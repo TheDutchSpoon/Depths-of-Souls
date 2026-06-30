@@ -1,0 +1,664 @@
+# Depths of Souls — Game Design Document
+
+A web-based incremental game. The entire game takes place in **a single endlessly descending
+cave** — *the Depths* — where the player collects creature **souls**, fuses them, and descends
+ever deeper. Combat is automatic; the player's primary influence is **scripting creature
+behavior**. Manual turn-based control is a secondary, optional mode.
+
+> This document is the source of truth for *what* the game is. Implementation rules live
+> in the other files in `.claude/`. When this document and code disagree, this document
+> wins until it is deliberately revised.
+
+---
+
+## 1. Vision
+
+The player assembles a party of creatures, fuses and customizes them, and then writes
+**behavior scripts** that decide what each creature does each turn. Combat runs itself.
+The fun loop is *observe → diagnose → rescript → re-fight*, not *click attack*. Power comes
+from understanding the systems and writing better scripts, not from manual reflexes.
+
+The incremental layer comes from:
+- **Endless descent**: the cave goes down forever and gets harder forever; you descend until
+  your party can't, then strengthen and push deeper.
+- A fusion economy that compounds (recombining creatures into stronger ones).
+- **Biomes**: the cave changes biome every 10 floors (10 biomes in v1), each with its own
+  creatures to encounter and collect (biomes spawn species; each species has multiple creatures).
+- **Facilities** built at the cave entrance that grant permanent upgrades and services.
+- Many small multiplicative bonuses (traits, gem augments, artifact infusions, spec perks) that
+  stack.
+
+## 2. Design pillars
+
+1. **Scripting is the game.** Every meaningful decision is expressible as a rule the
+   player configures. If a tactic can only be done by manual clicking, reconsider it.
+2. **Automation, not idleness.** The game plays combat automatically, but the player is
+   actively engaged in *tuning* — not just waiting for numbers to rise.
+3. **Legible systems.** A player should be able to reason about *why* something happened.
+   Combat is deterministic given the same seed, party, and scripts (see DETERMINISM).
+4. **Compounding builds.** Progression is about discovering synergies that multiply, not
+   linear stat increases.
+5. **No backend.** Everything runs client-side. Saves are local with manual export/import.
+
+## 3. Core loop
+
+```
+Descend a cave floor  ->  Auto-battle the floor's creatures  ->  Earn XP & drops
+        ^                                                                  |
+        |                                                                  v
+   Push deeper  <-  Party can go on  <-  Rescript & recustomize  <-  Spend resources
+        |                                                                  ^
+        v (party too weak)                                                 |
+   Return to entrance  ->  Use facilities (fuse / heal / store)  ----------+
+```
+
+Depth is **persistent** — there is no run that resets. You hold the deepest floor you've
+reached; descending is gated only by whether your party can survive the next floor. When it
+can't, you go back up, strengthen (fuse, level, rescript, build/upgrade facilities), and
+descend again past the wall.
+
+Short loop (seconds–minutes): fight a floor's creatures, watch scripts execute, collect XP.
+Medium loop (a session): descend until you hit a wall, return to the entrance, rescript and
+re-gear, push past it.
+Long loop (many sessions): discover biomes, build out facilities, and deepen builds to
+descend ever further.
+
+## 4. The Cave (world & structure)
+
+The entire game world is **one cave that descends endlessly**. The player can **never leave
+the cave**; all play happens either at the **entrance hub** or on the **floors below it**.
+
+- **Floors**: the cave is a stack of floors numbered from the entrance downward. Greater
+  depth = harder creatures (scaling curve is config; see §13). Depth is **persistent** — the
+  player keeps their deepest-reached floor; there is no per-run reset. From the entrance the
+  player can **fast-travel to any floor up to their deepest-reached** (floor selection is a
+  UI feature; no need to re-walk cleared floors).
+- **Biomes**: the biome changes **every 10 floors** to the next in sequence. v1 ships
+  **10 biomes** (so floors 1–10 are biome 1, 11–20 biome 2, … 91–100 biome 10; past floor 100,
+  each floor's biome is chosen by **seeded-RNG draw from all 10 biomes** unless the player has
+  pinned that floor via the Biome Atlas — see below; pinning can retroactively override a floor
+  already visited). Each biome has a **spawn pool of species**.
+  When a floor spawns an enemy, it picks a **species** from the biome's pool, then picks a
+  **specific creature within that species by rarity-weighted draw from the seeded RNG** (rarer
+  creatures appear less often). Biomes are **data** (name, theme, species pool, scaling tweaks,
+  visuals). **v1 content target per biome: more than 3 species, each with more than 6
+  creatures** (so ≥18 creatures per biome; ~180+ creatures across the 10 v1 biomes — the
+  largest content-authoring task in the project, and why creatures/traits must be data-driven).
+- **Fights & HP**: a floor contains a **variable, depth-scaled number of fights** drawn from its
+  biome pool. **Health resets to full between every fight** (including fights within the same
+  floor) — there is no cross-fight attrition. A creature reduced to 0 HP is simply removed from
+  that fight's turn order; death has **no lasting consequence** beyond the current fight (no
+  instance loss, no cooldown, no soul/XP penalty) — full HP and full roster availability return
+  for the next fight regardless of outcome. Defend/Regen/healing are purely *intra-fight* tools.
+- **Milestone bosses**: every 10th floor (each biome transition) is a tougher **boss** fight —
+  a difficulty checkpoint and reward spike, and the **sole source of perk points** (see §9).
+  Bosses are unique, **cannot be soul-collected**, and grant no soul%.
+- **Difficulty model**: each floor maps to an **enemy level range** (min–max), not a separate
+  stat multiplier — enemies are ordinary creature instances at some level, using the **same
+  linear growth formula** as the player's creatures (§5). Enemy level grows **faster than floor
+  number** (the gap is the difficulty pressure), and the range's **width widens with depth**
+  (deeper floors are spawn-level-swingier). Because HP resets each fight, deeper floors are
+  harder purely because enemy level outpaces the party's own leveling pace. Walls happen when
+  that gap outpaces level + build. This makes the **floor→level-range curve the single most
+  important balance lever** in the game (the curve's exact shape is config; see §13).
+- **Biome progression**:
+  - Early game, biomes are **discovered by descending** — you meet each new biome the first
+    time you reach its depth band, in a fixed sequence.
+  - Once **all biomes have been discovered**, the **Biome Atlas facility** lets the player
+    **assign (pin) a biome to a chosen cave floor** — shaping which biome occupies a floor to
+    farm, rather than taking whatever the sequence (or, past floor 100, the random draw) gave
+    them. Pinning can be applied at any time, including retroactively re-pinning a floor already
+    visited.
+- **Entrance hub**: a persistent base at the top of the cave where the player manages their
+  collection and builds **facilities** (see below). The hub is always accessible; returning
+  to it is how the player strengthens between descents.
+
+### Facilities
+Structures the player builds and upgrades **at the entrance** with **Bricks** to support deeper
+expeditions. Facilities are **data-driven** (cost, effect, upgrade tiers) and part of the
+permanent, forward-only progression. The player starts with minimal/none and **builds each
+out** as an early-game goal. **Every facility action (craft, infuse, fuse, summon) resolves
+instantly** on payment — no real-time timers/queues, consistent with the engine's no-wall-clock
+rule. Only **Gem Forge, Artifact Forge, and Fusion Chamber** have upgrade tiers (each
+facility's tier count is tailored individually); v1 tiers **raise the level cap**
+craftable/fuseable there (cost-reduction tiers may follow later). The other three facilities
+(Soul Altar, Storage/Vault, Biome Atlas) are **one-time builds** with no further tiers — they
+have no throughput axis to upgrade. v1 facility list:
+
+- **Gem Forge** — craft gems (from dropped recipes + **Essence**), augment gems, level gems
+  (Essence).
+- **Artifact Forge** — craft/infuse artifacts (fixed base-types + dropped infusion recipes),
+  level artifacts, using **Ore**.
+- **Fusion Chamber** — perform fusions **and** catch-up-level creatures up to the player's
+  current highest-level creature, both fuelled by **Lifeforce**.
+- **Soul Altar / Summoning Circle** — summon instances of any species at 100% soul.
+- **Storage / Vault** — manage the unlimited collection; organize the 6-slot active party.
+- **Biome Atlas** — unlocked once **all 10 biomes are discovered**; assigns a biome to a chosen
+  floor.
+
+*(No healing facility in v1 — HP resets every fight, so there is nothing persistent to heal.)*
+
+**Currencies & drops (structure; numbers TBD):** floors drop **Essence** (gems), **Ore**
+(artifacts), **Bricks** (facilities; rarer), **Lifeforce** (leveling + fusion), and **recipes**
+(gem, gem-augment, artifact-infusion). Recipe drops come from a **global depth-scaled drop
+table**, independent of which specific creature was defeated (not a per-creature loot table).
+**Perk points** are *not* dropped — they come only from first-time boss kills (see §9).
+Essence/Ore are the long-tail infinite sinks; Bricks is a front-loaded, tapering build-out sink.
+All currencies are **unbounded** — no storage cap.
+
+## 5. Creatures
+
+The game uses a **three-tier model**:
+
+- **Species** = a *grouping* of related creatures (e.g. "Spider"). A species spans **multiple
+  creatures** and **multiple affinities**. Traits within a species **generally synergize** (a
+  design principle — see example below). Species has mechanical weight: **biomes spawn species**
+  (the specific creature is chosen within the species; see §4).
+- **Creature** (the unit, a data template) = a specific creature within a species (e.g. "Black
+  Spider"). A creature carries its **affinity**, **base stats**, **innate trait**, sprite,
+  rarity, and its parent species. This is the collectible thing (its own soul bar).
+- **Instance** (owned, in save) = a copy of a creature the player owns: references a creature +
+  current **level/XP**, current **affinity** (may differ after fusion), **trait slots** (1
+  innate, or 2 after fusion), **equipped gems** (≤3), **equipped artifact** (1), `hasFused`.
+
+> **Species-synergy example** — the Spider species:
+> - *Black Spider* — affinity **Primal**; innate trait: deals **+30% damage to webbed enemies**.
+> - *Webbing Spider* — affinity **Body**; innate trait: **applies Web** when its attack hits.
+> Two creatures, same species, different affinities, traits built to combo.
+
+Each creature (the unit) has:
+
+- **Identity**: parent species, name, sprite/emoji placeholder, rarity (v1 ships **3 rarity
+  tiers — Common, Uncommon, Rare** — designed to expand with more tiers later).
+- **Affinity**: one of **Body, Spirit, Mind, Void, Primal** — the *domain of being* the creature
+  is made of (Body = physical form/instinct, Spirit = soul/the ethereal, Mind = psyche/intellect,
+  Void = entropy/nothingness, Primal = raw wild nature). Affinity lives **on the creature**, so
+  one species can contain creatures of different affinities. Cycle (see §7):
+  Body > Spirit > Mind > Void > Primal > Body.
+- **Core stats**: **Health, Attack, Intelligence, Defence, Speed.** Attack drives physical
+  damage (Attack action), Intelligence drives spell power (Cast action), Defence mitigates,
+  Speed drives turn order within a round.
+  - **Scale**: base stats are **fixed per creature** in the design range **10–30** per stat
+    (the design range, not a per-capture roll — all instances of a creature share the same base
+    stats; no individual IV-style rolls in v1).
+- **Trait slots**: a base creature has **1 innate trait**; a fused creature carries **both
+  parents' innate traits** (2). Artifacts can carry additional trait(s) via infusion (third
+  trait source). See §6.
+- **Spell gems**: spells are **equipped as spell gems** (not innate). Each creature has **3 gem
+  slots** by default (modifiable by traits/effects). Scripts choose which equipped gem to Cast.
+  See Spell gems below.
+- **Artifact**: **1 artifact slot** per creature (see §6 / Artifacts).
+- **Level & XP**: creatures level **only via combat XP**. Stat growth is **linear and derived
+  purely from base stats** — there is *no separate growth-rate field*. Level-N stat =
+  `base × (1 + 0.25 × (level − 1))` (i.e. +25% of base per level; level 1 = base; base 20 → +5
+  per level → L10 = 65). **Level is uncapped** — it climbs indefinitely in step with floor
+  depth (see §4 difficulty model); the formula holds at any level. This keeps the formula's
+  output in a sane range for the subtractive damage formula; the incremental power curve comes
+  from **multiplicative build sources** (traits, gems/augments, artifacts/infusions, fusion,
+  facility upgrades, spec perks) stacking in the Modifiers channel, not from levels.
+  - **Catch-up leveling**: at the Fusion Chamber, a creature can be leveled (using **Lifeforce**)
+    up to the player's **current highest-level creature** — pure catch-up so fresh
+    summons/fusions are viable at depth. The ceiling itself rises only through combat XP.
+
+### Soul collection & summoning
+Creatures are obtained via **souls**, not direct capture:
+- Defeating a creature grants a **% of that creature's soul** (tracked **per creature**, not per
+  species — Black Spider and Webbing Spider have separate soul bars). This reward is **banked
+  the instant the creature dies**, regardless of how the fight as a whole ends (see §7
+  Encounters).
+- **Rarer creatures grant less %** per defeat (slower to complete): soul-gain is a **flat
+  percentage, fixed per rarity tier** (no variance, no diminishing returns). Rarity is the knob;
+  depth does not affect soul gain in v1.
+- There is **no way to target/bias which specific creature spawns** beyond choosing a biome (via
+  discovery or the Biome Atlas); within a biome, the species → creature draw is pure
+  rarity-weighted seeded RNG, by design (soul-hunting is an intentional grind/RNG loop).
+- At **100%** soul, the creature is **permanently unlocked** — the player can **summon** new
+  instances of it freely thereafter (at the Soul Altar). Soul% **caps at 100%** (no overkill).
+- **Bosses cannot be soul-collected** (they grant no soul%); they are unique challenges.
+- **Cold start**: the player begins with **exactly one creature**, determined by their starting
+  **specialization** (the starter fits the spec's playstyle). Building out a full party via
+  soul collection is an explicit early-game goal. **Floor 1 is solo-clearable** with the
+  starter, and the first soul completion comes fast — the opening is designed for quick
+  momentum (1 → 2 → 3 creatures in the first session), not a grind wall.
+- **Roster**: collection is **unlimited**; the active **party is 6**, swappable at the hub.
+  **Duplicate creatures are allowed** across party slots (two instances of the same creature can
+  both be active at once) — instances are independent (level, gems, artifact, fusion state).
+
+### Spell gems
+- A **gem** carries one spell (Intelligence-scaled via the damage formula, optional status,
+  target shape) and is modeled as `{ spell, level, augments: Augment[] }`.
+- **Gem level governs how many augment slots** the gem has (not its damage — damage is purely
+  Intelligence-driven). Gems are **leveled via Essence**. **Gem level is bounded** (a fixed
+  max, raised by Gem Forge tiers); **augment slots have a small fixed max (3–5)**.
+- **Augments** are data-defined effects slotted into a gem that change the spell's
+  numbers/behavior (extra target, added/strengthened status, a Modifiers buff on cast, …).
+  Augments are the **same effect-framework objects** as infusions/traits/statuses (see §6 /
+  CONVENTIONS).
+- **Gems are crafted/augmented at the Gem Forge** using **Essence**; **gem recipes** and
+  **augment recipes** drop from floors.
+- Gems are a **shared, finite inventory** the player owns; a gem instance is equipped on one
+  creature at a time, **free and instant to equip/unequip**. Before a creature is fused, its
+  gems **unequip back to inventory** (so does its artifact — see Fusion, below).
+
+### Fusion (compounding economy)
+Two creatures fuse into a single resulting creature, at the **Fusion Chamber**, costing
+**Lifeforce**. This is the primary build-crafting mechanic. The rules:
+
+- **Each creature can be fused only once** (`hasFused`). A fusion *result* is itself
+  fusion-locked — it cannot be an input to another fusion. This caps creatures at 2 innate
+  traits and keeps fusion bounded.
+- **Both input creatures are consumed** into the single result. (Nothing is permanently lost:
+  inputs can be re-summoned from soul if that creature is at 100%.) Before being consumed, both
+  inputs' **equipped gems and artifact unequip back to inventory** — nothing of value is
+  destroyed by fusion, only the creature instance and its level/XP.
+- Fusion is **species-agnostic** — any creature can fuse with any other **except itself**:
+  fusing two instances of the identical creature is **disallowed** (it would produce two
+  identical innate traits with no meaningful tradeoff). There is **no level/state prerequisite**
+  otherwise — any unfused creature, at any level, is eligible.
+- The result's composition:
+  - **Identity = parent 1**: the result *is* parent 1's creature (same sprite, name, and parent
+    species) — except for the stats and affinity below.
+  - **Base stats = per-stat average of both parents** (e.g. result Attack = (p1 Attack + p2
+    Attack) / 2). Because growth is derived from base stats, the result's growth follows
+    automatically from its new averaged bases — there is no separate growth field to inherit.
+    *Consequence:* fusion pulls stats toward the midpoint, so fusing is about combining
+    **traits + affinity**, not stacking stats (you can't fuse two high-Attack creatures into
+    something higher than either).
+  - **Affinity = parent 2's affinity.**
+  - **Traits = both parents' innate traits** (the result carries 2).
+- The result starts at **level 1**; bring it up via catch-up leveling (Lifeforce).
+- Fusion order (which parent is "parent 1") is **player-chosen in the UI**.
+- The result has **no rarity** — rarity only governs spawn-weight and soul-gain for
+  *collectible, spawnable* static creatures, and a fusion result is neither (it's derived from
+  a recipe; see §11).
+
+> Terminology note for implementation: **species** = the grouping (data: a set of creatures +
+> thematic identity, used by biome spawn tables); **creature** = the specific unit (data:
+> affinity, base stats, innate trait, sprite, rarity, parent species); **instance** = an owned
+> copy (level/XP, current affinity, trait slots, equipped gems/artifact, `hasFused`). **Affinity**
+> lives on the creature/instance, separate from identity, so fusion is a clean field-level
+> recombination: identity from parent-1 creature, affinity from parent-2, averaged base stats,
+> both innate traits. **There is no growth-rate field** — level-N stat = `base × (1 + 0.25 ×
+> (level − 1))`, derived purely from base stats.
+
+## 6. Traits, statuses, artifacts & the effect framework
+
+### The unified effect framework (architectural keystone)
+**Traits, status effects, gem augments, and artifact infusions are all instances of one
+data-driven, hook-based effect framework.** They differ only in how they attach to a creature
+(innate/fused, applied in combat, equipped via gem, equipped via artifact) and which hooks they
+use — not in their underlying machinery. This is a hard invariant (see CONVENTIONS): one effect
+model underpins all of them, so new content is data and genuinely novel behavior is at most one
+reusable hook primitive.
+
+An effect declares: a **kind**, a **magnitude**, a **duration** (where applicable), a
+**stacking rule**, one or more **hooks** (when it acts — on-apply, start-of-turn, end-of-turn,
+on-the-creature's-turn, on-damage-taken, on-damage-dealt, on-expiry, …), and its **effects**
+(modify a stat, deal DoT, force an action like auto-Provoke, apply a sub-status, buff the
+Modifiers channel, etc.).
+
+**Loop safety** (engine invariant, applies to the whole framework): an effect/trigger **cannot
+re-enter its own resolution chain** (kills true infinite loops), and a high, generous,
+**named cascade-depth cap** (`MAX_TRIGGER_CASCADE_DEPTH` **= 500**, counting *chain depth* not
+trigger breadth) backstops exotic multi-effect cycles. Breadth is effectively unlimited — "lots
+and lots of triggers firing once each" is a fully supported build path; only unbroken
+self-perpetuating chains are truncated. Truncation is deterministic.
+
+### Traits
+- **v1 categories**: **passive/stat** (always-on modifiers, e.g. "+25% Attack at full HP") and
+  **triggered** (fire on a hook event, e.g. "when attacked, retaliate"). **Behavioral** traits
+  (changing scripting options / granting extra actions) are **deferred past v1**.
+- A base creature has **1 innate trait**; a fused creature has **2** (both parents'). Each
+  **species has a fixed innate trait** defined in its data (capturing a species = knowing its
+  trait). Artifacts can add further trait(s) via infusion.
+- Traits are **data, not code branches**, interpreted via the effect framework above.
+
+### Status effects
+- Statuses are **applied effects** (from spells, augments, traits) with a **fixed turn
+  duration**, counted down each round.
+- **Stacking**: re-applying refreshes duration **and** stacks intensity, up to a per-status
+  cap — **each status declares its own cap explicitly; there is no shared global default.**
+- **v1 content**: a flexible, easily-addable **DoT category** (parameterized: damage value,
+  duration, flavor; start with Poison/Burn) plus **one buff and one debuff per stat** —
+  Attack, Defence, Intelligence, Speed (8 total; some names TBD). All 8 are **data instances of
+  one generic stat-modifier primitive** (parameters: stat, direction, magnitude, duration) — no
+  per-stat special-casing in the engine. Health's "buff" is **Regen** (heal-over-time); its
+  "debuff" is just a DoT (no max-HP modifier in v1).
+- **DoT damage** uses its **own value from the source** and **bypasses Defence** (not the
+  Attack/Defence formula) — making DoT a distinct answer to high-Defence enemies.
+- **Stun** (and similar tempo effects) are checked **when the affected creature's turn comes
+  up**, so a stun applied earlier in the round lands.
+- The system is built to **scale to many future statuses** (e.g. end-of-turn auto-Provoke,
+  exotic conditional effects) via new data using existing hooks.
+
+### Artifacts
+- An artifact is an **equippable item** on a creature (**1 artifact slot** per creature in v1),
+  **stat-focused** in character (where gems are spell-focused).
+- Structurally **parallel to gems**: an artifact has a **level** (bounded, a fixed max, raised
+  by Artifact Forge tiers) that governs **infusion slots** (small fixed max, 3–5), and slots
+  hold **infusions** — which are the **same effect-framework objects** as gem augments.
+  Infusions grant **stats, traits, or other effects**. Equip/unequip is **free and instant**.
+- **Base artifacts are a small fixed set of base-types** — stat-flavor variants (e.g. a
+  Health-focused charm vs. a Defence-focused plate) that all compete for the single artifact
+  slot, not distinct equipment categories; variety comes from infusions. **Infusion recipes
+  drop** from floors.
+- Crafted/infused at the **Artifact Forge** using **Ore**; artifacts are **leveled via Ore**.
+
+## 7. Combat (automatic)
+
+- **Format**: **6v6** — six creatures per side, all active simultaneously. The full party of
+  six is the normal case. Early game, before the player has collected six creatures, fights
+  run with fewer (1–5) on the player side; the engine must handle any party size 1–6.
+- **Turn-based under the hood**, resolved automatically. **One round = every living creature
+  acts once**, in **Speed order (descending)**, recomputed each round (so Speed buffs/debuffs
+  change ordering next round). Ties broken deterministically: **side (player side wins ties) →
+  slot → creature id**. No creature gets multiple actions in v1 (a trait could grant extra
+  actions later). As a determinism/safety backstop, every fight has a **hard round cap**
+  (config); a fight that somehow reaches it (e.g. a pathological all-Defend/all-Wait script on
+  both sides) ends immediately as a timeout/draw rather than running unbounded.
+- Each turn, a creature consults its **behavior script** to choose an action. If the script
+  yields no valid action, fall back to the implicit default (basic Attack on a default target,
+  else Wait). The player never has to author the empty case.
+- **Actions** (the starting set — more may be added later):
+  - **Attack** — physical strike scaled by Attack vs. target Defence (see damage formula).
+  - **Cast** — cast an equipped spell (gem), scaled by Intelligence. No resource cost, freely
+    castable. Scripts pick *which* equipped gem/slot to cast. A spell's **target shape**
+    (single-target or AOE/all-enemies) is a property of the spell itself, not the rule — v1
+    supports both shapes.
+  - **Defend** — until the creature's next turn: takes **35% less damage** (a ×0.65 multiplier
+    in the Modifiers stack) **and** has **+50% Defence** (a ×1.5 multiplier on its current
+    Defence stat). Both apply together; strongest on already-tanky creatures (the +50% Defence
+    scales with base Defence) while the flat 35% helps squishier creatures too.
+  - **Provoke** — mark this creature as *provoking* (taunt) **until its next turn**; see
+    targeting rule below. Re-provoking each turn is a recurring tactical cost (the creature
+    isn't attacking), making dedicated tanking a real choice.
+  - **Wait** — take no action this turn.
+  - Plus any trait-granted actions (post-v1).
+- **Provoke / targeting resolution**: when a creature uses an offensive action (Attack or
+  Cast) against the enemy side, target selection works as follows:
+  - If one or more enemy creatures are currently **provoking**, the action targets a
+    **random** one of the provoking creatures.
+  - If none are provoking, the action targets per the script's normal targeting selector
+    (or the default selector if none applies).
+  - "Random" here means a draw from the **seeded combat RNG**, never `Math.random()`, so the
+    outcome stays deterministic and replayable (see CONVENTIONS). Provoke is an **override
+    layer** applied *after* the script chooses an action — it constrains the target set, it
+    does not change which action the script selected. Targeting selectors that conflict with
+    an active provoke are narrowed to the provoking set rather than ignored wholesale.
+  - Provoke applies only to enemy-targeting offensive actions; ally-targeting actions (e.g.
+    a support spell on an ally) are unaffected.
+  - Provoke **only narrows single-target selection**. An **AOE** Cast (hits all enemies)
+    ignores provoke entirely and still hits its full target set — narrowing an AOE down to just
+    the taunting creature would defeat the point of choosing an AOE spell.
+- **Affinity advantage** is a cycle: **Body > Spirit > Mind > Void > Primal > Body** (each
+  beats the next; loops back). It is its **own multiplicative term** in the damage formula
+  (not pooled with other Modifiers), defined once per hit: if the attacker's affinity beats
+  the defender's, **×1.25**; if the defender's beats the attacker's, **×0.75**; otherwise
+  **×1.0**. Because it's separate, it stacks *multiplicatively* with Modifiers (a +50% buff and
+  affinity advantage = ×1.5 × 1.25, not ×1.75), so affinity matchups stay relevant no matter
+  how buffed a creature is. Encode the cycle and multipliers as data, not branches.
+
+### Damage formula
+All direct damage (Attack and Cast) uses one formula:
+
+```
+damage = ( MAX(OffStat − Defence, 0) + 0.01 × OffStat ) × Affinity × Modifiers
+```
+
+- **OffStat** = the attacker's **Attack** (for Attack) or **Intelligence** (for Cast). Both
+  are checked against the target's single **Defence** stat (no separate magic resist in v1).
+- **Subtractive core**, `MAX(OffStat − Defence, 0)`, clamped at 0 — Defence is build-defining
+  and can fully cancel the core.
+- **+1% chip floor**, `0.01 × OffStat` (1% of the attacker's offensive stat), so a hit never
+  does literally nothing even against a fully-tanked target.
+- **Affinity** = the separate ×1.25 / ×0.75 / ×1.0 term above.
+- **Modifiers** = the multiplicative stack of all other effects (buffs, debuffs, Defend's
+  ×0.65, trait/augment/perk multipliers, trait-granted crits). This is **where the incremental
+  "numbers go up" power lives** — base stats grow linearly with level (see §5), but *build*
+  power compounds here.
+- There is **no flat post-mitigation additive ("Additional") channel** in v1 (can be added
+  later if a trait needs true damage).
+- Damage is **fully deterministic** — no damage variance/rolls. Same inputs → same number.
+- **No baseline critical hits**; "crit" is a concept a trait may grant, multiplying into the
+  Modifiers stack.
+- **Defend interaction**: a defending target applies Defence ×1.5 inside the subtractive core
+  and ×0.65 in Modifiers (so even the chip floor is reduced).
+- **DoT damage** does **not** use this formula — DoTs carry their own value from their source
+  and bypass Defence (see status framework, §6 / CONVENTIONS).
+- **Encounters** are **cave floors**: descending to a floor pits your party against that
+  floor's creatures (drawn from the floor's biome). Clearing a floor lets you descend to the
+  next. Rewards (XP, drops) scale with depth. **Every reward is banked per kill-event, the
+  instant an enemy dies** — soul%, XP, and currency drops are never held pending the fight's
+  outcome, so a party wipe after some enemies are already dead keeps everything earned so far
+  (consistent with "no loss of progress"; only the fight itself ends early).
+- **On a party wipe** there is **no run reset and no loss of progress** — depth is persistent.
+  A wipe sends the party back to the **entrance hub**; from there the player can **select which
+  floor to travel to** (any floor up to their deepest-reached — fast-travel, no re-walking),
+  so a wipe just means returning to the hub to strengthen and then jumping back to where they
+  left off. Wiping never rolls back collected creatures, XP, or facilities.
+- Combat must be **deterministic** given (party snapshot, scripts, RNG seed). This makes
+  bugs reproducible, enables fast-forward/replay, and lets us test scripts. See
+  `CONVENTIONS.md` for the determinism rules.
+
+### Manual mode (secondary)
+An optional toggle lets the player take manual control of one fight: same engine, but
+actions come from UI input instead of the script. It must not require its own combat code
+path — it's the same resolver with a different action source.
+
+## 8. Scripting system (the heart of the game)
+
+The player authors **scripts**: ordered lists of rules. Scripts are **templated** — a
+script is a reusable template that can be assigned to any creature (a creature references a
+template; many creatures can share one; editing a template updates all creatures using it). A
+rule is:
+
+```
+PRIORITY n:  IF <condition>  THEN <action>  [TARGETING <selector>]
+```
+
+Evaluated top-down each turn; the **first** rule whose single condition is true and whose
+action is currently valid wins.
+
+**One condition per rule (v1).** No AND/OR. Complex behavior is expressed by **stacking
+priority-ordered rules** (you get "OR" by writing two rules; nuance comes from ordering narrow
+high-priority rules above general ones). **Consequence**: rule *ordering carries all the logic
+weight*, which makes the **drag-to-reorder UI** and the **"which rule fired" feedback**
+(§ROADMAP combat-feedback) load-bearing features, not minor polish. Rule count per template and
+template count overall are both **unbounded**.
+
+**v1 conditions** (a starter set — expandable, and the highest-leverage place to add power
+later): self HP%, ally HP% (any / lowest), enemy HP% (any / lowest / highest), enemy count,
+ally count, turn/round number, "has status X" (self / ally / enemy — matches a **literal status
+ID**, e.g. exactly "Weaken", not a category like "any Attack-debuff"), affinity advantage vs a
+target, and "is provoking". (Fight-*context* conditions like "is this a boss fight" or "current
+floor/depth" are deliberately deferred past v1.)
+
+**v1 targeting selectors** (orthogonal to conditions — any condition pairs with any target):
+lowest-HP enemy, highest-HP enemy, highest-Attack enemy, highest-Intelligence enemy, lowest-HP
+ally, random enemy, self, the provoking enemy.
+
+**Actions**: the action set from §7. For **Cast**, the rule specifies **which equipped gem/slot**
+to fire (choosing the right spell for the situation is the tactical depth). The **TARGETING**
+clause only appears for actions that need to choose among multiple valid targets (Attack,
+single-target Cast); it's automatically omitted for self-only actions (Defend, Provoke, Wait)
+and for AOE Cast (which always hits its full target set per §7).
+
+**Fallback**: if no rule matches, the engine applies the implicit default automatically (Attack
+a default target if any valid, else Wait) — the player never authors the empty case.
+
+Design constraints:
+- Authoring is **UI-driven** (dropdowns/blocks), not free-text code, so it's accessible and
+  cannot crash the engine. Think "Final Fantasy XII Gambits."
+- The script model is **serializable data** so it saves, exports, and feeds deterministic
+  replays.
+- **Script scope (decided)**: scripts are **reusable templates assignable to creatures**; the
+  template is the unit of authoring. Per-creature overrides may come later.
+
+## 9. Player specializations
+
+The player picks a **specialization** that shapes their own bonuses and playstyle (distinct
+from creature affinities). The game ships with **three** at launch; future specializations
+may be added and **existing ones edited**, so model specializations as **data**, not
+hard-coded classes.
+
+Starting specializations (each defines a **starter creature** matching its playstyle — the
+player's single cold-start creature, see §5):
+- **Sorcerer** — gems/Cast focus; perks center on gem slots, augment capacity, Cast-damage
+  Modifiers. (Resolves the Sorcerer↔gem interaction.) Spell-leaning starter.
+- **Brute** — Attack focus; perks center on Attack-action Modifiers and physical builds.
+  Attack-leaning starter.
+- **Shieldbarer** — Defence/tank focus; perks center on Defend/Defence/survivability and
+  Provoke-tanking. Defence-leaning starter.
+
+**All content is accessible to every specialization** (same creatures, gems, artifacts,
+biomes, facilities) — a spec changes *how you play*, never *what you can reach*.
+
+**Perks & perk points:**
+- A specialization is a **named collection of perks** (data; perks plug into the existing
+  effect framework where sensible, plus meta-economy hooks like soul gain, currency drops,
+  facility efficiency). Specific perks are TBD; the data model + placeholders suffice for now.
+- The perk tree is a **flat list, not a prerequisite/tiered tree** — any perk can be bought in
+  any order. Each spec has a **fixed set of perks**; some are single on/off purchases, others
+  are **leveled** (purchasable multiple times up to a per-perk level cap) — the full set, at
+  max levels, sums to exactly **1000 points**.
+- Each spec's full perk tree costs **1000 perk points** total.
+- Perk points are earned **only from first-time boss kills**: **100 points per boss**, one boss
+  per 10th-floor biome transition. 10 bosses in v1 = 1000 points = exactly enough to **max one
+  specialization at floor 100** — character progression and cave depth finish together. Bosses
+  are the **sole** perk-point source (no other trickle); points come from **first clear only**,
+  not repeatable farming.
+- Points are spent **freely** on whichever perks the player wants as they're earned.
+- Perk points are effectively a **third, non-droppable progression currency** (alongside the
+  combat-dropped currencies).
+
+**Specialization is freely swappable, free and unlimited, any time** — no cooldown, no fee. On
+swap, all spent perk points are **refunded for full re-spend** in the new spec — your total
+earned points (a function of bosses cleared) is your budget, and swapping reallocates it
+(build-change, not grind-reset). Permanent-until-swap; no per-point respec cost.
+
+Model specializations as **data** so future specs can be added and existing ones edited.
+
+## 10. Progression & incremental layers
+
+- **Creature XP & levels**: creatures level **only via combat XP**, with **linear** stat growth
+  (+25% of base per level). The XP/level ceiling rises only through combat.
+- **Catch-up leveling**: at the Fusion Chamber, fresh summons/fusions can be leveled (via
+  **Lifeforce**) up to the player's current highest-level creature — never beyond it.
+- **Build power (the incremental curve)**: the "numbers go up" fantasy lives in **multiplicative
+  build sources** stacking in the Modifiers channel — traits, gem augments, artifact infusions,
+  fusion, facility-upgrade efficiencies, and spec perks — *not* in raw levels.
+- **Currencies** (combat-dropped unless noted): **Essence** (gems), **Ore** (artifacts),
+  **Bricks** (facilities, rarer), **Lifeforce** (leveling + fusion), and **perk points**
+  (specs; non-dropped, first-boss-kills only). All currencies are **unbounded** — no storage
+  cap.
+- **Depth scaling**: enemy **level** (via a floor→level-range curve, not a separate stat
+  multiplier) scales with floor depth (config; the master difficulty lever — see §4 difficulty
+  model and §13).
+- **Biome discovery**: reaching new depth bands reveals biomes; discovering all 10 unlocks the
+  Biome Atlas (see §4).
+- **Facilities**: built/upgraded with Bricks; a core progression axis (see §4).
+- **Souls**: per-creature collection toward 100% summon unlocks (see §5).
+
+There are **no prestige mechanics and no progress resets** — progression is purely forward
+(descend deeper, grow creatures via XP + catch-up, collect souls, craft gems/artifacts, fuse,
+build facilities, earn perks, deepen builds).
+
+Balance numbers are **not** in this document — they live in tunable config so AI-assisted
+iteration doesn't require touching engine code. See CONVENTIONS.
+
+## 11. Persistence
+
+Saves are expected to be **large** (big creature rosters, many script templates, inventories,
+progression state). Design for that from the start.
+
+**Store:** IndexedDB is the **primary store** (via `idb`/Dexie); `localStorage` holds only tiny
+things (settings, a last-save pointer) — never the main save.
+
+**What the save contains** (instances + references only — never copies of static game data):
+- **Player meta**: chosen specialization; perk points (earned total + spent allocation);
+  deepest-reached floor; current floor; bosses defeated (first-clear tracking); biome discovery
+  state; Biome Atlas assignments.
+- **Collection**: owned creature **instances**, each: a reference to its source + level/XP,
+  current affinity, trait slots, equipped gem refs, equipped artifact ref, `hasFused`; plus
+  **per-creature soul%**.
+- **Inventory**: gem instances (level + augments), artifact instances (level + infusions),
+  unlocked recipes, currency balances (Essence / Ore / Bricks / Lifeforce).
+- **Facilities**: which are built + their upgrade tiers.
+- **Scripts**: all script templates + each creature's assigned template.
+
+**References, not copies** (the key rule): instances reference static creatures/species **by
+ID** (e.g. `creatureId: "black_spider"`) and read base stats/affinity/trait from shipped data.
+This keeps saves lean and lets rebalancing flow into existing saves automatically.
+
+**Fused creatures store a recipe, not a result.** A fused instance saves
+`{ identityParent: creatureId, affinityParent: creatureId }` (two static creature IDs, ordered
+by role). On load the engine derives the fused creature: **identity/species from
+identityParent, affinity from affinityParent, base stats = per-stat average of the two, both
+innate traits**. This is valid because **fusion is fuse-once** (a parent is never itself a
+fusion) and fusion reads only **static per-creature data** (not level/gems/XP). *Consequence,
+accepted as intended:* rebalancing a base creature later **does** retroactively change existing
+fused creatures derived from it.
+
+**Versioning & migration**: `{ version: number, data: {...} }` — **one global version number for
+the whole save**, even though storage is partitioned (below); a migration step may touch only
+the partition(s) it actually changes. On load, run a sequential migration chain
+(`migrate_v1_to_v2(data)`, `migrate_v2_to_v3(data)`, …), each a pure function, up to current.
+Never load an unversioned blob.
+
+**Partitioning**: split the save into **logical records** (`meta`, `collection`, `inventory`,
+`facilities`, `scripts`) so a small change (e.g. spending a perk point) rewrites only `meta`,
+not the whole game. **Do not pre-optimize** to per-creature records; only split `collection`
+finer *if* the collection write becomes a **measured** bottleneck on very large rosters. If a
+partition is **missing or fails to parse** on load (corruption, manual tampering, a bug), the
+engine resets **just that partition** to its default/empty shape and surfaces a warning to the
+player — it does not fail the whole load. Losing one partition (e.g. `inventory`) should never
+cost the player unrelated data (e.g. `collection`, `scripts`).
+
+**Autosave**: on **meaningful events** (fight resolved, item crafted, fusion done, floor
+descended, perk spent), **debounced** (a few seconds), plus a save on tab-close /
+visibility-change. A fight is **atomic** — never save mid-fight; resolve, then save the result.
+Never block the game loop on a save.
+
+**Slots & file ops**: **single save slot** in v1 (the game is one continuous forward-only
+descent). Provide **export to file** (compressed, e.g. native `CompressionStream`/gzip — large
+saves warrant it for shareable/backup file size), **import from file** (decompresses and
+migrates as needed), and **delete save** (a clean start-over escape hatch). **IndexedDB itself
+stores uncompressed records** — compression is an export/import-boundary concern only, kept off
+the hot autosave path.
+
+## 12. Explicit non-goals (for now)
+
+- No multiplayer, no server, no accounts.
+- No real-money anything.
+- No real-time/twitch combat — it's resolved turn-based even when fast-forwarded.
+- No free-text scripting language in v1 (UI-driven rules only).
+- **No prestige / no resets** — progression is forward-only.
+
+## 13. Open questions & parked items
+
+**Balance numbers (all parked — live in config, tune in playtest):**
+- Floor→enemy-level-range curve (the master difficulty lever: level-vs-floor ratio, range
+  width-growth rate) and XP/level growth pacing.
+- Drop weights/rates for Essence, Ore, Bricks, Lifeforce, and recipes.
+- Costs: gem craft/augment/level (Essence), artifact craft/infuse/level (Ore), facility
+  build/upgrade (Bricks), fusion + catch-up leveling (Lifeforce).
+- Soul-per-kill % per rarity tier; status magnitudes/durations/per-status stack caps; affinity
+  already fixed (±25%).
+- Facility upgrade-tier counts and exact cap values (Gem Forge, Artifact Forge, Fusion Chamber
+  only — structure is decided in §4, numbers are not).
+- Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
+  round-cap value (structure decided in §7, number TBD).
+
+**Design items parked (decided to defer, not undecided):**
+- **Behavioral traits** (scripting-altering / extra-action traits) — post-v1.
+- **Status effect naming** (Intelligence/Speed buff-debuff names) — data, name later.
+- **Lifeforce / Essence** possible rename if they feel too samey in UI.
+
+**Genuinely open (need a decision before the relevant content):**
+1. The **biome roster**: the 10 biome names/themes and which creature types populate each
+   (v1 target >3 species/biome, >6 creatures/species ≈180+ total), plus per-spec **starter
+   creatures**. Deliberately deferred — don't let it block the engine skeleton (Phases 0–3),
+   which is built against placeholder data; it's the largest content-authoring task in the
+   project.
+
+Lock this down before the phase that depends on it (Phase 4 content, per ROADMAP).
