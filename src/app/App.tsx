@@ -1,21 +1,15 @@
-import { useEffect } from 'react'
-import { useGameStore } from '../state/store'
-import { TickCounter } from '../ui/TickCounter'
-
-const TICK_INTERVAL_MS = 1000
+import { CombatDemo } from '../ui/CombatDemo'
+import { demoPlayerParty, demoEnemyParty, DEMO_SEED } from './demoFight'
 
 function App() {
-  const incrementTick = useGameStore((state) => state.incrementTick)
-
-  useEffect(() => {
-    const id = setInterval(incrementTick, TICK_INTERVAL_MS)
-    return () => clearInterval(id)
-  }, [incrementTick])
-
   return (
     <main>
       <h1>Depths of Souls</h1>
-      <TickCounter />
+      <CombatDemo
+        playerParty={demoPlayerParty}
+        enemyParty={demoEnemyParty}
+        seed={DEMO_SEED}
+      />
     </main>
   )
 }
