@@ -10,17 +10,56 @@ skeleton exists.
 - Seeded RNG utility in `engine/` with a determinism test.
 - Pick and wire the store (Zustand). A trivial "tick increments a counter" loop on screen.
 
+## Phase 0.5 — Deploy checkpoint (GitHub Pages, do this early)
+Deploy the Phase 0 skeleton to GitHub Pages **now**, before Phase 1. Rationale: same philosophy
+as the golden test — prove the *deployment pipeline* against the simplest possible artifact, so
+every later phase inherits a known-good deploy instead of discovering hosting problems at the end.
+The Phase 0 tick-counter page is already renderable; if it shows up live, the whole pipeline (base
+path, CI build, Pages serving, asset loading) is proven end-to-end.
+- **Set `base` in `vite.config.ts`** to the repo path: `base: '/Depths-of-Souls/'`. This is the
+  one true gotcha — a **project** Pages site serves from `https://thedutchspoon.github.io/
+  Depths-of-Souls/` (a subpath), and Vite defaults to root `/`, so without this the JS bundle
+  404s and you get a blank page. (Only a user/org site at the domain root could skip this.)
+- **GitHub Actions workflow** that runs on push to `main`: `npm ci` → `eslint`/`vitest run`
+  (let the tests gate the deploy, per the canary philosophy) → `npm run build` → publish `dist/`
+  to Pages. Enable Pages in repo settings pointed at the Actions deployment.
+- **Verify live**: the tick counter renders and increments at the Pages URL. That's the whole
+  acceptance test for this checkpoint.
+- **No SPA-router rewrite exists on Pages** — deep-link refreshes 404. Not an issue now (single
+  page, no router). If a router is ever added, use **hash routing** (`/#/...`) to sidestep it, or
+  add a `404.html` fallback. Note it and move on.
+- From here, every phase is continuously deployed: merging to `main` re-runs tests and republishes,
+  so "does it work hosted" is answered on every push, not deferred to Phase 10.
+- **Environments** (see CONVENTIONS → Deployment): `main` → production URL; each PR → an ephemeral
+  **preview** deploy, torn down on close. Drive per-environment differences (base path, IndexedDB
+  name, debug flags) off a single **Vite mode**. **Namespace IndexedDB per environment**
+  (`depths-of-souls` prod / `depths-of-souls-dev`) from the start — prod and dev share an origin, so a shared DB name would
+  let a dev build corrupt a real save. (No save code exists until Phase 5, but fix the DB-naming
+  convention now.)
+
 ## Phase 1 — Combat engine (pure, no scripting yet)
+*Design detail lives in GAME_DESIGN §6–§7 and CONVENTIONS (combat rules + effect framework).*
 - Core types: `Creature` (stats: Health, Attack, Intelligence, Defence, Speed; one of five
-  affinities), `Action`, `CombatState`, typed `CombatEvent`.
-- Support **6v6** (and any party size 1–6). Turn order by Speed with deterministic tie-break
-  (ties: player side first → slot → id).
-- Affinity-advantage lookup (Body > Spirit > Mind > Void > Primal > Body) as data.
-- A fight-level **round cap** (config) as a determinism backstop — fight resolution must always
-  terminate, even given a pathological script.
-- `resolveTurn(state) -> { state, events }` with only the **Attack** action at first.
-- Run a fixed small fight to completion from a seed; assert a golden event log. **This is the
-  proof the architecture works — get it green before moving on.**
+  affinities; `id`/`side`/`slot`/`currentHp`/`alive`), `Action` (union; **Attack only** this
+  phase), `CombatState` (holds the **RNG state** + frozen round queue), typed `CombatEvent`.
+- Support **6v6** (and any party size 1–6). **Frozen round-start queue** by effective Speed; ties:
+  **player side → slot → id**; never recompute mid-round.
+- All stat reads via **`getEffectiveStat`** (passthrough to base now); OffStat via a **remap-aware
+  lookup** seam. Base stats immutable.
+- Damage formula with **two pools** (dealt additive, taken multiplicative), standalone affinity,
+  unconditional chip floor, **integer `MAX(1, floor(raw))`**. Pools empty ⇒ 1.0 in Phase 1, but
+  wire them in.
+- **Phase-point hook seams** (fight/round/turn start-end), all no-ops now; **no** `resolveRound`.
+- Three-value result (`win`/`loss`/`draw`); **round cap** (config) backstop; win/loss checked after
+  every action; dead creatures flagged not removed; rewards bank per kill.
+- Resolver API: `createCombat` factory (guards empty parties) + `resolveTurn` stepper +
+  `resolveFight` wrapper. Attack default target = **first living enemy by slot**.
+- **Event log**: intent events (per-action union, always emitted) + shared consequence events
+  (`DamageDealt` w/ full breakdown, `CreatureDied`) + lifecycle; flat array; narration not
+  event-sourcing.
+- **Golden-replay suite**: a small set of fixed fights (1v1, 6v6, affinity matchup, stomp),
+  full-event-log deep-equal vs committed fixtures; grows each later phase. **Get it green before
+  Phase 2 — it's the proof the architecture holds.**
 
 ## Phase 2 — Actions, spells & scripting interpreter
 - Flesh out the action set: **Attack, Cast, Defend, Provoke, Wait**. Spells (Cast) are data
@@ -97,7 +136,11 @@ skeleton exists.
 - Toggle that feeds UI-chosen actions into the *same* resolver. No forked combat path.
 
 ## Phase 10 — Polish & deploy
-- Static build, deploy to chosen host, save-compatibility check, balance pass via config.
+- The Pages deploy pipeline already exists (Phase 0.5) and has been live since the skeleton — this
+  phase is the **production hardening pass**, not a first deploy: final balance pass via config,
+  save-compatibility check across a version migration, asset/bundle-size optimization, a custom
+  domain if wanted, and confirming IndexedDB persistence + save export/import behave on the live
+  origin (per-browser saves; export-to-file is the cross-device/eviction backstop).
 
 ---
 

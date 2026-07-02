@@ -28,47 +28,86 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
 
 ## Combat & scripting
 
-- The resolver is a pure function: `resolveTurn(state) -> { state, events }`. Emit an event
-  log (typed events) describing what happened; the UI renders from events, not by peeking
-  into resolver internals.
-- Combat is **6v6** (party size 1–6 supported for early game). **One round = every living
-  creature acts once**, in Speed order (descending), recomputed each round; ties broken
-  deterministically (side → slot → id; **player side wins ties**). No multi-actions in v1. A
-  fight-level **round cap** (config) is a hard backstop — every fight must terminate; reaching
-  it ends the fight as a timeout/draw.
+- **Resolver shape** (three pieces): `createCombat(playerParty, enemyParty, seed) -> CombatState`
+  (factory — sets up sides/slots, seeds RNG, guards against empty parties); `resolveTurn(state)
+  -> { state, events }` (pure primitive — one creature's action); and `resolveFight(state)`
+  (thin run-to-completion wrapper over the stepper). Expose the **stepper** (advance-one-turn,
+  crossing round boundaries internally) as the single low-level driver so manual-mode/playback can
+  step incrementally; `resolveFight` is the convenience wrapper. Emit a typed **event log**; the
+  UI renders from events, never from resolver internals. **RNG state lives inside `CombatState`**
+  (threaded state-in-state-out), so the function stays purely `state -> { state, events }`. The
+  engine is **player/enemy-aware** (sides are labeled; win = player side survives).
+- Combat is **6v6** (party size 1–6 supported). **One round = every living creature acts once.**
+  The acting order is a **frozen ordered list of creature IDs**, built **once at round-start** from
+  current effective Speed; ties broken deterministically (**player side → slot → id**). **Never
+  recompute mid-round** — a creature that dies before its turn is skipped (alive-check); Speed
+  changes bank for the *next* round's rebuild. (Future extra-actions = an explicit insert-action
+  effect, never a queue re-sort.) A fight-level **round cap** (config) is a hard backstop — every
+  fight must terminate; reaching it ends the fight as a **draw**.
+- **Phase structure**: the fight loop crosses explicit **phase points** — fight-start / round-start
+  / (per creature) turn / round-end / fight-end — firing the matching **effect-framework hooks** at
+  each. Status tick/expiry, DoT, Regen, etc. are `round-end`/`turn`-scoped hooks, **not** a separate
+  `resolveRound` function. In Phase 1 all hook lists are empty (no-ops), but the seams exist.
+- **Resolution & timing**: strictly **sequential** (no simultaneity, no dying retaliation in v1) —
+  each creature acts fully, damage applies immediately, death is checked immediately. **Win/loss/
+  draw is checked after every action**; the fight ends the instant a side has no living creatures
+  (does not finish the round). **Result is a three-value union** (`win` / `loss` / `draw`); draw
+  resolves like loss for navigation. A creature at 0 HP is **flagged `alive: false`, not removed**
+  (stable slots for tie-break/event references); compaction only at fight end. **Rewards bank per
+  kill-event**, immediately, never held pending fight outcome.
 - **Damage formula** (Attack and Cast both):
-  `damage = (MAX(OffStat − Defence, 0) + 0.01 × OffStat) × Affinity × Modifiers`, where
-  OffStat = Attack or Intelligence. Subtractive core clamped at 0; +1% chip floor (of OffStat);
-  **Affinity is its own multiplicative term** (×1.25 / ×0.75 / ×1.0), kept *separate* from the
-  Modifiers stack so it compounds multiplicatively. **No "Additional" channel, no damage
-  variance, no baseline crits** (crit is a trait-granted Modifier). Fully deterministic.
-- The starting action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union;
-  design it to grow). Spells (Cast) have **no cost, freely castable**; scripts pick the gem slot.
-  - **Defend**: Defence ×1.5 inside the subtractive core **and** ×0.65 in Modifiers, until the
-    creature's next turn.
+  ```
+  raw    = (MAX(OffStat − Defence, 0) + 0.01 × OffStat) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)
+  damage = MAX(1, floor(raw))
+  ```
+  - **OffStat** read via a **remap-aware lookup** (consults `stat-remap` effects; returns effective
+    Attack for Attack / effective Intelligence for Cast when none). `OffStat`/`Defence` are
+    **effective** stats via `getEffectiveStat` (never raw base).
+  - Subtractive core clamped at 0; **+1% chip floor unconditional** (applies even when core = 0).
+  - **Integer damage**: full-precision `raw`, **floored once at the end**, **min 1** (a hit always
+    removes ≥1 HP → no stalemates; round cap is only a pathological backstop). Never round per-term
+    (float drift breaks golden replay).
+  - **Affinity** = standalone ×1.25 / ×0.75 / ×1.0 (data lookup; store ±25% as config), separate
+    from both pools, always multiplicative.
+  - **Two asymmetric mod pools**: attacker's **dealt pool is additive** (`1 + Σ`, empty = 1.0);
+    defender's **taken pool is multiplicative** (`Π`, empty = 1.0). Reductions in the taken pool
+    trend toward but never reach 0 (**no immunity, no clamp needed**); amplifications share it.
+    Rationale: additive offense stays tractable when stacking many sources; multiplicative defense
+    makes tanking a real power path. **Stat buffs are NOT dealt-mods** (they raise effective stats);
+    "+damage%" effects are dealt-mods — never double-count.
+  - **No "Additional" channel, no variance, no baseline crits** (crit = a trait-granted dealt-mod).
+- The starting action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows).
+  Spells (Cast) have **no cost, freely castable**; scripts pick the gem slot; spells carry a
+  **target shape** (single-target or AOE). Phase 1 implements **Attack only**, with a default
+  target of **first living enemy by slot** (deterministic, no RNG).
+  - **Defend**: ×1.5 effective Defence (inside the core) **and** a ×0.65 factor in the defender's
+    taken pool, until its next turn.
   - **Provoke**: marks the creature provoking until its next turn.
-- **Affinity advantage** (Body > Spirit > Mind > Void > Primal > Body) is data-driven; the
-  resolver looks the multiplier up (store ±25% as config constants), it does not branch per pair.
-- **DoT damage** does **not** use the damage formula — it carries its own value from the source
-  and **bypasses Defence**.
-- **Provoke targeting**: offensive actions (Attack/Cast) against the enemy side must target a
-  **random provoking enemy** if any enemy is provoking, else the script's selector. "Random"
-  **must** draw from the seeded combat RNG (never `Math.random()`). Implement provoke as a
-  **target-set override applied after** the script picks an action: it narrows targets, it does
-  not change the chosen action. Ally-targeting actions are exempt. **AOE actions (hit-all-
-  enemies) are also exempt** — provoke only narrows single-target selection, never an AOE's
-  full target set.
+- **DoT damage** does **not** use the damage formula — its own value from the source, **bypasses
+  Defence**.
+- **Provoke targeting**: single-target offensive actions (Attack / single-target Cast) against the
+  enemy side target a **random provoking enemy** (seeded combat RNG, never `Math.random()`) if any
+  enemy provokes, else the script's selector. Implement as a **target-set override applied after**
+  the action is chosen (narrows targets, doesn't change the action). **Ally-targeting and AOE
+  actions are exempt** — AOE always hits its full set.
 - The scripting interpreter evaluates a creature's ordered rules and returns a chosen `Action`.
   **One condition per rule in v1** (no AND/OR); rule **ordering carries the logic** (first valid
-  match wins), so reorder UI and "which rule fired" feedback are load-bearing. Conditions,
-  selectors, and actions are data-defined and interpreted — never hard-coded per creature.
-  Implicit fallback: Attack a default target if valid, else Wait. Rule count per template and
-  template count overall are **unbounded**. The `TARGETING` field is only present/applicable
-  for actions that select among multiple targets (Attack, single-target Cast) — omit it for
-  self-only actions (Defend, Provoke, Wait) and AOE Cast. A `"has status X"` condition matches a
-  literal status ID, not a category.
-- **Scripts are reusable templates** referenced by creatures (many may share one). The
-  interpreter resolves a creature's assigned template each turn.
+  match wins), so reorder UI and "which rule fired" feedback are load-bearing. Data-defined,
+  interpreted — never hard-coded per creature. Implicit fallback: Attack a default target if valid,
+  else Wait. Rule/template counts **unbounded**. `TARGETING` present only for multi-target actions
+  (Attack, single-target Cast); omitted for self-only (Defend/Provoke/Wait) and AOE Cast. A
+  `"has status X"` condition matches a **literal status ID** (a `condition-status`), not a category.
+- **Scripts are reusable templates** referenced by creatures (many may share one).
+- **Event log**: two families. **Intent events** — a discriminated union on action kind, one
+  variant per action, each carrying only its own fields (`AttackDeclared { attackerId, targetId }`;
+  later `SpellCast`/`Defended`/`Provoked`/`Waited`) — **always emitted, including no-consequence
+  actions like Wait** (complete turn-by-turn log). **Consequence events** — separate and shared
+  across all sources (`DamageDealt { sourceId, targetId, rawDamage, finalDamage, affinityMultiplier,
+  wasChipOnly, remainingHp }`, `CreatureDied { creatureId }`; later status/heal). Consequences are
+  never nested in intents (a poison tick and an Attack both reuse `DamageDealt`). Plus lifecycle:
+  `FightStarted`, `RoundStarted { round }`, `FightEnded { result }`. **Flat chronological array**;
+  events reference creatures by **id + key inline values** (e.g. `remainingHp`), not snapshots;
+  **descriptive narration, not event-sourcing** (state is returned alongside, authoritative).
 - Manual mode swaps the *action source* (UI input) for the same resolver. Do not fork the
   combat code path.
 
@@ -78,24 +117,39 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
 data-driven, hook-based effect model.** Do not build them as separate subsystems — they share
 the same interpreter, differing only in how they attach and which hooks they use.
 
-- An effect declares: `kind`, `magnitude`, `duration` (where applicable), `stackingRule`,
-  `hooks[]` (on-apply, start-of-turn, end-of-turn, on-the-creature's-turn, on-damage-taken,
-  on-damage-dealt, on-expiry, …), and `effects[]` (modify stat, deal DoT, force an action like
-  auto-Provoke, apply a sub-status, buff the Modifiers channel, …).
-- New content = a data entry. Genuinely novel behavior = at most one new reusable hook
-  primitive, then reused. Never special-case an individual trait/status in the resolver. The 8
-  v1 stat buff/debuff statuses (Attack/Defence/Intelligence/Speed × buff/debuff) are all **data
-  instances of one generic stat-modifier primitive** (`stat`, `direction`, `magnitude`,
-  `duration`) — never one hardcoded effect kind per stat.
+- An effect declares: `category` (see taxonomy), `magnitude`, `duration` (where applicable),
+  `stackingRule`, `hooks[]` (on-apply, start-of-turn, end-of-turn, on-the-creature's-turn,
+  on-damage-taken, on-damage-dealt, on-expiry, …), and its payload.
+- **Four effect categories**, all on this one framework:
+  1. **`stat-modifier`** — changes a stat's value (`stat`, `direction`, `magnitude`, `duration`;
+     may be permanent). Folds into effective stats. The 8 v1 buffs/debuffs are **named presets** of
+     this one primitive — never one hardcoded kind per stat; custom magnitudes allowed directly.
+  2. **`stat-remap`** — redirects which stat a formula slot reads (e.g. Speed-as-Attack). Reads the
+     **source stat's effective value**; slot stat-modifiers do **not** transfer. Multiple remaps on
+     one slot → **fixed effect order (innate-1 → innate-2 → infusions), last-writer-wins**. The
+     damage formula's OffStat lookup is remap-aware, so no formula change is needed to support it —
+     **build this indirection seam in Phase 1** (returns effective Attack when no remap exists).
+  3. **`damage-modifier`** — folds into the damage formula's pools: attacker's **additive dealt
+     pool** or defender's **multiplicative taken pool**. Distinct from `stat-modifier` (never
+     double-count a "+Attack" buff and a "+damage%" buff).
+  4. **`condition-status`** — tagged conditions (Poison, Stun, …); what scripting's `has-status`
+     scopes to.
+- **Effective stats (invariant)**: base stats are **immutable** (except permanent effects like
+  level-up). Current stat = `getEffectiveStat(creature, stat)`, folding active `stat-modifier`
+  effects over base in a **fixed deterministic order**. **Never write a derived value back.** Expiry
+  = drop the effect from the list. **All combat math reads stats through this accessor** — a
+  passthrough to base in Phase 1 (no effects yet), so the folding slots in later with no rewrite.
+- New content = a data entry. Genuinely novel behavior = at most one new reusable hook primitive,
+  then reused. Never special-case an individual trait/status in the resolver.
 - **Loop safety (engine invariant)**: an effect/trigger **cannot re-enter its own resolution
   chain** (prevents true infinite loops). A named config constant `MAX_TRIGGER_CASCADE_DEPTH`
-  (**default 500**, order of hundreds–1000) caps *chain depth* (not trigger breadth) as a
-  backstop for exotic multi-effect cycles. Breadth is effectively unlimited — many distinct
-  triggers firing once each is fully supported. Truncation is **deterministic**.
+  (**default 500**) caps *chain depth* (not trigger breadth) as a backstop for exotic multi-effect
+  cycles. Breadth is effectively unlimited — many distinct triggers firing once each is fully
+  supported. Truncation is **deterministic**.
 - Statuses: fixed turn duration; stacking refreshes duration **and** stacks intensity to a cap
-  **that each status declares explicitly — there is no shared global default**. **DoT carries
-  its own damage value and bypasses Defence** (not the damage formula). Tempo effects (e.g.
-  Stun) are checked when the affected creature's turn comes up.
+  **that each status declares explicitly — no shared global default**. **DoT carries its own damage
+  value and bypasses Defence** (not the damage formula). Tempo effects (e.g. Stun) are checked when
+  the affected creature's turn comes up.
 
 ## Data-driven content
 
@@ -129,7 +183,8 @@ the same interpreter, differing only in how they attach and which hooks they use
   existing fusions derived from it. Do **not** store computed fusion results.
 - **Stat growth is linear and derived from base stats — there is NO growth-rate field.**
   Level-N stat = `base × (1 + 0.25 × (level − 1))`. Incremental power comes from the
-  **Modifiers channel** (traits/augments/infusions/perks/fusion/facility upgrades), not levels.
+  **build-modifier pools and effective stats** (traits/augments/infusions/perks/fusion/facility
+  upgrades), not levels.
 - **Gems**: `{ spell, level, augments[] }`; level (**bounded, fixed max, raised by Gem Forge
   tiers**) → augment-slot count (**small fixed max, 3–5**; not damage); leveled via
   **Essence**, free/instant to equip. **Artifacts**: parallel shape (level bounded similarly,
@@ -197,12 +252,65 @@ the same interpreter, differing only in how they attach and which hooks they use
 
 ## Testing
 
-- The engine is pure -> unit-test it. Cover: turn order, a few trait interactions, script
-  rule precedence, determinism (same seed -> identical event log), the round-cap safety
-  backstop, and save migrations.
-- Prefer table-driven tests for trait/condition/action primitives.
-- A "golden replay" test (fixed party + scripts + seed -> expected event log) catches
-  accidental nondeterminism and balance drift early.
+**Three tiers** (test the pure engine heavily, the browser lightly):
+- **Unit tests** (Vitest) — small isolated units, no DOM/async/mocks needed because the engine is
+  pure. Cover the *consequence-bearing* branches, not line-count vanity: the damage formula (core
+  fully absorbed → chip-floor-only; affinity advantage / disadvantage / neutral; `MAX(1, floor)`
+  clamp; empty pools = ×1.0), turn-order tie-break (player → slot → id), death-mid-round skipping,
+  the round-cap → draw path, the empty-party guard, and determinism (same seed → identical event
+  log). Prefer **table-driven tests** for the trait/condition/action primitives.
+- **Golden-replay / snapshot tests** (Vitest) — the highest-leverage tier: a fixed
+  `(party, scripts, seed)` run to completion, asserting the **full event log** deep-equal against a
+  **committed fixture**. One golden fight covers turn order + damage + affinity + death + events in
+  a single assertion. **Keep fixtures small** (tiny parties, few rounds) so a diff is human-
+  readable. The suite starts small (1v1, 6v6, affinity matchup, stomp) and **grows every phase** to
+  exercise newly added mechanics.
+- **E2E smoke test** (Playwright) — does the app render and the loop run in a real browser (the
+  Phase 0.5 "counter increments" check). Slower; run it on `main` / pre-deploy, not on the inner
+  loop.
+
+**Discipline:**
+- **A golden-test failure is a question, not a chore.** It means *either* a regression *or* an
+  intended change — decide which *before* regenerating the fixture. Never reflexively "update
+  snapshot"; that turns a regression detector into a rubber stamp.
+- **Characterize the empty seams now.** Pin the current behavior of the "no-op today, real later"
+  seams — `getEffectiveStat` returns base with no effects; the mod pools yield ×1.0 when empty; the
+  remap-aware OffStat lookup returns effective Attack with no remap. When a later phase makes them
+  real, the test states exactly what changed.
+- **Every failing fight is reproducible from its seed** — combat is deterministic, so when a bug
+  appears in play, capture the seed and it becomes a permanent regression fixture.
+- **Every engine change ships with or updates a test.** The golden-replay suite is the canary.
+
+**CI (GitHub Actions):**
+- Run **lint + unit + golden tests on every push *and* every pull request** — catch regressions
+  *before* merge so `main` stays always-green and always-deployable. Tests are fast (pure engine,
+  no browser), so this costs seconds.
+- **Deploy only from `main`, and only if tests pass** — the deploy step is gated on the test step
+  (build/publish guarded to the `main` branch). Tests-on-every-change, deploy-on-main.
+
+## Deployment & environments
+
+- **Static host: GitHub Pages** (no backend; the built `dist/` is all that's served). Project site
+  → served from the repo subpath, so **`base: '/Depths-of-Souls/'` in `vite.config.ts`** is
+  mandatory (without it the bundle 404s → blank page).
+- **Environments are driven by Vite mode**, not by separate code paths. One mode switch
+  (`--mode production` / `--mode development` or a custom mode) flips, together: the `base` path,
+  the **IndexedDB database name**, and any debug/feature flags. Keep all per-environment differences
+  behind this single mechanism.
+- **Prod vs dev topology: PR-preview deployments.** `main` deploys to the production Pages URL;
+  each **pull request** deploys an **ephemeral preview** (its own temporary subpath) that is torn
+  down when the PR closes. No standing dev environment to maintain; "dev" = the change about to
+  merge.
+- **IndexedDB MUST be namespaced by environment** (e.g. `depths-of-souls` (prod) vs `depths-of-souls-dev`), driven by the
+  Vite mode. This is a **hard requirement**, not a nicety: prod and dev share the same origin
+  (same domain, different path), so they share the same IndexedDB unless the DB *name* differs — a
+  dev build with a broken/half-migrated schema could otherwise corrupt a real prod save. Isolation
+  lives in the app (DB name), never in the hosting topology.
+- **No SPA-router URL rewriting on Pages** — deep-link refreshes 404. Not an issue now (single
+  page, no router). If a router is ever added, use **hash routing** (`/#/...`) or a `404.html`
+  fallback.
+- **Saves are per-browser, per-origin** — export-to-file (§ persistence) is the cross-device and
+  eviction backstop, not a sync layer.
 
 ## Project layout
 
@@ -212,7 +320,7 @@ src/
   data/      content as data: creatures, traits, spells, biomes, facilities, config.
   state/     store, save/load, migrations.
   ui/        React components; render state, dispatch intents.
-  app/       wiring, game loop, routing.
+  app/       wiring, game loop, top-level screens (no router in v1; hash routing only if ever needed).
 ```
 
 ## Style

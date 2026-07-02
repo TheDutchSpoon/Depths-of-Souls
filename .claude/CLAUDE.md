@@ -15,15 +15,18 @@ engine. No backend — everything is client-side, statically deployed.
 Key fixed facts: stats are **Health, Attack, Intelligence, Defence, Speed** (base 10–30 per
 creature, fixed; **linear** growth derived from base, no growth field: level-N =
 `base × (1 + 0.25 × (level−1))`). Damage (Attack & Cast):
-`(MAX(OffStat − Defence, 0) + 0.01×OffStat) × Affinity × Modifiers` — subtractive core + 1%
-chip floor; **Affinity is a separate multiplicative term** (×1.25/×0.75/×1.0, stacks
-multiplicatively with Modifiers); no Additional channel, **no variance, no baseline crits**,
-fully deterministic. One round = each living creature acts once in Speed order. Actions:
-**Attack, Cast, Defend, Provoke, Wait** (Defend = Defence×1.5 + ×0.65 dmg taken; Provoke until
+`(MAX(effOff − effDef, 0) + 0.01×effOff) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)`, then
+`MAX(1, floor(...))` — subtractive core + unconditional 1% chip floor, **integer, min-1 damage**;
+**Affinity** standalone ×1.25/×0.75/×1.0; **dealt pool additive**, **taken pool multiplicative**
+(no immunity/clamp); stats read via `getEffectiveStat` (base immutable); no Additional channel,
+**no variance, no baseline crits**, fully deterministic. One round = each living creature acts
+once in Speed order (frozen round-start queue; ties: player→slot→id). Actions:
+**Attack, Cast, Defend, Provoke, Wait** (Defend = Defence×1.5 + ×0.65 in taken pool; Provoke until
 next turn; Cast picks a gem slot, no cost). Affinities (domain of being): **Body, Spirit, Mind,
 Void, Primal**, cycle **Body > Spirit > Mind > Void > Primal > Body**. Incremental power lives
-in the **Modifiers channel**, not levels. **Unified effect framework**: traits, statuses, gem
-augments, artifact infusions are ONE data-driven hook-based model with loop safety
+in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
+statuses, gem augments, artifact infusions are ONE data-driven hook-based model (4 categories:
+stat-modifier, stat-remap, damage-modifier, condition-status) with loop safety
 (self-re-entry prevention + `MAX_TRIGGER_CASCADE_DEPTH`). **Three-tier creatures**: **species**
 (a group of creatures; biomes spawn species; intra-species traits synergize) → **creature** (the
 unit: affinity + base stats + 1 innate trait) → **instance** (owned copy). No "class" concept —
@@ -45,7 +48,7 @@ hub, fast-travel to any floor up to deepest). **Biome changes every 10 floors** 
 boss every 10th floor, non-collectable). **No prestige, no resets**
 — forward-only.
 
-Full design: `.claude/docs/GAME_DESIGN.md`. Read it before designing features.
+Full design: `.claude/GAME_DESIGN.md`. Read it before designing features.
 
 ## Tech stack
 
@@ -84,8 +87,8 @@ src/
 4. **Scripting is serializable data**: the player's rules are JSON-shaped, saved & replayable.
 5. **Versioned saves**: every save has a version; add a migration when the shape changes.
 
-Detailed conventions: `.claude/docs/CONVENTIONS.md`.
-Roadmap & what to build first: `.claude/docs/ROADMAP.md`.
+Detailed conventions: `.claude/CONVENTIONS.md`.
+Roadmap & what to build first: `.claude/ROADMAP.md`.
 
 ## Working agreement
 

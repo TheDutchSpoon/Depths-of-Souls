@@ -86,8 +86,9 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   largest content-authoring task in the project, and why creatures/traits must be data-driven).
 - **Fights & HP**: a floor contains a **variable, depth-scaled number of fights** drawn from its
   biome pool. **Health resets to full between every fight** (including fights within the same
-  floor) — there is no cross-fight attrition. A creature reduced to 0 HP is simply removed from
-  that fight's turn order; death has **no lasting consequence** beyond the current fight (no
+  floor) — there is no cross-fight attrition. A creature reduced to 0 HP is flagged as no longer
+  alive and skipped in the turn order (its slot is retained, not deleted — see CONVENTIONS); death
+  has **no lasting consequence** beyond the current fight (no
   instance loss, no cooldown, no soul/XP penalty) — full HP and full roster availability return
   for the next fight regardless of outcome. Defend/Regen/healing are purely *intra-fight* tools.
 - **Milestone bosses**: every 10th floor (each biome transition) is a tougher **boss** fight —
@@ -195,7 +196,8 @@ Each creature (the unit) has:
   depth (see §4 difficulty model); the formula holds at any level. This keeps the formula's
   output in a sane range for the subtractive damage formula; the incremental power curve comes
   from **multiplicative build sources** (traits, gems/augments, artifacts/infusions, fusion,
-  facility upgrades, spec perks) stacking in the Modifiers channel, not from levels.
+  facility upgrades, spec perks) stacking in the build-modifier pools / effective stats, not from
+  levels.
   - **Catch-up leveling**: at the Fusion Chamber, a creature can be leveled (using **Lifeforce**)
     up to the player's **current highest-level creature** — pure catch-up so fresh
     summons/fusions are viable at depth. The ceiling itself rises only through combat XP.
@@ -291,14 +293,40 @@ use — not in their underlying machinery. This is a hard invariant (see CONVENT
 model underpins all of them, so new content is data and genuinely novel behavior is at most one
 reusable hook primitive.
 
-An effect declares: a **kind**, a **magnitude**, a **duration** (where applicable), a
-**stacking rule**, one or more **hooks** (when it acts — on-apply, start-of-turn, end-of-turn,
-on-the-creature's-turn, on-damage-taken, on-damage-dealt, on-expiry, …), and its **effects**
-(modify a stat, deal DoT, force an action like auto-Provoke, apply a sub-status, buff the
-Modifiers channel, etc.).
+An effect declares: a **kind/category** (see taxonomy below), a **magnitude**, a **duration**
+(where applicable), a **stacking rule**, one or more **hooks** (when it acts — on-apply,
+start-of-turn, end-of-turn, on-the-creature's-turn, on-damage-taken, on-damage-dealt, on-expiry,
+…), and its payload.
+
+**Effect categories (taxonomy)** — four kinds, all riding this one framework:
+1. **`stat-modifier`** — changes a stat's *value* (`stat`, `direction`, `magnitude`, `duration`;
+   duration may be permanent). Folds into **effective stats** (below). The 8 v1 stat buffs/debuffs
+   (Attack/Defence/Intelligence/Speed × up/down) are just **named presets** of this one primitive —
+   no per-stat special-casing — and spells/effects may apply custom magnitudes directly, not only
+   the presets.
+2. **`stat-remap`** — redirects *which stat a formula slot reads* (e.g. "use Speed as Attack for
+   the Attack action"). Reads the **source stat's effective value**; Attack-slot stat-modifiers do
+   **not** transfer to the substituted stat (a Speed-attacker wants +Speed, not +Attack — a legible
+   consequence). Multiple remaps on one slot resolve by **fixed effect order (innate-1 → innate-2 →
+   artifact infusions), last-writer-wins**. The damage formula reads its OffStat through a
+   remap-aware lookup so this needs no formula changes.
+3. **`damage-modifier`** — folds into the damage formula's mod pools: the attacker's **additive
+   dealt pool** (`1 + Σ`) or the defender's **multiplicative taken pool** (`Π`). "+X% damage
+   dealt", Defend's ×0.65, a "+50% damage taken" debuff, trait-granted crits all live here.
+   Distinct from `stat-modifier` — a "+Attack" buff and a "+damage dealt" buff are different
+   categories and never double-count.
+4. **`condition-status`** — tagged conditions like Poison (DoT) and Stun (skip turn). This is what
+   scripting's `has-status` condition scopes to (not stat buffs).
+
+**Effective stats (engine invariant):** base stats are **immutable** (except by permanent effects
+like level-up). A creature's current stat is **computed on demand** — `getEffectiveStat(creature,
+stat)` folds all active `stat-modifier` effects over the base in a fixed deterministic order.
+Never write a derived value back to the creature. Expiry = removing the effect from the list; the
+next `getEffectiveStat` reflects it automatically (no reverse-bookkeeping, no order ambiguity).
+All combat math reads stats through this accessor (a passthrough to base until effects exist).
 
 **Loop safety** (engine invariant, applies to the whole framework): an effect/trigger **cannot
-re-enter its own resolution chain** (kills true infinite loops), and a high, generous,
+re-enter its own resolution chain** (kills true infinite loops), and a
 **named cascade-depth cap** (`MAX_TRIGGER_CASCADE_DEPTH` **= 500**, counting *chain depth* not
 trigger breadth) backstops exotic multi-effect cycles. Breadth is effectively unlimited — "lots
 and lots of triggers firing once each" is a fully supported build path; only unbroken
@@ -309,7 +337,7 @@ self-perpetuating chains are truncated. Truncation is deterministic.
   **triggered** (fire on a hook event, e.g. "when attacked, retaliate"). **Behavioral** traits
   (changing scripting options / granting extra actions) are **deferred past v1**.
 - A base creature has **1 innate trait**; a fused creature has **2** (both parents'). Each
-  **species has a fixed innate trait** defined in its data (capturing a species = knowing its
+  **creature has a fixed innate trait** defined in its data (collecting a creature = knowing its
   trait). Artifacts can add further trait(s) via infusion.
 - Traits are **data, not code branches**, interpreted via the effect framework above.
 
@@ -365,10 +393,11 @@ self-perpetuating chains are truncated. Truncation is deterministic.
     castable. Scripts pick *which* equipped gem/slot to cast. A spell's **target shape**
     (single-target or AOE/all-enemies) is a property of the spell itself, not the rule — v1
     supports both shapes.
-  - **Defend** — until the creature's next turn: takes **35% less damage** (a ×0.65 multiplier
-    in the Modifiers stack) **and** has **+50% Defence** (a ×1.5 multiplier on its current
-    Defence stat). Both apply together; strongest on already-tanky creatures (the +50% Defence
-    scales with base Defence) while the flat 35% helps squishier creatures too.
+  - **Defend** — until the creature's next turn: takes **35% less damage** (a ×0.65 factor in
+    the defender's multiplicative **taken pool**) **and** has **+50% Defence** (a ×1.5 on its
+    effective Defence, inside the subtractive core). Both apply together; strongest on already-
+    tanky creatures (the +50% Defence scales with base Defence) while the flat 35% helps squishier
+    creatures too.
   - **Provoke** — mark this creature as *provoking* (taunt) **until its next turn**; see
     targeting rule below. Re-provoking each turn is a recurring tactical cost (the creature
     isn't attacking), making dedicated tanking a real choice.
@@ -391,54 +420,80 @@ self-perpetuating chains are truncated. Truncation is deterministic.
     ignores provoke entirely and still hits its full target set — narrowing an AOE down to just
     the taunting creature would defeat the point of choosing an AOE spell.
 - **Affinity advantage** is a cycle: **Body > Spirit > Mind > Void > Primal > Body** (each
-  beats the next; loops back). It is its **own multiplicative term** in the damage formula
-  (not pooled with other Modifiers), defined once per hit: if the attacker's affinity beats
-  the defender's, **×1.25**; if the defender's beats the attacker's, **×0.75**; otherwise
-  **×1.0**. Because it's separate, it stacks *multiplicatively* with Modifiers (a +50% buff and
-  affinity advantage = ×1.5 × 1.25, not ×1.75), so affinity matchups stay relevant no matter
-  how buffed a creature is. Encode the cycle and multipliers as data, not branches.
+  beats the next; loops back). It is its **own standalone multiplicative term** in the damage
+  formula (separate from both the additive dealt pool and the multiplicative taken pool), defined
+  once per hit: attacker's affinity beats defender's → **×1.25**; defender's beats attacker's →
+  **×0.75**; otherwise **×1.0**. Being separate and always-multiplicative keeps affinity matchups
+  relevant no matter how much a build stacks in the mod pools. Encode the cycle and multipliers as
+  data, not branches.
 
 ### Damage formula
 All direct damage (Attack and Cast) uses one formula:
 
 ```
-damage = ( MAX(OffStat − Defence, 0) + 0.01 × OffStat ) × Affinity × Modifiers
+raw    = ( MAX(OffStat − Defence, 0) + 0.01 × OffStat ) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)
+damage = MAX(1, floor(raw))
 ```
 
-- **OffStat** = the attacker's **Attack** (for Attack) or **Intelligence** (for Cast). Both
-  are checked against the target's single **Defence** stat (no separate magic resist in v1).
-- **Subtractive core**, `MAX(OffStat − Defence, 0)`, clamped at 0 — Defence is build-defining
-  and can fully cancel the core.
-- **+1% chip floor**, `0.01 × OffStat` (1% of the attacker's offensive stat), so a hit never
-  does literally nothing even against a fully-tanked target.
-- **Affinity** = the separate ×1.25 / ×0.75 / ×1.0 term above.
-- **Modifiers** = the multiplicative stack of all other effects (buffs, debuffs, Defend's
-  ×0.65, trait/augment/perk multipliers, trait-granted crits). This is **where the incremental
-  "numbers go up" power lives** — base stats grow linearly with level (see §5), but *build*
-  power compounds here.
-- There is **no flat post-mitigation additive ("Additional") channel** in v1 (can be added
-  later if a trait needs true damage).
-- Damage is **fully deterministic** — no damage variance/rolls. Same inputs → same number.
-- **No baseline critical hits**; "crit" is a concept a trait may grant, multiplying into the
-  Modifiers stack.
-- **Defend interaction**: a defending target applies Defence ×1.5 inside the subtractive core
-  and ×0.65 in Modifiers (so even the chip floor is reduced).
-- **DoT damage** does **not** use this formula — DoTs carry their own value from their source
-  and bypass Defence (see status framework, §6 / CONVENTIONS).
-- **Encounters** are **cave floors**: descending to a floor pits your party against that
-  floor's creatures (drawn from the floor's biome). Clearing a floor lets you descend to the
-  next. Rewards (XP, drops) scale with depth. **Every reward is banked per kill-event, the
-  instant an enemy dies** — soul%, XP, and currency drops are never held pending the fight's
-  outcome, so a party wipe after some enemies are already dead keeps everything earned so far
-  (consistent with "no loss of progress"; only the fight itself ends early).
-- **On a party wipe** there is **no run reset and no loss of progress** — depth is persistent.
-  A wipe sends the party back to the **entrance hub**; from there the player can **select which
-  floor to travel to** (any floor up to their deepest-reached — fast-travel, no re-walking),
-  so a wipe just means returning to the hub to strengthen and then jumping back to where they
-  left off. Wiping never rolls back collected creatures, XP, or facilities.
-- Combat must be **deterministic** given (party snapshot, scripts, RNG seed). This makes
-  bugs reproducible, enables fast-forward/replay, and lets us test scripts. See
-  `CONVENTIONS.md` for the determinism rules.
+- **OffStat** = the attacker's **Attack** (for Attack) or **Intelligence** (for Cast) — read via
+  a **resolvable lookup** (`getAttackStat`-style) that consults any active **stat-remap** effect
+  first, so a trait like "use Speed as Attack" slots in without a formula rewrite (see §6). In
+  Phase 1 there are no remaps, so it returns effective Attack. Both offensive stats are checked
+  against the target's single **Defence** (no separate magic resist in v1).
+- **Effective stats**: `OffStat` and `Defence` are **effective** values (base folded with active
+  stat-modifiers via `getEffectiveStat`), never raw base — see §6 and CONVENTIONS. Base stats are
+  never mutated; effective values are computed on demand.
+- **Subtractive core**, `MAX(OffStat − Defence, 0)`, clamped at 0 — Defence can fully cancel it.
+- **+1% chip floor**, `0.01 × OffStat`, added **unconditionally** (even when the core is fully
+  absorbed), so affinity/mods still have something to act on against a wall.
+- **Rounding**: HP and damage are **integers**; `raw` is computed in full precision, then
+  **floored once at the end**, with a hard **minimum of 1** — every hit removes at least 1 HP
+  (no stalemates; the round cap is thus only a pathological backstop). Floor once, not per-term
+  (per-term rounding compounds error and risks cross-platform float drift → breaks golden replay).
+- **Affinity** = the standalone ×1.25 / ×0.75 / ×1.0 term (see cycle above). **Always
+  multiplicative**, separate from both mod pools, so affinity matchups stay relevant no matter how
+  much a build stacks.
+- **Two damage-modifier pools, deliberately asymmetric** (this is where build power compounds;
+  base stats grow linearly, §5):
+  - **Dealt pool (attacker's damage-*dealt* modifiers): additive** — `1 + Σ dealtMods` (empty =
+    1.0). Many "+X% damage" sources **sum**, keeping offensive scaling tractable and avoiding
+    super-exponential blowup when stacking lots of trait/augment/perk modifiers.
+  - **Taken pool (defender's damage-*taken* modifiers): multiplicative** — `Π(takenFactors)`
+    (empty = 1.0). Each reduction (Defend's ×0.65, a "-20% taken" source = ×0.8) or amplification
+    (a "Vulnerable: +50% taken" debuff = ×1.5) is its **own factor, producted together**.
+    Reductions trend toward but **never reach 0** → defensive builds are powerful and never grant
+    true immunity; **no clamp needed** (multiplication can't cross 0). Amplifications share the
+    same pool.
+  - Rationale for the asymmetry: additive on offense prevents number-explosion when stacking many
+    sources; multiplicative on defense makes each defensive layer compound so tanking is a real
+    power path, with no immunity and no clamp. Different goals, different math, on purpose.
+- **Stat changes never touch the damage pools**: a "+50% Attack" buff raises effective Attack
+  (folded into `OffStat`); it is *not* a dealt-mod. Conversely, a "+30% damage dealt" effect is a
+  dealt-mod and does not touch the Attack stat. This split prevents double-counting. (A future
+  status *could* deliberately be a damage-modifier — that's a distinct effect category, §6.)
+- **Defend** contributes its ×0.65 to the defender's **taken pool** and its ×1.5 to the
+  defender's effective Defence (inside the core), both until the creature's next turn.
+- **No "Additional" (flat true-damage) channel** in v1. **No damage variance/rolls** — fully
+  deterministic. **No baseline crits** — "crit" is a trait-granted dealt-mod.
+- **DoT damage** does **not** use this formula — DoTs carry their own value from their source and
+  bypass Defence (see status framework, §6 / CONVENTIONS).
+
+### Encounters, rewards & wipes
+- **Encounters** are **cave floors**: descending pits your party against that floor's creatures
+  (drawn from the floor's biome, at the floor's enemy-level range; see §4). Clearing a floor lets
+  you descend. Rewards (XP, drops) scale with depth.
+- **Rewards bank per kill-event, the instant an enemy dies** — soul%, XP, and currency are never
+  held pending the fight's outcome, so a wipe after some enemies died keeps everything earned so
+  far. Win/loss/draw is checked **after every action**; the fight ends the instant one side has no
+  living creatures (it does not finish the round).
+- **Fight result is a three-value union** — `win` / `loss` / `draw`. A round-cap timeout is a
+  `draw`. For navigation, **draw resolves like loss** (return to hub, no floor cleared), but
+  already-banked per-kill rewards stay banked.
+- **On a wipe** (loss or draw) there is **no run reset and no loss of progress** — depth is
+  persistent. The party returns to the **entrance hub**; from there the player can **fast-travel**
+  to any floor up to their deepest-reached. Wiping never rolls back creatures, XP, or facilities.
+- Combat must be **deterministic** given (party snapshot, scripts, RNG seed) — enables
+  reproducible bugs, replay/fast-forward, and testable scripts. See CONVENTIONS.
 
 ### Manual mode (secondary)
 An optional toggle lets the player take manual control of one fight: same engine, but
@@ -504,8 +559,8 @@ hard-coded classes.
 Starting specializations (each defines a **starter creature** matching its playstyle — the
 player's single cold-start creature, see §5):
 - **Sorcerer** — gems/Cast focus; perks center on gem slots, augment capacity, Cast-damage
-  Modifiers. (Resolves the Sorcerer↔gem interaction.) Spell-leaning starter.
-- **Brute** — Attack focus; perks center on Attack-action Modifiers and physical builds.
+  modifiers. (Resolves the Sorcerer↔gem interaction.) Spell-leaning starter.
+- **Brute** — Attack focus; perks center on Attack-action damage modifiers and physical builds.
   Attack-leaning starter.
 - **Shieldbarer** — Defence/tank focus; perks center on Defend/Defence/survivability and
   Provoke-tanking. Defence-leaning starter.
@@ -544,9 +599,9 @@ Model specializations as **data** so future specs can be added and existing ones
   (+25% of base per level). The XP/level ceiling rises only through combat.
 - **Catch-up leveling**: at the Fusion Chamber, fresh summons/fusions can be leveled (via
   **Lifeforce**) up to the player's current highest-level creature — never beyond it.
-- **Build power (the incremental curve)**: the "numbers go up" fantasy lives in **multiplicative
-  build sources** stacking in the Modifiers channel — traits, gem augments, artifact infusions,
-  fusion, facility-upgrade efficiencies, and spec perks — *not* in raw levels.
+- **Build power (the incremental curve)**: the "numbers go up" fantasy lives in **build sources**
+  stacking in the build-modifier pools and effective stats — traits, gem augments, artifact
+  infusions, fusion, facility-upgrade efficiencies, and spec perks — *not* in raw levels.
 - **Currencies** (combat-dropped unless noted): **Essence** (gems), **Ore** (artifacts),
   **Bricks** (facilities, rarer), **Lifeforce** (leveling + fusion), and **perk points**
   (specs; non-dropped, first-boss-kills only). All currencies are **unbounded** — no storage
