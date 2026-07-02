@@ -9,7 +9,10 @@ handles all commits/pushes — see working agreement).
   builds (what `vite build` uses by default), `'/'` otherwise (local `vite dev`). Matches
   CONVENTIONS' "environments are driven by Vite mode" rule and avoids the classic Pages
   gotcha (project sites serve from a subpath; omitting `base` 404s the JS bundle).
-- **`.github/workflows/deploy.yml`**: one workflow, three jobs.
+- **`.github/workflows/deploy.yml`**: one workflow, three jobs. Each job uses
+  `actions/setup-node` pinned to **Node 24** (matches the local dev toolchain — Node
+  v24.14.1 — so "passes locally, fails in CI" from a Node-version mismatch isn't a risk
+  here).
   - `test` — `npm ci` → `lint` → `format:check` → `test`. Runs on every push *and* every
     pull request (not just `main`), per CONVENTIONS' CI rule ("catch regressions before
     merge").
@@ -20,6 +23,11 @@ handles all commits/pushes — see working agreement).
     itself serializes concurrent deployments — no separate locking needed for that).
   - Workflow-level `concurrency` (keyed on workflow+ref, `cancel-in-progress: true`) cancels
     superseded runs of the *same* branch/PR without affecting unrelated branches.
+- **`package.json` was not touched.** `lint`, `format:check`, `test`, and `build` are all
+  pre-existing Phase 0 scripts (`format:check` → `prettier --check .`, the non-writing
+  variant — the writing one, `format` → `prettier --write .`, is deliberately not what CI
+  runs, since `--write` would make a CI check "pass" by silently reformatting instead of
+  failing on unformatted code). The workflow doesn't invent or rename anything.
 
 ## Prerequisites confirmed before writing any of this
 

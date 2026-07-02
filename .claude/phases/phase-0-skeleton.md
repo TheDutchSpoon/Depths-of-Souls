@@ -58,9 +58,10 @@ own nested `vite-node`/`@vitest/mocker` dependencies — onto the same major ver
 npm install     # install dependencies
 npm run dev     # dev server
 npm run build   # typecheck + production build
-npm run test    # vitest run (once)
-npm run lint    # eslint .
-npm run format  # prettier --write .
+npm run test          # vitest run (once)
+npm run lint          # eslint .
+npm run format        # prettier --write .
+npm run format:check  # prettier --check . (non-writing; this is the one CI uses)
 ```
 
 ## Next
