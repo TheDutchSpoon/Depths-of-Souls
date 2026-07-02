@@ -8,8 +8,8 @@ import type { CombatEvent, Creature, FightResult } from '../engine/types'
 // real combat UI (sprites, health bars, animation) -- that is Phase 7 scope.
 
 interface CombatDemoProps {
-  playerParty: Creature[]
-  enemyParty: Creature[]
+  playerParty: readonly Creature[]
+  enemyParty: readonly Creature[]
   seed: number
 }
 
