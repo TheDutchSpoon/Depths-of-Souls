@@ -46,8 +46,12 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
   fight must terminate; reaching it ends the fight as a **draw**.
 - **Phase structure**: the fight loop crosses explicit **phase points** — fight-start / round-start
   / (per creature) turn / round-end / fight-end — firing the matching **effect-framework hooks** at
-  each. Status tick/expiry, DoT, Regen, etc. are `round-end`/`turn`-scoped hooks, **not** a separate
-  `resolveRound` function. In Phase 1 all hook lists are empty (no-ops), but the seams exist.
+  each **and** emitting the matching lifecycle event (`FightStarted`, `RoundStarted`, `TurnStarted`/
+  `TurnEnded`, `FightEnded`; there is no separate round-end event — end-of-round hooks fire but
+  round boundaries are implied by the next `RoundStarted`/`FightEnded`). Status tick/expiry, DoT,
+  Regen, etc. are `round-end`/`turn`-scoped hooks, **not** a separate `resolveRound` function. In
+  Phase 1 all hook lists are empty (no-ops) and no round-cap draw has happened yet, but the seams
+  and events exist from the start.
 - **Resolution & timing**: strictly **sequential** (no simultaneity, no dying retaliation in v1) —
   each creature acts fully, damage applies immediately, death is checked immediately. **Win/loss/
   draw is checked after every action**; the fight ends the instant a side has no living creatures
@@ -105,9 +109,13 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
   across all sources (`DamageDealt { sourceId, targetId, rawDamage, finalDamage, affinityMultiplier,
   wasChipOnly, remainingHp }`, `CreatureDied { creatureId }`; later status/heal). Consequences are
   never nested in intents (a poison tick and an Attack both reuse `DamageDealt`). Plus lifecycle:
-  `FightStarted`, `RoundStarted { round }`, `FightEnded { result }`. **Flat chronological array**;
-  events reference creatures by **id + key inline values** (e.g. `remainingHp`), not snapshots;
-  **descriptive narration, not event-sourcing** (state is returned alongside, authoritative).
+  `FightStarted`, `RoundStarted { round }`, `TurnStarted { creatureId }`, `TurnEnded { creatureId }`,
+  `FightEnded { result }`. **`TurnStarted`/`TurnEnded` are real log events, not just internal hook
+  checkpoints** — they give playback (§ROADMAP Phase 7) an explicit, unambiguous turn boundary to
+  key off, rather than inferring one from the next intent event (which breaks down for Wait or any
+  no-op turn). **Flat chronological array**; events reference creatures by **id + key inline
+  values** (e.g. `remainingHp`), not snapshots; **descriptive narration, not event-sourcing** (state
+  is returned alongside, authoritative).
 - Manual mode swaps the *action source* (UI input) for the same resolver. Do not fork the
   combat code path.
 
