@@ -1,6 +1,6 @@
 # Phase 1.5 (interlude) — Tooling + engine demo harness
 
-Status: planned (not yet built)
+Status: shipped
 
 Task brief for the coding agent. **Not a design phase** — this is infrastructure + a throwaway
 dev harness, done between Phase 1 (combat engine, merged) and Phase 2 (scripting interpreter).
