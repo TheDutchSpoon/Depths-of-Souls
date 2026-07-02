@@ -38,7 +38,7 @@ jobs:
       # is uploaded. GitHub's own docs list this as a required step for custom workflows;
       # omitting it is a documented cause of a deployment sitting stuck/queued instead of
       # failing fast.
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/setup-node@v4
         with:
           node-version: 24
