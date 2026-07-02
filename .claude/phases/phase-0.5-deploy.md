@@ -1,7 +1,7 @@
 # Phase 0.5 — Deploy checkpoint
 
-Status: **workflow pushed; first two live deploy attempts failed (root cause identified and
-fixed); retry pending.**
+Status: **done — live at `https://thedutchspoon.github.io/Depths-of-Souls/`, confirmed by
+the user.**
 
 ## What was built
 
@@ -123,6 +123,25 @@ real configured Pages path, which could replace the hardcoded `/Depths-of-Souls/
 PR-preview deploys are ever built, since previews need a different subpath per PR. Not done
 now; out of scope for just fixing the stuck deploy.)
 
+## Resolution
+
+While the fourth attempt was still stalled, a **live GitHub Pages platform incident**
+turned up on `githubstatus.com` (title: "Incident with Pages," status `investigating`,
+impact `minor`, started **16:54:10 UTC** — well after the first two attempts, but squarely
+inside the fourth attempt's stall window). This was very likely the actual proximate cause
+of at least the third and fourth stalls: no workflow-level fix can route around a platform
+incident. Earlier in this incident I stated the status page showed "fully operational, no
+incidents" — that was accurate *at the time I checked* (~16:37), but I didn't re-check it
+on every subsequent failure and kept chasing workflow-level causes instead; the incident
+started later and I only found it after being pushed to look again.
+
+Once GitHub's incident cleared, a retry — with both Fix #1 (deploy job concurrency) and
+Fix #2 (`actions/configure-pages`) already in place — succeeded. **Confirmed directly by
+the user**; not independently re-verified via the API in this session. Both fixes stay in
+the workflow going forward: they're correct per GitHub's own documented pattern regardless
+of the fact that the platform incident, not these bugs, was the actual blocker on this
+particular day.
+
 ## What's NOT done yet (deliberately deferred)
 
 - **PR-preview deploys** (CONVENTIONS' "each pull request deploys an ephemeral preview").
@@ -135,18 +154,7 @@ now; out of scope for just fixing the stuck deploy.)
 - **IndexedDB per-environment namespacing** — the naming convention is already decided in
   CONVENTIONS (`depths-of-souls` prod / `depths-of-souls-dev`), but no code exists to apply
   it to, since no IndexedDB/save code exists until Phase 5. Nothing to build yet.
-- **The actual first live deployment.** Everything above is verified as far as it can be
-  without pushing. The real acceptance test — "the tick counter renders and increments at
-  the Pages URL" — only happens once this is pushed and the workflow runs for real on
-  GitHub's infrastructure.
 
-## Next, once pushed
+## Next
 
-1. Push the concurrency fix, then retry (a new push, or "Re-run all jobs" on the failed
-   run — either triggers a fresh `deploy` attempt).
-2. Watch the Actions run (three jobs: test → build → deploy). It should no longer sit
-   queued for anywhere near 10 minutes; if it does, that points at something Pages-backend
-   side rather than this workflow.
-3. Visit `https://thedutchspoon.github.io/Depths-of-Souls/` and confirm the tick counter
-   renders and increments — the literal Phase 0.5 acceptance test.
-4. Then: Phase 1, the pure combat resolver. See `ROADMAP.md`.
+Phase 1 — the pure combat resolver. See `ROADMAP.md`.

@@ -55,8 +55,10 @@ path, CI build, Pages serving, asset loading) is proven end-to-end.
 - Resolver API: `createCombat` factory (guards empty parties) + `resolveTurn` stepper +
   `resolveFight` wrapper. Attack default target = **first living enemy by slot**.
 - **Event log**: intent events (per-action union, always emitted) + shared consequence events
-  (`DamageDealt` w/ full breakdown, `CreatureDied`) + lifecycle; flat array; narration not
-  event-sourcing.
+  (`DamageDealt` w/ full breakdown, `CreatureDied`) + lifecycle (`FightStarted`, `RoundStarted`,
+  **`TurnStarted`/`TurnEnded`**, `FightEnded` — turn boundaries are real events, not just internal
+  hook checkpoints, so playback has an explicit boundary even for no-op turns); flat array;
+  narration not event-sourcing.
 - **Golden-replay suite**: a small set of fixed fights (1v1, 6v6, affinity matchup, stomp),
   full-event-log deep-equal vs committed fixtures; grows each later phase. **Get it green before
   Phase 2 — it's the proof the architecture holds.**
