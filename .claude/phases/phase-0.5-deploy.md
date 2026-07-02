@@ -1,7 +1,7 @@
 # Phase 0.5 — Deploy checkpoint
 
-Status: **code + local verification done; first live Actions run pending a push** (the user
-handles all commits/pushes — see working agreement).
+Status: **workflow pushed; first two live deploy attempts failed (root cause identified and
+fixed); retry pending.**
 
 ## What was built
 
@@ -57,6 +57,42 @@ handles all commits/pushes — see working agreement).
   was reviewed manually against GitHub's own documented Pages-via-Actions pattern rather
   than tool-verified.
 
+## Incident: first two deploys stuck at `deployment_queued`, then failed
+
+After pushing, the first live run's `deploy` job never got past `deployment_queued` and
+the workflow run's own conclusion ended up **cancelled**. A second push produced a second
+run where `test` and `build` both succeeded, but `deploy` sat in the Pages backend's queued
+state for **exactly 10 minutes** before `actions/deploy-pages` hit its own internal timeout
+and failed the job. Confirmed via the (unauthenticated, public) GitHub REST API — no
+guessing from Actions-UI text alone:
+
+- `GET /repos/.../actions/runs` — run 1: `cancelled`; run 2: `test`/`build` success,
+  `deploy` `failure`.
+- `GET /repos/.../deployments/{id}/statuses` — both Pages deployments show
+  `waiting → queued → in_progress → error|failure`, i.e. they were genuinely accepted and
+  marked in-progress, but the Pages backend never actually finished processing either one.
+
+**Root cause (one confirmed, one contributing/likely):**
+- **Confirmed bug in the workflow I wrote**: the `deploy` job's concurrency was governed by
+  the *workflow-level* `concurrency: { group: ${{ github.workflow }}-${{ github.ref }},
+  cancel-in-progress: true }`. GitHub's own official Pages-deploy template deliberately
+  avoids this — cancelling a run that has an **in-flight Pages deployment** can leave the
+  `github-pages` environment's internal deployment lock in a bad state, which is a plausible
+  explanation for why the *second* attempt got stuck queued behind the *first* one's abrupt
+  cancellation.
+- **Likely contributing factor**: this was the repo's first-ever Pages deployment (Pages had
+  only just been switched on). A stuck/slow first deployment while GitHub finishes
+  provisioning the Pages environment is a commonly reported one-time hiccup, independent of
+  anything in this workflow.
+
+**Fix applied**: gave the `deploy` job its own job-level concurrency override —
+`group: pages`, `cancel-in-progress: false` — so it can never be killed mid-flight; a
+newer push's deploy will queue behind an older one instead of cancelling it. The
+workflow-level group (cancel-in-progress: true) still applies to `test`/`build`, so CI
+still cancels stale runs for those — only the actual Pages deploy step is protected.
+Re-validated as syntactically valid YAML and correctly Prettier-formatted after the change;
+a live retry is what will actually confirm the fix.
+
 ## What's NOT done yet (deliberately deferred)
 
 - **PR-preview deploys** (CONVENTIONS' "each pull request deploys an ephemeral preview").
@@ -76,7 +112,11 @@ handles all commits/pushes — see working agreement).
 
 ## Next, once pushed
 
-1. Watch the Actions run (three jobs: test → build → deploy).
-2. Visit `https://thedutchspoon.github.io/Depths-of-Souls/` and confirm the tick counter
+1. Push the concurrency fix, then retry (a new push, or "Re-run all jobs" on the failed
+   run — either triggers a fresh `deploy` attempt).
+2. Watch the Actions run (three jobs: test → build → deploy). It should no longer sit
+   queued for anywhere near 10 minutes; if it does, that points at something Pages-backend
+   side rather than this workflow.
+3. Visit `https://thedutchspoon.github.io/Depths-of-Souls/` and confirm the tick counter
    renders and increments — the literal Phase 0.5 acceptance test.
-3. Then: Phase 1, the pure combat resolver. See `ROADMAP.md`.
+4. Then: Phase 1, the pure combat resolver. See `ROADMAP.md`.

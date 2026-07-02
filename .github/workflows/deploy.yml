@@ -48,6 +48,12 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
+    # Overrides the workflow-level concurrency group above: a Pages deployment must never
+    # be cancelled mid-flight (it can leave the environment stuck queued for the next
+    # attempt) — it should queue behind a prior deploy, not kill it.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
