@@ -1,0 +1,29 @@
+version: 2
+updates:
+  # Project dependencies (package.json / package-lock.json).
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    groups:
+      npm-minor-patch:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+    # Major bumps are excluded from the group above, so each opens its own individual PR.
+
+  # Action versions pinned in .github/workflows/*.yml -- a real supply-chain surface,
+  # not just dev tooling, so it gets the same treatment as npm.
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    groups:
+      actions-minor-patch:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
