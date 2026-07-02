@@ -63,6 +63,15 @@ path, CI build, Pages serving, asset loading) is proven end-to-end.
   full-event-log deep-equal vs committed fixtures; grows each later phase. **Get it green before
   Phase 2 — it's the proof the architecture holds.**
 
+## Phase 1.5 — Tooling + engine demo harness (interlude)
+Two independent, non-blocking deliverables, done now while the engine is fresh and the tree is
+small: **Dependabot** (npm + github-actions ecosystems, weekly, grouped minor/patch, separate
+major, no auto-merge) and a **throwaway engine demo harness** replacing the Phase 0 tick counter
+on the live Pages site — a button that runs `createCombat`/`resolveFight` on a hardcoded fight
+and renders the real event log, proving deployed engine code actually works. Explicitly guarded
+against scope creep into Phase 7's real combat UI, and against leaking any React/DOM dependency
+into `src/engine/`. Full brief: `.claude/briefs/phase-1.5-tooling-and-demo.md`.
+
 ## Phase 2 — Actions, spells & scripting interpreter
 - Flesh out the action set: **Attack, Cast, Defend, Provoke, Wait**. Spells (Cast) are data
   with **no cost and freely castable**, and carry a **target shape** (single-target or
