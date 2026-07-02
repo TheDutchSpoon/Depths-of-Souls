@@ -34,13 +34,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Registers/initializes the deployment with the Pages backend before the artifact
+      # is uploaded. GitHub's own docs list this as a required step for custom workflows;
+      # omitting it is a documented cause of a deployment sitting stuck/queued instead of
+      # failing fast.
+      - uses: actions/configure-pages@v5
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 

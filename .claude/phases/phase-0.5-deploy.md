@@ -57,7 +57,7 @@ fixed); retry pending.**
   was reviewed manually against GitHub's own documented Pages-via-Actions pattern rather
   than tool-verified.
 
-## Incident: first two deploys stuck at `deployment_queued`, then failed
+## Incident: four consecutive deploys stuck at `deployment_queued`, then failed
 
 After pushing, the first live run's `deploy` job never got past `deployment_queued` and
 the workflow run's own conclusion ended up **cancelled**. A second push produced a second
@@ -85,13 +85,43 @@ guessing from Actions-UI text alone:
   provisioning the Pages environment is a commonly reported one-time hiccup, independent of
   anything in this workflow.
 
-**Fix applied**: gave the `deploy` job its own job-level concurrency override —
+**Fix #1 applied**: gave the `deploy` job its own job-level concurrency override —
 `group: pages`, `cancel-in-progress: false` — so it can never be killed mid-flight; a
 newer push's deploy will queue behind an older one instead of cancelling it. The
 workflow-level group (cancel-in-progress: true) still applies to `test`/`build`, so CI
 still cancels stale runs for those — only the actual Pages deploy step is protected.
-Re-validated as syntactically valid YAML and correctly Prettier-formatted after the change;
-a live retry is what will actually confirm the fix.
+
+**This did not fix it.** A retry after Fix #1 stalled and failed identically (10 minutes,
+same status sequence). The user then reset the Pages environment via Settings → Pages
+(switched Source away from "GitHub Actions" and back), then re-ran — a fourth attempt,
+which *also* stalled with the identical signature. Four consecutive identical failures
+survived both a workflow fix and a full source-side reset, which pointed at something
+structurally missing from the workflow itself rather than transient backend state.
+
+**Fix #2 — the actual root cause, found in GitHub's own docs**
+(`using-custom-workflows-with-github-pages`): the documented reference workflow for a
+custom (non-`actions/starter-workflows`) Pages deploy includes an **`actions/configure-pages`**
+step in the build job, run *before* the build and artifact upload. This workflow never had
+it. GitHub's docs explicitly call out a closely-related failure mode for a different
+missing piece ("Not setting `needs` may result in an independent deployment that
+continuously searches for an artifact that hasn't been created") — i.e. the exact
+"accepted, marked in-progress, then wedged forever" shape seen here, just from a different
+missing prerequisite (`needs` was already set correctly in this workflow; `configure-pages`
+was not present at all). Without it, the deployment is never properly registered/
+initialized against the Pages backend before the artifact shows up, which is a plausible
+explanation for every attempt being accepted (`waiting → queued → in_progress`) but never
+actually processed.
+
+Added `actions/configure-pages@v5` as the second step of the `build` job (right after
+checkout, before `setup-node`/`npm ci`/`npm run build`), matching the order in GitHub's
+reference example. Re-validated as syntactically valid YAML and correctly Prettier-formatted.
+**Not yet confirmed live** — the next push/retry is what actually proves this fixed it.
+
+*(Aside for later: `actions/configure-pages` also emits a `base_path` output reflecting the
+real configured Pages path, which could replace the hardcoded `/Depths-of-Souls/` in
+`vite.config.ts` with something that derives automatically — worth revisiting if/when
+PR-preview deploys are ever built, since previews need a different subpath per PR. Not done
+now; out of scope for just fixing the stuck deploy.)
 
 ## What's NOT done yet (deliberately deferred)
 
