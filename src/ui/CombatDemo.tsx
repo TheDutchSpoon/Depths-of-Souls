@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { createCombat, resolveFight } from '../engine/combat'
 import type { CombatEvent, Creature, FightResult } from '../engine/types'
+import type { Script } from '../engine/scripting-types'
 
 // Throwaway dev harness proving the engine runs end-to-end in the browser. Phase 7
 // (Combat UI & feedback) replaces this with real combat presentation once Phase 4
-// content and the Phase 2/3 scripting/traits systems exist. Do not grow this toward
-// real combat UI (sprites, health bars, animation) -- that is Phase 7 scope.
+// content exists. Do not grow this toward real combat UI (sprites, health bars,
+// animation) or toward a script-authoring UI -- that is Phase 6/7 scope. This is a
+// viewer, not an editor: both sides run real scripts through the Phase 2 interpreter.
 
 interface CombatDemoProps {
   playerParty: readonly Creature[]
   enemyParty: readonly Creature[]
   seed: number
+  scripts: ReadonlyMap<string, Script>
 }
 
 interface FightOutcome {
@@ -18,11 +21,11 @@ interface FightOutcome {
   result: FightResult | null
 }
 
-export function CombatDemo({ playerParty, enemyParty, seed }: CombatDemoProps) {
+export function CombatDemo({ playerParty, enemyParty, seed, scripts }: CombatDemoProps) {
   const [outcome, setOutcome] = useState<FightOutcome | null>(null)
 
   function runFight() {
-    const initial = createCombat(playerParty, enemyParty, seed)
+    const initial = createCombat(playerParty, enemyParty, seed, scripts)
     const { events, state } = resolveFight(initial)
     setOutcome({ events, result: state.result })
   }

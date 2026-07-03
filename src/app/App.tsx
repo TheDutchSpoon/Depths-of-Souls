@@ -1,5 +1,5 @@
 import { CombatDemo } from '../ui/CombatDemo'
-import { demoPlayerParty, demoEnemyParty, DEMO_SEED } from './demoFight'
+import { demoPlayerParty, demoEnemyParty, demoScripts, DEMO_SEED } from './demoFight'
 
 function App() {
   return (
@@ -9,6 +9,7 @@ function App() {
         playerParty={demoPlayerParty}
         enemyParty={demoEnemyParty}
         seed={DEMO_SEED}
+        scripts={demoScripts}
       />
     </main>
   )
