@@ -1,6 +1,6 @@
 # Phase 2.5 (interlude) — Scripted combat demo (visual harness)
 
-Status: planned (not yet built)
+Status: code-complete, verified, not yet merged — see phases/phase-2.5-scripted-demo.md
 
 Task brief for the coding agent. **Not a design phase** — a throwaway visual demo, done after
 Phase 2 (actions, spells & the scripting interpreter) is merged. Single deliverable, one PR.
