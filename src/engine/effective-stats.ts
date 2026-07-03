@@ -10,19 +10,27 @@ export function getEffectiveStat(creature: Creature, stat: Stat): number {
   return creature.baseStats[stat]
 }
 
-export type ActionKind = 'attack' // grows to 'attack' | 'cast' in Phase 2
+export type ActionKind = 'attack' | 'cast'
 
 /**
- * Remap-aware OffStat lookup. Phase 1: no stat-remap effects exist, so this always
- * falls back to effective Attack for the 'attack' action kind. A future remap check
- * (consulting active stat-remap effects, fixed effect order, last-writer-wins) slots
- * in as a lookup BEFORE the fallback, with no change to callers.
+ * Remap-aware OffStat lookup, scaled by the action's spellPower (1.0 for Attack; a
+ * spell's own coefficient for Cast). Order: remap-resolve source stat -> getEffectiveStat
+ * -> x spellPower. Phase 1/2: no stat-remap effects exist, so this always falls back to
+ * effective Attack/Intelligence. A future remap check (consulting active stat-remap
+ * effects, fixed effect order, last-writer-wins) slots in as a lookup BEFORE the
+ * fallback, with no change to callers.
  */
-export function getOffensiveStat(creature: Creature, actionKind: ActionKind): number {
+export function getOffensiveStat(
+  creature: Creature,
+  actionKind: ActionKind,
+  spellPower: number = 1.0,
+): number {
   // Seam: a Phase 3 stat-remap check would go here, before the fallback below.
   switch (actionKind) {
     case 'attack':
-      return getEffectiveStat(creature, 'attack')
+      return getEffectiveStat(creature, 'attack') * spellPower
+    case 'cast':
+      return getEffectiveStat(creature, 'intelligence') * spellPower
     default: {
       const exhaustive: never = actionKind
       throw new Error(`Unhandled action kind: ${String(exhaustive)}`)

@@ -77,25 +77,35 @@ into `src/engine/`. Full brief: `.claude/briefs/phase-1.5-tooling-and-demo.md`.
   with **no cost and freely castable**, carry a **target shape** (single / all-enemies) and a
   **spellPower** coefficient (scales OffStat pre-Defence; Attack = 1.0). A rule's Cast references a
   **gem slot index** (not a spell ID); minimal `Spell` shape only — forge/augment/leveling economy
-  is Phase 8.
+  is Phase 8. **Requires extending the Phase 1 `Creature` type** with
+  `equippedSpells: readonly (Spell | null)[]` (bare slots, no Gem wrapper; ~3 slots as a
+  variable-length array) — a change to a type other modules depend on, not just new code.
 - Implement **Provoke** as a post-selection target override: **single-target** offensive actions
   hit a random provoking enemy (seeded RNG) when any enemy provokes, else the script's selector;
   **AOE casts ignore provoke** and hit their full (cast-start-frozen) set. AOE resolves fully, then
-  win/loss is checked (win-check at the action boundary).
+  win/loss is checked (win-check at the action boundary). (No standalone "provoking-enemy" selector —
+  dropped as vestigial, since the override already handles it; see GAME_DESIGN §8.)
 - Data shapes: `Condition` and `TargetSelector` are **discriminated unions**; `Rule` =
   `{ condition, action, targeting? }`; `Script` = `{ id, rules[], defaultTarget? }` (ordering =
   array position, no priority int; `defaultTarget?` reserved for Phase 6). Creature refs a script by
   **`scriptId`**. Add an **`always`** condition. HP% compared via **integer cross-multiplication**
-  (denominator = effective Health), no float.
+  (denominator = effective Health), no float. **Condition scope this phase: the testable subset only**
+  (`always`, HP%, enemy/ally counts, turn/round, affinity-advantage, is-provoking); **`has-status`
+  is deferred to Phase 3** (no status producer exists yet — the union grows then).
 - Interpreter (**pure engine**, fills the `decideAction` seam): side-effect-free lookahead, first
   rule whose condition is true **and** action is valid wins (invalid → skip); else implicit fallback
-  (Attack, else Wait). **Symmetric** — enemies run the same system via five **stock scripts** in
-  `data/` (`always-attack`/`-cast`/`-defend`/`-provoke`/`-wait`).
+  (Attack, else Wait). **Validity = existence check, not resolution**: a `random-enemy` selector is
+  valid iff ≥1 living enemy exists; the RNG draw happens **once, at execution, for the winning rule
+  only** (non-winning rules must not consume RNG, or outcomes depend on incidental script structure).
+  **Symmetric** — enemies run the same system via five **stock scripts** in `data/`
+  (`always-attack`/`-cast`/`-defend`/`-provoke`/`-wait`).
 - New intent event **`SpellCast`**; reuse shared `DamageDealt`/`CreatureDied`.
 - Tests: unit (conditions at boundaries, selectors + tie-break, precedence, skip-on-invalid,
   fallback); focused **hand-derived** goldens (scripted 1v1, AOE cast, provoke redirect, random
   selector, skip-on-invalid); one **6v6 integration golden** (mixed stock scripts both sides, all
-  action types + AOE + a provoke redirect, checkpoint-verified + labeled); an RNG-dependent golden.
+  action types + AOE + a provoke redirect, checkpoint-verified + labeled); plus a distinct
+  **seed-sensitivity golden** (same script + party under two different seeds → the two logs differ,
+  each stable — proves the RNG is threaded end-to-end, not just that one mechanism works once).
   Phase 1 goldens stay stable. Verify scripted combat is deterministic.
 
 ## Phase 2.5 — Scripted combat demo (interlude)

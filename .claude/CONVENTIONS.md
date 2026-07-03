@@ -90,10 +90,13 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
 - The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
   (Cast) have **no cost, freely castable**; a rule picks the **gem slot index** (not a spell ID),
   and the fired spell is whatever occupies that slot on that creature (template-reusable across
-  loadouts). A spell carries a **target shape** (single / all-enemies) and a **spellPower**
-  coefficient; shape is resolved from the equipped spell at evaluation time. Phase 2 ships a
-  **minimal `Spell`** (`{ id, targetShape, spellPower, ... }`); the forge/augment/leveling economy
-  is deferred to Phase 8.
+  loadouts). This requires **extending the Phase 1 `Creature` type** with an equipped-spells field —
+  `equippedSpells: readonly (Spell | null)[]` (bare `Spell | null` slots, **not** the full
+  `{ spell, level, augments }` Gem wrapper — that wrapper is Phase 8 economy; hardcode ~3 slots as a
+  variable-length `readonly` array so trait/forge slot-count changes fit later without a retype).
+  A spell carries a **target shape** (single / all-enemies) and a **spellPower** coefficient; shape
+  is resolved from the equipped spell at evaluation time. Phase 2 ships a **minimal `Spell`**
+  (`{ id, targetShape, spellPower, ... }`); the forge/augment/leveling economy is deferred to Phase 8.
   - **Defend**: ×1.5 effective Defence (inside the core) **and** a ×0.65 factor in the defender's
     taken pool, until its next turn.
   - **Provoke**: marks the creature provoking until its next turn.
@@ -111,21 +114,32 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
   seam, now consulting the script; RNG only via `CombatState`'s seeded RNG). **Side-effect-free
   lookahead**: walk the ordered rules top-down; a rule matches only if its **condition is true AND
   its action is valid** (invalid → **skip to next rule**, never match-and-fizzle); first match wins;
-  only then execute. **One condition per rule** (no AND/OR); **ordering carries the logic** and is
+  only then execute. **Validity-checking is an *existence* check, never a resolution** — e.g. a
+  `random-enemy` selector is valid iff ≥1 living enemy exists; the **actual RNG draw happens exactly
+  once, at execution time, for the winning rule only**. Non-winning rules that reference a random
+  selector must **not** consume RNG state during lookahead — otherwise the chosen target would
+  depend on incidental script structure above it, breaking `same seed → identical outcome`. So
+  lookahead is pure (predicates + existence only); the single stateful draw is part of *execution*.
+  **One condition per rule** (no AND/OR); **ordering carries the logic** and is
   **array position** (no stored priority int), so reorder UI + "which rule fired" feedback are
   load-bearing. Implicit fallback: Attack a valid default target, else Wait. `TARGETING` present only
   for multi-target actions (Attack, single-target Cast); omitted for self-only (Defend/Provoke/Wait)
   and AOE Cast. A `"has status X"` condition matches a **literal status ID** (a `condition-status`),
-  not a category.
+  not a category — **deferred to Phase 3** (no status producer exists until then; see below).
   - **Condition** = discriminated union on kind; comparator is **data** (`< <= > >= ==`, `!=`
     optional). **HP% via integer cross-multiplication** — `currentHp * 100 <cmp> threshold * effMaxHp`
     where `effMaxHp = getEffectiveStat(_, 'health')` — integer thresholds, **no float**. Subject
     qualifier `any` (existential) / `lowest` / `highest` (pick-and-test-the-extremum). `always` = an
-    unconditionally-true kind.
+    unconditionally-true kind. **Phase 2 ships only the testable subset** (`always`, HP%, enemy/ally
+    counts, turn/round number, affinity-advantage, is-provoking); **`has-status` is deferred to
+    Phase 3**, landing with the status framework that produces statuses — the union grows then (no
+    untestable dead union members in Phase 2).
   - **TargetSelector** = discriminated union on kind; all extremum selectors use the **shared
     tie-break** (primary key, then player side → slot → id by codepoint). `random-enemy` draws from
-    the seeded RNG and advances it. **"ally" includes the acting creature**; unresolvable player
-    selector → rule invalid → skip.
+    the seeded RNG and advances it. **"ally" includes the acting creature**. An unresolvable selector
+    → rule invalid → skip, but this is a **defensive/unreachable seam in v1** (no v1 selector can
+    fail to resolve — self exists, ally-selectors include self, enemy-selectors always have a target
+    since combat never resolves an action against a wiped side); kept for future selectors that can.
   - **`Script`** = `{ id, rules: Rule[], defaultTarget?: TargetSelector }`; `Rule` =
     `{ condition, action, targeting? }`. Creature references a script by **`scriptId`**; null/absent →
     implicit fallback. `defaultTarget?` reserved for Phase 6 (rules omitting TARGETING fall back to
