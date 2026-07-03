@@ -154,9 +154,12 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
   `SpellCast { casterId, gemSlot, targetId | targetIds }`, `Defended`/`Provoked`/`Waited`) —
   **always emitted, including no-consequence actions like Wait** (complete turn-by-turn log).
   **Consequence events** — separate and shared across all sources (`DamageDealt { sourceId,
-  targetId, rawDamage, finalDamage, affinityMultiplier, wasChipOnly, remainingHp }`,
-  `CreatureDied { creatureId }`; the set **grows** in Phase 3 with shared `StatusApplied` /
-  `StatusExpired` (and DoT ticks / Regen reuse `DamageDealt` / a `HealApplied`). Consequences are
+  targetId, rawDamage, finalDamage, affinityMultiplier, wasChipOnly, remainingHp, damageSource:
+  'attack'|'cast'|'dot' }` — `damageSource` is **required** as of Phase 3 (Phase 1/2 goldens
+  consciously field-added), `CreatureDied { creatureId }`; the set **grows** in Phase 3 with shared
+  `StatusApplied` / `StatusExpired` / `StatModifierApplied` (source, target, stat, factor, effective
+  delta) / `HealApplied` (Regen) / `HpClamped` (currentHp reduced when effective max Health drops
+  below it — neither damage nor heal); DoT ticks reuse `DamageDealt`). Consequences are
   never nested in intents (a poison tick and an Attack both reuse `DamageDealt`; an AOE Cast = one
   `SpellCast` intent followed by N `DamageDealt`). Plus the Phase 3 trigger-intent event
   `TriggerFired` (precedes a trigger's consequences) and the loop-safety `CascadeTruncated`
@@ -228,10 +231,14 @@ the same interpreter, differing only in how they attach and which hooks they use
 - **One shared per-creature effect ordering** — innate-1 → innate-2 → artifact infusions → applied
   statuses — reused *everywhere* effects are iterated (stat folding, hook firing, remap resolution).
 - **Interaction edges**: **dead creatures fire only `on-death`** (`effectsForHook` filters to
-  `alive`; lethal damage fires `on-death`, not `on-damage-taken` — death pre-empts the reaction).
-  **Applying a status emits `StatusApplied` then fires `on-status-applied`** (event-before-hook).
-  **Conditional-passive predicates** read effective stats but must not depend on the stat they gate
-  (no `getEffectiveStat` read-cycle).
+  `alive`; lethal damage fires `on-death`, not `on-damage-taken` — death pre-empts the victim's
+  reaction). **Damage-path hook order** (after `DamageDealt` lands): `on-damage-dealt` (source) fires
+  **unconditionally, even on a lethal hit** → `on-damage-taken` (self) fires **only if the target
+  survived** → then if it died: `CreatureDied` → `on-death` (self) → `on-kill` (source) →
+  `on-ally-death`/`on-enemy-death` (observers). I.e. hit-reactions (dealt always, taken if-survived)
+  resolve **before** death-reactions (died/kill/observers). **Applying a status emits `StatusApplied`
+  then fires `on-status-applied`** (event-before-hook). **Conditional-passive predicates** read
+  effective stats but must not depend on the stat they gate (no `getEffectiveStat` read-cycle).
 - **v1 hook vocabulary (13):** `on-fight-start`, `on-turn-start`, `on-turn-end`, `on-round-end`,
   `on-damage-dealt`, `on-damage-taken`, `on-kill`, `on-death`, `on-ally-action`, `on-enemy-action`,
   `on-ally-death`, `on-enemy-death`, `on-status-applied`. Each = firing point + context shape.
@@ -278,9 +285,18 @@ the same interpreter, differing only in how they attach and which hooks they use
   duration and increments intensity to the status's **explicitly-declared cap — no shared global
   default**. DoT intensity = per-stack damage; stat-status intensity = magnitude.
 - **A DoT tick IS an `on-round-end` hook on the DoT effect** (same machinery as any trigger — no
-  separate status-tick pass). **DoT carries its own value and bypasses Defence.** A DoT tick emits a
-  **tagged `DamageDealt`** (`damageSource: 'dot'` + status identity, no `TriggerFired`) so the log
-  reads "[creature] took X poison damage."
+  separate status-tick pass). **DoT carries its own value and bypasses Defence.** `DamageDealt`
+  carries a **required `damageSource: 'attack' | 'cast' | 'dot'`** (+ status identity for `'dot'`); a
+  DoT tick emits a `'dot'`-tagged `DamageDealt` (no `TriggerFired`) so the log reads "[creature] took
+  X poison damage." Because the field is required, **Phase 1/2 goldens are consciously updated**
+  (field-addition-only: regenerate, verify diff shows only the new field, no value/ordering changes).
+- **Applying a stat-modifier emits `StatModifierApplied`** (source, target, stat, factor, **and the
+  concrete effective-stat delta** — a bare factor is meaningless without its base). This is the golden
+  assertion surface + Phase 7 floating-combat-text source; stat-modifiers are not surfaced *as status
+  icons* but the log records the change. Order: `TriggerFired` → `StatModifierApplied`.
+- **Health is a modifiable stat**: `currentHp` inits to **effective** max Health at fight-start;
+  clamps to effective max whenever it changes (Health debuff lowers cap+current; Health buff raises
+  cap, no auto-heal). HP% stays 0–100.
 - **Stun is just a `condition-status`** — an `on-turn-start` hook with a **suppress-action** response
   → the turn is skipped via the Phase 1 empty-bracket (TurnStarted/TurnEnded still emit). No special
   resolver branch.

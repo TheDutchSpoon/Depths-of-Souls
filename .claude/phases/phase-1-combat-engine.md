@@ -3,7 +3,7 @@
 Status: **done**. Full local verification green (63/63 tests, lint, format, build);
 matches ROADMAP's exit criterion ("get it green before Phase 2 — it's the proof the
 architecture holds"). Implemented on branch `phase-1-combat-engine` per the approved plan
-at `.claude/plans/sorted-drifting-dream.md` (kept there for the detailed rationale behind
+at `.claude/briefs/phase-1-implementation-plan.md` (kept there for the detailed rationale behind
 every design decision below; not duplicated here).
 
 ## What was built

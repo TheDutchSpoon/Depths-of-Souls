@@ -2,7 +2,7 @@
 
 Status: **done**. Full local verification green (149/149 tests across 23 files, lint,
 format, build). Implemented on branch `phase-2` per the approved plan at
-`.claude/plans/sorted-drifting-dream.md` (kept there for the detailed rationale, exact
+`.claude/briefs/phase-2-implementation-plan.md` (kept there for the detailed rationale, exact
 type definitions, and the full `ASSUMPTION:`-tagged decision list behind every choice
 below — not duplicated here).
 
