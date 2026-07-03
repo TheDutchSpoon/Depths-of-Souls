@@ -431,21 +431,33 @@ self-perpetuating chains are truncated. Truncation is deterministic.
 All direct damage (Attack and Cast) uses one formula:
 
 ```
-raw    = ( MAX(OffStat − Defence, 0) + 0.01 × OffStat ) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)
-damage = MAX(1, floor(raw))
+effOffStat = getEffectiveStat( remapResolve(creature, action) ) × spellPower   // spellPower = 1.0 for Attack
+raw        = ( MAX(effOffStat − Defence, 0) + 0.01 × effOffStat ) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)
+damage     = MAX(1, floor(raw))
 ```
 
-- **OffStat** = the attacker's **Attack** (for Attack) or **Intelligence** (for Cast) — read via
-  a **resolvable lookup** (`getAttackStat`-style) that consults any active **stat-remap** effect
-  first, so a trait like "use Speed as Attack" slots in without a formula rewrite (see §6). In
-  Phase 1 there are no remaps, so it returns effective Attack. Both offensive stats are checked
-  against the target's single **Defence** (no separate magic resist in v1).
-- **Effective stats**: `OffStat` and `Defence` are **effective** values (base folded with active
-  stat-modifiers via `getEffectiveStat`), never raw base — see §6 and CONVENTIONS. Base stats are
-  never mutated; effective values are computed on demand.
-- **Subtractive core**, `MAX(OffStat − Defence, 0)`, clamped at 0 — Defence can fully cancel it.
-- **+1% chip floor**, `0.01 × OffStat`, added **unconditionally** (even when the core is fully
-  absorbed), so affinity/mods still have something to act on against a wall.
+- **effOffStat** = the attacker's effective offensive stat, scaled by the action's **spellPower**:
+  - Base offensive stat is **Attack** (for Attack) or **Intelligence** (for Cast), read via a
+    **resolvable lookup** (`getAttackStat`-style) that consults any active **stat-remap** effect
+    first, so a trait like "use Speed as Attack" slots in without a formula rewrite (see §6).
+  - That value is taken as an **effective** stat (`getEffectiveStat`, base folded with active
+    stat-modifiers), never raw base. `Defence` is likewise effective.
+  - Then multiplied by **`spellPower`**, a coefficient the **action/spell** carries. Basic **Attack
+    has spellPower 1.0**; a spell declares its own (e.g. a "30% Intelligence" spell = `0.30`).
+  - **Order**: remap-resolve the source stat → `getEffectiveStat` → `× spellPower` → that is
+    `effOffStat`, used everywhere OffStat appears below.
+  - Both offensive paths are checked against the target's single **Defence** (no separate magic
+    resist in v1).
+- **spellPower scales OffStat, NOT the post-mitigation damage** — it is inside the subtractive
+  core, *before* Defence: a 30% spell wields `Int × 0.30` and Defence bites that scaled value
+  (`(Int × 0.30) − Def`), **not** `(Int − Def) × 0.30`. Deliberate: Defence measures against the
+  spell's actual incoming power. This is a **third modifier locus**, distinct from stat-modifiers
+  (→ effective stats) and damage-modifiers (→ the dealt/taken pools below); see §6.
+- **Base stats immutable**; effective values computed on demand (see §6 and CONVENTIONS).
+- **Subtractive core**, `MAX(effOffStat − Defence, 0)`, clamped at 0 — Defence can fully cancel it.
+- **+1% chip floor**, `0.01 × effOffStat`, added **unconditionally** (even when the core is fully
+  absorbed) — and it scales with spellPower too (a weak spell has a proportionally small chip), so
+  affinity/mods still have something to act on against a wall.
 - **Rounding**: HP and damage are **integers**; `raw` is computed in full precision, then
   **floored once at the end**, with a hard **minimum of 1** — every hit removes at least 1 HP
   (no stalemates; the round cap is thus only a pathological backstop). Floor once, not per-term
@@ -548,6 +560,39 @@ Design constraints:
   replays.
 - **Script scope (decided)**: scripts are **reusable templates assignable to creatures**; the
   template is the unit of authoring. Per-creature overrides may come later.
+
+**Interpreter semantics (locked — Phase 2):**
+- **Rule validity**: a rule matches only if its condition is true **AND** its chosen action is
+  currently valid. An invalid action → **skip to the next rule** (not "match and fizzle"). An empty
+  referenced gem slot makes Cast invalid; an unresolvable player selector (e.g. "provoking enemy"
+  with no provoker) makes the rule invalid. Both → skip. This keeps scripts robust.
+- **Evaluation is side-effect-free lookahead**: walk rules top-down evaluating condition + validity
+  as pure predicates over current state; the **first** rule that passes wins; only then is its
+  single action executed. No try/rollback.
+- **`always` condition**: unconditionally true — also the idiomatic explicit catch-all bottom rule.
+- **Ordering is array position**, not a stored priority number; drag-to-reorder reorders the array.
+- **Cast references a gem *slot index*** (not a spell ID), so a template is reusable across
+  loadouts; the spell fired is whatever occupies that slot on that creature. The **target shape**
+  (single / all-enemies) is a property of the *equipped spell*, resolved at evaluation time; AOE
+  omits the selector and hits all living enemies (frozen at cast-start, slot order); single-target
+  uses the selector and is subject to provoke.
+- **"ally" includes the acting creature**; "lowest-HP ally" on a solo creature resolves to itself.
+- **`Script.defaultTarget?`** (reserved): optional per-template default selector for rules that omit
+  TARGETING; data field reserved now, surfaced in the Phase 6 authoring UI.
+- **Assignment**: a creature references a script by `scriptId`; null/absent → the implicit fallback
+  runs every turn (Attack a valid target, else Wait). The interpreter is **symmetric** — player and
+  enemy creatures use the same system. Phase 2 gives enemies trivial **stock scripts** (one per
+  action type); richer enemy scripts drop in later with no new machinery.
+- **HP% conditions** use **effective Health** as the denominator (`getEffectiveStat(_, 'health')`),
+  compared via integer cross-multiplication (no float) — see CONVENTIONS.
+
+**Deferred to Phase 6 (authoring UI):**
+- The UI must surface **equipped-slot contents** when authoring a Cast rule — a slot-referencing
+  rule fires different spells on different creatures; template-vs-creature context makes this
+  non-trivial.
+- A template's TARGETING clause may **mismatch** a creature's equipped spell shape (single-target
+  selector on an AOE slot). Runtime tolerates it (AOE ignores the stray selector); the UI must
+  handle the mismatch — warn / adapt / type slots by shape (TBD).
 
 ## 9. Player specializations
 

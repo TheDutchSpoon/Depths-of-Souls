@@ -14,7 +14,8 @@ engine. No backend — everything is client-side, statically deployed.
 
 Key fixed facts: stats are **Health, Attack, Intelligence, Defence, Speed** (base 10–30 per
 creature, fixed; **linear** growth derived from base, no growth field: level-N =
-`base × (1 + 0.25 × (level−1))`). Damage (Attack & Cast):
+`base × (1 + 0.25 × (level−1))`). Damage (Attack & Cast): `effOff = getEffectiveStat(remap(off)) ×
+spellPower` (spellPower 1.0 for Attack, a spell property, scales OffStat pre-Defence), then
 `(MAX(effOff − effDef, 0) + 0.01×effOff) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)`, then
 `MAX(1, floor(...))` — subtractive core + unconditional 1% chip floor, **integer, min-1 damage**;
 **Affinity** standalone ×1.25/×0.75/×1.0; **dealt pool additive**, **taken pool multiplicative**
@@ -22,7 +23,11 @@ creature, fixed; **linear** growth derived from base, no growth field: level-N =
 **no variance, no baseline crits**, fully deterministic. One round = each living creature acts
 once in Speed order (frozen round-start queue; ties: player→slot→id). Actions:
 **Attack, Cast, Defend, Provoke, Wait** (Defend = Defence×1.5 + ×0.65 in taken pool; Provoke until
-next turn; Cast picks a gem slot, no cost). Affinities (domain of being): **Body, Spirit, Mind,
+next turn; Cast picks a gem *slot index*, no cost, spell carries target-shape + spellPower).
+**Scripting** (the game's heart): pure interpreter `decideAction(creature, script, state)` walks a
+creature's ordered rules, first valid match wins (invalid action → skip); `Condition`/`TargetSelector`
+are discriminated unions; HP% via integer cross-multiplication; enemies run the same system (stock
+scripts). Affinities (domain of being): **Body, Spirit, Mind,
 Void, Primal**, cycle **Body > Spirit > Mind > Void > Primal > Body**. Incremental power lives
 in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
 statuses, gem augments, artifact infusions are ONE data-driven hook-based model (4 categories:
