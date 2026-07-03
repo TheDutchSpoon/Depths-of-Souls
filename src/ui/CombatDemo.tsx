@@ -52,6 +52,16 @@ function describeEvent(event: CombatEvent): string {
       return `${event.creatureId}'s turn`
     case 'AttackDeclared':
       return `${event.attackerId} attacks ${event.targetId}`
+    case 'SpellCast':
+      return event.targetShape === 'aoe'
+        ? `${event.casterId} casts slot ${event.gemSlot} at [${event.targetIds.join(', ')}]`
+        : `${event.casterId} casts slot ${event.gemSlot} at ${event.targetId}`
+    case 'Defended':
+      return `  ${event.creatureId} defends`
+    case 'Provoked':
+      return `  ${event.creatureId} provokes`
+    case 'Waited':
+      return `  ${event.creatureId} waits`
     case 'DamageDealt':
       return (
         `  ${event.sourceId} -> ${event.targetId}: ${event.finalDamage} damage ` +

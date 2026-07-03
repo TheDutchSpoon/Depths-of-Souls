@@ -1,17 +1,21 @@
 import { createSeededRng } from './rng'
-import { ROUND_CAP } from './config'
+import { ROUND_CAP, DEFEND_DEFENCE_MULTIPLIER, DEFEND_TAKEN_FACTOR } from './config'
 import { buildTurnQueue } from './turn-order'
-import { getDefaultTarget } from './targeting'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import { calculateDamage } from './damage'
+import type { DamageResult } from './damage'
 import { firePhaseHook } from './phase-hooks'
+import { findCreature } from './creature-lookup'
+import { decideAction } from './interpreter'
 import type { CreatureId } from './ids'
 import type { Action, CombatEvent, CombatState, Creature, FightResult } from './types'
+import type { Script } from './scripting-types'
 
 export function createCombat(
   playerParty: readonly Creature[],
   enemyParty: readonly Creature[],
   seed: number,
+  scripts: ReadonlyMap<string, Script> = new Map(),
 ): CombatState {
   if (playerParty.length === 0 || enemyParty.length === 0) {
     throw new Error('createCombat: both parties must have at least one creature')
@@ -25,11 +29,12 @@ export function createCombat(
     turnCursor: 0,
     round: 0,
     result: null,
+    scripts,
   }
 }
 
 function getCreature(state: CombatState, id: CreatureId): Creature {
-  const creature = [...state.playerParty, ...state.enemyParty].find((c) => c.id === id)
+  const creature = findCreature(state, id)
   if (!creature) throw new Error(`resolver invariant violated: unknown creature id ${id}`)
   return creature
 }
@@ -37,7 +42,7 @@ function getCreature(state: CombatState, id: CreatureId): Creature {
 function updateCreature(
   state: CombatState,
   id: CreatureId,
-  patch: Partial<Pick<Creature, 'currentHp' | 'alive'>>,
+  patch: Partial<Pick<Creature, 'currentHp' | 'alive' | 'defending' | 'provoking'>>,
 ): CombatState {
   const updateSide = (party: readonly Creature[]) =>
     party.map((c) => (c.id === id ? { ...c, ...patch } : c))
@@ -48,40 +53,37 @@ function updateCreature(
   }
 }
 
-function decideAction(actor: Creature, state: CombatState): Action | null {
-  // Phase 1: no scripting yet -- this IS the implicit fallback. Always Attack the
-  // default target. Returns null only in the structurally-unreachable empty-enemy case.
-  const enemyParty = actor.side === 'player' ? state.enemyParty : state.playerParty
-  const targetId = getDefaultTarget(enemyParty)
-  return targetId ? { kind: 'attack', targetId } : null
+/** The literal expiry point of Defend/Provoke's "until its next turn." */
+function clearOwnTransientStatus(state: CombatState, id: CreatureId): CombatState {
+  return updateCreature(state, id, { defending: false, provoking: false })
 }
 
-function executeAttack(
-  actor: Creature,
-  targetId: CreatureId,
+/** Defend: +50% effective Defence (inside the core) and a x0.65 taken-pool factor. */
+function resolveDefenceAndTakenFactors(target: Creature): {
+  defence: number
+  takenFactors: readonly number[]
+} {
+  const baseDefence = getEffectiveStat(target, 'defence')
+  if (!target.defending) return { defence: baseDefence, takenFactors: [] }
+  return {
+    defence: baseDefence * DEFEND_DEFENCE_MULTIPLIER,
+    takenFactors: [DEFEND_TAKEN_FACTOR],
+  }
+}
+
+/** Applies a damage result to `target`, emitting DamageDealt (+ CreatureDied if it killed). */
+function applyDamageAndEmit(
+  sourceId: CreatureId,
+  target: Creature,
+  damage: DamageResult,
   state: CombatState,
   events: CombatEvent[],
 ): CombatState {
-  events.push({ type: 'AttackDeclared', attackerId: actor.id, targetId })
-
-  const target = getCreature(state, targetId)
-  const offStat = getOffensiveStat(actor, 'attack')
-  const defence = getEffectiveStat(target, 'defence')
-
-  const damage = calculateDamage({
-    offStat,
-    defence,
-    attackerAffinity: actor.affinity,
-    defenderAffinity: target.affinity,
-    dealtMods: [], // Phase 1: always empty; wired for Phase 3 damage-modifier effects
-    takenFactors: [], // Phase 1: always empty
-  })
-
   const newHp = Math.max(target.currentHp - damage.finalDamage, 0)
   const died = newHp === 0 && target.alive
 
   // State threading: `nextState` is the only source of truth from here on. Never read
-  // `target`/`actor` again after this point -- they're a pre-mutation snapshot.
+  // `target` again after this point -- it's a pre-mutation snapshot.
   const nextState = updateCreature(state, target.id, {
     currentHp: newHp,
     alive: newHp > 0,
@@ -89,7 +91,7 @@ function executeAttack(
 
   events.push({
     type: 'DamageDealt',
-    sourceId: actor.id,
+    sourceId,
     targetId: target.id,
     rawDamage: damage.rawDamage,
     finalDamage: damage.finalDamage,
@@ -105,6 +107,140 @@ function executeAttack(
   return nextState
 }
 
+function executeAttack(
+  actor: Creature,
+  targetId: CreatureId,
+  state: CombatState,
+  events: CombatEvent[],
+): CombatState {
+  events.push({ type: 'AttackDeclared', attackerId: actor.id, targetId })
+
+  const target = getCreature(state, targetId)
+  const offStat = getOffensiveStat(actor, 'attack')
+  const { defence, takenFactors } = resolveDefenceAndTakenFactors(target)
+
+  const damage = calculateDamage({
+    offStat,
+    defence,
+    attackerAffinity: actor.affinity,
+    defenderAffinity: target.affinity,
+    dealtMods: [], // Phase 1/2: always empty; wired for Phase 3 damage-modifier effects
+    takenFactors,
+  })
+
+  return applyDamageAndEmit(actor.id, target, damage, state, events)
+}
+
+function executeCastSingle(
+  actor: Creature,
+  gemSlot: number,
+  targetId: CreatureId,
+  state: CombatState,
+  events: CombatEvent[],
+): CombatState {
+  const spell = actor.equippedSpells[gemSlot]
+  if (!spell)
+    throw new Error('resolver invariant violated: cast referencing an empty gem slot')
+
+  events.push({
+    type: 'SpellCast',
+    targetShape: 'single',
+    casterId: actor.id,
+    gemSlot,
+    targetId,
+  })
+
+  const target = getCreature(state, targetId)
+  const offStat = getOffensiveStat(actor, 'cast', spell.spellPower)
+  const { defence, takenFactors } = resolveDefenceAndTakenFactors(target)
+
+  const damage = calculateDamage({
+    offStat,
+    defence,
+    attackerAffinity: actor.affinity,
+    defenderAffinity: target.affinity,
+    dealtMods: [],
+    takenFactors,
+  })
+
+  return applyDamageAndEmit(actor.id, target, damage, state, events)
+}
+
+function executeCastAoe(
+  actor: Creature,
+  gemSlot: number,
+  state: CombatState,
+  events: CombatEvent[],
+): CombatState {
+  const spell = actor.equippedSpells[gemSlot]
+  if (!spell)
+    throw new Error('resolver invariant violated: cast referencing an empty gem slot')
+
+  const opposingParty = actor.side === 'player' ? state.enemyParty : state.playerParty
+  // Frozen target list: all living enemies, slot order, evaluated ONCE, right here.
+  const targetIds = opposingParty.filter((c) => c.alive).map((c) => c.id)
+  events.push({
+    type: 'SpellCast',
+    targetShape: 'aoe',
+    casterId: actor.id,
+    gemSlot,
+    targetIds,
+  })
+
+  const offStat = getOffensiveStat(actor, 'cast', spell.spellPower)
+  let working = state
+
+  for (const targetId of targetIds) {
+    const target = getCreature(working, targetId)
+    // Forward guard: skip a frozen-list target that's no longer alive by the time its
+    // hit would land. Inert in Phase 2 (no other kill source exists mid-AOE yet), but
+    // Phase 3 (reflect-damage traits, on-death triggers) can make this reachable, and
+    // emitting DamageDealt against a corpse would be wrong. The frozen target *set*
+    // itself is unchanged -- this only skips *hitting* an already-dead member.
+    if (!target.alive) continue
+
+    const { defence, takenFactors } = resolveDefenceAndTakenFactors(target)
+    const damage = calculateDamage({
+      offStat,
+      defence,
+      attackerAffinity: actor.affinity,
+      defenderAffinity: target.affinity,
+      dealtMods: [],
+      takenFactors,
+    })
+    working = applyDamageAndEmit(actor.id, target, damage, working, events)
+  }
+
+  return working
+}
+
+function executeDefend(
+  actor: Creature,
+  state: CombatState,
+  events: CombatEvent[],
+): CombatState {
+  events.push({ type: 'Defended', creatureId: actor.id })
+  return updateCreature(state, actor.id, { defending: true })
+}
+
+function executeProvoke(
+  actor: Creature,
+  state: CombatState,
+  events: CombatEvent[],
+): CombatState {
+  events.push({ type: 'Provoked', creatureId: actor.id })
+  return updateCreature(state, actor.id, { provoking: true })
+}
+
+function executeWait(
+  actor: Creature,
+  state: CombatState,
+  events: CombatEvent[],
+): CombatState {
+  events.push({ type: 'Waited', creatureId: actor.id })
+  return state
+}
+
 function executeAction(
   actor: Creature,
   action: Action,
@@ -114,8 +250,25 @@ function executeAction(
   switch (action.kind) {
     case 'attack':
       return executeAttack(actor, action.targetId, state, events)
+    case 'cast':
+      switch (action.targetShape) {
+        case 'single':
+          return executeCastSingle(actor, action.gemSlot, action.targetId, state, events)
+        case 'aoe':
+          return executeCastAoe(actor, action.gemSlot, state, events)
+        default: {
+          const exhaustive: never = action
+          throw new Error(`Unhandled cast shape: ${String(exhaustive)}`)
+        }
+      }
+    case 'defend':
+      return executeDefend(actor, state, events)
+    case 'provoke':
+      return executeProvoke(actor, state, events)
+    case 'wait':
+      return executeWait(actor, state, events)
     default: {
-      const exhaustive: never = action.kind
+      const exhaustive: never = action
       throw new Error(`Unhandled action kind: ${String(exhaustive)}`)
     }
   }
@@ -177,11 +330,11 @@ export function resolveTurn(state: CombatState): {
   working = { ...working, turnCursor: working.turnCursor + 1 }
 
   if (creatureId === undefined) {
-    // Type-required by noUncheckedIndexedAccess; logically unreachable in Phase 1 -- a
-    // freshly-built queue always has >=1 alive creature, since the round-cap gate above
-    // and the win/loss check below together guarantee the fight already ended before a
-    // queue with zero living creatures could ever be built here. Defensive finalize, not
-    // a silent fallthrough.
+    // Type-required by noUncheckedIndexedAccess; logically unreachable -- a freshly-built
+    // queue always has >=1 alive creature, since the round-cap gate above and the
+    // win/loss check below together guarantee the fight already ended before a queue
+    // with zero living creatures could ever be built here. Defensive finalize, not a
+    // silent fallthrough.
     const result = checkWinLoss(working) ?? 'draw'
     return finalize(working, events, result)
   }
@@ -197,18 +350,31 @@ export function resolveTurn(state: CombatState): {
   events.push({ type: 'TurnStarted', creatureId: actor.id })
 
   if (actor.alive) {
-    const action = decideAction(actor, working)
-    if (action) working = executeAction(actor, action, working, events)
+    const script = actor.scriptId ? (working.scripts.get(actor.scriptId) ?? null) : null
+    // Provoke's override is resolved INSIDE decideAction (see interpreter.ts /
+    // targeting.ts's resolveOffensiveTarget) -- there is no separate post-hoc override
+    // step here. decideAction sees the actor's defending/provoking status as it stood
+    // ENTERING this turn (still whatever the actor's previous turn set), which is what
+    // makes a self-referential is-provoking condition meaningful.
+    const action = decideAction(actor, script, working)
+
+    // "Until its next turn" expires here, before this turn's action executes -- a fresh
+    // Defend/Provoke below re-applies for the next cycle; anything else leaves it lapsed.
+    working = clearOwnTransientStatus(working, actor.id)
+    const freshActor = getCreature(working, actor.id)
+
+    if (action) {
+      working = executeAction(freshActor, action, working, events) // AOE resolves fully in here
+    }
   }
 
   events.push({ type: 'TurnEnded', creatureId: actor.id })
   if (actor.alive) working = firePhaseHook('turn-end', working)
 
   // Win/loss/draw is checked after EVERY action, not just round boundaries. This ordering
-  // (the turn fully closes with TurnEnded before this check runs) is intentional and must
-  // survive Phase 2's multi-hit/AOE actions: the check must never move inside an action's
-  // execution loop, or a killing blow mid-AOE would emit FightEnded before its own
-  // TurnEnded.
+  // (the turn fully closes with TurnEnded before this check runs) is intentional: AOE's
+  // multi-hit loop already fully resolves inside executeAction before this point, so a
+  // killing blow mid-AOE never emits FightEnded before its own TurnEnded.
   const result = checkWinLoss(working)
   if (result) return finalize(working, events, result)
 

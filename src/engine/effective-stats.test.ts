@@ -11,6 +11,10 @@ const creature: Creature = {
   affinity: 'body',
   currentHp: 30,
   alive: true,
+  scriptId: null,
+  equippedSpells: [],
+  defending: false,
+  provoking: false,
 }
 
 describe('getEffectiveStat', () => {
@@ -23,9 +27,21 @@ describe('getEffectiveStat', () => {
 })
 
 describe('getOffensiveStat', () => {
-  it('falls back to effective Attack for the attack action kind (no stat-remap effects in Phase 1)', () => {
+  it('falls back to effective Attack for the attack action kind (no stat-remap effects)', () => {
     expect(getOffensiveStat(creature, 'attack')).toBe(
       getEffectiveStat(creature, 'attack'),
+    )
+  })
+
+  it('defaults spellPower to 1.0, so an omitted 3rd arg is exactly Attack parity', () => {
+    expect(getOffensiveStat(creature, 'attack')).toBe(
+      getOffensiveStat(creature, 'attack', 1.0),
+    )
+  })
+
+  it('scales effective Intelligence by spellPower for the cast action kind', () => {
+    expect(getOffensiveStat(creature, 'cast', 0.3)).toBe(
+      getEffectiveStat(creature, 'intelligence') * 0.3,
     )
   })
 })

@@ -6,3 +6,12 @@ export const AFFINITY_DISADVANTAGE_MULTIPLIER = 0.75
 export const AFFINITY_NEUTRAL_MULTIPLIER = 1.0
 
 export const CHIP_FLOOR_RATE = 0.01
+
+// Defend: +50% effective Defence (inside the core) and a x0.65 factor in the defender's
+// taken pool, both until the creature's next turn.
+export const DEFEND_DEFENCE_MULTIPLIER = 1.5
+export const DEFEND_TAKEN_FACTOR = 0.65
+
+// Fixture/data-default convenience only -- no engine logic reads this; Creature.equippedSpells
+// stays a variable-length array so trait/forge slot-count changes fit later without a retype.
+export const DEFAULT_GEM_SLOT_COUNT = 3

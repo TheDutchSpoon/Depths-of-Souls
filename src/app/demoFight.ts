@@ -16,6 +16,10 @@ export const demoPlayerParty: Creature[] = [
     affinity: 'body',
     currentHp: 40,
     alive: true,
+    scriptId: null,
+    equippedSpells: [],
+    defending: false,
+    provoking: false,
   },
   {
     id: createCreatureId('mira'),
@@ -25,6 +29,10 @@ export const demoPlayerParty: Creature[] = [
     affinity: 'spirit',
     currentHp: 28,
     alive: true,
+    scriptId: null,
+    equippedSpells: [],
+    defending: false,
+    provoking: false,
   },
 ]
 
@@ -37,6 +45,10 @@ export const demoEnemyParty: Creature[] = [
     affinity: 'primal',
     currentHp: 22,
     alive: true,
+    scriptId: null,
+    equippedSpells: [],
+    defending: false,
+    provoking: false,
   },
   {
     id: createCreatureId('bog-rat'),
@@ -46,5 +58,9 @@ export const demoEnemyParty: Creature[] = [
     affinity: 'void',
     currentHp: 16,
     alive: true,
+    scriptId: null,
+    equippedSpells: [],
+    defending: false,
+    provoking: false,
   },
 ]
