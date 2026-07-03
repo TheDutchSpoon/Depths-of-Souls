@@ -114,13 +114,50 @@ Phase 1.5 demo) showing both sides run scripts through the interpreter live on P
 guardrails: consumes the engine, engine stays pure, real content not fixtures, explicitly replaced
 by Phase 7. Separate PR after Phase 2.
 
-## Phase 3 — Traits as data
-- `Trait` data model: triggers + effects, interpreted by the engine.
-- A handful of traits exercising each v1 category (**passive stat, triggered** — behavioral
-  traits are deferred past v1 per GAME_DESIGN §6).
-- Implement the loop-safety backstop (`MAX_TRIGGER_CASCADE_DEPTH = 500`) and self-re-entry
-  prevention from the start, even with few traits — cheap to add now, hard to retrofit.
-- Hook trait effects into the resolver via the event system, not special cases.
+## Phase 3 — Traits, statuses & the effect framework (activate the dormant seams)
+- **Hook execution model**: scoped iteration (per-creature at per-creature points; all creatures in
+  tie-break order at global points) behind an **`effectsForHook`** lookup (index deferred). Hooks
+  reuse action machinery + shared consequence events; a **`TriggerFired`** intent event precedes
+  triggered consequences. One shared per-creature effect ordering (innate → infusions → statuses).
+- **v1 hook vocabulary (13)**: fight-start, turn-start, turn-end, round-end, damage-dealt,
+  damage-taken, kill, death, ally-action, enemy-action, ally-death, enemy-death, status-applied.
+  Additive/golden-safe to expand.
+- **Loop safety** (build now, cheap now / hard to retrofit): instance-level stack-scoped
+  self-re-entry guard; `MAX_TRIGGER_CASCADE_DEPTH = 500` (chain depth, not breadth); deterministic
+  truncation + a **mandatory `CascadeTruncated`** event; depth transient (never in `CombatState`).
+- **Trait model**: `Trait { id, name, effects[] }`; passive/stat (incl. **conditional passives via
+  read-time predicate**) + triggered (`{hook, condition?, response}`). Response vocab (parameterized
+  by target + magnitude): **deal-damage, apply-status, apply-stat-modifier, suppress-action**. **No
+  keywords, explicit targets**; **"attack"/"cast" = the real actions** (DoT the lone bypass).
+  Behavioral responses deferred. `Creature.innateTraitIds` (1 base / 2 fused) from a data registry.
+- **Status lifecycle**: round-based countdown at round-end; **DoT tick = an on-round-end hook**,
+  before decrement; **Stun = a condition-status** (turn-start suppress-action, skip via empty
+  bracket); single-instance-per-type stacking to a declared cap; round-end order
+  hooks→decrement→expire (`StatusExpired`). Full v1 status content (Poison, Burn, Regen, Stun, and
+  timed damage-modifier statuses Weaken/Vulnerability — data instances of built primitives). Raw
+  stat buffs/debuffs are **permanent-for-fight multiplicative `stat-modifier` effects, not statuses**
+  (shown as the effective stat, uncapped, never-zero).
+- **`has-status`** joins the Condition union (completes the Phase 2 deferral). **Spells gain optional
+  status-application** so statuses are reachable via Cast.
+- **Trait content is representative & temporary** — a handful of real-but-placeholder traits
+  exercising each hook/response, treated as real content (data + tests) until the actual creature
+  roster is designed (Phase 4+), then replaced.
+- **Artifacts are NOT in this phase** — the artifact mechanism (slot, infusions, forge, Ore) is
+  Phase 8; Phase 3 builds the effect framework they'll plug into.
+- Tests: unit per response type, conditional-passive predicate, status stacking/duration/expiry,
+  and **explicit loop-safety** (self-trigger blocked by re-entry guard; a >500 cascade asserts
+  deterministic truncation + `CascadeTruncated`). New goldens: triggered-damage (+`TriggerFired`),
+  DoT (round-end tick/countdown/expiry), stun (skip via empty bracket), conditional-passive
+  (HP-threshold stat change), one loop-safety golden, and a **round-end interaction golden** (a DoT
+  tick kills a creature mid-sweep whose `on-death` applies a status: assert `on-death` fires, the
+  dead creature's own pending tick is skipped, the new status keeps full duration / starts next
+  round, and win/loss is checked after the full sweep). Phase 1/2 goldens stay stable.
+
+## Phase 3.5 — Traits & statuses demo (interlude)
+Throwaway visual demo (per the standing "every phase ships a demo" convention) showing traits +
+statuses live: triggered effects firing, DoT ticking, stun skipping a turn, `TriggerFired`/status
+events in the log. Same guardrails (consumes the engine, engine stays pure, real content, explicitly
+replaced by Phase 7). Separate PR after Phase 3; own brief + phase record.
 
 ## Phase 4 — Party, specializations, the cave & biomes
 - Full **6v6** party vs a floor's creatures; **floor-by-floor descent** with **persistent

@@ -298,12 +298,18 @@ An effect declares: a **kind/category** (see taxonomy below), a **magnitude**, a
 start-of-turn, end-of-turn, on-the-creature's-turn, on-damage-taken, on-damage-dealt, on-expiry,
 …), and its payload.
 
-**Effect categories (taxonomy)** — four kinds, all riding this one framework:
-1. **`stat-modifier`** — changes a stat's *value* (`stat`, `direction`, `magnitude`, `duration`;
-   duration may be permanent). Folds into **effective stats** (below). The 8 v1 stat buffs/debuffs
-   (Attack/Defence/Intelligence/Speed × up/down) are just **named presets** of this one primitive —
-   no per-stat special-casing — and spells/effects may apply custom magnitudes directly, not only
-   the presets.
+**Effect categories (taxonomy)** — four kinds, all riding this one framework. **Category determines
+player-facing treatment** (a bright line, locked Phase 3):
+1. **`stat-modifier`** — scales a stat's *value* (`stat`, `factor`). Folds into **effective stats**
+   (below) **multiplicatively** (`base × Π(factors)`). **Always permanent-for-the-fight, uncapped,
+   never surfaced as a status** — the player sees only the resulting **effective stat** (and net
+   multiplier), never a "−20% Attack" icon. Because folding is multiplicative, reductions **approach
+   but never reach zero** (five ×0.8 = ×0.328, not zero) and **stacking is uncapped** — grinding a
+   stat up or down is a supported, cap-free build path (the incremental-scaling lane). Buffs compound
+   the same way (five ×1.3 = ×3.7). **There is no temporary stat-modifier** — all timed/capped
+   debuffing is done via `damage-modifier` or `condition-status` instead. Stat buffs/debuffs are data
+   instances of this one primitive (parameters: stat, factor), no per-stat special-casing;
+   spells/effects may apply custom factors.
 2. **`stat-remap`** — redirects *which stat a formula slot reads* (e.g. "use Speed as Attack for
    the Attack action"). Reads the **source stat's effective value**; Attack-slot stat-modifiers do
    **not** transfer to the substituted stat (a Speed-attacker wants +Speed, not +Attack — a legible
@@ -311,35 +317,136 @@ start-of-turn, end-of-turn, on-the-creature's-turn, on-damage-taken, on-damage-d
    artifact infusions), last-writer-wins**. The damage formula reads its OffStat through a
    remap-aware lookup so this needs no formula changes.
 3. **`damage-modifier`** — folds into the damage formula's mod pools: the attacker's **additive
-   dealt pool** (`1 + Σ`) or the defender's **multiplicative taken pool** (`Π`). "+X% damage
-   dealt", Defend's ×0.65, a "+50% damage taken" debuff, trait-granted crits all live here.
-   Distinct from `stat-modifier` — a "+Attack" buff and a "+damage dealt" buff are different
-   categories and never double-count.
-4. **`condition-status`** — tagged conditions like Poison (DoT) and Stun (skip turn). This is what
-   scripting's `has-status` condition scopes to (not stat buffs).
+   dealt pool** (`1 + Σ`) or the defender's **multiplicative taken pool** (`Π`). **These ARE surfaced
+   as timed statuses and may be capped.** Weaken ("−X% damage dealt", e.g. 1 stack + duration),
+   Defend's ×0.65, a Vulnerability ("+X% damage taken") debuff, trait-granted crits all live here.
+   Pools stay additive-dealt / multiplicative-taken (unchanged — these are capped/timed, so no
+   runaway-to-zero concern). Distinct from `stat-modifier` — a "−Attack" stat change and a "−damage
+   dealt" Weaken are different categories with different treatment and never double-count.
+4. **`condition-status`** — tagged conditions like Poison (DoT), Regen, Stun (skip turn). Timed,
+   surfaced as status icons. This is what scripting's `has-status` condition scopes to (not the
+   invisible stat-modifiers).
 
 **Effective stats (engine invariant):** base stats are **immutable** (except by permanent effects
 like level-up). A creature's current stat is **computed on demand** — `getEffectiveStat(creature,
-stat)` folds all active `stat-modifier` effects over the base in a fixed deterministic order.
-Never write a derived value back to the creature. Expiry = removing the effect from the list; the
-next `getEffectiveStat` reflects it automatically (no reverse-bookkeeping, no order ambiguity).
-All combat math reads stats through this accessor (a passthrough to base until effects exist).
+stat)` folds all active `stat-modifier` effects over the base **multiplicatively** (`base ×
+Π(factors)`) in a fixed deterministic order (a conditional passive's factor is included only when
+its read-time predicate holds). Never write a derived value back to the creature. Expiry = removing
+the effect from the list; the next `getEffectiveStat` reflects it automatically (no
+reverse-bookkeeping, no order ambiguity). All combat math reads stats through this accessor (a
+passthrough to base until effects exist). **This base+fold-on-read model — not a mutable per-creature
+stat blob — is required**: conditional passives (whose contribution blinks with live state) and any
+non-permanent effects need recomputation/reversibility a mutable blob cannot give cleanly, and it
+keeps the representation singular and deterministic.
+
+**UI consequence of multiplicative stacking (a Phase 7 requirement):** because stacked multipliers
+aren't mentally computable (`0.8³ = 0.512`, not "−60%"), the UI must **always surface the computed
+effective stat and net multiplier as the primary display**, with the per-factor breakdown as
+hover/detail — never make the player multiply factors. (Incremental-genre players expect
+multiplicative diminishing-returns, so this is idiomatic, but the display must show *results*, not
+raw factor lists.) One known ergonomic cost: scripting against a *predicted* post-debuff stat
+threshold requires reasoning about compounding; if playtesting shows this confuses players, an
+additive-within-a-type / multiplicative-across-types hybrid is the documented fallback.
+
 
 **Loop safety** (engine invariant, applies to the whole framework): an effect/trigger **cannot
 re-enter its own resolution chain** (kills true infinite loops), and a
 **named cascade-depth cap** (`MAX_TRIGGER_CASCADE_DEPTH` **= 500**, counting *chain depth* not
 trigger breadth) backstops exotic multi-effect cycles. Breadth is effectively unlimited — "lots
 and lots of triggers firing once each" is a fully supported build path; only unbroken
-self-perpetuating chains are truncated. Truncation is deterministic.
+self-perpetuating chains are truncated. Truncation is deterministic. Concretely (locked Phase 3):
+- **Self-re-entry guard = instance-level, stack-scoped** — a specific effect *instance* cannot
+  re-enter while it is already unwinding on the active resolution stack. This blocks true
+  self-loops (a retaliation triggering its own retaliation) but leaves legitimate cross-creature
+  cascades alone (A hits B, B's trait fires — not re-entry of A's).
+- **Depth = chain nesting**, not breadth. N effects firing on one hook point is breadth N at the
+  current depth; each trigger that *causes a new hook to fire* increments depth for that sub-chain.
+- **On the cap**: the over-cap trigger simply does **not execute** (no crash, no partial fire);
+  resolution unwinds normally, and a **mandatory `CascadeTruncated` event** (creature/effect +
+  depth) is **always** emitted — observable in the log/UI and assertable in goldens.
+- **Depth is transient** — it lives on the resolution call stack, resets to 0 per top-level
+  action/hook point, and is **never stored in `CombatState`** or serialized (same principle as
+  effective stats: derived/momentary values don't live in authoritative state).
+
+### Hook execution model (locked Phase 3)
+The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
+- **Scoped iteration.** At a **per-creature** phase point (that creature's turn start/end),
+  iterate that creature's effects; at a **global** phase point (round-start/round-end), iterate all
+  creatures' effects in the **standard tie-break order** (player → slot → id). All hook lookups go
+  through one function, **`effectsForHook(creature, hook)`** (scan-and-filter inside) — a
+  hook-type index is deferred until profiling shows it's needed (drop-in behind that boundary,
+  golden-verified, since correct output is byte-identical).
+- **Hooks reuse action machinery.** A hook that deals damage or applies a status calls the *same*
+  paths and emits the *same* shared consequence events (`DamageDealt`, `CreatureDied`,
+  `StatusApplied`, …) as a chosen action. A hook is a new *trigger origin*, not a new consequence
+  vocabulary.
+- **`TriggerFired` intent event** precedes the consequences a trigger produces (mirroring
+  `AttackDeclared`→`DamageDealt`), so the log explains *why* triggered damage/effects happened.
+- **One shared per-creature effect ordering** — innate-1 → innate-2 → artifact infusions → applied
+  statuses — is reused *everywhere* effects are iterated: stat folding, hook firing, remap
+  resolution. One "effect order" concept, not several.
+
+**Hook interaction edges (locked Phase 3):**
+- **Dead creatures fire only `on-death`.** `effectsForHook` considers only effects on `alive`
+  creatures; the sole exception is `on-death`, which fires once, *as* the creature dies, even
+  mid-cascade/mid-sweep. A creature that takes lethal damage fires `on-death` but **not**
+  `on-damage-taken` (death pre-empts the reaction — you can't swing back if the blow killed you).
+- **Applying a status emits `StatusApplied` then fires `on-status-applied`** (event-before-hook,
+  matching intent→consequence ordering). Re-entrant chains (a status-application triggering another)
+  are covered by the loop-safety guard.
+- **DoT damage is a tagged `DamageDealt`, not a `TriggerFired`.** A DoT tick emits only
+  `DamageDealt` (no per-tick `TriggerFired` — the DoT's existence is already announced by its
+  `StatusApplied`), but that `DamageDealt` carries a **source marker** (e.g. `damageSource:
+  'attack' | 'cast' | 'dot'` + the status identity) so the log renders it as "[creature] took X
+  poison damage" and Phase 7's UI can attribute it. (Contrast: a triggered *attack* does emit
+  `TriggerFired` → `DamageDealt`.)
+- **Conditional-passive predicates read effective stats but must not create a read-cycle**: a
+  predicate gating a modifier of stat X may reference *other* effective stats, but must not depend on
+  X's own effective value (read base X if truly needed). Prevents `getEffectiveStat` recursion.
+
+**v1 hook vocabulary (13, pinned):** `on-fight-start`, `on-turn-start`, `on-turn-end`,
+`on-round-end`, `on-damage-dealt`, `on-damage-taken`, `on-kill` (dealt a killing blow), `on-death`
+(self died), `on-ally-action`, `on-enemy-action`, `on-ally-death`, `on-enemy-death`,
+`on-status-applied`. Each hook = a firing point + a **context** (e.g. `on-damage-taken` provides
+`{self, source, amount}`). Expanding the set later is **additive and golden-safe** — a new firing
+point no trait listens to emits zero events — provided the hook fires at a point the resolver
+already reaches; a hook needing newly-tracked state is a larger change (none of v1's are).
 
 ### Traits
-- **v1 categories**: **passive/stat** (always-on modifiers, e.g. "+25% Attack at full HP") and
-  **triggered** (fire on a hook event, e.g. "when attacked, retaliate"). **Behavioral** traits
-  (changing scripting options / granting extra actions) are **deferred past v1**.
+- **v1 categories**: **passive/stat** (always-on or conditionally-on modifiers, e.g. "+25% Attack
+  at full HP") and **triggered** (fire on a hook, produce an effect). **Behavioral** traits
+  (changing scripting options, granting extra actions, altering the creature's own decision-making
+  or the turn economy) are **deferred past v1**. *Reacting to an event by dealing damage / applying
+  a status / changing a stat is **triggered**, not behavioral — in scope.*
 - A base creature has **1 innate trait**; a fused creature has **2** (both parents'). Each
   **creature has a fixed innate trait** defined in its data (collecting a creature = knowing its
-  trait). Artifacts can add further trait(s) via infusion.
-- Traits are **data, not code branches**, interpreted via the effect framework above.
+  trait). Artifacts can add further trait(s) via infusion (artifact *mechanism* deferred to Phase 8;
+  the effects it would carry are the framework built here).
+- **`Trait { id, name, effects: readonly Effect[] }`** — a thin named wrapper (identity/flavor for
+  UI) over one-or-more effects (the mechanical units); a trait may bundle multiple effects.
+- **Passive/stat traits** are `stat-modifier` effects. A **conditional** passive carries a
+  **read-time activation predicate** evaluated during `getEffectiveStat` folding (e.g. "+25% Attack
+  at full HP" = a modifier whose predicate is `currentHp == effMaxHp`) — never cached, always
+  correct on read.
+- **Triggered traits** = `{ hook, condition?, response }`. The **v1 response vocabulary** (each
+  fully parameterized by **target** and **magnitude**): **(a) deal damage, (b) apply a status,
+  (c) apply a stat-modifier, (d) suppress-action** (skip a turn — what Stun uses). Design-space
+  breadth comes from the **hook × condition × parameter cross-product**, not from more response
+  types (13 hooks × conditions × targets/magnitudes is ample for the v1 trait roster).
+- **No keywords, no implicit targets.** There is no "Retaliate" (or similar) concept — every trait
+  is expressed as an explicit event→condition→response→target→magnitude sentence in data, e.g.
+  *"when this creature is dealt damage by another creature, attack that creature for 30% Attack."*
+  The hook **context** supplies the reference actors (`{self, source}` etc.); the response names its
+  target via a vocabulary (`self`, `triggering-source`, `triggering-ally`, `all-enemies`, a full
+  `TargetSelector`, …).
+- **"attack" / "cast" in a trait or spell mean the real actions** — same damage formula, OffStat
+  (Attack / Intelligence), affinity, Defence interaction, pools, and min-1 floor as a creature
+  choosing that action; the trait/spell supplies only the spellPower coefficient and target. There
+  is no separate "trigger damage" formula. **DoT is the one deliberate Defence-bypass exception**;
+  a response may *opt into* that bypass explicitly for armour-ignoring damage.
+- Traits are **data, not code branches**. Definitions live in `src/data/`; a creature references
+  them via **`innateTraitIds`** (1 base / 2 fused), resolved from a registry at combat start, with
+  effects instantiated onto the active-effects list at fight start.
 
 ### Status effects
 - Statuses are **applied effects** (from spells, augments, traits) with a **fixed turn
@@ -347,19 +454,60 @@ self-perpetuating chains are truncated. Truncation is deterministic.
 - **Stacking**: re-applying refreshes duration **and** stacks intensity, up to a per-status
   cap — **each status declares its own cap explicitly; there is no shared global default.**
 - **v1 content**: a flexible, easily-addable **DoT category** (parameterized: damage value,
-  duration, flavor; start with Poison/Burn) plus **one buff and one debuff per stat** —
-  Attack, Defence, Intelligence, Speed (8 total; some names TBD). All 8 are **data instances of
-  one generic stat-modifier primitive** (parameters: stat, direction, magnitude, duration) — no
-  per-stat special-casing in the engine. Health's "buff" is **Regen** (heal-over-time); its
-  "debuff" is just a DoT (no max-HP modifier in v1).
+  duration, flavor; start with Poison/Burn), **Regen** (heal-over-time), **Stun**, and a set of
+  **timed `damage-modifier` statuses** — **Weaken** ("−X% damage dealt", capped ~1 stack + duration)
+  and **Vulnerability** ("+X% damage taken") — all surfaced as status icons with durations. **Raw
+  stat buffs/debuffs (raising/lowering Attack/Defence/Intelligence/Speed) are NOT statuses** — they
+  are permanent-for-fight `stat-modifier` effects (multiplicative, uncapped, invisible-as-status;
+  the player sees the effective stat). So "make them weaker" has two distinct tools: a **permanent
+  stat-modifier** (grind their Attack down, uncapped) vs. a **timed Weaken damage-modifier** (tactical
+  output cut). Health's "regen" is the Regen HoT; a health "debuff" is just a DoT (no max-HP modifier
+  in v1). All are **data instances of the built primitives** — no per-stat/per-status special-casing.
 - **DoT damage** uses its **own value from the source** and **bypasses Defence** (not the
   Attack/Defence formula) — making DoT a distinct answer to high-Defence enemies.
-- **Stun** (and similar tempo effects) are checked **when the affected creature's turn comes
-  up**, so a stun applied earlier in the round lands.
+- **Stun** is **just a `condition-status`**, not a special mechanic — it registers an
+  `on-turn-start` hook whose response is **suppress-action**, so the affected creature's turn is
+  skipped **via the Phase 1 empty-bracket mechanism** (its `TurnStarted`/`TurnEnded` still emit,
+  with no action between). A stun applied earlier in the round lands because the check happens when
+  the creature's turn comes up. No special resolver branch — the resolver just fires the hook.
 - The system is built to **scale to many future statuses** (e.g. end-of-turn auto-Provoke,
-  exotic conditional effects) via new data using existing hooks.
+  exotic conditional effects) via new data using existing hooks. New statuses are pure data
+  instances of the built primitives (DoT / stat-modifier / heal-over-time / suppress-action) — the
+  v1 set is not a ceiling.
+
+**Status lifecycle (locked Phase 3):**
+- **Duration counts down in ROUNDS**, decremented at **round-end** (a global phase point), not
+  per-turn — order-independent and easy to hand-derive in goldens. A "3-round" status lasts three
+  round-ends regardless of whose it is.
+- **A DoT ticks at round-end, *before* the decrement** — so a freshly-applied 1-round DoT ticks
+  exactly once, then decrements to 0 and expires ("a 1-round poison poisons once").
+- **Stacking = a single status instance per (status-type, creature)** carrying a **stack count** +
+  **remaining duration**; re-applying refreshes duration and increments intensity toward the
+  status's declared cap. DoT intensity = per-stack tick damage; stat-status intensity = magnitude
+  scaling. (Not N separate instances.)
+- **Round-end resolves as global sweeps over a start-of-sweep snapshot.** Snapshot the set of
+  statuses present when the sweep begins, then: **(1)** fire all `on-round-end` hooks across all
+  creatures in **tie-break order** — including DoT ticks (a DoT tick *is* an `on-round-end` hook on
+  the DoT effect, same machinery as any trigger; **no separate status-tick pass**). Cascades resolve
+  fully here: if a tick kills a creature, that creature's **`on-death` hook fires immediately** (the
+  death exception — see hook model), which may itself apply new statuses/effects. **(2)** Decrement
+  durations — **only for statuses in the start-of-sweep snapshot**. **(3)** Expire snapshot statuses
+  now at 0 duration (emit `StatusExpired`).
+- **Statuses born *during* the sweep** (e.g. a poison applied by an `on-death` trait) are **not in
+  the snapshot**: they do not tick, decrement, or expire this sweep — they keep their full declared
+  duration and begin normal countdown at the *next* round-end. (Without this, a mid-sweep-applied
+  status would silently lose a round to the same sweep's decrement.)
+- **A creature killed mid-sweep fires only `on-death`**; its own not-yet-reached `on-round-end`
+  hooks (e.g. a DoT it was carrying that would tick *others*) are **skipped** — so round-end is
+  deterministically order-sensitive to death (fixed by tie-break order). **Win/loss is checked once,
+  after the entire sweep completes** (consistent with "resolve the whole boundary, then check").
 
 ### Artifacts
+**Note:** the artifact *mechanism* (slot, infusions, Artifact Forge, Ore, leveling, infusion-recipe
+drops) is **deferred to Phase 8** with the rest of the forge economy. The **effects** an artifact
+would carry are exactly the effect framework built in Phase 3 — so nothing about artifacts needs to
+exist before Phase 8; they plug into the already-built machinery. The design below is the eventual
+target.
 - An artifact is an **equippable item** on a creature (**1 artifact slot** per creature in v1),
   **stat-focused** in character (where gems are spell-focused).
 - Structurally **parallel to gems**: an artifact has a **level** (bounded, a fixed max, raised
