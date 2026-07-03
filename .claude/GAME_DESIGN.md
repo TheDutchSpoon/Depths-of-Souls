@@ -542,7 +542,13 @@ floor/depth" are deliberately deferred past v1.)
 
 **v1 targeting selectors** (orthogonal to conditions — any condition pairs with any target):
 lowest-HP enemy, highest-HP enemy, highest-Attack enemy, highest-Intelligence enemy, lowest-HP
-ally, random enemy, self, the provoking enemy.
+ally, random enemy, self.
+
+*(A "provoking enemy" selector was considered and **dropped** for v1: because Provoke is a blanket
+post-selection override on all single-target offensive actions (§7), explicitly selecting the
+provoker would produce behavior indistinguishable from any other selector when a provoker exists,
+and an unresolvable rule when none does — i.e. it can never produce an observable outcome. Reintroduce
+only if a future mechanic makes it meaningful, e.g. targeting provokers for non-offensive actions.)*
 
 **Actions**: the action set from §7. For **Cast**, the rule specifies **which equipped gem/slot**
 to fire (choosing the right spell for the situation is the tactical depth). The **TARGETING**
@@ -563,9 +569,15 @@ Design constraints:
 
 **Interpreter semantics (locked — Phase 2):**
 - **Rule validity**: a rule matches only if its condition is true **AND** its chosen action is
-  currently valid. An invalid action → **skip to the next rule** (not "match and fizzle"). An empty
-  referenced gem slot makes Cast invalid; an unresolvable player selector (e.g. "provoking enemy"
-  with no provoker) makes the rule invalid. Both → skip. This keeps scripts robust.
+  currently valid. An invalid action → **skip to the next rule** (not "match and fizzle"). In v1 the
+  one reachable cause of invalidity is an **empty referenced gem slot** (Cast with nothing in that
+  slot → skip). A separate "**unresolvable selector → skip**" branch also exists, but with the v1
+  selector set it has **no reachable trigger** (self always exists; ally-selectors include the
+  acting creature so they always resolve; enemy-selectors always have a target because `decideAction`
+  never runs against an already-wiped enemy side — win/loss is checked after every action). It is
+  kept as a **defensive/structural seam** — documented but currently unreachable, like Phase 1's
+  `getDefaultTarget` null case — so that future selectors which *can* fail to resolve get correct
+  behavior for free. This keeps scripts robust.
 - **Evaluation is side-effect-free lookahead**: walk rules top-down evaluating condition + validity
   as pure predicates over current state; the **first** rule that passes wins; only then is its
   single action executed. No try/rollback.
