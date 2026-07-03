@@ -60,6 +60,7 @@ export const expectedEvents: CombatEvent[] = [
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 0,
+    damageSource: 'attack',
   },
   { type: 'CreatureDied', creatureId: FOE },
   { type: 'TurnEnded', creatureId: CASTER },

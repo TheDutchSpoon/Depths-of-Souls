@@ -1,6 +1,7 @@
 import type { CreatureId } from './ids'
 import type { SeededRng } from './rng'
 import type { Script } from './scripting-types'
+import type { ActiveEffect, Hook } from './effect-types'
 
 // ---- Stats & affinity ----
 
@@ -50,6 +51,14 @@ export interface Creature {
   readonly defending: boolean
   /** Until this creature's next turn: single-target offensive actions against it redirect here. */
   readonly provoking: boolean
+  /** Static references (1 base / 2 fused) resolved from the trait registry at fight-start. */
+  readonly innateTraitIds: readonly string[]
+  /**
+   * Fight-scoped, mutable effect list (threaded via updateCreature). Instantiated from
+   * innateTraitIds at createCombat; statuses append here in-fight (Slice C). Canonical order:
+   * innate-1 -> innate-2 -> artifact infusions (none in v1) -> applied statuses.
+   */
+  readonly activeEffects: readonly ActiveEffect[]
 }
 
 // ---- Actions ----
@@ -156,8 +165,22 @@ export interface WaitedEvent {
   readonly creatureId: CreatureId
 }
 
+/** Precedes a triggered effect's consequences (mirrors AttackDeclared->DamageDealt). Slice B.
+ * `effectId` is the stable definition id (trait/status), not the opaque instance id. */
+export interface TriggerFiredEvent {
+  readonly type: 'TriggerFired'
+  readonly sourceId: CreatureId
+  readonly hook: Hook
+  readonly effectId: string
+}
+
 export type IntentEvent =
-  AttackDeclaredEvent | SpellCastEvent | DefendedEvent | ProvokedEvent | WaitedEvent
+  | AttackDeclaredEvent
+  | SpellCastEvent
+  | DefendedEvent
+  | ProvokedEvent
+  | WaitedEvent
+  | TriggerFiredEvent
 
 // Consequence events: shared across any future source, not just Attack.
 export interface DamageDealtEvent {
@@ -171,6 +194,8 @@ export interface DamageDealtEvent {
   readonly affinityMultiplier: number
   readonly wasChipOnly: boolean
   readonly remainingHp: number
+  /** What produced this damage. 'dot' bypasses Defence and carries no TriggerFired (Slice C). */
+  readonly damageSource: 'attack' | 'cast' | 'dot'
 }
 
 export interface CreatureDiedEvent {
@@ -178,7 +203,69 @@ export interface CreatureDiedEvent {
   readonly creatureId: CreatureId
 }
 
-export type ConsequenceEvent = DamageDealtEvent | CreatureDiedEvent
+// ---- Phase 3 consequence events (front-loaded for a stable type surface; emitted in the
+// slice that owns the mechanism: StatModifierApplied/HpClamped in B, the rest in C). ----
+
+export interface StatusAppliedEvent {
+  readonly type: 'StatusApplied'
+  readonly targetId: CreatureId
+  readonly statusId: string
+  readonly stacks: number
+  readonly duration: number
+  readonly sourceId?: CreatureId
+}
+
+export interface StatusExpiredEvent {
+  readonly type: 'StatusExpired'
+  readonly creatureId: CreatureId
+  readonly statusId: string
+}
+
+export interface StatModifierAppliedEvent {
+  readonly type: 'StatModifierApplied'
+  readonly sourceId: CreatureId
+  readonly targetId: CreatureId
+  readonly stat: Stat
+  readonly factor: number
+  readonly effectiveBefore: number
+  readonly effectiveAfter: number
+}
+
+/** Emitted only when a lowered effective max Health actually reduces currentHp (after the
+ * StatModifierApplied that caused it). Neither damage nor heal — an explicit currentHp drop. */
+export interface HpClampedEvent {
+  readonly type: 'HpClamped'
+  readonly creatureId: CreatureId
+  readonly previousHp: number
+  readonly newHp: number
+  readonly effectiveMaxHealth: number
+}
+
+export interface HealAppliedEvent {
+  readonly type: 'HealApplied'
+  readonly sourceId: CreatureId
+  readonly targetId: CreatureId
+  readonly amount: number
+  readonly remainingHp: number
+}
+
+/** Loop-safety: emitted when a trigger cascade would exceed MAX_TRIGGER_CASCADE_DEPTH. */
+export interface CascadeTruncatedEvent {
+  readonly type: 'CascadeTruncated'
+  readonly creatureId: CreatureId
+  readonly effectId: string
+  readonly depth: number
+}
+
+export type ConsequenceEvent =
+  | DamageDealtEvent
+  | CreatureDiedEvent
+  | StatusAppliedEvent
+  | StatusExpiredEvent
+  | StatModifierAppliedEvent
+  | HpClampedEvent
+  | HealAppliedEvent
+  | CascadeTruncatedEvent
 
 // Lifecycle events. TurnStarted/TurnEnded are real events (not just internal hook
 // checkpoints) so playback has an explicit boundary even for no-op/skipped turns.

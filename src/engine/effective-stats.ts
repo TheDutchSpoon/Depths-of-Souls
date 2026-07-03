@@ -1,39 +1,51 @@
 import type { Creature, Stat } from './types'
 
 /**
- * Phase 1: no stat-modifier effects exist, so this is a pure passthrough to base.
- * Every stat read in combat math MUST go through this function — never `creature.baseStats.x`
- * inline. Phase 3 will fold active stat-modifier effects over base here, in a fixed
- * deterministic order.
+ * A creature's current value for `stat`: base folded with active `stat-modifier` effects,
+ * **multiplicatively** (`base × Π(factors)`), in canonical active-effects order. A conditional
+ * passive's factor is included only when its read-time predicate holds. Base stats are
+ * immutable; this is computed on demand and never written back.
+ *
+ * Multiplication is commutative, so numeric order is irrelevant here — but effects are still
+ * iterated in canonical order (shared with hook firing / remap resolution). A predicate may read
+ * OTHER effective stats but must not read `stat` itself (no read-cycle — see CONVENTIONS §6).
  */
 export function getEffectiveStat(creature: Creature, stat: Stat): number {
-  return creature.baseStats[stat]
+  let value = creature.baseStats[stat]
+  for (const effect of creature.activeEffects) {
+    if (effect.category !== 'stat-modifier') continue
+    if (effect.stat !== stat) continue
+    if (effect.predicate && !effect.predicate(creature)) continue
+    value *= effect.factor
+  }
+  return value
 }
 
 export type ActionKind = 'attack' | 'cast'
 
 /**
- * Remap-aware OffStat lookup, scaled by the action's spellPower (1.0 for Attack; a
- * spell's own coefficient for Cast). Order: remap-resolve source stat -> getEffectiveStat
- * -> x spellPower. Phase 1/2: no stat-remap effects exist, so this always falls back to
- * effective Attack/Intelligence. A future remap check (consulting active stat-remap
- * effects, fixed effect order, last-writer-wins) slots in as a lookup BEFORE the
- * fallback, with no change to callers.
+ * Remap-aware OffStat lookup, scaled by the action's spellPower (1.0 for Attack; a spell's own
+ * coefficient for Cast). Order: remap-resolve the source stat -> getEffectiveStat -> × spellPower.
+ * A `stat-remap` effect on the slot redirects which stat is read (e.g. Speed-as-Attack), with
+ * multiple remaps resolving last-writer-wins in canonical order. The substituted stat is read
+ * through getEffectiveStat, so the slot's own stat-modifiers do NOT transfer (a Speed-attacker
+ * wants +Speed, not +Attack) — a legible, automatic consequence of reading the remapped stat.
  */
 export function getOffensiveStat(
   creature: Creature,
   actionKind: ActionKind,
   spellPower: number = 1.0,
 ): number {
-  // Seam: a Phase 3 stat-remap check would go here, before the fallback below.
-  switch (actionKind) {
-    case 'attack':
-      return getEffectiveStat(creature, 'attack') * spellPower
-    case 'cast':
-      return getEffectiveStat(creature, 'intelligence') * spellPower
-    default: {
-      const exhaustive: never = actionKind
-      throw new Error(`Unhandled action kind: ${String(exhaustive)}`)
-    }
+  const sourceStat = resolveRemappedStat(creature, actionKind)
+  return getEffectiveStat(creature, sourceStat) * spellPower
+}
+
+function resolveRemappedStat(creature: Creature, slot: ActionKind): Stat {
+  let stat: Stat = slot === 'attack' ? 'attack' : 'intelligence'
+  for (const effect of creature.activeEffects) {
+    if (effect.category !== 'stat-remap') continue
+    if (effect.slot !== slot) continue
+    stat = effect.fromStat // last-writer-wins in canonical order
   }
+  return stat
 }

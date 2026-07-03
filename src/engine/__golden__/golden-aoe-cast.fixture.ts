@@ -69,6 +69,7 @@ export const expectedEvents: CombatEvent[] = [
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 0,
+    damageSource: 'cast',
   },
   { type: 'CreatureDied', creatureId: E1 },
   {
@@ -80,6 +81,7 @@ export const expectedEvents: CombatEvent[] = [
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 0,
+    damageSource: 'cast',
   },
   { type: 'CreatureDied', creatureId: E2 },
   { type: 'TurnEnded', creatureId: CASTER },

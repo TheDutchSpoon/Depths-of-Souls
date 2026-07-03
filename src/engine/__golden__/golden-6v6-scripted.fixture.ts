@@ -85,8 +85,10 @@ export const expectedRound1TurnOrder: readonly CreatureId[] = [
   'e5',
 ].map(createCreatureId)
 
-/** Per-event-type counts across the full ~28-round fight. */
-export const expectedEventTypeCounts: Readonly<Record<CombatEvent['type'], number>> = {
+/** Per-event-type counts across the full ~28-round fight. Sparse: only the event types that
+ * actually occur are keys (Phase 3's new event types never fire in this Phase-2-content fight),
+ * matching how the test tallies actual events. */
+export const expectedEventTypeCounts: Partial<Record<CombatEvent['type'], number>> = {
   FightStarted: 1,
   RoundStarted: 28,
   TurnStarted: 176,
@@ -118,6 +120,7 @@ export const expectedSpotCheckDamage: readonly CombatEvent[] = [
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 23,
+    damageSource: 'attack',
   },
   {
     type: 'DamageDealt',
@@ -128,6 +131,7 @@ export const expectedSpotCheckDamage: readonly CombatEvent[] = [
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 19,
+    damageSource: 'cast',
   },
   {
     type: 'DamageDealt',
@@ -138,6 +142,7 @@ export const expectedSpotCheckDamage: readonly CombatEvent[] = [
     affinityMultiplier: 1,
     wasChipOnly: true,
     remainingHp: 22,
+    damageSource: 'cast',
   },
 ]
 
