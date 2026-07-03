@@ -19,7 +19,9 @@ spellPower` (spellPower 1.0 for Attack, a spell property, scales OffStat pre-Def
 `(MAX(effOff − effDef, 0) + 0.01×effOff) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)`, then
 `MAX(1, floor(...))` — subtractive core + unconditional 1% chip floor, **integer, min-1 damage**;
 **Affinity** standalone ×1.25/×0.75/×1.0; **dealt pool additive**, **taken pool multiplicative**
-(no immunity/clamp); stats read via `getEffectiveStat` (base immutable); no Additional channel,
+(no immunity/clamp); stats read via `getEffectiveStat` (base immutable, **stat-modifiers fold
+multiplicatively `base×Π(factors)`** — uncapped, never-zero, permanent-for-fight, shown as effective
+stat not as a status); no Additional channel,
 **no variance, no baseline crits**, fully deterministic. One round = each living creature acts
 once in Speed order (frozen round-start queue; ties: player→slot→id). Actions:
 **Attack, Cast, Defend, Provoke, Wait** (Defend = Defence×1.5 + ×0.65 in taken pool; Provoke until
@@ -31,8 +33,17 @@ scripts). Affinities (domain of being): **Body, Spirit, Mind,
 Void, Primal**, cycle **Body > Spirit > Mind > Void > Primal > Body**. Incremental power lives
 in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
 statuses, gem augments, artifact infusions are ONE data-driven hook-based model (4 categories:
-stat-modifier, stat-remap, damage-modifier, condition-status) with loop safety
-(self-re-entry prevention + `MAX_TRIGGER_CASCADE_DEPTH`). **Three-tier creatures**: **species**
+stat-modifier, stat-remap, damage-modifier, condition-status). Hooks live as of Phase 3: 13-hook
+v1 vocab, fired via `effectsForHook` (scoped iteration, shared per-creature effect order), reusing
+action machinery; a **`TriggerFired`** event precedes triggered consequences. **Traits** =
+`{id,name,effects[]}` — passive (incl. conditional via read-time predicate) + triggered
+(`{hook,condition?,response}`; responses: deal-damage/apply-status/apply-stat-modifier/
+suppress-action, explicit targets, no keywords). **"attack"/"cast" in a trait/spell mean the real
+actions** (full formula; DoT the lone Defence-bypass). **Statuses**: round-based countdown at
+round-end, DoT-tick-is-a-round-end-hook, **Stun = a condition-status** (turn-start suppress-action),
+single-instance stacking to a declared cap. **Loop safety**: instance-level stack-scoped
+self-re-entry guard + `MAX_TRIGGER_CASCADE_DEPTH=500` (chain depth) + mandatory `CascadeTruncated`;
+depth transient. **Three-tier creatures**: **species**
 (a group of creatures; biomes spawn species; intra-species traits synergize) → **creature** (the
 unit: affinity + base stats + 1 innate trait) → **instance** (owned copy). No "class" concept —
 affinity is the only such axis. Obtained via **souls** (tracked **per creature**, 100% =
