@@ -5,51 +5,46 @@ import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import { calculateDamage } from './damage'
 import type { DamageResult } from './damage'
 import { firePhaseHook } from './phase-hooks'
-import { findCreature } from './creature-lookup'
+import { getCreature, updateCreature } from './creature-lookup'
+import { instantiateTraitEffects, effectiveMaxHp } from './effects'
 import { decideAction } from './interpreter'
 import type { CreatureId } from './ids'
 import type { Action, CombatEvent, CombatState, Creature, FightResult } from './types'
 import type { Script } from './scripting-types'
+import type { Trait } from './effect-types'
 
 export function createCombat(
   playerParty: readonly Creature[],
   enemyParty: readonly Creature[],
   seed: number,
   scripts: ReadonlyMap<string, Script> = new Map(),
+  traits: ReadonlyMap<string, Trait> = new Map(),
 ): CombatState {
   if (playerParty.length === 0 || enemyParty.length === 0) {
     throw new Error('createCombat: both parties must have at least one creature')
   }
 
+  // Fight-start: instantiate each creature's innate-trait effects onto activeEffects, then set
+  // currentHp to effective max Health (so a +Health trait actually grants the HP). For a
+  // trait-less creature this is a no-op: activeEffects is [] and effective max == base Health,
+  // so currentHp is unchanged -- Phase 1/2 fixtures stay byte-identical.
+  const instantiate = (creature: Creature): Creature => {
+    const withEffects: Creature = {
+      ...creature,
+      activeEffects: instantiateTraitEffects(creature, traits),
+    }
+    return { ...withEffects, currentHp: effectiveMaxHp(withEffects) }
+  }
+
   return {
     rng: createSeededRng(seed),
-    playerParty: [...playerParty],
-    enemyParty: [...enemyParty],
+    playerParty: playerParty.map(instantiate),
+    enemyParty: enemyParty.map(instantiate),
     turnQueue: [],
     turnCursor: 0,
     round: 0,
     result: null,
     scripts,
-  }
-}
-
-function getCreature(state: CombatState, id: CreatureId): Creature {
-  const creature = findCreature(state, id)
-  if (!creature) throw new Error(`resolver invariant violated: unknown creature id ${id}`)
-  return creature
-}
-
-function updateCreature(
-  state: CombatState,
-  id: CreatureId,
-  patch: Partial<Pick<Creature, 'currentHp' | 'alive' | 'defending' | 'provoking'>>,
-): CombatState {
-  const updateSide = (party: readonly Creature[]) =>
-    party.map((c) => (c.id === id ? { ...c, ...patch } : c))
-  return {
-    ...state,
-    playerParty: updateSide(state.playerParty),
-    enemyParty: updateSide(state.enemyParty),
   }
 }
 
@@ -76,6 +71,7 @@ function applyDamageAndEmit(
   sourceId: CreatureId,
   target: Creature,
   damage: DamageResult,
+  damageSource: 'attack' | 'cast' | 'dot',
   state: CombatState,
   events: CombatEvent[],
 ): CombatState {
@@ -98,6 +94,7 @@ function applyDamageAndEmit(
     affinityMultiplier: damage.affinityMultiplier,
     wasChipOnly: damage.wasChipOnly,
     remainingHp: newHp,
+    damageSource,
   })
 
   if (died) {
@@ -128,7 +125,7 @@ function executeAttack(
     takenFactors,
   })
 
-  return applyDamageAndEmit(actor.id, target, damage, state, events)
+  return applyDamageAndEmit(actor.id, target, damage, 'attack', state, events)
 }
 
 function executeCastSingle(
@@ -163,7 +160,7 @@ function executeCastSingle(
     takenFactors,
   })
 
-  return applyDamageAndEmit(actor.id, target, damage, state, events)
+  return applyDamageAndEmit(actor.id, target, damage, 'cast', state, events)
 }
 
 function executeCastAoe(
@@ -208,7 +205,7 @@ function executeCastAoe(
       dealtMods: [],
       takenFactors,
     })
-    working = applyDamageAndEmit(actor.id, target, damage, working, events)
+    working = applyDamageAndEmit(actor.id, target, damage, 'cast', working, events)
   }
 
   return working

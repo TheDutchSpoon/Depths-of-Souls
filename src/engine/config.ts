@@ -15,3 +15,8 @@ export const DEFEND_TAKEN_FACTOR = 0.65
 // Fixture/data-default convenience only -- no engine logic reads this; Creature.equippedSpells
 // stays a variable-length array so trait/forge slot-count changes fit later without a retype.
 export const DEFAULT_GEM_SLOT_COUNT = 3
+
+// Loop safety (Phase 3): counts trigger-cascade CHAIN DEPTH, not breadth. An over-cap trigger
+// does not execute; a mandatory CascadeTruncated event is emitted and resolution unwinds. Depth
+// is transient (call-stack only), never stored in CombatState. Wired in Slice B.
+export const MAX_TRIGGER_CASCADE_DEPTH = 500

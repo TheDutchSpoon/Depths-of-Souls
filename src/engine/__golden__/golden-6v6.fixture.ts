@@ -60,6 +60,7 @@ function attackTurn(attackerIndex: number): CombatEvent[] {
       affinityMultiplier: 1,
       wasChipOnly: false,
       remainingHp: 0,
+      damageSource: 'attack',
     },
     { type: 'CreatureDied', creatureId: targetId },
     { type: 'TurnEnded', creatureId: attackerId },

@@ -4,6 +4,7 @@
 import { createCreatureId } from '../ids'
 import { DEFAULT_GEM_SLOT_COUNT } from '../config'
 import type { Affinity, Creature, Side, Spell } from '../types'
+import type { ActiveEffect } from '../effect-types'
 
 export interface CreatureOverrides {
   id?: string
@@ -21,6 +22,8 @@ export interface CreatureOverrides {
   equippedSpells?: readonly (Spell | null)[]
   defending?: boolean
   provoking?: boolean
+  innateTraitIds?: readonly string[]
+  activeEffects?: readonly ActiveEffect[]
 }
 
 /** A flat, unremarkable baseline creature (all stats 20) for tests that don't care about specifics. */
@@ -46,6 +49,8 @@ export function makeCreature(overrides: CreatureOverrides = {}): Creature {
       Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null),
     defending: overrides.defending ?? false,
     provoking: overrides.provoking ?? false,
+    innateTraitIds: overrides.innateTraitIds ?? [],
+    activeEffects: overrides.activeEffects ?? [],
   }
 }
 

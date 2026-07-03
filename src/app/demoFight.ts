@@ -29,6 +29,8 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
   {
     id: createCreatureId('mira'),
@@ -43,6 +45,8 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [CINDER_NOVA],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
   {
     id: createCreatureId('tomas'),
@@ -56,6 +60,8 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
   {
     id: createCreatureId('liora'),
@@ -69,6 +75,8 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
   {
     id: createCreatureId('wendel'),
@@ -82,6 +90,8 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
 ]
 
@@ -98,6 +108,8 @@ export const demoEnemyParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
   {
     id: createCreatureId('bog-witch'),
@@ -111,6 +123,8 @@ export const demoEnemyParty: Creature[] = [
     equippedSpells: [CINDER_NOVA],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
   {
     id: createCreatureId('stone-troll'),
@@ -124,6 +138,8 @@ export const demoEnemyParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
   {
     id: createCreatureId('alpha-wolf'),
@@ -137,6 +153,8 @@ export const demoEnemyParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
   {
     id: createCreatureId('sleepy-slime'),
@@ -150,5 +168,7 @@ export const demoEnemyParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
+    innateTraitIds: [],
+    activeEffects: [],
   },
 ]

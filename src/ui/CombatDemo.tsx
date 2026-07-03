@@ -77,6 +77,21 @@ function describeEvent(event: CombatEvent): string {
       return `${event.creatureId}'s turn ends`
     case 'FightEnded':
       return `Fight ended: ${event.result}`
+    // Phase 3 events (not emitted until later slices; handled here so the union stays exhaustive).
+    case 'TriggerFired':
+      return `  ${event.sourceId} triggers ${event.effectId} (${event.hook})`
+    case 'StatusApplied':
+      return `  ${event.targetId} gains ${event.statusId} x${event.stacks} (${event.duration}r)`
+    case 'StatusExpired':
+      return `  ${event.creatureId}'s ${event.statusId} expired`
+    case 'StatModifierApplied':
+      return `  ${event.targetId} ${event.stat}: ${event.effectiveBefore} -> ${event.effectiveAfter}`
+    case 'HpClamped':
+      return `  ${event.creatureId} HP clamped ${event.previousHp} -> ${event.newHp} (max ${event.effectiveMaxHealth})`
+    case 'HealApplied':
+      return `  ${event.targetId} heals ${event.amount} -- ${event.remainingHp} HP`
+    case 'CascadeTruncated':
+      return `  cascade truncated at ${event.creatureId}/${event.effectId} (depth ${event.depth})`
     default: {
       const exhaustive: never = event
       throw new Error(`Unhandled event type: ${String(exhaustive)}`)
