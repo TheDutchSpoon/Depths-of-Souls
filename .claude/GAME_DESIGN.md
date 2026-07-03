@@ -390,16 +390,31 @@ The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
 - **Dead creatures fire only `on-death`.** `effectsForHook` considers only effects on `alive`
   creatures; the sole exception is `on-death`, which fires once, *as* the creature dies, even
   mid-cascade/mid-sweep. A creature that takes lethal damage fires `on-death` but **not**
-  `on-damage-taken` (death pre-empts the reaction — you can't swing back if the blow killed you).
+  `on-damage-taken` (death pre-empts the victim's reaction — you can't swing back if the blow killed
+  you). **Damage-path hook order** (after `DamageDealt`): `on-damage-dealt` (source) fires
+  **unconditionally — including on a lethal hit** (the attacker dealt the damage regardless) →
+  `on-damage-taken` (self) fires **only if the target survived** → then if it died: `CreatureDied` →
+  `on-death` → `on-kill` (source) → `on-ally-death`/`on-enemy-death` (observers). Hit-reactions
+  resolve before death-reactions.
 - **Applying a status emits `StatusApplied` then fires `on-status-applied`** (event-before-hook,
   matching intent→consequence ordering). Re-entrant chains (a status-application triggering another)
   are covered by the loop-safety guard.
-- **DoT damage is a tagged `DamageDealt`, not a `TriggerFired`.** A DoT tick emits only
-  `DamageDealt` (no per-tick `TriggerFired` — the DoT's existence is already announced by its
-  `StatusApplied`), but that `DamageDealt` carries a **source marker** (e.g. `damageSource:
-  'attack' | 'cast' | 'dot'` + the status identity) so the log renders it as "[creature] took X
-  poison damage" and Phase 7's UI can attribute it. (Contrast: a triggered *attack* does emit
-  `TriggerFired` → `DamageDealt`.)
+- **`DamageDealt` carries a required `damageSource: 'attack' | 'cast' | 'dot'`** (+ the status
+  identity for DoT). A DoT tick emits only `DamageDealt` (no per-tick `TriggerFired` — the DoT's
+  existence is already announced by its `StatusApplied`), tagged `'dot'`, so the log renders
+  "[creature] took X poison damage" and Phase 7's UI can attribute it. Attack/cast damage carries
+  `'attack'`/`'cast'`. (Contrast: a triggered *attack* does emit `TriggerFired` → `DamageDealt`.)
+  Because the field is **required** (uniform self-describing schema, not an optional sometimes-field),
+  the **Phase 1/2 goldens are consciously updated** to add it — a **field-addition-only** change
+  (regenerate, then verify the diff shows *only* the new field, no value/ordering changes), which is
+  a deliberate reviewed schema update, not a silent regenerate, and preserves the byte-identical
+  *behavior* guarantee while improving the schema.
+- **Applying a stat-modifier emits a `StatModifierApplied` consequence event** carrying source,
+  target, stat, the factor applied, **and the concrete effective-stat change** (e.g. before/after or
+  delta — "Attack 100 → 51 (−49)"), because a bare factor (`×0.8`) is meaningless without its base.
+  This is the golden assertion surface for stat changes (stat-modifiers are "not surfaced *as a
+  status icon*" — a UI statement, not a log one; the log still records the change, and Phase 7 can
+  use it for floating combat text like "Attack −49"). Order: `TriggerFired` → `StatModifierApplied`.
 - **Conditional-passive predicates read effective stats but must not create a read-cycle**: a
   predicate gating a modifier of stat X may reference *other* effective stats, but must not depend on
   X's own effective value (read base X if truly needed). Prevents `getEffectiveStat` recursion.
@@ -461,8 +476,18 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   are permanent-for-fight `stat-modifier` effects (multiplicative, uncapped, invisible-as-status;
   the player sees the effective stat). So "make them weaker" has two distinct tools: a **permanent
   stat-modifier** (grind their Attack down, uncapped) vs. a **timed Weaken damage-modifier** (tactical
-  output cut). Health's "regen" is the Regen HoT; a health "debuff" is just a DoT (no max-HP modifier
-  in v1). All are **data instances of the built primitives** — no per-stat/per-status special-casing.
+  output cut). Health's "regen" is the Regen HoT; a health DoT is a distinct answer to high-Defence
+  enemies. **Health IS a modifiable stat** (a `stat-modifier` may target it, e.g. an innate "+50%
+  Health" trait) — the four combat stats plus Health all fold multiplicatively. Two rules keep this
+  clean: **(a)** at fight-start, `currentHp` initializes to **effective** max Health (so a +Health
+  trait actually grants the HP); **(b)** `currentHp` is **clamped to effective max whenever effective
+  max changes** — a Health debuff lowers the cap and current HP with it; a Health buff raises the cap
+  but does **not** auto-heal into the new space. HP% (which scripts read) therefore stays bounded
+  0–100. When the clamp actually reduces `currentHp` (max dropped below current), a dedicated
+  **`HpClamped { creatureId, previousHp, newHp, effectiveMaxHealth }`** event is emitted (after the
+  `StatModifierApplied` that caused it) so the currentHp drop — neither damage nor heal — is explicit
+  in the log/UI rather than silently inferred. All are **data instances of the built primitives** — no
+  per-stat/per-status special-casing.
 - **DoT damage** uses its **own value from the source** and **bypasses Defence** (not the
   Attack/Defence formula) — making DoT a distinct answer to high-Defence enemies.
 - **Stun** is **just a `condition-status`**, not a special mechanic — it registers an
