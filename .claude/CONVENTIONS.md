@@ -61,13 +61,20 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
   kill-event**, immediately, never held pending fight outcome.
 - **Damage formula** (Attack and Cast both):
   ```
-  raw    = (MAX(OffStat − Defence, 0) + 0.01 × OffStat) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)
-  damage = MAX(1, floor(raw))
+  effOffStat = getEffectiveStat( remapResolve(creature, action) ) × spellPower   // spellPower = 1.0 for Attack
+  raw        = (MAX(effOffStat − Defence, 0) + 0.01 × effOffStat) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)
+  damage     = MAX(1, floor(raw))
   ```
-  - **OffStat** read via a **remap-aware lookup** (consults `stat-remap` effects; returns effective
-    Attack for Attack / effective Intelligence for Cast when none). `OffStat`/`Defence` are
-    **effective** stats via `getEffectiveStat` (never raw base).
-  - Subtractive core clamped at 0; **+1% chip floor unconditional** (applies even when core = 0).
+  - **effOffStat**: source stat (**Attack** for Attack / **Intelligence** for Cast) read via a
+    **remap-aware lookup** (consults `stat-remap` effects), taken as an **effective** stat
+    (`getEffectiveStat`, never raw base), then **× the action's `spellPower`** coefficient. Order:
+    remap → effective → × spellPower. `Defence` is likewise effective.
+  - **spellPower** is a **spell/action property** (Attack = 1.0; a "30% Int" spell = 0.30). It
+    scales OffStat **inside the core, pre-Defence** — a 30% spell = `(Int × 0.30) − Def`, **not**
+    `(Int − Def) × 0.30` (Defence measures against actual incoming power). It's a **third modifier
+    locus**, distinct from stat-modifiers (→ effective stats) and damage-modifiers (→ the pools).
+  - Subtractive core clamped at 0; **+1% chip floor unconditional** and it **scales with
+    effOffStat** too (a weak spell has a proportionally small chip).
   - **Integer damage**: full-precision `raw`, **floored once at the end**, **min 1** (a hit always
     removes ≥1 HP → no stalemates; round cap is only a pathological backstop). Never round per-term
     (float drift breaks golden replay).
@@ -80,13 +87,19 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
     makes tanking a real power path. **Stat buffs are NOT dealt-mods** (they raise effective stats);
     "+damage%" effects are dealt-mods — never double-count.
   - **No "Additional" channel, no variance, no baseline crits** (crit = a trait-granted dealt-mod).
-- The starting action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows).
-  Spells (Cast) have **no cost, freely castable**; scripts pick the gem slot; spells carry a
-  **target shape** (single-target or AOE). Phase 1 implements **Attack only**, with a default
-  target of **first living enemy by slot** (deterministic, no RNG).
+- The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
+  (Cast) have **no cost, freely castable**; a rule picks the **gem slot index** (not a spell ID),
+  and the fired spell is whatever occupies that slot on that creature (template-reusable across
+  loadouts). A spell carries a **target shape** (single / all-enemies) and a **spellPower**
+  coefficient; shape is resolved from the equipped spell at evaluation time. Phase 2 ships a
+  **minimal `Spell`** (`{ id, targetShape, spellPower, ... }`); the forge/augment/leveling economy
+  is deferred to Phase 8.
   - **Defend**: ×1.5 effective Defence (inside the core) **and** a ×0.65 factor in the defender's
     taken pool, until its next turn.
   - **Provoke**: marks the creature provoking until its next turn.
+  - **AOE Cast**: target set **frozen at cast-start** (all living enemies, slot order); the whole
+    action resolves fully (all `DamageDealt`/`CreatureDied`) **before** win/loss is checked — the
+    win-check stays at the action boundary, never inside the per-target loop.
 - **DoT damage** does **not** use the damage formula — its own value from the source, **bypasses
   Defence**.
 - **Provoke targeting**: single-target offensive actions (Attack / single-target Cast) against the
@@ -94,21 +107,44 @@ These exist mostly to keep AI-generated code consistent as the codebase grows.
   enemy provokes, else the script's selector. Implement as a **target-set override applied after**
   the action is chosen (narrows targets, doesn't change the action). **Ally-targeting and AOE
   actions are exempt** — AOE always hits its full set.
-- The scripting interpreter evaluates a creature's ordered rules and returns a chosen `Action`.
-  **One condition per rule in v1** (no AND/OR); rule **ordering carries the logic** (first valid
-  match wins), so reorder UI and "which rule fired" feedback are load-bearing. Data-defined,
-  interpreted — never hard-coded per creature. Implicit fallback: Attack a default target if valid,
-  else Wait. Rule/template counts **unbounded**. `TARGETING` present only for multi-target actions
-  (Attack, single-target Cast); omitted for self-only (Defend/Provoke/Wait) and AOE Cast. A
-  `"has status X"` condition matches a **literal status ID** (a `condition-status`), not a category.
-- **Scripts are reusable templates** referenced by creatures (many may share one).
+- **Interpreter** = pure engine code: `decideAction(creature, script, state) -> Action` (the Phase 1
+  seam, now consulting the script; RNG only via `CombatState`'s seeded RNG). **Side-effect-free
+  lookahead**: walk the ordered rules top-down; a rule matches only if its **condition is true AND
+  its action is valid** (invalid → **skip to next rule**, never match-and-fizzle); first match wins;
+  only then execute. **One condition per rule** (no AND/OR); **ordering carries the logic** and is
+  **array position** (no stored priority int), so reorder UI + "which rule fired" feedback are
+  load-bearing. Implicit fallback: Attack a valid default target, else Wait. `TARGETING` present only
+  for multi-target actions (Attack, single-target Cast); omitted for self-only (Defend/Provoke/Wait)
+  and AOE Cast. A `"has status X"` condition matches a **literal status ID** (a `condition-status`),
+  not a category.
+  - **Condition** = discriminated union on kind; comparator is **data** (`< <= > >= ==`, `!=`
+    optional). **HP% via integer cross-multiplication** — `currentHp * 100 <cmp> threshold * effMaxHp`
+    where `effMaxHp = getEffectiveStat(_, 'health')` — integer thresholds, **no float**. Subject
+    qualifier `any` (existential) / `lowest` / `highest` (pick-and-test-the-extremum). `always` = an
+    unconditionally-true kind.
+  - **TargetSelector** = discriminated union on kind; all extremum selectors use the **shared
+    tie-break** (primary key, then player side → slot → id by codepoint). `random-enemy` draws from
+    the seeded RNG and advances it. **"ally" includes the acting creature**; unresolvable player
+    selector → rule invalid → skip.
+  - **`Script`** = `{ id, rules: Rule[], defaultTarget?: TargetSelector }`; `Rule` =
+    `{ condition, action, targeting? }`. Creature references a script by **`scriptId`**; null/absent →
+    implicit fallback. `defaultTarget?` reserved for Phase 6 (rules omitting TARGETING fall back to
+    it). Rule/template counts **unbounded**.
+- **Scripts are reusable templates** referenced by creatures (many may share one). The interpreter is
+  **symmetric** — player and enemy creatures use the same system. Phase 2 provides five **stock
+  scripts** in `data/` (real content, not `__fixtures__`): `always-attack` (lowest-HP enemy),
+  `always-cast` (slot 0, lowest-HP enemy, degrades to fallback if slotless), `always-defend`,
+  `always-provoke`, `always-wait`. Enemies use these until richer scripts arrive (no new machinery).
 - **Event log**: two families. **Intent events** — a discriminated union on action kind, one
-  variant per action, each carrying only its own fields (`AttackDeclared { attackerId, targetId }`;
-  later `SpellCast`/`Defended`/`Provoked`/`Waited`) — **always emitted, including no-consequence
-  actions like Wait** (complete turn-by-turn log). **Consequence events** — separate and shared
-  across all sources (`DamageDealt { sourceId, targetId, rawDamage, finalDamage, affinityMultiplier,
-  wasChipOnly, remainingHp }`, `CreatureDied { creatureId }`; later status/heal). Consequences are
-  never nested in intents (a poison tick and an Attack both reuse `DamageDealt`). Plus lifecycle:
+  variant per action, each carrying only its own fields (`AttackDeclared { attackerId, targetId }`,
+  `SpellCast { casterId, gemSlot, targetId | targetIds }`, `Defended`/`Provoked`/`Waited`) —
+  **always emitted, including no-consequence actions like Wait** (complete turn-by-turn log).
+  **Consequence events** — separate and shared across all sources (`DamageDealt { sourceId,
+  targetId, rawDamage, finalDamage, affinityMultiplier, wasChipOnly, remainingHp }`,
+  `CreatureDied { creatureId }`; the set **grows** in Phase 3+ with shared `StatusApplied`/
+  `StatusExpired`/`StatusTicked`/`HealApplied`/etc.). Consequences are never nested in intents (a
+  poison tick and an Attack both reuse `DamageDealt`; an AOE Cast = one `SpellCast` intent followed
+  by N `DamageDealt`). Plus lifecycle:
   `FightStarted`, `RoundStarted { round }`, `TurnStarted { creatureId }`, `TurnEnded { creatureId }`,
   `FightEnded { result }`. **`TurnStarted`/`TurnEnded` are real log events, not just internal hook
   checkpoints** — they give playback (§ROADMAP Phase 7) an explicit, unambiguous turn boundary to
@@ -281,10 +317,22 @@ the same interpreter, differing only in how they attach and which hooks they use
 - **A golden-test failure is a question, not a chore.** It means *either* a regression *or* an
   intended change — decide which *before* regenerating the fixture. Never reflexively "update
   snapshot"; that turns a regression detector into a rubber stamp.
+- **Golden fixtures are layered by capability and additive across phases.** Each phase keeps prior
+  fixtures **stable** (they pin already-verified behavior) and **adds** fixtures exercising the new
+  capability. Never rewrite an old golden to accommodate a new feature unless the feature
+  *deliberately* changes that behavior — a changed old golden must be a conscious, reviewed decision,
+  not incidental. (E.g. Phase 1 goldens test raw engine math and stay as-is; Phase 2 adds
+  interpreted-fight goldens.)
+- **Two-tier golden discipline.** Small **focused** goldens are **hand-derived** (per-mechanism
+  correctness — the expected log computed by hand). A large **integration** golden may be
+  **generated-then-checkpoint-verified** (hand-check the load-bearing assertions: turn order, event
+  counts, key results) rather than fully hand-traced — but it must be **explicitly labeled in the
+  fixture** as an integration/regression golden whose per-mechanism correctness rests on the focused
+  goldens. Don't pass off a giant generated log as hand-verified.
 - **Characterize the empty seams now.** Pin the current behavior of the "no-op today, real later"
   seams — `getEffectiveStat` returns base with no effects; the mod pools yield ×1.0 when empty; the
-  remap-aware OffStat lookup returns effective Attack with no remap. When a later phase makes them
-  real, the test states exactly what changed.
+  remap-aware OffStat lookup returns effective Attack with no remap; `spellPower` is 1.0 for Attack.
+  When a later phase makes them real, the test states exactly what changed.
 - **Every failing fight is reproducible from its seed** — combat is deterministic, so when a bug
   appears in play, capture the seed and it becomes a permanent regression fixture.
 - **Every engine change ships with or updates a test.** The golden-replay suite is the canary.
@@ -330,6 +378,20 @@ src/
   ui/        React components; render state, dispatch intents.
   app/       wiring, game loop, top-level screens (no router in v1; hash routing only if ever needed).
 ```
+
+## Implementation plans
+
+- When a phase or task is worked up as an **implementation plan** (e.g. a `briefs/` doc or a plan
+  handed to the coding agent), **every assumption the plan makes must be explicitly marked** —
+  inline, clearly labeled (e.g. an **`ASSUMPTION:`** tag or a dedicated "Assumptions" section) — so
+  they can be reviewed together *before* implementation, not discovered later in the code.
+- An assumption is anything the plan *decides* that wasn't already pinned in GAME_DESIGN /
+  CONVENTIONS / a locked design session: a chosen default, an interpretation of an ambiguous spec,
+  a value picked for lack of a stated one, a deferred edge case. If the plan had to choose, it's an
+  assumption — surface it.
+- Marked assumptions are the review checklist: go over them explicitly, confirm or correct each,
+  before (or alongside) approving the plan. This mirrors the code-level rule below (`// ASSUMPTION:`
+  notes) but catches the decision one step earlier, at plan time.
 
 ## Style
 

@@ -74,20 +74,35 @@ into `src/engine/`. Full brief: `.claude/briefs/phase-1.5-tooling-and-demo.md`.
 
 ## Phase 2 — Actions, spells & scripting interpreter
 - Flesh out the action set: **Attack, Cast, Defend, Provoke, Wait**. Spells (Cast) are data
-  with **no cost and freely castable**, and carry a **target shape** (single-target or
-  AOE/all-enemies); wire basic spell effects + creature known-spell lists.
-- Implement **Provoke** as a target-set override: **single-target** offensive actions hit a
-  random provoking enemy (seeded RNG) when any enemy provokes, else the script's selector;
-  **AOE casts ignore provoke** and always hit their full target set.
-- Data shapes for `Condition`, `TargetSelector`, `Action`, and a `Rule` (priority + condition
-  + action + targeting, where targeting is omitted for self-only/AOE actions). A `Script` is an
-  ordered list of rules, authored as a **template**, unbounded in rule count.
-- Interpreter: given a creature + its assigned template + state, pick the first valid
-  matching rule's action; else default (Attack, else Wait).
-- Start tiny: conditions (self HP%, enemy HP%, turn number, affinity advantage), targets
-  (lowest-HP enemy, highest-Attack enemy, self, ally), actions (the five above).
-- Tests for rule precedence, Provoke targeting, and fallback. Verify scripted combat is
-  still deterministic.
+  with **no cost and freely castable**, carry a **target shape** (single / all-enemies) and a
+  **spellPower** coefficient (scales OffStat pre-Defence; Attack = 1.0). A rule's Cast references a
+  **gem slot index** (not a spell ID); minimal `Spell` shape only — forge/augment/leveling economy
+  is Phase 8.
+- Implement **Provoke** as a post-selection target override: **single-target** offensive actions
+  hit a random provoking enemy (seeded RNG) when any enemy provokes, else the script's selector;
+  **AOE casts ignore provoke** and hit their full (cast-start-frozen) set. AOE resolves fully, then
+  win/loss is checked (win-check at the action boundary).
+- Data shapes: `Condition` and `TargetSelector` are **discriminated unions**; `Rule` =
+  `{ condition, action, targeting? }`; `Script` = `{ id, rules[], defaultTarget? }` (ordering =
+  array position, no priority int; `defaultTarget?` reserved for Phase 6). Creature refs a script by
+  **`scriptId`**. Add an **`always`** condition. HP% compared via **integer cross-multiplication**
+  (denominator = effective Health), no float.
+- Interpreter (**pure engine**, fills the `decideAction` seam): side-effect-free lookahead, first
+  rule whose condition is true **and** action is valid wins (invalid → skip); else implicit fallback
+  (Attack, else Wait). **Symmetric** — enemies run the same system via five **stock scripts** in
+  `data/` (`always-attack`/`-cast`/`-defend`/`-provoke`/`-wait`).
+- New intent event **`SpellCast`**; reuse shared `DamageDealt`/`CreatureDied`.
+- Tests: unit (conditions at boundaries, selectors + tie-break, precedence, skip-on-invalid,
+  fallback); focused **hand-derived** goldens (scripted 1v1, AOE cast, provoke redirect, random
+  selector, skip-on-invalid); one **6v6 integration golden** (mixed stock scripts both sides, all
+  action types + AOE + a provoke redirect, checkpoint-verified + labeled); an RNG-dependent golden.
+  Phase 1 goldens stay stable. Verify scripted combat is deterministic.
+
+## Phase 2.5 — Scripted combat demo (interlude)
+*Brief: `.claude/briefs/phase-2.5-scripted-demo.md`.* Throwaway visual harness (successor to the
+Phase 1.5 demo) showing both sides run scripts through the interpreter live on Pages. Same
+guardrails: consumes the engine, engine stays pure, real content not fixtures, explicitly replaced
+by Phase 7. Separate PR after Phase 2.
 
 ## Phase 3 — Traits as data
 - `Trait` data model: triggers + effects, interpreted by the engine.
