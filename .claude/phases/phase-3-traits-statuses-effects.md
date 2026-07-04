@@ -1,7 +1,7 @@
 # Phase 3 — Traits, statuses & the effect framework
 
 Status: **in progress — shipped in three slices/PRs.** Slices A and B **complete and locally
-verified** (A: 169/169 tests; B: 178/178 tests; both lint/format/build green); Slice C pending.
+verified** (A: 169/169 tests; B: 183/183 tests; both lint/format/build green); Slice C pending.
 Built per the approved plan at
 `.claude/briefs/phase-3-implementation-plan.md` (kept there for the detailed rationale, the
 slice/PR sequencing, and the full `ASSUMPTION:`-tagged decision list behind every choice below —
@@ -137,7 +137,14 @@ New file `src/engine/resolution.ts` — the trigger/cascade core:
 
 Extended:
 - `effect-types.ts` — `TriggeredDef` / `TriggeredEffect` added to `EffectDef` / the `ActiveEffect`
-  union.
+  union, including an optional **`condition?: Condition`** (reusing the serializable scripting
+  `Condition` union — triggered conditions are data, not a bespoke predicate). `fireHook` evaluates
+  it **self-scoped against live state** (per-effect loop order: re-entry guard → condition →
+  depth cap → `TriggerFired` → response); a false condition fires nothing and consumes none of the
+  truncation budget. Content: `VENGEFUL` (retaliate only while self HP% < 50). **Bounded deferral:**
+  the reused union is self/global-scoped, so it cannot yet reference the triggering *source* (e.g.
+  "retaliate only if the attacker is Body"); that needs a hook-context condition variant, added when
+  content requires it.
 - `effects.ts` — `effectsForHook(creature, hook)` (scan-and-filter, canonical order); `withInstance`
   gains the `triggered` case.
 - `combat.ts` — `applyDamageAndEmit`/`resolveDefenceAndTakenFactors` removed (now in
@@ -150,7 +157,11 @@ Extended:
 - `phase-hooks.ts` — **deleted** (its `firePhaseHook` no-op is fully replaced by `fireHook`).
 - `data/traits.ts` — triggered content: `RETALIATE` (on-damage-taken → 30% Attack at the
   attacker), `GRUDGE` (on-ally-death → +50% Attack to self), `RECKLESS` (on-damage-taken → 30%
-  Attack at *itself*, for the loop-safety golden).
+  Attack at *itself*, for the loop-safety golden), `VENGEFUL` (the conditional one above).
+- `resolution.ts` `applyStatModifier` — a per-target application ordinal folded into the applied
+  modifier's `EffectInstanceId`, so re-stacking the same modifier (e.g. Grudge on multiple ally
+  deaths) yields distinct, deterministic ids (effect identity must be unique; Slice C's statuses
+  lean on it). Folding still stacks multiplicatively.
 
 ### A correctness insight worth recording
 
@@ -164,14 +175,18 @@ guard's loop-bounding is tested through a real fight.
 
 ### Verification performed
 
-- `npm run test` — **178/178** pass (+9 over Slice A: 5 in `resolution.test.ts`, 2 goldens, 2 trait
-  shape tests). The **169 prior tests pass byte-identical** — the `applyDamageAndEmit` relocation +
-  new hook firing changed no existing behavior (this is Slice B's explicit merge blocker).
+- `npm run test` — **183/183** pass. The **169 prior tests pass byte-identical** — the
+  `applyDamageAndEmit` relocation + new hook firing (and the condition/instance-id refinements)
+  changed no existing behavior (this is Slice B's explicit merge blocker).
 - `npm run lint` / `npm run format:check` / `npm run build` — clean.
-- Two hand-derived goldens (independent `node -e` calculator, matched first run):
+- Three hand-derived goldens (independent `node -e` calculator, matched first run):
   `golden-triggered-damage` (`TriggerFired` precedes the retaliation's `DamageDealt`; the **lethal
-  hit fires no retaliation** — death pre-empts `on-damage-taken`) and `golden-loop-safety` (the
-  self-re-entry guard: `RECKLESS` fires once per hit, never loops).
+  hit fires no retaliation** — death pre-empts `on-damage-taken`), `golden-loop-safety` (the
+  self-re-entry guard: `RECKLESS` fires once per hit, never loops), and `golden-conditional-trigger`
+  (`VENGEFUL` stays silent while healthy, fires once a hit crosses below 50%, none on the kill).
+- Unit coverage (`resolution.test.ts`): every response type, the re-entry guard, the white-box
+  depth-cap truncation, suppress-action, `StatModifierApplied`/`HpClamped`, the triggered condition
+  (true/false), and re-stacked-modifier id uniqueness + multiplicative folding.
 
 ### Deliberately out of scope for Slice B (Slice C)
 

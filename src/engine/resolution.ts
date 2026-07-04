@@ -13,6 +13,7 @@ import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import { livingEnemiesOf } from './targeting'
 import { resolveTargetSelector } from './target-selectors'
 import { effectsForHook, effectiveMaxHp } from './effects'
+import { evaluateCondition } from './conditions'
 import { createEffectInstanceId } from './effect-types'
 import {
   MAX_TRIGGER_CASCADE_DEPTH,
@@ -214,6 +215,18 @@ export function fireHook(
     for (const effect of effectsForHook(self, hook)) {
       if (cascade.activeInstances.has(effect.instanceId)) continue // self-re-entry guard
 
+      // Optional trigger condition (self-scoped, reusing the scripting Condition union). Evaluated
+      // against the LIVE self -- `working` may have changed since `self` was snapshotted, so an
+      // earlier same-hook effect's HP change is visible. A false condition means the trigger simply
+      // isn't firing: it emits nothing and consumes none of the depth/truncation budget.
+      // evaluateCondition is pure (never draws RNG), safe to call for every candidate effect.
+      if (
+        effect.condition &&
+        !evaluateCondition(effect.condition, getCreature(working, selfId), working)
+      ) {
+        continue
+      }
+
       if (cascade.depth + 1 > MAX_TRIGGER_CASCADE_DEPTH) {
         events.push({
           type: 'CascadeTruncated',
@@ -356,11 +369,18 @@ function applyStatModifier(
 ): CombatState {
   const target = getCreature(state, targetId)
   const effectiveBefore = getEffectiveStat(target, stat)
+  // Fold a per-target application ordinal into the id so re-stacking the SAME modifier (e.g. Grudge
+  // firing on each ally death) yields distinct, deterministic (never-RNG) EffectInstanceIds --
+  // effect identity is meant to be unique, and Slice C's statuses lean on it.
+  const idPrefix = `${targetId}#applied#${sourceTraitId}#${stat}#`
+  const ordinal = target.activeEffects.filter((e) =>
+    e.instanceId.startsWith(idPrefix),
+  ).length
   const modifier: ActiveEffect = {
     category: 'stat-modifier',
     stat,
     factor,
-    instanceId: createEffectInstanceId(`${targetId}#applied#${sourceTraitId}#${stat}`),
+    instanceId: createEffectInstanceId(`${idPrefix}${ordinal}`),
     sourceTraitId,
   }
   let working = updateCreature(state, targetId, {

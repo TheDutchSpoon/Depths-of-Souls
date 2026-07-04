@@ -5,6 +5,7 @@ import {
   SWIFT_STRIKER,
   RETALIATE,
   GRUDGE,
+  VENGEFUL,
   STOCK_TRAITS,
   TRAIT_REGISTRY,
 } from './traits'
@@ -71,6 +72,28 @@ describe('stock traits (representative Phase 3 content)', () => {
           target: { kind: 'self' },
           stat: 'attack',
           factor: 1.5,
+        },
+      },
+    ])
+  })
+
+  it('VENGEFUL is a triggered on-damage-taken retaliate gated on self HP% < 50', () => {
+    expect(VENGEFUL.effects).toEqual([
+      {
+        category: 'triggered',
+        hook: 'on-damage-taken',
+        condition: {
+          kind: 'hp-percent',
+          subject: 'self',
+          qualifier: 'any',
+          comparator: '<',
+          thresholdPercent: 50,
+        },
+        response: {
+          kind: 'deal-damage',
+          target: { kind: 'triggering-source' },
+          offStat: 'attack',
+          spellPower: 0.3,
         },
       },
     ])

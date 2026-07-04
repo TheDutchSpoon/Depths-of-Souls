@@ -95,6 +95,33 @@ export const RECKLESS: Trait = {
   ],
 }
 
+/** Triggered + CONDITIONAL: retaliates for 30% Attack, but only while below half HP. The
+ * condition (self HP% < 50) reuses the scripting Condition union, evaluated self-scoped at fire
+ * time -- so it stays silent while healthy and kicks in once wounded. */
+export const VENGEFUL: Trait = {
+  id: 'vengeful',
+  name: 'Vengeful',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-damage-taken',
+      condition: {
+        kind: 'hp-percent',
+        subject: 'self',
+        qualifier: 'any',
+        comparator: '<',
+        thresholdPercent: 50,
+      },
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'triggering-source' },
+        offStat: 'attack',
+        spellPower: 0.3,
+      },
+    },
+  ],
+}
+
 export const STOCK_TRAITS: readonly Trait[] = [
   BRUTISH,
   BLOODLUST,
@@ -102,6 +129,7 @@ export const STOCK_TRAITS: readonly Trait[] = [
   RETALIATE,
   GRUDGE,
   RECKLESS,
+  VENGEFUL,
 ]
 
 /** Ready to pass directly as createCombat's `traits` argument. */

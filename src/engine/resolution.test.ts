@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn, resolveFight } from './combat'
 import { fireHook, newCascade } from './resolution'
+import { getEffectiveStat } from './effective-stats'
 import { makeParty } from './__fixtures__/creatures'
 import { createCreatureId } from './ids'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
@@ -234,5 +235,131 @@ describe('loop safety', () => {
     // The over-cap trigger did NOT execute: no TriggerFired, no DamageDealt.
     expect(events.some((e) => e.type === 'TriggerFired')).toBe(false)
     expect(events.some((e) => e.type === 'DamageDealt')).toBe(false)
+  })
+})
+
+describe('triggered condition (self-scoped)', () => {
+  // Retaliate, gated on self HP% < 50. Target max HP 40 -> threshold is currentHp < 20.
+  const COND_RETALIATE: Trait = {
+    id: 'cond-retaliate',
+    name: 'Conditional Retaliate',
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-damage-taken',
+        condition: {
+          kind: 'hp-percent',
+          subject: 'self',
+          qualifier: 'any',
+          comparator: '<',
+          thresholdPercent: 50,
+        },
+        response: {
+          kind: 'deal-damage',
+          target: { kind: 'triggering-source' },
+          offStat: 'attack',
+          spellPower: 0.3,
+        },
+      },
+    ],
+  }
+
+  // One resolveTurn = the attacker's turn (it acts first), including the target's reaction.
+  function attackerTurn(attackerAttack: number): CombatEvent[] {
+    const player = makeParty('player', [
+      {
+        id: 'atk',
+        attack: attackerAttack,
+        defence: 0,
+        speed: 20,
+        affinity: 'body',
+        scriptId: 'always-attack',
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      {
+        id: 'tgt',
+        health: 40,
+        attack: 20,
+        defence: 5,
+        speed: 1,
+        affinity: 'body',
+        scriptId: 'always-wait',
+        innateTraitIds: ['cond-retaliate'],
+      },
+    ])
+    return resolveTurn(
+      createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(COND_RETALIATE)),
+    ).events
+  }
+
+  it('does not fire while the condition is false (target stays above 50% HP)', () => {
+    // atk 10, def 5 -> 5 dmg -> target 35/40 (> 50%) -> condition false -> nothing.
+    const events = attackerTurn(10)
+    expect(events.some((e) => e.type === 'TriggerFired')).toBe(false)
+    expect(events.filter((e) => e.type === 'DamageDealt')).toHaveLength(1) // only the attack
+  })
+
+  it('fires once the hit drops the target below the threshold', () => {
+    // atk 30, def 5 -> 25 dmg -> target 15/40 (< 50%) -> condition true -> retaliation.
+    const events = attackerTurn(30)
+    expect(
+      events.some(
+        (e) =>
+          e.type === 'TriggerFired' &&
+          e.effectId === 'cond-retaliate' &&
+          e.hook === 'on-damage-taken',
+      ),
+    ).toBe(true)
+    // The attack plus the retaliation striking back at the attacker.
+    expect(
+      events.some(
+        (e) =>
+          e.type === 'DamageDealt' &&
+          e.sourceId === createCreatureId('tgt') &&
+          e.targetId === createCreatureId('atk'),
+      ),
+    ).toBe(true)
+  })
+})
+
+describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
+  it('gives each application a distinct instance id and stacks multiplicatively', () => {
+    // Fire GRUDGE's on-ally-death twice on the same bearer (as if two allies fell).
+    const player = makeParty('player', [
+      { id: 'bearer', attack: 20, scriptId: 'always-wait', innateTraitIds: ['grudge'] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 30 }])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, TRAIT_REGISTRY)
+    const events: CombatEvent[] = []
+    const bearerId = createCreatureId('bearer')
+    const allyId = createCreatureId('ally')
+
+    state = fireHook(
+      'on-ally-death',
+      [bearerId],
+      allyId,
+      state,
+      events,
+      newCascade(),
+    ).state
+    state = fireHook(
+      'on-ally-death',
+      [bearerId],
+      allyId,
+      state,
+      events,
+      newCascade(),
+    ).state
+
+    const bearer = [...state.playerParty, ...state.enemyParty].find(
+      (c) => c.id === bearerId,
+    )!
+    const applied = bearer.activeEffects.filter(
+      (e) => e.category === 'stat-modifier' && e.sourceTraitId === 'grudge',
+    )
+    expect(applied).toHaveLength(2)
+    expect(new Set(applied.map((e) => e.instanceId)).size).toBe(2) // distinct ids
+    expect(getEffectiveStat(bearer, 'attack')).toBe(20 * 1.5 * 1.5) // stacking still folds: 45
   })
 })
