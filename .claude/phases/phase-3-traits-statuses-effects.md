@@ -1,7 +1,8 @@
 # Phase 3 — Traits, statuses & the effect framework
 
-Status: **in progress — shipped in three slices/PRs.** Slice A **complete and locally verified**
-(169/169 tests, lint, format, build green); Slices B and C pending. Built per the approved plan at
+Status: **in progress — shipped in three slices/PRs.** Slices A and B **complete and locally
+verified** (A: 169/169 tests; B: 178/178 tests; both lint/format/build green); Slice C pending.
+Built per the approved plan at
 `.claude/briefs/phase-3-implementation-plan.md` (kept there for the detailed rationale, the
 slice/PR sequencing, and the full `ASSUMPTION:`-tagged decision list behind every choice below —
 not duplicated here).
@@ -15,7 +16,7 @@ which makes damage-application the load-bearing recursion + cascade-safety surfa
 ships as three independently-mergeable PRs, each leaving `main` green and deployable:
 
 - **Slice A — effect folding, remap & passive traits** (this record's first section). No hook firing.
-- **Slice B — triggered hooks & cascade safety** (`resolution.ts`, the recursion core). *Pending.*
+- **Slice B — triggered hooks & cascade safety** (`resolution.ts`, the recursion core).
 - **Slice C — status lifecycle, round-end sweep, `has-status`, spell-applied statuses.** *Pending.*
 
 Sequential branch-off: B branches off post-A `main`, C off post-B `main`, so B/C never carry a
@@ -104,6 +105,83 @@ round-end sweep, `has-status`, and spell-applied statuses (Slice C); artifacts/g
 behavioral traits (post-v1); the real creature roster (GAME_DESIGN §13, still deferred). The Phase 3.5
 demo is a separate PR after the full phase.
 
+---
+
+## Slice B — Triggered hooks & cascade safety
+
+Turns the dormant hook seams into a real, mutually-recursive dispatcher. The damage-application
+path becomes the site where 7 of the 13 hooks fire, so this is the load-bearing correctness slice.
+
+### What was built
+
+New file `src/engine/resolution.ts` — the trigger/cascade core:
+- **`fireHook(hook, selfIds, source, state, events, cascade)`** — scoped dispatch: the caller
+  passes a single creature (per-creature point) or a tie-break-ordered id list (global point).
+  Alive-gated — only `on-death` fires on a dead creature. Looks effects up via `effectsForHook`.
+  Returns `{ state, suppressed }` (`suppressed` is meaningful only for `on-turn-start` / Stun).
+- **`applyDamageAndEmit`** — **relocated here** from `combat.ts` and now fires the damage-path
+  hooks in the pinned order: `DamageDealt` → `on-damage-dealt` (source, **unconditional, even on a
+  lethal hit**) → `on-damage-taken` (self, **survived only** — death pre-empts it) → if it died:
+  `CreatureDied` → `on-death` → `on-kill` → `on-ally-death`/`on-enemy-death` (living observers).
+- **`dealDamage`** — the shared real-formula path (OffStat, affinity, pools, min-1) used by *both*
+  chosen Attack/Cast (from `combat.ts`) and triggered deal-damage responses — "attack"/"cast" in a
+  trait are the real actions. `resolveDefenceAndTakenFactors` (Defend) moved here alongside it.
+- **`executeResponse`** — the v1 response vocabulary: `deal-damage`, `apply-stat-modifier`
+  (appends the modifier, emits `StatModifierApplied` with concrete before/after, and `HpClamped`
+  when a Health debuff pulls `currentHp` below the new max), `suppress-action`, and an
+  `apply-status` stub that throws until Slice C.
+- **`CascadeState`** — `{ depth, activeInstances }`, transient/call-stack only (never in
+  `CombatState`). The stack-scoped self-re-entry guard skips an instance already unwinding;
+  `MAX_TRIGGER_CASCADE_DEPTH` bounds chain depth, emitting a mandatory `CascadeTruncated` and not
+  executing the over-cap trigger.
+
+Extended:
+- `effect-types.ts` — `TriggeredDef` / `TriggeredEffect` added to `EffectDef` / the `ActiveEffect`
+  union.
+- `effects.ts` — `effectsForHook(creature, hook)` (scan-and-filter, canonical order); `withInstance`
+  gains the `triggered` case.
+- `combat.ts` — `applyDamageAndEmit`/`resolveDefenceAndTakenFactors` removed (now in
+  `resolution.ts`); executors slimmed to emit their intent event then delegate to `dealDamage`;
+  `resolveTurn` fires `on-fight-start`/`on-turn-start`/`on-turn-end`/`on-round-end` via `fireHook`
+  (a fresh `CascadeState` per top-level action/hook), with `on-turn-start`'s `suppressed` result
+  skipping the action — that is exactly how **Stun** works, no special resolver branch. Lifecycle
+  events now precede their hook (`FightStarted`/`TurnStarted` before the hook fires); the
+  no-op-in-B `round-start`/`fight-end` hook calls were dropped (no such hooks in the v1 vocab).
+- `phase-hooks.ts` — **deleted** (its `firePhaseHook` no-op is fully replaced by `fireHook`).
+- `data/traits.ts` — triggered content: `RETALIATE` (on-damage-taken → 30% Attack at the
+  attacker), `GRUDGE` (on-ally-death → +50% Attack to self), `RECKLESS` (on-damage-taken → 30%
+  Attack at *itself*, for the loop-safety golden).
+
+### A correctness insight worth recording
+
+Mutual retaliation between two creatures (A↔B, both `RETALIATE`) is **bounded to depth 2 by the
+re-entry guard itself**: A hits B → B retaliates A → A retaliates B → B's retaliate would fire
+again, but B's instance is still unwinding on the stack, so the guard blocks it. With ≤12 creatures
+and this stack-scoped guard, a real fight can **never nest 500 deep** — `MAX_TRIGGER_CASCADE_DEPTH`
+is a pure backstop, unreachable through normal play. So the depth cap is tested **white-box** (fire
+a hook with `cascade.depth` pre-set at the cap, same style as the Phase 1 round-cap test), while the
+guard's loop-bounding is tested through a real fight.
+
+### Verification performed
+
+- `npm run test` — **178/178** pass (+9 over Slice A: 5 in `resolution.test.ts`, 2 goldens, 2 trait
+  shape tests). The **169 prior tests pass byte-identical** — the `applyDamageAndEmit` relocation +
+  new hook firing changed no existing behavior (this is Slice B's explicit merge blocker).
+- `npm run lint` / `npm run format:check` / `npm run build` — clean.
+- Two hand-derived goldens (independent `node -e` calculator, matched first run):
+  `golden-triggered-damage` (`TriggerFired` precedes the retaliation's `DamageDealt`; the **lethal
+  hit fires no retaliation** — death pre-empts `on-damage-taken`) and `golden-loop-safety` (the
+  self-re-entry guard: `RECKLESS` fires once per hit, never loops).
+
+### Deliberately out of scope for Slice B (Slice C)
+
+Status lifecycle + the round-end snapshot→tick→decrement→expire sweep; `has-status`; spell-applied
+statuses; DoT/Regen/Stun/Weaken/Vulnerability content. The `apply-status` response is a stub that
+throws until then. Three hook fire-sites remain unwired — `on-ally-action`, `on-enemy-action`
+(no content needs them yet), `on-status-applied` (Slice C) — all additive and golden-safe to add
+where the resolver already reaches.
+
 ## Next
 
-Slice B — triggered hooks & cascade safety. See `.claude/briefs/phase-3-implementation-plan.md`.
+Slice C — status lifecycle, round-end sweep, `has-status`, spell-applied statuses. See
+`.claude/briefs/phase-3-implementation-plan.md`.

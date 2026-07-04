@@ -106,8 +106,16 @@ export type StatRemapDef = {
   readonly fromStat: Stat
 }
 
-// Grows in Slices B/C with triggered/status-applying definitions.
-export type EffectDef = StatModifierDef | StatRemapDef
+// A triggered effect fires its response on `hook` (Slice B). Grows with an optional context
+// condition and status-applying / condition-status variants in later slices.
+export type TriggeredDef = {
+  readonly category: 'triggered'
+  readonly hook: Hook
+  readonly response: EffectResponse
+}
+
+// Grows in Slice C with status-applying / condition-status definitions.
+export type EffectDef = StatModifierDef | StatRemapDef | TriggeredDef
 
 // ---- Active effect instances (what lives on Creature.activeEffects) ----
 
@@ -119,9 +127,10 @@ interface InstanceIdentity {
 
 export type StatModifierEffect = StatModifierDef & InstanceIdentity
 export type StatRemapEffect = StatRemapDef & InstanceIdentity
+export type TriggeredEffect = TriggeredDef & InstanceIdentity
 
-// Grows in Slices B/C (triggered effects, condition-status / timed damage-modifier instances).
-export type ActiveEffect = StatModifierEffect | StatRemapEffect
+// Grows in Slice C (condition-status / timed damage-modifier instances).
+export type ActiveEffect = StatModifierEffect | StatRemapEffect | TriggeredEffect
 
 // ---- Trait ----
 

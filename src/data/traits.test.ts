@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { BRUTISH, BLOODLUST, SWIFT_STRIKER, STOCK_TRAITS, TRAIT_REGISTRY } from './traits'
+import {
+  BRUTISH,
+  BLOODLUST,
+  SWIFT_STRIKER,
+  RETALIATE,
+  GRUDGE,
+  STOCK_TRAITS,
+  TRAIT_REGISTRY,
+} from './traits'
 import { getEffectiveStat, getOffensiveStat } from '../engine/effective-stats'
 import { instantiateTraitEffects } from '../engine/effects'
 import { makeCreature } from '../engine/__fixtures__/creatures'
@@ -36,5 +44,35 @@ describe('stock traits (representative Phase 3 content)', () => {
       activeEffects: instantiateTraitEffects(c, TRAIT_REGISTRY),
     }
     expect(getOffensiveStat(withEffects, 'attack')).toBe(24)
+  })
+
+  it('RETALIATE is a triggered on-damage-taken deal-damage response (30% Attack)', () => {
+    expect(RETALIATE.effects).toEqual([
+      {
+        category: 'triggered',
+        hook: 'on-damage-taken',
+        response: {
+          kind: 'deal-damage',
+          target: { kind: 'triggering-source' },
+          offStat: 'attack',
+          spellPower: 0.3,
+        },
+      },
+    ])
+  })
+
+  it('GRUDGE is a triggered on-ally-death apply-stat-modifier (+50% Attack)', () => {
+    expect(GRUDGE.effects).toEqual([
+      {
+        category: 'triggered',
+        hook: 'on-ally-death',
+        response: {
+          kind: 'apply-stat-modifier',
+          target: { kind: 'self' },
+          stat: 'attack',
+          factor: 1.5,
+        },
+      },
+    ])
   })
 })

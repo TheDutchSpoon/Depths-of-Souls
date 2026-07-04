@@ -7,7 +7,14 @@
 
 import { getEffectiveStat } from './effective-stats'
 import { createEffectInstanceId } from './effect-types'
-import type { ActiveEffect, EffectDef, EffectInstanceId, Trait } from './effect-types'
+import type {
+  ActiveEffect,
+  EffectDef,
+  EffectInstanceId,
+  Hook,
+  Trait,
+  TriggeredEffect,
+} from './effect-types'
 import type { Creature } from './types'
 
 /**
@@ -43,11 +50,24 @@ function withInstance(
       return { ...def, instanceId, sourceTraitId }
     case 'stat-remap':
       return { ...def, instanceId, sourceTraitId }
+    case 'triggered':
+      return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
       throw new Error(`Unknown effect def category: ${String(exhaustive)}`)
     }
   }
+}
+
+/**
+ * The creature's triggered effects registered for `hook`, in canonical active-effects order.
+ * Scan-and-filter (a hook-type index is deferred until profiling shows it's needed). The
+ * alive/death gating is the caller's (fireHook) responsibility, not this lookup's.
+ */
+export function effectsForHook(creature: Creature, hook: Hook): TriggeredEffect[] {
+  return creature.activeEffects.filter(
+    (e): e is TriggeredEffect => e.category === 'triggered' && e.hook === hook,
+  )
 }
 
 /**
