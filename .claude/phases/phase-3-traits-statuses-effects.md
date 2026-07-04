@@ -1,8 +1,8 @@
 # Phase 3 — Traits, statuses & the effect framework
 
-Status: **in progress — shipped in three slices/PRs.** Slices A and B **complete and locally
-verified** (A: 169/169 tests; B: 183/183 tests; both lint/format/build green); Slice C pending.
-Built per the approved plan at
+Status: **done — shipped in three slices/PRs**, all **complete and locally verified**
+(A: 169/169; B: 183/183; C: 204/204 tests; all lint/format/build green). Built per the approved
+plan at
 `.claude/briefs/phase-3-implementation-plan.md` (kept there for the detailed rationale, the
 slice/PR sequencing, and the full `ASSUMPTION:`-tagged decision list behind every choice below —
 not duplicated here).
@@ -17,7 +17,7 @@ ships as three independently-mergeable PRs, each leaving `main` green and deploy
 
 - **Slice A — effect folding, remap & passive traits** (this record's first section). No hook firing.
 - **Slice B — triggered hooks & cascade safety** (`resolution.ts`, the recursion core).
-- **Slice C — status lifecycle, round-end sweep, `has-status`, spell-applied statuses.** *Pending.*
+- **Slice C — status lifecycle, round-end sweep, `has-status`, spell-applied statuses.**
 
 Sequential branch-off: B branches off post-A `main`, C off post-B `main`, so B/C never carry a
 stale pre-`damageSource` schema.
@@ -196,7 +196,128 @@ throws until then. Three hook fire-sites remain unwired — `on-ally-action`, `o
 (no content needs them yet), `on-status-applied` (Slice C) — all additive and golden-safe to add
 where the resolver already reaches.
 
+---
+
+## Slice C — Status lifecycle, round-end sweep, `has-status`, spell-applied statuses
+
+Completes the effect framework: timed statuses (DoT/Regen/Stun/Weaken/Vulnerability), the
+round-end snapshot→tick→decrement→expire sweep with its own win-check, `has-status` (completing
+the Phase 2 deferral), and spell-applied statuses.
+
+### What was built
+
+**Two new `ActiveEffect` categories** (`effect-types.ts`), completing GAME_DESIGN §6's four-category
+taxonomy (`stat-modifier`/`stat-remap` from Slice A, these two from C):
+- **`condition-status`** (`ConditionStatusDef`/`Effect`) — DoT, Regen, Stun. Fires a `response` on
+  a `hook`, the *same* dispatch machinery as a permanent triggered trait, plus live
+  `remainingDuration`/`stacks` bookkeeping. `effectsForHook` was broadened to match both
+  `TriggeredEffect` and `ConditionStatusEffect` uniformly.
+- **`damage-modifier`** (`DamageModifierDef`/`Effect`) — Weaken/Vulnerability. Read **passively**
+  by the damage formula's pools (never fired via a hook), analogous to how `stat-modifier` is read
+  passively by `getEffectiveStat`.
+
+**`EffectResponse` gained two things** it needed to express DoT/Regen honestly:
+- **`flatAmount?` on `deal-damage`** — a fixed per-stack magnitude, independent of any stat,
+  bypassing the OffStat/Defence/affinity/pools formula *entirely* (not merely zeroing Defence).
+  This is GAME_DESIGN's "own value from the source" read literally: DoT is not "Attack scaled,
+  minus Defence" but a flat number a status carries. The unused, never-implemented `bypassDefence`
+  field from Slice A/B is retired in favor of this (its presence/absence is the mode switch;
+  `offStat`/`spellPower` became optional so existing formula-mode traits are unaffected).
+- **A new `heal` response kind** — Regen's HoT, structurally parallel to `deal-damage`'s flat mode.
+
+**`effects.ts`** gains `gatherDealtMods`/`gatherTakenFactors` (read the damage-modifier pool
+contributions: dealt is additive `magnitude × stacks`, taken is multiplicative `magnitude ** stacks`),
+`hasStatus`, and `instantiateStatus`.
+
+**`resolution.ts`**:
+- **`applyStatus`** (new, exported) — single instance per (statusId, creature); re-applying
+  refreshes duration to the new application's value and increments stacks to the status's declared
+  cap. Emits `StatusApplied`, then fires `on-status-applied` (event-before-hook).
+- **`applyFlatDamage`**/**`applyHeal`** (new, private) — the flat-DoT and Regen execution paths.
+  `applyFlatDamage` still routes through `applyDamageAndEmit`, so a DoT tick fires the *same*
+  damage-path hooks (`on-damage-dealt`/`-taken`/`-death`/`-kill`/…) as any other damage source.
+  `applyHeal` clamps to effective max Health — no auto-heal past it.
+- **`dealDamage`** now gathers `gatherDealtMods(attacker)`/`gatherTakenFactors(target)` into the
+  formula's pools, alongside Defend's existing factor (Defend itself stays resolver-inline, never
+  modeled as an effect — required by "no temporary stat-modifier").
+- **A real correctness fix in `fireHook`**: the alive-check is now re-evaluated **fresh before every
+  individual effect**, not once per creature before its whole effect list. Slice B's version
+  snapshotted `self` once per creature; if that creature's *first* on-round-end effect killed it,
+  a *second* effect in the same list (e.g. one that would hit someone else) would still have fired
+  — silently wrong, and exactly the case GAME_DESIGN's round-end-interaction rule warns about
+  ("a creature killed mid-sweep fires only on-death; its own not-yet-reached on-round-end hooks…
+  are skipped"). Caught while building `golden-round-end-interaction`, fixed before it shipped.
+
+**`combat.ts`**: `createCombat` gains a 6th `statuses` param (`ReadonlyMap<string, StatusDef>`,
+mirroring `scripts`/`traits`); `executeCastSingle`/`executeCastAoe` apply `spell.appliesStatus` to
+a surviving target after damage lands. The single `fireHook('on-round-end', …)` call is replaced
+by the full **round-end sweep**: `resolveRoundEndSweep` — (1) `snapshotStatuses` (every
+status-carrying effect present *before* anything fires), (2) fire all `on-round-end` hooks in
+tie-break order, (3)+(4) `decrementAndExpireSnapshot` — decrement and expire **only** the
+snapshotted statuses, so a status **born mid-sweep** (e.g. from an `on-death` response) is
+untouched and keeps full duration, counting from the *next* round-end. **Win/loss is now checked
+once, immediately after the full sweep** — a real fix, not just documentation: previously a
+lethal round-end DoT would let a wiped side's opponent take one more unwarranted turn before the
+result was noticed (the round-cap-style "check before proceeding" pattern, applied here for the
+same reason).
+
+**`scripting-types.ts`/`conditions.ts`**: `HasStatusCondition` (`subject` + literal `statusId`)
+completes the Condition union deferred since Phase 2. `evaluateCondition`'s internal
+`hpPercentPool` helper was renamed `subjectPool` (now shared by both `hp-percent` and
+`has-status`, since both are subject-pool existentials over self/ally/enemy).
+
+**Content** (`data/statuses.ts`, new): `POISON`/`BURN` (flat DoT, 3/5 per stack, no `TriggerFired`),
+`REGEN` (flat HoT, 4/stack), `STUN` (on-turn-start suppress-action, cap 1), `WEAKEN` (-20%
+dealt/stack, cap 1), `VULNERABILITY` (×1.5 taken/stack, cap 2). `data/traits.ts` adds `REELING`
+(on-damage-taken → self-stun) and `CATASTROPHIC_COLLAPSE` (the round-end-interaction exerciser: a
+lethal self-hit, a would-be ally-hit that must be skipped, and an on-death apply-status — all on
+one trait). `data/spells.ts` adds `VENOM_BOLT` (applies Poison), per CONVENTIONS' "Spell gains an
+optional status-application."
+
+### New goldens (hand-derived, matched on first run after one fixture-authoring bug)
+
+- **`golden-dot`** — `VENOM_BOLT` applies Poison via a real Cast; three flat, stack-scaled
+  round-end ticks (no `TriggerFired`); the third tick both kills the target and expires the status
+  in the same sweep; win/loss checked right after.
+- **`golden-stun`** — `REELING` applies Stun on the first hit; the victim's *very next* turn (same
+  round) is an empty `TurnStarted`/`TurnEnded` bracket — no special resolver branch, the Phase 1
+  skip signal reused exactly. The killing blow next round does **not** re-stun (death pre-empts
+  `on-damage-taken`, Slice B's rule, reused here for free).
+- **`golden-round-end-interaction`** — the fixture built to *prove* the `fireHook` fresh-alive-check
+  fix: `CATASTROPHIC_COLLAPSE`'s self-kill effect fires first, its sibling ally-hit effect is
+  skipped (dead by the time the loop reaches it), its `on-death` effect fires regardless and
+  applies Weaken to an ally, and that Weaken — born mid-sweep — is confirmed absent from *that*
+  sweep's decrement (verified by its full duration surviving into the next round) while still
+  affecting damage immediately.
+
+One fixture-authoring bug caught before any of these ran: `golden-dot`'s `TARGET` used
+`scriptId: 'always-wait'` but the fixture only registered its own custom script in the `scripts`
+map, not the stock scripts — so the lookup missed, fell back to the implicit default, and `TARGET`
+attacked instead of waiting. Fixed by merging `STOCK_SCRIPTS_BY_ID` into the fixture's script map.
+
+### Verification performed
+
+- `npm run test` — **204/204** pass. The **183 prior tests pass byte-identical** — confirmed via
+  `git status`: no existing golden fixture was touched, only new Slice C files added.
+- `npm run lint` / `npm run format:check` / `npm run build` — clean.
+
+### A resolved forward note (from Slice B's PR review)
+
+Slice B flagged that `applyStatModifier`'s count-based ordinal (`#applied#…#<ordinal>`) could
+collide if a stat-modifier were ever *removed* and its slot's count reused. Confirmed moot for C:
+Slice C's only removal path is `StatusExpired` on `condition-status`/`damage-modifier` effects
+(which use the unrelated `#status#<statusId>` id scheme, no ordinal at all, single-instance by
+construction). No stat-modifier removal path exists anywhere in Slice C, so the dormant risk
+remains dormant — noted here for whoever eventually adds one.
+
+### Deliberately out of scope (Phase 4+)
+
+Real creature/species content (GAME_DESIGN §13, still deferred) — all trait/status content in
+Phases 3A–C is representative and temporary, replaced once the roster is designed. Artifacts/gems
+economy (Phase 8). `on-ally-action`/`on-enemy-action` remain unwired (no content needs them yet;
+additive and golden-safe to add later). The Phase 3.5 demo is a separate PR, next.
+
 ## Next
 
-Slice C — status lifecycle, round-end sweep, `has-status`, spell-applied statuses. See
-`.claude/briefs/phase-3-implementation-plan.md`.
+Phase 3.5 — the traits/statuses visual demo (interlude), then Phase 4 (party, specializations,
+the cave & biomes). See `ROADMAP.md`.

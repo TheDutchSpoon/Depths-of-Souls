@@ -1,6 +1,6 @@
 # Phase 3 — Traits, Statuses & the Effect Framework: Implementation Plan
 
-Status: planned
+Status: shipped — see phases/phase-3-traits-statuses-effects.md
 
 ## Context
 

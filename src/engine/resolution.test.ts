@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn, resolveFight } from './combat'
-import { fireHook, newCascade } from './resolution'
+import { applyStatus, fireHook, newCascade } from './resolution'
 import { getEffectiveStat } from './effective-stats'
+import { updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
 import { createCreatureId } from './ids'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
 import type { CombatEvent } from './types'
-import type { Trait } from './effect-types'
+import type { ConditionStatusEffect, StatusDef, Trait } from './effect-types'
 
 function registry(...traits: Trait[]): ReadonlyMap<string, Trait> {
   return new Map(traits.map((t) => [t.id, t]))
@@ -361,5 +362,153 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
     expect(applied).toHaveLength(2)
     expect(new Set(applied.map((e) => e.instanceId)).size).toBe(2) // distinct ids
     expect(getEffectiveStat(bearer, 'attack')).toBe(20 * 1.5 * 1.5) // stacking still folds: 45
+  })
+})
+
+describe('applyStatus + condition-status content (Slice C)', () => {
+  const TEST_DOT: StatusDef = {
+    category: 'condition-status',
+    statusId: 'test-dot',
+    cap: 3,
+    hook: 'on-round-end',
+    response: {
+      kind: 'deal-damage',
+      target: { kind: 'self' },
+      flatAmount: 5,
+      emitTriggerFired: false,
+      damageSource: 'dot',
+    },
+  }
+
+  function stateWithTestDot() {
+    const player = makeParty('player', [{ id: 'p', health: 40 }])
+    const enemy = makeParty('enemy', [{ id: 'e' }])
+    const statuses = new Map([[TEST_DOT.statusId, TEST_DOT]])
+    return createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, TRAIT_REGISTRY, statuses)
+  }
+
+  it('emits StatusApplied then fires on-status-applied', () => {
+    const state = stateWithTestDot()
+    const events: CombatEvent[] = []
+    applyStatus(
+      createCreatureId('e'),
+      createCreatureId('p'),
+      { statusId: 'test-dot', duration: 2 },
+      state,
+      events,
+      newCascade(),
+    )
+    expect(events[0]).toMatchObject({
+      type: 'StatusApplied',
+      targetId: createCreatureId('p'),
+      statusId: 'test-dot',
+      stacks: 1,
+      duration: 2,
+      sourceId: createCreatureId('e'),
+    })
+  })
+
+  it('re-applying refreshes duration and stacks up to the declared cap', () => {
+    let state = stateWithTestDot()
+    const events: CombatEvent[] = []
+    const apply = (duration: number) => {
+      state = applyStatus(
+        createCreatureId('e'),
+        createCreatureId('p'),
+        { statusId: 'test-dot', duration },
+        state,
+        events,
+        newCascade(),
+      )
+    }
+    apply(2)
+    apply(5)
+    apply(5)
+    apply(5) // 4th application; cap is 3
+
+    const p = [...state.playerParty, ...state.enemyParty].find(
+      (c) => c.id === createCreatureId('p'),
+    )!
+    const effect = p.activeEffects.find(
+      (e) => e.category === 'condition-status',
+    ) as ConditionStatusEffect
+    expect(effect.stacks).toBe(3) // capped
+    expect(effect.remainingDuration).toBe(5) // refreshed to the latest application's duration
+  })
+
+  it('a DoT tick is a flat, stack-scaled deal-damage bypassing the OffStat/Defence formula, with no TriggerFired', () => {
+    let state = stateWithTestDot()
+    const events: CombatEvent[] = []
+    state = applyStatus(
+      createCreatureId('e'),
+      createCreatureId('p'),
+      { statusId: 'test-dot', duration: 2, stacks: 2 },
+      state,
+      events,
+      newCascade(),
+    )
+    const before = events.length
+    fireHook(
+      'on-round-end',
+      [createCreatureId('p')],
+      undefined,
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.slice(before).find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 10, damageSource: 'dot' }) // 5 * 2 stacks
+    expect(events.slice(before).some((e) => e.type === 'TriggerFired')).toBe(false)
+  })
+})
+
+describe('heal response (Regen)', () => {
+  const TEST_REGEN: StatusDef = {
+    category: 'condition-status',
+    statusId: 'test-regen',
+    cap: 3,
+    hook: 'on-round-end',
+    response: {
+      kind: 'heal',
+      target: { kind: 'self' },
+      amountPerStack: 10,
+      emitTriggerFired: false,
+    },
+  }
+
+  it('emits HealApplied clamped to effective max Health, never past it', () => {
+    const player = makeParty('player', [{ id: 'p', health: 40 }])
+    const enemy = makeParty('enemy', [{ id: 'e' }])
+    const statuses = new Map([[TEST_REGEN.statusId, TEST_REGEN]])
+    let state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      TRAIT_REGISTRY,
+      statuses,
+    )
+    state = updateCreature(state, createCreatureId('p'), { currentHp: 35 }) // simulate prior damage
+
+    const events: CombatEvent[] = []
+    state = applyStatus(
+      createCreatureId('e'),
+      createCreatureId('p'),
+      { statusId: 'test-regen', duration: 2 },
+      state,
+      events,
+      newCascade(),
+    )
+    fireHook(
+      'on-round-end',
+      [createCreatureId('p')],
+      undefined,
+      state,
+      events,
+      newCascade(),
+    )
+
+    const heal = events.find((e) => e.type === 'HealApplied')
+    expect(heal).toMatchObject({ amount: 5, remainingHp: 40 }) // 35+10=45 clamped to 40
   })
 })

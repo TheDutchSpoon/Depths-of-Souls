@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { instantiateTraitEffects, effectiveMaxHp, clampedHp } from './effects'
+import {
+  instantiateTraitEffects,
+  effectiveMaxHp,
+  clampedHp,
+  gatherDealtMods,
+  gatherTakenFactors,
+  hasStatus,
+} from './effects'
 import { createEffectInstanceId } from './effect-types'
 import { makeCreature } from './__fixtures__/creatures'
 import type { ActiveEffect, Trait } from './effect-types'
@@ -92,5 +99,78 @@ describe('effectiveMaxHp / clampedHp', () => {
     ).toBe(15)
     // Already below max: unchanged (no auto-heal).
     expect(clampedHp(makeCreature({ health: 30, currentHp: 10 }))).toBe(10)
+  })
+})
+
+describe('gatherDealtMods / gatherTakenFactors', () => {
+  const weaken: ActiveEffect = {
+    category: 'damage-modifier',
+    statusId: 'weaken',
+    direction: 'dealt',
+    magnitude: -0.2,
+    cap: 1,
+    instanceId: createEffectInstanceId('w'),
+    sourceTraitId: 'weaken',
+    remainingDuration: 2,
+    stacks: 1,
+  }
+  const vulnerability: ActiveEffect = {
+    category: 'damage-modifier',
+    statusId: 'vulnerability',
+    direction: 'taken',
+    magnitude: 1.5,
+    cap: 2,
+    instanceId: createEffectInstanceId('v'),
+    sourceTraitId: 'vulnerability',
+    remainingDuration: 2,
+    stacks: 2,
+  }
+  const unrelated: ActiveEffect = {
+    category: 'stat-modifier',
+    stat: 'attack',
+    factor: 1.1,
+    instanceId: createEffectInstanceId('s'),
+    sourceTraitId: 'brutish',
+  }
+
+  it('gatherDealtMods sums magnitude*stacks for dealt damage-modifier effects only', () => {
+    const c = makeCreature({ activeEffects: [weaken, vulnerability, unrelated] })
+    expect(gatherDealtMods(c)).toEqual([-0.2])
+  })
+
+  it('gatherTakenFactors compounds magnitude ** stacks for taken damage-modifier effects only', () => {
+    const c = makeCreature({ activeEffects: [weaken, vulnerability, unrelated] })
+    expect(gatherTakenFactors(c)).toEqual([1.5 ** 2])
+  })
+})
+
+describe('hasStatus', () => {
+  it('is true only when a matching statusId is present among status-carrying effects', () => {
+    const dot: ActiveEffect = {
+      category: 'condition-status',
+      statusId: 'poison',
+      cap: 5,
+      hook: 'on-round-end',
+      response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
+      instanceId: createEffectInstanceId('p'),
+      sourceTraitId: 'poison',
+      remainingDuration: 2,
+      stacks: 1,
+    }
+    const c = makeCreature({ activeEffects: [dot] })
+    expect(hasStatus(c, 'poison')).toBe(true)
+    expect(hasStatus(c, 'stun')).toBe(false)
+  })
+
+  it('never matches a stat-modifier/stat-remap/plain-triggered effect', () => {
+    const brutish: ActiveEffect = {
+      category: 'stat-modifier',
+      stat: 'attack',
+      factor: 1.3,
+      instanceId: createEffectInstanceId('b'),
+      sourceTraitId: 'brutish',
+    }
+    const c = makeCreature({ activeEffects: [brutish] })
+    expect(hasStatus(c, 'brutish')).toBe(false)
   })
 })

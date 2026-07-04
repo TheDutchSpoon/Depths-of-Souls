@@ -12,7 +12,13 @@ import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import { livingEnemiesOf } from './targeting'
 import { resolveTargetSelector } from './target-selectors'
-import { effectsForHook, effectiveMaxHp } from './effects'
+import {
+  effectsForHook,
+  effectiveMaxHp,
+  gatherDealtMods,
+  gatherTakenFactors,
+  instantiateStatus,
+} from './effects'
 import { evaluateCondition } from './conditions'
 import { createEffectInstanceId } from './effect-types'
 import {
@@ -25,10 +31,13 @@ import type { CreatureId } from './ids'
 import type { CombatEvent, CombatState, Creature, Stat } from './types'
 import type {
   ActiveEffect,
+  ConditionStatusEffect,
+  DamageModifierEffect,
   EffectInstanceId,
   EffectResponse,
   Hook,
   ResponseTarget,
+  StatusSpec,
 } from './effect-types'
 
 export interface CascadeState {
@@ -45,6 +54,9 @@ interface HookContext {
   /** The other creature involved in the trigger (attacker for on-damage-taken, victim for
    * on-damage-dealt/on-kill, dead ally for on-ally-death, ...). */
   readonly source?: CreatureId
+  /** The firing effect's current stack count, when it's a status (condition-status); absent
+   * for a plain (unstacked) triggered trait. Scales flat deal-damage/heal magnitudes. */
+  readonly stacks?: number
 }
 
 // ---- Damage application + damage-path hooks ----
@@ -81,14 +93,14 @@ export function dealDamage(
   const attacker = getCreature(state, attackerId)
   const target = getCreature(state, targetId)
   const offStat = getOffensiveStat(attacker, offStatKind, spellPower)
-  const { defence, takenFactors } = resolveDefenceAndTakenFactors(target)
+  const { defence, takenFactors: defendFactors } = resolveDefenceAndTakenFactors(target)
   const damage = calculateDamage({
     offStat,
     defence,
     attackerAffinity: attacker.affinity,
     defenderAffinity: target.affinity,
-    dealtMods: [],
-    takenFactors,
+    dealtMods: gatherDealtMods(attacker),
+    takenFactors: [...defendFactors, ...gatherTakenFactors(target)],
   })
   return applyDamageAndEmit(
     attackerId,
@@ -193,6 +205,12 @@ function fireDeathObservers(
  * guard), and MAX_TRIGGER_CASCADE_DEPTH bounds chain depth (emitting CascadeTruncated at the cap
  * and NOT executing the over-cap trigger). Returns whether any response suppressed the action
  * (only meaningful for on-turn-start / Stun).
+ *
+ * The alive-check is re-evaluated FRESH before every individual effect (not once per creature):
+ * if a creature's own first on-round-end effect kills it (e.g. a lethal DoT tick), its OWN
+ * remaining not-yet-reached effects in this same pass (that would otherwise affect someone else)
+ * are skipped -- a creature killed mid-sweep fires only on-death, per GAME_DESIGN's round-end
+ * interaction rule.
  */
 export function fireHook(
   hook: Hook,
@@ -207,12 +225,18 @@ export function fireHook(
   const isDeathHook = hook === 'on-death'
 
   for (const selfId of selfIds) {
-    const self = findCreature(working, selfId)
-    if (!self) continue
-    // Dead creatures fire only on-death; everything else requires a living self.
-    if (isDeathHook ? self.alive : !self.alive) continue
+    const initial = findCreature(working, selfId)
+    if (!initial) continue
+    // Effects are looked up once per creature (the active-effects LIST itself doesn't change
+    // mid-pass in v1 content); aliveness is re-checked fresh below, per effect.
+    const candidates = effectsForHook(initial, hook)
 
-    for (const effect of effectsForHook(self, hook)) {
+    for (const effect of candidates) {
+      const self = findCreature(working, selfId)
+      if (!self) continue
+      // Dead creatures fire only on-death; everything else requires a living self.
+      if (isDeathHook ? self.alive : !self.alive) continue
+
       if (cascade.activeInstances.has(effect.instanceId)) continue // self-re-entry guard
 
       // Optional trigger condition (self-scoped, reusing the scripting Condition union). Evaluated
@@ -220,10 +244,7 @@ export function fireHook(
       // earlier same-hook effect's HP change is visible. A false condition means the trigger simply
       // isn't firing: it emits nothing and consumes none of the depth/truncation budget.
       // evaluateCondition is pure (never draws RNG), safe to call for every candidate effect.
-      if (
-        effect.condition &&
-        !evaluateCondition(effect.condition, getCreature(working, selfId), working)
-      ) {
+      if (effect.condition && !evaluateCondition(effect.condition, self, working)) {
         continue
       }
 
@@ -237,10 +258,10 @@ export function fireHook(
         continue
       }
 
-      // A DoT tick (deal-damage, emitTriggerFired: false) announces itself via its own
-      // StatusApplied, not a per-tick TriggerFired (Slice C); every other trigger emits one.
+      // A DoT/Regen tick (emitTriggerFired: false) announces itself via its own StatusApplied,
+      // not a per-tick TriggerFired; every other trigger emits one.
       const emitTriggerFired = !(
-        effect.response.kind === 'deal-damage' &&
+        (effect.response.kind === 'deal-damage' || effect.response.kind === 'heal') &&
         effect.response.emitTriggerFired === false
       )
       if (emitTriggerFired) {
@@ -252,12 +273,15 @@ export function fireHook(
         })
       }
 
+      // Present only on a status (condition-status); absent for a plain permanent trait.
+      const stacks = effect.category === 'condition-status' ? effect.stacks : undefined
+
       cascade.activeInstances.add(effect.instanceId)
       cascade.depth += 1
       const result = executeResponse(
         effect.response,
         effect.sourceTraitId,
-        { self: self.id, source },
+        { self: self.id, source, stacks },
         working,
         events,
         cascade,
@@ -313,20 +337,52 @@ export function executeResponse(
 ): { state: CombatState; suppressed: boolean } {
   switch (response.kind) {
     case 'deal-damage': {
-      const damageSource = response.damageSource ?? response.offStat
+      const stacks = context.stacks ?? 1
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const t = findCreature(working, targetId)
         if (!t || !t.alive) continue // never strike a corpse
-        working = dealDamage(
+        if (response.flatAmount !== undefined) {
+          // Flat mode (DoT): own value from the source, bypassing the whole OffStat/Defence/
+          // affinity/pools formula. Scales by the firing status's current stacks.
+          working = applyFlatDamage(
+            context.self,
+            targetId,
+            response.flatAmount * stacks,
+            response.damageSource ?? 'dot',
+            working,
+            events,
+            cascade,
+          )
+        } else {
+          const offStat = response.offStat ?? 'attack'
+          const spellPower = response.spellPower ?? 1.0
+          working = dealDamage(
+            context.self,
+            targetId,
+            offStat,
+            spellPower,
+            response.damageSource ?? offStat,
+            working,
+            events,
+            cascade,
+          )
+        }
+      }
+      return { state: working, suppressed: false }
+    }
+    case 'heal': {
+      const stacks = context.stacks ?? 1
+      let working = state
+      for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        const t = findCreature(working, targetId)
+        if (!t || !t.alive) continue
+        working = applyHeal(
           context.self,
           targetId,
-          response.offStat,
-          response.spellPower,
-          damageSource,
+          response.amountPerStack * stacks,
           working,
           events,
-          cascade,
         )
       }
       return { state: working, suppressed: false }
@@ -346,9 +402,20 @@ export function executeResponse(
       }
       return { state: working, suppressed: false }
     }
-    case 'apply-status':
-      // Statuses land in Slice C; no Slice-B content routes here.
-      throw new Error('apply-status response is implemented in Slice C')
+    case 'apply-status': {
+      let working = state
+      for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        working = applyStatus(
+          context.self,
+          targetId,
+          response.status,
+          working,
+          events,
+          cascade,
+        )
+      }
+      return { state: working, suppressed: false }
+    }
     case 'suppress-action':
       return { state, suppressed: true }
     default: {
@@ -356,6 +423,126 @@ export function executeResponse(
       throw new Error(`Unhandled response kind: ${String(exhaustive)}`)
     }
   }
+}
+
+/** DoT: a flat, stack-scaled magnitude, independent of any stat, bypassing the whole formula
+ * (Defence/affinity/pools). Still real damage application -- fires the same damage-path hooks
+ * (on-damage-dealt/-taken/-death/-kill/-ally-death/-enemy-death) as any other damage source. */
+function applyFlatDamage(
+  sourceId: CreatureId,
+  targetId: CreatureId,
+  amount: number,
+  damageSource: 'attack' | 'cast' | 'dot',
+  state: CombatState,
+  events: CombatEvent[],
+  cascade: CascadeState,
+): CombatState {
+  const target = getCreature(state, targetId)
+  const finalDamage = Math.max(1, Math.floor(amount))
+  const damage: DamageResult = {
+    rawDamage: amount,
+    finalDamage,
+    affinityMultiplier: 1,
+    wasChipOnly: false,
+  }
+  return applyDamageAndEmit(
+    sourceId,
+    target,
+    damage,
+    damageSource,
+    state,
+    events,
+    cascade,
+  )
+}
+
+/** Regen: a flat, stack-scaled heal, clamped to effective max Health -- no auto-heal past it. */
+function applyHeal(
+  sourceId: CreatureId,
+  targetId: CreatureId,
+  amount: number,
+  state: CombatState,
+  events: CombatEvent[],
+): CombatState {
+  const target = getCreature(state, targetId)
+  const maxHp = effectiveMaxHp(target)
+  const newHp = Math.min(maxHp, target.currentHp + Math.max(0, Math.floor(amount)))
+  const working = updateCreature(state, targetId, { currentHp: newHp })
+  events.push({
+    type: 'HealApplied',
+    sourceId,
+    targetId,
+    amount: newHp - target.currentHp,
+    remainingHp: newHp,
+  })
+  return working
+}
+
+/**
+ * Applies (or re-applies) a status. Single instance per (statusId, creature): a fresh
+ * application creates a new instance at the status's declared duration/stacks; re-applying
+ * REFRESHES duration to the new application's value and increments stacks up to the status
+ * definition's declared cap. Emits StatusApplied, then fires on-status-applied (event-before-hook).
+ */
+export function applyStatus(
+  sourceId: CreatureId,
+  targetId: CreatureId,
+  spec: StatusSpec,
+  state: CombatState,
+  events: CombatEvent[],
+  cascade: CascadeState,
+): CombatState {
+  const def = state.statuses.get(spec.statusId)
+  if (!def) {
+    throw new Error(`resolver invariant violated: unknown statusId ${spec.statusId}`)
+  }
+
+  const target = getCreature(state, targetId)
+  const existing = target.activeEffects.find(
+    (e): e is ConditionStatusEffect | DamageModifierEffect =>
+      (e.category === 'condition-status' || e.category === 'damage-modifier') &&
+      e.statusId === spec.statusId,
+  )
+
+  const addedStacks = spec.stacks ?? 1
+  const newStacks = Math.min(def.cap, (existing?.stacks ?? 0) + addedStacks)
+
+  const nextEffects: ActiveEffect[] = existing
+    ? target.activeEffects.map((e) =>
+        e.instanceId === existing.instanceId
+          ? { ...e, remainingDuration: spec.duration, stacks: newStacks }
+          : e,
+      )
+    : [
+        ...target.activeEffects,
+        instantiateStatus(
+          def,
+          createEffectInstanceId(`${targetId}#status#${spec.statusId}`),
+          spec.duration,
+          newStacks,
+        ),
+      ]
+
+  let working = updateCreature(state, targetId, { activeEffects: nextEffects })
+
+  events.push({
+    type: 'StatusApplied',
+    targetId,
+    statusId: spec.statusId,
+    stacks: newStacks,
+    duration: spec.duration,
+    sourceId,
+  })
+
+  working = fireHook(
+    'on-status-applied',
+    [targetId],
+    sourceId,
+    working,
+    events,
+    cascade,
+  ).state
+  return working
 }
 
 function applyStatModifier(

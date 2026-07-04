@@ -62,14 +62,28 @@ export type EffectResponse =
   | {
       readonly kind: 'deal-damage'
       readonly target: ResponseTarget
-      readonly offStat: RemapSlot
-      readonly spellPower: number
-      /** DoT bypasses Defence; default false. */
-      readonly bypassDefence?: boolean
-      /** DoT ticks emit no TriggerFired; default true. */
+      // Formula mode (the default): a real Attack/Cast-flavored hit -- reads the source's live
+      // effective Attack/Intelligence through the real damage formula (OffStat, Defence,
+      // affinity, pools). Used by trait retaliation etc.
+      readonly offStat?: RemapSlot
+      readonly spellPower?: number
+      // Flat mode (DoT): a fixed per-stack magnitude, independent of any stat -- GAME_DESIGN's
+      // "own value from the source." Bypasses the OffStat/Defence/affinity/pools formula
+      // entirely (not merely zeroing Defence). Mutually exclusive with offStat/spellPower;
+      // presence of flatAmount selects this mode. Scales by the firing status's current stacks.
+      readonly flatAmount?: number
+      /** DoT ticks emit no TriggerFired (their StatusApplied already announced them); default true. */
       readonly emitTriggerFired?: boolean
-      /** Overrides the DamageDealt tag; default derived from offStat. */
+      /** Overrides the DamageDealt tag; default derived from offStat ('dot' when flatAmount is set). */
       readonly damageSource?: 'attack' | 'cast' | 'dot'
+    }
+  | {
+      readonly kind: 'heal'
+      readonly target: ResponseTarget
+      /** Flat per-stack heal amount (Regen); scales by the firing status's current stacks. */
+      readonly amountPerStack: number
+      /** Regen ticks emit no TriggerFired, matching DoT; default true. */
+      readonly emitTriggerFired?: boolean
     }
   | {
       readonly kind: 'apply-status'
@@ -118,23 +132,75 @@ export type TriggeredDef = {
   readonly response: EffectResponse
 }
 
-// Grows in Slice C with status-applying / condition-status definitions.
+// EffectDef is what a TRAIT authors (stat-modifier/stat-remap/triggered only -- traits are
+// permanent-for-fight; timed statuses are a separate, parallel concept below, never authored
+// directly on a Trait).
 export type EffectDef = StatModifierDef | StatRemapDef | TriggeredDef
+
+// ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
+// a spell's appliesStatus, never innate. Declared in a separate status registry (data/statuses.ts),
+// looked up by statusId at application time -- NOT part of a Trait's own EffectDef union. ----
+
+export type DamageModifierDirection = 'dealt' | 'taken'
+
+/** DoT (Poison/Burn), Regen, Stun: fires `response` on `hook`, same machinery as any trigger.
+ * `condition` mirrors TriggeredDef's (self-scoped, optional) so fireHook checks both uniformly;
+ * no v1 status content uses it. */
+export type ConditionStatusDef = {
+  readonly category: 'condition-status'
+  readonly statusId: string
+  /** Max stacks a re-application can reach. */
+  readonly cap: number
+  readonly hook: Hook
+  readonly condition?: Condition
+  readonly response: EffectResponse
+}
+
+/** Weaken/Vulnerability: read PASSIVELY by the damage formula's pools, never fired via a hook. */
+export type DamageModifierDef = {
+  readonly category: 'damage-modifier'
+  readonly statusId: string
+  readonly cap: number
+  readonly direction: DamageModifierDirection
+  /** Per-stack term: for 'dealt', an ADDITIVE contribution to (1 + Σ dealtMods); for 'taken', a
+   * per-stack MULTIPLICATIVE factor compounding via magnitude ** stacks into Π(takenFactors). */
+  readonly magnitude: number
+}
+
+export type StatusDef = ConditionStatusDef | DamageModifierDef
 
 // ---- Active effect instances (what lives on Creature.activeEffects) ----
 
 interface InstanceIdentity {
   readonly instanceId: EffectInstanceId
-  /** Stable definition id (the owning trait) for TriggerFired legibility / debugging. */
+  /** Stable definition id (the owning trait, or the statusId for a status) for TriggerFired
+   * legibility / debugging. */
   readonly sourceTraitId: string
+}
+
+/** Statuses additionally carry live, mutable duration/stack bookkeeping (absent from the
+ * static StatusDef, which only declares the cap/mechanism). */
+interface StatusInstanceState {
+  readonly remainingDuration: number
+  readonly stacks: number
 }
 
 export type StatModifierEffect = StatModifierDef & InstanceIdentity
 export type StatRemapEffect = StatRemapDef & InstanceIdentity
 export type TriggeredEffect = TriggeredDef & InstanceIdentity
+export type ConditionStatusEffect = ConditionStatusDef &
+  InstanceIdentity &
+  StatusInstanceState
+export type DamageModifierEffect = DamageModifierDef &
+  InstanceIdentity &
+  StatusInstanceState
 
-// Grows in Slice C (condition-status / timed damage-modifier instances).
-export type ActiveEffect = StatModifierEffect | StatRemapEffect | TriggeredEffect
+export type ActiveEffect =
+  | StatModifierEffect
+  | StatRemapEffect
+  | TriggeredEffect
+  | ConditionStatusEffect
+  | DamageModifierEffect
 
 // ---- Trait ----
 

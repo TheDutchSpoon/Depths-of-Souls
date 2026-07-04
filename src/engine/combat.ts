@@ -1,15 +1,16 @@
 import { createSeededRng } from './rng'
 import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
-import { getCreature, updateCreature } from './creature-lookup'
+import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import { instantiateTraitEffects, effectiveMaxHp } from './effects'
-import { dealDamage, fireHook, newCascade } from './resolution'
+import { applyStatus, dealDamage, fireHook, newCascade } from './resolution'
 import type { CascadeState } from './resolution'
 import { decideAction } from './interpreter'
 import type { CreatureId } from './ids'
+import type { EffectInstanceId } from './effect-types'
 import type { Action, CombatEvent, CombatState, Creature, FightResult } from './types'
 import type { Script } from './scripting-types'
-import type { Trait } from './effect-types'
+import type { StatusDef, StatusSpec, Trait } from './effect-types'
 
 export function createCombat(
   playerParty: readonly Creature[],
@@ -17,6 +18,7 @@ export function createCombat(
   seed: number,
   scripts: ReadonlyMap<string, Script> = new Map(),
   traits: ReadonlyMap<string, Trait> = new Map(),
+  statuses: ReadonlyMap<string, StatusDef> = new Map(),
 ): CombatState {
   if (playerParty.length === 0 || enemyParty.length === 0) {
     throw new Error('createCombat: both parties must have at least one creature')
@@ -43,6 +45,7 @@ export function createCombat(
     round: 0,
     result: null,
     scripts,
+    statuses,
   }
 }
 
@@ -57,6 +60,89 @@ function livingIds(state: CombatState): CreatureId[] {
   return [...state.playerParty, ...state.enemyParty]
     .filter((c) => c.alive)
     .map((c) => c.id)
+}
+
+interface StatusSnapshotEntry {
+  readonly creatureId: CreatureId
+  readonly instanceId: EffectInstanceId
+}
+
+/** Every status-carrying effect (condition-status/damage-modifier) present right now, across
+ * both parties (alive or not -- a status on a just-dead bearer still needs decrementing/expiry
+ * bookkeeping). This is the "start-of-sweep snapshot": statuses BORN during this same sweep
+ * (e.g. from an on-death trait) are never in it, so they keep full duration and start counting
+ * at the NEXT round-end. */
+function snapshotStatuses(state: CombatState): StatusSnapshotEntry[] {
+  const entries: StatusSnapshotEntry[] = []
+  for (const creature of [...state.playerParty, ...state.enemyParty]) {
+    for (const effect of creature.activeEffects) {
+      if (
+        effect.category === 'condition-status' ||
+        effect.category === 'damage-modifier'
+      ) {
+        entries.push({ creatureId: creature.id, instanceId: effect.instanceId })
+      }
+    }
+  }
+  return entries
+}
+
+/** Decrements remaining duration for snapshot statuses ONLY, then expires any that reach 0
+ * (StatusExpired, removed from activeEffects). Statuses not in the snapshot (born mid-sweep)
+ * are untouched here. */
+function decrementAndExpireSnapshot(
+  state: CombatState,
+  snapshot: readonly StatusSnapshotEntry[],
+  events: CombatEvent[],
+): CombatState {
+  let working = state
+  for (const { creatureId, instanceId } of snapshot) {
+    const creature = findCreature(working, creatureId)
+    if (!creature) continue
+    const effect = creature.activeEffects.find((e) => e.instanceId === instanceId)
+    if (
+      !effect ||
+      (effect.category !== 'condition-status' && effect.category !== 'damage-modifier')
+    ) {
+      continue
+    }
+
+    const remainingDuration = effect.remainingDuration - 1
+    if (remainingDuration > 0) {
+      working = updateCreature(working, creatureId, {
+        activeEffects: creature.activeEffects.map((e) =>
+          e.instanceId === instanceId ? { ...e, remainingDuration } : e,
+        ),
+      })
+    } else {
+      working = updateCreature(working, creatureId, {
+        activeEffects: creature.activeEffects.filter((e) => e.instanceId !== instanceId),
+      })
+      events.push({ type: 'StatusExpired', creatureId, statusId: effect.statusId })
+    }
+  }
+  return working
+}
+
+/**
+ * The round-end status sweep (GAME_DESIGN's status lifecycle): (1) snapshot statuses present at
+ * sweep start, (2) fire all on-round-end hooks across all living creatures in tie-break order
+ * (incl. DoT/Regen ticks; cascades incl. on-death resolve fully -- a creature killed mid-sweep
+ * fires only on-death, its own not-yet-reached on-round-end effects skipped by fireHook's
+ * fresh alive-check), (3)+(4) decrement then expire ONLY the snapshotted statuses. Win/loss is
+ * checked by the caller once, after this whole sweep completes.
+ */
+function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): CombatState {
+  const snapshot = snapshotStatuses(state)
+  const fired = fireHook(
+    'on-round-end',
+    livingIds(state),
+    undefined,
+    state,
+    events,
+    newCascade(),
+  ).state
+  return decrementAndExpireSnapshot(fired, snapshot, events)
 }
 
 // The damage formula + application + damage-path hook firing all live in resolution.ts now
@@ -93,7 +179,7 @@ function executeCastSingle(
     gemSlot,
     targetId,
   })
-  return dealDamage(
+  let working = dealDamage(
     actor.id,
     targetId,
     'cast',
@@ -103,6 +189,31 @@ function executeCastSingle(
     events,
     cascade,
   )
+  if (spell.appliesStatus) {
+    working = applyStatusIfAlive(
+      actor.id,
+      targetId,
+      spell.appliesStatus,
+      working,
+      events,
+      cascade,
+    )
+  }
+  return working
+}
+
+/** Never applies a status to a corpse -- a cast's damage may have killed the target. */
+function applyStatusIfAlive(
+  sourceId: CreatureId,
+  targetId: CreatureId,
+  spec: StatusSpec,
+  state: CombatState,
+  events: CombatEvent[],
+  cascade: CascadeState,
+): CombatState {
+  const target = getCreature(state, targetId)
+  if (!target.alive) return state
+  return applyStatus(sourceId, targetId, spec, state, events, cascade)
 }
 
 function executeCastAoe(
@@ -144,6 +255,16 @@ function executeCastAoe(
       events,
       cascade,
     )
+    if (spell.appliesStatus) {
+      working = applyStatusIfAlive(
+        actor.id,
+        targetId,
+        spell.appliesStatus,
+        working,
+        events,
+        cascade,
+      )
+    }
   }
 
   return working
@@ -261,16 +382,11 @@ export function resolveTurn(state: CombatState): {
   // Round boundary: the queue is exhausted (or this is the very first call).
   if (working.turnCursor >= working.turnQueue.length) {
     if (working.round > 0) {
-      // Round-end hooks fire across all living creatures in tie-break order. (Slice C expands
-      // this into the full snapshot -> tick -> decrement -> expire sweep with its own win-check.)
-      working = fireHook(
-        'on-round-end',
-        livingIds(working),
-        undefined,
-        working,
-        events,
-        newCascade(),
-      ).state
+      working = resolveRoundEndSweep(working, events)
+      // Win/loss checked once, immediately after the full sweep completes -- a DoT can wipe a
+      // side at round-end, and this must not wait for a subsequent (now-moot) creature turn.
+      const sweepResult = checkWinLoss(working)
+      if (sweepResult) return finalize(working, events, sweepResult)
     }
 
     const nextRound = working.round + 1

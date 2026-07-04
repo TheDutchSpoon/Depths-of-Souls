@@ -56,6 +56,15 @@ export interface IsProvokingCondition {
   readonly kind: 'is-provoking'
 }
 
+/** Matches a literal statusId (never a category) among the subject pool's status-carrying
+ * effects (condition-status + timed damage-modifier -- never stat-modifiers). Existential over
+ * the pool, same as hp-percent's `any` qualifier; no lowest/highest qualifier here. */
+export interface HasStatusCondition {
+  readonly kind: 'has-status'
+  readonly subject: HpSubject
+  readonly statusId: string
+}
+
 export type Condition =
   | AlwaysCondition
   | HpPercentCondition
@@ -64,7 +73,7 @@ export type Condition =
   | RoundNumberCondition
   | EnemyWeakToMeExistsCondition
   | IsProvokingCondition
-// Deliberately no has-status member -- deferred to Phase 3 (no status producer exists yet).
+  | HasStatusCondition
 
 // ---- Target selectors ----
 // The exact 7-member v1 set from GAME_DESIGN §8.

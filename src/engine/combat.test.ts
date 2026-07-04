@@ -117,6 +117,7 @@ describe('round cap', () => {
       round: ROUND_CAP,
       result: null,
       scripts: new Map(),
+      statuses: new Map(),
     }
 
     const { state, events } = resolveTurn(atCap)

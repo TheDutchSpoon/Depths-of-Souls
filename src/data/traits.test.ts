@@ -6,6 +6,8 @@ import {
   RETALIATE,
   GRUDGE,
   VENGEFUL,
+  REELING,
+  CATASTROPHIC_COLLAPSE,
   STOCK_TRAITS,
   TRAIT_REGISTRY,
 } from './traits'
@@ -97,5 +99,35 @@ describe('stock traits (representative Phase 3 content)', () => {
         },
       },
     ])
+  })
+
+  it('REELING is a triggered on-damage-taken apply-status (self-stun for 1 round)', () => {
+    expect(REELING.effects).toEqual([
+      {
+        category: 'triggered',
+        hook: 'on-damage-taken',
+        response: {
+          kind: 'apply-status',
+          target: { kind: 'self' },
+          status: { statusId: 'stun', duration: 1 },
+        },
+      },
+    ])
+  })
+
+  it('CATASTROPHIC_COLLAPSE bundles a self-kill, an ally-hit, and an on-death apply-status', () => {
+    expect(CATASTROPHIC_COLLAPSE.effects).toHaveLength(3)
+    expect(CATASTROPHIC_COLLAPSE.effects[0]).toMatchObject({
+      hook: 'on-round-end',
+      response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 999 },
+    })
+    expect(CATASTROPHIC_COLLAPSE.effects[1]).toMatchObject({
+      hook: 'on-round-end',
+      response: { kind: 'deal-damage', target: { kind: 'selector' } },
+    })
+    expect(CATASTROPHIC_COLLAPSE.effects[2]).toMatchObject({
+      hook: 'on-death',
+      response: { kind: 'apply-status', status: { statusId: 'weaken' } },
+    })
   })
 })

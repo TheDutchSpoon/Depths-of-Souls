@@ -18,4 +18,13 @@ export const CINDER_NOVA: Spell = {
   spellPower: 0.3,
 }
 
-export const STOCK_SPELLS: readonly Spell[] = [EMBER_LANCE, CINDER_NOVA]
+// Slice C: a spell-applied status, per CONVENTIONS' "Spell gains an optional status-application."
+export const VENOM_BOLT: Spell = {
+  id: 'venom-bolt',
+  name: 'Venom Bolt',
+  targetShape: 'single',
+  spellPower: 0.4,
+  appliesStatus: { statusId: 'poison', duration: 3 },
+}
+
+export const STOCK_SPELLS: readonly Spell[] = [EMBER_LANCE, CINDER_NOVA, VENOM_BOLT]

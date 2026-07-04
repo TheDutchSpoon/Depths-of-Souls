@@ -2,6 +2,7 @@ import { pickExtremum } from './tie-break'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
 import { getEffectiveStat } from './effective-stats'
 import { getAffinityMultiplier } from './affinity'
+import { hasStatus } from './effects'
 import type { CombatState, Creature } from './types'
 import type { Condition, ComparatorOp, HpSubject } from './scripting-types'
 
@@ -36,7 +37,7 @@ function hpPercentSatisfied(
   return compare(creature.currentHp * 100, comparator, thresholdPercent * effMaxHp)
 }
 
-function hpPercentPool(
+function subjectPool(
   subject: HpSubject,
   creature: Creature,
   state: CombatState,
@@ -65,7 +66,7 @@ export function evaluateCondition(
     case 'always':
       return true
     case 'hp-percent': {
-      const pool = hpPercentPool(condition.subject, creature, state)
+      const pool = subjectPool(condition.subject, creature, state)
       if (pool.length === 0) return false
       if (condition.qualifier === 'any') {
         return pool.some((c) =>
@@ -101,6 +102,10 @@ export function evaluateCondition(
       )
     case 'is-provoking':
       return creature.provoking
+    case 'has-status':
+      return subjectPool(condition.subject, creature, state).some((c) =>
+        hasStatus(c, condition.statusId),
+      )
     default: {
       const exhaustive: never = condition
       throw new Error(`Unhandled condition kind: ${String(exhaustive)}`)

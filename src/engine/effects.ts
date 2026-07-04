@@ -9,9 +9,12 @@ import { getEffectiveStat } from './effective-stats'
 import { createEffectInstanceId } from './effect-types'
 import type {
   ActiveEffect,
+  ConditionStatusEffect,
+  DamageModifierEffect,
   EffectDef,
   EffectInstanceId,
   Hook,
+  StatusDef,
   Trait,
   TriggeredEffect,
 } from './effect-types'
@@ -60,13 +63,20 @@ function withInstance(
 }
 
 /**
- * The creature's triggered effects registered for `hook`, in canonical active-effects order.
+ * The creature's effects registered for `hook`, in canonical active-effects order. Matches BOTH
+ * permanent triggered traits (Retaliate, Grudge) and timed condition-status effects (DoT/Regen/
+ * Stun) -- both fire via the same hook-dispatch machinery in resolution.ts's fireHook.
  * Scan-and-filter (a hook-type index is deferred until profiling shows it's needed). The
  * alive/death gating is the caller's (fireHook) responsibility, not this lookup's.
  */
-export function effectsForHook(creature: Creature, hook: Hook): TriggeredEffect[] {
+export function effectsForHook(
+  creature: Creature,
+  hook: Hook,
+): (TriggeredEffect | ConditionStatusEffect)[] {
   return creature.activeEffects.filter(
-    (e): e is TriggeredEffect => e.category === 'triggered' && e.hook === hook,
+    (e): e is TriggeredEffect | ConditionStatusEffect =>
+      (e.category === 'triggered' || e.category === 'condition-status') &&
+      e.hook === hook,
   )
 }
 
@@ -86,4 +96,58 @@ export function effectiveMaxHp(creature: Creature): number {
  */
 export function clampedHp(creature: Creature): number {
   return Math.min(creature.currentHp, effectiveMaxHp(creature))
+}
+
+/** Attacker's additive dealt-mod pool contribution from active damage-modifier statuses
+ * (e.g. Weaken: -20%/stack). Read passively, like getEffectiveStat -- never fired via a hook. */
+export function gatherDealtMods(creature: Creature): number[] {
+  return creature.activeEffects
+    .filter(
+      (e): e is DamageModifierEffect =>
+        e.category === 'damage-modifier' && e.direction === 'dealt',
+    )
+    .map((e) => e.magnitude * e.stacks)
+}
+
+/** Defender's multiplicative taken-pool contribution from active damage-modifier statuses
+ * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks). */
+export function gatherTakenFactors(creature: Creature): number[] {
+  return creature.activeEffects
+    .filter(
+      (e): e is DamageModifierEffect =>
+        e.category === 'damage-modifier' && e.direction === 'taken',
+    )
+    .map((e) => e.magnitude ** e.stacks)
+}
+
+/** True iff `creature` carries the literal statusId among its status-carrying effects
+ * (condition-status or damage-modifier) -- what scripting's has-status condition scopes to.
+ * Never matches a stat-modifier/stat-remap/plain-triggered effect. */
+export function hasStatus(creature: Creature, statusId: string): boolean {
+  return creature.activeEffects.some(
+    (e) =>
+      (e.category === 'condition-status' || e.category === 'damage-modifier') &&
+      e.statusId === statusId,
+  )
+}
+
+/** Instantiates a status definition into an ActiveEffect with fresh duration/stack bookkeeping.
+ * `instanceId` follows the `${creatureId}#status#${statusId}` scheme (deterministic, never RNG). */
+export function instantiateStatus(
+  def: StatusDef,
+  instanceId: EffectInstanceId,
+  remainingDuration: number,
+  stacks: number,
+): ActiveEffect {
+  const base = { instanceId, sourceTraitId: def.statusId, remainingDuration, stacks }
+  switch (def.category) {
+    case 'condition-status':
+      return { ...def, ...base }
+    case 'damage-modifier':
+      return { ...def, ...base }
+    default: {
+      const exhaustive: never = def
+      throw new Error(`Unknown status category: ${String(exhaustive)}`)
+    }
+  }
 }
