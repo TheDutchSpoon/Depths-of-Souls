@@ -457,8 +457,25 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       newCascade(),
     )
     const tick = events.slice(before).find((e) => e.type === 'DamageDealt')
-    expect(tick).toMatchObject({ finalDamage: 10, damageSource: 'dot' }) // 5 * 2 stacks
+    expect(tick).toMatchObject({
+      finalDamage: 10,
+      damageSource: 'dot',
+      statusId: 'test-dot',
+    }) // 5 * 2 stacks
     expect(events.slice(before).some((e) => e.type === 'TriggerFired')).toBe(false)
+  })
+
+  it("attack/cast DamageDealt carry no statusId -- it's exclusively the causing STATUS's identity", () => {
+    const player = makeParty('player', [
+      { id: 'atk', attack: 10, defence: 0, scriptId: 'always-attack' },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'tgt', health: 40, defence: 0 }])
+    const { events } = resolveTurn(createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID))
+    const attackHit = events.find(
+      (e): e is Extract<CombatEvent, { type: 'DamageDealt' }> => e.type === 'DamageDealt',
+    )
+    expect(attackHit).toBeDefined()
+    expect(attackHit?.statusId).toBeUndefined()
   })
 })
 

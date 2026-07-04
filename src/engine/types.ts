@@ -200,6 +200,10 @@ export interface DamageDealtEvent {
   readonly remainingHp: number
   /** What produced this damage. 'dot' bypasses Defence and carries no TriggerFired (Slice C). */
   readonly damageSource: 'attack' | 'cast' | 'dot'
+  /** The causing status, when a status produced this damage (DoT ticks). Absent for attack/cast
+   * and for a trait's own dot-tagged flat hit. Lets the log render "[creature] took X poison
+   * damage" and Phase 7 attribute it. */
+  readonly statusId?: string
 }
 
 export interface CreatureDiedEvent {

@@ -1,7 +1,7 @@
 # Phase 3 — Traits, statuses & the effect framework
 
 Status: **done — shipped in three slices/PRs**, all **complete and locally verified**
-(A: 169/169; B: 183/183; C: 204/204 tests; all lint/format/build green). Built per the approved
+(A: 169/169; B: 183/183; C: 206/206 tests; all lint/format/build green). Built per the approved
 plan at
 `.claude/briefs/phase-3-implementation-plan.md` (kept there for the detailed rationale, the
 slice/PR sequencing, and the full `ASSUMPTION:`-tagged decision list behind every choice below —
@@ -295,10 +295,46 @@ One fixture-authoring bug caught before any of these ran: `golden-dot`'s `TARGET
 map, not the stock scripts — so the lookup missed, fell back to the implicit default, and `TARGET`
 attacked instead of waiting. Fixed by merging `STOCK_SCRIPTS_BY_ID` into the fixture's script map.
 
+### PR #22 amendments (two items, landed before merge)
+
+**1. `DamageDealt` carries the causing status's identity.** Per GAME_DESIGN's event contract
+("`damageSource` … + the status identity for DoT"), `DamageDealtEvent` gains an optional
+`statusId?: string` — present only when a firing `condition-status` produced the hit, absent for
+attack/cast and for a *trait's* own `dot`-tagged flat hit (`damageSource` is the damage *flavor*;
+`statusId` is the causing *status*, a narrower thing — `CATASTROPHIC_COLLAPSE`'s self-kill is
+`'dot'`-flavored but carries no `statusId`, since it's a triggered trait, not a status).
+Threaded exactly like `stacks` already was: derived in `fireHook` from the firing effect
+(`condition-status` → its `statusId`; anything else → `undefined`), carried on `HookContext`,
+passed through `dealDamage`/`applyFlatDamage`/`applyDamageAndEmit`. Because the field is optional
+and `toEqual` treats an explicit `undefined` the same as an absent key, **every existing golden
+needed zero changes** — confirmed by running the full suite before touching `golden-dot` (only
+that one fixture failed, on the two DoT ticks; `golden-stun` and `golden-round-end-interaction`
+stayed green untouched). `golden-dot`'s two `dotTick(...)` events gained `statusId: 'poison'`; a
+new `resolution.test.ts` case confirms attack/cast `DamageDealt` carry no `statusId`.
+
+**2. Round-end sweep: a status (re)applied *during* its own sweep keeps full duration.** A real,
+previously-dormant bug: `applyStatus`'s refresh path reuses the same `instanceId`, so a status
+*already in* the snapshot that got refreshed by an `on-round-end` response firing *during* the
+same sweep would still get decremented by that sweep's step (3) — wrongly taking a
+just-refreshed duration down by one. Not reachable by any v1 content (confirmed: nothing
+re-applies a snapshotted status mid-sweep), but a correctness lock worth adding now rather than
+after some future status does. Fixed by deriving the "reapplied this sweep" set directly from the
+`StatusApplied` events `fireHook`'s own firing step just produced (`resolveRoundEndSweep` scans
+`events` from where the sweep's firing started), rather than threading a mutable set through
+`applyStatus`/`fireHook`/`executeResponse` (which would otherwise burden the non-sweep spell-cast
+caller too). `StatusSnapshotEntry` gained a `statusId` field; `decrementAndExpireSnapshot` skips
+any `(creatureId, statusId)` pair present in that set. Verified the fix is load-bearing (not
+inert) by temporarily disabling the skip and confirming a new synthetic `combat.test.ts` case
+fails as expected (`remainingDuration` wrongly drops from 5 to 4) before restoring it.
+
+Both items verified byte-identical against every existing golden except `golden-dot` (which was
+itself authored fresh in this same PR, so its `statusId` field is a birth, not a modification).
+
 ### Verification performed
 
-- `npm run test` — **204/204** pass. The **183 prior tests pass byte-identical** — confirmed via
-  `git status`: no existing golden fixture was touched, only new Slice C files added.
+- `npm run test` — **206/206** pass (+2 over the PR's original 204: the `statusId` assertion and
+  the sweep-refresh synthetic test). The prior goldens pass byte-identical — confirmed via
+  `git status`: only `golden-dot.fixture.ts` shows as modified among `__golden__/*`.
 - `npm run lint` / `npm run format:check` / `npm run build` — clean.
 
 ### A resolved forward note (from Slice B's PR review)

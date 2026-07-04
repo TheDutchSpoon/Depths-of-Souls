@@ -57,6 +57,9 @@ interface HookContext {
   /** The firing effect's current stack count, when it's a status (condition-status); absent
    * for a plain (unstacked) triggered trait. Scales flat deal-damage/heal magnitudes. */
   readonly stacks?: number
+  /** The firing effect's statusId, when it's a status (condition-status); absent for a plain
+   * triggered trait. Threaded onto DamageDealt so a DoT tick's causing status is attributable. */
+  readonly statusId?: string
 }
 
 // ---- Damage application + damage-path hooks ----
@@ -89,6 +92,7 @@ export function dealDamage(
   state: CombatState,
   events: CombatEvent[],
   cascade: CascadeState,
+  statusId?: string,
 ): CombatState {
   const attacker = getCreature(state, attackerId)
   const target = getCreature(state, targetId)
@@ -110,6 +114,7 @@ export function dealDamage(
     state,
     events,
     cascade,
+    statusId,
   )
 }
 
@@ -128,6 +133,7 @@ export function applyDamageAndEmit(
   state: CombatState,
   events: CombatEvent[],
   cascade: CascadeState,
+  statusId?: string,
 ): CombatState {
   const newHp = Math.max(target.currentHp - damage.finalDamage, 0)
   const died = newHp === 0 && target.alive
@@ -143,6 +149,7 @@ export function applyDamageAndEmit(
     wasChipOnly: damage.wasChipOnly,
     remainingHp: newHp,
     damageSource,
+    statusId,
   })
 
   working = fireHook(
@@ -275,13 +282,15 @@ export function fireHook(
 
       // Present only on a status (condition-status); absent for a plain permanent trait.
       const stacks = effect.category === 'condition-status' ? effect.stacks : undefined
+      const statusId =
+        effect.category === 'condition-status' ? effect.statusId : undefined
 
       cascade.activeInstances.add(effect.instanceId)
       cascade.depth += 1
       const result = executeResponse(
         effect.response,
         effect.sourceTraitId,
-        { self: self.id, source, stacks },
+        { self: self.id, source, stacks, statusId },
         working,
         events,
         cascade,
@@ -353,6 +362,7 @@ export function executeResponse(
             working,
             events,
             cascade,
+            context.statusId,
           )
         } else {
           const offStat = response.offStat ?? 'attack'
@@ -366,6 +376,7 @@ export function executeResponse(
             working,
             events,
             cascade,
+            context.statusId,
           )
         }
       }
@@ -436,6 +447,7 @@ function applyFlatDamage(
   state: CombatState,
   events: CombatEvent[],
   cascade: CascadeState,
+  statusId?: string,
 ): CombatState {
   const target = getCreature(state, targetId)
   const finalDamage = Math.max(1, Math.floor(amount))
@@ -453,6 +465,7 @@ function applyFlatDamage(
     state,
     events,
     cascade,
+    statusId,
   )
 }
 

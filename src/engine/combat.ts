@@ -65,6 +65,7 @@ function livingIds(state: CombatState): CreatureId[] {
 interface StatusSnapshotEntry {
   readonly creatureId: CreatureId
   readonly instanceId: EffectInstanceId
+  readonly statusId: string
 }
 
 /** Every status-carrying effect (condition-status/damage-modifier) present right now, across
@@ -80,7 +81,11 @@ function snapshotStatuses(state: CombatState): StatusSnapshotEntry[] {
         effect.category === 'condition-status' ||
         effect.category === 'damage-modifier'
       ) {
-        entries.push({ creatureId: creature.id, instanceId: effect.instanceId })
+        entries.push({
+          creatureId: creature.id,
+          instanceId: effect.instanceId,
+          statusId: effect.statusId,
+        })
       }
     }
   }
@@ -89,14 +94,20 @@ function snapshotStatuses(state: CombatState): StatusSnapshotEntry[] {
 
 /** Decrements remaining duration for snapshot statuses ONLY, then expires any that reach 0
  * (StatusExpired, removed from activeEffects). Statuses not in the snapshot (born mid-sweep)
- * are untouched here. */
+ * are untouched here. A snapshot entry whose (creature, statusId) pair was ALSO (re)applied
+ * during this same sweep's firing step (`reappliedThisSweep`) is treated as fresh too -- refresh
+ * mid-sweep unifies with the born-mid-sweep rule, so a re-application never gets decremented in
+ * the very sweep that just refreshed it. */
 function decrementAndExpireSnapshot(
   state: CombatState,
   snapshot: readonly StatusSnapshotEntry[],
   events: CombatEvent[],
+  reappliedThisSweep: ReadonlySet<string>,
 ): CombatState {
   let working = state
-  for (const { creatureId, instanceId } of snapshot) {
+  for (const { creatureId, instanceId, statusId } of snapshot) {
+    if (reappliedThisSweep.has(`${creatureId}#${statusId}`)) continue // refreshed this sweep
+
     const creature = findCreature(working, creatureId)
     if (!creature) continue
     const effect = creature.activeEffects.find((e) => e.instanceId === instanceId)
@@ -129,11 +140,15 @@ function decrementAndExpireSnapshot(
  * sweep start, (2) fire all on-round-end hooks across all living creatures in tie-break order
  * (incl. DoT/Regen ticks; cascades incl. on-death resolve fully -- a creature killed mid-sweep
  * fires only on-death, its own not-yet-reached on-round-end effects skipped by fireHook's
- * fresh alive-check), (3)+(4) decrement then expire ONLY the snapshotted statuses. Win/loss is
- * checked by the caller once, after this whole sweep completes.
+ * fresh alive-check), (3)+(4) decrement then expire ONLY the snapshotted statuses -- except any
+ * (creature, statusId) pair that was itself (re)applied during step (2), derived directly from
+ * the StatusApplied events that step just produced (no extra state threaded through
+ * applyStatus/fireHook/executeResponse, which would otherwise burden the non-sweep spell-cast
+ * caller too). Win/loss is checked by the caller once, after this whole sweep completes.
  */
 function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): CombatState {
   const snapshot = snapshotStatuses(state)
+  const firstSweepEventIndex = events.length
   const fired = fireHook(
     'on-round-end',
     livingIds(state),
@@ -142,7 +157,16 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
     events,
     newCascade(),
   ).state
-  return decrementAndExpireSnapshot(fired, snapshot, events)
+
+  const reappliedThisSweep = new Set<string>()
+  for (let i = firstSweepEventIndex; i < events.length; i++) {
+    const event = events[i]
+    if (event?.type === 'StatusApplied') {
+      reappliedThisSweep.add(`${event.targetId}#${event.statusId}`)
+    }
+  }
+
+  return decrementAndExpireSnapshot(fired, snapshot, events, reappliedThisSweep)
 }
 
 // The damage formula + application + damage-path hook firing all live in resolution.ts now

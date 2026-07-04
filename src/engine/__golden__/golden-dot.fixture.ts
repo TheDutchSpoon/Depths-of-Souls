@@ -1,7 +1,9 @@
 // Golden: the DoT lifecycle end-to-end -- a spell-applied status (VENOM_BOLT -> Poison),
 // StatusApplied, three on-round-end ticks (flat, bypassing Defence/affinity/pools, no
-// TriggerFired), StatusExpired on the tick that also happens to kill the target, and win/loss
-// checked once after that round-end sweep (GAME_DESIGN's round-end status lifecycle).
+// TriggerFired, each carrying `statusId: 'poison'` -- the causing status, per GAME_DESIGN's
+// event contract), StatusExpired on the tick that also happens to kill the target, and win/loss
+// checked once after that round-end sweep (GAME_DESIGN's round-end status lifecycle). The
+// cast's own DamageDealt carries no statusId (it isn't status-caused).
 //
 // Hand-derived (independent `node -e` calculator). CASTER casts venom-bolt on round 1 only (a
 // custom script), then waits forever so poison is never refreshed. TARGET always-waits.
@@ -70,6 +72,7 @@ function dotTick(remainingHp: number): CombatEvent {
     wasChipOnly: false,
     remainingHp,
     damageSource: 'dot',
+    statusId: 'poison',
   }
 }
 
