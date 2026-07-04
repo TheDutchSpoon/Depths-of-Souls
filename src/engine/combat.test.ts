@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { createCombat, resolveFight, resolveTurn } from './combat'
 import { makeParty } from './__fixtures__/creatures'
 import { createSeededRng } from './rng'
+import { createCreatureId } from './ids'
 import { ROUND_CAP } from './config'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
+import type { StatusDef, Trait } from './effect-types'
 
 const EMBER_LANCE: Spell = {
   id: 'ember-lance',
@@ -117,6 +119,7 @@ describe('round cap', () => {
       round: ROUND_CAP,
       result: null,
       scripts: new Map(),
+      statuses: new Map(),
     }
 
     const { state, events } = resolveTurn(atCap)
@@ -443,5 +446,104 @@ describe('Wait', () => {
     expect(
       events.some((e) => e.type === 'DamageDealt' || e.type === 'AttackDeclared'),
     ).toBe(false)
+  })
+})
+
+describe('round-end sweep: a status (re)applied during its own sweep keeps full duration', () => {
+  it('skips decrementing a (creature, statusId) pair refreshed mid-sweep, decrements everything else normally', () => {
+    // Not reachable by any current v1 content (nothing re-applies a snapshotted status
+    // mid-sweep yet) -- a synthetic correctness lock for future self-refreshing round-end
+    // content. Z seeds two statuses at fight-start (weaken-test, vulnerability-test), then
+    // re-applies weaken-test to itself every on-round-end -- refreshing the SAME instance
+    // (single-instance-per-statusId) within the very sweep that would otherwise decrement it.
+    const REFRESH_WEAKEN: Trait = {
+      id: 'refresh-weaken-test',
+      name: 'Refresh Weaken (test)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-fight-start',
+          response: {
+            kind: 'apply-status',
+            target: { kind: 'self' },
+            status: { statusId: 'weaken-test', duration: 5 },
+          },
+        },
+        {
+          category: 'triggered',
+          hook: 'on-fight-start',
+          response: {
+            kind: 'apply-status',
+            target: { kind: 'self' },
+            status: { statusId: 'vulnerability-test', duration: 3 },
+          },
+        },
+        {
+          category: 'triggered',
+          hook: 'on-round-end',
+          response: {
+            kind: 'apply-status',
+            target: { kind: 'self' },
+            status: { statusId: 'weaken-test', duration: 5 },
+          },
+        },
+      ],
+    }
+    const WEAKEN_TEST: StatusDef = {
+      category: 'damage-modifier',
+      statusId: 'weaken-test',
+      direction: 'dealt',
+      magnitude: -0.1,
+      cap: 1,
+    }
+    const VULNERABILITY_TEST: StatusDef = {
+      category: 'damage-modifier',
+      statusId: 'vulnerability-test',
+      direction: 'taken',
+      magnitude: 1.2,
+      cap: 1,
+    }
+    const alwaysWaitScript: Script = {
+      id: 'always-wait-sweep-test',
+      rules: [{ condition: { kind: 'always' }, action: { kind: 'wait' } }],
+    }
+
+    const player = makeParty('player', [
+      {
+        id: 'z',
+        scriptId: 'always-wait-sweep-test',
+        innateTraitIds: ['refresh-weaken-test'],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'dummy', scriptId: 'always-wait-sweep-test' },
+    ])
+    const traits = new Map([[REFRESH_WEAKEN.id, REFRESH_WEAKEN]])
+    const statuses = new Map([
+      [WEAKEN_TEST.statusId, WEAKEN_TEST],
+      [VULNERABILITY_TEST.statusId, VULNERABILITY_TEST],
+    ])
+    const scripts = new Map([[alwaysWaitScript.id, alwaysWaitScript]])
+
+    let state = createCombat(player, enemy, 1, scripts, traits, statuses)
+    // Drive exactly through round 1's two turns and into round 2's boundary (round 1's sweep).
+    while (state.round < 2) {
+      state = resolveTurn(state).state
+    }
+
+    const z = [...state.playerParty, ...state.enemyParty].find(
+      (c) => c.id === createCreatureId('z'),
+    )!
+    const weaken = z.activeEffects.find(
+      (e) => e.category === 'damage-modifier' && e.statusId === 'weaken-test',
+    )
+    const vulnerability = z.activeEffects.find(
+      (e) => e.category === 'damage-modifier' && e.statusId === 'vulnerability-test',
+    )
+
+    // Refreshed THIS sweep (on-round-end re-applied it) -> NOT decremented: stays at 5, not 4.
+    expect(weaken).toMatchObject({ remainingDuration: 5 })
+    // Untouched by any re-application -> decrements normally: 3 -> 2.
+    expect(vulnerability).toMatchObject({ remainingDuration: 2 })
   })
 })

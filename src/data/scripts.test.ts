@@ -23,6 +23,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     round: 1,
     result: null,
     scripts: new Map(),
+    statuses: new Map(),
     ...overrides,
   }
 }

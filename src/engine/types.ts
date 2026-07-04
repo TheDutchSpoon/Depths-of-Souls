@@ -1,7 +1,7 @@
 import type { CreatureId } from './ids'
 import type { SeededRng } from './rng'
 import type { Script } from './scripting-types'
-import type { ActiveEffect, Hook } from './effect-types'
+import type { ActiveEffect, Hook, StatusDef, StatusSpec } from './effect-types'
 
 // ---- Stats & affinity ----
 
@@ -18,6 +18,8 @@ export interface Spell {
   readonly name: string
   readonly targetShape: 'single' | 'aoe'
   readonly spellPower: number
+  /** Applied to the target(s) after damage lands, if the target survives. */
+  readonly appliesStatus?: StatusSpec
 }
 
 // ---- Creature ----
@@ -118,6 +120,8 @@ export interface CombatState {
   readonly result: FightResult | null
   /** Script template registry for this fight, keyed by Script.id. */
   readonly scripts: ReadonlyMap<string, Script>
+  /** Status definition registry for this fight, keyed by StatusDef.statusId. */
+  readonly statuses: ReadonlyMap<string, StatusDef>
 }
 
 // ---- Events ----
@@ -196,6 +200,10 @@ export interface DamageDealtEvent {
   readonly remainingHp: number
   /** What produced this damage. 'dot' bypasses Defence and carries no TriggerFired (Slice C). */
   readonly damageSource: 'attack' | 'cast' | 'dot'
+  /** The causing status, when a status produced this damage (DoT ticks). Absent for attack/cast
+   * and for a trait's own dot-tagged flat hit. Lets the log render "[creature] took X poison
+   * damage" and Phase 7 attribute it. */
+  readonly statusId?: string
 }
 
 export interface CreatureDiedEvent {

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { evaluateCondition } from './conditions'
 import { makeCreature, makeParty } from './__fixtures__/creatures'
 import { createSeededRng } from './rng'
+import { createEffectInstanceId } from './effect-types'
 import type { CombatState } from './types'
+import type { ActiveEffect } from './effect-types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
@@ -14,6 +16,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     round: 1,
     result: null,
     scripts: new Map(),
+    statuses: new Map(),
     ...overrides,
   }
 }
@@ -195,5 +198,89 @@ describe('evaluateCondition -- is-provoking', () => {
     const state = makeState()
     expect(evaluateCondition({ kind: 'is-provoking' }, provoking, state)).toBe(true)
     expect(evaluateCondition({ kind: 'is-provoking' }, notProvoking, state)).toBe(false)
+  })
+})
+
+describe('evaluateCondition -- has-status', () => {
+  const poisonEffect: ActiveEffect = {
+    category: 'condition-status',
+    statusId: 'poison',
+    cap: 5,
+    hook: 'on-round-end',
+    response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
+    instanceId: createEffectInstanceId('p'),
+    sourceTraitId: 'poison',
+    remainingDuration: 2,
+    stacks: 1,
+  }
+
+  it('is existential over the subject pool, matching a literal statusId', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [
+      { id: 'poisoned', activeEffects: [poisonEffect] },
+      { id: 'clean' },
+    ])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(
+      evaluateCondition(
+        { kind: 'has-status', subject: 'enemy', statusId: 'poison' },
+        player[0]!,
+        state,
+      ),
+    ).toBe(true)
+    expect(
+      evaluateCondition(
+        { kind: 'has-status', subject: 'enemy', statusId: 'stun' },
+        player[0]!,
+        state,
+      ),
+    ).toBe(false)
+  })
+
+  it('self subject checks the acting creature itself', () => {
+    const stunEffect: ActiveEffect = {
+      category: 'condition-status',
+      statusId: 'stun',
+      cap: 1,
+      hook: 'on-turn-start',
+      response: { kind: 'suppress-action' },
+      instanceId: createEffectInstanceId('s'),
+      sourceTraitId: 'stun',
+      remainingDuration: 1,
+      stacks: 1,
+    }
+    const stunned = makeCreature({ activeEffects: [stunEffect] })
+    expect(
+      evaluateCondition(
+        { kind: 'has-status', subject: 'self', statusId: 'stun' },
+        stunned,
+        makeState(),
+      ),
+    ).toBe(true)
+    expect(
+      evaluateCondition(
+        { kind: 'has-status', subject: 'self', statusId: 'poison' },
+        stunned,
+        makeState(),
+      ),
+    ).toBe(false)
+  })
+
+  it('never matches a stat-modifier/stat-remap/plain-triggered effect', () => {
+    const brutish: ActiveEffect = {
+      category: 'stat-modifier',
+      stat: 'attack',
+      factor: 1.3,
+      instanceId: createEffectInstanceId('b'),
+      sourceTraitId: 'brutish',
+    }
+    const creature = makeCreature({ activeEffects: [brutish] })
+    expect(
+      evaluateCondition(
+        { kind: 'has-status', subject: 'self', statusId: 'brutish' },
+        creature,
+        makeState(),
+      ),
+    ).toBe(false)
   })
 })

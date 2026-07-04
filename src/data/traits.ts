@@ -122,6 +122,67 @@ export const VENGEFUL: Trait = {
   ],
 }
 
+/** Triggered + apply-status: when dealt damage, this creature is stunned (reeling) for 1 round.
+ * Exercises Stun's condition-status suppress-action end-to-end from a trait's apply-status
+ * response (Slice C). */
+export const REELING: Trait = {
+  id: 'reeling',
+  name: 'Reeling',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-damage-taken',
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'self' },
+        status: { statusId: 'stun', duration: 1 },
+      },
+    },
+  ],
+}
+
+/** Triggered edge-case content, for the round-end-interaction golden: three effects on one
+ * trait. (1) on-round-end: a lethal self-hit. (2) on-round-end: would damage the lowest-HP ally
+ * -- MUST be skipped when (1) already killed the bearer this same sweep (fireHook's fresh
+ * per-effect alive-check). (3) on-death: applies Weaken to the lowest-HP ally -- fires
+ * regardless, proving on-death still runs for a creature that died mid-sweep. */
+export const CATASTROPHIC_COLLAPSE: Trait = {
+  id: 'catastrophic-collapse',
+  name: 'Catastrophic Collapse',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-round-end',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: 999,
+        emitTriggerFired: false,
+        damageSource: 'dot',
+      },
+    },
+    {
+      category: 'triggered',
+      hook: 'on-round-end',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'selector', selector: { kind: 'lowest-hp-ally' } },
+        offStat: 'attack',
+        spellPower: 0.5,
+      },
+    },
+    {
+      category: 'triggered',
+      hook: 'on-death',
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'selector', selector: { kind: 'lowest-hp-ally' } },
+        status: { statusId: 'weaken', duration: 2 },
+      },
+    },
+  ],
+}
+
 export const STOCK_TRAITS: readonly Trait[] = [
   BRUTISH,
   BLOODLUST,
@@ -130,6 +191,8 @@ export const STOCK_TRAITS: readonly Trait[] = [
   GRUDGE,
   RECKLESS,
   VENGEFUL,
+  REELING,
+  CATASTROPHIC_COLLAPSE,
 ]
 
 /** Ready to pass directly as createCombat's `traits` argument. */
