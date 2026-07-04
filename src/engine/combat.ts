@@ -1,12 +1,10 @@
 import { createSeededRng } from './rng'
-import { ROUND_CAP, DEFEND_DEFENCE_MULTIPLIER, DEFEND_TAKEN_FACTOR } from './config'
+import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
-import { getEffectiveStat, getOffensiveStat } from './effective-stats'
-import { calculateDamage } from './damage'
-import type { DamageResult } from './damage'
-import { firePhaseHook } from './phase-hooks'
 import { getCreature, updateCreature } from './creature-lookup'
 import { instantiateTraitEffects, effectiveMaxHp } from './effects'
+import { dealDamage, fireHook, newCascade } from './resolution'
+import type { CascadeState } from './resolution'
 import { decideAction } from './interpreter'
 import type { CreatureId } from './ids'
 import type { Action, CombatEvent, CombatState, Creature, FightResult } from './types'
@@ -53,79 +51,27 @@ function clearOwnTransientStatus(state: CombatState, id: CreatureId): CombatStat
   return updateCreature(state, id, { defending: false, provoking: false })
 }
 
-/** Defend: +50% effective Defence (inside the core) and a x0.65 taken-pool factor. */
-function resolveDefenceAndTakenFactors(target: Creature): {
-  defence: number
-  takenFactors: readonly number[]
-} {
-  const baseDefence = getEffectiveStat(target, 'defence')
-  if (!target.defending) return { defence: baseDefence, takenFactors: [] }
-  return {
-    defence: baseDefence * DEFEND_DEFENCE_MULTIPLIER,
-    takenFactors: [DEFEND_TAKEN_FACTOR],
-  }
+/** All living creatures' ids in tie-break order (player slots, then enemy slots) -- the order
+ * global phase-point hooks (fight-start, round-end) iterate. */
+function livingIds(state: CombatState): CreatureId[] {
+  return [...state.playerParty, ...state.enemyParty]
+    .filter((c) => c.alive)
+    .map((c) => c.id)
 }
 
-/** Applies a damage result to `target`, emitting DamageDealt (+ CreatureDied if it killed). */
-function applyDamageAndEmit(
-  sourceId: CreatureId,
-  target: Creature,
-  damage: DamageResult,
-  damageSource: 'attack' | 'cast' | 'dot',
-  state: CombatState,
-  events: CombatEvent[],
-): CombatState {
-  const newHp = Math.max(target.currentHp - damage.finalDamage, 0)
-  const died = newHp === 0 && target.alive
-
-  // State threading: `nextState` is the only source of truth from here on. Never read
-  // `target` again after this point -- it's a pre-mutation snapshot.
-  const nextState = updateCreature(state, target.id, {
-    currentHp: newHp,
-    alive: newHp > 0,
-  })
-
-  events.push({
-    type: 'DamageDealt',
-    sourceId,
-    targetId: target.id,
-    rawDamage: damage.rawDamage,
-    finalDamage: damage.finalDamage,
-    affinityMultiplier: damage.affinityMultiplier,
-    wasChipOnly: damage.wasChipOnly,
-    remainingHp: newHp,
-    damageSource,
-  })
-
-  if (died) {
-    events.push({ type: 'CreatureDied', creatureId: target.id })
-  }
-
-  return nextState
-}
+// The damage formula + application + damage-path hook firing all live in resolution.ts now
+// (dealDamage / applyDamageAndEmit). These executors just emit the intent event, then delegate:
+// "attack"/"cast" go through the exact same damage path a triggered deal-damage response does.
 
 function executeAttack(
   actor: Creature,
   targetId: CreatureId,
   state: CombatState,
   events: CombatEvent[],
+  cascade: CascadeState,
 ): CombatState {
   events.push({ type: 'AttackDeclared', attackerId: actor.id, targetId })
-
-  const target = getCreature(state, targetId)
-  const offStat = getOffensiveStat(actor, 'attack')
-  const { defence, takenFactors } = resolveDefenceAndTakenFactors(target)
-
-  const damage = calculateDamage({
-    offStat,
-    defence,
-    attackerAffinity: actor.affinity,
-    defenderAffinity: target.affinity,
-    dealtMods: [], // Phase 1/2: always empty; wired for Phase 3 damage-modifier effects
-    takenFactors,
-  })
-
-  return applyDamageAndEmit(actor.id, target, damage, 'attack', state, events)
+  return dealDamage(actor.id, targetId, 'attack', 1.0, 'attack', state, events, cascade)
 }
 
 function executeCastSingle(
@@ -134,6 +80,7 @@ function executeCastSingle(
   targetId: CreatureId,
   state: CombatState,
   events: CombatEvent[],
+  cascade: CascadeState,
 ): CombatState {
   const spell = actor.equippedSpells[gemSlot]
   if (!spell)
@@ -146,21 +93,16 @@ function executeCastSingle(
     gemSlot,
     targetId,
   })
-
-  const target = getCreature(state, targetId)
-  const offStat = getOffensiveStat(actor, 'cast', spell.spellPower)
-  const { defence, takenFactors } = resolveDefenceAndTakenFactors(target)
-
-  const damage = calculateDamage({
-    offStat,
-    defence,
-    attackerAffinity: actor.affinity,
-    defenderAffinity: target.affinity,
-    dealtMods: [],
-    takenFactors,
-  })
-
-  return applyDamageAndEmit(actor.id, target, damage, 'cast', state, events)
+  return dealDamage(
+    actor.id,
+    targetId,
+    'cast',
+    spell.spellPower,
+    'cast',
+    state,
+    events,
+    cascade,
+  )
 }
 
 function executeCastAoe(
@@ -168,6 +110,7 @@ function executeCastAoe(
   gemSlot: number,
   state: CombatState,
   events: CombatEvent[],
+  cascade: CascadeState,
 ): CombatState {
   const spell = actor.equippedSpells[gemSlot]
   if (!spell)
@@ -184,28 +127,23 @@ function executeCastAoe(
     targetIds,
   })
 
-  const offStat = getOffensiveStat(actor, 'cast', spell.spellPower)
   let working = state
-
   for (const targetId of targetIds) {
+    // Skip a frozen-list target that's no longer alive by the time its hit lands (a prior
+    // hit's on-death/reflect cascade may have killed it). The frozen target *set* is
+    // unchanged; this only skips *hitting* an already-dead member.
     const target = getCreature(working, targetId)
-    // Forward guard: skip a frozen-list target that's no longer alive by the time its
-    // hit would land. Inert in Phase 2 (no other kill source exists mid-AOE yet), but
-    // Phase 3 (reflect-damage traits, on-death triggers) can make this reachable, and
-    // emitting DamageDealt against a corpse would be wrong. The frozen target *set*
-    // itself is unchanged -- this only skips *hitting* an already-dead member.
     if (!target.alive) continue
-
-    const { defence, takenFactors } = resolveDefenceAndTakenFactors(target)
-    const damage = calculateDamage({
-      offStat,
-      defence,
-      attackerAffinity: actor.affinity,
-      defenderAffinity: target.affinity,
-      dealtMods: [],
-      takenFactors,
-    })
-    working = applyDamageAndEmit(actor.id, target, damage, 'cast', working, events)
+    working = dealDamage(
+      actor.id,
+      targetId,
+      'cast',
+      spell.spellPower,
+      'cast',
+      working,
+      events,
+      cascade,
+    )
   }
 
   return working
@@ -243,16 +181,24 @@ function executeAction(
   action: Action,
   state: CombatState,
   events: CombatEvent[],
+  cascade: CascadeState,
 ): CombatState {
   switch (action.kind) {
     case 'attack':
-      return executeAttack(actor, action.targetId, state, events)
+      return executeAttack(actor, action.targetId, state, events, cascade)
     case 'cast':
       switch (action.targetShape) {
         case 'single':
-          return executeCastSingle(actor, action.gemSlot, action.targetId, state, events)
+          return executeCastSingle(
+            actor,
+            action.gemSlot,
+            action.targetId,
+            state,
+            events,
+            cascade,
+          )
         case 'aoe':
-          return executeCastAoe(actor, action.gemSlot, state, events)
+          return executeCastAoe(actor, action.gemSlot, state, events, cascade)
         default: {
           const exhaustive: never = action
           throw new Error(`Unhandled cast shape: ${String(exhaustive)}`)
@@ -285,8 +231,11 @@ function finalize(
   events: CombatEvent[],
   result: FightResult,
 ): { state: CombatState; events: CombatEvent[] } {
-  const finalState = firePhaseHook('fight-end', { ...state, result })
-  return { state: finalState, events: [...events, { type: 'FightEnded', result }] }
+  // No on-fight-end hook in the v1 vocabulary; just set the result and emit FightEnded.
+  return {
+    state: { ...state, result },
+    events: [...events, { type: 'FightEnded', result }],
+  }
 }
 
 export function resolveTurn(state: CombatState): {
@@ -296,16 +245,32 @@ export function resolveTurn(state: CombatState): {
   const events: CombatEvent[] = []
   let working = state
 
-  // Fight-start (once, when round === 0).
+  // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start.
   if (working.round === 0) {
-    working = firePhaseHook('fight-start', working)
     events.push({ type: 'FightStarted' })
+    working = fireHook(
+      'on-fight-start',
+      livingIds(working),
+      undefined,
+      working,
+      events,
+      newCascade(),
+    ).state
   }
 
   // Round boundary: the queue is exhausted (or this is the very first call).
   if (working.turnCursor >= working.turnQueue.length) {
     if (working.round > 0) {
-      working = firePhaseHook('round-end', working)
+      // Round-end hooks fire across all living creatures in tie-break order. (Slice C expands
+      // this into the full snapshot -> tick -> decrement -> expire sweep with its own win-check.)
+      working = fireHook(
+        'on-round-end',
+        livingIds(working),
+        undefined,
+        working,
+        events,
+        newCascade(),
+      ).state
     }
 
     const nextRound = working.round + 1
@@ -319,7 +284,7 @@ export function resolveTurn(state: CombatState): {
 
     const queue = buildTurnQueue(working.playerParty, working.enemyParty)
     working = { ...working, turnQueue: queue, turnCursor: 0, round: nextRound }
-    working = firePhaseHook('round-start', working)
+    // No on-round-start hook in the v1 vocabulary; just emit RoundStarted.
     events.push({ type: 'RoundStarted', round: nextRound })
   }
 
@@ -343,17 +308,32 @@ export function resolveTurn(state: CombatState): {
   // A dead-before-turn creature still gets an (empty) bracket -- that IS the skip signal,
   // per CONVENTIONS' "explicit boundary even for no-op turns". A dead creature must not
   // trigger start-of-turn effects, hence the hooks (not the events) are alive-gated.
-  if (actor.alive) working = firePhaseHook('turn-start', working)
   events.push({ type: 'TurnStarted', creatureId: actor.id })
 
+  // Turn-start hooks fire on the acting creature (if it entered the turn alive), after the
+  // TurnStarted boundary. A suppress-action response (Stun) skips the action entirely -- the
+  // empty bracket IS the skip.
+  let suppressed = false
   if (actor.alive) {
+    const startResult = fireHook(
+      'on-turn-start',
+      [actor.id],
+      undefined,
+      working,
+      events,
+      newCascade(),
+    )
+    working = startResult.state
+    suppressed = startResult.suppressed
+  }
+
+  // Re-resolve after turn-start hooks (which may have changed HP/alive) before acting.
+  const actorAfterStart = getCreature(working, actor.id)
+  if (actorAfterStart.alive && !suppressed) {
     const script = actor.scriptId ? (working.scripts.get(actor.scriptId) ?? null) : null
-    // Provoke's override is resolved INSIDE decideAction (see interpreter.ts /
-    // targeting.ts's resolveOffensiveTarget) -- there is no separate post-hoc override
-    // step here. decideAction sees the actor's defending/provoking status as it stood
-    // ENTERING this turn (still whatever the actor's previous turn set), which is what
-    // makes a self-referential is-provoking condition meaningful.
-    const action = decideAction(actor, script, working)
+    // decideAction sees the actor's defending/provoking status as it stood ENTERING this turn
+    // (Provoke's override is resolved inside decideAction; no post-hoc override step here).
+    const action = decideAction(actorAfterStart, script, working)
 
     // "Until its next turn" expires here, before this turn's action executes -- a fresh
     // Defend/Provoke below re-applies for the next cycle; anything else leaves it lapsed.
@@ -361,12 +341,22 @@ export function resolveTurn(state: CombatState): {
     const freshActor = getCreature(working, actor.id)
 
     if (action) {
-      working = executeAction(freshActor, action, working, events) // AOE resolves fully in here
+      // Fresh cascade per top-level action: depth resets to 0, guard set starts empty.
+      working = executeAction(freshActor, action, working, events, newCascade())
     }
   }
 
   events.push({ type: 'TurnEnded', creatureId: actor.id })
-  if (actor.alive) working = firePhaseHook('turn-end', working)
+  if (getCreature(working, actor.id).alive) {
+    working = fireHook(
+      'on-turn-end',
+      [actor.id],
+      undefined,
+      working,
+      events,
+      newCascade(),
+    ).state
+  }
 
   // Win/loss/draw is checked after EVERY action, not just round boundaries. This ordering
   // (the turn fully closes with TurnEnded before this check runs) is intentional: AOE's

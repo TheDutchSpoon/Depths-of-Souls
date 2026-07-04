@@ -10,7 +10,7 @@
 // engine-internal and golden-invisible, so it need not be complete now.
 
 import type { Creature, Stat } from './types'
-import type { TargetSelector } from './scripting-types'
+import type { Condition, TargetSelector } from './scripting-types'
 
 // Stable per-fight identity for an effect instance. Deterministic (never RNG) so goldens
 // reproduce; the stack-scoped self-re-entry guard (Slice B) keys on this.
@@ -106,8 +106,20 @@ export type StatRemapDef = {
   readonly fromStat: Stat
 }
 
-// Grows in Slices B/C with triggered/status-applying definitions.
-export type EffectDef = StatModifierDef | StatRemapDef
+// A triggered effect fires its response on `hook` (Slice B). An optional `condition` gates it,
+// reusing the serializable scripting `Condition` union — evaluated SELF-scoped against live state
+// at fire time (omission = unconditional). This union is self/global-scoped, so it cannot yet
+// reference the triggering source (e.g. "retaliate only if the attacker is Body"); that needs a
+// hook-context condition variant, deferred until content requires it.
+export type TriggeredDef = {
+  readonly category: 'triggered'
+  readonly hook: Hook
+  readonly condition?: Condition
+  readonly response: EffectResponse
+}
+
+// Grows in Slice C with status-applying / condition-status definitions.
+export type EffectDef = StatModifierDef | StatRemapDef | TriggeredDef
 
 // ---- Active effect instances (what lives on Creature.activeEffects) ----
 
@@ -119,9 +131,10 @@ interface InstanceIdentity {
 
 export type StatModifierEffect = StatModifierDef & InstanceIdentity
 export type StatRemapEffect = StatRemapDef & InstanceIdentity
+export type TriggeredEffect = TriggeredDef & InstanceIdentity
 
-// Grows in Slices B/C (triggered effects, condition-status / timed damage-modifier instances).
-export type ActiveEffect = StatModifierEffect | StatRemapEffect
+// Grows in Slice C (condition-status / timed damage-modifier instances).
+export type ActiveEffect = StatModifierEffect | StatRemapEffect | TriggeredEffect
 
 // ---- Trait ----
 
