@@ -32,6 +32,16 @@ branched from `main` after Phase 3's PR (#22) merged.
   - `cave-goblin`'s Attack raised (12 → 17) so it lands real (non-chip) hits on `liora`
     through her lowered Defence (14 → 7) — the tuning needed for `VENGEFUL` to actually
     dip below 50% HP and fire, rather than sitting permanently above threshold.
+  - `stone-troll`'s Health/Defence lowered (45 → 30, 14 → 8) — at the original stats, the
+    fight's last few rounds were just `aldric`/`mira` chipping it for 1 while poison ticked
+    it down, a long tail after every interesting mechanic had already fired, pushing
+    playback past the brief's ~15–30s target (85 beats × 500ms ≈ 42.5s). The lowered stats
+    let `aldric`/`mira` land real (non-chip) hits, ending the fight in 70 beats (≈35s) —
+    within range of the target with `Skip to end` available for the remainder, without
+    touching `BEAT_DELAY_MS` or any of the already-tuned mechanics above (re-verified: all
+    of retaliate/vengeful/grudge/reeling/demo-regen, the poison apply→dot→expire lifecycle,
+    stun's empty-bracket skip, and the self-inflicted collapse rendering still fire
+    identically at `DEMO_SEED`).
   - Exports `demoTraits` (real `TRAIT_REGISTRY` plus the one throwaway demo trait, merged
     — the demo trait itself is never added to `src/data/traits.ts`) and `demoStatuses`
     (`STATUS_REGISTRY`), both threaded into `createCombat`.
@@ -52,7 +62,11 @@ branched from `main` after Phase 3's PR (#22) merged.
     mid-playback and reveals the remainder instantly. The interval is cleared on unmount
     and at the start of every new run (`clearTimer()` called before scheduling a new one),
     so rapid re-clicks (e.g. mashing "New random seed" mid-playback) cannot leak or stack
-    timers — verified live (see below).
+    timers — verified live (see below). The interval's `setRevealedBeats` updater is a pure
+    `Math.min(current + 1, beats.length)`; the stop condition (calling `clearTimer`, a ref
+    mutation) lives in its own `useEffect` keyed on `[outcome, revealedBeats]` rather than
+    inside the updater, so no side effect runs inside a state updater (StrictMode
+    double-invokes updaters specifically to catch that class of bug).
   - `Result: <result>` is only shown once playback finishes, so it doesn't spoil the live
     reveal.
 - `src/app/App.tsx` — passes `traits`/`statuses` through; prop renamed `seed` →

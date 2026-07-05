@@ -82,6 +82,14 @@ export function CombatDemo({
   // Timer hygiene: cancel any in-flight reveal if the component goes away mid-playback.
   useEffect(() => clearTimer, [])
 
+  // Stops the interval once every beat is revealed. Kept out of setRevealedBeats's updater
+  // above (a ref mutation there would be a side effect inside a state updater -- StrictMode
+  // double-invokes updaters to catch exactly that, even though it'd be harmless here since
+  // clearTimer is idempotent and the return value stays pure).
+  useEffect(() => {
+    if (outcome && revealedBeats >= outcome.beats.length) clearTimer()
+  }, [outcome, revealedBeats])
+
   function runFight(seed: number) {
     clearTimer()
     const initial = createCombat(playerParty, enemyParty, seed, scripts, traits, statuses)
@@ -93,11 +101,7 @@ export function CombatDemo({
 
     if (beats.length > 1) {
       timerRef.current = setInterval(() => {
-        setRevealedBeats((current) => {
-          const next = current + 1
-          if (next >= beats.length) clearTimer()
-          return Math.min(next, beats.length)
-        })
+        setRevealedBeats((current) => Math.min(current + 1, beats.length))
       }, BEAT_DELAY_MS)
     }
   }
