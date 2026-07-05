@@ -230,9 +230,10 @@ the same interpreter, differing only in how they attach and which hooks they use
 - **`TriggerFired`** intent event precedes a trigger's consequences (mirrors `AttackDeclared`).
 - **One shared per-creature effect ordering** — innate-1 → innate-2 → artifact infusions → applied
   statuses — reused *everywhere* effects are iterated (stat folding, hook firing, remap resolution).
-- **Interaction edges**: **dead creatures fire only `on-death`** (`effectsForHook` filters to
-  `alive`; lethal damage fires `on-death`, not `on-damage-taken` — death pre-empts the victim's
-  reaction). **Damage-path hook order** (after `DamageDealt` lands): `on-damage-dealt` (source) fires
+- **Interaction edges**: **dead creatures fire only `on-death`** (`fireHook` gates on `alive`
+  per-effect — `effectsForHook` is a pure scan-filter and does no alive-gating; lethal damage fires
+  `on-death`, not `on-damage-taken` — death pre-empts the victim's reaction).
+  **Damage-path hook order** (after `DamageDealt` lands): `on-damage-dealt` (source) fires
   **unconditionally, even on a lethal hit** → `on-damage-taken` (self) fires **only if the target
   survived** → then if it died: `CreatureDied` → `on-death` (self) → `on-kill` (source) →
   `on-ally-death`/`on-enemy-death` (observers). I.e. hit-reactions (dealt always, taken if-survived)
@@ -267,6 +268,13 @@ the same interpreter, differing only in how they attach and which hooks they use
 - **Triggered traits** = `{ hook, condition?, response }`. **Response vocabulary (v1, each
   parameterized by target + magnitude): deal-damage, apply-status, apply-stat-modifier,
   suppress-action.** Breadth = hook × condition × parameter cross-product, not more response types.
+  The optional `condition?` **reuses the scripting `Condition` union** (declarative data — *not* a
+  predicate, unlike the conditional-*passive* which is the one deliberately non-serializable spot),
+  evaluated **self-scoped against live state at fire time** (pure, no RNG; a false condition skips
+  the effect **silently**, before the depth-cap and `TriggerFired` accounting). Source-relative
+  conditions (predicating on the triggering *source* — e.g. the attacker's affinity) are **not
+  expressible yet**: the `Condition` union is self/global-scoped, so this is deferred until content
+  needs it.
 - **No keywords, no implicit targets** — a trait is an explicit
   event→condition→response→target→magnitude sentence; the hook **context** supplies reference actors
   (`{self, source}`, etc.); the response names its target (`self`, `triggering-source`,
@@ -305,8 +313,12 @@ the same interpreter, differing only in how they attach and which hooks they use
   cascades incl. `on-death` resolve fully) **→ (2)** decrement durations **for snapshot statuses only**
   **→ (3)** expire snapshot statuses at 0 (`StatusExpired`). **Statuses born mid-sweep** (e.g. from an
   `on-death` trait) are not in the snapshot — they keep full duration and start counting next
-  round-end. A creature killed mid-sweep fires only `on-death`; its own not-yet-reached round-end
-  hooks are skipped. **Win/loss checked once, after the full sweep.**
+  round-end. A **refresh** of a status already in the snapshot is treated the same: because
+  re-application reuses the same `instanceId`, step (2) must additionally **skip** decrement/expiry
+  for any `(creature, statusId)` that emitted a `StatusApplied` during step (1) — derived from those
+  sweep-fired events, not from extra state threaded through `applyStatus`. A creature killed
+  mid-sweep fires only `on-death`; its own not-yet-reached round-end hooks are skipped. **Win/loss
+  checked once, after the full sweep.**
 - **v1 status content**: DoT (Poison, Burn), Regen (HoT), Stun, and timed **`damage-modifier`
   statuses** — Weaken (−% dealt, ~1 stack + duration) and Vulnerability (+% taken). **Raw stat
   buffs/debuffs are NOT statuses** — they're permanent-for-fight multiplicative `stat-modifier`
@@ -522,6 +534,13 @@ src/
   throwaway** (Phase 7's real combat UI replaces them all), and is a **separate PR** after the
   phase's core work. It gets its own `briefs/` entry (Status: planned → shipped) and a `phases/`
   record like any other work.
+  - **Baseline demo-UX (from Phase 3.5 onward), inherited by every successor harness:** a
+    **randomize-seed** button plus the **current seed shown on screen** (seed-selection randomness
+    lives in `src/ui`/`src/app`, never the engine; `resolveFight(seed)` stays deterministic), and
+    **timed playback** that reveals the event log progressively — a *cosmetic* replay of the
+    already-computed deterministic log (the engine is never made async/steppable), paced on **beats**
+    (each turn's action and each `TriggerFired`), with a **skip-to-end**. These stay a paced
+    text-log *viewer* — not sprites/health-bars/animation (that's Phase 7).
 
 ## Style
 

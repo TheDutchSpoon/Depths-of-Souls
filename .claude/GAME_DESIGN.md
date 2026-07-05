@@ -518,10 +518,12 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   death exception — see hook model), which may itself apply new statuses/effects. **(2)** Decrement
   durations — **only for statuses in the start-of-sweep snapshot**. **(3)** Expire snapshot statuses
   now at 0 duration (emit `StatusExpired`).
-- **Statuses born *during* the sweep** (e.g. a poison applied by an `on-death` trait) are **not in
-  the snapshot**: they do not tick, decrement, or expire this sweep — they keep their full declared
-  duration and begin normal countdown at the *next* round-end. (Without this, a mid-sweep-applied
-  status would silently lose a round to the same sweep's decrement.)
+- **Statuses born *or refreshed* during the sweep** are treated as fresh: a status newly applied by
+  an `on-death`/`on-round-end` effect, **or a re-application that refreshes one already present**,
+  keeps its full/refreshed duration and begins normal countdown at the *next* round-end — it does
+  not tick, decrement, or expire in the sweep that (re)applied it. (Without this, a mid-sweep
+  (re)application would silently lose a round to the same sweep's decrement, and born-vs-refreshed
+  would diverge for no design reason.)
 - **A creature killed mid-sweep fires only `on-death`**; its own not-yet-reached `on-round-end`
   hooks (e.g. a DoT it was carrying that would tick *others*) are **skipped** — so round-end is
   deterministically order-sensitive to death (fixed by tie-break order). **Win/loss is checked once,
