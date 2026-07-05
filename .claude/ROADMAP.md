@@ -4,6 +4,11 @@ Build order, designed so each phase produces something runnable and the risky co
 pure, deterministic engine) comes first. Don't build content systems before the engine
 skeleton exists.
 
+Phases 0–10 together produce the **start-of-beta build** — the game's state when beta opens,
+not a feature-complete release (see GAME_DESIGN §1, *Scope note*). Beta is the live-content
+period after: biomes 11+, deeper species rosters, and post-floor-100 endgame ship then.
+**"v1" in these docs = this start-of-beta baseline.**
+
 ## Phase 0 — Skeleton
 - Vite + React + TypeScript (strict) project. ESLint/Prettier. One test runner (Vitest).
 - Folder layout from CONVENTIONS. Empty `engine/`, `data/`, `state/`, `ui/`, `app/`.
@@ -163,16 +168,30 @@ deterministic). Same guardrails (consumes the engine, engine stays pure, real co
 replaced by Phase 7). Separate PR after Phase 3; own brief + phase record.
 
 ## Phase 4 — Party, specializations, the cave & biomes
+Phase 4 is a **systems-plus-seed** milestone: build the party/cave/biome/spec/XP systems for the
+**full 10-biome structure** (biome count, cadence, discovery, the floor→level-range curve, and the
+perk economy all stay 10-calibrated), but author only the **first 3 biomes** of content. Those 3
+are **real, fully-themed, in-game cave biomes** (floors 1–30, each with its own theme/species/
+creatures as the player will see them) — "seed" means *first authored*, not placeholder. The
+10-biome progression spine isn't *satisfied* until all 10 are authored across later phases; Phase 4
+proves the systems against real content and demos the loop, it doesn't ship full beta content.
+Ships in **multiple slices + a Phase 4.5 demo**. The systems spine is specified in
+GAME_DESIGN/CONVENTIONS (locked via design grill); the **coding agent's implementation plan owns
+the slice breakdown** (no separate Phase 4 brief).
+
 - Full **6v6** party vs a floor's creatures; **floor-by-floor descent** with **persistent
   depth** (no run reset; a wipe returns the party to the entrance hub and keeps all progress).
 - **Biomes** as data (species spawn pool per biome; specific creature picked by rarity-weighted RNG within a species). Biome
-  changes **every 10 floors** (10 biomes in v1; >3 species/biome, >6 creatures/species).
-  Discover biomes by descending; placeholder roster is fine. Floor 101+ draws a biome by seeded
-  RNG unless pinned via the Biome Atlas.
+  changes **every 10 floors** (10 biomes in v1; ≥6 species/biome, ≥3 creatures/species).
+  Discover biomes by descending. Phase 4 authors the **first 3 real, themed biomes** (floors
+  1–30); biomes 4–10 stay placeholder/config-driven until their authoring slice. Floor 101+ draws
+  a biome by seeded RNG unless pinned via the Biome Atlas.
 - **Fast-travel**: track deepest-reached floor; on wipe return to hub; let the player jump to
   any floor up to their deepest.
 - Player **specializations** (Sorcerer, Brute, Shieldbarer) as data with tunable bonuses.
-- Creature **XP/leveling** (the only creature-progression currency; **uncapped**).
+- Creature **XP/leveling** (the only creature-progression currency; **uncapped**). *(Catch-up
+  leveling is **Phase 8** — it needs the Fusion Chamber + Lifeforce; Phase 4 is combat-XP leveling
+  only.)*
 - Data-driven enemy generation and a **floor→enemy-level-range curve** (config, not literals) —
   enemies are ordinary creature instances at that level, not a separately-scaled stat block.
 
@@ -222,9 +241,19 @@ replaced by Phase 7). Separate PR after Phase 3; own brief + phase record.
 
 ### Guidance for AI-assisted work
 - Resolve the relevant GAME_DESIGN §13 open question *before* building a phase that depends
-  on it — currently just the **biome roster** (settle it before Phase 4 content). Placeholder
-  rosters are fine until then; the facility list itself is already decided (§4), only its exact
+  on it — currently the **biome roster**: settle the **first 3 biomes** (names/themes, ≥6 species
+  × ≥3 creatures, the 3 per-spec starter creatures, and a solo-clearable floor 1) before the Phase
+  4 content slice; the remaining 7 biomes settle before each authoring slice. Placeholder rosters
+  are fine for un-authored biomes; the facility list itself is already decided (§4), only its exact
   tier costs/counts remain parked balance numbers.
+- **Content authoring rides as a slice within each content-bearing phase** (not as separate
+  interlude phases): **3 biomes in Phase 4**, the remaining **7 tapering across later content
+  phases** (Phase 6–9), landing on **exactly 10 biomes by end of Phase 10** (Phase 10 is hardening
+  — no new content). Ten is load-bearing: 10 bosses × 100 = **1000 perk points = one maxed spec at
+  floor 100**, so "progression and depth finish together" (§9). Over- or under-shooting 10 doesn't
+  break anything — it just decouples the two milestones the design deliberately aligned. **Biomes
+  11+ are beta content** — how beta extends progression past floor 100 (more specializations,
+  further perks, or otherwise) is an open beta-time decision, deliberately not settled here.
 - Keep PRs/changes phase-scoped. Don't build Phase 8 economy on a Phase 1 engine that lacks
   tests.
 - Every engine change ships with or updates a test. The golden-replay test is the canary.
