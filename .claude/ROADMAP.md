@@ -154,9 +154,12 @@ by Phase 7. Separate PR after Phase 2.
   round, and win/loss is checked after the full sweep). Phase 1/2 goldens stay stable.
 
 ## Phase 3.5 — Traits & statuses demo (interlude)
-Throwaway visual demo (per the standing "every phase ships a demo" convention) showing traits +
-statuses live: triggered effects firing, DoT ticking, stun skipping a turn, `TriggerFired`/status
-events in the log. Same guardrails (consumes the engine, engine stays pure, real content, explicitly
+*Brief: `.claude/briefs/phase-3.5-traits-statuses-demo.md`.* Throwaway visual demo (per the standing
+"every phase ships a demo" convention) showing traits + statuses live: triggered effects firing, DoT
+ticking, stun skipping a turn, `TriggerFired`/status events in the log. Adds the **baseline demo-UX**
+inherited by all later `.5` demos — a **randomize-seed** button (+ seed shown) and **timed,
+beat-paced playback** (with skip-to-end), both UI-only (the engine stays synchronous/pure/
+deterministic). Same guardrails (consumes the engine, engine stays pure, real content, explicitly
 replaced by Phase 7). Separate PR after Phase 3; own brief + phase record.
 
 ## Phase 4 — Party, specializations, the cave & biomes

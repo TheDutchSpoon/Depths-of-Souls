@@ -1,20 +1,60 @@
 import { createCreatureId } from '../engine/ids'
 import type { Creature } from '../engine/types'
 import type { Script } from '../engine/scripting-types'
+import type { Trait } from '../engine/effect-types'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
-import { CINDER_NOVA } from '../data/spells'
+import { CINDER_NOVA, VENOM_BOLT } from '../data/spells'
+import { STATUS_REGISTRY } from '../data/statuses'
+import {
+  TRAIT_REGISTRY,
+  RETALIATE,
+  VENGEFUL,
+  REELING,
+  GRUDGE,
+  CATASTROPHIC_COLLAPSE,
+} from '../data/traits'
 
 // Hardcoded demo fight data -- not real game content (species/creature data doesn't
 // exist yet, see GAME_DESIGN.md §13), just enough to run the real engine and show its
 // output. This file and CombatDemo.tsx are a throwaway harness; Phase 7 replaces them.
-// Successor to the Phase 1.5 harness: both sides now run real scripts (the five stock
-// scripts from src/data/scripts.ts) through the Phase 2 interpreter instead of a single
-// hardcoded Attack.
+// Successor to the Phase 2.5 harness: Phase 3.5 wires real trait/status/spell content
+// (src/data/traits.ts, src/data/statuses.ts, src/data/spells.ts) onto the same scripted
+// parties so triggers, DoT, stun, and stat-modifier statuses actually fire in the log.
 
 export const DEMO_SEED = 20260702
 
 // Real shipped stock scripts, not demo-only scripts -- see src/data/scripts.ts.
 export const demoScripts: ReadonlyMap<string, Script> = STOCK_SCRIPTS_BY_ID
+
+// Real shipped statuses -- see src/data/statuses.ts. Needed so poison/stun/weaken/regen
+// resolve when a trait or spell applies them.
+export const demoStatuses = STATUS_REGISTRY
+
+// Demo-only trait: NOT part of the shipped src/data/traits.ts roster, clearly scoped here
+// like the demo parties themselves. Grants self Regen whenever hit, so a HealApplied event
+// arises naturally in-fight (per the Phase 3.5 brief's recommendation) rather than being
+// seeded. Merged into a demo-scoped trait registry below, never touching real content.
+const DEMO_ONLY_REGEN_ON_HIT: Trait = {
+  id: 'demo-regen-on-hit',
+  name: '(Demo) Regen on Hit',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-damage-taken',
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'self' },
+        status: { statusId: 'regen', duration: 3 },
+      },
+    },
+  ],
+}
+
+// Demo-scoped trait registry: the real STOCK_TRAITS plus the one throwaway demo trait above.
+export const demoTraits: ReadonlyMap<string, Trait> = new Map([
+  ...TRAIT_REGISTRY,
+  [DEMO_ONLY_REGEN_ON_HIT.id, DEMO_ONLY_REGEN_ON_HIT],
+])
 
 export const demoPlayerParty: Creature[] = [
   {
@@ -41,8 +81,8 @@ export const demoPlayerParty: Creature[] = [
     currentHp: 28,
     alive: true,
     scriptId: 'always-cast',
-    // Slot 0 holds Cinder Nova (AOE, 30% Intelligence) so always-cast fires it for real.
-    equippedSpells: [CINDER_NOVA],
+    // Slot 0 holds Venom Bolt so always-cast applies poison (a real appliesStatus spell).
+    equippedSpells: [VENOM_BOLT],
     defending: false,
     provoking: false,
     innateTraitIds: [],
@@ -60,14 +100,17 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
-    innateTraitIds: [],
+    // Durable front-liner: strikes back for 30% Attack whenever hit, and regenerates from
+    // the demo-only regen-on-hit trait (kept off liora below so Vengeful can actually dip
+    // below 50% HP instead of being topped back up every round).
+    innateTraitIds: [RETALIATE.id, DEMO_ONLY_REGEN_ON_HIT.id],
     activeEffects: [],
   },
   {
     id: createCreatureId('liora'),
     side: 'player',
     slot: 3,
-    baseStats: { health: 35, attack: 12, intelligence: 8, defence: 14, speed: 22 },
+    baseStats: { health: 35, attack: 12, intelligence: 8, defence: 7, speed: 22 },
     affinity: 'void',
     currentHp: 35,
     alive: true,
@@ -75,7 +118,9 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
-    innateTraitIds: [],
+    // The provoking tank: draws fire and stays silent until wounded, then retaliates once
+    // below half HP -- the read-time condition made visible (Vengeful).
+    innateTraitIds: [VENGEFUL.id],
     activeEffects: [],
   },
   {
@@ -90,7 +135,8 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
-    innateTraitIds: [],
+    // Reeling: stunned for 1 round whenever hit -- shows a suppressed, empty-bracket turn.
+    innateTraitIds: [REELING.id],
     activeEffects: [],
   },
 ]
@@ -100,7 +146,7 @@ export const demoEnemyParty: Creature[] = [
     id: createCreatureId('cave-goblin'),
     side: 'enemy',
     slot: 0,
-    baseStats: { health: 22, attack: 12, intelligence: 4, defence: 6, speed: 12 },
+    baseStats: { health: 22, attack: 17, intelligence: 4, defence: 6, speed: 12 },
     affinity: 'primal',
     currentHp: 22,
     alive: true,
@@ -130,9 +176,9 @@ export const demoEnemyParty: Creature[] = [
     id: createCreatureId('stone-troll'),
     side: 'enemy',
     slot: 2,
-    baseStats: { health: 45, attack: 16, intelligence: 3, defence: 14, speed: 7 },
+    baseStats: { health: 30, attack: 16, intelligence: 3, defence: 8, speed: 7 },
     affinity: 'body',
-    currentHp: 45,
+    currentHp: 30,
     alive: true,
     scriptId: 'always-defend',
     equippedSpells: [],
@@ -153,7 +199,8 @@ export const demoEnemyParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
-    innateTraitIds: [],
+    // When an ally dies (the self-destructing sleepy-slime below), permanently +50% Attack.
+    innateTraitIds: [GRUDGE.id],
     activeEffects: [],
   },
   {
@@ -168,7 +215,9 @@ export const demoEnemyParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
-    innateTraitIds: [],
+    // Self-destructs at round-end (999 self damage), applying Weaken to its lowest-HP ally
+    // on death -- the real-content showcase for the damage-modifier status category.
+    innateTraitIds: [CATASTROPHIC_COLLAPSE.id],
     activeEffects: [],
   },
 ]
