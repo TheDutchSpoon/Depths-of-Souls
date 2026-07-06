@@ -28,6 +28,12 @@ The incremental layer comes from:
 - Many small multiplicative bonuses (traits, gem augments, artifact infusions, spec perks) that
   stack.
 
+**Scope note — start-of-beta baseline.** Everything in this document describes the **start-of-beta
+build**: the state the game is in when beta *opens*, produced by ROADMAP phases 0–10. It is *not* a
+feature-complete release. Post-beta content — biomes 11+, deeper per-species rosters,
+post-floor-100 endgame, further specializations — is deliberately outside this baseline and ships
+*during* beta. Throughout these docs, **"v1" means this start-of-beta baseline.**
+
 ## 2. Design pillars
 
 1. **Scripting is the game.** Every meaningful decision is expressible as a rule the
@@ -81,10 +87,12 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   When a floor spawns an enemy, it picks a **species** from the biome's pool, then picks a
   **specific creature within that species by rarity-weighted draw from the seeded RNG** (rarer
   creatures appear less often). Biomes are **data** (name, theme, species pool, scaling tweaks,
-  visuals). **v1 content target per biome: more than 3 species, each with more than 6
+  visuals). **v1 content target per biome: 6 or more species, each with 3 or more
   creatures** (so ≥18 creatures per biome; ~180+ creatures across the 10 v1 biomes — the
   largest content-authoring task in the project, and why creatures/traits must be data-driven).
-- **Fights & HP**: a floor contains a **variable, depth-scaled number of fights** drawn from its
+- **Fights & HP**: a floor contains a **depth-determined number of fights** (`fightCount(floor)`, a
+  deterministic config function — **not** rolled; the fight *count* is stable across visits, only
+  the *creatures* re-roll) drawn from its
   biome pool. **Health resets to full between every fight** (including fights within the same
   floor) — there is no cross-fight attrition. A creature reduced to 0 HP is flagged as no longer
   alive and skipped in the turn order (its slot is retained, not deleted — see CONVENTIONS); death
@@ -102,9 +110,18 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   harder purely because enemy level outpaces the party's own leveling pace. Walls happen when
   that gap outpaces level + build. This makes the **floor→level-range curve the single most
   important balance lever** in the game (the curve's exact shape is config; see §13).
+- **Generation is deterministic-per-seed, fresh-per-visit**: which **biome** sits on a floor is
+  fixed (the 1–100 sequence, a seeded draw for 101+, or an Atlas pin), but the **specific creatures
+  a floor spawns re-roll on every descent** — re-running a floor yields different draws. This is the
+  **soul-grind loop**: farm a floor repeatedly for the creature whose soul you want. All of it is
+  reproducible from the run seed (a seeded RNG stream advanced per descent), so runs stay debuggable
+  and testable without ever repeating content in normal play.
 - **Biome progression**:
   - Early game, biomes are **discovered by descending** — you meet each new biome the first
-    time you reach its depth band, in a fixed sequence.
+    time you reach its depth band, in a fixed sequence. This 1–100 order is **authored, not
+    incidental**: it's an **onboarding ramp** — biome 1's creatures carry the simplest traits (a
+    lone passive or one clean trigger), each deeper biome layering in more, easing the player into
+    the trait system in step with the mechanics themselves.
   - Once **all biomes have been discovered**, the **Biome Atlas facility** lets the player
     **assign (pin) a biome to a chosen cave floor** — shaping which biome occupies a floor to
     farm, rather than taking whatever the sequence (or, past floor 100, the random draw) gave
@@ -191,8 +208,10 @@ Each creature (the unit) has:
 - **Artifact**: **1 artifact slot** per creature (see §6 / Artifacts).
 - **Level & XP**: creatures level **only via combat XP**. Stat growth is **linear and derived
   purely from base stats** — there is *no separate growth-rate field*. Level-N stat =
-  `base × (1 + 0.25 × (level − 1))` (i.e. +25% of base per level; level 1 = base; base 20 → +5
-  per level → L10 = 65). **Level is uncapped** — it climbs indefinitely in step with floor
+  `round(base × (1 + 0.25 × (level − 1)))` — **rounded to the nearest integer**, recomputed from
+  base each level (never accumulated, so no rounding drift); inputs are exact quarters, so the
+  rounding is fully deterministic, and integer stats keep the level-up readout clean (i.e. +25% of
+  base per level; level 1 = base; base 20 → +5 per level → L10 = 65). **Level is uncapped** — it climbs indefinitely in step with floor
   depth (see §4 difficulty model); the formula holds at any level. This keeps the formula's
   output in a sane range for the subtractive damage formula; the incremental power curve comes
   from **multiplicative build sources** (traits, gems/augments, artifacts/infusions, fusion,
@@ -229,6 +248,14 @@ Creatures are obtained via **souls**, not direct capture:
 ### Spell gems
 - A **gem** carries one spell (Intelligence-scaled via the damage formula, optional status,
   target shape) and is modeled as `{ spell, level, augments: Augment[] }`.
+- **Spell affinity & equip-gating**: every spell carries an **affinity** (one of the five — Body,
+  Spirit, Mind, Void, Primal) and is **equippable only on a creature of matching affinity**, tying
+  loadouts to a creature's domain instead of letting anything cast anything. The gate governs
+  **equipping only** — it does **not** feed the damage affinity cycle, which stays keyed on the
+  **caster's** affinity (§7). **Enemy** loadouts are **rolled at generation** from the
+  affinity-matched pool (fresh per visit, reproducible from seed); **player** loadouts are
+  player-chosen and persistent (gem-equipped from Phase 8). *(An off-affinity exception via a
+  trait/perk is parked post-beta — §13; until then the gate is universal.)*
 - **Gem level governs how many augment slots** the gem has (not its damage — damage is purely
   Intelligence-driven). Gems are **leveled via Essence**. **Gem level is bounded** (a fixed
   max, raised by Gem Forge tiers); **augment slots have a small fixed max (3–5)**.
@@ -280,8 +307,8 @@ Two creatures fuse into a single resulting creature, at the **Fusion Chamber**, 
 > copy (level/XP, current affinity, trait slots, equipped gems/artifact, `hasFused`). **Affinity**
 > lives on the creature/instance, separate from identity, so fusion is a clean field-level
 > recombination: identity from parent-1 creature, affinity from parent-2, averaged base stats,
-> both innate traits. **There is no growth-rate field** — level-N stat = `base × (1 + 0.25 ×
-> (level − 1))`, derived purely from base stats.
+> both innate traits. **There is no growth-rate field** — level-N stat = `round(base × (1 + 0.25 ×
+> (level − 1)))`, derived purely from base stats.
 
 ## 6. Traits, statuses, artifacts & the effect framework
 
@@ -802,8 +829,11 @@ biomes, facilities) — a spec changes *how you play*, never *what you can reach
 
 **Perks & perk points:**
 - A specialization is a **named collection of perks** (data; perks plug into the existing
-  effect framework where sensible, plus meta-economy hooks like soul gain, currency drops,
-  facility efficiency). Specific perks are TBD; the data model + placeholders suffice for now.
+  effect framework where sensible. *(Meta-economy perk hooks — soul gain, currency drops,
+  facility efficiency — are **deferred post-beta**; v1 perks are **combat effect-framework objects
+  only**, so a spec's full 1000-point tree is authored from stat/damage-modifier perks. `Perk`
+  stays a plain effect-carrier — no speculative meta-hook framework is built now.)* Specific perks
+  are TBD; the data model + placeholders suffice for now.
 - The perk tree is a **flat list, not a prerequisite/tiered tree** — any perk can be bought in
   any order. Each spec has a **fixed set of perks**; some are single on/off purchases, others
   are **leveled** (purchasable multiple times up to a per-perk level cap) — the full set, at
@@ -940,12 +970,21 @@ the hot autosave path.
 - **Behavioral traits** (scripting-altering / extra-action traits) — post-v1.
 - **Status effect naming** (Intelligence/Speed buff-debuff names) — data, name later.
 - **Lifeforce / Essence** possible rename if they feel too samey in UI.
+- **Entrance-hub prelude** (idea, not committed): a short opening of a few fights vs. very weak
+  **non-spawnable** creatures — "clearing the cave entrance to set up base" — doubling as a gentle
+  tutorial at the shallow end of the onboarding ramp (§4). Would reuse the fixed-authored-encounter
+  path (same as bosses; outside the spawn pool). Possibly before start-of-beta; deliberately
+  **unbuilt** for now (no prelude seam until authored).
+- **Off-affinity spell equipping** via a trait/perk exception (§5) — deferred post-beta with the
+  gem/perk economy; the equip-gate is universal until then.
 
 **Genuinely open (need a decision before the relevant content):**
 1. The **biome roster**: the 10 biome names/themes and which creature types populate each
-   (v1 target >3 species/biome, >6 creatures/species ≈180+ total), plus per-spec **starter
+   (v1 target ≥6 species/biome, ≥3 creatures/species ≈180+ total), plus per-spec **starter
    creatures**. Deliberately deferred — don't let it block the engine skeleton (Phases 0–3),
    which is built against placeholder data; it's the largest content-authoring task in the
-   project.
+   project. The 1–100 **biome order is an onboarding ramp** (§4) — biome 1's creatures carry the
+   simplest traits, complexity rising with depth — so authoring the roster is also an
+   ordering-by-comprehension task, not just a *which-creatures* task.
 
 Lock this down before the phase that depends on it (Phase 4 content, per ROADMAP).

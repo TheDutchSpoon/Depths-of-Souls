@@ -14,7 +14,7 @@ engine. No backend — everything is client-side, statically deployed.
 
 Key fixed facts: stats are **Health, Attack, Intelligence, Defence, Speed** (base 10–30 per
 creature, fixed; **linear** growth derived from base, no growth field: level-N =
-`base × (1 + 0.25 × (level−1))`). Damage (Attack & Cast): `effOff = getEffectiveStat(remap(off)) ×
+`round(base × (1 + 0.25 × (level−1)))`). Damage (Attack & Cast): `effOff = getEffectiveStat(remap(off)) ×
 spellPower` (spellPower 1.0 for Attack, a spell property, scales OffStat pre-Defence), then
 `(MAX(effOff − effDef, 0) + 0.01×effOff) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)`, then
 `MAX(1, floor(...))` — subtractive core + unconditional 1% chip floor, **integer, min-1 damage**;
@@ -47,8 +47,9 @@ depth transient. **Three-tier creatures**: **species**
 (a group of creatures; biomes spawn species; intra-species traits synergize) → **creature** (the
 unit: affinity + base stats + 1 innate trait) → **instance** (owned copy). No "class" concept —
 affinity is the only such axis. Obtained via **souls** (tracked **per creature**, 100% =
-permanent summon); 1 starter from your spec; unlimited roster, 6-slot party. **Gems** (spells,
-leveled via Essence, augment slots) and **artifacts** (stat-focused, leveled via Ore, infusion
+permanent summon); 1 starter from your spec; unlimited roster, 6-slot party. **Gems** (spells [each has
+an **affinity**; equippable only on a matching-affinity creature], leveled via Essence, augment
+slots) and **artifacts** (stat-focused, leveled via Ore, infusion
 slots) share the effect framework. **Fusion** (Fusion Chamber, Lifeforce, species-agnostic):
 once per creature, both inputs consumed, result = parent-1 identity + parent-2 affinity +
 **averaged base stats** + both traits, level 1, catch-up-levelable up to your highest. Scripts:
@@ -60,7 +61,7 @@ Currencies: **Essence** (gems), **Ore** (artifacts), **Bricks** (facilities), **
 Fusion Chamber, Soul Altar, Storage, Biome Atlas. World: a single **cave**; **HP resets every
 fight**; difficulty = enemy stats scaling faster than the party; **depth is persistent** (wipe →
 hub, fast-travel to any floor up to deepest). **Biome changes every 10 floors** (**10 in v1**,
->3 species/biome, >6 creatures/species ≈180+ total; specific creature = rarity-weighted RNG;
+≥6 species/biome, ≥3 creatures/species ≈180+ total; specific creature = rarity-weighted RNG;
 boss every 10th floor, non-collectable). **No prestige, no resets**
 — forward-only.
 
@@ -86,7 +87,7 @@ combat deterministic, testable, and replayable. Do not import React into engine 
 
 ```
 src/
-  engine/      pure TS: combat resolver, scripting interpreter, RNG, scaling. No React.
+  engine/      pure TS: combat resolver, scripting interpreter, RNG, scaling, cave generation. No React.
   data/        creatures, traits, spells, biomes, facilities as data. No logic.
   state/       the store; save/load; migrations.
   ui/          React components. Renders state, dispatches intents. No game rules here.
