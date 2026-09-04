@@ -119,9 +119,18 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
 - **Biome progression**:
   - Early game, biomes are **discovered by descending** — you meet each new biome the first
     time you reach its depth band, in a fixed sequence. This 1–100 order is **authored, not
-    incidental**: it's an **onboarding ramp** — biome 1's creatures carry the simplest traits (a
-    lone passive or one clean trigger), each deeper biome layering in more, easing the player into
-    the trait system in step with the mechanics themselves.
+    incidental**: it's an **onboarding ramp in interaction *scope*, not trait depth**. Every
+    creature is build-relevant from biome 1 (no filler) — what ramps is *how many moving pieces* an
+    interaction spans, not how shallow it is. Biomes 1–3 use **self-contained** or
+    **within-species-closed**, **single-condition** interactions (each species is authored as a
+    closed mini-system); **cross-species, chained, and multi-condition** combos are deferred to
+    **biome 4+**. There is **no difficulty ramp across biomes 1–3** — the enemy-level curve carries
+    escalation; only interaction *scope* widens with later biomes.
+  - **Seed biomes (Phase 4):** the first three authored biomes are **The Overgrowth** (lush,
+    sunlit entrance), **Glimmerdark** (light thins, life adapts, bioluminescence), and **Rotcap
+    Hollow** (fungal — colonies, spores, spread). Mood is a **creature-design filter** — it shapes
+    what feels *native*, not mechanics; every biome stays affinity-complete. Species are
+    **biome-exclusive** (a new biome = all-new creatures).
   - Once **all biomes have been discovered**, the **Biome Atlas facility** lets the player
     **assign (pin) a biome to a chosen cave floor** — shaping which biome occupies a floor to
     farm, rather than taking whatever the sequence (or, past floor 100, the random draw) gave
@@ -259,6 +268,22 @@ Creatures are obtained via **souls**, not direct capture:
   affinity-matched pool (fresh per visit, reproducible from seed); **player** loadouts are
   player-chosen and persistent (gem-equipped from Phase 8). *(An off-affinity exception via a
   trait/perk is parked post-beta — §13; until then the gate is universal.)*
+- **Seed spell set (Phase 4 content).** ~10 spells per affinity (~50 total), authored as **data
+  against a shared template** (not designed one-by-one). Every affinity gets the full kit —
+  **damage** (single + AOE), **stat-buff** (self/ally) and **stat-debuff** (enemy), other
+  **debuffs** (DoT, Stun, Vulnerability) and **buffs** (Regen, etc.), and **heals/support** — with a
+  per-affinity **centre of gravity** (its signature buff/debuff keys off its own mapped stat;
+  **Vitality** is the primary healer / Regen home) that is a *default, not a fence*: theme-fitting
+  exceptions are welcome anywhere. **Wit** spells are the most *potent* damage (not more numerous),
+  since Wit→Intelligence and Cast scales off Intelligence.
+  - **Support is in scope** (heals, ally/self buffs) — a model extension over the offensive-only
+    built Spell (see Phase-4 systems addenda in CONVENTIONS).
+  - **Scaling:** off **Intelligence by default**; a minority off their **affinity's mapped stat**
+    (flavored exception); other-stat rare; **flat** (Int-independent) allowed for pure utility.
+    Carried by a per-spell `scalingStat` field (`Intelligence | Health | Attack | Defence | Speed |
+    none`).
+  - Spell **flavor and affinity are independent layers** — an elementally-named spell can carry any
+    behavioral affinity; no renaming needed.
 - **Gem level governs how many augment slots** the gem has (not its damage — damage is purely
   Intelligence-driven). Gems are **leveled via Essence**. **Gem level is bounded** (a fixed
   max, raised by Gem Forge tiers); **augment slots have a small fixed max (3–5)**.
@@ -831,6 +856,16 @@ player's single cold-start creature, see §5):
 **All content is accessible to every specialization** (same creatures, gems, artifacts,
 biomes, facilities) — a spec changes *how you play*, never *what you can reach*.
 
+The three starter creatures (locked): the **Sorcerer**'s is **Wit**-affinity, high Intelligence,
+with a trait granting one spell as a permanent extra gem plus a 50% chance on-turn-end to cast a
+random equipped spell; the **Brute**'s is high Attack, `on-attack → strike the same target again for
+100% Attack` (falls back to default target if it died); the **Shieldbarer**'s is high Defence,
+`on-provoke → grant self *defending*`. Each starter belongs to a **species found only in a deep
+biome**, authored later — so in the seed content only the starter exists, and its species sits
+**below the ≥3-creature minimum on purpose** (a forward-reference, not a gap). The Sorcerer's is
+Wit; the other two affinities settle when their species are authored (ideally the three land
+distinct).
+
 **Perks & perk points:**
 - A specialization is a **named collection of perks** (data; perks plug into the existing
   effect framework where sensible. *(Meta-economy perk hooks — soul gain, currency drops,
@@ -985,10 +1020,12 @@ the hot autosave path.
 **Genuinely open (need a decision before the relevant content):**
 1. The **biome roster**: the 10 biome names/themes and which creature types populate each
    (v1 target ≥6 species/biome, ≥3 creatures/species ≈180+ total), plus per-spec **starter
-   creatures**. Deliberately deferred — don't let it block the engine skeleton (Phases 0–3),
-   which is built against placeholder data; it's the largest content-authoring task in the
-   project. The 1–100 **biome order is an onboarding ramp** (§4) — biome 1's creatures carry the
-   simplest traits, complexity rising with depth — so authoring the roster is also an
+   creatures**. **First three decided** (§4): The Overgrowth, Glimmerdark, Rotcap Hollow — the
+   remaining seven are open. Deliberately deferred — don't let it block the engine skeleton
+   (Phases 0–3), which is built against placeholder data; it's the largest content-authoring task
+   in the project. The 1–100 **biome order is an onboarding ramp** (§4) — a ramp in interaction
+   *scope* (self-contained/within-species → cross-species at biome 4+), not trait depth; every
+   creature is build-relevant from biome 1 — so authoring the roster is also an
    ordering-by-comprehension task, not just a *which-creatures* task.
 
 Lock this down before the phase that depends on it (Phase 4 content, per ROADMAP).
