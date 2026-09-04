@@ -30,14 +30,14 @@ export const playerParty = makeParty('player', [
     attack: 10,
     speed: 20,
     health: 20,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'cast-then-attack',
     equippedSpells: [null],
   },
 ])
 
 export const enemyParty = makeParty('enemy', [
-  { id: 'foe', defence: 0, health: 10, speed: 10, affinity: 'body' },
+  { id: 'foe', defence: 0, health: 10, speed: 10, affinity: 'vitality' },
 ])
 
 /**

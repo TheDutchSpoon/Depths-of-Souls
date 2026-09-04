@@ -30,7 +30,7 @@ export const scripts = new Map([
 // Hero has no script assigned -- exercises the implicit fallback (Attack the default
 // target) rather than an authored rule, same as every Phase 1 fixture.
 export const playerParty = makeParty('player', [
-  { id: 'hero', attack: 20, defence: 30, speed: 10, health: 20, affinity: 'body' },
+  { id: 'hero', attack: 20, defence: 30, speed: 10, health: 20, affinity: 'vitality' },
 ])
 
 export const enemyParty = makeParty('enemy', [
@@ -40,7 +40,7 @@ export const enemyParty = makeParty('enemy', [
     defence: 10,
     speed: 20,
     health: 13,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'defend-then-attack',
   },
 ])

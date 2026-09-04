@@ -7,7 +7,7 @@ import type { ActiveEffect, Hook, StatusDef, StatusSpec } from './effect-types'
 
 export type Stat = 'health' | 'attack' | 'intelligence' | 'defence' | 'speed'
 
-export type Affinity = 'body' | 'spirit' | 'mind' | 'void' | 'primal'
+export type Affinity = 'vitality' | 'violence' | 'wit' | 'endurance' | 'instinct'
 
 export type Side = 'player' | 'enemy'
 

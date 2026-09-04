@@ -41,7 +41,7 @@ export const playerParty = makeParty('player', [
     defence: 10,
     health: 50,
     speed: 20,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'attack-lowest',
   },
 ])
@@ -54,7 +54,7 @@ export const enemyParty = makeParty('enemy', [
     defence: 0,
     health: 20,
     speed: 30,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'always-provoke',
   },
   {
@@ -62,7 +62,7 @@ export const enemyParty = makeParty('enemy', [
     defence: 0,
     health: 10,
     speed: 10,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'always-wait',
   },
 ])

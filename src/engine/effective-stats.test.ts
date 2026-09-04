@@ -36,7 +36,7 @@ const creature: Creature = {
   side: 'player',
   slot: 0,
   baseStats: { health: 30, attack: 22, intelligence: 18, defence: 14, speed: 25 },
-  affinity: 'body',
+  affinity: 'vitality',
   currentHp: 30,
   alive: true,
   scriptId: null,

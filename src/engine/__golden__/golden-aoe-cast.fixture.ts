@@ -30,15 +30,15 @@ export const playerParty = makeParty('player', [
     intelligence: 20,
     speed: 100,
     health: 30,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'cast-aoe',
     equippedSpells: [CINDER_NOVA],
   },
 ])
 
 export const enemyParty = makeParty('enemy', [
-  { id: 'e1', defence: 0, health: 5, speed: 2, affinity: 'body' },
-  { id: 'e2', defence: 0, health: 5, speed: 1, affinity: 'body' },
+  { id: 'e1', defence: 0, health: 5, speed: 2, affinity: 'vitality' },
+  { id: 'e2', defence: 0, health: 5, speed: 1, affinity: 'vitality' },
 ])
 
 /**

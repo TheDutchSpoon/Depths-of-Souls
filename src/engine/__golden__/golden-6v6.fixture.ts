@@ -8,8 +8,13 @@ export const SEED = 4004
 // damage-formula inputs -- one hand calculation covers all six kills. p5's Speed (35)
 // deliberately ties e0's Speed (35) to exercise "player side wins ties" in a real
 // fixture, not just the turn-order unit test.
-const PLAYER_STATS = { attack: 30, defence: 10, health: 50, affinity: 'body' } as const
-const ENEMY_STATS = { attack: 5, defence: 5, health: 10, affinity: 'body' } as const // neutral
+const PLAYER_STATS = {
+  attack: 30,
+  defence: 10,
+  health: 50,
+  affinity: 'vitality',
+} as const
+const ENEMY_STATS = { attack: 5, defence: 5, health: 10, affinity: 'vitality' } as const // neutral
 
 export const playerParty = makeParty('player', [
   { id: 'p0', speed: 60, ...PLAYER_STATS },

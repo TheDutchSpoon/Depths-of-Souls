@@ -29,8 +29,8 @@ next turn; Cast picks a gem *slot index*, no cost, spell carries target-shape + 
 **Scripting** (the game's heart): pure interpreter `decideAction(creature, script, state)` walks a
 creature's ordered rules, first valid match wins (invalid action → skip); `Condition`/`TargetSelector`
 are discriminated unions; HP% via integer cross-multiplication; enemies run the same system (stock
-scripts). Affinities (domain of being): **Body, Spirit, Mind,
-Void, Primal**, cycle **Body > Spirit > Mind > Void > Primal > Body**. Incremental power lives
+scripts). Affinities (behavioral drive, soft-mapped to HP/Atk/Int/Def/Spd resp.): **Vitality, Violence, Wit,
+Endurance, Instinct**, cycle **Vitality > Violence > Wit > Endurance > Instinct > Vitality**. Incremental power lives
 in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
 statuses, gem augments, artifact infusions are ONE data-driven hook-based model (4 categories:
 stat-modifier, stat-remap, damage-modifier, condition-status). Hooks live as of Phase 3: 13-hook

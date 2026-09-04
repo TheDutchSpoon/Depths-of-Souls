@@ -123,7 +123,7 @@ export type StatRemapDef = {
 // A triggered effect fires its response on `hook` (Slice B). An optional `condition` gates it,
 // reusing the serializable scripting `Condition` union — evaluated SELF-scoped against live state
 // at fire time (omission = unconditional). This union is self/global-scoped, so it cannot yet
-// reference the triggering source (e.g. "retaliate only if the attacker is Body"); that needs a
+// reference the triggering source (e.g. "retaliate only if the attacker is Vitality"); that needs a
 // hook-context condition variant, deferred until content requires it.
 export type TriggeredDef = {
   readonly category: 'triggered'

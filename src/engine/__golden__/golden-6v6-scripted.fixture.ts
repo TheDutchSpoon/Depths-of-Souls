@@ -24,14 +24,14 @@ const PLAYER_BASE = {
   intelligence: 25,
   defence: 8,
   health: 30,
-  affinity: 'body',
+  affinity: 'vitality',
 } as const
 const ENEMY_BASE = {
   attack: 15,
   intelligence: 25,
   defence: 8,
   health: 30,
-  affinity: 'body',
+  affinity: 'vitality',
 } as const
 
 export const playerParty = makeParty('player', [
