@@ -53,6 +53,24 @@ derivation of a floor's contents.
   to the **whole active party regardless of survival**, banked per kill, kept on wipe; **level-ups
   apply post-fight** — the engine never sees a mid-fight level change.
 
+## Phase 4 systems addenda (surfaced during content design)
+
+Engine-vocabulary additions beyond the Grill-1 spine, surfaced while authoring seed content.
+**Systems work**, pinned as the manifest the coding agent's plan is reviewed against — not incidental
+data.
+
+- **`on-[action]` hook family** — `on-attack`, `on-cast`, `on-defend`, `on-provoke` (on-wait
+  omitted). Fire when a creature **takes** the action, once per action, **not** on its resulting
+  damage — so a response that itself attacks/casts does **not** re-fire the hook (no cascade, no
+  loop-guard). Expands the pinned hook set; each needs golden coverage.
+- **Grant-action-state response** — a triggered response that sets `defending` / `provoking` on a
+  target. Reuses the existing action-state flags and Defend's math/goldens; a general primitive, not
+  a per-trait special-case.
+- **Support-spell model** — extend the offensive-only Spell to allow **ally/self targeting**, a
+  **heal** response (restore HP), and **beneficial-status/buff application to allies**.
+- **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
+  Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5.
+
 ## Combat & scripting
 
 - **Resolver shape** (three pieces): `createCombat(playerParty, enemyParty, seed) -> CombatState`
@@ -433,6 +451,9 @@ the same interpreter, differing only in how they attach and which hooks they use
   Only **Gem Forge, Artifact Forge, Fusion Chamber** have upgrade tiers (tier counts differ per
   facility); v1 tiers **raise the level cap** craftable/fuseable there. Soul Altar,
   Storage/Vault, and Biome Atlas are **one-time builds** with no tiers.
+- **Unspecified magnitude ⇒ 100%.** A trait/spell deal-damage or coefficient response that omits a
+  magnitude means **100%** of the relevant OffStat — the authoring default, so a blank is meaningful,
+  not an error.
 - Specializations are **data** (named perk collections); **perks are effect-framework
   effect-carriers** — v1 **combat-only** (meta-economy perk hooks deferred post-beta; no meta
   framework built, `Perk` stays a plain effect-carrier). A spec is **valid iff its perks'
