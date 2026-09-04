@@ -180,19 +180,22 @@ The game uses a **three-tier model**:
   innate, or 2 after fusion), **equipped gems** (≤3), **equipped artifact** (1), `hasFused`.
 
 > **Species-synergy example** — the Spider species:
-> - *Black Spider* — affinity **Primal**; innate trait: deals **+30% damage to webbed enemies**.
-> - *Webbing Spider* — affinity **Body**; innate trait: **applies Web** when its attack hits.
+> - *Black Spider* — affinity **Instinct**; innate trait: deals **+30% damage to webbed enemies**.
+> - *Webbing Spider* — affinity **Vitality**; innate trait: **applies Web** when its attack hits.
 > Two creatures, same species, different affinities, traits built to combo.
 
 Each creature (the unit) has:
 
 - **Identity**: parent species, name, sprite/emoji placeholder, rarity (v1 ships **3 rarity
   tiers — Common, Uncommon, Rare** — designed to expand with more tiers later).
-- **Affinity**: one of **Body, Spirit, Mind, Void, Primal** — the *domain of being* the creature
-  is made of (Body = physical form/instinct, Spirit = soul/the ethereal, Mind = psyche/intellect,
-  Void = entropy/nothingness, Primal = raw wild nature). Affinity lives **on the creature**, so
-  one species can contain creatures of different affinities. Cycle (see §7):
-  Body > Spirit > Mind > Void > Primal > Body.
+- **Affinity**: one of **Vitality, Violence, Wit, Endurance, Instinct** — the *behavioral drive*
+  the creature embodies (Vitality = teeming life/resilience, Violence = raw aggression, Wit = sharp
+  cunning/mind, Endurance = stubborn toughness, Instinct = feral quickness). Affinity lives **on the
+  creature**, so one species can contain creatures of different affinities. Each affinity **softly
+  corresponds to a stat** — a flavor lean and a trait hook (traits may "scale off my affinity's
+  stat"), **never a constraint** on a creature's actual stats (an off-lean creature is a legitimate
+  surprise): Vitality→Health, Violence→Attack, Wit→Intelligence, Endurance→Defence, Instinct→Speed.
+  Cycle (see §7): Vitality > Violence > Wit > Endurance > Instinct > Vitality.
 - **Core stats**: **Health, Attack, Intelligence, Defence, Speed.** Attack drives physical
   damage (Attack action), Intelligence drives spell power (Cast action), Defence mitigates,
   Speed drives turn order within a round.
@@ -248,8 +251,8 @@ Creatures are obtained via **souls**, not direct capture:
 ### Spell gems
 - A **gem** carries one spell (Intelligence-scaled via the damage formula, optional status,
   target shape) and is modeled as `{ spell, level, augments: Augment[] }`.
-- **Spell affinity & equip-gating**: every spell carries an **affinity** (one of the five — Body,
-  Spirit, Mind, Void, Primal) and is **equippable only on a creature of matching affinity**, tying
+- **Spell affinity & equip-gating**: every spell carries an **affinity** (one of the five — Vitality,
+  Violence, Wit, Endurance, Instinct) and is **equippable only on a creature of matching affinity**, tying
   loadouts to a creature's domain instead of letting anything cast anything. The gate governs
   **equipping only** — it does **not** feed the damage affinity cycle, which stays keyed on the
   **caster's** affinity (§7). **Enemy** loadouts are **rolled at generation** from the
@@ -621,8 +624,9 @@ target.
   - Provoke **only narrows single-target selection**. An **AOE** Cast (hits all enemies)
     ignores provoke entirely and still hits its full target set — narrowing an AOE down to just
     the taunting creature would defeat the point of choosing an AOE spell.
-- **Affinity advantage** is a cycle: **Body > Spirit > Mind > Void > Primal > Body** (each
-  beats the next; loops back). It is its **own standalone multiplicative term** in the damage
+- **Affinity advantage** is a cycle: **Vitality > Violence > Wit > Endurance > Instinct > Vitality**
+  (each beats the next; loops back — *Vitality outlasts Violence, Violence overwhelms Wit, Wit cracks
+  Endurance, Endurance outlasts Instinct, Instinct strikes Vitality*). It is its **own standalone multiplicative term** in the damage
   formula (separate from both the additive dealt pool and the multiplicative taken pool), defined
   once per hit: attacker's affinity beats defender's → **×1.25**; defender's beats attacker's →
   **×0.75**; otherwise **×1.0**. Being separate and always-multiplicative keeps affinity matchups

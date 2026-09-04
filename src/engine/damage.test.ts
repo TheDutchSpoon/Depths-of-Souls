@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { calculateDamage, type DamageInput } from './damage'
 
 const NEUTRAL: Pick<DamageInput, 'attackerAffinity' | 'defenderAffinity'> = {
-  attackerAffinity: 'body',
-  defenderAffinity: 'mind', // non-adjacent in the cycle -> neutral (1.0)
+  attackerAffinity: 'vitality',
+  defenderAffinity: 'wit', // non-adjacent in the cycle -> neutral (1.0)
 }
 
 function input(overrides: Partial<DamageInput>): DamageInput {
@@ -37,8 +37,8 @@ describe('calculateDamage', () => {
       input({
         offStat: 30,
         defence: 10,
-        attackerAffinity: 'body',
-        defenderAffinity: 'spirit',
+        attackerAffinity: 'vitality',
+        defenderAffinity: 'violence',
       }),
     )
     expect(result.affinityMultiplier).toBe(1.25)
@@ -51,8 +51,8 @@ describe('calculateDamage', () => {
       input({
         offStat: 30,
         defence: 10,
-        attackerAffinity: 'spirit',
-        defenderAffinity: 'body',
+        attackerAffinity: 'violence',
+        defenderAffinity: 'vitality',
       }),
     )
     expect(result.affinityMultiplier).toBe(0.75)
@@ -104,8 +104,8 @@ describe('calculateDamage', () => {
       input({
         offStat: 50,
         defence: 40,
-        attackerAffinity: 'body',
-        defenderAffinity: 'spirit',
+        attackerAffinity: 'vitality',
+        defenderAffinity: 'violence',
       }),
     )
     expect(result.rawDamage).toBeCloseTo(13.125)

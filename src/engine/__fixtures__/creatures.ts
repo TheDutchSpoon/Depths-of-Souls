@@ -40,7 +40,7 @@ export function makeCreature(overrides: CreatureOverrides = {}): Creature {
       defence: overrides.defence ?? 20,
       speed: overrides.speed ?? 20,
     },
-    affinity: overrides.affinity ?? 'body',
+    affinity: overrides.affinity ?? 'vitality',
     currentHp: overrides.currentHp ?? health,
     alive: overrides.alive ?? true,
     scriptId: overrides.scriptId ?? null,

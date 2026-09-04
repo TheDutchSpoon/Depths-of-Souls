@@ -161,9 +161,9 @@ describe('evaluateCondition -- round-number', () => {
 
 describe('evaluateCondition -- enemy-weak-to-me-exists', () => {
   it('is true when at least one living enemy is weak to the acting creature (existential, decoupled from targeting)', () => {
-    const player = makeParty('player', [{ id: 'me', affinity: 'body' }])
-    // body beats spirit (cycle: body > spirit > mind > void > primal > body)
-    const enemy = makeParty('enemy', [{ id: 'weak', affinity: 'spirit' }])
+    const player = makeParty('player', [{ id: 'me', affinity: 'vitality' }])
+    // vitality beats violence (cycle: vitality > violence > wit > endurance > instinct > vitality)
+    const enemy = makeParty('enemy', [{ id: 'weak', affinity: 'violence' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
     expect(
       evaluateCondition({ kind: 'enemy-weak-to-me-exists' }, player[0]!, state),
@@ -171,8 +171,8 @@ describe('evaluateCondition -- enemy-weak-to-me-exists', () => {
   })
 
   it('is false when no living enemy is weak to the acting creature', () => {
-    const player = makeParty('player', [{ id: 'me', affinity: 'body' }])
-    const enemy = makeParty('enemy', [{ id: 'neutral', affinity: 'mind' }])
+    const player = makeParty('player', [{ id: 'me', affinity: 'vitality' }])
+    const enemy = makeParty('enemy', [{ id: 'neutral', affinity: 'wit' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
     expect(
       evaluateCondition({ kind: 'enemy-weak-to-me-exists' }, player[0]!, state),
@@ -180,9 +180,9 @@ describe('evaluateCondition -- enemy-weak-to-me-exists', () => {
   })
 
   it('excludes dead enemies from the existential check', () => {
-    const player = makeParty('player', [{ id: 'me', affinity: 'body' }])
+    const player = makeParty('player', [{ id: 'me', affinity: 'vitality' }])
     const enemy = makeParty('enemy', [
-      { id: 'weak-but-dead', affinity: 'spirit', alive: false },
+      { id: 'weak-but-dead', affinity: 'violence', alive: false },
     ])
     const state = makeState({ playerParty: player, enemyParty: enemy })
     expect(

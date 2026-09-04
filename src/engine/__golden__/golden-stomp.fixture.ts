@@ -10,11 +10,11 @@ const WEAKLING = createCreatureId('weakling')
 // Stomper is slower on purpose, so the weakling's chip-floor-only hit actually lands
 // (and is visible in the log) before the stomper's dominant hit finishes it off.
 export const playerParty = makeParty('player', [
-  { id: 'stomper', attack: 40, defence: 30, speed: 10, health: 50, affinity: 'body' },
+  { id: 'stomper', attack: 40, defence: 30, speed: 10, health: 50, affinity: 'vitality' },
 ])
 
 export const enemyParty = makeParty('enemy', [
-  { id: 'weakling', attack: 5, defence: 1, speed: 20, health: 60, affinity: 'body' },
+  { id: 'weakling', attack: 5, defence: 1, speed: 20, health: 60, affinity: 'vitality' },
 ])
 
 /**

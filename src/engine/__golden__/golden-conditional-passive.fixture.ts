@@ -30,7 +30,7 @@ export const playerParty = makeParty('player', [
     attack: 20,
     defence: 5,
     speed: 10,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'always-attack',
     innateTraitIds: ['bloodlust'],
   },
@@ -43,7 +43,7 @@ export const enemyParty = makeParty('enemy', [
     attack: 18,
     defence: 8,
     speed: 5,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'always-attack',
   },
 ])

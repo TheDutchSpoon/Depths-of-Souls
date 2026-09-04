@@ -3,7 +3,7 @@
 // uses the real damage formula, and — critically — the lethal hit does NOT trigger a retaliation
 // (death pre-empts the victim's on-damage-taken, per the pinned damage-path hook order).
 //
-// Hand-derived (independent `node -e` calculator). Both bodies → neutral affinity ×1.0. HERO
+// Hand-derived (independent `node -e` calculator). Both vitality → neutral affinity ×1.0. HERO
 // (speed 10) acts before FOE (speed 5, scripted always-wait — it only ever reacts, never attacks).
 //
 //   HERO→FOE (off 20, def 8):        core 12, chip 0.20 → raw 12.20 → 12.
@@ -30,7 +30,7 @@ export const playerParty = makeParty('player', [
     attack: 20,
     defence: 6,
     speed: 10,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'always-attack',
   },
 ])
@@ -42,7 +42,7 @@ export const enemyParty = makeParty('enemy', [
     attack: 16,
     defence: 8,
     speed: 5,
-    affinity: 'body',
+    affinity: 'vitality',
     scriptId: 'always-wait',
     innateTraitIds: ['retaliate'],
   },

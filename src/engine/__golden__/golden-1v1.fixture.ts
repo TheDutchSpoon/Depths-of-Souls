@@ -8,11 +8,11 @@ const HERO = createCreatureId('hero')
 const GOBLIN = createCreatureId('goblin')
 
 export const playerParty = makeParty('player', [
-  { id: 'hero', attack: 22, defence: 14, speed: 18, health: 30, affinity: 'body' },
+  { id: 'hero', attack: 22, defence: 14, speed: 18, health: 30, affinity: 'vitality' },
 ])
 
 export const enemyParty = makeParty('enemy', [
-  { id: 'goblin', attack: 16, defence: 10, speed: 12, health: 24, affinity: 'body' },
+  { id: 'goblin', attack: 16, defence: 10, speed: 12, health: 24, affinity: 'vitality' },
 ])
 
 /**

@@ -5,8 +5,15 @@ import {
   AFFINITY_NEUTRAL_MULTIPLIER,
 } from './config'
 
-/** Cycle order: each affinity beats the next, wrapping (Body > Spirit > Mind > Void > Primal > Body). */
-const AFFINITY_CYCLE: readonly Affinity[] = ['body', 'spirit', 'mind', 'void', 'primal']
+/** Cycle order: each affinity beats the next, wrapping (Vitality > Violence > Wit > Endurance >
+ * Instinct > Vitality). */
+const AFFINITY_CYCLE: readonly Affinity[] = [
+  'vitality',
+  'violence',
+  'wit',
+  'endurance',
+  'instinct',
+]
 
 function beats(attacker: Affinity, defender: Affinity): boolean {
   const attackerIndex = AFFINITY_CYCLE.indexOf(attacker)

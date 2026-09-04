@@ -11,38 +11,39 @@ const ADV = AFFINITY_ADVANTAGE_MULTIPLIER
 const DIS = AFFINITY_DISADVANTAGE_MULTIPLIER
 const NEU = AFFINITY_NEUTRAL_MULTIPLIER
 
-// Full 5x5 table, hand-derived from the cycle: Body > Spirit > Mind > Void > Primal > Body.
+// Full 5x5 table, hand-derived from the cycle: Vitality > Violence > Wit > Endurance > Instinct >
+// Vitality.
 const cases: Array<[Affinity, Affinity, number]> = [
-  // Body
-  ['body', 'body', NEU],
-  ['body', 'spirit', ADV],
-  ['body', 'mind', NEU],
-  ['body', 'void', NEU],
-  ['body', 'primal', DIS],
-  // Spirit
-  ['spirit', 'body', DIS],
-  ['spirit', 'spirit', NEU],
-  ['spirit', 'mind', ADV],
-  ['spirit', 'void', NEU],
-  ['spirit', 'primal', NEU],
-  // Mind
-  ['mind', 'body', NEU],
-  ['mind', 'spirit', DIS],
-  ['mind', 'mind', NEU],
-  ['mind', 'void', ADV],
-  ['mind', 'primal', NEU],
-  // Void
-  ['void', 'body', NEU],
-  ['void', 'spirit', NEU],
-  ['void', 'mind', DIS],
-  ['void', 'void', NEU],
-  ['void', 'primal', ADV],
-  // Primal
-  ['primal', 'body', ADV],
-  ['primal', 'spirit', NEU],
-  ['primal', 'mind', NEU],
-  ['primal', 'void', DIS],
-  ['primal', 'primal', NEU],
+  // Vitality
+  ['vitality', 'vitality', NEU],
+  ['vitality', 'violence', ADV],
+  ['vitality', 'wit', NEU],
+  ['vitality', 'endurance', NEU],
+  ['vitality', 'instinct', DIS],
+  // Violence
+  ['violence', 'vitality', DIS],
+  ['violence', 'violence', NEU],
+  ['violence', 'wit', ADV],
+  ['violence', 'endurance', NEU],
+  ['violence', 'instinct', NEU],
+  // Wit
+  ['wit', 'vitality', NEU],
+  ['wit', 'violence', DIS],
+  ['wit', 'wit', NEU],
+  ['wit', 'endurance', ADV],
+  ['wit', 'instinct', NEU],
+  // Endurance
+  ['endurance', 'vitality', NEU],
+  ['endurance', 'violence', NEU],
+  ['endurance', 'wit', DIS],
+  ['endurance', 'endurance', NEU],
+  ['endurance', 'instinct', ADV],
+  // Instinct
+  ['instinct', 'vitality', ADV],
+  ['instinct', 'violence', NEU],
+  ['instinct', 'wit', NEU],
+  ['instinct', 'endurance', DIS],
+  ['instinct', 'instinct', NEU],
 ]
 
 describe('getAffinityMultiplier', () => {
@@ -51,7 +52,13 @@ describe('getAffinityMultiplier', () => {
   })
 
   it('gives each affinity exactly one advantage, one disadvantage, and three neutral matchups', () => {
-    const affinities: Affinity[] = ['body', 'spirit', 'mind', 'void', 'primal']
+    const affinities: Affinity[] = [
+      'vitality',
+      'violence',
+      'wit',
+      'endurance',
+      'instinct',
+    ]
     for (const attacker of affinities) {
       const results = affinities.map((defender) =>
         getAffinityMultiplier(attacker, defender),

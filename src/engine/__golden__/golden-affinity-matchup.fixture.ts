@@ -7,24 +7,24 @@ export const SEED = 3003
 const HERO = createCreatureId('hero')
 const WISP = createCreatureId('wisp')
 
-// Body beats Spirit in the cycle (Body > Spirit > Mind > Void > Primal > Body), so
-// hero's outgoing hits get the x1.25 advantage and wisp's return hits get the x0.75
-// disadvantage -- the same pairing, viewed from both directions.
+// Vitality beats Violence in the cycle (Vitality > Violence > Wit > Endurance > Instinct >
+// Vitality), so hero's outgoing hits get the x1.25 advantage and wisp's return hits get the
+// x0.75 disadvantage -- the same pairing, viewed from both directions.
 export const playerParty = makeParty('player', [
-  { id: 'hero', attack: 20, defence: 10, speed: 15, health: 30, affinity: 'body' },
+  { id: 'hero', attack: 20, defence: 10, speed: 15, health: 30, affinity: 'vitality' },
 ])
 
 export const enemyParty = makeParty('enemy', [
-  { id: 'wisp', attack: 15, defence: 8, speed: 10, health: 25, affinity: 'spirit' },
+  { id: 'wisp', attack: 15, defence: 8, speed: 10, health: 25, affinity: 'violence' },
 ])
 
 /**
  * Hand-derived. Hero acts first every round (Speed 15 > 10).
  *
- * Hero's hit (body -> spirit, advantage x1.25):
+ * Hero's hit (vitality -> violence, advantage x1.25):
  *   core = max(20-8,0) = 12, chip = 0.01*20 = 0.2, base = 12.2, raw = 12.2*1.25 = 15.25,
  *   final = 15.
- * Wisp's hit (spirit -> body, disadvantage x0.75):
+ * Wisp's hit (violence -> vitality, disadvantage x0.75):
  *   core = max(15-10,0) = 5, chip = 0.01*15 = 0.15, base = 5.15,
  *   raw = 5.15*0.75 = 3.8625000000000003 (float artifact -- exact IEEE-754 result of
  *   5.15*0.75 in JS, not a typo), final = 3.
