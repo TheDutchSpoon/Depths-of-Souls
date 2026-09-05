@@ -182,8 +182,12 @@ The game uses a **three-tier model**:
   design principle — see example below). Species has mechanical weight: **biomes spawn species**
   (the specific creature is chosen within the species; see §4).
 - **Creature** (the unit, a data template) = a specific creature within a species (e.g. "Black
-  Spider"). A creature carries its **affinity**, **base stats**, **innate trait**, sprite,
-  rarity, and its parent species. This is the collectible thing (its own soul bar).
+  Spider"). A creature carries its **affinity**, **base stats**, **innate trait**, a **default
+  script** (`defaultScriptId` — its role/behavior: attack / cast / provoke / defend, used when it
+  spawns as an enemy and as the player's starting script, overridable later), sprite, rarity, and
+  its parent species. This is the collectible thing (its own soul bar). *(Spells aren't
+  caster-gated — any creature has gem slots; a **cast-role** creature is generated with ≥1 castable
+  spell so it has something to cast.)*
 - **Instance** (owned, in save) = a copy of a creature the player owns: references a creature +
   current **level/XP**, current **affinity** (may differ after fusion), **trait slots** (1
   innate, or 2 after fusion), **equipped gems** (≤3), **equipped artifact** (1), `hasFused`.
@@ -270,7 +274,8 @@ Creatures are obtained via **souls**, not direct capture:
   trait/perk is parked post-beta — §13; until then the gate is universal.)*
 - **Seed spell set (Phase 4 content).** ~10 spells per affinity (~50 total), authored as **data
   against a shared template** (not designed one-by-one). Every affinity gets the full kit —
-  **damage** (single + AOE), **stat-buff** (self/ally) and **stat-debuff** (enemy), other
+  **damage** (single + AOE), **stat-buff** (self/ally) and **stat-debuff** (enemy) — both permanent
+  **stat-modifiers** (last the fight), distinct from timed **statuses** — other
   **debuffs** (DoT, Stun, Vulnerability) and **buffs** (Regen, etc.), and **heals/support** — with a
   per-affinity **centre of gravity** (its signature buff/debuff keys off its own mapped stat;
   **Vitality** is the primary healer / Regen home) that is a *default, not a fence*: theme-fitting
@@ -1016,6 +1021,10 @@ the hot autosave path.
   **unbuilt** for now (no prelude seam until authored).
 - **Off-affinity spell equipping** via a trait/perk exception (§5) — deferred post-beta with the
   gem/perk economy; the equip-gate is universal until then.
+- **Turn-order status** (candidate, not locked): a timed status forcing the target to act **first or
+  last** for N turns — an Instinct-flavored control toy, distinct from a permanent +Speed
+  stat-modifier. Needs the turn-order step to read it (a position override; precedent: Stun already
+  suppresses a turn). Decide when authoring Instinct content.
 
 **Genuinely open (need a decision before the relevant content):**
 1. The **biome roster**: the 10 biome names/themes and which creature types populate each

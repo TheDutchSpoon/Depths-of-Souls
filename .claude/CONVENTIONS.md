@@ -48,6 +48,10 @@ derivation of a floor's contents.
   `createCombat`, **not** duplicated here. **Un-fused only** (fused derivation is Phase 8). One
   `Instance` type serves player and enemy (an enemy is a transient instance — enemies are ordinary
   instances at a level, never a separate stat block).
+- **Enemy script & loadout at spawn** — generation sets the enemy instance's `scriptId` from the
+  static creature's **`defaultScriptId`** (its role); a **cast-role** enemy is rolled **≥1
+  affinity-matched spell** (coherence — never a caster with an empty loadout). Non-cast creatures may
+  still carry spells (gem slots aren't caster-gated).
 - **Rewards** (XP / soul% / currency) are a **run-layer consumer of the event log**
   (`CreatureDied.creatureId` joined against the generated enemy roster), never engine state. XP goes
   to the **whole active party regardless of survival**, banked per kill, kept on wipe; **level-ups
@@ -66,8 +70,12 @@ data.
 - **Grant-action-state response** — a triggered response that sets `defending` / `provoking` on a
   target. Reuses the existing action-state flags and Defend's math/goldens; a general primitive, not
   a per-trait special-case.
-- **Support-spell model** — extend the offensive-only Spell to allow **ally/self targeting**, a
-  **heal** response (restore HP), and **beneficial-status/buff application to allies**.
+- **Support-spell model** — extend the offensive-only Spell so a spell may target **ally/self**
+  (single **or** all-allies AOE, mirroring the enemy side), and its payload may be a **heal**
+  (restore HP), a **timed status**, or a **stat-modifier** (a permanent-for-the-fight buff/debuff).
+  Applying a stat-modifier is new — spells currently carry only `appliesStatus`. (Buff/stat-debuff =
+  stat-modifier, permanent-for-fight; Weaken/Vulnerability etc. = timed statuses — existing
+  categories, unchanged.)
 - **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
   Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5.
 
