@@ -25,7 +25,7 @@ The incremental layer comes from:
 - **Biomes**: the cave changes biome every 10 floors (10 biomes in v1), each with its own
   creatures to encounter and collect (biomes spawn species; each species has multiple creatures).
 - **Facilities** built at the cave entrance that grant permanent upgrades and services.
-- Many small multiplicative bonuses (traits, gem augments, artifact infusions, spec perks) that
+- Many small multiplicative bonuses (traits, gem augments, equipment infusions, spec perks) that
   stack.
 
 **Scope note — start-of-beta baseline.** Everything in this document describes the **start-of-beta
@@ -146,7 +146,7 @@ expeditions. Facilities are **data-driven** (cost, effect, upgrade tiers) and pa
 permanent, forward-only progression. The player starts with minimal/none and **builds each
 out** as an early-game goal. **Every facility action (craft, infuse, fuse, summon) resolves
 instantly** on payment — no real-time timers/queues, consistent with the engine's no-wall-clock
-rule. Only **Gem Forge, Artifact Forge, and Fusion Chamber** have upgrade tiers (each
+rule. Only **Gem Forge, Equipment Forge, and Fusion Chamber** have upgrade tiers (each
 facility's tier count is tailored individually); v1 tiers **raise the level cap**
 craftable/fuseable there (cost-reduction tiers may follow later). The other three facilities
 (Soul Altar, Storage/Vault, Biome Atlas) are **one-time builds** with no further tiers — they
@@ -154,8 +154,8 @@ have no throughput axis to upgrade. v1 facility list:
 
 - **Gem Forge** — craft gems (from dropped recipes + **Essence**), augment gems, level gems
   (Essence).
-- **Artifact Forge** — craft/infuse artifacts (fixed base-types + dropped infusion recipes),
-  level artifacts, using **Ore**.
+- **Equipment Forge** — craft/infuse equipment (fixed base-types + dropped infusion recipes),
+  level equipment, using **Ore**.
 - **Fusion Chamber** — perform fusions **and** catch-up-level creatures up to the player's
   current highest-level creature, both fuelled by **Lifeforce**.
 - **Soul Altar / Summoning Circle** — summon instances of any species at 100% soul.
@@ -166,14 +166,19 @@ have no throughput axis to upgrade. v1 facility list:
 *(No healing facility in v1 — HP resets every fight, so there is nothing persistent to heal.)*
 
 **Currencies & drops (structure; numbers TBD):** floors drop **Essence** (gems), **Ore**
-(artifacts), **Bricks** (facilities; rarer), **Lifeforce** (leveling + fusion), and **recipes**
-(gem, gem-augment, artifact-infusion). Recipe drops come from a **global depth-scaled drop
+(equipment), **Bricks** (facilities; rarer), **Lifeforce** (leveling + fusion), and **recipes**
+(gem, gem-augment, equipment-infusion). Recipe drops come from a **global depth-scaled drop
 table**, independent of which specific creature was defeated (not a per-creature loot table).
 **Perk points** are *not* dropped — they come only from first-time boss kills (see §9).
 Essence/Ore are the long-tail infinite sinks; Bricks is a front-loaded, tapering build-out sink.
 All currencies are **unbounded** — no storage cap.
 
 ## 5. Creatures
+
+> **Seed roster catalogued in `.claude/species/`.** The 18 seed species (6 per biome), the 3
+> bosses, and the Unicorn intro-helper are authored in `.claude/species/species-locked.md` (locked
+> mechanics; the canonical roster the coding agent stamps into data). `.claude/species/_species-backlog.md`
+> holds **un-selected inspiration — not spec.**
 
 The game uses a **three-tier model**:
 
@@ -190,7 +195,7 @@ The game uses a **three-tier model**:
   spell so it has something to cast.)*
 - **Instance** (owned, in save) = a copy of a creature the player owns: references a creature +
   current **level/XP**, current **affinity** (may differ after fusion), **trait slots** (1
-  innate, or 2 after fusion), **equipped gems** (≤3), **equipped artifact** (1), `hasFused`.
+  innate, or 2 after fusion), **equipped gems** (≤3), **equipped equipment** (1), `hasFused`.
 
 > **Species-synergy example** — the Spider species:
 > - *Black Spider* — affinity **Instinct**; innate trait: deals **+30% damage to webbed enemies**.
@@ -216,12 +221,12 @@ Each creature (the unit) has:
     (the design range, not a per-capture roll — all instances of a creature share the same base
     stats; no individual IV-style rolls in v1).
 - **Trait slots**: a base creature has **1 innate trait**; a fused creature carries **both
-  parents' innate traits** (2). Artifacts can carry additional trait(s) via infusion (third
+  parents' innate traits** (2). Equipment can carry additional trait(s) via infusion (third
   trait source). See §6.
 - **Spell gems**: spells are **equipped as spell gems** (not innate). Each creature has **3 gem
   slots** by default (modifiable by traits/effects). Scripts choose which equipped gem to Cast.
   See Spell gems below.
-- **Artifact**: **1 artifact slot** per creature (see §6 / Artifacts).
+- **Equipment**: **1 equipment slot** per creature (see §6 / Equipment).
 - **Level & XP**: creatures level **only via combat XP**. Stat growth is **linear and derived
   purely from base stats** — there is *no separate growth-rate field*. Level-N stat =
   `round(base × (1 + 0.25 × (level − 1)))` — **rounded to the nearest integer**, recomputed from
@@ -230,7 +235,7 @@ Each creature (the unit) has:
   base per level; level 1 = base; base 20 → +5 per level → L10 = 65). **Level is uncapped** — it climbs indefinitely in step with floor
   depth (see §4 difficulty model); the formula holds at any level. This keeps the formula's
   output in a sane range for the subtractive damage formula; the incremental power curve comes
-  from **multiplicative build sources** (traits, gems/augments, artifacts/infusions, fusion,
+  from **multiplicative build sources** (traits, gems/augments, equipment/infusions, fusion,
   facility upgrades, spec perks) stacking in the build-modifier pools / effective stats, not from
   levels.
   - **Catch-up leveling**: at the Fusion Chamber, a creature can be leveled (using **Lifeforce**)
@@ -259,7 +264,7 @@ Creatures are obtained via **souls**, not direct capture:
   momentum (1 → 2 → 3 creatures in the first session), not a grind wall.
 - **Roster**: collection is **unlimited**; the active **party is 6**, swappable at the hub.
   **Duplicate creatures are allowed** across party slots (two instances of the same creature can
-  both be active at once) — instances are independent (level, gems, artifact, fusion state).
+  both be active at once) — instances are independent (level, gems, equipment, fusion state).
 
 ### Spell gems
 - A **gem** carries one spell (Intelligence-scaled via the damage formula, optional status,
@@ -300,7 +305,7 @@ Creatures are obtained via **souls**, not direct capture:
   **augment recipes** drop from floors.
 - Gems are a **shared, finite inventory** the player owns; a gem instance is equipped on one
   creature at a time, **free and instant to equip/unequip**. Before a creature is fused, its
-  gems **unequip back to inventory** (so does its artifact — see Fusion, below).
+  gems **unequip back to inventory** (so does its equipment — see Fusion, below).
 
 ### Fusion (compounding economy)
 Two creatures fuse into a single resulting creature, at the **Fusion Chamber**, costing
@@ -311,7 +316,7 @@ Two creatures fuse into a single resulting creature, at the **Fusion Chamber**, 
   traits and keeps fusion bounded.
 - **Both input creatures are consumed** into the single result. (Nothing is permanently lost:
   inputs can be re-summoned from soul if that creature is at 100%.) Before being consumed, both
-  inputs' **equipped gems and artifact unequip back to inventory** — nothing of value is
+  inputs' **equipped gems and equipment unequip back to inventory** — nothing of value is
   destroyed by fusion, only the creature instance and its level/XP.
 - Fusion is **species-agnostic** — any creature can fuse with any other **except itself**:
   fusing two instances of the identical creature is **disallowed** (it would produce two
@@ -337,18 +342,18 @@ Two creatures fuse into a single resulting creature, at the **Fusion Chamber**, 
 > Terminology note for implementation: **species** = the grouping (data: a set of creatures +
 > thematic identity, used by biome spawn tables); **creature** = the specific unit (data:
 > affinity, base stats, innate trait, sprite, rarity, parent species); **instance** = an owned
-> copy (level/XP, current affinity, trait slots, equipped gems/artifact, `hasFused`). **Affinity**
+> copy (level/XP, current affinity, trait slots, equipped gems/equipment, `hasFused`). **Affinity**
 > lives on the creature/instance, separate from identity, so fusion is a clean field-level
 > recombination: identity from parent-1 creature, affinity from parent-2, averaged base stats,
 > both innate traits. **There is no growth-rate field** — level-N stat = `round(base × (1 + 0.25 ×
 > (level − 1)))`, derived purely from base stats.
 
-## 6. Traits, statuses, artifacts & the effect framework
+## 6. Traits, statuses, equipment & the effect framework
 
 ### The unified effect framework (architectural keystone)
-**Traits, status effects, gem augments, and artifact infusions are all instances of one
+**Traits, status effects, gem augments, and equipment infusions are all instances of one
 data-driven, hook-based effect framework.** They differ only in how they attach to a creature
-(innate/fused, applied in combat, equipped via gem, equipped via artifact) and which hooks they
+(innate/fused, applied in combat, equipped via gem, equipped via equipment) and which hooks they
 use — not in their underlying machinery. This is a hard invariant (see CONVENTIONS): one effect
 model underpins all of them, so new content is data and genuinely novel behavior is at most one
 reusable hook primitive.
@@ -374,7 +379,7 @@ player-facing treatment** (a bright line, locked Phase 3):
    the Attack action"). Reads the **source stat's effective value**; Attack-slot stat-modifiers do
    **not** transfer to the substituted stat (a Speed-attacker wants +Speed, not +Attack — a legible
    consequence). Multiple remaps on one slot resolve by **fixed effect order (innate-1 → innate-2 →
-   artifact infusions), last-writer-wins**. The damage formula reads its OffStat through a
+   equipment infusions), last-writer-wins**. The damage formula reads its OffStat through a
    remap-aware lookup so this needs no formula changes.
 3. **`damage-modifier`** — folds into the damage formula's mod pools: the attacker's **additive
    dealt pool** (`1 + Σ`) or the defender's **multiplicative taken pool** (`Π`). **These ARE surfaced
@@ -442,7 +447,7 @@ The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
   vocabulary.
 - **`TriggerFired` intent event** precedes the consequences a trigger produces (mirroring
   `AttackDeclared`→`DamageDealt`), so the log explains *why* triggered damage/effects happened.
-- **One shared per-creature effect ordering** — innate-1 → innate-2 → artifact infusions → applied
+- **One shared per-creature effect ordering** — innate-1 → innate-2 → equipment infusions → applied
   statuses — is reused *everywhere* effects are iterated: stat folding, hook firing, remap
   resolution. One "effect order" concept, not several.
 
@@ -495,7 +500,7 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   a status / changing a stat is **triggered**, not behavioral — in scope.*
 - A base creature has **1 innate trait**; a fused creature has **2** (both parents'). Each
   **creature has a fixed innate trait** defined in its data (collecting a creature = knowing its
-  trait). Artifacts can add further trait(s) via infusion (artifact *mechanism* deferred to Phase 8;
+  trait). Equipment can add further trait(s) via infusion (equipment *mechanism* deferred to Phase 8;
   the effects it would carry are the framework built here).
 - **`Trait { id, name, effects: readonly Effect[] }`** — a thin named wrapper (identity/flavor for
   UI) over one-or-more effects (the mechanical units); a trait may bundle multiple effects.
@@ -589,23 +594,23 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   deterministically order-sensitive to death (fixed by tie-break order). **Win/loss is checked once,
   after the entire sweep completes** (consistent with "resolve the whole boundary, then check").
 
-### Artifacts
-**Note:** the artifact *mechanism* (slot, infusions, Artifact Forge, Ore, leveling, infusion-recipe
-drops) is **deferred to Phase 8** with the rest of the forge economy. The **effects** an artifact
-would carry are exactly the effect framework built in Phase 3 — so nothing about artifacts needs to
+### Equipment
+**Note:** the equipment *mechanism* (slot, infusions, Equipment Forge, Ore, leveling, infusion-recipe
+drops) is **deferred to Phase 8** with the rest of the forge economy. The **effects** an equipment
+would carry are exactly the effect framework built in Phase 3 — so nothing about equipment needs to
 exist before Phase 8; they plug into the already-built machinery. The design below is the eventual
 target.
-- An artifact is an **equippable item** on a creature (**1 artifact slot** per creature in v1),
+- An equipment is an **equippable item** on a creature (**1 equipment slot** per creature in v1),
   **stat-focused** in character (where gems are spell-focused).
-- Structurally **parallel to gems**: an artifact has a **level** (bounded, a fixed max, raised
-  by Artifact Forge tiers) that governs **infusion slots** (small fixed max, 3–5), and slots
+- Structurally **parallel to gems**: an equipment has a **level** (bounded, a fixed max, raised
+  by Equipment Forge tiers) that governs **infusion slots** (small fixed max, 3–5), and slots
   hold **infusions** — which are the **same effect-framework objects** as gem augments.
   Infusions grant **stats, traits, or other effects**. Equip/unequip is **free and instant**.
-- **Base artifacts are a small fixed set of base-types** — stat-flavor variants (e.g. a
-  Health-focused charm vs. a Defence-focused plate) that all compete for the single artifact
+- **Base equipment are a small fixed set of base-types** — stat-flavor variants (e.g. a
+  Health-focused charm vs. a Defence-focused plate) that all compete for the single equipment
   slot, not distinct equipment categories; variety comes from infusions. **Infusion recipes
   drop** from floors.
-- Crafted/infused at the **Artifact Forge** using **Ore**; artifacts are **leveled via Ore**.
+- Crafted/infused at the **Equipment Forge** using **Ore**; equipment are **leveled via Ore**.
 
 ## 7. Combat (automatic)
 
@@ -844,6 +849,10 @@ Design constraints:
 
 ## 9. Player specializations
 
+> **The three v1 perk trees are catalogued in `.claude/specializations/`** — `sorcerer.md`,
+> `brute.md`, `shieldbarer.md`. Each is a flat pool of effect-carrier perks summing to exactly
+> **1000**, with per-perk phase tags (P4 vs P8). The starters live there too.
+
 The player picks a **specialization** that shapes their own bonuses and playstyle (distinct
 from creature affinities). The game ships with **three** at launch; future specializations
 may be added and **existing ones edited**, so model specializations as **data**, not
@@ -858,7 +867,7 @@ player's single cold-start creature, see §5):
 - **Shieldbarer** — Defence/tank focus; perks center on Defend/Defence/survivability and
   Provoke-tanking. Defence-leaning starter.
 
-**All content is accessible to every specialization** (same creatures, gems, artifacts,
+**All content is accessible to every specialization** (same creatures, gems, equipment,
 biomes, facilities) — a spec changes *how you play*, never *what you can reach*.
 
 The three starter creatures (locked): the **Sorcerer**'s is **Wit**-affinity, high Intelligence,
@@ -906,9 +915,9 @@ Model specializations as **data** so future specs can be added and existing ones
 - **Catch-up leveling**: at the Fusion Chamber, fresh summons/fusions can be leveled (via
   **Lifeforce**) up to the player's current highest-level creature — never beyond it.
 - **Build power (the incremental curve)**: the "numbers go up" fantasy lives in **build sources**
-  stacking in the build-modifier pools and effective stats — traits, gem augments, artifact
+  stacking in the build-modifier pools and effective stats — traits, gem augments, equipment
   infusions, fusion, facility-upgrade efficiencies, and spec perks — *not* in raw levels.
-- **Currencies** (combat-dropped unless noted): **Essence** (gems), **Ore** (artifacts),
+- **Currencies** (combat-dropped unless noted): **Essence** (gems), **Ore** (equipment),
   **Bricks** (facilities, rarer), **Lifeforce** (leveling + fusion), and **perk points**
   (specs; non-dropped, first-boss-kills only). All currencies are **unbounded** — no storage
   cap.
@@ -921,7 +930,7 @@ Model specializations as **data** so future specs can be added and existing ones
 - **Souls**: per-creature collection toward 100% summon unlocks (see §5).
 
 There are **no prestige mechanics and no progress resets** — progression is purely forward
-(descend deeper, grow creatures via XP + catch-up, collect souls, craft gems/artifacts, fuse,
+(descend deeper, grow creatures via XP + catch-up, collect souls, craft gems/equipment, fuse,
 build facilities, earn perks, deepen builds).
 
 Balance numbers are **not** in this document — they live in tunable config so AI-assisted
@@ -940,9 +949,9 @@ things (settings, a last-save pointer) — never the main save.
   deepest-reached floor; current floor; bosses defeated (first-clear tracking); biome discovery
   state; Biome Atlas assignments.
 - **Collection**: owned creature **instances**, each: a reference to its source + level/XP,
-  current affinity, trait slots, equipped gem refs, equipped artifact ref, `hasFused`; plus
+  current affinity, trait slots, equipped gem refs, equipped equipment ref, `hasFused`; plus
   **per-creature soul%**.
-- **Inventory**: gem instances (level + augments), artifact instances (level + infusions),
+- **Inventory**: gem instances (level + augments), equipment instances (level + infusions),
   unlocked recipes, currency balances (Essence / Ore / Bricks / Lifeforce).
 - **Facilities**: which are built + their upgrade tiers.
 - **Scripts**: all script templates + each creature's assigned template.
@@ -1001,11 +1010,11 @@ the hot autosave path.
 - Floor→enemy-level-range curve (the master difficulty lever: level-vs-floor ratio, range
   width-growth rate) and XP/level growth pacing.
 - Drop weights/rates for Essence, Ore, Bricks, Lifeforce, and recipes.
-- Costs: gem craft/augment/level (Essence), artifact craft/infuse/level (Ore), facility
+- Costs: gem craft/augment/level (Essence), equipment craft/infuse/level (Ore), facility
   build/upgrade (Bricks), fusion + catch-up leveling (Lifeforce).
 - Soul-per-kill % per rarity tier; status magnitudes/durations/per-status stack caps; affinity
   already fixed (±25%).
-- Facility upgrade-tier counts and exact cap values (Gem Forge, Artifact Forge, Fusion Chamber
+- Facility upgrade-tier counts and exact cap values (Gem Forge, Equipment Forge, Fusion Chamber
   only — structure is decided in §4, numbers are not).
 - Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
   round-cap value (structure decided in §7, number TBD).

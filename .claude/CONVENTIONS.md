@@ -79,6 +79,57 @@ data.
 - **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
   Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5.
 
+### Response vocabulary — now SIX
+Was four; `heal` + `revive` are the two justified new verbs — **hold at six.**
+- **`heal`** — restore HP to a *living* target (self / ally / all-allies via targeting); caps at
+  effective max HP (no overheal); distinct from Regen (the over-time status).
+- **`revive`** — return a *dead* creature to its slot at **battle-start baseline + a % of baseline
+  max HP** (Unicorn: 20%). See Death-reset.
+- **`deal-damage` `scalingStat`** — default **Attack**; can be Defence/etc. — the mirror of spells'
+  `scalingStat`, letting a trait/response scale off any stat (Thorns/Shield Bash→Defence,
+  Shellbacks, Aggressive Caster→Attack).
+- **Armor penetration** — a damage-calc parameter: ignore X% of the *target's* Defence.
+- **Cross-stat contribution** — a value may add to an **attack's *or* a spell's** damage *on top of*
+  that action's own scaling stat. General model: every damage source has a base scaling stat
+  (attack→Attack, spell→its `scalingStat`); cross-stat contributions layer **additively** on top,
+  regardless of source. (Shield Bash: Defence→attacks & spells; Aggressive Caster: Attack→spells.
+  Composes with armor-pen: pen cuts the *target's* Defence, cross-stat adds the *attacker's* — no
+  conflict.)
+
+### New primitives / capabilities
+- **count-scaling** modifier — factor reads a **live count**: living allies, allies of a
+  species/affinity, enemies-with-a-status, **dead allies**, or a per-creature **defend-count**.
+  Recomputed each read.
+- **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
+- **adjacency targeting** — slot-adjacency (Splashing's first consumer; un-defers the biome-4+
+  adjacency deferral). *Edge for the coding agent: adjacent slots vs adjacent living creatures.*
+- **targeting-override** — a step at target-selection: Provoke narrows (existing), **Confusion**
+  randomizes (50% to own side), **Tunnel Vision** ignores enemy Provoke.
+- **cheat-death** — intercept a lethal hit → RNG → survive at 1 HP (Last Stand).
+- **scoped suppress-action** — suppress a *specific* action (**Silenced**=Cast, **Pacified**=Attack)
+  vs Stun's suppress-all; a parameter on `suppress-action`.
+- **acted-before-target** condition — "this creature acts before its target this round" (Blindclaws).
+
+### New statuses (data — several ride the mechanisms above)
+Web (act-last + 10%/turn break-free), Sleep (breaks on damage; 3-turn), Glow (stacking resource;
++%dmg/stack; consumable), turn-order (act first *or* last — two-way), Spore (DoT + spread-on-death),
+Confusion (3-turn; 50% harmful-action friendly-fire), Silenced (suppress-Cast; Violence spell),
+Pacified (suppress-Attack; Wit spell), Splashing (adjacency splash), Proficient (**P8**; +equipment
+benefit).
+
+### Flow
+- **scripted-intro encounter** — a rigged fight whose outcome triggers a story beat (revive the
+  starter + gain the **Unicorn**) instead of wipe→hub; the Unicorn joins win-or-lose.
+
+### Principles (locked)
+- **Every status has an intrinsic effect** — no inert markers.
+- **Death-reset** — on death, a creature's accumulated buffs/debuffs/statuses/stat-mods are **wiped**;
+  a revived creature returns at **battle-start baseline**. Death is meaningful; revive is a second
+  chance, not a buff-preserving undo. Applies to all deaths.
+- **Immunity suppresses the *effect*, not the *application*** — an immune creature still receives the
+  status (it still counts for "target is X" payoffs); it just ignores what the status does.
+  (Clear Mind/Silenced, Aggressive/Pacified, Lucidity/Confusion.)
+
 ## Combat & scripting
 
 - **Resolver shape** (three pieces): `createCombat(playerParty, enemyParty, seed) -> CombatState`
@@ -229,7 +280,7 @@ data.
 
 ## Unified effect framework (load-bearing invariant)
 
-**Traits, status effects, gem augments, and artifact infusions are all instances of ONE
+**Traits, status effects, gem augments, and equipment infusions are all instances of ONE
 data-driven, hook-based effect model.** Do not build them as separate subsystems — they share
 the same interpreter, differing only in how they attach and which hooks they use.
 
@@ -281,7 +332,7 @@ the same interpreter, differing only in how they attach and which hooks they use
   paths and emits the *same* shared consequence events as a chosen action. A hook is a trigger
   *origin*, not new consequence vocabulary.
 - **`TriggerFired`** intent event precedes a trigger's consequences (mirrors `AttackDeclared`).
-- **One shared per-creature effect ordering** — innate-1 → innate-2 → artifact infusions → applied
+- **One shared per-creature effect ordering** — innate-1 → innate-2 → equipment infusions → applied
   statuses — reused *everywhere* effects are iterated (stat folding, hook firing, remap resolution).
 - **Interaction edges**: **dead creatures fire only `on-death`** (`fireHook` gates on `alive`
   per-effect — `effectsForHook` is a pure scan-filter and does no alive-gating; lethal damage fires
@@ -318,9 +369,11 @@ the same interpreter, differing only in how they attach and which hooks they use
   fight start.
 - **Passive/stat traits** = `stat-modifier` effects; a **conditional** passive carries a
   **read-time activation predicate** evaluated during `getEffectiveStat` folding (never cached).
-- **Triggered traits** = `{ hook, condition?, response }`. **Response vocabulary (v1, each
+- **Triggered traits** = `{ hook, condition?, response }`. **Response vocabulary (each
   parameterized by target + magnitude): deal-damage, apply-status, apply-stat-modifier,
-  suppress-action.** Breadth = hook × condition × parameter cross-product, not more response types.
+  suppress-action, heal, revive** (six — see Phase 4 addenda; heal + revive were the two justified
+  additions to the original four). Breadth = hook × condition × parameter cross-product, not more
+  response types.
   The optional `condition?` **reuses the scripting `Condition` union** (declarative data — *not* a
   predicate, unlike the conditional-*passive* which is the one deliberately non-serializable spot),
   evaluated **self-scoped against live state at fire time** (pure, no RNG; a false condition skips
@@ -383,7 +436,7 @@ the same interpreter, differing only in how they attach and which hooks they use
 
 ## Data-driven content
 
-- Creatures, **species templates**, traits, spells/**gems**, **artifacts**, **statuses**,
+- Creatures, **species templates**, traits, spells/**gems**, **equipment**, **statuses**,
   biomes, facilities, **specializations/perks**, and scaling curves are data in `src/data/`,
   validated by types (consider `zod` at load boundaries).
 - **Three-tier model**: **species** = a grouping of creatures (data: thematic identity + the
@@ -392,7 +445,7 @@ the same interpreter, differing only in how they attach and which hooks they use
   10–30, innate trait, sprite, rarity — v1 ships **3 rarity tiers: Common, Uncommon, Rare**,
   designed to expand later). **Instance** (in save) = an owned copy: references a creature +
   level/XP (**uncapped**), current affinity, trait slots (1 or 2), equipped gems (≤3) +
-  artifact (1), `hasFused`. Base stats are **fixed per creature** (no per-instance rolls in v1).
+  equipment (1), `hasFused`. Base stats are **fixed per creature** (no per-instance rolls in v1).
   Affinity lives on the creature/instance; one species spans multiple affinities. Duplicate
   creatures may occupy multiple party slots simultaneously; an in-fight death has no
   consequence beyond that one fight.
@@ -401,7 +454,7 @@ the same interpreter, differing only in how they attach and which hooks they use
   identityParent, affinity from affinityParent, base stats = per-stat average of both parents,
   both innate traits**; result is level 1; both inputs consumed; result is itself fusion-locked
   (`hasFused`). **Fusing two instances of the identical creature is disallowed.** There is no
-  level/state prerequisite otherwise. Equipped gems **and artifact** unequip back to inventory
+  level/state prerequisite otherwise. Equipped gems **and equipment** unequip back to inventory
   before the inputs are consumed. A fusion result has **no rarity** (rarity only applies to
   spawnable/collectible static creatures). (There is **no "class"** concept — affinity is the
   only such axis.)
@@ -424,16 +477,16 @@ the same interpreter, differing only in how they attach and which hooks they use
   Off-affinity exceptions (trait/perk) are post-beta; **no exception seam is pre-built**.
 - **Gems**: `{ spell, level, augments[] }`; level (**bounded, fixed max, raised by Gem Forge
   tiers**) → augment-slot count (**small fixed max, 3–5**; not damage); leveled via
-  **Essence**, free/instant to equip. **Artifacts**: parallel shape (level bounded similarly,
-  raised by Artifact Forge tiers; → infusion-slot count, same 3–5 ceiling; leveled via **Ore**),
-  stat-focused; few fixed base-types (stat-flavor variants for the single artifact slot, not
+  **Essence**, free/instant to equip. **Equipment**: parallel shape (level bounded similarly,
+  raised by Equipment Forge tiers; → infusion-slot count, same 3–5 ceiling; leveled via **Ore**),
+  stat-focused; few fixed base-types (stat-flavor variants for the single equipment slot, not
   equipment categories). Augments and infusions are **effect-framework objects** (above).
 - **Souls**: tracked **per creature** (not per species); 100% = permanent summon unlock; caps
   at 100%; bosses grant none. Soul-gain per kill is a **flat % fixed per rarity tier** (no
   variance); banked the instant the kill happens, regardless of the fight's eventual outcome.
   There is no way to target/bias which specific creature spawns beyond choosing a biome — within
   a biome it's pure rarity-weighted RNG.
-- **Currencies** (config-tuned): Essence (gems), Ore (artifacts), Bricks (facilities, rarer),
+- **Currencies** (config-tuned): Essence (gems), Ore (equipment), Bricks (facilities, rarer),
   Lifeforce (fusion + catch-up leveling), perk points (specs; non-dropped, first-boss-only,
   1000 = one maxed spec [flat list, some perks leveled], refund-on-swap, free/unlimited swap).
   All combat-dropped except perk points; all currencies are **unbounded** (no storage cap).
@@ -456,7 +509,7 @@ the same interpreter, differing only in how they attach and which hooks they use
   which creature died.
 - **Facilities**: all facility actions (craft, infuse, fuse, summon) resolve **instantly** on
   payment — no real-time timers/queues, consistent with engine purity's no-wall-clock rule.
-  Only **Gem Forge, Artifact Forge, Fusion Chamber** have upgrade tiers (tier counts differ per
+  Only **Gem Forge, Equipment Forge, Fusion Chamber** have upgrade tiers (tier counts differ per
   facility); v1 tiers **raise the level cap** craftable/fuseable there. Soul Altar,
   Storage/Vault, and Biome Atlas are **one-time builds** with no tiers.
 - **Unspecified magnitude ⇒ 100%.** A trait/spell deal-damage or coefficient response that omits a

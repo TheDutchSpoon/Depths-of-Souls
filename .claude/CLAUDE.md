@@ -32,7 +32,7 @@ are discriminated unions; HP% via integer cross-multiplication; enemies run the 
 scripts). Affinities (behavioral drive, soft-mapped to HP/Atk/Int/Def/Spd resp.): **Vitality, Violence, Wit,
 Endurance, Instinct**, cycle **Vitality > Violence > Wit > Endurance > Instinct > Vitality**. Incremental power lives
 in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
-statuses, gem augments, artifact infusions are ONE data-driven hook-based model (4 categories:
+statuses, gem augments, equipment infusions are ONE data-driven hook-based model (4 categories:
 stat-modifier, stat-remap, damage-modifier, condition-status). Hooks live as of Phase 3: 13-hook
 v1 vocab (Phase 4 adds the `on-[action]` family: on-attack/cast/defend/provoke), fired via `effectsForHook` (scoped iteration, shared per-creature effect order), reusing
 action machinery; a **`TriggerFired`** event precedes triggered consequences. **Traits** =
@@ -49,15 +49,15 @@ unit: affinity + base stats + 1 innate trait) → **instance** (owned copy). No 
 affinity is the only such axis. Obtained via **souls** (tracked **per creature**, 100% =
 permanent summon); 1 starter from your spec; unlimited roster, 6-slot party. **Gems** (spells [each has
 an **affinity**; equippable only on a matching-affinity creature], leveled via Essence, augment
-slots) and **artifacts** (stat-focused, leveled via Ore, infusion
+slots) and **equipment** (stat-focused, leveled via Ore, infusion
 slots) share the effect framework. **Fusion** (Fusion Chamber, Lifeforce, species-agnostic):
 once per creature, both inputs consumed, result = parent-1 identity + parent-2 affinity +
 **averaged base stats** + both traits, level 1, catch-up-levelable up to your highest. Scripts:
 **templates**, **one condition per rule** (no AND/OR), ordering = logic. Specs:
 **Sorcerer/Brute/Shieldbarer** (gems/Cast, Attack, Defence-tank), perks bought with
 **perk points** (100/first-boss-kill, 1000 = one maxed spec at floor 100, refund-on-swap).
-Currencies: **Essence** (gems), **Ore** (artifacts), **Bricks** (facilities), **Lifeforce**
-(fusion+leveling), **perk points**. Facilities (built w/ Bricks): Gem Forge, Artifact Forge,
+Currencies: **Essence** (gems), **Ore** (equipment), **Bricks** (facilities), **Lifeforce**
+(fusion+leveling), **perk points**. Facilities (built w/ Bricks): Gem Forge, Equipment Forge,
 Fusion Chamber, Soul Altar, Storage, Biome Atlas. World: a single **cave**; **HP resets every
 fight**; difficulty = enemy stats scaling faster than the party; **depth is persistent** (wipe →
 hub, fast-travel to any floor up to deepest). **Biome changes every 10 floors** (**10 in v1**,

@@ -17,7 +17,7 @@ period after: biomes 11+, deeper species rosters, and post-floor-100 endgame shi
 
 ## Phase 0.5 — Deploy checkpoint (GitHub Pages, do this early)
 Deploy the Phase 0 skeleton to GitHub Pages **now**, before Phase 1. Rationale: same philosophy
-as the golden test — prove the *deployment pipeline* against the simplest possible artifact, so
+as the golden test — prove the *deployment pipeline* against the simplest possible equipment, so
 every later phase inherits a known-good deploy instead of discovering hosting problems at the end.
 The Phase 0 tick-counter page is already renderable; if it shows up live, the whole pipeline (base
 path, CI build, Pages serving, asset loading) is proven end-to-end.
@@ -147,7 +147,7 @@ by Phase 7. Separate PR after Phase 2.
 - **Trait content is representative & temporary** — a handful of real-but-placeholder traits
   exercising each hook/response, treated as real content (data + tests) until the actual creature
   roster is designed (Phase 4+), then replaced.
-- **Artifacts are NOT in this phase** — the artifact mechanism (slot, infusions, forge, Ore) is
+- **Equipment are NOT in this phase** — the equipment mechanism (slot, infusions, forge, Ore) is
   Phase 8; Phase 3 builds the effect framework they'll plug into.
 - Tests: unit per response type, conditional-passive predicate, status stacking/duration/expiry,
   and **explicit loop-safety** (self-trigger blocked by re-entry guard; a >500 cascade asserts
@@ -216,14 +216,14 @@ the slice breakdown** (no separate Phase 4 brief).
   legibility.
 
 ## Phase 8 — Progression & incremental layers
-- **Facilities**: entrance-hub structures (Gem Forge, Artifact Forge, Fusion Chamber, Soul
+- **Facilities**: entrance-hub structures (Gem Forge, Equipment Forge, Fusion Chamber, Soul
   Altar, Storage/Vault, Biome Atlas) as data; all actions resolve instantly (no timers). Only
-  Gem Forge/Artifact Forge/Fusion Chamber have upgrade tiers (v1: cap-raising only); the rest
+  Gem Forge/Equipment Forge/Fusion Chamber have upgrade tiers (v1: cap-raising only); the rest
   are one-time builds. Includes the Biome Atlas, unlocked once all biomes are discovered.
 - **Fusion**: once per creature (track `hasFused`); result takes identity from parent-1 creature,
   affinity from parent 2, averaged base stats, both innate traits; species-agnostic (but not
   self-fusable); player picks fusion order.
-- Further unlocks and artifact variety. **No prestige, no resets** — progression is
+- Further unlocks and equipment variety. **No prestige, no resets** — progression is
   forward-only. (Masteries were considered and dropped from scope.)
 - This is where the long-term game lives; only meaningful once 1–7 are solid.
 
