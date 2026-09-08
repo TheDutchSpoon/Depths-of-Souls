@@ -13,12 +13,14 @@ const EMBER_LANCE: Spell = {
   name: 'Ember Lance',
   targetShape: 'single',
   spellPower: 0.5,
+  affinity: 'violence',
 }
 const CINDER_NOVA: Spell = {
   id: 'cinder-nova',
   name: 'Cinder Nova',
   targetShape: 'aoe',
   spellPower: 0.3,
+  affinity: 'violence',
 }
 
 function isAttackDeclared(event: { type: string }): event is AttackDeclaredEvent {

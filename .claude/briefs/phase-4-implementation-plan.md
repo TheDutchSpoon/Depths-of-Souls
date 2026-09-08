@@ -71,6 +71,9 @@ src/engine/
                              materializeCreature, enemy script/loadout rolling. Pure, seeded.
   leveling.ts          NEW   scaleStatsToLevel(base, level) (round(base*(1+0.25*(level-1)))),
                              XP curve (xpForNextLevel), pure.
+  curves.ts            NEW   Slice A -- pure depth curves: enemyLevelRange, fightCount,
+                             enemyPartySize (1->6, clamped), RARITY_DRAW_WEIGHT. Engine, not data
+                             (pure functions/constants, no content). Parked-balance placeholders.
   effect-types.ts      EXTEND  new Hook members; EffectResponse grows revive + grant-action-state;
                              deal-damage grows scalingStat; suppress-action grows scope;
                              new passive EffectDef categories: cross-stat, armor-penetration,
@@ -105,7 +108,6 @@ src/data/
     starters.ts          NEW  Slice F -- the 3 starter creatures + the Unicorn
   biomes.ts             NEW  Slice A (shape) / H1-H3 (real entries) -- biome data + spawn pools
   specializations.ts    NEW  Slice F -- Sorcerer/Brute/Shieldbarer + PERK_REGISTRY per spec
-  curves.ts             NEW  Slice A -- floor->level-range curve config, fightCount config
 
 src/state/                    NEW DIRECTORY -- first use in the project
   store.ts             NEW  Slice G -- Zustand store: collection, active party, deepestFloor/
@@ -148,6 +150,7 @@ it, and the one-line mechanism. Cross-reference this table, not the prose, when 
 | Count-scaling (incl. defend-count) | New passive/damage-modifier magnitude source | D | A modifier (`stat-modifier`, `damage-modifier`, or a `deal-damage` response's magnitude) may declare `magnitudeSource: { kind: 'count', of: 'living-allies' \| 'living-allies-of-affinity' \| 'living-allies-of-species' \| 'enemies-with-status' \| 'dead-allies' \| 'self-defend-count' }` instead of a flat number; recomputed at each read, never cached. |
 | Consume-stacks response | Response (+1, → 8) | D | `{ kind: 'consume-stacks', statusId, effect: EffectResponse }`: reads the target's current stack count for `statusId`, removes the status entirely (0 stacks), then executes `effect` with the read count available as its magnitude source (`magnitudeSource: { kind: 'consumed-stacks' }`). |
 | Cheat-death | New passive EffectDef category + resolver hook point | D | `{ category: 'cheat-death', chancePercent }`. Checked inside `applyDamageAndEmit`, at the instant HP would reach 0, **before** `CreatureDied`/`on-death` fire: one seeded RNG roll; on success, `currentHp = 1` instead of 0, no death events, resolution continues as if the hit landed for `finalDamage − 1`... — see Assumption 19 for the exact HP-left semantics. |
+| `Spell.affinity` | Data field (**required**) | A | `Affinity` (one of the five). Every spell carries the affinity its equip-gate keys on: `canEquip(spell, affinity) = spell.affinity === affinity`. First consumer: Slice A's generator rolls cast-role enemies an affinity-matched spell from the biome pool; player equipping (Phase 8) reuses the same gate. Governs **equipping only** — the damage cycle stays keyed on the **caster's** affinity, so adding it left every existing golden byte-identical (only the input spell fixtures gained the field). |
 | Support-spell model | `Spell` extension | E | `Spell.targetSide?: 'enemy' \| 'ally'` (default `'enemy'`, preserving every existing spell byte-identical) and `Spell.payload?: 'damage' \| 'heal' \| 'stat-modifier'` (default `'damage'`). An ally-targeting heal/stat-modifier spell reuses the *existing* `heal`/`apply-stat-modifier` response execution paths, just invoked from Cast instead of a trigger. |
 
 **Response vocabulary after Phase 4: eight top-level kinds** (`deal-damage`, `heal`,
@@ -203,7 +206,10 @@ land first with no rework risk.
   explicit formula (e.g. `min = floor, max = floor + 2 + floor(floor/10)`) clearly commented
   as a placeholder tuned in playtest, not a literal scattered through logic. `fightCount(floor):
   number` — **ASSUMPTION 3**: also parked; a flat placeholder (e.g. `3`) is fine, deterministic
-  and not RNG-rolled per the spec.
+  and not RNG-rolled per the spec. `enemyPartySize(floor): number` — enemy count **scales with
+  depth (1→6, clamped at the 6v6 max)**, a deterministic curve alongside `enemyLevelRange`; exact
+  ramp shape is parked balance (§13). This supersedes the earlier flat "up to 6" reading (decided
+  in review of Slice A).
 - **`generation.ts`**:
   - `biomeForFloor(floor, atlasPins, runSeed): BiomeId` — floors 1–100 fixed sequence
     (`biomes[floor(1..100 as 1-indexed decade) ]`), floor 101+ a **derived seeded draw** (not
@@ -220,7 +226,9 @@ land first with no rework risk.
     `createCombat` owns that, so materialized creatures pass through the exact same fight-start
     HP-init path as any other).
   - `generateFloor(floor, biomeData, runRng): { enemyParty: Creature[] }[]` (one entry per
-    fight, `fightCount(floor)` of them) — for each fight, for each of up to 6 enemy slots: draw
+    fight, `fightCount(floor)` of them) — for each fight, for each of `enemyPartySize(floor)` enemy
+    slots (enemy count **scales with depth, 1→6**, clamped at the 6v6 max — see `curves.ts`; this
+    replaces the earlier flat "up to 6" reading): draw
     a species from the biome's spawn pool **by a per-species `weight` field on the biome data**
     (a data-driven primitive, not a hardcoded uniform draw — **ASSUMPTION 5**: every species
     entry in `biomes.ts` carries an explicit `weight`, defaulting to **equal** across a biome's

@@ -15,6 +15,7 @@ export const CINDER_NOVA: Spell = {
   name: 'Cinder Nova',
   targetShape: 'aoe',
   spellPower: 0.3,
+  affinity: 'violence',
 }
 
 export const CAST_AOE_SCRIPT: Script = {
