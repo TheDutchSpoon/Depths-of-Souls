@@ -244,11 +244,13 @@ function resolveInstanceTarget(
 
 /**
  * Phase 4 Slice C (Proficient Warrior / Annihilate): the living enemies a Splashing actor's
- * main hit against `mainTargetId` should also strike -- computed from `state` as it stood
- * BEFORE the main hit lands (so `mainTargetId` is still among the alive-filtered list
+ * main ATTACK hit against `mainTargetId` should also strike -- computed from `state` as it
+ * stood BEFORE the main hit lands (so `mainTargetId` is still among the alive-filtered list
  * adjacentLivingTargets indexes into; looking this up AFTER the main hit could drop the just-
  * killed main target out of that list and break the adjacency lookup). Empty when the actor
- * has no active Splashing. Annihilate upgrades the set to every OTHER living enemy.
+ * has no active Splashing. Annihilate upgrades the set to every OTHER living enemy. Attacks
+ * only -- brute.md defines Splashing as "attacks deal 100% of their damage to enemies
+ * adjacent to the target"; only executeAttack (below) calls this, never executeCastSingle.
  */
 function splashTargetIds(
   actor: Creature,
@@ -361,7 +363,6 @@ function executeCastSingle(
     if (!resolvedTargetId) break
 
     const thisTargetId = resolvedTargetId
-    const splashIds = splashTargetIds(actor, thisTargetId, working)
     events.push({
       type: 'SpellCast',
       targetShape: 'single',
@@ -377,6 +378,9 @@ function executeCastSingle(
       events,
       cascade,
     ).state
+    // Splashing is an attacks-only mechanic (brute.md: "attacks deal 100% of their damage to
+    // enemies adjacent to the target"; CONVENTIONS' "Splashing / Annihilate" bullet) -- Cast
+    // never splashes, so there is no splash loop here (contrast executeAttack below).
     const offStat = resolveSpellOffStat(actor, spell, powerPercent / 100)
     working = dealDamageWithOffStat(
       actor.id,
@@ -388,21 +392,6 @@ function executeCastSingle(
       events,
       cascade,
     )
-    // Splashing (see executeAttack's matching comment) -- same recomputed offStat, each
-    // splash target's own Defence/affinity/pools, no TriggerFired, no appliesStatus.
-    for (const splashId of splashIds) {
-      if (!findCreature(working, splashId)?.alive) continue
-      working = dealDamageWithOffStat(
-        actor.id,
-        splashId,
-        offStat,
-        'cast',
-        'cast',
-        working,
-        events,
-        cascade,
-      )
-    }
     if (spell.appliesStatus) {
       working = applyStatusIfAlive(
         actor.id,

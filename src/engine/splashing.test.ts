@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from './combat'
 import { makeParty } from './__fixtures__/creatures'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
-import type { CombatEvent } from './types'
+import type { CombatEvent, Spell } from './types'
 import type { Trait } from './effect-types'
 
 // Phase 4 Slice C (Proficient Warrior / Annihilate). Fixture-scoped traits only -- per the
@@ -23,6 +23,14 @@ const ANNIHILATE_TRAIT: Trait = {
   id: 'annihilate-fixture',
   name: 'Annihilate (fixture)',
   effects: [{ category: 'annihilate' }],
+}
+
+const TEST_SPELL: Spell = {
+  id: 'test-single-spell',
+  name: 'Test Bolt',
+  targetShape: 'single',
+  spellPower: 1,
+  affinity: 'vitality',
 }
 
 function damageDealtEvents(
@@ -138,5 +146,35 @@ describe('Splashing (Phase 4 Slice C)', () => {
 
     const dealt = damageDealtEvents(events)
     expect(dealt.map((e) => e.targetId).sort()).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('Splashing is attacks-only -- a single-target Cast produces only the main hit, no splash', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        intelligence: 20,
+        speed: 20,
+        scriptId: 'always-cast',
+        equippedSpells: [TEST_SPELL],
+        innateTraitIds: [SPLASHING_TRAIT.id],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'left', health: 40, defence: 0, speed: 1, scriptId: 'always-wait' },
+      { id: 'middle', health: 10, defence: 0, speed: 3, scriptId: 'always-wait' },
+      { id: 'right', health: 40, defence: 0, speed: 1, scriptId: 'always-wait' },
+    ])
+    const state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      registry(SPLASHING_TRAIT),
+    )
+    const { events } = resolveTurn(state)
+
+    const dealt = damageDealtEvents(events)
+    expect(dealt).toHaveLength(1)
+    expect(dealt[0]?.targetId).toBe('middle') // lowest-hp-enemy pick, main hit only
   })
 })

@@ -232,11 +232,13 @@ export type ProvokeImmunityDef = {
   readonly category: 'provoke-immunity'
 }
 
-/** Proficient Warrior: after a single-target Attack/Cast's main hit resolves, also strike each
+/** Proficient Warrior: after a single-target Attack's main hit resolves, also strike each
  * living enemy ADJACENT to that target (targeting.ts's adjacentLivingTargets) for its own
  * recomputed damage -- own Defence/affinity/pools, never a copy of the main hit's number
- * (ASSUMPTION 15). Upgraded to all-other-living-enemies by a simultaneously-active
- * AnnihilateDef. Never emits TriggerFired -- it's the same action, not a triggered response. */
+ * (ASSUMPTION 15). Attacks only -- brute.md: "attacks deal 100% of their damage to enemies
+ * adjacent to the target"; Cast never splashes. Upgraded to all-other-living-enemies by a
+ * simultaneously-active AnnihilateDef. Never emits TriggerFired -- it's the same action, not
+ * a triggered response. */
 export type SplashingDef = {
   readonly category: 'splashing'
 }

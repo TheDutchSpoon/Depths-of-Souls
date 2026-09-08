@@ -359,9 +359,9 @@ never satisfies this condition — the condition's own RNG-purity is preserved w
 casing the interpreter's lookahead loop).
 
 `src/engine/targeting.ts` — `resolveOffensiveTarget` restructured into the three-step override
-pipeline: Tunnel Vision (`hasProvokeImmunity`) → Confusion (`resolveConfusionRedirect`, a new
-private helper) → Provoke (`resolveProvoke`, the pre-existing logic, unchanged, extracted to its
-own function). **ASSUMPTION 12** (Confusion checked before Provoke): implemented and
+pipeline: Confusion (`resolveConfusionRedirect`, a new private helper) → Tunnel Vision
+(`hasProvokeImmunity`) → Provoke (`resolveProvoke`, the pre-existing logic, unchanged, extracted
+to its own function). **ASSUMPTION 12** (Confusion checked before Provoke): implemented and
 golden-tested — a confused actor's roll can redirect to its own side even with an enemy provoker
 active. New exported `shouldRedirectAoeToAllies` (the AOE case, **ASSUMPTION 13**: one roll per
 AOE instance, wired into `combat.ts`'s `executeCastAoe`) and `adjacentLivingTargets` (**ASSUMPTION
@@ -374,10 +374,11 @@ next living one). An unconfused/non-provoke-immune actor draws exactly the same 
   before freezing the target list, flipping to the caster's own side on a successful roll.
 - New `splashTargetIds(actor, mainTargetId, state)` helper, computed from state as it stood
   **before** the main hit lands (so the main target — possibly about to die — is still present in
-  the alive-filtered list `adjacentLivingTargets` indexes into). Wired into `executeAttack` and
-  `executeCastSingle` right after each instance's main `dealDamage`/`dealDamageWithOffStat` call:
-  loops the (possibly annihilate-upgraded) splash set, recomputing the **same** damage formula
-  (same offStat/spellPower as the main hit) against each target's own Defence/affinity/pools
+  the alive-filtered list `adjacentLivingTargets` indexes into). Wired into `executeAttack` only
+  — **attacks-only**, per `brute.md`'s "attacks deal 100% of their damage to enemies adjacent to
+  the target" (`executeCastSingle` never calls it; see the review-fix note below): loops the
+  (possibly annihilate-upgraded) splash set, recomputing the **same** damage formula (same
+  offStat/spellPower as the main hit) against each target's own Defence/affinity/pools
   (**ASSUMPTION 15**), re-checking aliveness per splash target (an earlier splash hit's own
   damage-path cascade — e.g. a fixture Retaliate — could kill a later one). No `TriggerFired`, no
   spell status-application on splash hits.
@@ -396,7 +397,7 @@ merely its outcome). `hasStatus` extended to also match `turn-order-status`/`fri
 
 ### Tests
 
-333/333 (up from Slice B's 299 — 34 new). Unit coverage per new primitive across
+337/337 (up from Slice B's 299 — 38 new, post-review-fix). Unit coverage per new primitive across
 `effects.test.ts` (the five new checks), `turn-order.test.ts` (position beats raw Speed; both-
 poles-at-once resolves first; multiple same-pole members still Speed-sort within their pole),
 `conditions.test.ts` (acted-before-target: earlier/later in queue, no-targeting, `random-enemy`
@@ -404,18 +405,61 @@ never draws RNG, unresolvable selector), `interpreter.test.ts` (status-immunity 
 suppression: casts freely while immune, still `has-status`, still suppressed without the
 matching immunity), `targeting.test.ts` (the full override pipeline: Tunnel Vision, Confusion at
 100%/0% chance, Confusion-before-Provoke, a Lucidity-immune actor drawing zero Confusion RNG
-while Provoke still applies, `shouldRedirectAoeToAllies`, `adjacentLivingTargets` incl. the
+while Provoke still applies, a Tunnel-Vision-*and*-confused actor still redirecting via Confusion
+— the review-fix regression test, `shouldRedirectAoeToAllies`, `adjacentLivingTargets` incl. the
 dead-slot-neighbor-skip case).
 
-Two new focused-golden files (hand-derived arithmetic in comments, fixture-scoped traits only):
+Two focused-golden files (hand-derived arithmetic in comments, fixture-scoped traits only):
 `splashing.test.ts` (a 3-enemy lineup, Splashing's main hit + two distinctly-recomputed splash
 hits proving no-copy; a lone-enemy no-splash case; a 4-enemy Annihilate case hitting all three
-others despite non-adjacency) and `confusion.test.ts` (end-to-end `executeCastAoe` wiring proof:
-a confused caster's AOE redirects entirely to its own side; an unconfused caster is unaffected).
+others despite non-adjacency; a Cast-produces-no-splash case — the review-fix regression test)
+and `confusion.test.ts` (end-to-end `executeCastAoe` wiring proof: a confused caster's AOE
+redirects entirely to its own side; an unconfused caster is unaffected).
+
+Two committed `__golden__` full-event-log fixture pairs (hand-derived arithmetic, fixture-scoped
+traits/statuses only, added in the post-review pass per design feedback):
+`golden-turn-order-status` (an act-first enemy and an act-last player creature reordering around
+a Speed-sorted two-member "normal" pole spanning both sides — 4 explicit `resolveTurn` steps,
+full round-1 log asserted, including the two on-fight-start `apply-status` firings that plant the
+positions) and `golden-splashing` (the 3-enemy-lineup Attack + two-splash-hit scenario, full
+event log asserted end-to-end through `createCombat`/`resolveTurn`, not just the isolated unit
+assertions `splashing.test.ts` already covered).
 
 Full Phase 1–3 + Slice A/B suite re-verified byte-identical (all pre-existing goldens pass
 unmodified) — confirmed the turn-order/targeting-override restructures are additive no-ops absent
 the new effect categories. `lint` / `format:check` / `build` all clean.
+
+### PR review fixes (design feedback, actioned before merge)
+
+Three items, caught in design review against a corrected `CONVENTIONS.md` (delivered alongside
+the feedback — the brief's own vocabulary table still read the pre-correction shapes and was
+explicitly *not* the thing to code against):
+
+1. **Tunnel Vision was bypassing Confusion, not just Provoke.** `resolveOffensiveTarget`'s
+   original ordering (`hasProvokeImmunity` check first, short-circuiting straight to
+   `resolveNormally`) skipped the Confusion step entirely for a provoke-immune actor — but
+   `brute.md` defines Tunnel Vision as bypassing *only* Provoke's redirect. Fixed by reordering to
+   Confusion first, then gating the Provoke step (not the whole pipeline) on
+   `hasProvokeImmunity`: a confused, provoke-immune actor now still rolls and redirects via
+   Confusion. Byte-identical for every non-confused actor (confirmed: full suite unchanged).
+   Regression test added: a creature carrying both `provoke-immunity` and a 100%
+   `friendly-fire-status` redirects to its own side on a single-target action (parity with the
+   pre-existing AOE-side assertion).
+2. **Splashing was firing on Cast, not just Attack.** `brute.md` defines Splashing as an
+   attacks-only mechanic ("attacks deal 100% of their damage to enemies adjacent to the target"),
+   but the original `executeCastSingle` also ran the splash loop. Removed `splashTargetIds` and
+   the splash loop from `executeCastSingle` entirely; `executeAttack` is unchanged.
+   `SplashingDef`'s doc comment corrected ("single-target Attack/Cast" → "single-target Attack").
+   Annihilate rides on Splashing, so no separate fix was needed there. Regression test added: a
+   Splashing creature's single-target Cast produces exactly one `DamageDealt` (the main hit), no
+   splash.
+3. **Golden coverage gap.** The slice had only focused unit tests for the two largest new
+   mechanisms (turn-order status, Splashing) — no committed full-event-log golden, unlike every
+   other Slice B/C mechanism. Added `golden-turn-order-status` and `golden-splashing` (above).
+
+`npm run test` — 337/337 across 49 files (up from the pre-fix pass's 333/47 — 4 new tests: the two
+regression tests above plus the two new golden files). `lint` / `format:check` / `build`
+re-verified clean after the fix.
 
 ### Notable decisions surfaced during implementation (synced to CONVENTIONS.md)
 

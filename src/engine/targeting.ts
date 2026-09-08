@@ -41,16 +41,17 @@ export function getProvokingMembers(party: readonly Creature[]): readonly Creatu
 
 /**
  * Phase 4 Slice C: the targeting-override pipeline for a single-target offensive action, in
- * pinned order: (1) Tunnel Vision -- if the actor is provoke-immune, skip straight to normal
- * resolution, ignoring enemy Provoke entirely. (2) Confusion -- ASSUMPTION 12: checked BEFORE
- * Provoke, so a confused actor's 50% friendly-fire roll can redirect the action at its own
- * side regardless of whether the enemy side has a provoker; only when the roll doesn't
- * trigger (or the actor isn't confused) does Provoke get a chance to apply. (3) Provoke --
- * the pre-Slice-C mechanism, unchanged: if the opposing side has >=1 provoking member, draws
- * one seeded-RNG index among them and returns that provoker, `resolveNormally` NEVER CALLED
- * in that case (a selector's own RNG draw, e.g. random-enemy, never happens when it would
- * just be discarded); only when no provoker exists does the normal selector/default-target
- * resolution run.
+ * pinned order: (1) Confusion -- ASSUMPTION 12: checked FIRST, so a confused actor's 50%
+ * friendly-fire roll can redirect the action at its own side regardless of whether the enemy
+ * side has a provoker, and regardless of whether the actor is provoke-immune -- Tunnel Vision
+ * (brute.md) is defined as bypassing Provoke's redirect only, not Confusion's, so a confused
+ * Tunnel-Vision creature still rolls Confusion. (2) Tunnel Vision -- if the roll didn't
+ * redirect (or the actor isn't confused) and the actor is provoke-immune, skip straight to
+ * normal resolution, ignoring enemy Provoke entirely. (3) Provoke -- the pre-Slice-C
+ * mechanism, unchanged: if the opposing side has >=1 provoking member, draws one seeded-RNG
+ * index among them and returns that provoker, `resolveNormally` NEVER CALLED in that case (a
+ * selector's own RNG draw, e.g. random-enemy, never happens when it would just be discarded);
+ * only when no provoker exists does the normal selector/default-target resolution run.
  *
  * RNG draws are no longer capped at exactly one (Confusion may draw up to two of its own,
  * always BEFORE any Provoke draw), but each step still draws at most what its own mechanism
@@ -64,10 +65,10 @@ export function resolveOffensiveTarget(
   state: CombatState,
   resolveNormally: () => CreatureId | null,
 ): CreatureId | null {
-  if (hasProvokeImmunity(actor)) return resolveNormally()
-
   const confusion = resolveConfusionRedirect(actor, state)
   if (confusion.redirected) return confusion.targetId
+
+  if (hasProvokeImmunity(actor)) return resolveNormally()
 
   return resolveProvoke(actor, state, resolveNormally)
 }

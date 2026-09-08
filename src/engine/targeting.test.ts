@@ -207,6 +207,29 @@ describe('resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C
     expect(result).toBe(enemy[1]!.id)
   })
 
+  it('Tunnel Vision does NOT bypass Confusion -- a confused, provoke-immune actor still redirects to its own side (parity with the AOE case)', () => {
+    const player = makeParty('player', [
+      { id: 'confused-tv', activeEffects: [provokeImmunity(), confusion(100)] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'provoker', provoking: true }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      rng: createSeededRng(1),
+    })
+
+    let called = false
+    const result = resolveOffensiveTarget(player[0]!, state, () => {
+      called = true
+      return enemy[0]!.id
+    })
+
+    expect(called).toBe(false)
+    // Only living ally is the actor itself -- Confusion still redirects here despite Tunnel
+    // Vision being active; Tunnel Vision only ever bypasses Provoke.
+    expect(result).toBe(player[0]!.id)
+  })
+
   it('a confused actor at 100% chance always redirects to a living ally, never calling resolveNormally', () => {
     const player = makeParty('player', [
       { id: 'confused', activeEffects: [confusion(100)] },
