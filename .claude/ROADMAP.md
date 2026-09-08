@@ -1,7 +1,8 @@
 # Depths of Souls — Roadmap
 
 Build order, designed so each phase produces something runnable and the risky core (the
-pure, deterministic engine) comes first. Don't build content systems before the engine
+pure, deterministic engine) comes first. Each phase ships in **slices**, built and reviewed per
+`.claude/WORKFLOWS.md` (fresh chat per slice; docs-are-the-memory). Don't build content systems before the engine
 skeleton exists.
 
 Phases 0–10 together produce the **start-of-beta build** — the game's state when beta opens,
@@ -175,9 +176,10 @@ are **real, fully-themed, in-game cave biomes** (floors 1–30, each with its ow
 creatures as the player will see them) — "seed" means *first authored*, not placeholder. The
 10-biome progression spine isn't *satisfied* until all 10 are authored across later phases; Phase 4
 proves the systems against real content and demos the loop, it doesn't ship full beta content.
-Ships in **multiple slices + a Phase 4.5 demo**. The systems spine is specified in
-GAME_DESIGN/CONVENTIONS (locked via design grill); the **coding agent's implementation plan owns
-the slice breakdown** (no separate Phase 4 brief).
+Ships in **multiple slices + a Phase 4.5 demo** (see `.claude/WORKFLOWS.md` for the slice
+build/review loop). The systems spine is specified in GAME_DESIGN/CONVENTIONS (locked via design
+grill); the **coding agent's implementation plan owns the slice breakdown** —
+`.claude/briefs/phase-4-implementation-plan.md`.
 
 - Full **6v6** party vs a floor's creatures; **floor-by-floor descent** with **persistent
   depth** (no run reset; a wipe returns the party to the entrance hub and keeps all progress).

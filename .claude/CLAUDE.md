@@ -106,6 +106,7 @@ src/
 
 Detailed conventions: `.claude/CONVENTIONS.md`.
 Roadmap & what to build first: `.claude/ROADMAP.md`.
+How slices get built & reviewed (fresh chat per slice; docs-are-the-memory; kickoff templates): `.claude/WORKFLOWS.md` — read before starting or reviewing any slice.
 `.claude/phases/` = records of what was **built** (written after the fact, one per phase).
 `.claude/briefs/` = forward-looking task **briefs** — the plan/reasoning/guardrails handed to the
 coding agent *before* work starts. Briefs are **kept** as historical artifacts (intent), not

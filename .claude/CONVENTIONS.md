@@ -64,9 +64,21 @@ Engine-vocabulary additions beyond the Grill-1 spine, surfaced while authoring s
 data.
 
 - **`on-[action]` hook family** — `on-attack`, `on-cast`, `on-defend`, `on-provoke` (on-wait
-  omitted). Fire when a creature **takes** the action, once per action, **not** on its resulting
-  damage — so a response that itself attacks/casts does **not** re-fire the hook (no cascade, no
-  loop-guard). Expands the pinned hook set; each needs golden coverage.
+  omitted). Fire **once per action *instance*** (see the action instance-list note below) — a
+  single Attack that resolves as three instances fires `on-attack` three times, once per
+  instance — **not** on the resulting damage. Expands the pinned hook set; each needs golden
+  coverage.
+- **Action instance-list (locked, resolves the "attack again" ambiguity)** — an Attack or Cast
+  resolves as a **list of instances, each carrying a power %**, assembled **once, up front**,
+  from the acting creature's active count/power modifiers, before any instance resolves: base
+  `[100%]`; "an additional time" appends `[100%]`; "attack again for 30%" appends `[30%]`; both
+  together = `[100%, 100%, 30%]` (linear composition — an "additional time" never re-multiplies
+  another entry). The executor then **runs the list**: each entry is a **real action instance**
+  (fires `on-attack`/`on-cast` and everything downstream, per instance) — nothing is spawned
+  mid-resolution, so there is no trigger, no re-entrancy, and no loop-guard involved. This is
+  what distinguishes "attack again for X%" (an instance in the list, fires `on-attack`) from
+  "deal damage equal to X% of Attack" (a plain `deal-damage` response — not an attack, fires
+  nothing) — the wording is the signal.
 - **Grant-action-state response** — a triggered response that sets `defending` / `provoking` on a
   target. Reuses the existing action-state flags and Defend's math/goldens; a general primitive, not
   a per-trait special-case.
@@ -79,8 +91,12 @@ data.
 - **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
   Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5.
 
-### Response vocabulary — now SIX
-Was four; `heal` + `revive` are the two justified new verbs — **hold at six.**
+### Response vocabulary — now EIGHT
+Was four; `heal` + `revive` are the two justified new verbs, **and** `grant-action-state` +
+`consume-stacks` (listed under New primitives below) are responses too — so the true count is
+**eight top-level kinds**: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress-action`,
+`heal`, `revive`, `grant-action-state`, `consume-stacks` (`consume-stacks` wraps one of the others,
+not a ninth). **Hold the line at eight.**
 - **`heal`** — restore HP to a *living* target (self / ally / all-allies via targeting); caps at
   effective max HP (no overheal); distinct from Regen (the over-time status).
 - **`revive`** — return a *dead* creature to its slot at **battle-start baseline + a % of baseline
@@ -371,9 +387,8 @@ the same interpreter, differing only in how they attach and which hooks they use
   **read-time activation predicate** evaluated during `getEffectiveStat` folding (never cached).
 - **Triggered traits** = `{ hook, condition?, response }`. **Response vocabulary (each
   parameterized by target + magnitude): deal-damage, apply-status, apply-stat-modifier,
-  suppress-action, heal, revive** (six — see Phase 4 addenda; heal + revive were the two justified
-  additions to the original four). Breadth = hook × condition × parameter cross-product, not more
-  response types.
+  suppress-action, heal, revive, grant-action-state, consume-stacks** (eight — see Phase 4 addenda).
+  Breadth = hook × condition × parameter cross-product, not more response types.
   The optional `condition?` **reuses the scripting `Condition` union** (declarative data — *not* a
   predicate, unlike the conditional-*passive* which is the one deliberately non-serializable spot),
   evaluated **self-scoped against live state at fire time** (pure, no RNG; a false condition skips
