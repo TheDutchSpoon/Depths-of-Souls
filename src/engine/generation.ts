@@ -11,9 +11,9 @@ import { createCreatureId, type BiomeId } from './ids'
 import { createSeededRng, type SeededRng } from './rng'
 import { scaleStatsToLevel } from './leveling'
 import {
-  ENEMY_PARTY_SIZE,
   RARITY_DRAW_WEIGHT,
   enemyLevelRange,
+  enemyPartySize,
   fightCount,
   type RarityTier,
 } from './curves'
@@ -225,10 +225,11 @@ export function generateFloor(
 ): readonly Fight[] {
   const fights: Fight[] = []
   const { min, max } = enemyLevelRange(floor)
+  const partySize = enemyPartySize(floor)
 
   for (let fightIndex = 0; fightIndex < fightCount(floor); fightIndex++) {
     const enemyParty: Creature[] = []
-    for (let slot = 0; slot < ENEMY_PARTY_SIZE; slot++) {
+    for (let slot = 0; slot < partySize; slot++) {
       const species = weightedPick(biome.speciesPool, (s) => s.weight, runRng)
       const speciesCreature = weightedPick(
         species.creatures,

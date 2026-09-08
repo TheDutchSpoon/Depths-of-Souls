@@ -27,13 +27,19 @@ export function fightCount(floor: number): number {
   return 3
 }
 
-/**
- * ASSUMPTION (Slice A): the brief's "for each fight, for each of up to 6 enemy slots" doesn't
- * pin whether enemy count scales with depth. A flat 6 (the full 6v6 slate) is the simplest
- * reading and matches combat's max party size; not floor-scaled in v1. Revisit if a future
- * design pass wants enemy count to ramp like the level range does.
- */
+/** The ceiling `enemyPartySize` ramps to and clamps at -- combat's max party size (6v6). */
 export const ENEMY_PARTY_SIZE = 6
+
+/**
+ * Decided in review of Slice A, superseding the earlier flat-6 reading of the brief's "up to 6
+ * enemy slots": enemy party size scales with depth, ramping 1 -> ENEMY_PARTY_SIZE and clamping
+ * there -- the same treatment enemyLevelRange already gets, rather than every fight spawning
+ * the full slate from floor 1. Exact ramp shape is parked balance (GAME_DESIGN §13); this is
+ * the simplest monotonic 1->6 placeholder, tuned in playtest.
+ */
+export function enemyPartySize(floor: number): number {
+  return Math.min(ENEMY_PARTY_SIZE, floor)
+}
 
 export type RarityTier = 'common' | 'uncommon' | 'rare'
 

@@ -1,6 +1,6 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slice A done** (A: 253/253 tests; lint/format/build green). Built per
+Status: **in progress — Slice A done** (A: 260/260 tests; lint/format/build green). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
@@ -25,10 +25,14 @@ New files under `src/engine/`:
 - `curves.ts` — `enemyLevelRange(floor)` (ASSUMPTION 2: placeholder `{min: floor, max: floor +
   2 + floor(floor/10)}`) and `fightCount(floor)` (ASSUMPTION 3: flat placeholder `3`,
   deterministic, never rolled), plus two additions beyond the brief's own numbered list:
-  `ENEMY_PARTY_SIZE = 6` (new assumption — the brief's "up to 6 enemy slots" doesn't pin
-  whether enemy count scales with depth; fixed at the full 6v6 slate for now) and
+  `enemyPartySize(floor)` (`ENEMY_PARTY_SIZE = 6` as the ceiling it ramps to and clamps at) and
   `RARITY_DRAW_WEIGHT` (new assumption — GAME_DESIGN §13 parks soul-*gain*-per-rarity but never
   pins spawn-*weight*-per-rarity; a descending placeholder, common 6 / uncommon 3 / rare 1).
+  **`enemyPartySize` was revised in PR review**: the first draft read the brief's "up to 6 enemy
+  slots" as a flat 6 from floor 1; review decided enemy count should scale with depth the same
+  way `enemyLevelRange` does (`min(ENEMY_PARTY_SIZE, floor)`, ramping 1→6 and clamping) rather
+  than spawning the full slate immediately. Both `curves.ts`/`generation.ts` and the two
+  doc-sync files (CONVENTIONS.md, the brief) were updated to match before merge.
 - `generation.ts` — the module itself:
   - `Species`/`SpeciesCreature`/`BiomeData` — the static content **shapes** Slice A ships (real
     content is H1–H3's job). `SpeciesCreature` carries affinity/baseStats/defaultScriptId/
@@ -51,7 +55,7 @@ New files under `src/engine/`:
     (`${speciesCreatureId}-${side}-${slot}`); copies affinity/`defaultScriptId`→`scriptId`/
     innateTraitIds; `currentHp` is a placeholder equal to `baseStats.health` — `createCombat`
     still owns the real fight-start init, so a materialized creature never bypasses it.
-  - `generateFloor(floor, biome, runRng)` — `fightCount(floor)` fights of `ENEMY_PARTY_SIZE`
+  - `generateFloor(floor, biome, runRng)` — `fightCount(floor)` fights of `enemyPartySize(floor)`
     enemies each: per slot, a weighted species draw, a rarity-weighted within-species creature
     draw (`RARITY_DRAW_WEIGHT`), a level draw from `enemyLevelRange(floor)`, then
     `materializeCreature`. A cast-role creature (ASSUMPTION, read narrowly per the brief's own
@@ -90,9 +94,9 @@ suite passing byte-identical. Updated the 6 existing `Spell` literals: `data/spe
 (`EMBER_LANCE`/`CINDER_NOVA` → violence, `VENOM_BOLT` → instinct — flavor picks, mechanically
 inert), `combat.test.ts`, `interpreter.test.ts`, `golden-aoe-cast.fixture.ts`.
 
-**Docs follow-up flagged, not yet actioned**: CONVENTIONS' "Spell affinity & equip-gating"
-section reads as pre-existing infrastructure; it should note the predicate is actually
-implemented as of Phase 4 Slice A, so a future slice doesn't assume it predates this work.
+**Docs follow-up — actioned in review**: CONVENTIONS' "Spell affinity & equip-gating" bullet now
+notes the predicate is implemented as of Phase 4 Slice A (its first consumer), so a later slice
+doesn't assume it predates this work.
 
 ### Tests
 
@@ -102,7 +106,9 @@ implemented as of Phase 4 Slice A, so a future slice doesn't assume it predates 
   formula.
 - `curves.test.ts` — `enemyLevelRange` table-driven against the placeholder formula (floors 1,
   9, 10, 25, 100) plus a never-inverts sanity check; `fightCount`'s flat-and-deterministic
-  contract; `RARITY_DRAW_WEIGHT`'s descending ordering; `ENEMY_PARTY_SIZE`.
+  contract; `RARITY_DRAW_WEIGHT`'s descending ordering; `ENEMY_PARTY_SIZE`; `enemyPartySize`
+  table-driven (floor 1→1, 3→3, 6→6, 7→6 clamped, 100→6 clamped), a never-exceeds-the-ceiling
+  check, and a non-decreasing-with-depth check.
 - `generation.test.ts` — `canEquip` table-driven; `materializeCreature`'s purity, level-baking,
   id derivation, field copying, HP placeholder, and default/supplied `equippedSpells`;
   `biomeForFloor`'s fixed 1–100 sequence (table-driven across all 10 decades), atlas-pin
@@ -110,22 +116,40 @@ implemented as of Phase 4 Slice A, so a future slice doesn't assume it predates 
   of call order** (drawing unrelated floors first doesn't perturb a later re-draw of the same
   floor — the concrete test of ASSUMPTION 4's "not an advancing stream" claim), and the
   invariant-violation throw for missing biome data; `generateFloor`'s fight-count/party-size
-  shape, real-seed determinism (two independent `createSeededRng(42)` runs deep-equal), level
-  bounds, and **two full hand-derived constant-RNG traces** — a `{ next: () => V }` stub makes
-  every weighted pick and level roll pure arithmetic instead of a random outcome, so the
-  *entire* generated floor (all fights, all slots) becomes predictable and independently
-  verifiable by hand (documented inline: `V = 0.3` resolves to the common non-caster at level 1
-  everywhere; `V = 0.9` resolves to the caster at level 3, loaded with its one affinity-matched
-  spell, everywhere).
+  shape (now `enemyPartySize(floor)`, not the flat ceiling), real-seed determinism (two
+  independent `createSeededRng(42)` runs deep-equal), level bounds, and **two full hand-derived
+  constant-RNG traces at floor 6** (the shallowest floor where `enemyPartySize` reaches the full
+  6-slot ceiling, so every slot per fight is still exercised) — a `{ next: () => V }` stub makes
+  every weighted pick and level roll pure arithmetic instead of a random outcome, so the *entire*
+  generated floor (all fights, all slots) becomes predictable and independently verifiable by
+  hand (documented inline: `V = 0.3` resolves to the common non-caster at level 6 everywhere;
+  `V = 0.9` resolves to the caster at level 8, loaded with its one affinity-matched spell,
+  everywhere).
 - `data/biomes.test.ts` — the 10-slot shape, unique ids, empty-pool validity, `BIOMES_BY_ID`
   indexing.
 
+### PR review amendment: `enemyPartySize` replaces the flat `ENEMY_PARTY_SIZE` in `generateFloor`
+
+Reviewed and decided before merge: enemy count should **scale with depth** (`enemyPartySize(floor)
+= min(ENEMY_PARTY_SIZE, floor)`, ramping 1→6 and clamping) rather than every fight spawning the
+full 6-slot slate starting at floor 1 — the same treatment `enemyLevelRange` already gets.
+`ENEMY_PARTY_SIZE` stays exported as the ceiling the curve clamps to; `generateFloor`'s slot loop
+now bounds on `enemyPartySize(floor)`. The two hand-derived `generateFloor` constant-RNG traces
+moved from floor 1 (which now yields only 1 enemy per fight) to floor 6 (the shallowest floor at
+the full ceiling), re-deriving their expected stats at the new level roll (level 6/8 instead of
+1/3) so every slot stays exercised. `curves.test.ts` gained the `enemyPartySize` coverage above.
+Both doc-sync files were updated in the same pass: CONVENTIONS' "Generation & the run layer"
+bullet list gained an `enemyPartySize(floor)` entry, and the brief's module map / Slice A prose /
+engine-vocabulary delta table were corrected to match (`curves.ts` was also confirmed correctly
+placed under `src/engine/`, not `src/data/` — the brief's module map had listed it under `data/`
+by mistake; only the doc needed fixing).
+
 ### Verification performed
 
-- `npm run test` — **253/253** pass across 39 files (+46 over Phase 3.5's 207: exactly the new
-  test count in `leveling.test.ts`/`curves.test.ts`/`generation.test.ts`/`biomes.test.ts`). All
-  prior goldens pass byte-identical — the `Spell.affinity` addition touches no formula and no
-  event shape.
+- `npm run test` — **260/260** pass across 39 files (+53 over Phase 3.5's 207: the
+  `leveling.test.ts`/`curves.test.ts`/`generation.test.ts`/`biomes.test.ts` additions, including
+  the post-review `enemyPartySize` cases). All prior goldens pass byte-identical — the
+  `Spell.affinity` addition touches no formula and no event shape.
 - `npm run lint` / `npm run format:check` / `npm run build` — clean.
 
 ### Deliberately out of scope for Slice A (later slices)

@@ -3,6 +3,7 @@ import {
   ENEMY_PARTY_SIZE,
   RARITY_DRAW_WEIGHT,
   enemyLevelRange,
+  enemyPartySize,
   fightCount,
 } from './curves'
 
@@ -46,5 +47,32 @@ describe('RARITY_DRAW_WEIGHT', () => {
 describe('ENEMY_PARTY_SIZE', () => {
   it('matches combat max party size (6v6)', () => {
     expect(ENEMY_PARTY_SIZE).toBe(6)
+  })
+})
+
+describe('enemyPartySize', () => {
+  it.each([
+    [1, 1],
+    [3, 3],
+    [6, 6],
+    [7, 6],
+    [100, 6],
+  ])('floor %i -> %i (ramps 1->ENEMY_PARTY_SIZE, then clamps)', (floor, expected) => {
+    expect(enemyPartySize(floor)).toBe(expected)
+  })
+
+  it('never exceeds ENEMY_PARTY_SIZE', () => {
+    for (const floor of [1, 5, 50, 500]) {
+      expect(enemyPartySize(floor)).toBeLessThanOrEqual(ENEMY_PARTY_SIZE)
+    }
+  })
+
+  it('is non-decreasing across increasing depth', () => {
+    const floors = [1, 2, 3, 4, 5, 6, 7, 20]
+    for (let i = 1; i < floors.length; i++) {
+      expect(enemyPartySize(floors[i]!)).toBeGreaterThanOrEqual(
+        enemyPartySize(floors[i - 1]!),
+      )
+    }
   })
 })
