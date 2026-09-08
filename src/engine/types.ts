@@ -18,6 +18,11 @@ export interface Spell {
   readonly name: string
   readonly targetShape: 'single' | 'aoe'
   readonly spellPower: number
+  /** Governs equipping only (canEquip(spell, creature) = spell.affinity === creature.affinity,
+   * CONVENTIONS "Spell affinity & equip-gating") -- the damage affinity cycle stays keyed on
+   * the CASTER's affinity, never the spell's. First consumer: Phase 4 Slice A's generation
+   * module rolls cast-role enemies an affinity-matched spell from their biome's spell pool. */
+  readonly affinity: Affinity
   /** Applied to the target(s) after damage lands, if the target survives. */
   readonly appliesStatus?: StatusSpec
 }

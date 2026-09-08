@@ -8,6 +8,7 @@ export const EMBER_LANCE: Spell = {
   name: 'Ember Lance',
   targetShape: 'single',
   spellPower: 0.5,
+  affinity: 'violence',
 }
 
 // The "30%-Intelligence" spell anchor from GAME_DESIGN.md §7's own example.
@@ -16,6 +17,7 @@ export const CINDER_NOVA: Spell = {
   name: 'Cinder Nova',
   targetShape: 'aoe',
   spellPower: 0.3,
+  affinity: 'violence',
 }
 
 // Slice C: a spell-applied status, per CONVENTIONS' "Spell gains an optional status-application."
@@ -24,6 +26,7 @@ export const VENOM_BOLT: Spell = {
   name: 'Venom Bolt',
   targetShape: 'single',
   spellPower: 0.4,
+  affinity: 'instinct',
   appliesStatus: { statusId: 'poison', duration: 3 },
 }
 
