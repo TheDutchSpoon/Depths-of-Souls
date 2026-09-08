@@ -1,7 +1,8 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
 Status: **in progress — Slices A–D done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
-C: 333/333 tests; D: 368/368 tests, post-review-amendment; lint/format/build green throughout). Built per
+C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; lint/format/build green
+throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
@@ -667,12 +668,14 @@ pool alongside every other active source (which stay `magnitude ** count`, uncha
   `golden-defend-count` (unchanged data, `accumulation: 'multiplicative'` now stated explicitly)
   is kept as the companion pin for the default mode, per the design owner's "keep a multiplicative
   fixture too" instruction.
-- Also reverted an unrelated line this PR had touched: the top-of-file Status summary's Slice C
-  test count, corrected from 333 to 337 to match the Slice C section's own post-fix number — the
-  design agent flagged this as an edit to what should be an immutable outcome archive, so it's
-  reverted back to 333 here (the Slice C section's prose already carries the accurate post-fix
-  337 number; only the compact header summary reads 333, unchanged from how Slice C's own PR left
-  it).
+- The top-of-file Status summary's Slice C test count reads **337/337** (matching the Slice C
+  section's own post-fix number and the B→C→D chain: 299 → 337 → 368, i.e. 337 + 31 = 368). An
+  earlier pass in this same PR reverted that header number back to the stale pre-fix 333, worried
+  the correction was an improper edit to an otherwise-immutable outcome archive; on a second look,
+  333 was simply residue from Slice C's own PR never updating its header to match its body's
+  post-review-fix count, and leaving it stale made the record internally inconsistent (the header
+  and body disagreeing on Slice C's own final count). Corrected to 337 here, done once, in this
+  same PR.
 
 `npm run test` — **368/368** across 55 files (up from the pre-amendment pass's 363/53 — 5 new: 4
 unit tests in `effects.test.ts`'s new `accumulation: 'additive'` describe block, plus the one new
