@@ -64,9 +64,21 @@ Engine-vocabulary additions beyond the Grill-1 spine, surfaced while authoring s
 data.
 
 - **`on-[action]` hook family** — `on-attack`, `on-cast`, `on-defend`, `on-provoke` (on-wait
-  omitted). Fire when a creature **takes** the action, once per action, **not** on its resulting
-  damage — so a response that itself attacks/casts does **not** re-fire the hook (no cascade, no
-  loop-guard). Expands the pinned hook set; each needs golden coverage.
+  omitted). Fire **once per action *instance*** (see the action instance-list note below) — a
+  single Attack that resolves as three instances fires `on-attack` three times, once per
+  instance — **not** on the resulting damage. Expands the pinned hook set; each needs golden
+  coverage.
+- **Action instance-list (locked, resolves the "attack again" ambiguity)** — an Attack or Cast
+  resolves as a **list of instances, each carrying a power %**, assembled **once, up front**,
+  from the acting creature's active count/power modifiers, before any instance resolves: base
+  `[100%]`; "an additional time" appends `[100%]`; "attack again for 30%" appends `[30%]`; both
+  together = `[100%, 100%, 30%]` (linear composition — an "additional time" never re-multiplies
+  another entry). The executor then **runs the list**: each entry is a **real action instance**
+  (fires `on-attack`/`on-cast` and everything downstream, per instance) — nothing is spawned
+  mid-resolution, so there is no trigger, no re-entrancy, and no loop-guard involved. This is
+  what distinguishes "attack again for X%" (an instance in the list, fires `on-attack`) from
+  "deal damage equal to X% of Attack" (a plain `deal-damage` response — not an attack, fires
+  nothing) — the wording is the signal.
 - **Grant-action-state response** — a triggered response that sets `defending` / `provoking` on a
   target. Reuses the existing action-state flags and Defend's math/goldens; a general primitive, not
   a per-trait special-case.
