@@ -33,6 +33,34 @@ export interface Spell {
    * exercised by any v1 damage-dealing content, a forward reference for Slice E's non-damage
    * payloads). */
   readonly scalingStat?: Stat | 'none'
+  /** Phase 4 Slice E (Support-spell model): who this spell targets. Absent = 'enemy', the
+   * pre-Slice-E default -- every existing spell (EMBER_LANCE/CINDER_NOVA/VENOM_BOLT) is
+   * unaffected. 'ally' exempts the cast from the Provoke/Confusion targeting-override pipeline
+   * entirely (GAME_DESIGN §7: "Provoke applies only to enemy-targeting offensive actions;
+   * ally-targeting actions... are unaffected" -- ASSUMPTION: Confusion is bundled into that same
+   * exemption here, not just Provoke, since Confusion's roll is scoped to a "harmful action"
+   * per CONVENTIONS and a support cast on an ally isn't one) and, for 'aoe' shape, freezes the
+   * caster's own living side instead of the opposing side (mirroring the enemy-AOE freeze rule).
+   */
+  readonly targetSide?: 'enemy' | 'ally'
+  /** Phase 4 Slice E: what a successful cast actually does to its target(s). Absent = 'damage',
+   * the pre-Slice-E default (byte-identical -- every existing spell keeps going through
+   * dealDamageWithOffStat). 'heal' reuses the existing `heal` response-execution path directly
+   * (applyHeal), magnitude = the SAME scalingStat/spellPower-derived OffStat a damage spell would
+   * compute (resolveSpellOffStat), just applied as HP restored instead of HP removed. 'stat-modifier'
+   * reuses `apply-stat-modifier`'s execution (applyStatModifier) via the spell's own `statModifier`
+   * field below -- a permanent-for-the-fight buff/debuff, GAME_DESIGN §5's "stat-buff (self/ally)
+   * and stat-debuff (enemy)... permanent stat-modifiers (last the fight)". Neither payload emits
+   * TriggerFired -- Cast is the trigger context here, a chosen action, not a reaction. */
+  readonly payload?: 'damage' | 'heal' | 'stat-modifier'
+  /** Required iff payload is 'stat-modifier' (a resolver-invariant error otherwise, mirroring
+   * deal-damage's mutually-exclusive-modes check). The flat stat/factor pair applied via
+   * applyStatModifier -- NOT derived from scalingStat/spellPower (a stat buff's magnitude is an
+   * authored constant, not a scaled hit), so instance-list powerPercent scaling doesn't apply to
+   * it either (an "additional cast instance" would apply the SAME full-strength modifier again,
+   * stacking -- stat-modifier is uncapped/additive-across-sources by design, CONVENTIONS' Unified
+   * effect framework §1). */
+  readonly statModifier?: { readonly stat: Stat; readonly factor: number }
 }
 
 // ---- Creature ----

@@ -82,9 +82,18 @@ function resolveRuleAction(
       }
       const targeting = rule.targeting
       if (!targeting) return null
-      const targetId = resolveOffensiveTarget(creature, state, () =>
-        resolveTargetSelector(targeting, creature, state),
-      )
+      // Phase 4 Slice E: an ally-targeting spell (Spell.targetSide === 'ally') skips the
+      // Provoke/Confusion targeting-override pipeline entirely -- resolveOffensiveTarget's whole
+      // contract is "enemy-targeting offensive action" (GAME_DESIGN §7: "Provoke applies only
+      // to enemy-targeting offensive actions; ally-targeting actions... are unaffected";
+      // ASSUMPTION: bundling Confusion into the same exemption here, since its roll is likewise
+      // scoped to a "harmful action" per CONVENTIONS, which a support cast on an ally isn't).
+      const targetId =
+        spell.targetSide === 'ally'
+          ? resolveTargetSelector(targeting, creature, state)
+          : resolveOffensiveTarget(creature, state, () =>
+              resolveTargetSelector(targeting, creature, state),
+            )
       return targetId
         ? { kind: 'cast', targetShape: 'single', gemSlot: rule.action.gemSlot, targetId }
         : null

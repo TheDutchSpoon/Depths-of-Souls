@@ -782,8 +782,14 @@ target, and "is provoking". (Fight-*context* conditions like "is this a boss fig
 floor/depth" are deliberately deferred past v1.)
 
 **v1 targeting selectors** (orthogonal to conditions — any condition pairs with any target):
-lowest-HP enemy, highest-HP enemy, highest-Attack enemy, highest-Intelligence enemy, lowest-HP
-ally, random enemy, self.
+lowest-HP enemy, highest-HP enemy, highest-Attack enemy, highest-Intelligence enemy, random enemy,
+lowest-HP ally, highest-HP ally, highest-Attack ally, highest-Intelligence ally, random ally, self.
+The ally set mirrors the enemy set one-for-one (Phase 4 Slice E completed it alongside the
+support-spell model — support spells and ally-targeting trait responses need to pick *which* ally,
+not only "the weakest one"). "ally" always **includes the acting creature**, so every ally selector
+always resolves. *(Support-specific selectors with no enemy mirror — e.g. highest-Defence ally to
+buff the tank — are **deferred** to when the seed buff spells are authored (Slices H1–H3 / F), so the
+set is driven by what the content actually wants rather than guessed up front.)*
 
 *(A "provoking enemy" selector was considered and **dropped** for v1: because Provoke is a blanket
 post-selection override on all single-target offensive actions (§7), explicitly selecting the
@@ -843,9 +849,18 @@ Design constraints:
 - The UI must surface **equipped-slot contents** when authoring a Cast rule — a slot-referencing
   rule fires different spells on different creatures; template-vs-creature context makes this
   non-trivial.
-- A template's TARGETING clause may **mismatch** a creature's equipped spell shape (single-target
-  selector on an AOE slot). Runtime tolerates it (AOE ignores the stray selector); the UI must
-  handle the mismatch — warn / adapt / type slots by shape (TBD).
+- A template's TARGETING clause may **mismatch** a creature's equipped spell in two ways; the UI
+  must handle both — warn / adapt / type slots by shape and side (TBD):
+  - **Shape mismatch** (single-target selector on an AOE slot): runtime tolerates it — AOE ignores
+    the stray selector and hits its full frozen set.
+  - **Side mismatch** (an enemy-side selector on an **ally-targeting** spell, or vice versa —
+    ally-targeting spells exist as of the Phase 4 Slice E support-spell model): runtime resolves the
+    selector **literally**, so a support spell under an enemy selector will land on an enemy (and
+    vice versa) — the same already-tolerated behavior the enemy side has always had (e.g. a `self`
+    selector on an offensive spell hits self). No engine special-case corrects it; the UI is the
+    single fence, at author time. (Now that the ally selector set is complete — §8 above — a
+    correctly-authored support spell always has an on-side selector to use, so this is purely an
+    authoring-error guard, not a missing capability.)
 
 ## 9. Player specializations
 

@@ -1,8 +1,9 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–D done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
-C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; lint/format/build green
-throughout). Built per
+Status: **in progress — Slices A–E done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
+post-design-feedback (ally target-selector completion); lint/format/build green throughout). Built
+per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
@@ -721,7 +722,189 @@ directly expressible — see the amendment above) and `StatModifierDef`'s deferr
 host (H1, bundled with a real `speciesId` iff Swarmhive is stat-shaped — see the H1 hand-off note
 above); the Zustand store (G); real biome content (H1–H3); integration (I).
 
+## Slice E — Support-spell model
+
+Built and tested against **fixture** spells/scripts only (no `src/data/` content lands here; the
+real ~50-spell per-affinity seed set, including its heal/buff entries, is H1–H3's job — this slice
+only builds and proves the mechanism, per the brief's own "Data" bullet). Every row tagged `E` in
+the brief's engine-vocabulary delta table.
+
+### What was built
+
+`src/engine/types.ts`: `Spell` gains three optional fields, all absent-by-default and therefore
+byte-identical for every existing spell (`EMBER_LANCE`/`CINDER_NOVA`/`VENOM_BOLT` — confirmed by
+the full pre-existing suite passing unmodified):
+- `targetSide?: 'enemy' | 'ally'` (default `'enemy'`).
+- `payload?: 'damage' | 'heal' | 'stat-modifier'` (default `'damage'`).
+- `statModifier?: { stat: Stat; factor: number }` — required (a resolver-invariant throw
+  otherwise) iff `payload === 'stat-modifier'`. **ASSUMPTION (own, not literally shaped by the
+  brief)**: a stat-modifier payload's magnitude is this authored flat `{stat, factor}` pair, NOT
+  derived from `scalingStat`/`spellPower` the way damage/heal are — a permanent-for-fight buff's
+  strength is an authored constant (GAME_DESIGN §5's "stat-buff... permanent stat-modifiers"), not
+  a scaled hit. A direct consequence: instance-list `powerPercent` scaling (Slice B) does not apply
+  to it either — an "additional cast instance" would reapply the SAME full-strength modifier again
+  (uncapped/additive-across-sources by design, CONVENTIONS' Unified effect framework §1), not a
+  partial-power one.
+
+`src/engine/resolution.ts`: `applyHeal` and `applyStatModifier` (both pre-existing, private,
+Regen/triggered-stat-modifier internals) are now `export`ed — a heal/stat-modifier-payload Cast
+(`combat.ts`) calls them directly, the same "reuse the response's execution path, not through a
+trigger" shape the brief specifies (Cast is the trigger context here, a chosen action; neither
+call emits `TriggerFired`). No other change to either function.
+
+`src/engine/combat.ts`:
+- New `applyCastPayload(actor, spell, targetId, powerPercent, ...)` — the payload router shared by
+  both Cast executors: `'damage'` (default) is the pre-Slice-E `dealDamageWithOffStat` call,
+  unchanged; `'heal'` calls `applyHeal` with the SAME `resolveSpellOffStat`-derived magnitude a
+  damage spell would compute, just applied as HP restored (so it inherits the existing
+  scalingStat/spellPower/`'none'` semantics for free); `'stat-modifier'` calls `applyStatModifier`
+  with the spell's own `statModifier` field (throws if absent, mirroring `deal-damage`'s
+  mutual-exclusivity invariant style) and `spell.id` as `sourceTraitId` (for
+  effect-instance-id/debugging legibility, matching a trait's own id in that role elsewhere).
+- `resolveInstanceTarget` gains a `targetSide` parameter (default `'enemy'`, so `executeAttack`'s
+  own call site — v1 has no ally-targeting Attack — is untouched): the post-death instance-list
+  fallback (ASSUMPTION 31, Slice B) now draws its default target from the ACTOR'S OWN side for an
+  ally-targeting Cast instance, mirroring `resolveOffensiveTarget`'s enemy-only contract simply not
+  applying to ally casts.
+- `executeCastSingle` reads `spell.targetSide` once and threads it into `resolveInstanceTarget`;
+  its per-instance body now calls `applyCastPayload` instead of a hardcoded `dealDamageWithOffStat`
+  call. `executeCastAoe` branches its per-instance target-party resolution on `targetSide`: `'ally'`
+  freezes the caster's own living side UNCONDITIONALLY (no Confusion roll at all — see the
+  ASSUMPTION below), `'enemy'` keeps the exact pre-Slice-E Confusion-then-opposing-side logic
+  unchanged; both freeze via the same `filter(alive).map(id)` pattern as before (unified into a
+  `resolvedParty` local rather than duplicating the freeze line).
+
+`src/engine/scripting-types.ts` / `src/engine/target-selectors.ts` — **the v1 ally target-selector
+set, completed (design-feedback addition, folded into this same slice)**. The support-spell model
+lets a spell/trait-response target the ally side, but v1 only shipped two ally picks (`self`,
+`lowest-hp-ally`) against the enemy side's full five — not enough to actually choose WHICH ally a
+buff/heal lands on. Added the one-for-one mirror of the four non-trivial enemy selectors:
+`highest-hp-ally`, `highest-attack-ally`, `highest-intelligence-ally`, `random-ally` (11-member
+`TargetSelector` union total). All four reuse the EXACT enemy-mirror machinery over
+`livingAlliesOf(...)` instead of `livingEnemiesOf(...)` — same `pickExtremum`/shared tie-break for
+the three extremums, same seeded-RNG-draw shape for `random-ally`. Implemented in all three
+consumer functions: `targetSelectorHasCandidate` (unconditionally true — "ally" always includes
+the acting creature, so it's alive by construction), `resolveTargetSelector` (the real resolution),
+and `peekTargetSelector` (Slice C's acted-before-target lookahead: the three extremum ally
+selectors resolve normally, `random-ally` returns `null` without drawing, exactly like
+`random-enemy` — interpreter lookahead must never consume RNG). Each function's `never`-typed
+`default` case meant `tsc` pointed at every site needing the four new kinds; no other switch over
+`TargetSelector` exists in the engine, so no other file needed a change. **No side-mismatch guard
+was added** — a template pairing an enemy selector with an ally-targeting spell (or vice versa)
+resolves the selector literally, the same already-tolerated behavior the enemy side has always had
+(e.g. a `self` selector on an offensive spell hits self); the Phase 6 authoring UI is the intended
+fence (GAME_DESIGN §8), and with the ally set now complete a correctly-authored support spell
+always has an on-side selector to use. **The interpreter needed no change at all** — its
+ally-cast branch (above) already resolves through `resolveTargetSelector`, so the four new
+selectors work through it as-is; support-spells.test.ts's own end-to-end test proves this (below).
+Support-specific selectors with no enemy mirror (e.g. `highest-defence-ally` for tank-buffs) are
+deliberately **out of scope** — deferred to whichever slice first authors real buff spells that
+actually need one (H1–H3/F), so the set follows real content rather than a guess.
+
+`src/engine/interpreter.ts`: `resolveRuleAction`'s single-target Cast branch now checks
+`spell.targetSide` before resolving: `'ally'` calls `resolveTargetSelector` directly; `'enemy'`
+(default) keeps the pre-Slice-E `resolveOffensiveTarget(...)` wrapping, unchanged. `actionNeedsTargeting`/`isRuleValid`/`targetSelectorHasCandidate` are untouched — a single-target
+Cast (either side) already needed a `rule.targeting` selector before this slice, and v1's existing
+selector set already partitions by pool via its OWN kind (`self`/`lowest-hp-ally` → ally pool,
+the rest → enemy pool via `livingAlliesOf`/`livingEnemiesOf`) — no new `TargetSelector` variant was
+needed for this slice's own fixture/golden content.
+
+**ASSUMPTION (own, ASSUMPTION-tagged for review — the one genuine judgment call in this slice)**:
+the brief's own text only names Provoke ("Provoke's targeting override does not apply" — a direct
+quote from GAME_DESIGN §7) as exempt for ally-targeting actions. This slice bundles Confusion into
+the SAME exemption — an ally cast never even reaches `resolveOffensiveTarget` (single-target) or
+`shouldRedirectAoeToAllies` (AOE), so neither Provoke NOR Confusion is consulted, and — load-bearing
+for RNG-purity — **no RNG is drawn at all** for an ally-targeting cast's targeting step, confirmed
+by a dedicated unit test wrapping `state.rng` in a call-counter (`support-spells.test.ts`).
+Reasoning: CONVENTIONS' own Confusion description scopes its roll to a bearer's "harmful action, "
+and a support cast on one's own side is definitionally never one — bundling both exemptions under
+one "this isn't an enemy-targeting offensive action" gate is simpler than special-casing Confusion
+to still roll (redirecting an already-ally cast to... the same ally side) for no player-visible
+effect. Flagged for explicit sign-off since GAME_DESIGN's own §7 text only literally names Provoke.
+
+### Data (fixture-only, per the brief)
+
+No `src/data/` content lands in this slice. Test-only fixtures: `HEAL_SPELL`/
+`HEAL_LOWEST_ALLY_SCRIPT` (`golden-heal-cast.fixture.ts` — a fixture-authored ally-selector script,
+since no stock script targets allies) and `BUFF_SPELL` (`golden-buff-cast.fixture.ts`), plus two
+inline fixture spells in `support-spells.test.ts`.
+
+### Tests
+
+385/385 (up from Slice D's 368 — 17 new: 4 from the support-spell model's own work below, 13 from
+the ally target-selector completion). `support-spells.test.ts` —
+targeted unit coverage for the two mechanisms the brief's Tests bullet calls out beyond the
+goldens: an ally-targeting single Cast resolves via the ally pool and ignores an active enemy
+Provoke entirely (a regression-proving setup: an unbypassed `resolveOffensiveTarget` would have
+the provoking foe hijack the target to ITSELF); an ally-targeting AOE Cast freezes the caster's own
+living side and draws **zero** RNG even at a rigged 100%-chance Confusion (the call-counter-wrapped
+`rng` proves the roll is never consulted, not merely that its outcome wouldn't have mattered).
+
+Two hand-derived (`node -e` calculator) golden pairs, both fixture-scoped:
+`golden-heal-cast` (ENEMY→WOUNDED damage first via ordinary combat, establishing a real
+below-max-HP ally state without patching `currentHp` post-`createCombat`; HEALER's
+`lowest-hp-ally`-scripted Cast then heals WOUNDED, landing exactly at its effective max HP — the
+"no overheal" clamp rule falls out naturally rather than needing a separate synthetic case; WOUNDED
+then kills the enemy on its own turn to close the fight) and `golden-buff-cast` (an ally-targeting
+AOE `stat-modifier` Cast emits `StatModifierApplied` for BOTH living allies in slot order — the
+caster itself included, per "ally" always including the acting creature — before ALLY closes the
+fight with an ordinary Attack).
+
+**Ally target-selector completion — its own 13 new tests**, all in `target-selectors.test.ts`
+except the last: `ALL_SELECTORS`'s existing parameterized candidacy/resolution table grew from 7
+to 11 entries (+4 free cases); `highest-hp-ally` tie-broken resolution; `highest-attack-ally`/
+`highest-intelligence-ally` compared via `getEffectiveStat` (mirroring the enemy pair's own test);
+a dedicated case proving `highest-attack-ally` reads EFFECTIVE Attack (a lower-base ally carrying a
+×3 stat-modifier still wins over a higher-base unbuffed one); the shared tie-break on an exact
+stat tie, ally-side; `random-ally` resolving to a pool member and advancing `state.rng` by exactly
+one draw (mirroring `random-enemy`'s own test); `targetSelectorHasCandidate` never advancing
+`state.rng` for `random-ally`; `peekTargetSelector` resolving the three extremum ally selectors
+normally; `peekTargetSelector` never drawing RNG for `random-ally`, returning `null`. Plus one
+end-to-end test in `support-spells.test.ts`: an ally-targeting single-target stat-modifier Cast
+scripted with `highest-attack-ally` (three player creatures of differing Attack) lands its
+`StatModifierApplied` on the correct (highest-Attack) ally — proving the interpreter's existing
+ally-cast branch needed no change to pick up the four new selectors.
+
+Full Phase 1–3 + Slice A–D suite re-verified byte-identical (all pre-existing goldens pass
+unmodified) — confirmed the `Spell`/`resolveInstanceTarget`/Cast-executor/interpreter changes AND
+the ally-selector-set completion are additive no-ops: no existing content references the four new
+selectors, and the two `TargetSelector`-consuming switches' `never`-typed default cases mean `tsc`
+would have caught any missed call site. `lint` / `format:check` / `build` all clean.
+
+### Notable decisions surfaced during implementation (flag for review before Slice F)
+
+- **Confusion bundled into the same ally-cast exemption as Provoke** (the ASSUMPTION above) — the
+  brief's own quoted text names only Provoke; needs explicit sign-off since it's a scope
+  interpretation, not a literal instruction.
+- **`stat-modifier` payload's magnitude is an authored flat `{stat, factor}`, not derived from
+  `scalingStat`/`spellPower`** — and is therefore also NOT scaled by instance-list `powerPercent`.
+  Neither the brief nor CONVENTIONS pins this explicitly; the alternative (deriving a buff's
+  strength from the caster's own Intelligence) had no textual support and would make a permanent
+  stat-modifier's authored balance number caster-dependent, which nothing else in the unified
+  effect framework does for `stat-modifier` (§1: "params: stat, factor; no per-stat
+  special-casing").
+- **`applyHeal`/`applyStatModifier` exported as-is, no signature change** — both already took
+  exactly the `(sourceId, targetId, amount/factor, state, events)` shape a direct (non-trigger)
+  Cast-time call needed; no new wrapper function was needed.
+- **Ally target-selector completion, folded into this same slice on design-agent review** — the
+  support-spell model shipped with only 2 of the enemy side's 5 selectors mirrored on the ally
+  side (`self`/`lowest-hp-ally`), which wasn't enough to actually choose WHICH ally a buff/heal
+  targets. This is the **second** time an ally-side gap surfaced late in this slice (first as the
+  side-mismatch-guard question the doc-sync pass resolved, now as this real functionality gap) —
+  flagged by the design agent as worth a proactive pass over the full ally-targeting/trait-response
+  vocabulary before Slice F/H content design starts, to catch any other "enemy has it, ally
+  doesn't" asymmetries ahead of implementation rather than mid-slice. Worth doing before Slice F's
+  kickoff.
+
+### Deliberately out of scope for Slice E (later slices)
+
+Specializations/perks/starters/the Unicorn's real content, incl. the real per-spec spell loadouts
+that will actually USE `targetSide`/`payload` in anger (F); the Zustand store (G); the real
+~50-spell per-affinity seed set incl. real heal/buff spells (H1–H3, per GAME_DESIGN §5's "Vitality
+is the primary healer/Regen home"); integration (I).
+
 ## Next
 
-Slice E — the support-spell model (`Spell.targetSide`/`payload`, ally/self targeting, heal and
-stat-modifier payloads via Cast). See `.claude/briefs/phase-4-implementation-plan.md`.
+Slice F — specializations, perks, starters & the Unicorn (`data/specializations.ts`, the
+player-level perk-effect instantiation model, the three starter creatures, the scripted-intro
+encounter). See `.claude/briefs/phase-4-implementation-plan.md`.
