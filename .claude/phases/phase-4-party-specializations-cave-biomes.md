@@ -1,7 +1,7 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–B done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
-lint/format/build green throughout). Built per
+Status: **in progress — Slices A–C done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+C: 333/333 tests; lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
@@ -314,7 +314,136 @@ but ally-targeting/heal/stat-modifier payloads are E's own work); specialization
 the Unicorn's real content (F — this slice only built and proved the `revive`/`grant-action-state`
 *mechanisms* against fixtures); the Zustand store (G); real biome content (H1–H3); integration (I).
 
+## Slice C — Targeting, turn-order & status-immunity primitives
+
+Built and tested against **fixture** traits/statuses only (no `src/data/` content lands here;
+real per-species content — Web, Blindclaws, Confusion, Splashing, etc. — is H1–H3/F's job). Every
+row tagged `C` in the brief's engine-vocabulary delta table.
+
+### What was built
+
+`src/engine/effect-types.ts` — six new categories:
+- Four new permanent-for-fight passive `EffectDef` categories, structurally identical to
+  `armor-penetration`/`cross-stat` (never surfaced as a status, gathered read-time, consulted at
+  each mechanism's own site): `status-immunity` (`{ statusId }`, Clear Mind/Aggressive/Lucidity),
+  `provoke-immunity` (Tunnel Vision, no params), `splashing` and `annihilate` (Proficient
+  Warrior's two halves, no params — **interpretation**: modeled as passives per Slice F's
+  ASSUMPTION 21 perk-instantiation mechanism, not as runtime status instances, despite
+  CONVENTIONS' "New statuses" list naming Splashing informally there).
+- Two new **passively-read** `StatusDef` categories (never hook-fired, unlike
+  `condition-status`/`damage-modifier` — read directly at their consumer's call site instead):
+  `turn-order-status` (`{ statusId, cap, position: 'first' | 'last' }`, Web/Blindclaws) and
+  `friendly-fire-status` (`{ statusId, cap, chancePercent }`, Confusion). Both extend
+  `ActiveEffect`/`StatusDef`; `hasStatus`, `applyStatus`'s existing-instance lookup, and
+  `combat.ts`'s round-end snapshot/decrement/expire sweep were all extended to recognize the two
+  new categories alongside the existing pair, so they apply/refresh/stack/decrement/expire on the
+  same schedule as any other status and still satisfy `has-status`.
+
+`src/engine/turn-order.ts` — `buildTurnQueue` rewritten to partition living combatants into an
+act-first pole / normal group / act-last pole (each internally Speed-sorted with the existing
+tie-break), concatenated first→normal→last. **ASSUMPTION 9** (both poles active at once → first
+wins): implemented and golden-tested. With no `turn-order-status` effects present, both poles are
+empty and the output is byte-identical to the pre-Slice-C single-group sort (confirmed: the full
+prior suite passes unmodified). **Web's break-free roll was deliberately NOT built** — see
+CONVENTIONS' "turn-order status" bullet for why, and the open item for H1.
+
+`src/engine/scripting-types.ts` / `conditions.ts` — `ActedBeforeTargetCondition` (`{ kind:
+'acted-before-target' }`) added to the `Condition` union. `evaluateCondition` gains an optional
+4th parameter, `ruleTargeting?: TargetSelector` (the interpreter's own call site now passes
+`rule.targeting`; the trigger-condition call site in `resolution.ts`'s `fireHook` passes nothing,
+so this condition is always false there — a documented, deliberate limitation, consistent with
+the existing self/global-scoped `Condition` note). **ASSUMPTION 11** resolved via a new
+`peekTargetSelector` (`target-selectors.ts`): RNG-free for every selector kind except
+`random-enemy`, which returns `null` instead of drawing (so a rule targeted at `random-enemy`
+never satisfies this condition — the condition's own RNG-purity is preserved without special-
+casing the interpreter's lookahead loop).
+
+`src/engine/targeting.ts` — `resolveOffensiveTarget` restructured into the three-step override
+pipeline: Tunnel Vision (`hasProvokeImmunity`) → Confusion (`resolveConfusionRedirect`, a new
+private helper) → Provoke (`resolveProvoke`, the pre-existing logic, unchanged, extracted to its
+own function). **ASSUMPTION 12** (Confusion checked before Provoke): implemented and
+golden-tested — a confused actor's roll can redirect to its own side even with an enemy provoker
+active. New exported `shouldRedirectAoeToAllies` (the AOE case, **ASSUMPTION 13**: one roll per
+AOE instance, wired into `combat.ts`'s `executeCastAoe`) and `adjacentLivingTargets` (**ASSUMPTION
+14**: alive-filtered, slot-ordered neighbors — a dead slot-neighbor is skipped in favor of the
+next living one). An unconfused/non-provoke-immune actor draws exactly the same RNG as before
+(zero extra draws) — confirmed by the full prior suite passing byte-identical.
+
+`src/engine/combat.ts`:
+- `executeCastAoe`'s target-side resolution now runs `shouldRedirectAoeToAllies` once per instance
+  before freezing the target list, flipping to the caster's own side on a successful roll.
+- New `splashTargetIds(actor, mainTargetId, state)` helper, computed from state as it stood
+  **before** the main hit lands (so the main target — possibly about to die — is still present in
+  the alive-filtered list `adjacentLivingTargets` indexes into). Wired into `executeAttack` and
+  `executeCastSingle` right after each instance's main `dealDamage`/`dealDamageWithOffStat` call:
+  loops the (possibly annihilate-upgraded) splash set, recomputing the **same** damage formula
+  (same offStat/spellPower as the main hit) against each target's own Defence/affinity/pools
+  (**ASSUMPTION 15**), re-checking aliveness per splash target (an earlier splash hit's own
+  damage-path cascade — e.g. a fixture Retaliate — could kill a later one). No `TriggerFired`, no
+  spell status-application on splash hits.
+
+`src/engine/interpreter.ts` — `isActionSuppressed` now skips a `condition-status` suppression
+whose `statusId` the creature is immune to (`hasStatusImmunity`, from `effects.ts`) before
+checking scope — a Clear-Mind-immune creature carrying Silenced still reads as `has-status:
+silenced` (untouched) but casts freely, per "immunity suppresses the effect, not the
+application."
+
+`src/engine/effects.ts` — five new read-time helpers, same scan-and-filter shape as the existing
+gatherers: `hasStatusImmunity`, `hasProvokeImmunity`, `hasSplashing`, `hasAnnihilate`,
+`activeFriendlyFireStatus` (the last excludes an immune bearer's own friendly-fire-status,
+so an immune creature's Confusion roll — including its RNG draw — never happens at all, not
+merely its outcome). `hasStatus` extended to also match `turn-order-status`/`friendly-fire-status`.
+
+### Tests
+
+333/333 (up from Slice B's 299 — 34 new). Unit coverage per new primitive across
+`effects.test.ts` (the five new checks), `turn-order.test.ts` (position beats raw Speed; both-
+poles-at-once resolves first; multiple same-pole members still Speed-sort within their pole),
+`conditions.test.ts` (acted-before-target: earlier/later in queue, no-targeting, `random-enemy`
+never draws RNG, unresolvable selector), `interpreter.test.ts` (status-immunity vs scoped
+suppression: casts freely while immune, still `has-status`, still suppressed without the
+matching immunity), `targeting.test.ts` (the full override pipeline: Tunnel Vision, Confusion at
+100%/0% chance, Confusion-before-Provoke, a Lucidity-immune actor drawing zero Confusion RNG
+while Provoke still applies, `shouldRedirectAoeToAllies`, `adjacentLivingTargets` incl. the
+dead-slot-neighbor-skip case).
+
+Two new focused-golden files (hand-derived arithmetic in comments, fixture-scoped traits only):
+`splashing.test.ts` (a 3-enemy lineup, Splashing's main hit + two distinctly-recomputed splash
+hits proving no-copy; a lone-enemy no-splash case; a 4-enemy Annihilate case hitting all three
+others despite non-adjacency) and `confusion.test.ts` (end-to-end `executeCastAoe` wiring proof:
+a confused caster's AOE redirects entirely to its own side; an unconfused caster is unaffected).
+
+Full Phase 1–3 + Slice A/B suite re-verified byte-identical (all pre-existing goldens pass
+unmodified) — confirmed the turn-order/targeting-override restructures are additive no-ops absent
+the new effect categories. `lint` / `format:check` / `build` all clean.
+
+### Notable decisions surfaced during implementation (synced to CONVENTIONS.md)
+
+- The exact category names/shapes for all six new effect primitives (the brief named mechanisms,
+  not authoring shapes, matching the pattern from Slice B's `action-instance`).
+- Splashing/Annihilate modeled as permanent passive `EffectDef`s, not runtime status instances —
+  reasoned from Slice F's own ASSUMPTION 21 (perks are player-level `EffectDef`s, instantiated the
+  same way innate traits are), since CONVENTIONS' "New statuses" list names Splashing informally
+  there and could be read either way.
+- Turn-order-status/friendly-fire-status as a **third read pattern** for `StatusDef`: passively
+  read at a dedicated consumer site (`buildTurnQueue`, the targeting pipeline), neither hook-fired
+  like `condition-status` nor pool-read-everywhere like `damage-modifier`.
+- **Web's break-free roll is explicitly deferred, not built** — the brief's own ASSUMPTION 10
+  offered two competing shapes and flagged it for review; building either prematurely risked a 9th
+  response kind or a speculative field ahead of H1's real content. **Needs a decision before H1's
+  kickoff.**
+- `acted-before-target`'s RNG-free `peekTargetSelector` (returns `null`, never draws, for
+  `random-enemy`) as the concrete resolution of ASSUMPTION 11's "resolved first, no RNG" framing.
+
+### Deliberately out of scope for Slice C (later slices)
+
+Resource/counter primitives incl. `magnitudeSource`/count-scaling/consume-stacks/cheat-death (D);
+the support-spell model (E); specializations/perks/starters/the Unicorn's real content incl.
+Splashing/Annihilate/Tunnel Vision's actual perk-tree wiring (F); the Zustand store (G); real
+biome content incl. Web/Blindclaws/Confusion's actual status definitions (H1–H3 — **H1 needs the
+break-free decision above before authoring Web**); integration (I).
+
 ## Next
 
-Slice C — targeting, turn-order & status-immunity primitives. See
-`.claude/briefs/phase-4-implementation-plan.md`.
+Slice D — resource & counter primitives (`magnitudeSource`, count-scaling, consume-stacks,
+cheat-death). See `.claude/briefs/phase-4-implementation-plan.md`.
