@@ -1,8 +1,9 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
 Status: **in progress — Slices A–E done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
-C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 372/372 tests;
-lint/format/build green throughout). Built per
+C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
+post-design-feedback (ally target-selector completion); lint/format/build green throughout). Built
+per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
@@ -773,6 +774,33 @@ call emits `TriggerFired`). No other change to either function.
   unchanged; both freeze via the same `filter(alive).map(id)` pattern as before (unified into a
   `resolvedParty` local rather than duplicating the freeze line).
 
+`src/engine/scripting-types.ts` / `src/engine/target-selectors.ts` — **the v1 ally target-selector
+set, completed (design-feedback addition, folded into this same slice)**. The support-spell model
+lets a spell/trait-response target the ally side, but v1 only shipped two ally picks (`self`,
+`lowest-hp-ally`) against the enemy side's full five — not enough to actually choose WHICH ally a
+buff/heal lands on. Added the one-for-one mirror of the four non-trivial enemy selectors:
+`highest-hp-ally`, `highest-attack-ally`, `highest-intelligence-ally`, `random-ally` (11-member
+`TargetSelector` union total). All four reuse the EXACT enemy-mirror machinery over
+`livingAlliesOf(...)` instead of `livingEnemiesOf(...)` — same `pickExtremum`/shared tie-break for
+the three extremums, same seeded-RNG-draw shape for `random-ally`. Implemented in all three
+consumer functions: `targetSelectorHasCandidate` (unconditionally true — "ally" always includes
+the acting creature, so it's alive by construction), `resolveTargetSelector` (the real resolution),
+and `peekTargetSelector` (Slice C's acted-before-target lookahead: the three extremum ally
+selectors resolve normally, `random-ally` returns `null` without drawing, exactly like
+`random-enemy` — interpreter lookahead must never consume RNG). Each function's `never`-typed
+`default` case meant `tsc` pointed at every site needing the four new kinds; no other switch over
+`TargetSelector` exists in the engine, so no other file needed a change. **No side-mismatch guard
+was added** — a template pairing an enemy selector with an ally-targeting spell (or vice versa)
+resolves the selector literally, the same already-tolerated behavior the enemy side has always had
+(e.g. a `self` selector on an offensive spell hits self); the Phase 6 authoring UI is the intended
+fence (GAME_DESIGN §8), and with the ally set now complete a correctly-authored support spell
+always has an on-side selector to use. **The interpreter needed no change at all** — its
+ally-cast branch (above) already resolves through `resolveTargetSelector`, so the four new
+selectors work through it as-is; support-spells.test.ts's own end-to-end test proves this (below).
+Support-specific selectors with no enemy mirror (e.g. `highest-defence-ally` for tank-buffs) are
+deliberately **out of scope** — deferred to whichever slice first authors real buff spells that
+actually need one (H1–H3/F), so the set follows real content rather than a guess.
+
 `src/engine/interpreter.ts`: `resolveRuleAction`'s single-target Cast branch now checks
 `spell.targetSide` before resolving: `'ally'` calls `resolveTargetSelector` directly; `'enemy'`
 (default) keeps the pre-Slice-E `resolveOffensiveTarget(...)` wrapping, unchanged. `actionNeedsTargeting`/`isRuleValid`/`targetSelectorHasCandidate` are untouched — a single-target
@@ -803,7 +831,8 @@ inline fixture spells in `support-spells.test.ts`.
 
 ### Tests
 
-372/372 (up from Slice D's 368 — 4 new: 2 unit tests, 2 golden pairs). `support-spells.test.ts` —
+385/385 (up from Slice D's 368 — 17 new: 4 from the support-spell model's own work below, 13 from
+the ally target-selector completion). `support-spells.test.ts` —
 targeted unit coverage for the two mechanisms the brief's Tests bullet calls out beyond the
 goldens: an ally-targeting single Cast resolves via the ally pool and ignores an active enemy
 Provoke entirely (a regression-proving setup: an unbypassed `resolveOffensiveTarget` would have
@@ -821,9 +850,26 @@ AOE `stat-modifier` Cast emits `StatModifierApplied` for BOTH living allies in s
 caster itself included, per "ally" always including the acting creature — before ALLY closes the
 fight with an ordinary Attack).
 
+**Ally target-selector completion — its own 13 new tests**, all in `target-selectors.test.ts`
+except the last: `ALL_SELECTORS`'s existing parameterized candidacy/resolution table grew from 7
+to 11 entries (+4 free cases); `highest-hp-ally` tie-broken resolution; `highest-attack-ally`/
+`highest-intelligence-ally` compared via `getEffectiveStat` (mirroring the enemy pair's own test);
+a dedicated case proving `highest-attack-ally` reads EFFECTIVE Attack (a lower-base ally carrying a
+×3 stat-modifier still wins over a higher-base unbuffed one); the shared tie-break on an exact
+stat tie, ally-side; `random-ally` resolving to a pool member and advancing `state.rng` by exactly
+one draw (mirroring `random-enemy`'s own test); `targetSelectorHasCandidate` never advancing
+`state.rng` for `random-ally`; `peekTargetSelector` resolving the three extremum ally selectors
+normally; `peekTargetSelector` never drawing RNG for `random-ally`, returning `null`. Plus one
+end-to-end test in `support-spells.test.ts`: an ally-targeting single-target stat-modifier Cast
+scripted with `highest-attack-ally` (three player creatures of differing Attack) lands its
+`StatModifierApplied` on the correct (highest-Attack) ally — proving the interpreter's existing
+ally-cast branch needed no change to pick up the four new selectors.
+
 Full Phase 1–3 + Slice A–D suite re-verified byte-identical (all pre-existing goldens pass
-unmodified) — confirmed the `Spell`/`resolveInstanceTarget`/Cast-executor/interpreter changes are
-additive no-ops absent the three new optional fields. `lint` / `format:check` / `build` all clean.
+unmodified) — confirmed the `Spell`/`resolveInstanceTarget`/Cast-executor/interpreter changes AND
+the ally-selector-set completion are additive no-ops: no existing content references the four new
+selectors, and the two `TargetSelector`-consuming switches' `never`-typed default cases mean `tsc`
+would have caught any missed call site. `lint` / `format:check` / `build` all clean.
 
 ### Notable decisions surfaced during implementation (flag for review before Slice F)
 
@@ -840,6 +886,15 @@ additive no-ops absent the three new optional fields. `lint` / `format:check` / 
 - **`applyHeal`/`applyStatModifier` exported as-is, no signature change** — both already took
   exactly the `(sourceId, targetId, amount/factor, state, events)` shape a direct (non-trigger)
   Cast-time call needed; no new wrapper function was needed.
+- **Ally target-selector completion, folded into this same slice on design-agent review** — the
+  support-spell model shipped with only 2 of the enemy side's 5 selectors mirrored on the ally
+  side (`self`/`lowest-hp-ally`), which wasn't enough to actually choose WHICH ally a buff/heal
+  targets. This is the **second** time an ally-side gap surfaced late in this slice (first as the
+  side-mismatch-guard question the doc-sync pass resolved, now as this real functionality gap) —
+  flagged by the design agent as worth a proactive pass over the full ally-targeting/trait-response
+  vocabulary before Slice F/H content design starts, to catch any other "enemy has it, ally
+  doesn't" asymmetries ahead of implementation rather than mid-slice. Worth doing before Slice F's
+  kickoff.
 
 ### Deliberately out of scope for Slice E (later slices)
 

@@ -19,6 +19,12 @@ export function targetSelectorHasCandidate(
     case 'self':
       return true
     case 'lowest-hp-ally':
+    case 'highest-hp-ally':
+    case 'highest-attack-ally':
+    case 'highest-intelligence-ally':
+    case 'random-ally':
+      // Phase 4 Slice E: always true -- "ally" includes the acting creature itself, which is
+      // alive by construction whenever this is evaluated (mirrors lowest-hp-ally's own contract).
       return livingAlliesOf(creature, state).length > 0
     case 'lowest-hp-enemy':
     case 'highest-hp-enemy':
@@ -50,6 +56,36 @@ export function resolveTargetSelector(
         pickExtremum(livingAlliesOf(creature, state), (c) => c.currentHp, 'asc')?.id ??
         null
       )
+    // Phase 4 Slice E: the one-for-one ally mirror of the four non-trivial enemy selectors
+    // below, reusing the exact same pickExtremum/tie-break machinery over livingAlliesOf
+    // instead of livingEnemiesOf.
+    case 'highest-hp-ally':
+      return (
+        pickExtremum(livingAlliesOf(creature, state), (c) => c.currentHp, 'desc')?.id ??
+        null
+      )
+    case 'highest-attack-ally':
+      return (
+        pickExtremum(
+          livingAlliesOf(creature, state),
+          (c) => getEffectiveStat(c, 'attack'),
+          'desc',
+        )?.id ?? null
+      )
+    case 'highest-intelligence-ally':
+      return (
+        pickExtremum(
+          livingAlliesOf(creature, state),
+          (c) => getEffectiveStat(c, 'intelligence'),
+          'desc',
+        )?.id ?? null
+      )
+    case 'random-ally': {
+      const pool = livingAlliesOf(creature, state)
+      if (pool.length === 0) return null
+      const index = Math.floor(state.rng.next() * pool.length)
+      return pool[index]?.id ?? null
+    }
     case 'lowest-hp-enemy':
       return (
         pickExtremum(livingEnemiesOf(creature, state), (c) => c.currentHp, 'asc')?.id ??
@@ -94,13 +130,14 @@ export function resolveTargetSelector(
  * (see scripting-types.ts's ActedBeforeTargetCondition doc). Every selector kind but
  * random-enemy is already RNG-free in resolveTargetSelector -- this delegates to it unchanged
  * for those, and returns null for random-enemy rather than drawing (there is no way to "peek"
- * a random pick without consuming randomness, and lookahead must never do that).
+ * a random pick without consuming randomness, and lookahead must never do that). Phase 4 Slice E:
+ * random-ally follows the exact same rule, for the same reason.
  */
 export function peekTargetSelector(
   selector: TargetSelector,
   creature: Creature,
   state: CombatState,
 ): CreatureId | null {
-  if (selector.kind === 'random-enemy') return null
+  if (selector.kind === 'random-enemy' || selector.kind === 'random-ally') return null
   return resolveTargetSelector(selector, creature, state)
 }

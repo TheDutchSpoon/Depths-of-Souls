@@ -152,3 +152,62 @@ describe('executeCastAoe -- ally-targeting AOE Cast (Phase 4 Slice E)', () => {
     expect(rng.calls).toBe(0)
   })
 })
+
+// Design-agent addendum (Phase 4 Slice E): the v1 ally target-selector set was completed
+// (highest-hp/highest-attack/highest-intelligence/random-ally, mirroring the enemy set) alongside
+// this slice's own support-spell model. target-selectors.test.ts covers the selectors themselves
+// in isolation; this is the end-to-end proof that a real ally-targeting Cast, scripted with one of
+// the new selectors, actually lands its payload on the selector's pick.
+describe('ally-targeting Cast end-to-end -- highest-attack-ally (Phase 4 Slice E addendum)', () => {
+  it('a stat-modifier buff scripted with highest-attack-ally lands on the highest-Attack ally', () => {
+    const BUFF_SINGLE_SPELL: Spell = {
+      id: 'test-buff-single',
+      name: 'Test Buff Single',
+      targetShape: 'single',
+      spellPower: 1,
+      affinity: 'vitality',
+      targetSide: 'ally',
+      payload: 'stat-modifier',
+      statModifier: { stat: 'defence', factor: 2 },
+    }
+    const script: Script = {
+      id: 'test-buff-highest-attack-ally',
+      rules: [
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'cast', gemSlot: 0 },
+          targeting: { kind: 'highest-attack-ally' },
+        },
+      ],
+    }
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        attack: 1,
+        defence: 10,
+        speed: 30,
+        scriptId: script.id,
+        equippedSpells: [BUFF_SINGLE_SPELL],
+      },
+      { id: 'weak', attack: 5, defence: 10, speed: 5 },
+      { id: 'strong', attack: 30, defence: 10, speed: 1 },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', speed: 1, scriptId: 'always-wait' }])
+    const scripts = new Map([...STOCK_SCRIPTS_BY_ID, [script.id, script] as const])
+    const state = createCombat(player, enemy, 1, scripts)
+
+    const { events } = resolveTurn(state)
+
+    const spellCast = events.find((e) => e.type === 'SpellCast')
+    expect(spellCast).toMatchObject({ targetShape: 'single', targetId: player[2]!.id })
+
+    const statModApplied = events.find((e) => e.type === 'StatModifierApplied')
+    expect(statModApplied).toMatchObject({
+      targetId: player[2]!.id,
+      stat: 'defence',
+      factor: 2,
+      effectiveBefore: 10,
+      effectiveAfter: 20,
+    })
+  })
+})

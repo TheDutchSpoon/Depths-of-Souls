@@ -93,13 +93,29 @@ export type Condition =
   | ActedBeforeTargetCondition
 
 // ---- Target selectors ----
-// The exact 7-member v1 set from GAME_DESIGN §8.
+// The v1 set from GAME_DESIGN §8: the 5-member enemy set (lowest/highest-hp, highest-attack,
+// highest-intelligence, random) plus `self` shipped in Phase 2; Phase 4 Slice E completed the
+// one-for-one ally mirror (highest-hp/highest-attack/highest-intelligence/random-ally alongside
+// the already-existing lowest-hp-ally) so ally-targeting spells/trait responses (the Slice E
+// support-spell model) can pick WHICH ally, not only "the weakest one" -- 11 members total.
 
 export interface SelfSelector {
   readonly kind: 'self'
 }
 export interface LowestHpAllySelector {
   readonly kind: 'lowest-hp-ally'
+}
+export interface HighestHpAllySelector {
+  readonly kind: 'highest-hp-ally'
+}
+export interface HighestAttackAllySelector {
+  readonly kind: 'highest-attack-ally'
+}
+export interface HighestIntelligenceAllySelector {
+  readonly kind: 'highest-intelligence-ally'
+}
+export interface RandomAllySelector {
+  readonly kind: 'random-ally'
 }
 export interface LowestHpEnemySelector {
   readonly kind: 'lowest-hp-enemy'
@@ -120,6 +136,10 @@ export interface RandomEnemySelector {
 export type TargetSelector =
   | SelfSelector
   | LowestHpAllySelector
+  | HighestHpAllySelector
+  | HighestAttackAllySelector
+  | HighestIntelligenceAllySelector
+  | RandomAllySelector
   | LowestHpEnemySelector
   | HighestHpEnemySelector
   | HighestAttackEnemySelector
