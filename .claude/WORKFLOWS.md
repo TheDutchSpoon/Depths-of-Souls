@@ -17,7 +17,8 @@ stale decisions silently outliving their correction.
 ```
 Phase <X> — Slice <Y: name>. Build ONLY this slice.
 
-Before writing anything, read on `main`:
+Before writing anything, read:
+- .claude/CLAUDE.md
 - .claude/briefs/phase-<X>-implementation-plan.md (this slice's section + the
   engine-vocabulary delta + the Assumptions checklist)
 - .claude/CONVENTIONS.md and .claude/GAME_DESIGN.md (the spec you build against —
