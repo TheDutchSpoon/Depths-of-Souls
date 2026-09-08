@@ -91,8 +91,12 @@ data.
 - **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
   Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5.
 
-### Response vocabulary — now SIX
-Was four; `heal` + `revive` are the two justified new verbs — **hold at six.**
+### Response vocabulary — now EIGHT
+Was four; `heal` + `revive` are the two justified new verbs, **and** `grant-action-state` +
+`consume-stacks` (listed under New primitives below) are responses too — so the true count is
+**eight top-level kinds**: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress-action`,
+`heal`, `revive`, `grant-action-state`, `consume-stacks` (`consume-stacks` wraps one of the others,
+not a ninth). **Hold the line at eight.**
 - **`heal`** — restore HP to a *living* target (self / ally / all-allies via targeting); caps at
   effective max HP (no overheal); distinct from Regen (the over-time status).
 - **`revive`** — return a *dead* creature to its slot at **battle-start baseline + a % of baseline
@@ -383,9 +387,8 @@ the same interpreter, differing only in how they attach and which hooks they use
   **read-time activation predicate** evaluated during `getEffectiveStat` folding (never cached).
 - **Triggered traits** = `{ hook, condition?, response }`. **Response vocabulary (each
   parameterized by target + magnitude): deal-damage, apply-status, apply-stat-modifier,
-  suppress-action, heal, revive** (six — see Phase 4 addenda; heal + revive were the two justified
-  additions to the original four). Breadth = hook × condition × parameter cross-product, not more
-  response types.
+  suppress-action, heal, revive, grant-action-state, consume-stacks** (eight — see Phase 4 addenda).
+  Breadth = hook × condition × parameter cross-product, not more response types.
   The optional `condition?` **reuses the scripting `Condition` union** (declarative data — *not* a
   predicate, unlike the conditional-*passive* which is the one deliberately non-serializable spot),
   evaluated **self-scoped against live state at fire time** (pure, no RNG; a false condition skips

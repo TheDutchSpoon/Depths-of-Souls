@@ -87,7 +87,7 @@ only the starter creature exists (species sits below the ≥3-creature minimum o
 
 - **Sorcerer starter** — **Wit** affinity, high Intelligence. Trait: grants one spell as a
   permanent extra gem + 50% on-turn-end to cast a random equipped spell.
-- **Brute starter** — high Attack. Trait: `on-attack → strike the same target again for 100% Attack`
+- **Brute starter** — high Attack. Trait: **Attack resolves one additional instance** (Attack executes twice at 100% — each a *real attack* firing `on-attack`; same target as the first, default-target fallback if it died). An **instance-list** modifier, not an on-attack trigger.
   (default-target fallback if it died).
 - **Shieldbarer starter** — high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide; permanent-for-fight, so repeated provokes stack). *(The old `on-provoke → grant self defending` trait became the Shieldbarer's **Shield up** perk.)*
 
@@ -157,9 +157,10 @@ Power seam: elevated **level** (a few above the floor's range, via the curve) + 
 adds. Exact stats/numbers are parked balance.
 
 ## Cumulative new mechanics (for the Phase-4 systems manifest)
-- **Response vocab 4 → 6:** add **`heal`** (restore HP to a living target; caps at max; no
-  overheal; distinct from Regen) and **`revive`** (return a *dead* creature at baseline + % HP —
-  see death-reset rule). Heal and revive are the two justified new verbs — hold at six.
+- **Response vocab 4 → 8:** add **`heal`** (restore HP to a living target; caps at max; no
+  overheal; distinct from Regen), **`revive`** (return a *dead* creature at baseline + % HP — see
+  death-reset rule), and — already-present-but-now-counted — **`grant-action-state`** and
+  **`consume-stacks`**. Eight top-level response kinds; hold the line at eight.
 - **Flow:** **scripted-intro encounter** (a rigged fight with a story outcome instead of wipe→hub).
 - Statuses: **Sleep** (breaks-on-damage suppress), **Glow** (stacking resource), **turn-order**
   (act first *or* last — two-way primitive; **Web** = act-last consumer + 10%/turn break-free),

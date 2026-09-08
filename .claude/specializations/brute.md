@@ -4,8 +4,10 @@
 force. (Contrast: Sorcerer = affinity-flexible caster, Shieldbarer = Defence/provoke.) All content
 stays reachable by every spec.
 
-**Starter:** high Attack. Trait: `on-attack → strike the same target again for 100% Attack`
-(default-target fallback if it died).
+**Starter:** high Attack. Trait: **Attack resolves one additional instance** — Attack executes
+twice at 100%, each a *real attack* firing `on-attack` (same target as the first, default-target
+fallback if it died). An **instance-list** modifier (not an on-attack trigger), consistent with
+Flurry.
 
 **Perk rules:** effect-framework effect-carriers, combat-only; flat pool; spec valid iff
 Σ(maxLevel × costPerLevel) === **1000**.
