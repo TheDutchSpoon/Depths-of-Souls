@@ -746,8 +746,10 @@ function applyFlatDamage(
   )
 }
 
-/** Regen: a flat, stack-scaled heal, clamped to effective max Health -- no auto-heal past it. */
-function applyHeal(
+/** Regen: a flat, stack-scaled heal, clamped to effective max Health -- no auto-heal past it.
+ * Exported as of Phase 4 Slice E: a heal-payload Cast (combat.ts) calls this directly, the same
+ * "not through a trigger" precedent already applied to apply-stat-modifier below. */
+export function applyHeal(
   sourceId: CreatureId,
   targetId: CreatureId,
   amount: number,
@@ -847,7 +849,10 @@ export function applyStatus(
   return working
 }
 
-function applyStatModifier(
+/** Exported as of Phase 4 Slice E: a stat-modifier-payload Cast (combat.ts) calls this directly
+ * (sourceTraitId = the spell's own id, for effect-instance-id/debugging legibility) -- the same
+ * "reuse the response's execution path, not through a trigger" precedent as heal above. */
+export function applyStatModifier(
   sourceId: CreatureId,
   targetId: CreatureId,
   stat: Stat,

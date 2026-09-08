@@ -11,6 +11,8 @@ import {
 } from './effects'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import {
+  applyHeal,
+  applyStatModifier,
   applyStatus,
   dealDamage,
   dealDamageWithOffStat,
@@ -228,18 +230,27 @@ function buildInstanceList(
  * (the selector is not re-run per instance) -- except when that target has since died, which
  * falls back to the normal default-target selection (matching the Brute starter's own wording).
  * Returns null once no living target remains (nothing further in the list can resolve).
+ *
+ * `targetSide` (Phase 4 Slice E, default 'enemy' -- Attack's own call site never passes it,
+ * since v1 has no ally-targeting Attack) picks which party the post-death fallback default draws
+ * from: the opposing side for an ordinary offensive instance, or the actor's OWN side for a
+ * support-spell instance -- mirrors resolveOffensiveTarget's enemy-only contract not applying to
+ * ally casts (GAME_DESIGN §7).
  */
 function resolveInstanceTarget(
   actor: Creature,
   previousTargetId: CreatureId | null,
   state: CombatState,
+  targetSide: 'enemy' | 'ally' = 'enemy',
 ): CreatureId | null {
   if (previousTargetId) {
     const current = findCreature(state, previousTargetId)
     if (current?.alive) return previousTargetId
   }
-  const enemyParty = actor.side === 'player' ? state.enemyParty : state.playerParty
-  return getDefaultTarget(enemyParty)
+  const fallbackSide =
+    targetSide === 'ally' ? actor.side : actor.side === 'player' ? 'enemy' : 'player'
+  const party = fallbackSide === 'player' ? state.playerParty : state.enemyParty
+  return getDefaultTarget(party)
 }
 
 /**
@@ -343,6 +354,71 @@ function resolveSpellOffStat(
   return getEffectiveStat(caster, spell.scalingStat) * spellPower
 }
 
+/**
+ * Phase 4 Slice E: routes a landed Cast instance to its payload's own execution path.
+ * 'damage' (default, byte-identical to pre-Slice-E) reuses dealDamageWithOffStat. 'heal' reuses
+ * applyHeal directly -- magnitude is the SAME resolveSpellOffStat a damage spell would compute,
+ * just applied as HP restored. 'stat-modifier' reuses applyStatModifier directly with the
+ * spell's own authored `statModifier` (NOT scaled by powerPercent -- see Spell.statModifier's
+ * doc comment). Neither heal nor stat-modifier emits TriggerFired (not a triggered response --
+ * Cast itself is the chosen-action context).
+ */
+function applyCastPayload(
+  actor: Creature,
+  spell: Spell,
+  targetId: CreatureId,
+  powerPercent: number,
+  state: CombatState,
+  events: CombatEvent[],
+  cascade: CascadeState,
+): CombatState {
+  const payload = spell.payload ?? 'damage'
+  switch (payload) {
+    case 'damage':
+      // Splashing is an attacks-only mechanic (brute.md: "attacks deal 100% of their damage to
+      // enemies adjacent to the target"; CONVENTIONS' "Splashing / Annihilate" bullet) -- Cast
+      // never splashes, so there is no splash loop here (contrast executeAttack above).
+      return dealDamageWithOffStat(
+        actor.id,
+        targetId,
+        resolveSpellOffStat(actor, spell, powerPercent / 100),
+        'cast',
+        'cast',
+        state,
+        events,
+        cascade,
+      )
+    case 'heal':
+      return applyHeal(
+        actor.id,
+        targetId,
+        resolveSpellOffStat(actor, spell, powerPercent / 100),
+        state,
+        events,
+      )
+    case 'stat-modifier': {
+      if (!spell.statModifier) {
+        throw new Error(
+          'resolver invariant violated: stat-modifier-payload spell missing statModifier',
+        )
+      }
+      return applyStatModifier(
+        actor.id,
+        targetId,
+        spell.statModifier.stat,
+        spell.statModifier.factor,
+        spell.id,
+        state,
+        events,
+      )
+    }
+    default: {
+      const exhaustive: never = payload
+      throw new Error(`Unhandled spell payload: ${String(exhaustive)}`)
+    }
+  }
+}
+
 function executeCastSingle(
   actor: Creature,
   gemSlot: number,
@@ -355,11 +431,12 @@ function executeCastSingle(
   if (!spell)
     throw new Error('resolver invariant violated: cast referencing an empty gem slot')
 
+  const targetSide = spell.targetSide ?? 'enemy'
   let working = state
   let resolvedTargetId: CreatureId | null = targetId
 
   for (const powerPercent of buildInstanceList(actor, 'cast')) {
-    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working)
+    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working, targetSide)
     if (!resolvedTargetId) break
 
     const thisTargetId = resolvedTargetId
@@ -378,16 +455,11 @@ function executeCastSingle(
       events,
       cascade,
     ).state
-    // Splashing is an attacks-only mechanic (brute.md: "attacks deal 100% of their damage to
-    // enemies adjacent to the target"; CONVENTIONS' "Splashing / Annihilate" bullet) -- Cast
-    // never splashes, so there is no splash loop here (contrast executeAttack below).
-    const offStat = resolveSpellOffStat(actor, spell, powerPercent / 100)
-    working = dealDamageWithOffStat(
-      actor.id,
+    working = applyCastPayload(
+      actor,
+      spell,
       thisTargetId,
-      offStat,
-      'cast',
-      'cast',
+      powerPercent,
       working,
       events,
       cascade,
@@ -431,16 +503,28 @@ function executeCastAoe(
   if (!spell)
     throw new Error('resolver invariant violated: cast referencing an empty gem slot')
 
+  const targetSide = spell.targetSide ?? 'enemy'
   let working = state
 
   for (const powerPercent of buildInstanceList(actor, 'cast')) {
-    // Confusion (ASSUMPTION 13): one roll, per instance, decides whether this WHOLE AOE
-    // instance retargets to the caster's own living side instead of the enemy side -- never
-    // a per-target coin flip. Provoke is exempt for AOE regardless (unchanged).
-    const redirectToAllies = shouldRedirectAoeToAllies(actor, working)
-    const opposingSide = actor.side === 'player' ? 'enemy' : 'player'
-    const targetSide = redirectToAllies ? actor.side : opposingSide
-    const targetParty = targetSide === 'player' ? working.playerParty : working.enemyParty
+    // Phase 4 Slice E: an ally-targeting AOE spell always freezes the caster's OWN living side
+    // -- no Confusion roll at all (Confusion's redirect is scoped to a "harmful action" per
+    // CONVENTIONS; a support cast on your own side is never one, so it must never touch
+    // state.rng here, mirroring targeting.ts's "draws nothing when inactive" discipline).
+    // Provoke was already exempt for every AOE regardless of side (GAME_DESIGN §7).
+    let resolvedParty: 'player' | 'enemy'
+    if (targetSide === 'ally') {
+      resolvedParty = actor.side
+    } else {
+      // Confusion (ASSUMPTION 13): one roll, per instance, decides whether this WHOLE AOE
+      // instance retargets to the caster's own living side instead of the enemy side -- never
+      // a per-target coin flip.
+      const redirectToAllies = shouldRedirectAoeToAllies(actor, working)
+      const opposingSide = actor.side === 'player' ? 'enemy' : 'player'
+      resolvedParty = redirectToAllies ? actor.side : opposingSide
+    }
+    const targetParty =
+      resolvedParty === 'player' ? working.playerParty : working.enemyParty
     // Frozen target list: all living members of the resolved side, slot order -- each AOE
     // instance independently re-freezes its OWN set at that instance's cast-start (no single
     // target to preserve across instances, unlike the single-target case above).
@@ -461,12 +545,11 @@ function executeCastAoe(
       // unchanged; this only skips *hitting* an already-dead member.
       const target = getCreature(working, targetId)
       if (!target.alive) continue
-      working = dealDamageWithOffStat(
-        actor.id,
+      working = applyCastPayload(
+        actor,
+        spell,
         targetId,
-        resolveSpellOffStat(actor, spell, powerPercent / 100),
-        'cast',
-        'cast',
+        powerPercent,
         working,
         events,
         cascade,
