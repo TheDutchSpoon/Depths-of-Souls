@@ -85,9 +85,10 @@ export type EffectResponse =
       readonly scalingStat?: Stat
       // Flat mode (DoT): a fixed per-stack magnitude, independent of any stat -- GAME_DESIGN's
       // "own value from the source." Bypasses the OffStat/Defence/affinity/pools formula
-      // entirely (not merely zeroing Defence). Mutually exclusive with offStat/scalingStat/
-      // spellPower; presence of flatAmount selects this mode. Scales by the firing status's
-      // current stacks.
+      // entirely (not merely zeroing Defence). Mutually exclusive with offStat/scalingStat
+      // (enforced -- see ASSUMPTION 6 above); presence of flatAmount selects this mode and its
+      // sibling spellPower field is simply never read. Scales by the firing status's current
+      // stacks.
       readonly flatAmount?: number
       /** DoT ticks emit no TriggerFired (their StatusApplied already announced them); default true. */
       readonly emitTriggerFired?: boolean

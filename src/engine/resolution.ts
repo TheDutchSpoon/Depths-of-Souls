@@ -582,6 +582,13 @@ export function executeResponse(
           alive: true,
           currentHp,
           activeEffects: reset.activeEffects,
+          // Death-reset also clears any stale action-state: a creature that died WHILE
+          // defending/provoking (killed before its own next turn, which is the only place
+          // these flags normally expire) must not come back still carrying them -- "no ramp
+          // preserved" applies to Defend's ×0.65 taken-factor and Provoke's redirect too, not
+          // just stat-modifiers/statuses.
+          defending: false,
+          provoking: false,
         })
         events.push({
           type: 'Revived',

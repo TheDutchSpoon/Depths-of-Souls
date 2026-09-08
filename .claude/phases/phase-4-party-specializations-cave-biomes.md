@@ -1,7 +1,7 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–B done** (A: 260/260 tests; B: 298/298 tests; lint/format/build
-green throughout). Built per
+Status: **in progress — Slices A–B done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
@@ -271,6 +271,25 @@ lower in the same script — still fires, no `SpellCast` ever emitted).
 Slice A's 260 — 38 new: 6 golden pairs = 12 files, plus unit additions across 5 existing test
 files), including every pre-existing golden fixture unmodified. `lint` / `format:check` / `build`
 all clean.
+
+### PR review fix: `revive` left stale `defending`/`provoking` on the revived creature (F1)
+
+Caught in review, fixed before merge. `revive`'s death-reset touched `alive`/`currentHp`/
+`activeEffects` but not the action-state flags — a creature that died **while defending**
+(Defended on an earlier turn, then killed before its own next turn, which is the only place
+these flags normally clear) came back still `defending: true`, silently applying Defend's ×0.65
+taken-factor to its next incoming hit (or still `provoking`, still redirecting enemy attacks)
+for the rest of the fight. Contradicted the brief's own "no ramp preserved" framing of
+death-reset. Fix: `revive`'s `updateCreature` patch now also sets `defending: false, provoking:
+false`. Regression test added to `resolution.test.ts`'s revive describe block: a creature revived
+from a dead-while-defending state is asserted to take **full** damage (undefended formula) on its
+next hit, not the reduced defended amount — proven through the real `dealDamage` path, not just a
+raw field check. 299/299 tests green after the fix; `lint`/`format:check`/`build` re-verified.
+
+Also fixed in the same pass (review nit, no behavior change): the `deal-damage` response's
+`flatAmount` doc comment overstated enforcement (claimed mutual exclusivity with `spellPower`,
+which is never actually checked — only `offStat`/`scalingStat`/`flatAmount` are enforced
+exclusive, per ASSUMPTION 6). Comment corrected in `effect-types.ts`.
 
 ### Notable decisions surfaced during implementation (synced to CONVENTIONS.md)
 

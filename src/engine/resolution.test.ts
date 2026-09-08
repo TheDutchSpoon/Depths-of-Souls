@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn, resolveFight } from './combat'
-import { applyStatus, executeResponse, fireHook, newCascade } from './resolution'
+import {
+  applyStatus,
+  dealDamage,
+  executeResponse,
+  fireHook,
+  newCascade,
+} from './resolution'
 import { getEffectiveStat } from './effective-stats'
 import { updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
@@ -661,6 +667,61 @@ describe('revive response (Phase 4 Slice B)', () => {
         currentHp: 8,
       },
     ])
+  })
+
+  it('clears defending/provoking on the revived creature (F1 regression: a creature that died while defending must not return still defending)', () => {
+    const player = makeParty('player', [
+      { id: 'reviver', innateTraitIds: ['revive-fixture'] },
+      {
+        id: 'fallen',
+        health: 40,
+        defence: 10,
+        alive: false,
+        defending: true,
+        provoking: true,
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', attack: 40 }])
+    const state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      registry(REVIVE_FIXTURE),
+    )
+    const events: CombatEvent[] = []
+    const revived = executeResponse(
+      { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
+      'revive-fixture',
+      { self: createCreatureId('reviver') },
+      state,
+      events,
+      newCascade(),
+    ).state
+
+    const fallen = [...revived.playerParty, ...revived.enemyParty].find(
+      (c) => c.id === createCreatureId('fallen'),
+    )!
+    expect(fallen.defending).toBe(false)
+    expect(fallen.provoking).toBe(false)
+
+    // Prove it through the REAL formula, not just the raw field: a subsequent hit deals full
+    // damage -- no Defend ×1.5 effective-defence / ×0.65 taken-factor reduction.
+    const hitEvents: CombatEvent[] = []
+    dealDamage(
+      createCreatureId('foe'),
+      createCreatureId('fallen'),
+      'attack',
+      1.0,
+      'attack',
+      revived,
+      hitEvents,
+      newCascade(),
+    )
+    // off 40, def 10 (undefended): core 30, chip 0.4 -> raw 30.4 -> final 30. A stale
+    // defending:true would instead give effDef 15, core 25, chip 0.4, raw 25.4 x taken 0.65 =
+    // 16.51 -> final 16 -- this assertion catches that regression.
+    expect(hitEvents[0]).toMatchObject({ finalDamage: 30 })
   })
 
   it('is a no-op when there are no dead allies to revive', () => {
