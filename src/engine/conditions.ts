@@ -3,8 +3,14 @@ import { livingAlliesOf, livingEnemiesOf } from './targeting'
 import { getEffectiveStat } from './effective-stats'
 import { getAffinityMultiplier } from './affinity'
 import { hasStatus } from './effects'
+import { peekTargetSelector } from './target-selectors'
 import type { CombatState, Creature } from './types'
-import type { Condition, ComparatorOp, HpSubject } from './scripting-types'
+import type {
+  Condition,
+  ComparatorOp,
+  HpSubject,
+  TargetSelector,
+} from './scripting-types'
 
 function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
   switch (cmp) {
@@ -56,11 +62,17 @@ function subjectPool(
   }
 }
 
-/** Pure -- never touches state.rng. Safe to run during lookahead for every rule. */
+/**
+ * Pure -- never touches state.rng. Safe to run during lookahead for every rule.
+ * `ruleTargeting` is the evaluating RULE's own targeting selector (absent for a TriggeredDef's
+ * condition, which has no rule context) -- consulted ONLY by acted-before-target (Slice C);
+ * every other condition kind ignores it.
+ */
 export function evaluateCondition(
   condition: Condition,
   creature: Creature,
   state: CombatState,
+  ruleTargeting?: TargetSelector,
 ): boolean {
   switch (condition.kind) {
     case 'always':
@@ -106,6 +118,15 @@ export function evaluateCondition(
       return subjectPool(condition.subject, creature, state).some((c) =>
         hasStatus(c, condition.statusId),
       )
+    case 'acted-before-target': {
+      if (!ruleTargeting) return false
+      const targetId = peekTargetSelector(ruleTargeting, creature, state)
+      if (!targetId) return false
+      const selfIndex = state.turnQueue.indexOf(creature.id)
+      const targetIndex = state.turnQueue.indexOf(targetId)
+      if (selfIndex === -1 || targetIndex === -1) return false
+      return selfIndex < targetIndex
+    }
     default: {
       const exhaustive: never = condition
       throw new Error(`Unhandled condition kind: ${String(exhaustive)}`)

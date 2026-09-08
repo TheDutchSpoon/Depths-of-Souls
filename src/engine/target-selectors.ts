@@ -88,3 +88,19 @@ export function resolveTargetSelector(
     }
   }
 }
+
+/**
+ * Phase 4 Slice C: an RNG-FREE resolution, for the acted-before-target condition's lookahead
+ * (see scripting-types.ts's ActedBeforeTargetCondition doc). Every selector kind but
+ * random-enemy is already RNG-free in resolveTargetSelector -- this delegates to it unchanged
+ * for those, and returns null for random-enemy rather than drawing (there is no way to "peek"
+ * a random pick without consuming randomness, and lookahead must never do that).
+ */
+export function peekTargetSelector(
+  selector: TargetSelector,
+  creature: Creature,
+  state: CombatState,
+): CreatureId | null {
+  if (selector.kind === 'random-enemy') return null
+  return resolveTargetSelector(selector, creature, state)
+}

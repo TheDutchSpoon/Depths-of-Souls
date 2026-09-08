@@ -1,6 +1,7 @@
 import { evaluateCondition } from './conditions'
 import { targetSelectorHasCandidate, resolveTargetSelector } from './target-selectors'
 import { getDefaultTarget, resolveOffensiveTarget } from './targeting'
+import { hasStatusImmunity } from './effects'
 import type { Action, CombatState, Creature } from './types'
 import type { Rule, RuleAction, Script } from './scripting-types'
 
@@ -23,11 +24,20 @@ function actionNeedsTargeting(action: RuleAction, creature: Creature): boolean {
  * pure scan of the acting creature's active effects for a present suppress-action response
  * whose scope covers `kind` -- ASSUMPTION 8: only ever gates Attack/Cast; Defend/Provoke/Wait
  * are never suppressible in v1, so this is never consulted for those kinds.
+ *
+ * Phase 4 Slice C (Clear Mind / Aggressive): a status-carrying (condition-status) suppression
+ * is skipped entirely when the creature carries a matching status-immunity -- per CONVENTIONS'
+ * "immunity suppresses the effect, not the application", the status still applies/stacks/
+ * counts for has-status; only its suppress-action effect is ignored here. A plain permanent
+ * `triggered` suppression (no statusId to key immunity off) is never immune-gated.
  */
 function isActionSuppressed(creature: Creature, kind: 'attack' | 'cast'): boolean {
   return creature.activeEffects.some((e) => {
     if (e.category !== 'triggered' && e.category !== 'condition-status') return false
     if (e.response.kind !== 'suppress-action') return false
+    if (e.category === 'condition-status' && hasStatusImmunity(creature, e.statusId)) {
+      return false
+    }
     const scope = e.response.scope ?? 'all'
     return scope === 'all' || scope === kind
   })
@@ -120,7 +130,7 @@ export function decideAction(
 ): Action | null {
   if (script) {
     for (const rule of script.rules) {
-      if (!evaluateCondition(rule.condition, creature, state)) continue
+      if (!evaluateCondition(rule.condition, creature, state, rule.targeting)) continue
       if (!isRuleValid(rule, creature, state)) continue
       return resolveRuleAction(rule, creature, state)
     }

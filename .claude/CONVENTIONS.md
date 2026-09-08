@@ -136,10 +136,44 @@ not a ninth). **Hold the line at eight.**
   species/affinity, enemies-with-a-status, **dead allies**, or a per-creature **defend-count**.
   Recomputed each read.
 - **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
-- **adjacency targeting** — slot-adjacency (Splashing's first consumer; un-defers the biome-4+
-  adjacency deferral). *Edge for the coding agent: adjacent slots vs adjacent living creatures.*
-- **targeting-override** — a step at target-selection: Provoke narrows (existing), **Confusion**
-  randomizes (50% to own side), **Tunnel Vision** ignores enemy Provoke.
+- **status-effect immunity** — `{ category: 'status-immunity', statusId }`, a permanent-for-fight
+  passive `EffectDef` (Clear Mind/Aggressive/Lucidity), structurally identical to
+  armor-penetration/cross-stat. **Built in Phase 4 Slice C.** Consulted at each immune-able
+  mechanism's OWN read site, never at `applyStatus`: the interpreter's `isActionSuppressed` skips
+  a `condition-status` suppression whose `statusId` the creature is immune to (Clear Mind/
+  Aggressive), and targeting's Confusion roll (`activeFriendlyFireStatus`) treats an immune bearer
+  as having no active Confusion at all — the roll (and its RNG draw) never happens, not merely its
+  outcome. The status itself is untouched: still applies, stacks, and satisfies `has-status`.
+- **adjacency targeting** — `adjacentLivingTargets(target, party)`: slot-order neighbors within the
+  **alive-filtered** list (living-adjacency, not raw slot-index adjacency — a dead slot-neighbor
+  would make Splashing whiff for no player-visible reason). **Built in Phase 4 Slice C**
+  (`targeting.ts`), consumed by Splashing's executor-level recompute (`combat.ts`'s
+  `executeAttack`/`executeCastSingle`, after the main hit resolves, computed against
+  pre-main-hit state so the main target is still findable in the alive-filtered list).
+- **targeting-override** — `resolveOffensiveTarget`'s pipeline, in this pinned order (**Phase 4
+  Slice C**): **(1) Tunnel Vision** (`{ category: 'provoke-immunity' }`, a permanent passive) —
+  bypasses **only the Provoke step** (step 3), never Confusion: a confused Tunnel-Vision creature
+  still rolls Confusion. So the pipeline evaluates Confusion first and, if it doesn't redirect,
+  skips straight to normal resolution for a provoke-immune actor (ignoring enemy Provoke). **(2) Confusion** — a
+  `chancePercent` roll off a new passively-read `StatusDef` category, `{ category:
+  'friendly-fire-status', statusId, cap, chancePercent }` (never hook-fired, unlike
+  condition-status); checked BEFORE Provoke, so a confused actor's roll can redirect to its own
+  side regardless of an enemy provoker. **(3) Provoke** (existing, unchanged). AOE Cast has its
+  own separate one-roll-per-instance Confusion check (`shouldRedirectAoeToAllies`) since it never
+  goes through `resolveOffensiveTarget` (Provoke is exempt for AOE for the same reason) — one roll
+  decides whether the WHOLE frozen target set flips to the caster's own living side, never a
+  per-target coin flip.
+- **Splashing / Annihilate** — two new permanent-for-fight passive `EffectDef` categories,
+  `{ category: 'splashing' }` and `{ category: 'annihilate' }` (**Built in Phase 4 Slice C**,
+  boolean presence, no magnitude — reasoned from the Perk execution model, ASSUMPTION 21: Slice F
+  perks are player-level `EffectDef`s instantiated the same way innate traits are, not runtime
+  `applyStatus` instances, despite this doc's "New statuses" list below naming Splashing
+  informally). After a single-target **Attack's** main hit — **attacks only, never Cast**
+  (decided with the design owner; matches `brute.md`'s Splashing = "attacks deal 100%..." and the
+  spec's melee-splash identity) — a Splashing bearer also strikes each adjacent living enemy (all
+  OTHER living enemies, with Annihilate) via a full formula recompute against that target's own
+  Defence/affinity/pools — never a copy of the main hit's number. No `TriggerFired` (same action,
+  not a trigger). Cast never splashes, so no spell-status-on-splash question arises.
 - **cheat-death** — intercept a lethal hit → RNG → survive at 1 HP (Last Stand).
 - **scoped suppress-action** — suppress a *specific* action (**Silenced**=Cast, **Pacified**=Attack)
   vs Stun's suppress-all; a parameter on `suppress-action`. **Built in Phase 4 Slice B with a
@@ -151,13 +185,34 @@ not a ninth). **Hold the line at eight.**
   being validated), gating only that one rule/action-kind while the rest of the turn (including
   the implicit fallback) stays choosable.
 - **acted-before-target** condition — "this creature acts before its target this round" (Blindclaws).
+  **Built in Phase 4 Slice C.** `evaluateCondition` gains an optional 4th parameter,
+  `ruleTargeting?: TargetSelector` (the evaluating rule's own selector; absent for a `TriggeredDef`
+  condition, which has no rule context — always false there). Resolved via a new
+  `peekTargetSelector` (`target-selectors.ts`): identical to `resolveTargetSelector` for every
+  selector kind except `random-enemy`, which returns `null` rather than drawing RNG (there is no
+  way to "peek" a random pick without consuming randomness, and interpreter lookahead must never
+  do that) — so a rule targeted at `random-enemy` never satisfies this condition. True iff the
+  acting creature's frozen-turn-queue index is lower than its resolved target's.
+- **turn-order status** (`{ category: 'turn-order-status', statusId, cap, position: 'first' |
+  'last' }`) — a third new passively-read `StatusDef` category alongside friendly-fire-status
+  (never hook-fired; read directly by `buildTurnQueue`, which partitions living combatants into an
+  act-first pole / normal group / act-last pole, each internally Speed-sorted, concatenated
+  first→normal→last). **Built in Phase 4 Slice C.** A bearer carrying both poles at once resolves
+  to **act-first** (first wins). **Web's 10%/turn break-free roll is deliberately NOT built in
+  Slice C** — the brief flagged it as the slice's one genuinely bespoke, unresolved mechanism
+  (ASSUMPTION 10, two competing shapes offered, neither locked), and building it prematurely risked
+  either a 9th response kind (breaking the locked "hold the line at eight" response-vocab count) or
+  a speculative `TurnOrderStatusDef` field ahead of H1's actual Web content. **Open item for H1's
+  kickoff**: decide break-free's concrete shape before authoring Web.
 
 ### New statuses (data — several ride the mechanisms above)
-Web (act-last + 10%/turn break-free), Sleep (breaks on damage; 3-turn), Glow (stacking resource;
-+%dmg/stack; consumable), turn-order (act first *or* last — two-way), Spore (DoT + spread-on-death),
-Confusion (3-turn; 50% harmful-action friendly-fire), Silenced (suppress-Cast; Violence spell),
-Pacified (suppress-Attack; Wit spell), Splashing (adjacency splash), Proficient (**P8**; +equipment
-benefit).
+Web (act-last + 10%/turn break-free — **break-free mechanism still undecided, see turn-order
+status above**), Sleep (breaks on damage; 3-turn), Glow (stacking resource; +%dmg/stack;
+consumable), turn-order (act first *or* last — two-way, **built C**), Spore (DoT +
+spread-on-death), Confusion (3-turn; 50% harmful-action friendly-fire, **built C**), Silenced
+(suppress-Cast; Violence spell), Pacified (suppress-Attack; Wit spell), Splashing (adjacency
+splash **on attacks only**, **built C** as a permanent passive, not a runtime status instance — see above), Proficient
+(**P8**; +equipment benefit).
 
 ### Flow
 - **scripted-intro encounter** — a rigged fight whose outcome triggers a story beat (revive the

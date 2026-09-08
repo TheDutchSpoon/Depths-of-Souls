@@ -65,6 +65,22 @@ export interface HasStatusCondition {
   readonly statusId: string
 }
 
+/**
+ * Blindclaws' Striker payoff ("+% while acting before its target"). Phase 4 Slice C.
+ * ASSUMPTION 11: scoped self-only (no explicit target parameter) -- evaluated against the
+ * RULE'S OWN `targeting` selector, resolved first (existence + selection, no RNG per the
+ * lookahead-purity rule -- see target-selectors.ts's peekTargetSelector), then checks the
+ * frozen round's turn-queue index ordering between self and that resolved target. A rule
+ * lacking `targeting`, or one whose selector can't be peeked without RNG (random-enemy), or
+ * one whose target isn't in the current queue (e.g. dead), evaluates false -- a small,
+ * documented deviation from every other v1 condition (which are target-independent), since
+ * this one needs the rule's own targeting to evaluate at all. When used as a TriggeredDef's
+ * condition (no rule/targeting context), always evaluates false.
+ */
+export interface ActedBeforeTargetCondition {
+  readonly kind: 'acted-before-target'
+}
+
 export type Condition =
   | AlwaysCondition
   | HpPercentCondition
@@ -74,6 +90,7 @@ export type Condition =
   | EnemyWeakToMeExistsCondition
   | IsProvokingCondition
   | HasStatusCondition
+  | ActedBeforeTargetCondition
 
 // ---- Target selectors ----
 // The exact 7-member v1 set from GAME_DESIGN §8.

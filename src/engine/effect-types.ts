@@ -209,6 +209,46 @@ export type TriggeredDef = {
   readonly response: EffectResponse
 }
 
+// Phase 4 Slice C: permanent-for-fight passives (the same treatment as ArmorPenetrationDef/
+// CrossStatDef/ActionInstanceDef above) -- always perk-granted (Slice F) in the locked seed
+// content, never surfaced as a status themselves, gathered read-time and consulted at each
+// mechanism's own site (never a hook, never applyStatus).
+
+/** Clear Mind / Aggressive / Lucidity: consulted at each STATUS'S OWN effect-execution site --
+ * suppress-action's scope check in the interpreter (isActionSuppressed), Confusion's
+ * friendly-fire roll in targeting.ts -- never at applyStatus. Per CONVENTIONS' "immunity
+ * suppresses the effect, not the application": the status still applies/stacks/counts for
+ * has-status; only its effect is skipped for an immune bearer. */
+export type StatusImmunityDef = {
+  readonly category: 'status-immunity'
+  readonly statusId: string
+}
+
+/** Tunnel Vision: the bearer's single-target offensive actions skip the enemy Provoke redirect
+ * entirely at target-selection (targeting.ts's override pipeline), going straight to normal
+ * resolution. Distinct from StatusImmunityDef -- Provoke is a redirect BY the enemy, not a
+ * status ON the bearer, so there is no statusId to key off. */
+export type ProvokeImmunityDef = {
+  readonly category: 'provoke-immunity'
+}
+
+/** Proficient Warrior: after a single-target Attack's main hit resolves, also strike each
+ * living enemy ADJACENT to that target (targeting.ts's adjacentLivingTargets) for its own
+ * recomputed damage -- own Defence/affinity/pools, never a copy of the main hit's number
+ * (ASSUMPTION 15). Attacks only -- brute.md: "attacks deal 100% of their damage to enemies
+ * adjacent to the target"; Cast never splashes. Upgraded to all-other-living-enemies by a
+ * simultaneously-active AnnihilateDef. Never emits TriggerFired -- it's the same action, not
+ * a triggered response. */
+export type SplashingDef = {
+  readonly category: 'splashing'
+}
+
+/** Annihilate: upgrades an active SplashingDef's target set from "adjacent" to "all other
+ * living enemies". Inert without Splashing also active on the same bearer. */
+export type AnnihilateDef = {
+  readonly category: 'annihilate'
+}
+
 // EffectDef is what a TRAIT authors (permanent-for-fight passives/triggers -- timed statuses are
 // a separate, parallel concept below, never authored directly on a Trait).
 export type EffectDef =
@@ -218,6 +258,10 @@ export type EffectDef =
   | ArmorPenetrationDef
   | CrossStatDef
   | ActionInstanceDef
+  | StatusImmunityDef
+  | ProvokeImmunityDef
+  | SplashingDef
+  | AnnihilateDef
 
 // ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
 // a spell's appliesStatus, never innate. Declared in a separate status registry (data/statuses.ts),
@@ -249,7 +293,34 @@ export type DamageModifierDef = {
   readonly magnitude: number
 }
 
-export type StatusDef = ConditionStatusDef | DamageModifierDef
+/** Web (act-last) / Blindclaws' grant-act-first (act-first) -- same primitive, opposite pole
+ * (species-locked.md). Read PASSIVELY by buildTurnQueue (turn-order.ts) at round-start queue
+ * build, never fired via a hook. ASSUMPTION 9: a bearer carrying both poles at once (two
+ * independently-applied turn-order statuses, or a re-application with a different position)
+ * resolves to 'first' -- first wins over last when both are simultaneously active. */
+export type TurnOrderStatusDef = {
+  readonly category: 'turn-order-status'
+  readonly statusId: string
+  readonly cap: number
+  readonly position: 'first' | 'last'
+}
+
+/** Confusion: a chancePercent roll, consulted once per the bearer's harmful offensive action
+ * (single-target AND AOE alike -- targeting.ts's override pipeline / combat.ts's AOE cast),
+ * that redirects the whole action to the bearer's own living side instead of the enemy side.
+ * Read PASSIVELY like TurnOrderStatusDef, never fired via a hook. ASSUMPTION (Slice C): the
+ * roll always happens exactly once for a confused, non-immune bearer's harmful action -- win or
+ * lose -- per species-locked.md's "Confusion consumes combat RNG"; an immune bearer (Lucidity)
+ * never rolls at all (the effect, including its RNG consumption, is fully suppressed). */
+export type FriendlyFireStatusDef = {
+  readonly category: 'friendly-fire-status'
+  readonly statusId: string
+  readonly cap: number
+  readonly chancePercent: number
+}
+
+export type StatusDef =
+  ConditionStatusDef | DamageModifierDef | TurnOrderStatusDef | FriendlyFireStatusDef
 
 // ---- Active effect instances (what lives on Creature.activeEffects) ----
 
@@ -279,6 +350,16 @@ export type DamageModifierEffect = DamageModifierDef &
 export type ArmorPenetrationEffect = ArmorPenetrationDef & InstanceIdentity
 export type CrossStatEffect = CrossStatDef & InstanceIdentity
 export type ActionInstanceEffect = ActionInstanceDef & InstanceIdentity
+export type StatusImmunityEffect = StatusImmunityDef & InstanceIdentity
+export type ProvokeImmunityEffect = ProvokeImmunityDef & InstanceIdentity
+export type SplashingEffect = SplashingDef & InstanceIdentity
+export type AnnihilateEffect = AnnihilateDef & InstanceIdentity
+export type TurnOrderStatusEffect = TurnOrderStatusDef &
+  InstanceIdentity &
+  StatusInstanceState
+export type FriendlyFireStatusEffect = FriendlyFireStatusDef &
+  InstanceIdentity &
+  StatusInstanceState
 
 export type ActiveEffect =
   | StatModifierEffect
@@ -289,6 +370,12 @@ export type ActiveEffect =
   | ArmorPenetrationEffect
   | CrossStatEffect
   | ActionInstanceEffect
+  | StatusImmunityEffect
+  | ProvokeImmunityEffect
+  | SplashingEffect
+  | AnnihilateEffect
+  | TurnOrderStatusEffect
+  | FriendlyFireStatusEffect
 
 // ---- Trait ----
 

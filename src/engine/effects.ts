@@ -16,6 +16,7 @@ import type {
   DamageModifierEffect,
   EffectDef,
   EffectInstanceId,
+  FriendlyFireStatusEffect,
   Hook,
   StatusDef,
   Trait,
@@ -63,6 +64,14 @@ function withInstance(
     case 'cross-stat':
       return { ...def, instanceId, sourceTraitId }
     case 'action-instance':
+      return { ...def, instanceId, sourceTraitId }
+    case 'status-immunity':
+      return { ...def, instanceId, sourceTraitId }
+    case 'provoke-immunity':
+      return { ...def, instanceId, sourceTraitId }
+    case 'splashing':
+      return { ...def, instanceId, sourceTraitId }
+    case 'annihilate':
       return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
@@ -130,12 +139,18 @@ export function gatherTakenFactors(creature: Creature): number[] {
 }
 
 /** True iff `creature` carries the literal statusId among its status-carrying effects
- * (condition-status or damage-modifier) -- what scripting's has-status condition scopes to.
- * Never matches a stat-modifier/stat-remap/plain-triggered effect. */
+ * (condition-status, damage-modifier, and -- Phase 4 Slice C -- turn-order-status /
+ * friendly-fire-status, the two new StatusDef categories this slice adds) -- what scripting's
+ * has-status condition scopes to. Never matches a stat-modifier/stat-remap/plain-triggered
+ * effect, nor the permanent perk-granted passives (status-immunity/provoke-immunity/splashing/
+ * annihilate), which carry no statusId and are never themselves a status. */
 export function hasStatus(creature: Creature, statusId: string): boolean {
   return creature.activeEffects.some(
     (e) =>
-      (e.category === 'condition-status' || e.category === 'damage-modifier') &&
+      (e.category === 'condition-status' ||
+        e.category === 'damage-modifier' ||
+        e.category === 'turn-order-status' ||
+        e.category === 'friendly-fire-status') &&
       e.statusId === statusId,
   )
 }
@@ -199,9 +214,59 @@ export function instantiateStatus(
       return { ...def, ...base }
     case 'damage-modifier':
       return { ...def, ...base }
+    case 'turn-order-status':
+      return { ...def, ...base }
+    case 'friendly-fire-status':
+      return { ...def, ...base }
     default: {
       const exhaustive: never = def
       throw new Error(`Unknown status category: ${String(exhaustive)}`)
     }
   }
+}
+
+// ---- Phase 4 Slice C: permanent-passive checks + status-carrying lookups ----
+
+/** True iff `creature` carries a status-immunity for `statusId` (Clear Mind/Aggressive/
+ * Lucidity). Consulted at each immune-able status's OWN effect-execution site -- never at
+ * applyStatus, per "immunity suppresses the effect, not the application". */
+export function hasStatusImmunity(creature: Creature, statusId: string): boolean {
+  return creature.activeEffects.some(
+    (e) => e.category === 'status-immunity' && e.statusId === statusId,
+  )
+}
+
+/** Tunnel Vision: true iff `creature`'s single-target offensive actions skip the enemy Provoke
+ * redirect entirely (targeting.ts's override pipeline). */
+export function hasProvokeImmunity(creature: Creature): boolean {
+  return creature.activeEffects.some((e) => e.category === 'provoke-immunity')
+}
+
+/** Proficient Warrior: true iff `creature`'s single-target Attack/Cast main hits also splash
+ * onto adjacent (or, with Annihilate, all other living) enemies. */
+export function hasSplashing(creature: Creature): boolean {
+  return creature.activeEffects.some((e) => e.category === 'splashing')
+}
+
+/** Annihilate: true iff `creature`'s Splashing (when also present) hits all other living
+ * enemies instead of just adjacent ones. Inert alone -- callers must check hasSplashing too. */
+export function hasAnnihilate(creature: Creature): boolean {
+  return creature.activeEffects.some((e) => e.category === 'annihilate')
+}
+
+/**
+ * Confusion: `creature`'s active friendly-fire-status effect, EXCLUDING one the creature is
+ * immune to (Lucidity) -- an immune bearer is treated as having no active friendly-fire status
+ * at all, so its roll (and RNG consumption) never happens, per "immunity suppresses the effect"
+ * extended to also suppress the roll itself for this passively-read status kind. At most one
+ * such status is expected in v1 content; the first match wins if content ever stacks more than
+ * one (deliberately permissive, not a modeled interaction).
+ */
+export function activeFriendlyFireStatus(
+  creature: Creature,
+): FriendlyFireStatusEffect | undefined {
+  return creature.activeEffects.find(
+    (e): e is FriendlyFireStatusEffect =>
+      e.category === 'friendly-fire-status' && !hasStatusImmunity(creature, e.statusId),
+  )
 }
