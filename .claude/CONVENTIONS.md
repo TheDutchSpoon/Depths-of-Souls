@@ -84,13 +84,20 @@ data.
   "deal damage equal to X% of Attack" (a plain `deal-damage` response — not an attack, fires
   nothing) — the wording is the signal.
   **Built in Phase 4 Slice B as a new passive `EffectDef` category** (the brief's own prose named
-  the mechanism but not its authoring shape — this is the decision that filled that gap, surfaced
-  for confirmation before Slice F's Echo/Flurry/Brute-starter perks are authored against it):
+  the mechanism but not its authoring shape — this decision filled that gap and is now **locked**;
+  Slice F's Echo/Flurry/Brute-starter perks author against it unchanged):
   `{ category: 'action-instance', actionKind: 'attack' | 'cast' | 'both', powerPercent: number }`,
   structurally identical to `armor-penetration`/`cross-stat` (permanent-for-fight, additive across
   stacked sources — each matching effect appends exactly one instance, gathered in canonical
   active-effects order via `gatherExtraInstances`). "An additional time" = `{ actionKind: 'attack',
   powerPercent: 100 }`; "attack again for 30%" = `{ actionKind: 'attack', powerPercent: 30 }`.
+  **`powerPercent` is a flat number by design, not a `magnitudeSource` (Slice D).** No locked or
+  backlog content scales the *number* or *power* of instances off combat state — Phase 4's
+  count-scaling (Swarmhive Striker, Bulwark) is always a *magnitude*, a separate axis served by
+  `magnitudeSource`. The trigger to revisit this is the first content item that grants a scaled
+  instance count or power; if that arrives, grow this category an optional `magnitudeSource` field
+  *alongside* `powerPercent` (additive, per the Slice D magnitudeSource-beside-flat pattern) — never
+  a parallel mechanism.
 - **Grant-action-state response** — a triggered response that sets `defending` / `provoking` on a
   target. Reuses the existing action-state flags and Defend's math/goldens; a general primitive, not
   a per-trait special-case.
