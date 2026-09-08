@@ -1,7 +1,7 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
 Status: **in progress — Slices A–D done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
-C: 337/337 tests, post-review-fix; D: 363/363 tests; lint/format/build green throughout). Built per
+C: 333/333 tests; D: 368/368 tests, post-review-amendment; lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
@@ -599,29 +599,84 @@ state, matching the existing `freshActor` re-fetch discipline) alongside setting
 
 ### Tests
 
-363/363 (up from Slice C's 337 — 26 new). Unit coverage in `effects.test.ts` (all six `CountOf`
-variants incl. the species-unset-is-0 default and the enemies-with-status invariant throw, the
-never-cached/live-recompute case, all three `MagnitudeSource` kinds incl. the
-consumed-stacks-outside-context throw, `gatherCheatDeathChance`'s sum/clamp, and a
-`gatherTakenFactors` case proving a `magnitudeSource` genuinely overrides `stacks`) and
-`resolution.test.ts` (`consume-stacks`'s read-clear-execute path and its 0-stacks no-op; cheat-death
-via a directly-stubbed `rng.next()` covering the success/fail/never-drawn-when-inactive branches).
+368/368 (up from Slice C's 337 — 31 new, incl. the PR #47 review amendment below). Unit coverage
+in `effects.test.ts` (all six `CountOf` variants incl. the species-unset-is-0 default and the
+enemies-with-status invariant throw, the never-cached/live-recompute case, all three
+`MagnitudeSource` kinds incl. the consumed-stacks-outside-context throw, `gatherCheatDeathChance`'s
+sum/clamp, a `gatherTakenFactors` case proving a `magnitudeSource` genuinely overrides `stacks`,
+and the four `accumulation` cases below) and `resolution.test.ts` (`consume-stacks`'s
+read-clear-execute path and its 0-stacks no-op; cheat-death via a directly-stubbed `rng.next()`
+covering the success/fail/never-drawn-when-inactive branches).
 
-Three new hand-derived (`node -e` calculator) golden pairs, all fixture-scoped:
-`golden-defend-count` (Bulwark-shaped: a `damage-modifier` applied ONCE at fight-start whose
-`magnitude ** liveDefendCount` shrinks the taken factor round-over-round as the bearer keeps
-Defending, ending in the bearer's death on round 2 once combined with the ordinary Defend factor);
-`golden-consume-stacks` (Detonator-shaped: 3 pre-seeded Glow stacks consumed by the very first
-Attack's `on-attack` hook, bursting Intelligence-scaled damage BEFORE the attack's own base hit,
-proving Glow is gone — its own dealt-mod never contributes to either hit); `golden-cheat-death`
-(Last Stand-shaped, two rigged seeds against IDENTICAL parties: SEED 7's first draw succeeds —
-survives at exactly 1 HP, no `CreatureDied`, then wins by counter-killing the attacker on its own
-turn; SEED 1's first draw fails — dies normally, one hit one round).
+Four hand-derived (`node -e` calculator) golden pairs, all fixture-scoped:
+`golden-defend-count` (pins `accumulation: 'multiplicative'`, the default: a `damage-modifier`
+applied ONCE at fight-start whose `magnitude ** liveDefendCount` shrinks the taken factor
+round-over-round as the bearer keeps Defending, never clamping, ending in the bearer's death on
+round 2 once combined with the ordinary Defend factor); `golden-defend-count-additive-cap` (PR #47
+amendment, real Bulwark-shaped — see below); `golden-consume-stacks` (Detonator-shaped: 3
+pre-seeded Glow stacks consumed by the very first Attack's `on-attack` hook, bursting
+Intelligence-scaled damage BEFORE the attack's own base hit, proving Glow is gone — its own
+dealt-mod never contributes to either hit); `golden-cheat-death` (Last Stand-shaped, two rigged
+seeds against IDENTICAL parties: SEED 7's first draw succeeds — survives at exactly 1 HP, no
+`CreatureDied`, then wins by counter-killing the attacker on its own turn; SEED 1's first draw
+fails — dies normally, one hit one round).
 
 Full Phase 1–3 + Slice A–C suite re-verified byte-identical (all pre-existing goldens pass
 unmodified) — the `gatherDealtMods`/`gatherTakenFactors` signature change and the
 `applyDamageAndEmit`/`deal-damage` magnitudeSource additions are provably additive no-ops absent
 the new fields. `lint` / `format:check` / `build` all clean.
+
+### PR #47 review amendment: additive-with-cap accumulation for taken-direction damage-modifiers
+
+Reviewed against the docs on `main` (not the PR's own claims) by a design-review agent, then
+actioned before merge. **Correction to this slice's initial submission**: the "notable decision"
+below claiming a purely multiplicative `magnitude ** count` makes Bulwark's "cap 80%" legible as
+ordinary uncapped exponential decay was **wrong** — `0.95 ** 32 ≈ 0.19` (an 81% reduction) sails
+past the cap and keeps climbing toward 100% as `count` grows; the original `golden-defend-count`
+fixture only reached ~10% reduction over its two rounds, so the divergence from the real spec
+never showed up against green gates. Decided with the design owner and synced to CONVENTIONS'
+"Taken-reduction accumulation" bullet: **additive within a source, multiplicative across
+sources** — Bulwark's own reduction is `Σ(per-Defend reduction)`, hard-clamped at a per-source
+cap, and that single collapsed factor then enters the existing multiplicative `Π(takenFactors)`
+pool alongside every other active source (which stay `magnitude ** count`, unchanged).
+
+- `DamageModifierDef` (`effect-types.ts`) gains two fields (ASSUMPTION — ITS field shape, not
+  pinned by the design owner, who left it to be proposed): `accumulation?: 'multiplicative' |
+  'additive'` (absent/`'multiplicative'` = byte-identical to every pre-amendment read) and
+  `reductionCap?: number` (meaningful only for `'additive'`; **distinct from the existing `cap`**,
+  which bounds `applyStatus`'s STACK-COUNT re-application ceiling, an unrelated axis a
+  `magnitudeSource`-driven source doesn't use). `magnitude` keeps the SAME per-unit-factor meaning
+  in both modes (0.95 = "this source's own single-unit factor is ×0.95") — only the combination
+  rule differs; `'additive'` derives the per-unit REDUCTION as `(1 - magnitude)`, sums it × the
+  live count, and clamps: `factor = 1 - min((1 - magnitude) × count, reductionCap)`.
+- `effects.ts`'s new `takenFactorFor(bearer, state, e)` replaces the direct `magnitude **
+  damageModifierCount(...)` call inside `gatherTakenFactors` — branches on `accumulation`,
+  `gatherDealtMods` untouched (the dealt pool is already additive-across-sources by construction,
+  so this axis is taken-only, per the design owner's framing).
+- Also fixed the flagged minor nit: `executeResponse`'s `deal-damage` case previously called
+  `resolveMagnitudeCount` twice (once each for `flatCount`/`formulaMultiplier`) with identical
+  arguments; collapsed to one `count` computed once, feeding whichever mode's branch actually
+  reads it.
+- **New golden**: `golden-defend-count-additive-cap` — real Bulwark-shaped (magnitude 0.95,
+  `reductionCap: 0.8`, matching `specializations/shieldbarer.md`'s "-5% per Defend, cap 80%"
+  exactly, unchanged by this decision). `Creature.defendCount` is PRESET to 15 via the fixture
+  (standing in for 15 earlier rounds, keeping the fixture small per CONVENTIONS' testing
+  discipline) so two more real in-fight Defends reach `count 16` (exactly the cap:
+  `0.05 × 16 = 0.8`) then `count 17` (one past it) — both rounds land the IDENTICAL final damage
+  (3), proving the clamp actually HOLDS rather than merely being asymptotically close.
+  `golden-defend-count` (unchanged data, `accumulation: 'multiplicative'` now stated explicitly)
+  is kept as the companion pin for the default mode, per the design owner's "keep a multiplicative
+  fixture too" instruction.
+- Also reverted an unrelated line this PR had touched: the top-of-file Status summary's Slice C
+  test count, corrected from 333 to 337 to match the Slice C section's own post-fix number — the
+  design agent flagged this as an edit to what should be an immutable outcome archive, so it's
+  reverted back to 333 here (the Slice C section's prose already carries the accurate post-fix
+  337 number; only the compact header summary reads 333, unchanged from how Slice C's own PR left
+  it).
+
+`npm run test` — **368/368** across 55 files (up from the pre-amendment pass's 363/53 — 5 new: 4
+unit tests in `effects.test.ts`'s new `accumulation: 'additive'` describe block, plus the one new
+golden). `lint` / `format:check` / `build` re-verified clean after the amendment.
 
 ### Notable decisions surfaced during implementation (flag for review before Slice E)
 
@@ -629,34 +684,39 @@ the new fields. `lint` / `format:check` / `build` all clean.
   number.** The brief's own wording ("overrides the flat number... computed at read-time
   instead") reads ambiguously between the two; a literal full-value substitution would break
   every existing per-stack formula shape (e.g. `magnitude ** stacks` becoming
-  `magnitude ** magnitude` doesn't compose). This interpretation is what makes Bulwark's "cap 80%"
-  (`specializations/shieldbarer.md`) legible as an ordinary exponential-decay taken-factor
-  (CONVENTIONS: "trend toward but never reach 0, no clamp needed") rather than requiring a new
-  hard-clamp mechanism — Slice D's own fixture treats the "cap" as descriptive of the practical
-  curve, not a literal engine clamp. **Needs explicit sign-off before Slice F authors the real
-  Bulwark perk against this shape.**
+  `magnitude ** magnitude` doesn't compose). **Approved as-is in the PR #47 review** — this part
+  of the original submission was correct and needed no change.
+- **Taken-reduction accumulation is a SEPARATE, orthogonal axis from count-source semantics** (PR
+  #47 review amendment, above) — `magnitudeSource` says WHAT the count is; `accumulation` says HOW
+  repeated per-unit contributions from that count combine. The original submission's claim that
+  multiplicative decay alone made Bulwark's cap legible was wrong and is corrected above.
 - **`StatModifierDef` does not get `magnitudeSource` in this slice** (see effect-types.ts's own
   flagged comment above) — Swarmhive Striker (H1) will need `getEffectiveStat` to gain
   `CombatState` access somehow; that design decision is deliberately deferred, not made here.
+  **Approved as-is in the PR #47 review.**
 - **`Creature.speciesId?: string`** is a new field this slice introduces unprompted (not named by
   the brief) to make `living-allies-of-species` implementable at all. Left unwired in
   `generation.ts` — H1 needs to thread a real value through `materializeCreature` before Swarmhive
-  content can use it.
+  content can use it. **H1 hand-off note from the PR #47 review**: if Swarmhive Striker is
+  authored as a `+Attack` STAT buff, H1 must also land the deferred `StatModifierDef`
+  `magnitudeSource` host above (both bundled together); if it's a `dealt` `+%dmg`-per-hive-mate
+  damage-modifier instead, no further engine change is needed — already fully supported today.
 - **`consume-stacks` is SELF-scoped with no `target` field** — every other response names its
   target explicitly; this one always reads/clears the firing creature's OWN stacks, matching the
   self-scoped trigger-condition convention rather than introducing a `ResponseTarget` for "the
-  stack-holder."
+  stack-holder." **Approved as-is in the PR #47 review.**
 - **Cheat-death's `DamageDealtEvent.finalDamage` is left unchanged, only `remainingHp` moves to
   1** — the brief only pins `remainingHp`; leaving `finalDamage` as the hit's own computed power
   (rather than deriving a "HP actually removed" value) matches the existing, already-accepted
-  overkill precedent where the two fields can diverge.
+  overkill precedent where the two fields can diverge. **Approved as-is in the PR #47 review.**
 
 ### Deliberately out of scope for Slice D (later slices)
 
 The support-spell model (E); specializations/perks/starters/the Unicorn's real content incl. the
-real Bulwark/Swarmhive/Detonator/Last Stand data and `StatModifierDef`'s deferred
-`magnitudeSource` host (F/H1–H2); the Zustand store (G); real biome content (H1–H3); integration
-(I).
+real Bulwark/Swarmhive/Detonator/Last Stand data (F/H1–H2, though Bulwark's own numbers are now
+directly expressible — see the amendment above) and `StatModifierDef`'s deferred `magnitudeSource`
+host (H1, bundled with a real `speciesId` iff Swarmhive is stat-shaped — see the H1 hand-off note
+above); the Zustand store (G); real biome content (H1–H3); integration (I).
 
 ## Next
 

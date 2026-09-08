@@ -381,6 +381,29 @@ export type DamageModifierDef = {
    * self-defend-count -- instead of needing repeated re-application to grow its `stacks`. Absent
    * is byte-identical to pre-Slice-D behavior (uses `stacks` exactly as before). */
   readonly magnitudeSource?: MagnitudeSource
+  /** Phase 4 Slice D, PR #47 review amendment -- ASSUMPTION (field shape proposed here, per the
+   * design agent's request; CONVENTIONS' "Taken-reduction accumulation" bullet pins the decided
+   * SEMANTICS, not this exact shape). How a `magnitudeSource`-driven count combines with
+   * `magnitude` for a `direction: 'taken'` effect. `'multiplicative'` (default, byte-identical to
+   * every pre-amendment read): `magnitude ** count`, asymptoting toward 0, never clamped -- the
+   * model for ordinary stacking taken-reductions and every FUTURE count-scaled taken source.
+   * `'additive'` (Bulwark: "-5% per Defend, cap 80%"): the per-unit reduction `(1 - magnitude)` is
+   * SUMMED × count, then hard-clamped at `reductionCap` -- `factor = 1 - min((1 - magnitude) ×
+   * count, reductionCap)`. `magnitude` keeps the SAME per-unit-factor meaning in both modes (0.95
+   * = "this source's own single-unit factor is x0.95") so an author picking a value doesn't need
+   * a different sign/scale convention per mode -- only the COMBINATION rule differs. Additive
+   * within a source, multiplicative across sources: the collapsed single factor still enters
+   * Π(takenFactors) alongside every other active taken source, never bypassing it. Ignored (reads
+   * as multiplicative) for `direction: 'dealt'` or when no `magnitudeSource` is present -- the
+   * dealt pool is already additive-across-sources by construction (Σ dealtMods), so this axis is
+   * taken-only. */
+  readonly accumulation?: 'multiplicative' | 'additive'
+  /** Required (meaningful) only when `accumulation` is `'additive'` -- the hard clamp on TOTAL
+   * reduction, a fraction (e.g. 0.8 for Bulwark's "cap 80%"). Distinct from `cap` above, which
+   * bounds the STACK COUNT a re-application can reach (applyStatus's cap-driven stacking model,
+   * an unrelated axis a magnitudeSource-driven source doesn't use -- Bulwark is applied once and
+   * never re-stacked; its own `cap` is 1). */
+  readonly reductionCap?: number
 }
 
 /** Web (act-last) / Blindclaws' grant-act-first (act-first) -- same primitive, opposite pole

@@ -190,6 +190,63 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     const state = makeState({ playerParty: party })
     expect(gatherTakenFactors(c, state)).toEqual([0.9 ** 3])
   })
+
+  describe("accumulation: 'additive' (Phase 4 Slice D, PR #47 review amendment -- real Bulwark shape)", () => {
+    function bulwark(reductionCap: number): ActiveEffect {
+      return {
+        category: 'damage-modifier',
+        statusId: 'bulwark-additive-fixture',
+        direction: 'taken',
+        magnitude: 0.95, // per-unit factor -- perUnitReduction = 1 - 0.95 = 0.05
+        magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+        accumulation: 'additive',
+        reductionCap,
+        cap: 1,
+        instanceId: createEffectInstanceId('bulwark-additive'),
+        sourceTraitId: 'bulwark-additive-fixture',
+        remainingDuration: 999,
+        stacks: 1,
+      }
+    }
+
+    it('sums the per-unit reduction × count below the cap (no clamping yet)', () => {
+      // perUnitReduction 0.05 × count 5 = 0.25 total reduction -> factor 0.75, well under cap 0.8.
+      const c = makeCreature({ activeEffects: [bulwark(0.8)], defendCount: 5 })
+      expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(0.75)
+    })
+
+    it('reaches the cap exactly at the count that makes perUnitReduction × count == cap', () => {
+      // 0.05 × 16 = 0.8 -- exactly the cap.
+      const c = makeCreature({ activeEffects: [bulwark(0.8)], defendCount: 16 })
+      expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(0.2)
+    })
+
+    it('holds the clamp past the count that would otherwise exceed it', () => {
+      // 0.05 × 17 = 0.85 > 0.8 -- must clamp to the SAME factor as count 16, not keep shrinking.
+      const c = makeCreature({ activeEffects: [bulwark(0.8)], defendCount: 17 })
+      expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(0.2)
+    })
+
+    it('is byte-identical to the pre-amendment multiplicative default when accumulation is absent', () => {
+      const multiplicative: ActiveEffect = {
+        category: 'damage-modifier',
+        statusId: 'bulwark-fixture',
+        direction: 'taken',
+        magnitude: 0.9,
+        magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+        cap: 999,
+        instanceId: createEffectInstanceId('b2'),
+        sourceTraitId: 'bulwark-fixture',
+        remainingDuration: 999,
+        stacks: 1,
+      }
+      const c = makeCreature({ activeEffects: [multiplicative], defendCount: 32 })
+      // 0.9 ** 32 -- asymptotic, never clamped, no cap field consulted.
+      expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(
+        0.9 ** 32,
+      )
+    })
+  })
 })
 
 describe('hasStatus', () => {

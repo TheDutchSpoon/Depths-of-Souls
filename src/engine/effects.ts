@@ -146,15 +146,39 @@ export function gatherDealtMods(creature: Creature, state: CombatState): number[
     .map((e) => e.magnitude * damageModifierCount(creature, state, e))
 }
 
+/** Phase 4 Slice D, PR #47 review amendment: collapses one `taken`-direction damage-modifier
+ * effect to its single contributed factor, per its `accumulation` mode (CONVENTIONS'
+ * "Taken-reduction accumulation", DamageModifierDef's own doc comment). `'multiplicative'`
+ * (default/absent -- byte-identical to every pre-amendment read): `magnitude ** count`,
+ * asymptoting toward 0, never clamped. `'additive'` (Bulwark): the per-unit reduction
+ * `(1 - magnitude)` summed × count, hard-clamped at `reductionCap` (default 1 -- i.e.
+ * unclamped -- if somehow omitted on an additive effect, though real content always sets it).
+ * The collapsed factor is what enters the multiplicative `Π(takenFactors)` pool alongside every
+ * other source -- additive WITHIN a source, multiplicative ACROSS sources. */
+function takenFactorFor(
+  bearer: Creature,
+  state: CombatState,
+  e: DamageModifierEffect,
+): number {
+  const count = damageModifierCount(bearer, state, e)
+  if (e.accumulation === 'additive') {
+    const perUnitReduction = 1 - e.magnitude
+    const totalReduction = Math.min(perUnitReduction * count, e.reductionCap ?? 1)
+    return 1 - totalReduction
+  }
+  return e.magnitude ** count
+}
+
 /** Defender's multiplicative taken-pool contribution from active damage-modifier statuses
- * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks). */
+ * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks -- or, for an
+ * `accumulation: 'additive'` source like Bulwark, its own hard-capped collapsed factor). */
 export function gatherTakenFactors(creature: Creature, state: CombatState): number[] {
   return creature.activeEffects
     .filter(
       (e): e is DamageModifierEffect =>
         e.category === 'damage-modifier' && e.direction === 'taken',
     )
-    .map((e) => e.magnitude ** damageModifierCount(creature, state, e))
+    .map((e) => takenFactorFor(creature, state, e))
 }
 
 /** True iff `creature` carries the literal statusId among its status-carrying effects

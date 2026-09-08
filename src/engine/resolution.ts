@@ -497,25 +497,20 @@ export function executeResponse(
       // Phase 4 Slice D: magnitudeSource, when present, REPLACES the repetition count this
       // response's magnitude is scaled by -- `stacks` in flat mode, or the implicit `×1` in
       // formula mode -- with a live resolveMagnitudeCount(...) reading (see MagnitudeSource's
-      // own doc comment). Resolved ONCE up front (bearer/state don't change per target).
+      // own doc comment). Resolved ONCE up front (bearer/state don't change per target); the
+      // single `count` feeds whichever mode below actually reads it (only one does per call).
+      const count = response.magnitudeSource
+        ? resolveMagnitudeCount(
+            bearer,
+            state,
+            response.magnitudeSource,
+            context.consumedStacks,
+          )
+        : undefined
       // Absent -> exact pre-Slice-D values (byte-identical: `stacks`, or `1` -- a no-op
       // multiplier on spellPower).
-      const flatCount = response.magnitudeSource
-        ? resolveMagnitudeCount(
-            bearer,
-            state,
-            response.magnitudeSource,
-            context.consumedStacks,
-          )
-        : stacks
-      const formulaMultiplier = response.magnitudeSource
-        ? resolveMagnitudeCount(
-            bearer,
-            state,
-            response.magnitudeSource,
-            context.consumedStacks,
-          )
-        : 1
+      const flatCount = count ?? stacks
+      const formulaMultiplier = count ?? 1
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const t = findCreature(working, targetId)

@@ -1,12 +1,18 @@
 // Golden: Creature.defendCount + the `magnitudeSource` count-scaling primitive on a
-// `damage-modifier` status (Phase 4 Slice D, Bulwark-SHAPED -- a fixture mechanism demo, not the
-// real Bulwark data from specializations/shieldbarer.md, which is Slice F's job).
+// `damage-modifier` status, `accumulation: 'multiplicative'` (the DEFAULT mode -- Phase 4 Slice D,
+// a fixture mechanism demo, not real content). PR #47 review amendment: this fixture now
+// specifically PINS the multiplicative mode (asymptotes toward 0, never clamped) -- the
+// additive-with-cap mode (real Bulwark's actual "-5%/Defend, cap 80%" shape,
+// specializations/shieldbarer.md) is its own separate golden,
+// golden-defend-count-additive-cap, since a purely multiplicative `magnitude ** count` does NOT
+// reach or hold a hard cap (see that fixture's header for why).
 //
 // BEARER's trait applies a permanent (duration 10, never re-applied) `taken`-direction
 // damage-modifier ONCE at fight-start, whose `magnitude` (0.95) is raised to the power of a LIVE
 // `self-defend-count` reading instead of the status's own (frozen at 1) `stacks` -- so the taken
 // factor keeps shrinking round-over-round purely from BEARER defending again, with no
-// re-application needed ("mitigation improves round-over-round as the bearer keeps defending").
+// re-application needed. Multiplicative mode never clamps (CONVENTIONS: "reductions trend toward
+// but never reach 0") -- contrast the additive-with-cap fixture, which hard-clamps.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // BEARER is faster (defends first each round, so it's already `defending` when hit that same
@@ -59,6 +65,7 @@ export const BULWARK_STATUS: DamageModifierDef = {
   direction: 'taken',
   magnitude: 0.95,
   magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+  accumulation: 'multiplicative', // explicit (== the default) -- this fixture PINS this mode
 }
 
 export const playerParty = makeParty('player', [
