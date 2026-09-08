@@ -4,6 +4,7 @@ import { makeParty } from './__fixtures__/creatures'
 import { createSeededRng } from './rng'
 import { createCreatureId } from './ids'
 import { ROUND_CAP } from './config'
+import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
 import type { StatusDef, Trait } from './effect-types'
@@ -122,6 +123,7 @@ describe('round cap', () => {
       result: null,
       scripts: new Map(),
       statuses: new Map(),
+      traits: new Map(),
     }
 
     const { state, events } = resolveTurn(atCap)
@@ -547,5 +549,166 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
     expect(weaken).toMatchObject({ remainingDuration: 5 })
     // Untouched by any re-application -> decrements normally: 3 -> 2.
     expect(vulnerability).toMatchObject({ remainingDuration: 2 })
+  })
+})
+
+describe('action instance-list composition (Phase 4 Slice B)', () => {
+  // Attacker: attack 20, no cross-stat/armor-pen. Target: defence 0, huge HP (survives every
+  // instance). Base 100%: off 20, core 20, chip 0.2 -> raw 20.2 -> final 20.
+  // Echo-shaped "an additional time" (100%): identical to the base instance -> final 20.
+  // Brute-starter-shaped "attack again for 30%" (30%): off 20*0.3=6, core 6, chip 0.06 -> raw
+  // 6.06 -> final 6.
+  const ECHO: Trait = {
+    id: 'echo-fixture',
+    name: 'Echo',
+    effects: [{ category: 'action-instance', actionKind: 'attack', powerPercent: 100 }],
+  }
+  const BRUTE_PARTIAL: Trait = {
+    id: 'brute-partial-fixture',
+    name: 'Brute Partial',
+    effects: [{ category: 'action-instance', actionKind: 'attack', powerPercent: 30 }],
+  }
+
+  function attackDamages(innateTraitIds: string[]): number[] {
+    const player = makeParty('player', [
+      { id: 'a', attack: 20, speed: 20, scriptId: 'always-attack', innateTraitIds },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'b', health: 100000, defence: 0, speed: 1, scriptId: 'always-wait' },
+    ])
+    const traits = new Map([
+      [ECHO.id, ECHO],
+      [BRUTE_PARTIAL.id, BRUTE_PARTIAL],
+    ])
+    const { events } = resolveTurn(
+      createCombat(player, enemy, 1, new Map(), traits, new Map()),
+    )
+    return events
+      .filter(
+        (e): e is Extract<typeof e, { type: 'DamageDealt' }> => e.type === 'DamageDealt',
+      )
+      .map((e) => e.finalDamage)
+  }
+
+  it('base-only: no action-instance effects -> exactly one instance', () => {
+    expect(attackDamages([])).toEqual([20])
+  })
+
+  it('+extra-instance (Echo, 100%): two full-power instances', () => {
+    expect(attackDamages(['echo-fixture'])).toEqual([20, 20])
+  })
+
+  it('+partial-power instance (Brute starter shape, 30%): base then the partial instance', () => {
+    expect(attackDamages(['brute-partial-fixture'])).toEqual([20, 6])
+  })
+
+  it('both together compose LINEARLY -- [100, 100, 30], never a re-multiplied entry', () => {
+    expect(attackDamages(['echo-fixture', 'brute-partial-fixture'])).toEqual([20, 20, 6])
+  })
+
+  it('each instance fires its own AttackDeclared and on-attack hook (per-instance, not per-action)', () => {
+    const ON_ATTACK_PING: Trait = {
+      id: 'on-attack-ping-fixture',
+      name: 'Ping',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-attack',
+          response: {
+            kind: 'deal-damage',
+            target: { kind: 'triggering-source' },
+            flatAmount: 1,
+            damageSource: 'attack',
+            emitTriggerFired: true,
+          },
+        },
+      ],
+    }
+    const player = makeParty('player', [
+      {
+        id: 'a',
+        attack: 20,
+        speed: 20,
+        scriptId: 'always-attack',
+        innateTraitIds: ['echo-fixture', 'on-attack-ping-fixture'],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'b', health: 100000, defence: 0, speed: 1, scriptId: 'always-wait' },
+    ])
+    const traits = new Map([
+      [ECHO.id, ECHO],
+      [ON_ATTACK_PING.id, ON_ATTACK_PING],
+    ])
+    const { events } = resolveTurn(
+      createCombat(player, enemy, 1, new Map(), traits, new Map()),
+    )
+
+    expect(events.filter((e) => e.type === 'AttackDeclared')).toHaveLength(2)
+    expect(
+      events.filter((e) => e.type === 'TriggerFired' && e.hook === 'on-attack'),
+    ).toHaveLength(2) // once per instance, not once per action
+  })
+})
+
+describe('Spell.scalingStat (Phase 4 Slice B)', () => {
+  function castHit(spell: Spell, casterOverrides: Record<string, unknown>) {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        speed: 20,
+        scriptId: 'always-cast',
+        equippedSpells: [spell],
+        ...casterOverrides,
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'target', health: 1000, defence: 0, speed: 1, scriptId: 'always-wait' },
+    ])
+    const { events } = resolveTurn(createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID))
+    return events.find((e) => e.type === 'DamageDealt')
+  }
+
+  it('absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup', () => {
+    const spell: Spell = {
+      id: 's',
+      name: 'S',
+      targetShape: 'single',
+      spellPower: 1,
+      affinity: 'vitality',
+    }
+    // off = Intelligence(20), def 0 -> core 20, chip 0.2 -> raw 20.2 -> final 20.
+    expect(castHit(spell, { intelligence: 20 })).toMatchObject({ finalDamage: 20 })
+  })
+
+  it('an explicit scalingStat reads that Stat DIRECTLY (no remap resolution, ignores Intelligence)', () => {
+    const spell: Spell = {
+      id: 's',
+      name: 'S',
+      targetShape: 'single',
+      spellPower: 1,
+      affinity: 'vitality',
+      scalingStat: 'defence',
+    }
+    // off = Defence(15), NOT the 999 Intelligence -- def 0 -> core 15, chip 0.15 -> raw 15.15 -> 15.
+    expect(castHit(spell, { defence: 15, intelligence: 999 })).toMatchObject({
+      finalDamage: 15,
+    })
+  })
+
+  it("'none' is flat/Int-independent -- offStat 0, always chip-floor-only (min-1)", () => {
+    const spell: Spell = {
+      id: 's',
+      name: 'S',
+      targetShape: 'single',
+      spellPower: 1,
+      affinity: 'vitality',
+      scalingStat: 'none',
+    }
+    // off = 0, def 0 -> core 0, chip 0 -> raw 0 -> MAX(1, floor(0)) = 1.
+    expect(castHit(spell, { intelligence: 999 })).toMatchObject({
+      finalDamage: 1,
+      wasChipOnly: true,
+    })
   })
 })

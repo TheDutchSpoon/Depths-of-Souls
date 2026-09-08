@@ -2,13 +2,28 @@ import { createSeededRng } from './rng'
 import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
-import { instantiateTraitEffects, effectiveMaxHp } from './effects'
-import { applyStatus, dealDamage, fireHook, newCascade } from './resolution'
+import { instantiateTraitEffects, effectiveMaxHp, gatherExtraInstances } from './effects'
+import { getEffectiveStat, getOffensiveStat } from './effective-stats'
+import {
+  applyStatus,
+  dealDamage,
+  dealDamageWithOffStat,
+  fireHook,
+  newCascade,
+} from './resolution'
 import type { CascadeState } from './resolution'
 import { decideAction } from './interpreter'
+import { getDefaultTarget } from './targeting'
 import type { CreatureId } from './ids'
 import type { EffectInstanceId } from './effect-types'
-import type { Action, CombatEvent, CombatState, Creature, FightResult } from './types'
+import type {
+  Action,
+  CombatEvent,
+  CombatState,
+  Creature,
+  FightResult,
+  Spell,
+} from './types'
 import type { Script } from './scripting-types'
 import type { StatusDef, StatusSpec, Trait } from './effect-types'
 
@@ -46,6 +61,7 @@ export function createCombat(
     result: null,
     scripts,
     statuses,
+    traits,
   }
 }
 
@@ -170,8 +186,43 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
 }
 
 // The damage formula + application + damage-path hook firing all live in resolution.ts now
-// (dealDamage / applyDamageAndEmit). These executors just emit the intent event, then delegate:
-// "attack"/"cast" go through the exact same damage path a triggered deal-damage response does.
+// (dealDamage / applyDamageAndEmit). These executors just emit the intent event(s), fire the
+// matching on-[action] hook, then delegate: "attack"/"cast" go through the exact same damage
+// path a triggered deal-damage response does.
+
+/**
+ * The action instance-list model (CONVENTIONS' "action instance-list", locked): an Attack or
+ * Cast resolves as a list of powerPercent entries, assembled ONCE, up front, before any instance
+ * resolves -- base [100], plus one entry per active action-instance passive matching
+ * `actionKind` (or 'both'), in canonical active-effects order. Composition is LINEAR
+ * ([100, 100, 30], never a re-multiplied entry). Nothing is spawned mid-resolution, so there is
+ * no trigger/re-entrancy/loop-guard involvement here -- this is a pre-computed execution plan.
+ */
+function buildInstanceList(
+  actor: Creature,
+  actionKind: 'attack' | 'cast',
+): readonly number[] {
+  return [100, ...gatherExtraInstances(actor, actionKind)]
+}
+
+/**
+ * ASSUMPTION 31: every instance after the first targets the SAME resolved target as instance 1
+ * (the selector is not re-run per instance) -- except when that target has since died, which
+ * falls back to the normal default-target selection (matching the Brute starter's own wording).
+ * Returns null once no living target remains (nothing further in the list can resolve).
+ */
+function resolveInstanceTarget(
+  actor: Creature,
+  previousTargetId: CreatureId | null,
+  state: CombatState,
+): CreatureId | null {
+  if (previousTargetId) {
+    const current = findCreature(state, previousTargetId)
+    if (current?.alive) return previousTargetId
+  }
+  const enemyParty = actor.side === 'player' ? state.enemyParty : state.playerParty
+  return getDefaultTarget(enemyParty)
+}
 
 function executeAttack(
   actor: Creature,
@@ -180,8 +231,54 @@ function executeAttack(
   events: CombatEvent[],
   cascade: CascadeState,
 ): CombatState {
-  events.push({ type: 'AttackDeclared', attackerId: actor.id, targetId })
-  return dealDamage(actor.id, targetId, 'attack', 1.0, 'attack', state, events, cascade)
+  let working = state
+  let resolvedTargetId: CreatureId | null = targetId
+
+  for (const powerPercent of buildInstanceList(actor, 'attack')) {
+    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working)
+    if (!resolvedTargetId) break // no living target left for this or any further instance
+
+    const thisTargetId = resolvedTargetId
+    events.push({ type: 'AttackDeclared', attackerId: actor.id, targetId: thisTargetId })
+    working = fireHook(
+      'on-attack',
+      [actor.id],
+      thisTargetId,
+      working,
+      events,
+      cascade,
+    ).state
+    working = dealDamage(
+      actor.id,
+      thisTargetId,
+      'attack',
+      powerPercent / 100,
+      'attack',
+      working,
+      events,
+      cascade,
+    )
+  }
+  return working
+}
+
+/**
+ * Phase 4 Slice B: Spell.scalingStat resolution. Absent -> the pre-Slice-B remap-aware
+ * Intelligence lookup (byte-identical to every existing spell, since getOffensiveStat's Cast
+ * default IS Intelligence already). An explicit Stat reads it DIRECTLY via getEffectiveStat (no
+ * stat-remap resolution), mirroring deal-damage's scalingStat. 'none' = flat/Int-independent:
+ * offStat 0 (always chip-floor-only through the same formula -- not exercised by any v1
+ * damage-dealing content).
+ */
+function resolveSpellOffStat(
+  caster: Creature,
+  spell: Spell,
+  powerFraction: number,
+): number {
+  const spellPower = spell.spellPower * powerFraction
+  if (spell.scalingStat === undefined) return getOffensiveStat(caster, 'cast', spellPower)
+  if (spell.scalingStat === 'none') return 0
+  return getEffectiveStat(caster, spell.scalingStat) * spellPower
 }
 
 function executeCastSingle(
@@ -196,32 +293,49 @@ function executeCastSingle(
   if (!spell)
     throw new Error('resolver invariant violated: cast referencing an empty gem slot')
 
-  events.push({
-    type: 'SpellCast',
-    targetShape: 'single',
-    casterId: actor.id,
-    gemSlot,
-    targetId,
-  })
-  let working = dealDamage(
-    actor.id,
-    targetId,
-    'cast',
-    spell.spellPower,
-    'cast',
-    state,
-    events,
-    cascade,
-  )
-  if (spell.appliesStatus) {
-    working = applyStatusIfAlive(
+  let working = state
+  let resolvedTargetId: CreatureId | null = targetId
+
+  for (const powerPercent of buildInstanceList(actor, 'cast')) {
+    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working)
+    if (!resolvedTargetId) break
+
+    const thisTargetId = resolvedTargetId
+    events.push({
+      type: 'SpellCast',
+      targetShape: 'single',
+      casterId: actor.id,
+      gemSlot,
+      targetId: thisTargetId,
+    })
+    working = fireHook(
+      'on-cast',
+      [actor.id],
+      thisTargetId,
+      working,
+      events,
+      cascade,
+    ).state
+    working = dealDamageWithOffStat(
       actor.id,
-      targetId,
-      spell.appliesStatus,
+      thisTargetId,
+      resolveSpellOffStat(actor, spell, powerPercent / 100),
+      'cast',
+      'cast',
       working,
       events,
       cascade,
     )
+    if (spell.appliesStatus) {
+      working = applyStatusIfAlive(
+        actor.id,
+        thisTargetId,
+        spell.appliesStatus,
+        working,
+        events,
+        cascade,
+      )
+    }
   }
   return working
 }
@@ -251,43 +365,51 @@ function executeCastAoe(
   if (!spell)
     throw new Error('resolver invariant violated: cast referencing an empty gem slot')
 
-  const opposingParty = actor.side === 'player' ? state.enemyParty : state.playerParty
-  // Frozen target list: all living enemies, slot order, evaluated ONCE, right here.
-  const targetIds = opposingParty.filter((c) => c.alive).map((c) => c.id)
-  events.push({
-    type: 'SpellCast',
-    targetShape: 'aoe',
-    casterId: actor.id,
-    gemSlot,
-    targetIds,
-  })
-
   let working = state
-  for (const targetId of targetIds) {
-    // Skip a frozen-list target that's no longer alive by the time its hit lands (a prior
-    // hit's on-death/reflect cascade may have killed it). The frozen target *set* is
-    // unchanged; this only skips *hitting* an already-dead member.
-    const target = getCreature(working, targetId)
-    if (!target.alive) continue
-    working = dealDamage(
-      actor.id,
-      targetId,
-      'cast',
-      spell.spellPower,
-      'cast',
-      working,
-      events,
-      cascade,
-    )
-    if (spell.appliesStatus) {
-      working = applyStatusIfAlive(
+
+  for (const powerPercent of buildInstanceList(actor, 'cast')) {
+    const opposingParty =
+      actor.side === 'player' ? working.enemyParty : working.playerParty
+    // Frozen target list: all living enemies, slot order -- each AOE instance independently
+    // re-freezes its OWN set at that instance's cast-start (no single target to preserve across
+    // instances, unlike the single-target case above).
+    const targetIds = opposingParty.filter((c) => c.alive).map((c) => c.id)
+    events.push({
+      type: 'SpellCast',
+      targetShape: 'aoe',
+      casterId: actor.id,
+      gemSlot,
+      targetIds,
+    })
+    // AOE has no single target to name as the hook's `source` -- self only.
+    working = fireHook('on-cast', [actor.id], undefined, working, events, cascade).state
+
+    for (const targetId of targetIds) {
+      // Skip a frozen-list target that's no longer alive by the time its hit lands (a prior
+      // hit's on-death/reflect cascade may have killed it). The frozen target *set* is
+      // unchanged; this only skips *hitting* an already-dead member.
+      const target = getCreature(working, targetId)
+      if (!target.alive) continue
+      working = dealDamageWithOffStat(
         actor.id,
         targetId,
-        spell.appliesStatus,
+        resolveSpellOffStat(actor, spell, powerPercent / 100),
+        'cast',
+        'cast',
         working,
         events,
         cascade,
       )
+      if (spell.appliesStatus) {
+        working = applyStatusIfAlive(
+          actor.id,
+          targetId,
+          spell.appliesStatus,
+          working,
+          events,
+          cascade,
+        )
+      }
     }
   }
 
@@ -298,18 +420,36 @@ function executeDefend(
   actor: Creature,
   state: CombatState,
   events: CombatEvent[],
+  cascade: CascadeState,
 ): CombatState {
   events.push({ type: 'Defended', creatureId: actor.id })
-  return updateCreature(state, actor.id, { defending: true })
+  const working = fireHook(
+    'on-defend',
+    [actor.id],
+    undefined,
+    state,
+    events,
+    cascade,
+  ).state
+  return updateCreature(working, actor.id, { defending: true })
 }
 
 function executeProvoke(
   actor: Creature,
   state: CombatState,
   events: CombatEvent[],
+  cascade: CascadeState,
 ): CombatState {
   events.push({ type: 'Provoked', creatureId: actor.id })
-  return updateCreature(state, actor.id, { provoking: true })
+  const working = fireHook(
+    'on-provoke',
+    [actor.id],
+    undefined,
+    state,
+    events,
+    cascade,
+  ).state
+  return updateCreature(working, actor.id, { provoking: true })
 }
 
 function executeWait(
@@ -350,9 +490,9 @@ function executeAction(
         }
       }
     case 'defend':
-      return executeDefend(actor, state, events)
+      return executeDefend(actor, state, events, cascade)
     case 'provoke':
-      return executeProvoke(actor, state, events)
+      return executeProvoke(actor, state, events, cascade)
     case 'wait':
       return executeWait(actor, state, events)
     default: {

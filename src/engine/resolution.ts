@@ -15,9 +15,12 @@ import { resolveTargetSelector } from './target-selectors'
 import {
   effectsForHook,
   effectiveMaxHp,
+  gatherArmorPenetration,
+  gatherCrossStatContribution,
   gatherDealtMods,
   gatherTakenFactors,
   instantiateStatus,
+  instantiateTraitEffects,
 } from './effects'
 import { evaluateCondition } from './conditions'
 import { createEffectInstanceId } from './effect-types'
@@ -95,12 +98,106 @@ export function dealDamage(
   statusId?: string,
 ): CombatState {
   const attacker = getCreature(state, attackerId)
-  const target = getCreature(state, targetId)
   const offStat = getOffensiveStat(attacker, offStatKind, spellPower)
+  return dealDamageCore(
+    attackerId,
+    targetId,
+    offStat,
+    offStatKind,
+    damageSource,
+    state,
+    events,
+    cascade,
+    statusId,
+  )
+}
+
+/**
+ * Phase 4 Slice B: the deal-damage response's `scalingStat` mode -- reads an ARBITRARY Stat
+ * directly via getEffectiveStat (no stat-remap resolution, unlike offStatKind/RemapSlot), then
+ * × spellPower, through the SAME downstream formula as dealDamage (armor-pen, cross-stat,
+ * affinity, pools, min-1 floor). E.g. Thorns/Shield Bash scaling off Defence instead of Attack.
+ */
+export function dealDamageWithScalingStat(
+  attackerId: CreatureId,
+  targetId: CreatureId,
+  stat: Stat,
+  spellPower: number,
+  damageSource: 'attack' | 'cast' | 'dot',
+  state: CombatState,
+  events: CombatEvent[],
+  cascade: CascadeState,
+  statusId?: string,
+): CombatState {
+  const attacker = getCreature(state, attackerId)
+  const offStat = getEffectiveStat(attacker, stat) * spellPower
+  // ASSUMPTION (Slice B, not pinned by the brief): a scalingStat-based deal-damage response is
+  // treated as Attack-flavored for cross-stat's `appliesTo` gating unless damageSource says
+  // 'cast' -- content examples (Thorns/Shield Bash) are reactive "strike back" responses, not
+  // spell-shaped.
+  return dealDamageCore(
+    attackerId,
+    targetId,
+    offStat,
+    damageSource === 'cast' ? 'cast' : 'attack',
+    damageSource,
+    state,
+    events,
+    cascade,
+    statusId,
+  )
+}
+
+/**
+ * Shared damage-formula core, ALSO exported directly for Spell.scalingStat (combat.ts): gathers
+ * the attacker's armor-penetration + cross-stat (for `actionKind`) passives, runs
+ * calculateDamage, applies + emits. `actionKind` also selects cross-stat's appliesTo bucket.
+ * `offStat` is the caller's fully-resolved value (remap-aware for the default Cast path,
+ * direct-stat for scalingStat, or 0 for a 'none'/flat-utility spell).
+ */
+export function dealDamageWithOffStat(
+  attackerId: CreatureId,
+  targetId: CreatureId,
+  offStat: number,
+  actionKind: 'attack' | 'cast',
+  damageSource: 'attack' | 'cast' | 'dot',
+  state: CombatState,
+  events: CombatEvent[],
+  cascade: CascadeState,
+  statusId?: string,
+): CombatState {
+  return dealDamageCore(
+    attackerId,
+    targetId,
+    offStat,
+    actionKind,
+    damageSource,
+    state,
+    events,
+    cascade,
+    statusId,
+  )
+}
+
+function dealDamageCore(
+  attackerId: CreatureId,
+  targetId: CreatureId,
+  offStat: number,
+  actionKind: 'attack' | 'cast',
+  damageSource: 'attack' | 'cast' | 'dot',
+  state: CombatState,
+  events: CombatEvent[],
+  cascade: CascadeState,
+  statusId?: string,
+): CombatState {
+  const attacker = getCreature(state, attackerId)
+  const target = getCreature(state, targetId)
   const { defence, takenFactors: defendFactors } = resolveDefenceAndTakenFactors(target)
   const damage = calculateDamage({
     offStat,
     defence,
+    armorPenetrationPercent: gatherArmorPenetration(attacker),
+    crossStatBonus: gatherCrossStatContribution(attacker, actionKind),
     attackerAffinity: attacker.affinity,
     defenderAffinity: target.affinity,
     dealtMods: gatherDealtMods(attacker),
@@ -329,6 +426,15 @@ function resolveResponseTargets(
       )
       return id ? [id] : []
     }
+    case 'random-dead-ally': {
+      const self = getCreature(state, context.self)
+      const party = self.side === 'player' ? state.playerParty : state.enemyParty
+      const deadAllies = party.filter((c) => !c.alive)
+      if (deadAllies.length === 0) return []
+      const index = Math.floor(state.rng.next() * deadAllies.length)
+      const chosen = deadAllies[index]
+      return chosen ? [chosen.id] : []
+    }
     default: {
       const exhaustive: never = target
       throw new Error(`Unhandled response target: ${String(exhaustive)}`)
@@ -346,6 +452,19 @@ export function executeResponse(
 ): { state: CombatState; suppressed: boolean } {
   switch (response.kind) {
     case 'deal-damage': {
+      // ASSUMPTION 6: offStat/scalingStat/flatAmount are mutually exclusive -- setting more
+      // than one is a resolver-invariant error, mirroring applyStatus's unknown-statusId throw,
+      // rather than silently picking one.
+      const modesSet = [
+        response.offStat !== undefined,
+        response.scalingStat !== undefined,
+        response.flatAmount !== undefined,
+      ].filter(Boolean).length
+      if (modesSet > 1) {
+        throw new Error(
+          'resolver invariant violated: deal-damage response set more than one of offStat/scalingStat/flatAmount',
+        )
+      }
       const stacks = context.stacks ?? 1
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
@@ -359,6 +478,19 @@ export function executeResponse(
             targetId,
             response.flatAmount * stacks,
             response.damageSource ?? 'dot',
+            working,
+            events,
+            cascade,
+            context.statusId,
+          )
+        } else if (response.scalingStat !== undefined) {
+          const spellPower = response.spellPower ?? 1.0
+          working = dealDamageWithScalingStat(
+            context.self,
+            targetId,
+            response.scalingStat,
+            spellPower,
+            response.damageSource ?? 'attack',
             working,
             events,
             cascade,
@@ -428,7 +560,48 @@ export function executeResponse(
       return { state: working, suppressed: false }
     }
     case 'suppress-action':
-      return { state, suppressed: true }
+      // Undeclared/'all' scope preserves the exact pre-Slice-B behavior (Stun: the whole turn
+      // is skipped via resolveTurn's suppressed flag). A scoped suppression ('attack'/'cast')
+      // does NOT set this flag -- it's read passively by the interpreter instead (see
+      // interpreter.ts's isActionSuppressed), so the rest of the turn stays choosable.
+      return { state, suppressed: (response.scope ?? 'all') === 'all' }
+    case 'revive': {
+      let working = state
+      for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        const target = findCreature(working, targetId)
+        if (!target || target.alive) continue // target must be dead
+        // Death-reset: a fresh instantiation of innateTraitIds (no ramp preserved), then
+        // currentHp = round(baselineMaxHp * pct) computed from THAT fresh baseline.
+        const reset: Creature = {
+          ...target,
+          activeEffects: instantiateTraitEffects(target, state.traits),
+        }
+        const baselineMaxHp = effectiveMaxHp(reset)
+        const currentHp = Math.round(baselineMaxHp * response.pct)
+        working = updateCreature(working, targetId, {
+          alive: true,
+          currentHp,
+          activeEffects: reset.activeEffects,
+        })
+        events.push({
+          type: 'Revived',
+          sourceId: context.self,
+          targetId,
+          currentHp,
+        })
+      }
+      return { state: working, suppressed: false }
+    }
+    case 'grant-action-state': {
+      let working = state
+      for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        working = updateCreature(working, targetId, {
+          ...(response.defending ? { defending: true } : {}),
+          ...(response.provoking ? { provoking: true } : {}),
+        })
+      }
+      return { state: working, suppressed: false }
+    }
     default: {
       const exhaustive: never = response
       throw new Error(`Unhandled response kind: ${String(exhaustive)}`)

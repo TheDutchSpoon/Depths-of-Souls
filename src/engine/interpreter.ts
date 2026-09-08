@@ -16,9 +16,30 @@ function actionNeedsTargeting(action: RuleAction, creature: Creature): boolean {
   return false // defend / provoke / wait: self-only, never need targeting
 }
 
-/** The one reachable v1 invalidity: Cast referencing an empty gem slot. */
+/**
+ * Phase 4 Slice B: scoped suppress-action (Silenced=Cast, Pacified=Attack) gates rule validity
+ * HERE, not via resolution.ts's hook-fired `suppressed` flag (that flag stays reserved for
+ * unscoped/'all' suppression -- Stun's existing whole-turn-skip mechanism, byte-identical). A
+ * pure scan of the acting creature's active effects for a present suppress-action response
+ * whose scope covers `kind` -- ASSUMPTION 8: only ever gates Attack/Cast; Defend/Provoke/Wait
+ * are never suppressible in v1, so this is never consulted for those kinds.
+ */
+function isActionSuppressed(creature: Creature, kind: 'attack' | 'cast'): boolean {
+  return creature.activeEffects.some((e) => {
+    if (e.category !== 'triggered' && e.category !== 'condition-status') return false
+    if (e.response.kind !== 'suppress-action') return false
+    const scope = e.response.scope ?? 'all'
+    return scope === 'all' || scope === kind
+  })
+}
+
+/** The one reachable v1 invalidity beyond scoped suppression: Cast referencing an empty gem slot. */
 function isRuleActionValid(action: RuleAction, creature: Creature): boolean {
-  if (action.kind === 'cast') return creature.equippedSpells[action.gemSlot] != null
+  if (action.kind === 'cast') {
+    if (creature.equippedSpells[action.gemSlot] == null) return false
+    return !isActionSuppressed(creature, 'cast')
+  }
+  if (action.kind === 'attack') return !isActionSuppressed(creature, 'attack')
   return true
 }
 
@@ -72,6 +93,11 @@ function resolveRuleAction(
 }
 
 function decideImplicitFallback(creature: Creature, state: CombatState): Action {
+  // ASSUMPTION (Slice B, not spelled out by the brief): the implicit fallback must also honor
+  // scoped Attack suppression (Pacified) -- otherwise an empty/no-matching script would
+  // trivially bypass it via the fallback's unconditional Attack. Falls back to Wait, mirroring
+  // how a script rule proposing a suppressed Attack is simply invalid.
+  if (isActionSuppressed(creature, 'attack')) return { kind: 'wait' }
   const enemyParty = creature.side === 'player' ? state.enemyParty : state.playerParty
   const targetId = resolveOffensiveTarget(creature, state, () =>
     getDefaultTarget(enemyParty),

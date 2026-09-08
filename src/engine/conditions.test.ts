@@ -17,6 +17,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
+    traits: new Map(),
     ...overrides,
   }
 }

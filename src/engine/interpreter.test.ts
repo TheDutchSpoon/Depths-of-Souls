@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { decideAction } from './interpreter'
 import { makeParty } from './__fixtures__/creatures'
 import { createSeededRng } from './rng'
+import { createEffectInstanceId } from './effect-types'
 import type { CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
+import type { ActiveEffect } from './effect-types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
@@ -16,6 +18,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
+    traits: new Map(),
     ...overrides,
   }
 }
@@ -277,5 +280,90 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
     expect(result).toEqual({ kind: 'attack', targetId: enemyWithProvoker[0]!.id })
     siblingWithProvoker.next()
     expect(stateWithProvoker.rng.next()).toBe(siblingWithProvoker.next())
+  })
+})
+
+describe('decideAction -- scoped suppress-action (Phase 4 Slice B)', () => {
+  function suppressEffect(scope: 'attack' | 'cast'): ActiveEffect {
+    return {
+      category: 'triggered',
+      hook: 'on-turn-start',
+      response: { kind: 'suppress-action', scope },
+      instanceId: createEffectInstanceId('fixture#suppress'),
+      sourceTraitId: 'fixture-suppress',
+    }
+  }
+
+  it('a Cast-scoped suppression (Silenced) skips a Cast rule but not a later Attack rule', () => {
+    const player = makeParty('player', [
+      {
+        id: 'me',
+        equippedSpells: [EMBER_LANCE],
+        activeEffects: [suppressEffect('cast')],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const script: Script = {
+      id: 'test',
+      rules: [
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'cast', gemSlot: 0 },
+          targeting: { kind: 'lowest-hp-enemy' },
+        },
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'attack' },
+          targeting: { kind: 'lowest-hp-enemy' },
+        },
+      ],
+    }
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(decideAction(player[0]!, script, state)).toEqual({
+      kind: 'attack',
+      targetId: enemy[0]!.id,
+    })
+  })
+
+  it('an Attack-scoped suppression (Pacified) skips an Attack rule but not a later Cast rule', () => {
+    const player = makeParty('player', [
+      {
+        id: 'me',
+        equippedSpells: [EMBER_LANCE],
+        activeEffects: [suppressEffect('attack')],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const script: Script = {
+      id: 'test',
+      rules: [
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'attack' },
+          targeting: { kind: 'lowest-hp-enemy' },
+        },
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'cast', gemSlot: 0 },
+          targeting: { kind: 'lowest-hp-enemy' },
+        },
+      ],
+    }
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(decideAction(player[0]!, script, state)).toEqual({
+      kind: 'cast',
+      targetShape: 'single',
+      gemSlot: 0,
+      targetId: enemy[0]!.id,
+    })
+  })
+
+  it('an Attack-scoped suppression also gates the implicit fallback (falls to Wait, not Attack)', () => {
+    const player = makeParty('player', [
+      { id: 'me', activeEffects: [suppressEffect('attack')] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(decideAction(player[0]!, null, state)).toEqual({ kind: 'wait' })
   })
 })

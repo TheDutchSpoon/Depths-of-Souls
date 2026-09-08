@@ -95,6 +95,47 @@ describe('calculateDamage', () => {
     expect(result.wasChipOnly).toBe(true)
   })
 
+  it('armorPenetrationPercent at 0 (default) is byte-identical to no penetration', () => {
+    const withZero = calculateDamage(
+      input({ offStat: 30, defence: 10, armorPenetrationPercent: 0 }),
+    )
+    const withoutField = calculateDamage(input({ offStat: 30, defence: 10 }))
+    expect(withZero).toEqual(withoutField)
+  })
+
+  it('armorPenetrationPercent at 50% halves the effective Defence before the core', () => {
+    // effDef = 20 * (1 - 0.5) = 10. core = 30 - 10 = 20. chip = 0.3. raw = 20.3.
+    const result = calculateDamage(
+      input({ offStat: 30, defence: 20, armorPenetrationPercent: 0.5 }),
+    )
+    expect(result.rawDamage).toBeCloseTo(20.3)
+    expect(result.finalDamage).toBe(20)
+  })
+
+  it('armorPenetrationPercent at 100% ignores Defence entirely', () => {
+    // effDef = 20 * (1 - 1) = 0. core = 30. chip = 0.3. raw = 30.3.
+    const result = calculateDamage(
+      input({ offStat: 30, defence: 20, armorPenetrationPercent: 1 }),
+    )
+    expect(result.rawDamage).toBeCloseTo(30.3)
+    expect(result.finalDamage).toBe(30)
+  })
+
+  it('crossStatBonus at 0 (default) is byte-identical to no bonus', () => {
+    const withZero = calculateDamage(
+      input({ offStat: 20, defence: 5, crossStatBonus: 0 }),
+    )
+    const withoutField = calculateDamage(input({ offStat: 20, defence: 5 }))
+    expect(withZero).toEqual(withoutField)
+  })
+
+  it('crossStatBonus adds to effOffStat before the core AND feeds the chip floor', () => {
+    // effOffStat = 20 + 15 = 35. core = 35 - 5 = 30. chip = 0.01 * 35 = 0.35. raw = 30.35.
+    const result = calculateDamage(input({ offStat: 20, defence: 5, crossStatBonus: 15 }))
+    expect(result.rawDamage).toBeCloseTo(30.35)
+    expect(result.finalDamage).toBe(30)
+  })
+
   it('floors the fully-composed value once, not each term before multiplying', () => {
     // core=10, chipFloor=0.5, affinity x1.25 (advantage).
     // Correct (floor once at the end): floor((10 + 0.5) * 1.25) = floor(13.125) = 13.
