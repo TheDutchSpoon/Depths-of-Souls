@@ -45,6 +45,7 @@ const creature: Creature = {
   provoking: false,
   innateTraitIds: [],
   activeEffects: [],
+  defendCount: 0,
 }
 
 describe('getEffectiveStat', () => {

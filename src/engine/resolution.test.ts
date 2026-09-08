@@ -742,6 +742,169 @@ describe('revive response (Phase 4 Slice B)', () => {
   })
 })
 
+describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', () => {
+  const GLOW: StatusDef = {
+    category: 'damage-modifier',
+    statusId: 'glow-fixture',
+    cap: 5,
+    direction: 'dealt',
+    magnitude: 0.1,
+  }
+
+  function stateWithGlowStacks(stacks: number) {
+    const player = makeParty('player', [
+      { id: 'detonator', intelligence: 10, defence: 0 },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 100, defence: 0 }])
+    const statuses = new Map([[GLOW.statusId, GLOW]])
+    let state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      TRAIT_REGISTRY,
+      statuses,
+    )
+    const events: CombatEvent[] = []
+    state = applyStatus(
+      createCreatureId('detonator'),
+      createCreatureId('detonator'),
+      { statusId: 'glow-fixture', duration: 5, stacks },
+      state,
+      events,
+      newCascade(),
+    )
+    return state
+  }
+
+  it('reads and clears the firing creature’s own stacks, then executes the wrapped effect scaled by the consumed count', () => {
+    const state = stateWithGlowStacks(3)
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'consume-stacks',
+        statusId: 'glow-fixture',
+        effect: {
+          kind: 'deal-damage',
+          target: { kind: 'triggering-source' },
+          scalingStat: 'intelligence',
+          magnitudeSource: { kind: 'consumed-stacks' },
+        },
+      },
+      'detonator-fixture',
+      { self: createCreatureId('detonator'), source: createCreatureId('foe') },
+      state,
+      events,
+      newCascade(),
+    )
+
+    expect(events[0]).toMatchObject({ type: 'StatusExpired', statusId: 'glow-fixture' })
+    // off = intelligence(10) * spellPower(1.0 * 3 consumed stacks) = 30; def 0: core 30, chip
+    // 0.3 -> raw 30.3 -> final 30.
+    expect(events[1]).toMatchObject({ type: 'DamageDealt', finalDamage: 30 })
+
+    const detonator = [...result.state.playerParty, ...result.state.enemyParty].find(
+      (c) => c.id === createCreatureId('detonator'),
+    )!
+    expect(detonator.activeEffects).toEqual([])
+  })
+
+  it('is a full no-op when the status is absent (0/absent stacks == no status present)', () => {
+    // A creature that never had Glow applied at all -- CONVENTIONS: "no status present" and
+    // "0 stacks" are the same state.
+    const player = makeParty('player', [{ id: 'detonator' }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const bareState = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'consume-stacks',
+        statusId: 'glow-fixture',
+        effect: {
+          kind: 'deal-damage',
+          target: { kind: 'triggering-source' },
+          flatAmount: 999,
+        },
+      },
+      'detonator-fixture',
+      { self: createCreatureId('detonator'), source: createCreatureId('foe') },
+      bareState,
+      events,
+      newCascade(),
+    )
+    expect(events).toEqual([])
+    expect(result.state).toEqual(bareState)
+  })
+})
+
+describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
+  const LAST_STAND: Trait = {
+    id: 'last-stand-fixture',
+    name: 'Last Stand (fixture)',
+    effects: [{ category: 'cheat-death', chancePercent: 50 }],
+  }
+
+  function stateWithBearer(traits: ReadonlyMap<string, Trait>) {
+    const player = makeParty('player', [{ id: 'atk', attack: 20, defence: 0 }])
+    const enemy = makeParty('enemy', [
+      { id: 'bearer', health: 20, defence: 0, innateTraitIds: [...traits.keys()] },
+    ])
+    return createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+  }
+
+  function hit(state: ReturnType<typeof stateWithBearer>, rngNext: () => number) {
+    const rigged = { ...state, rng: { next: rngNext } }
+    const events: CombatEvent[] = []
+    const result = dealDamage(
+      createCreatureId('atk'),
+      createCreatureId('bearer'),
+      'attack',
+      1.0,
+      'attack',
+      rigged,
+      events,
+      newCascade(),
+    )
+    const bearer = [...result.playerParty, ...result.enemyParty].find(
+      (c) => c.id === createCreatureId('bearer'),
+    )!
+    return { bearer, events }
+  }
+
+  it('a successful roll survives at exactly 1 HP -- no CreatureDied/on-death, DamageDealt.remainingHp reflects 1', () => {
+    // off 20, def 0: core 20, chip 0.2 -> raw 20.2 -> final 20 -- exactly lethal for health 20.
+    const state = stateWithBearer(registry(LAST_STAND))
+    const { bearer, events } = hit(state, () => 0.1) // 0.1 < 0.5 chance -> succeeds
+
+    expect(bearer.alive).toBe(true)
+    expect(bearer.currentHp).toBe(1)
+    expect(events.find((e) => e.type === 'DamageDealt')).toMatchObject({
+      finalDamage: 20, // ASSUMPTION 19: unchanged -- only remainingHp reflects the save
+      remainingHp: 1,
+    })
+    expect(events.some((e) => e.type === 'CreatureDied')).toBe(false)
+  })
+
+  it('a failed roll dies normally, unaffected', () => {
+    const state = stateWithBearer(registry(LAST_STAND))
+    const { bearer, events } = hit(state, () => 0.9) // 0.9 >= 0.5 chance -> fails
+
+    expect(bearer.alive).toBe(false)
+    expect(bearer.currentHp).toBe(0)
+    expect(events.some((e) => e.type === 'CreatureDied')).toBe(true)
+  })
+
+  it('never draws RNG for a creature with no cheat-death effect', () => {
+    const state = stateWithBearer(new Map<string, Trait>()) // no traits -- chancePercent sums to 0
+    let draws = 0
+    hit(state, () => {
+      draws += 1
+      return 0
+    })
+    expect(draws).toBe(0)
+  })
+})
+
 describe('suppress-action scope (Phase 4 Slice B)', () => {
   it('undeclared/"all" scope still sets suppressed:true -- byte-identical to pre-Slice-B (Stun)', () => {
     const state = createCombat(

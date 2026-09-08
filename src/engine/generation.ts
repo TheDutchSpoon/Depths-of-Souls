@@ -148,6 +148,9 @@ export function materializeCreature(
     provoking: false,
     innateTraitIds: speciesCreature.innateTraitIds,
     activeEffects: [],
+    // Phase 4 Slice D: cumulative-per-fight, always starts at 0. `speciesId` is deliberately
+    // left unset here -- see Creature.speciesId's own doc comment (out of this slice's scope).
+    defendCount: 0,
   }
 }
 

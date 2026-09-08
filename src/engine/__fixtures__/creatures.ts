@@ -24,6 +24,8 @@ export interface CreatureOverrides {
   provoking?: boolean
   innateTraitIds?: readonly string[]
   activeEffects?: readonly ActiveEffect[]
+  defendCount?: number
+  speciesId?: string
 }
 
 /** A flat, unremarkable baseline creature (all stats 20) for tests that don't care about specifics. */
@@ -51,6 +53,8 @@ export function makeCreature(overrides: CreatureOverrides = {}): Creature {
     provoking: overrides.provoking ?? false,
     innateTraitIds: overrides.innateTraitIds ?? [],
     activeEffects: overrides.activeEffects ?? [],
+    defendCount: overrides.defendCount ?? 0,
+    speciesId: overrides.speciesId,
   }
 }
 

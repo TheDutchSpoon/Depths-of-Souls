@@ -47,6 +47,41 @@ export type RemapSlot = 'attack' | 'cast'
 
 // ---- Forward surface for Slices B/C (declared, not yet consumed) ----
 
+// ---- Phase 4 Slice D: the count-scaling / resource-primitive vocabulary ----
+// CONVENTIONS "count-scaling" + the brief's magnitudeSource vocabulary-table row.
+
+/** The six live "board counts" resolveCount (effects.ts) reads, all resolved relative to the
+ * READING creature's own side/affinity/species (matching targeting.ts's livingAlliesOf
+ * convention: "ally" includes the acting creature) -- recomputed fresh on every read, never
+ * cached. 'enemies-with-status' additionally needs a statusId (MagnitudeSource's own sibling
+ * field below), since the count itself doesn't say WHICH status. */
+export type CountOf =
+  | 'living-allies'
+  | 'living-allies-of-affinity'
+  | 'living-allies-of-species'
+  | 'enemies-with-status'
+  | 'dead-allies'
+  | 'self-defend-count'
+
+/** ASSUMPTION (Slice D, not literally shaped by the brief -- CONVENTIONS/the vocabulary table
+ * name the mechanism, "a modifier... may declare magnitudeSource... instead of a flat number,"
+ * but not how it composes with a host's EXISTING per-stack formula). Interpreted here as an
+ * ALTERNATIVE SOURCE for whatever repetition count a host field already multiplies/exponentiates
+ * its own authored rate by (deal-damage's flatAmount×stacks / spellPower, damage-modifier's
+ * magnitude×stacks or magnitude**stacks) -- i.e. it substitutes for "stacks", not for the rate
+ * itself. This keeps every existing formula SHAPE unchanged and every Phase 1-3 call site
+ * byte-identical when magnitudeSource is absent (ASSUMPTION 16), while letting the substituted
+ * count be a LIVE board count instead of an applied-status's own bookkeeping. `flat` is "the
+ * existing implicit behavior, made explicit" (CONVENTIONS); `consumed-stacks` is resolved only
+ * inside a consume-stacks response's wrapped `effect` (a resolver-invariant error otherwise --
+ * see resolveMagnitudeCount). Flagged for review: `stat-modifier`'s `factor` is NOT wired to
+ * this source in this slice (see StatModifierDef's own comment) -- deferred to whichever slice
+ * first authors a count-scaled stat-modifier (H1's Swarmhive Striker). */
+export type MagnitudeSource =
+  | { readonly kind: 'flat'; readonly value: number }
+  | { readonly kind: 'count'; readonly of: CountOf; readonly statusId?: string }
+  | { readonly kind: 'consumed-stacks' }
+
 export type ResponseTarget =
   | { readonly kind: 'self' }
   | { readonly kind: 'triggering-source' }
@@ -94,6 +129,13 @@ export type EffectResponse =
       readonly emitTriggerFired?: boolean
       /** Overrides the DamageDealt tag; default derived from offStat ('dot' when flatAmount is set). */
       readonly damageSource?: 'attack' | 'cast' | 'dot'
+      /** Phase 4 Slice D: an alternative source for the repetition count this response's own
+       * magnitude is scaled by -- flatAmount's `× stacks` or (in offStat/scalingStat mode)
+       * spellPower's own `× 1` -- see MagnitudeSource's doc comment for the exact composition.
+       * Absent (the common case) is byte-identical to pre-Slice-D behavior (stacks / no-op ×1).
+       * Detonator-shaped: `{ scalingStat: 'intelligence', magnitudeSource: { kind:
+       * 'consumed-stacks' } }` scales the burst's spellPower by the just-consumed Glow count. */
+      readonly magnitudeSource?: MagnitudeSource
     }
   | {
       readonly kind: 'heal'
@@ -134,6 +176,18 @@ export type EffectResponse =
       readonly defending?: boolean
       readonly provoking?: boolean
     }
+  // Phase 4 Slice D (Glowflies' Detonator). SELF-scoped (no target field, unlike every other
+  // response) -- reads and clears the FIRING creature's own statusId stacks, matching the
+  // condition-status/triggered-response convention that trigger evaluation is self-scoped.
+  // ASSUMPTION 18: emits StatusExpired for the consumed status (it's genuinely gone, not merely
+  // decremented). 0/absent stacks is a full no-op per CONVENTIONS ("applyStatus's cap-driven
+  // model means 'no status present' and '0 stacks' are the same state") -- resolution.ts skips
+  // BOTH the removal and the wrapped `effect` entirely in that case, not just the removal.
+  | {
+      readonly kind: 'consume-stacks'
+      readonly statusId: string
+      readonly effect: EffectResponse
+    }
 
 // ---- Effect definitions (as authored in a Trait; no instance identity yet) ----
 
@@ -144,6 +198,19 @@ export type EffectResponse =
 // data, convert this to a declarative Condition-like structure.
 export type ActivationPredicate = (creature: Creature) => boolean
 
+// NOTE (Phase 4 Slice D, flagged for review): CONVENTIONS' count-scaling primitive names
+// stat-modifier as an eligible magnitudeSource host too ("a stat/damage-modifier whose factor
+// reads a live board count", species-locked.md's Swarmhive Striker). Deliberately NOT wired here
+// -- getEffectiveStat(creature, stat) is a pure (creature, stat) function called from ~15+ sites
+// across the codebase (conditions.ts, turn-order.ts, target-selectors.ts, ...), several of which
+// have no CombatState in scope at all; giving it access to live board counts would mean an
+// invasive, CombatState-aware signature change to a function the whole damage-formula/scripting
+// pipeline depends on -- out of this slice's own required scope (no Slice D golden needs a
+// count-scaled STAT, only a count-scaled damage-modifier/deal-damage -- see DamageModifierDef's
+// magnitudeSource and the deal-damage response's). Deferred to whichever slice first authors a
+// count-scaled stat-modifier for real (H1's Swarmhive Striker), matching this project's own
+// "stop and amend the relevant earlier slice" discipline for a primitive only a later slice's
+// real content turns out to need.
 export type StatModifierDef = {
   readonly category: 'stat-modifier'
   readonly stat: Stat
@@ -249,6 +316,20 @@ export type AnnihilateDef = {
   readonly category: 'annihilate'
 }
 
+/** Phase 4 Slice D (Last Stand): checked inside applyDamageAndEmit (resolution.ts) at the
+ * instant a hit would reduce a living target to 0 HP, BEFORE CreatureDied/on-death fire -- one
+ * seeded RNG roll (drawn only when the summed chancePercent is > 0 and the hit would otherwise
+ * be lethal, mirroring Confusion's "draws nothing when inactive" discipline); on success,
+ * currentHp is set to EXACTLY 1 (ASSUMPTION 19 -- not finalDamage-1 or any other derived value)
+ * and no death events/hooks fire at all -- resolution continues exactly as a non-lethal hit
+ * would. Additive across stacked sources, clamped to [0, 100] (gatherCheatDeathChance,
+ * effects.ts) -- the percent-scale mirror of ArmorPenetrationDef's [0,1] clamp. Never surfaced
+ * as a status, gathered read-time like ArmorPenetrationDef/ProvokeImmunityDef. */
+export type CheatDeathDef = {
+  readonly category: 'cheat-death'
+  readonly chancePercent: number
+}
+
 // EffectDef is what a TRAIT authors (permanent-for-fight passives/triggers -- timed statuses are
 // a separate, parallel concept below, never authored directly on a Trait).
 export type EffectDef =
@@ -262,6 +343,7 @@ export type EffectDef =
   | ProvokeImmunityDef
   | SplashingDef
   | AnnihilateDef
+  | CheatDeathDef
 
 // ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
 // a spell's appliesStatus, never innate. Declared in a separate status registry (data/statuses.ts),
@@ -291,6 +373,14 @@ export type DamageModifierDef = {
   /** Per-stack term: for 'dealt', an ADDITIVE contribution to (1 + Σ dealtMods); for 'taken', a
    * per-stack MULTIPLICATIVE factor compounding via magnitude ** stacks into Π(takenFactors). */
   readonly magnitude: number
+  /** Phase 4 Slice D (Bulwark-shaped): when present, the live resolveCount(...) reading
+   * REPLACES the applied status's own `stacks` bookkeeping as the exponent/multiplier `magnitude`
+   * is raised to/multiplied by -- `magnitude ** resolveCount(...)` ('taken') or `magnitude *
+   * resolveCount(...)` ('dealt'), recomputed every read (never cached, unlike `stacks`). Lets a
+   * status applied ONCE (e.g. at on-fight-start) keep scaling off live state -- e.g.
+   * self-defend-count -- instead of needing repeated re-application to grow its `stacks`. Absent
+   * is byte-identical to pre-Slice-D behavior (uses `stacks` exactly as before). */
+  readonly magnitudeSource?: MagnitudeSource
 }
 
 /** Web (act-last) / Blindclaws' grant-act-first (act-first) -- same primitive, opposite pole
@@ -354,6 +444,7 @@ export type StatusImmunityEffect = StatusImmunityDef & InstanceIdentity
 export type ProvokeImmunityEffect = ProvokeImmunityDef & InstanceIdentity
 export type SplashingEffect = SplashingDef & InstanceIdentity
 export type AnnihilateEffect = AnnihilateDef & InstanceIdentity
+export type CheatDeathEffect = CheatDeathDef & InstanceIdentity
 export type TurnOrderStatusEffect = TurnOrderStatusDef &
   InstanceIdentity &
   StatusInstanceState
@@ -374,6 +465,7 @@ export type ActiveEffect =
   | ProvokeImmunityEffect
   | SplashingEffect
   | AnnihilateEffect
+  | CheatDeathEffect
   | TurnOrderStatusEffect
   | FriendlyFireStatusEffect
 

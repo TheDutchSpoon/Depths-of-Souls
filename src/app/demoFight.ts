@@ -71,6 +71,7 @@ export const demoPlayerParty: Creature[] = [
     provoking: false,
     innateTraitIds: [],
     activeEffects: [],
+    defendCount: 0,
   },
   {
     id: createCreatureId('mira'),
@@ -87,6 +88,7 @@ export const demoPlayerParty: Creature[] = [
     provoking: false,
     innateTraitIds: [],
     activeEffects: [],
+    defendCount: 0,
   },
   {
     id: createCreatureId('tomas'),
@@ -105,6 +107,7 @@ export const demoPlayerParty: Creature[] = [
     // below 50% HP instead of being topped back up every round).
     innateTraitIds: [RETALIATE.id, DEMO_ONLY_REGEN_ON_HIT.id],
     activeEffects: [],
+    defendCount: 0,
   },
   {
     id: createCreatureId('liora'),
@@ -122,6 +125,7 @@ export const demoPlayerParty: Creature[] = [
     // below half HP -- the read-time condition made visible (Vengeful).
     innateTraitIds: [VENGEFUL.id],
     activeEffects: [],
+    defendCount: 0,
   },
   {
     id: createCreatureId('wendel'),
@@ -138,6 +142,7 @@ export const demoPlayerParty: Creature[] = [
     // Reeling: stunned for 1 round whenever hit -- shows a suppressed, empty-bracket turn.
     innateTraitIds: [REELING.id],
     activeEffects: [],
+    defendCount: 0,
   },
 ]
 
@@ -156,6 +161,7 @@ export const demoEnemyParty: Creature[] = [
     provoking: false,
     innateTraitIds: [],
     activeEffects: [],
+    defendCount: 0,
   },
   {
     id: createCreatureId('bog-witch'),
@@ -171,6 +177,7 @@ export const demoEnemyParty: Creature[] = [
     provoking: false,
     innateTraitIds: [],
     activeEffects: [],
+    defendCount: 0,
   },
   {
     id: createCreatureId('stone-troll'),
@@ -186,6 +193,7 @@ export const demoEnemyParty: Creature[] = [
     provoking: false,
     innateTraitIds: [],
     activeEffects: [],
+    defendCount: 0,
   },
   {
     id: createCreatureId('alpha-wolf'),
@@ -202,6 +210,7 @@ export const demoEnemyParty: Creature[] = [
     // When an ally dies (the self-destructing sleepy-slime below), permanently +50% Attack.
     innateTraitIds: [GRUDGE.id],
     activeEffects: [],
+    defendCount: 0,
   },
   {
     id: createCreatureId('sleepy-slime'),
@@ -219,5 +228,6 @@ export const demoEnemyParty: Creature[] = [
     // on death -- the real-content showcase for the damage-modifier status category.
     innateTraitIds: [CATASTROPHIC_COLLAPSE.id],
     activeEffects: [],
+    defendCount: 0,
   },
 ]
