@@ -341,10 +341,12 @@ row tagged `C` in the brief's engine-vocabulary delta table.
 
 `src/engine/turn-order.ts` — `buildTurnQueue` rewritten to partition living combatants into an
 act-first pole / normal group / act-last pole (each internally Speed-sorted with the existing
-tie-break), concatenated first→normal→last. **ASSUMPTION 9** (both poles active at once → first
-wins): implemented and golden-tested. With no `turn-order-status` effects present, both poles are
-empty and the output is byte-identical to the pre-Slice-C single-group sort (confirmed: the full
-prior suite passes unmodified). **Web's break-free roll was deliberately NOT built** — see
+tie-break), concatenated first→normal→last — the position-beats-raw-Speed mechanism itself is
+golden-tested (`golden-turn-order-status`). **ASSUMPTION 9** (both poles active at once → first
+wins) is implemented and unit-tested (`turn-order.test.ts`); no golden exercises that specific
+edge case. With no `turn-order-status` effects present, both poles are empty and the output is
+byte-identical to the pre-Slice-C single-group sort (confirmed: the full prior suite passes
+unmodified). **Web's break-free roll was deliberately NOT built** — see
 CONVENTIONS' "turn-order status" bullet for why, and the open item for H1.
 
 `src/engine/scripting-types.ts` / `conditions.ts` — `ActedBeforeTargetCondition` (`{ kind:
@@ -361,9 +363,11 @@ casing the interpreter's lookahead loop).
 `src/engine/targeting.ts` — `resolveOffensiveTarget` restructured into the three-step override
 pipeline: Confusion (`resolveConfusionRedirect`, a new private helper) → Tunnel Vision
 (`hasProvokeImmunity`) → Provoke (`resolveProvoke`, the pre-existing logic, unchanged, extracted
-to its own function). **ASSUMPTION 12** (Confusion checked before Provoke): implemented and
-golden-tested — a confused actor's roll can redirect to its own side even with an enemy provoker
-active. New exported `shouldRedirectAoeToAllies` (the AOE case, **ASSUMPTION 13**: one roll per
+to its own function). **ASSUMPTION 12** (Confusion checked before Provoke) is implemented and
+unit-tested (`targeting.test.ts`) — a confused actor's roll can redirect to its own side even
+with an enemy provoker active; no dedicated Confusion golden exists (`confusion.test.ts` covers
+the AOE wiring end-to-end but as a unit test, not a committed `__golden__` fixture pair). New
+exported `shouldRedirectAoeToAllies` (the AOE case, **ASSUMPTION 13**: one roll per
 AOE instance, wired into `combat.ts`'s `executeCastAoe`) and `adjacentLivingTargets` (**ASSUMPTION
 14**: alive-filtered, slot-ordered neighbors — a dead slot-neighbor is skipped in favor of the
 next living one). An unconfused/non-provoke-immune actor draws exactly the same RNG as before
@@ -409,7 +413,8 @@ while Provoke still applies, a Tunnel-Vision-*and*-confused actor still redirect
 — the review-fix regression test, `shouldRedirectAoeToAllies`, `adjacentLivingTargets` incl. the
 dead-slot-neighbor-skip case).
 
-Two focused-golden files (hand-derived arithmetic in comments, fixture-scoped traits only):
+Two focused unit-test files exercising full event logs inline (hand-derived arithmetic in
+comments, fixture-scoped traits only, but NOT committed `__golden__` fixture pairs):
 `splashing.test.ts` (a 3-enemy lineup, Splashing's main hit + two distinctly-recomputed splash
 hits proving no-copy; a lone-enemy no-splash case; a 4-enemy Annihilate case hitting all three
 others despite non-adjacency; a Cast-produces-no-splash case — the review-fix regression test)
