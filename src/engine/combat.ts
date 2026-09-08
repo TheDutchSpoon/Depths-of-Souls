@@ -502,7 +502,15 @@ function executeDefend(
     events,
     cascade,
   ).state
-  return updateCreature(working, actor.id, { defending: true })
+  // Phase 4 Slice D / ASSUMPTION 17: cumulative for the whole fight, never reset -- read fresh
+  // from `working` (not the pre-hook `actor`) in case an on-defend response somehow touched it,
+  // matching the project's existing "re-fetch before mutating" discipline (e.g. combat.ts's own
+  // freshActor pattern).
+  const afterHook = getCreature(working, actor.id)
+  return updateCreature(working, actor.id, {
+    defending: true,
+    defendCount: afterHook.defendCount + 1,
+  })
 }
 
 function executeProvoke(

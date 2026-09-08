@@ -16,11 +16,13 @@ import {
   effectsForHook,
   effectiveMaxHp,
   gatherArmorPenetration,
+  gatherCheatDeathChance,
   gatherCrossStatContribution,
   gatherDealtMods,
   gatherTakenFactors,
   instantiateStatus,
   instantiateTraitEffects,
+  resolveMagnitudeCount,
 } from './effects'
 import { evaluateCondition } from './conditions'
 import { createEffectInstanceId } from './effect-types'
@@ -65,6 +67,11 @@ interface HookContext {
   /** The firing effect's statusId, when it's a status (condition-status); absent for a plain
    * triggered trait. Threaded onto DamageDealt so a DoT tick's causing status is attributable. */
   readonly statusId?: string
+  /** Phase 4 Slice D: populated ONLY by a consume-stacks response's own wrapped-effect call
+   * (the just-read, about-to-be-cleared stack count) -- absent everywhere else. A
+   * `magnitudeSource: { kind: 'consumed-stacks' }` read outside this context is a resolver
+   * invariant violation (resolveMagnitudeCount throws). */
+  readonly consumedStacks?: number
 }
 
 // ---- Damage application + damage-path hooks ----
@@ -202,8 +209,8 @@ function dealDamageCore(
     crossStatBonus: gatherCrossStatContribution(attacker, actionKind),
     attackerAffinity: attacker.affinity,
     defenderAffinity: target.affinity,
-    dealtMods: gatherDealtMods(attacker),
-    takenFactors: [...defendFactors, ...gatherTakenFactors(target)],
+    dealtMods: gatherDealtMods(attacker, state),
+    takenFactors: [...defendFactors, ...gatherTakenFactors(target, state)],
   })
   return applyDamageAndEmit(
     attackerId,
@@ -234,8 +241,26 @@ export function applyDamageAndEmit(
   cascade: CascadeState,
   statusId?: string,
 ): CombatState {
-  const newHp = Math.max(target.currentHp - damage.finalDamage, 0)
-  const died = newHp === 0 && target.alive
+  const rawNewHp = Math.max(target.currentHp - damage.finalDamage, 0)
+  const wouldDie = rawNewHp === 0 && target.alive
+
+  // Phase 4 Slice D (Last Stand): checked at the instant a lethal hit would land, BEFORE any
+  // death event/hook fires -- one seeded RNG roll, drawn only when the bearer actually carries
+  // a nonzero cheat-death chance (an ordinary creature never touches state.rng here, mirroring
+  // targeting.ts's Confusion "draws nothing when inactive" discipline). ASSUMPTION 19: on
+  // success currentHp becomes EXACTLY 1 (not finalDamage-1) and `died` flips to false --
+  // resolution below proceeds through the ordinary non-lethal path (DamageDealt's remainingHp
+  // reflects 1, on-damage-taken fires since the target survived, no CreatureDied/on-death).
+  let newHp = rawNewHp
+  let died = wouldDie
+  if (wouldDie) {
+    const chancePercent = gatherCheatDeathChance(target)
+    if (chancePercent > 0 && state.rng.next() < chancePercent / 100) {
+      newHp = 1
+      died = false
+    }
+  }
+
   let working = updateCreature(state, target.id, { currentHp: newHp, alive: newHp > 0 })
 
   events.push({
@@ -468,17 +493,36 @@ export function executeResponse(
         )
       }
       const stacks = context.stacks ?? 1
+      const bearer = getCreature(state, context.self)
+      // Phase 4 Slice D: magnitudeSource, when present, REPLACES the repetition count this
+      // response's magnitude is scaled by -- `stacks` in flat mode, or the implicit `×1` in
+      // formula mode -- with a live resolveMagnitudeCount(...) reading (see MagnitudeSource's
+      // own doc comment). Resolved ONCE up front (bearer/state don't change per target); the
+      // single `count` feeds whichever mode below actually reads it (only one does per call).
+      const count = response.magnitudeSource
+        ? resolveMagnitudeCount(
+            bearer,
+            state,
+            response.magnitudeSource,
+            context.consumedStacks,
+          )
+        : undefined
+      // Absent -> exact pre-Slice-D values (byte-identical: `stacks`, or `1` -- a no-op
+      // multiplier on spellPower).
+      const flatCount = count ?? stacks
+      const formulaMultiplier = count ?? 1
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const t = findCreature(working, targetId)
         if (!t || !t.alive) continue // never strike a corpse
         if (response.flatAmount !== undefined) {
           // Flat mode (DoT): own value from the source, bypassing the whole OffStat/Defence/
-          // affinity/pools formula. Scales by the firing status's current stacks.
+          // affinity/pools formula. Scales by the firing status's current stacks (or, with
+          // magnitudeSource, the live count that replaces them).
           working = applyFlatDamage(
             context.self,
             targetId,
-            response.flatAmount * stacks,
+            response.flatAmount * flatCount,
             response.damageSource ?? 'dot',
             working,
             events,
@@ -486,7 +530,7 @@ export function executeResponse(
             context.statusId,
           )
         } else if (response.scalingStat !== undefined) {
-          const spellPower = response.spellPower ?? 1.0
+          const spellPower = (response.spellPower ?? 1.0) * formulaMultiplier
           working = dealDamageWithScalingStat(
             context.self,
             targetId,
@@ -500,7 +544,7 @@ export function executeResponse(
           )
         } else {
           const offStat = response.offStat ?? 'attack'
-          const spellPower = response.spellPower ?? 1.0
+          const spellPower = (response.spellPower ?? 1.0) * formulaMultiplier
           working = dealDamage(
             context.self,
             targetId,
@@ -610,6 +654,57 @@ export function executeResponse(
         })
       }
       return { state: working, suppressed: false }
+    }
+    case 'consume-stacks': {
+      // Phase 4 Slice D (Glowflies' Detonator). SELF-scoped: reads and clears the FIRING
+      // creature's own statusId stacks (context.self), not a targeted creature's -- consume-
+      // stacks has no `target` field, matching the self-scoped trigger-condition convention.
+      const self = getCreature(state, context.self)
+      const existing = self.activeEffects.find(
+        (
+          e,
+        ): e is
+          | ConditionStatusEffect
+          | DamageModifierEffect
+          | TurnOrderStatusEffect
+          | FriendlyFireStatusEffect =>
+          (e.category === 'condition-status' ||
+            e.category === 'damage-modifier' ||
+            e.category === 'turn-order-status' ||
+            e.category === 'friendly-fire-status') &&
+          e.statusId === response.statusId,
+      )
+      // 0/absent stacks is a full no-op (CONVENTIONS: "no status present" and "0 stacks" are the
+      // same state) -- the wrapped `effect` never fires, mirroring `deal-damage`'s "never strike
+      // a corpse" skip rather than firing it with a magnitude of 0.
+      if (!existing) return { state, suppressed: false }
+
+      const consumedStacks = existing.stacks
+      const working = updateCreature(state, context.self, {
+        activeEffects: self.activeEffects.filter(
+          (e) => e.instanceId !== existing.instanceId,
+        ),
+      })
+      // ASSUMPTION 18: StatusExpired, not a mere decrement -- the status is genuinely gone.
+      events.push({
+        type: 'StatusExpired',
+        creatureId: context.self,
+        statusId: response.statusId,
+      })
+
+      // The wrapped effect is executed DIRECTLY (not via fireHook) -- it's a continuation of the
+      // SAME trigger firing, not a new hook point: no separate TriggerFired, no additional
+      // cascade-depth increment/self-re-entry-guard bookkeeping (the outer consume-stacks
+      // trigger's own instance already holds that). Consumes/clears state, so it cannot re-fire
+      // itself even if the wrapped effect somehow re-triggered this same hook.
+      return executeResponse(
+        response.effect,
+        sourceTraitId,
+        { ...context, consumedStacks },
+        working,
+        events,
+        cascade,
+      )
     }
     default: {
       const exhaustive: never = response

@@ -74,6 +74,20 @@ export interface Creature {
    * innate-1 -> innate-2 -> artifact infusions (none in v1) -> applied statuses.
    */
   readonly activeEffects: readonly ActiveEffect[]
+  /** Phase 4 Slice D / ASSUMPTION 17: "times Defended this battle" -- cumulative for the whole
+   * fight, incremented in executeDefend, NEVER reset (Bulwark's "each time the creature has
+   * Defended this battle"). Not derivable from activeEffects (Defend's own action-state flag
+   * clears every turn); a small, explicit field, like innateTraitIds/activeEffects were in
+   * Phase 3. Feeds the 'self-defend-count' magnitudeSource kind (effects.ts's resolveCount). */
+  readonly defendCount: number
+  /** Phase 4 Slice D (own ASSUMPTION, not pinned by the brief): a static species reference,
+   * needed for the 'living-allies-of-species' magnitudeSource kind (resolveCount). Optional and
+   * unset by every Phase 1-3/Slice A-C creature and by this slice's own generation.ts --
+   * 'living-allies-of-species' is therefore inert (always 0) until a later slice (H1+) threads
+   * a real speciesId through materializeCreature. Deliberately NOT wired into generation.ts here
+   * -- out of this slice's own required scope (no Slice D golden exercises real species data);
+   * flagged for whichever slice first authors real species content. */
+  readonly speciesId?: string
 }
 
 // ---- Actions ----

@@ -11,18 +11,21 @@ import type {
   ActionInstanceEffect,
   ActiveEffect,
   ArmorPenetrationEffect,
+  CheatDeathEffect,
   ConditionStatusEffect,
+  CountOf,
   CrossStatEffect,
   DamageModifierEffect,
   EffectDef,
   EffectInstanceId,
   FriendlyFireStatusEffect,
   Hook,
+  MagnitudeSource,
   StatusDef,
   Trait,
   TriggeredEffect,
 } from './effect-types'
-import type { Creature } from './types'
+import type { CombatState, Creature } from './types'
 
 /**
  * Resolves a creature's innateTraitIds against the registry and instantiates each trait's
@@ -73,6 +76,8 @@ function withInstance(
       return { ...def, instanceId, sourceTraitId }
     case 'annihilate':
       return { ...def, instanceId, sourceTraitId }
+    case 'cheat-death':
+      return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
       throw new Error(`Unknown effect def category: ${String(exhaustive)}`)
@@ -116,26 +121,64 @@ export function clampedHp(creature: Creature): number {
   return Math.min(creature.currentHp, effectiveMaxHp(creature))
 }
 
+/** Phase 4 Slice D: the live repetition count a damage-modifier effect's `magnitude` is
+ * multiplied/exponentiated by -- `e.stacks` (pre-Slice-D behavior) unless the effect declares a
+ * `magnitudeSource`, in which case the live resolveCount(...) reading is used instead (recomputed
+ * every read -- see DamageModifierDef's own doc comment). */
+function damageModifierCount(
+  bearer: Creature,
+  state: CombatState,
+  e: DamageModifierEffect,
+): number {
+  return e.magnitudeSource
+    ? resolveMagnitudeCount(bearer, state, e.magnitudeSource)
+    : e.stacks
+}
+
 /** Attacker's additive dealt-mod pool contribution from active damage-modifier statuses
  * (e.g. Weaken: -20%/stack). Read passively, like getEffectiveStat -- never fired via a hook. */
-export function gatherDealtMods(creature: Creature): number[] {
+export function gatherDealtMods(creature: Creature, state: CombatState): number[] {
   return creature.activeEffects
     .filter(
       (e): e is DamageModifierEffect =>
         e.category === 'damage-modifier' && e.direction === 'dealt',
     )
-    .map((e) => e.magnitude * e.stacks)
+    .map((e) => e.magnitude * damageModifierCount(creature, state, e))
+}
+
+/** Phase 4 Slice D, PR #47 review amendment: collapses one `taken`-direction damage-modifier
+ * effect to its single contributed factor, per its `accumulation` mode (CONVENTIONS'
+ * "Taken-reduction accumulation", DamageModifierDef's own doc comment). `'multiplicative'`
+ * (default/absent -- byte-identical to every pre-amendment read): `magnitude ** count`,
+ * asymptoting toward 0, never clamped. `'additive'` (Bulwark): the per-unit reduction
+ * `(1 - magnitude)` summed × count, hard-clamped at `reductionCap` (default 1 -- i.e.
+ * unclamped -- if somehow omitted on an additive effect, though real content always sets it).
+ * The collapsed factor is what enters the multiplicative `Π(takenFactors)` pool alongside every
+ * other source -- additive WITHIN a source, multiplicative ACROSS sources. */
+function takenFactorFor(
+  bearer: Creature,
+  state: CombatState,
+  e: DamageModifierEffect,
+): number {
+  const count = damageModifierCount(bearer, state, e)
+  if (e.accumulation === 'additive') {
+    const perUnitReduction = 1 - e.magnitude
+    const totalReduction = Math.min(perUnitReduction * count, e.reductionCap ?? 1)
+    return 1 - totalReduction
+  }
+  return e.magnitude ** count
 }
 
 /** Defender's multiplicative taken-pool contribution from active damage-modifier statuses
- * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks). */
-export function gatherTakenFactors(creature: Creature): number[] {
+ * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks -- or, for an
+ * `accumulation: 'additive'` source like Bulwark, its own hard-capped collapsed factor). */
+export function gatherTakenFactors(creature: Creature, state: CombatState): number[] {
   return creature.activeEffects
     .filter(
       (e): e is DamageModifierEffect =>
         e.category === 'damage-modifier' && e.direction === 'taken',
     )
-    .map((e) => e.magnitude ** e.stacks)
+    .map((e) => takenFactorFor(creature, state, e))
 }
 
 /** True iff `creature` carries the literal statusId among its status-carrying effects
@@ -269,4 +312,97 @@ export function activeFriendlyFireStatus(
     (e): e is FriendlyFireStatusEffect =>
       e.category === 'friendly-fire-status' && !hasStatusImmunity(creature, e.statusId),
   )
+}
+
+// ---- Phase 4 Slice D: resource & counter primitives ----
+
+/**
+ * CONVENTIONS' count-scaling primitive: one of the six live "board counts" a `magnitudeSource`
+ * of kind 'count' can read, resolved relative to `bearer`'s OWN side/affinity/species and
+ * recomputed fresh on every call (never cached -- killing an ally mid-fight changes the reading
+ * on the very next read, same fight). `living-allies`/`-of-affinity`/`-of-species` INCLUDE
+ * `bearer` itself while it's alive, matching targeting.ts's livingAlliesOf convention ("ally"
+ * includes the acting creature). `living-allies-of-species` is inert (0) for any creature with no
+ * `speciesId` set -- true of every Phase 1-3/Slice A-D creature today (see Creature.speciesId's
+ * own doc comment). `enemies-with-status` requires `statusId` (thrown otherwise, mirroring
+ * applyStatus's unknown-statusId invariant throw).
+ */
+export function resolveCount(
+  bearer: Creature,
+  of: CountOf,
+  state: CombatState,
+  statusId?: string,
+): number {
+  const ownParty = bearer.side === 'player' ? state.playerParty : state.enemyParty
+  const opposingParty = bearer.side === 'player' ? state.enemyParty : state.playerParty
+
+  switch (of) {
+    case 'living-allies':
+      return ownParty.filter((c) => c.alive).length
+    case 'living-allies-of-affinity':
+      return ownParty.filter((c) => c.alive && c.affinity === bearer.affinity).length
+    case 'living-allies-of-species':
+      return ownParty.filter(
+        (c) => c.alive && c.speciesId !== undefined && c.speciesId === bearer.speciesId,
+      ).length
+    case 'dead-allies':
+      return ownParty.filter((c) => !c.alive).length
+    case 'enemies-with-status': {
+      if (!statusId) {
+        throw new Error(
+          'resolver invariant violated: enemies-with-status magnitudeSource requires a statusId',
+        )
+      }
+      return opposingParty.filter((c) => c.alive && hasStatus(c, statusId)).length
+    }
+    case 'self-defend-count':
+      return bearer.defendCount
+    default: {
+      const exhaustive: never = of
+      throw new Error(`Unhandled count kind: ${String(exhaustive)}`)
+    }
+  }
+}
+
+/**
+ * Resolves a MagnitudeSource to a live number. 'flat' is "the existing implicit behavior, made
+ * explicit" (CONVENTIONS); 'count' delegates to resolveCount above; 'consumed-stacks' has no
+ * meaning read cold -- it's populated only by a consume-stacks response's own wrapped-effect
+ * call (resolution.ts), so resolving it without that context is a resolver-invariant violation
+ * (mirrors applyStatus's unknown-statusId throw), not a silent 0.
+ */
+export function resolveMagnitudeCount(
+  bearer: Creature,
+  state: CombatState,
+  source: MagnitudeSource,
+  consumedStacks?: number,
+): number {
+  switch (source.kind) {
+    case 'flat':
+      return source.value
+    case 'count':
+      return resolveCount(bearer, source.of, state, source.statusId)
+    case 'consumed-stacks':
+      if (consumedStacks === undefined) {
+        throw new Error(
+          'resolver invariant violated: consumed-stacks magnitudeSource resolved outside a consume-stacks response',
+        )
+      }
+      return consumedStacks
+    default: {
+      const exhaustive: never = source
+      throw new Error(`Unhandled magnitude source kind: ${String(exhaustive)}`)
+    }
+  }
+}
+
+/** Last Stand: summed chancePercent across active cheat-death passives (additive across
+ * sources, clamped to [0, 100] -- the percent-scale mirror of gatherArmorPenetration's [0, 1]
+ * clamp). 0 for a creature with no cheat-death effect -- applyDamageAndEmit (resolution.ts)
+ * skips the RNG draw entirely in that case, never rolling for an ordinary creature. */
+export function gatherCheatDeathChance(creature: Creature): number {
+  const total = creature.activeEffects
+    .filter((e): e is CheatDeathEffect => e.category === 'cheat-death')
+    .reduce((sum, e) => sum + e.chancePercent, 0)
+  return Math.min(100, Math.max(0, total))
 }

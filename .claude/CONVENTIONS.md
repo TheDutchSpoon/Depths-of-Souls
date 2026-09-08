@@ -134,8 +134,50 @@ not a ninth). **Hold the line at eight.**
 ### New primitives / capabilities
 - **count-scaling** modifier — factor reads a **live count**: living allies, allies of a
   species/affinity, enemies-with-a-status, **dead allies**, or a per-creature **defend-count**.
-  Recomputed each read.
+  Recomputed each read. **Built in Phase 4 Slice D** as `MagnitudeSource` (`effect-types.ts`):
+  `{ kind: 'flat', value }` | `{ kind: 'count', of, statusId? }` | `{ kind: 'consumed-stacks' }`,
+  an optional sibling field on `DamageModifierDef.magnitude` and the `deal-damage` response.
+  **Count-source semantics (decided):** a `magnitudeSource` substitutes for the **repetition
+  count** a host field already scales its authored rate by — it stands in for `stacks` in the
+  existing `magnitude * stacks` / `magnitude ** stacks` / `flatAmount * stacks` formulas, **not**
+  for the rate/flat number itself. Absent ⇒ byte-identical to pre-Slice-D behavior. This axis is
+  about *what the count is*; it is orthogonal to the taken-reduction accumulation rule below.
+- **Taken-reduction accumulation (decided) — two authoring modes on a `taken` damage-modifier:**
+  - **multiplicative** (default; the existing `magnitude ** count`): asymptotes toward 0, never
+    clamped, per the taken-pool rule "reductions trend toward but never reach 0, no clamp needed."
+    This is the model for ordinary stacking taken-reductions and for all **future** count-scaled
+    taken sources.
+  - **additive-with-cap** (Bulwark): per-unit reduction **summed** `× count` and **hard-clamped**
+    at a per-source `cap` — `factor = 1 − min(reductionPerUnit × count, cap)`. Bulwark = −5% per
+    Defend, cap 80% (`specializations/shieldbarer.md`, **unchanged** — its text is exactly correct
+    under this decision). An additive-capped source collapses to that **single factor**, which then
+    enters the multiplicative taken pool `Π(takenFactors)` alongside every other source:
+    **additive within a source, multiplicative across sources.**
+  The two modes are the reason the taken pool needs both a summing/clamping path *and* the existing
+  product; a purely multiplicative `magnitude ** count` does **not** implement Bulwark's cap (it
+  sails past 80% toward 100% as the count grows — e.g. `0.95 ** 32 ≈ 0.19`, an 81% reduction), and
+  an earlier draft that claimed otherwise was wrong. The exact authoring field shape (e.g. an
+  `accumulation` discriminator + a `cap`, with the per-unit rate read from `magnitude` or a
+  dedicated field) is the coding agent's implementation plan to propose (ASSUMPTION-tagged) and
+  review; the default **must** be `multiplicative` so every existing taken status stays
+  byte-identical, and the focused golden **must** drive `count` high enough to actually reach the
+  cap (the Slice-D multiplicative fixture only reached ~10% over two rounds, so it never exercised
+  a clamp — which is exactly why the divergence was invisible to green gates).
+- **`StatModifierDef.factor` does NOT get `magnitudeSource` yet (decided — deferred to H1).**
+  `getEffectiveStat(creature, stat)` is a pure `(creature, stat)` function with no `CombatState`
+  at most of its ~15+ call sites; wiring a count-scaled stat-modifier (Swarmhive Striker) means
+  giving it state access — a real, invasive change with no Slice D consumer. Deferred to whichever
+  slice first authors Swarmhive Striker (**H1**), which must land it **together with** (a) a real
+  `speciesId` threaded through `materializeCreature` (the `living-allies-of-species` reader is
+  built but inert — returns 0 — until then), and (b) this stat-modifier host **iff** Striker is
+  authored as a stat buff rather than a `dealt` damage-modifier (a dealt-pool `+%dmg per hive-mate`
+  is already supported today).
 - **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
+  **Built in Phase 4 Slice D.** SELF-scoped (no `target` field) — always reads/clears the FIRING
+  creature's own stacks. 0/absent stacks is a full no-op (the wrapped effect never fires, not
+  fired-with-magnitude-0); a successful consume emits `StatusExpired` (ASSUMPTION 18) before the
+  wrapped effect executes (continuing the SAME trigger firing — no new `TriggerFired`, no extra
+  cascade-depth bookkeeping).
 - **status-effect immunity** — `{ category: 'status-immunity', statusId }`, a permanent-for-fight
   passive `EffectDef` (Clear Mind/Aggressive/Lucidity), structurally identical to
   armor-penetration/cross-stat. **Built in Phase 4 Slice C.** Consulted at each immune-able
@@ -174,7 +216,14 @@ not a ninth). **Hold the line at eight.**
   OTHER living enemies, with Annihilate) via a full formula recompute against that target's own
   Defence/affinity/pools — never a copy of the main hit's number. No `TriggerFired` (same action,
   not a trigger). Cast never splashes, so no spell-status-on-splash question arises.
-- **cheat-death** — intercept a lethal hit → RNG → survive at 1 HP (Last Stand).
+- **cheat-death** — intercept a lethal hit → RNG → survive at 1 HP (Last Stand). **Built in
+  Phase 4 Slice D**: a permanent-for-fight passive `EffectDef` (`{ chancePercent }`), gathered
+  read-time (additive across sources, clamped `[0, 100]`) and checked inside `applyDamageAndEmit`
+  at the instant a hit would land the target at 0 HP, BEFORE `CreatureDied`/`on-death` fire — one
+  seeded RNG draw, only when the bearer's summed chance is `> 0` (an ordinary creature never
+  touches `state.rng` here). On success `currentHp = 1` exactly; `DamageDealtEvent.finalDamage`
+  is left UNCHANGED (only `remainingHp` reflects the save) — matches the existing overkill
+  precedent, where `finalDamage` already isn't guaranteed to equal actual HP removed.
 - **scoped suppress-action** — suppress a *specific* action (**Silenced**=Cast, **Pacified**=Attack)
   vs Stun's suppress-all; a parameter on `suppress-action`. **Built in Phase 4 Slice B with a
   two-path split** (surfaced for confirmation): undeclared/`'all'` scope is unchanged from Stun's

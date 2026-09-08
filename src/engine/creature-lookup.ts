@@ -18,7 +18,10 @@ export function updateCreature(
   state: CombatState,
   id: CreatureId,
   patch: Partial<
-    Pick<Creature, 'currentHp' | 'alive' | 'defending' | 'provoking' | 'activeEffects'>
+    Pick<
+      Creature,
+      'currentHp' | 'alive' | 'defending' | 'provoking' | 'activeEffects' | 'defendCount'
+    >
   >,
 ): CombatState {
   const updateSide = (party: readonly Creature[]) =>

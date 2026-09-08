@@ -14,10 +14,31 @@ import {
   hasSplashing,
   hasAnnihilate,
   activeFriendlyFireStatus,
+  resolveCount,
+  resolveMagnitudeCount,
+  gatherCheatDeathChance,
 } from './effects'
 import { createEffectInstanceId } from './effect-types'
-import { makeCreature } from './__fixtures__/creatures'
+import { createSeededRng } from './rng'
+import { makeCreature, makeParty } from './__fixtures__/creatures'
 import type { ActiveEffect, Trait } from './effect-types'
+import type { CombatState } from './types'
+
+function makeState(overrides: Partial<CombatState> = {}): CombatState {
+  return {
+    rng: createSeededRng(1),
+    playerParty: [],
+    enemyParty: [],
+    turnQueue: [],
+    turnCursor: 0,
+    round: 1,
+    result: null,
+    scripts: new Map(),
+    statuses: new Map(),
+    traits: new Map(),
+    ...overrides,
+  }
+}
 
 const REGISTRY: ReadonlyMap<string, Trait> = new Map([
   [
@@ -143,12 +164,88 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
 
   it('gatherDealtMods sums magnitude*stacks for dealt damage-modifier effects only', () => {
     const c = makeCreature({ activeEffects: [weaken, vulnerability, unrelated] })
-    expect(gatherDealtMods(c)).toEqual([-0.2])
+    expect(gatherDealtMods(c, makeState())).toEqual([-0.2])
   })
 
   it('gatherTakenFactors compounds magnitude ** stacks for taken damage-modifier effects only', () => {
     const c = makeCreature({ activeEffects: [weaken, vulnerability, unrelated] })
-    expect(gatherTakenFactors(c)).toEqual([1.5 ** 2])
+    expect(gatherTakenFactors(c, makeState())).toEqual([1.5 ** 2])
+  })
+
+  it('a magnitudeSource replaces `stacks` as the live count the magnitude is scaled by (Phase 4 Slice D)', () => {
+    const bulwarkShaped: ActiveEffect = {
+      category: 'damage-modifier',
+      statusId: 'bulwark-fixture',
+      direction: 'taken',
+      magnitude: 0.9,
+      magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+      cap: 999,
+      instanceId: createEffectInstanceId('b'),
+      sourceTraitId: 'bulwark-fixture',
+      remainingDuration: 999,
+      stacks: 1, // ignored -- magnitudeSource overrides it with the live defendCount below
+    }
+    const c = makeCreature({ activeEffects: [bulwarkShaped], defendCount: 3 })
+    const party = [c]
+    const state = makeState({ playerParty: party })
+    expect(gatherTakenFactors(c, state)).toEqual([0.9 ** 3])
+  })
+
+  describe("accumulation: 'additive' (Phase 4 Slice D, PR #47 review amendment -- real Bulwark shape)", () => {
+    function bulwark(reductionCap: number): ActiveEffect {
+      return {
+        category: 'damage-modifier',
+        statusId: 'bulwark-additive-fixture',
+        direction: 'taken',
+        magnitude: 0.95, // per-unit factor -- perUnitReduction = 1 - 0.95 = 0.05
+        magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+        accumulation: 'additive',
+        reductionCap,
+        cap: 1,
+        instanceId: createEffectInstanceId('bulwark-additive'),
+        sourceTraitId: 'bulwark-additive-fixture',
+        remainingDuration: 999,
+        stacks: 1,
+      }
+    }
+
+    it('sums the per-unit reduction × count below the cap (no clamping yet)', () => {
+      // perUnitReduction 0.05 × count 5 = 0.25 total reduction -> factor 0.75, well under cap 0.8.
+      const c = makeCreature({ activeEffects: [bulwark(0.8)], defendCount: 5 })
+      expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(0.75)
+    })
+
+    it('reaches the cap exactly at the count that makes perUnitReduction × count == cap', () => {
+      // 0.05 × 16 = 0.8 -- exactly the cap.
+      const c = makeCreature({ activeEffects: [bulwark(0.8)], defendCount: 16 })
+      expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(0.2)
+    })
+
+    it('holds the clamp past the count that would otherwise exceed it', () => {
+      // 0.05 × 17 = 0.85 > 0.8 -- must clamp to the SAME factor as count 16, not keep shrinking.
+      const c = makeCreature({ activeEffects: [bulwark(0.8)], defendCount: 17 })
+      expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(0.2)
+    })
+
+    it('is byte-identical to the pre-amendment multiplicative default when accumulation is absent', () => {
+      const multiplicative: ActiveEffect = {
+        category: 'damage-modifier',
+        statusId: 'bulwark-fixture',
+        direction: 'taken',
+        magnitude: 0.9,
+        magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+        cap: 999,
+        instanceId: createEffectInstanceId('b2'),
+        sourceTraitId: 'bulwark-fixture',
+        remainingDuration: 999,
+        stacks: 1,
+      }
+      const c = makeCreature({ activeEffects: [multiplicative], defendCount: 32 })
+      // 0.9 ** 32 -- asymptotic, never clamped, no cap field consulted.
+      expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(
+        0.9 ** 32,
+      )
+    })
   })
 })
 
@@ -361,5 +458,158 @@ describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
     expect(activeFriendlyFireStatus(c)).toBeUndefined()
     // Still counts for has-status -- the status itself is untouched by immunity.
     expect(hasStatus(c, 'confusion')).toBe(true)
+  })
+})
+
+describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
+  it('living-allies counts the reading creature’s own side, alive only, INCLUDING itself', () => {
+    const party = makeParty('player', [
+      { id: 'a' },
+      { id: 'b' },
+      { id: 'c', alive: false },
+    ])
+    const state = makeState({ playerParty: party })
+    const a = party[0]!
+    expect(resolveCount(a, 'living-allies', state)).toBe(2) // a + b, c is dead
+  })
+
+  it('living-allies-of-affinity counts only same-affinity living allies (including self)', () => {
+    const party = makeParty('player', [
+      { id: 'a', affinity: 'vitality' },
+      { id: 'b', affinity: 'vitality' },
+      { id: 'c', affinity: 'violence' },
+    ])
+    const state = makeState({ playerParty: party })
+    expect(resolveCount(party[0]!, 'living-allies-of-affinity', state)).toBe(2)
+  })
+
+  it('living-allies-of-species is 0 when no speciesId is set (every Phase 1-3/Slice A-C creature)', () => {
+    const party = makeParty('player', [{ id: 'a' }, { id: 'b' }])
+    const state = makeState({ playerParty: party })
+    expect(resolveCount(party[0]!, 'living-allies-of-species', state)).toBe(0)
+  })
+
+  it('living-allies-of-species counts matching speciesId only, once assigned', () => {
+    const party = makeParty('player', [
+      { id: 'a', speciesId: 'swarmhive' },
+      { id: 'b', speciesId: 'swarmhive' },
+      { id: 'c', speciesId: 'spiders' },
+      { id: 'd' }, // no speciesId at all
+    ])
+    const state = makeState({ playerParty: party })
+    expect(resolveCount(party[0]!, 'living-allies-of-species', state)).toBe(2)
+  })
+
+  it('dead-allies counts the reading creature’s own side’s dead members', () => {
+    const party = makeParty('player', [
+      { id: 'a' },
+      { id: 'b', alive: false },
+      { id: 'c', alive: false },
+    ])
+    const state = makeState({ playerParty: party })
+    expect(resolveCount(party[0]!, 'dead-allies', state)).toBe(2)
+  })
+
+  it('enemies-with-status counts living OPPOSING creatures bearing the given statusId', () => {
+    const poisoned: ActiveEffect = {
+      category: 'condition-status',
+      statusId: 'poison',
+      cap: 5,
+      hook: 'on-round-end',
+      response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
+      instanceId: createEffectInstanceId('p'),
+      sourceTraitId: 'poison',
+      remainingDuration: 2,
+      stacks: 1,
+    }
+    const player = makeParty('player', [{ id: 'a' }])
+    const enemy = makeParty('enemy', [
+      { id: 'e1', activeEffects: [poisoned] },
+      { id: 'e2' },
+      { id: 'e3', activeEffects: [poisoned], alive: false }, // dead -- excluded
+    ])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(resolveCount(player[0]!, 'enemies-with-status', state, 'poison')).toBe(1)
+  })
+
+  it('enemies-with-status throws without a statusId (resolver invariant, mirrors applyStatus)', () => {
+    const player = makeParty('player', [{ id: 'a' }])
+    const state = makeState({ playerParty: player })
+    expect(() => resolveCount(player[0]!, 'enemies-with-status', state)).toThrow(
+      /enemies-with-status magnitudeSource requires a statusId/,
+    )
+  })
+
+  it('self-defend-count reads Creature.defendCount directly', () => {
+    const c = makeCreature({ defendCount: 5 })
+    expect(resolveCount(c, 'self-defend-count', makeState())).toBe(5)
+  })
+
+  it('recomputes live, never cached -- killing an ally changes the reading on the very next call', () => {
+    const party = makeParty('player', [{ id: 'a' }, { id: 'b' }])
+    const state = makeState({ playerParty: party })
+    const a = party[0]!
+    expect(resolveCount(a, 'living-allies', state)).toBe(2)
+
+    const afterKill = makeState({
+      playerParty: party.map((c) => (c.id === party[1]!.id ? { ...c, alive: false } : c)),
+    })
+    expect(resolveCount(a, 'living-allies', afterKill)).toBe(1)
+  })
+})
+
+describe('resolveMagnitudeCount (Phase 4 Slice D)', () => {
+  it("'flat' returns its own value, ignoring board state entirely", () => {
+    const c = makeCreature({})
+    expect(resolveMagnitudeCount(c, makeState(), { kind: 'flat', value: 7 })).toBe(7)
+  })
+
+  it("'count' delegates to resolveCount", () => {
+    const c = makeCreature({ defendCount: 4 })
+    expect(
+      resolveMagnitudeCount(c, makeState(), {
+        kind: 'count',
+        of: 'self-defend-count',
+      }),
+    ).toBe(4)
+  })
+
+  it("'consumed-stacks' returns the threaded consumedStacks value", () => {
+    const c = makeCreature({})
+    expect(resolveMagnitudeCount(c, makeState(), { kind: 'consumed-stacks' }, 6)).toBe(6)
+  })
+
+  it("'consumed-stacks' throws when resolved outside a consume-stacks response (no consumedStacks threaded)", () => {
+    const c = makeCreature({})
+    expect(() =>
+      resolveMagnitudeCount(c, makeState(), { kind: 'consumed-stacks' }),
+    ).toThrow(
+      /consumed-stacks magnitudeSource resolved outside a consume-stacks response/,
+    )
+  })
+})
+
+describe('gatherCheatDeathChance (Phase 4 Slice D, Last Stand)', () => {
+  function cheatDeath(chancePercent: number, id: string): ActiveEffect {
+    return {
+      category: 'cheat-death',
+      chancePercent,
+      instanceId: createEffectInstanceId(id),
+      sourceTraitId: id,
+    }
+  }
+
+  it('is 0 for a creature with no cheat-death effect', () => {
+    expect(gatherCheatDeathChance(makeCreature({}))).toBe(0)
+  })
+
+  it('sums across multiple sources, additive', () => {
+    const c = makeCreature({ activeEffects: [cheatDeath(20, 'a'), cheatDeath(10, 'b')] })
+    expect(gatherCheatDeathChance(c)).toBe(30)
+  })
+
+  it('clamps the total to [0, 100]', () => {
+    const c = makeCreature({ activeEffects: [cheatDeath(70, 'a'), cheatDeath(70, 'b')] })
+    expect(gatherCheatDeathChance(c)).toBe(100)
   })
 })
