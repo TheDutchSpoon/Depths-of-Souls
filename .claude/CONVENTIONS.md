@@ -42,6 +42,10 @@ derivation of a floor's contents.
   descent, reproducible from the run seed): re-descending a floor re-rolls its creatures (the
   soul-grind loop) while its biome stays fixed.
 - **`fightCount(floor)`** — deterministic; no per-visit roll.
+- **`enemyPartySize(floor)`** — deterministic; no per-visit roll. Enemy count **scales with depth**,
+  ramping from 1 toward the full 6-slot slate as floors deepen (an authored curve alongside
+  `enemyLevelRange`/`fightCount`, clamped at the 6v6 max). Exact ramp shape is parked balance
+  (GAME_DESIGN §13); it is *not* a flat 6.
 - **`materializeCreature(instance, staticData, side, slot)`** — pure and **RNG-free** (generation
   already spent the randomness): resolves the static creature, bakes level into `baseStats`
   (`round(...)`), copies affinity/scriptId/equippedSpells/innateTraitIds; final HP is set by
@@ -487,7 +491,10 @@ the same interpreter, differing only in how they attach and which hooks they use
 - **Spell affinity & equip-gating**: spells carry an `affinity` (one of the five);
   `canEquip(spell, creature) = spell.affinity === creature.affinity` — a **universal data-driven
   predicate**, not per-creature allow-lists. Enemy loadouts are generator-rolled from the
-  affinity-matched pool; player equipping (Phase 8) reuses the same gate. Governs **equipping
+  affinity-matched pool; player equipping (Phase 8) reuses the same gate. **The predicate itself
+  lands in Phase 4 Slice A** — its first consumer is the generator's cast-role loadout roll; no
+  earlier phase needed per-spell gating, so a later slice shouldn't assume it predates that work.
+  Governs **equipping
   only** — the damage affinity cycle stays keyed on **caster** affinity (goldens untouched).
   Off-affinity exceptions (trait/perk) are post-beta; **no exception seam is pre-built**.
 - **Gems**: `{ spell, level, augments[] }`; level (**bounded, fixed max, raised by Gem Forge
