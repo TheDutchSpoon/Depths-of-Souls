@@ -37,8 +37,8 @@ Rules:
 - Leave main green + deployable; the demo (if this slice ships one) consumes the
   engine, doesn't leak into it.
 
-Output: a PR against `main`, plus a short note of anything that surfaced a spec
-question (so the docs get updated before the next slice).
+Output: a PR against `main`, a short note of anything that surfaced a spec
+question (so the docs get updated before the next slice), plus an update to, or new phase document.
 ```
 
 ## Review kickoff (paste at the top of each review chat — one PR per chat)
@@ -46,7 +46,7 @@ question (so the docs get updated before the next slice).
 ```
 Review PR: <link or branch name>. Follow pr-review-runbook.md.
 It's a slice of the phase-<X> plan — review against the docs on `main`, not the PR's
-own claims. Separate real fixes from scope/labeling; flag the 1–3 things needing my
+own claims. Separate real fixes from scope/labeling; flag the things needing my
 decision vs. what you'll action. If it surfaced a new decision, say what the docs need.
 ```
 
