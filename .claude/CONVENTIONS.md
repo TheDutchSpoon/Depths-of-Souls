@@ -152,7 +152,9 @@ not a ninth). **Hold the line at eight.**
   pre-main-hit state so the main target is still findable in the alive-filtered list).
 - **targeting-override** — `resolveOffensiveTarget`'s pipeline, in this pinned order (**Phase 4
   Slice C**): **(1) Tunnel Vision** (`{ category: 'provoke-immunity' }`, a permanent passive) —
-  skips straight to normal resolution, ignoring enemy Provoke entirely. **(2) Confusion** — a
+  bypasses **only the Provoke step** (step 3), never Confusion: a confused Tunnel-Vision creature
+  still rolls Confusion. So the pipeline evaluates Confusion first and, if it doesn't redirect,
+  skips straight to normal resolution for a provoke-immune actor (ignoring enemy Provoke). **(2) Confusion** — a
   `chancePercent` roll off a new passively-read `StatusDef` category, `{ category:
   'friendly-fire-status', statusId, cap, chancePercent }` (never hook-fired, unlike
   condition-status); checked BEFORE Provoke, so a confused actor's roll can redirect to its own
@@ -166,10 +168,12 @@ not a ninth). **Hold the line at eight.**
   boolean presence, no magnitude — reasoned from the Perk execution model, ASSUMPTION 21: Slice F
   perks are player-level `EffectDef`s instantiated the same way innate traits are, not runtime
   `applyStatus` instances, despite this doc's "New statuses" list below naming Splashing
-  informally). After a single-target Attack/Cast's main hit, a Splashing bearer also strikes each
-  adjacent living enemy (all OTHER living enemies, with Annihilate) via a full formula recompute
-  against that target's own Defence/affinity/pools — never a copy of the main hit's number. No
-  `TriggerFired` (same action, not a trigger); no spell status-application on splash hits.
+  informally). After a single-target **Attack's** main hit — **attacks only, never Cast**
+  (decided with the design owner; matches `brute.md`'s Splashing = "attacks deal 100%..." and the
+  spec's melee-splash identity) — a Splashing bearer also strikes each adjacent living enemy (all
+  OTHER living enemies, with Annihilate) via a full formula recompute against that target's own
+  Defence/affinity/pools — never a copy of the main hit's number. No `TriggerFired` (same action,
+  not a trigger). Cast never splashes, so no spell-status-on-splash question arises.
 - **cheat-death** — intercept a lethal hit → RNG → survive at 1 HP (Last Stand).
 - **scoped suppress-action** — suppress a *specific* action (**Silenced**=Cast, **Pacified**=Attack)
   vs Stun's suppress-all; a parameter on `suppress-action`. **Built in Phase 4 Slice B with a
@@ -207,7 +211,7 @@ status above**), Sleep (breaks on damage; 3-turn), Glow (stacking resource; +%dm
 consumable), turn-order (act first *or* last — two-way, **built C**), Spore (DoT +
 spread-on-death), Confusion (3-turn; 50% harmful-action friendly-fire, **built C**), Silenced
 (suppress-Cast; Violence spell), Pacified (suppress-Attack; Wit spell), Splashing (adjacency
-splash, **built C** as a permanent passive, not a runtime status instance — see above), Proficient
+splash **on attacks only**, **built C** as a permanent passive, not a runtime status instance — see above), Proficient
 (**P8**; +equipment benefit).
 
 ### Flow
