@@ -106,7 +106,20 @@ data.
   (restore HP), a **timed status**, or a **stat-modifier** (a permanent-for-the-fight buff/debuff).
   Applying a stat-modifier is new — spells currently carry only `appliesStatus`. (Buff/stat-debuff =
   stat-modifier, permanent-for-fight; Weaken/Vulnerability etc. = timed statuses — existing
-  categories, unchanged.)
+  categories, unchanged.) **Built in Phase 4 Slice E**: `Spell.targetSide?: 'enemy' | 'ally'`
+  (default `'enemy'`) and `Spell.payload?: 'damage' | 'heal' | 'stat-modifier'` (default
+  `'damage'`), both byte-identical-when-absent. `'ally'` exempts the cast from the ENTIRE
+  Provoke/Confusion targeting-override pipeline (`resolveOffensiveTarget`/
+  `shouldRedirectAoeToAllies`) — not just Provoke, which is all GAME_DESIGN §7's own text names —
+  and draws **zero** RNG for targeting as a result (ASSUMPTION, ship-time decision, flagged for
+  sign-off: Confusion's roll is scoped to a bearer's "harmful action" per this doc's own Confusion
+  entry, and a support cast on one's own side is definitionally never one). A `stat-modifier`
+  payload's magnitude is an authored flat `{ stat, factor }` field on the spell (`Spell.
+  statModifier`), NOT derived from `scalingStat`/`spellPower` the way `damage`/`heal` payloads are,
+  and NOT scaled by an instance-list's `powerPercent` (Slice B) — an authored permanent buff's
+  strength is a balance constant, not a scaled hit. `heal`/`stat-modifier` reuse `applyHeal`/
+  `applyStatModifier` (now exported from `resolution.ts`) called DIRECTLY from the Cast executor —
+  neither emits `TriggerFired` (Cast is the chosen-action context here, not a trigger).
 - **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
   Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5.
 
