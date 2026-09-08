@@ -8,8 +8,11 @@
 import { getEffectiveStat } from './effective-stats'
 import { createEffectInstanceId } from './effect-types'
 import type {
+  ActionInstanceEffect,
   ActiveEffect,
+  ArmorPenetrationEffect,
   ConditionStatusEffect,
+  CrossStatEffect,
   DamageModifierEffect,
   EffectDef,
   EffectInstanceId,
@@ -54,6 +57,12 @@ function withInstance(
     case 'stat-remap':
       return { ...def, instanceId, sourceTraitId }
     case 'triggered':
+      return { ...def, instanceId, sourceTraitId }
+    case 'armor-penetration':
+      return { ...def, instanceId, sourceTraitId }
+    case 'cross-stat':
+      return { ...def, instanceId, sourceTraitId }
+    case 'action-instance':
       return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
@@ -129,6 +138,51 @@ export function hasStatus(creature: Creature, statusId: string): boolean {
       (e.category === 'condition-status' || e.category === 'damage-modifier') &&
       e.statusId === statusId,
   )
+}
+
+/** Attacker's summed armor-penetration passives (additive across sources, clamped [0,1]) --
+ * read passively by dealDamage/dealDamageWithScalingStat, never fired via a hook. */
+export function gatherArmorPenetration(creature: Creature): number {
+  const total = creature.activeEffects
+    .filter((e): e is ArmorPenetrationEffect => e.category === 'armor-penetration')
+    .reduce((sum, e) => sum + e.percent, 0)
+  return Math.min(1, Math.max(0, total))
+}
+
+/** Attacker's summed cross-stat contribution for `actionKind` (its own effOffStat, added
+ * post-spellPower, before the subtractive core) -- sums `percentPerRank ×
+ * getEffectiveStat(creature, fromStat)` over matching effects whose appliesTo covers actionKind. */
+export function gatherCrossStatContribution(
+  creature: Creature,
+  actionKind: 'attack' | 'cast',
+): number {
+  return creature.activeEffects
+    .filter(
+      (e): e is CrossStatEffect =>
+        e.category === 'cross-stat' &&
+        (e.appliesTo === actionKind || e.appliesTo === 'both'),
+    )
+    .reduce(
+      (sum, e) => sum + e.percentPerRank * getEffectiveStat(creature, e.fromStat),
+      0,
+    )
+}
+
+/** The powerPercent of each active action-instance passive matching `actionKind` (or 'both'),
+ * in canonical active-effects order -- appended after the base [100] entry to build an Attack/
+ * Cast's instance list (combat.ts's buildInstanceList). See ActionInstanceDef's own doc comment
+ * for the inline ASSUMPTION this primitive's exact shape rests on. */
+export function gatherExtraInstances(
+  creature: Creature,
+  actionKind: 'attack' | 'cast',
+): number[] {
+  return creature.activeEffects
+    .filter(
+      (e): e is ActionInstanceEffect =>
+        e.category === 'action-instance' &&
+        (e.actionKind === actionKind || e.actionKind === 'both'),
+    )
+    .map((e) => e.powerPercent)
 }
 
 /** Instantiates a status definition into an ActiveEffect with fresh duration/stack bookkeeping.

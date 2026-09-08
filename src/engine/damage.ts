@@ -11,6 +11,13 @@ export interface DamageInput {
   readonly dealtMods: readonly number[]
   /** Defender's multiplicative taken-mod pool. Empty in Phase 1; applied as Π. */
   readonly takenFactors: readonly number[]
+  /** Phase 4 Slice B: ignore this fraction of the TARGET's Defence, applied before the
+   * subtractive core. 0 by default -- byte-identical to pre-Slice-B behavior. */
+  readonly armorPenetrationPercent?: number
+  /** Phase 4 Slice B: a flat bonus added to offStat AFTER spellPower, before the subtractive
+   * core (Shield Bash's Defence contribution, etc.). 0 by default -- byte-identical to
+   * pre-Slice-B behavior. Feeds the chip floor too, since it scales with the same effOffStat. */
+  readonly crossStatBonus?: number
 }
 
 export interface DamageResult {
@@ -23,8 +30,13 @@ export interface DamageResult {
 }
 
 export function calculateDamage(input: DamageInput): DamageResult {
-  const core = Math.max(input.offStat - input.defence, 0)
-  const chipFloor = CHIP_FLOOR_RATE * input.offStat
+  // Both default to their pre-Slice-B no-op value (0), so effectiveOffStat === input.offStat and
+  // effectiveDefence === input.defence when neither is set -- provably additive.
+  const effectiveOffStat = input.offStat + (input.crossStatBonus ?? 0)
+  const effectiveDefence = input.defence * (1 - (input.armorPenetrationPercent ?? 0))
+
+  const core = Math.max(effectiveOffStat - effectiveDefence, 0)
+  const chipFloor = CHIP_FLOOR_RATE * effectiveOffStat
   const affinityMultiplier = getAffinityMultiplier(
     input.attackerAffinity,
     input.defenderAffinity,

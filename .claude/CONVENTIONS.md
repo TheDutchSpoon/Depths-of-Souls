@@ -83,6 +83,21 @@ data.
   what distinguishes "attack again for X%" (an instance in the list, fires `on-attack`) from
   "deal damage equal to X% of Attack" (a plain `deal-damage` response — not an attack, fires
   nothing) — the wording is the signal.
+  **Built in Phase 4 Slice B as a new passive `EffectDef` category** (the brief's own prose named
+  the mechanism but not its authoring shape — this decision filled that gap and is now **locked**;
+  Slice F's Echo/Flurry/Brute-starter perks author against it unchanged):
+  `{ category: 'action-instance', actionKind: 'attack' | 'cast' | 'both', powerPercent: number }`,
+  structurally identical to `armor-penetration`/`cross-stat` (permanent-for-fight, additive across
+  stacked sources — each matching effect appends exactly one instance, gathered in canonical
+  active-effects order via `gatherExtraInstances`). "An additional time" = `{ actionKind: 'attack',
+  powerPercent: 100 }`; "attack again for 30%" = `{ actionKind: 'attack', powerPercent: 30 }`.
+  **`powerPercent` is a flat number by design, not a `magnitudeSource` (Slice D).** No locked or
+  backlog content scales the *number* or *power* of instances off combat state — Phase 4's
+  count-scaling (Swarmhive Striker, Bulwark) is always a *magnitude*, a separate axis served by
+  `magnitudeSource`. The trigger to revisit this is the first content item that grants a scaled
+  instance count or power; if that arrives, grow this category an optional `magnitudeSource` field
+  *alongside* `powerPercent` (additive, per the Slice D magnitudeSource-beside-flat pattern) — never
+  a parallel mechanism.
 - **Grant-action-state response** — a triggered response that sets `defending` / `provoking` on a
   target. Reuses the existing action-state flags and Defend's math/goldens; a general primitive, not
   a per-trait special-case.
@@ -127,7 +142,14 @@ not a ninth). **Hold the line at eight.**
   randomizes (50% to own side), **Tunnel Vision** ignores enemy Provoke.
 - **cheat-death** — intercept a lethal hit → RNG → survive at 1 HP (Last Stand).
 - **scoped suppress-action** — suppress a *specific* action (**Silenced**=Cast, **Pacified**=Attack)
-  vs Stun's suppress-all; a parameter on `suppress-action`.
+  vs Stun's suppress-all; a parameter on `suppress-action`. **Built in Phase 4 Slice B with a
+  two-path split** (surfaced for confirmation): undeclared/`'all'` scope is unchanged from Stun's
+  existing mechanism (the hook-fired response sets resolveTurn's whole-turn `suppressed` flag,
+  skipping the action entirely). A scoped (`'attack'`/`'cast'`) suppression does **not** set that
+  flag — it's read passively by the **interpreter** instead (a scan of the acting creature's
+  active effects for a present `suppress-action` response whose scope covers the action kind
+  being validated), gating only that one rule/action-kind while the rest of the turn (including
+  the implicit fallback) stays choosable.
 - **acted-before-target** condition — "this creature acts before its target this round" (Blindclaws).
 
 ### New statuses (data — several ride the mechanisms above)
@@ -364,9 +386,11 @@ the same interpreter, differing only in how they attach and which hooks they use
   resolve **before** death-reactions (died/kill/observers). **Applying a status emits `StatusApplied`
   then fires `on-status-applied`** (event-before-hook). **Conditional-passive predicates** read
   effective stats but must not depend on the stat they gate (no `getEffectiveStat` read-cycle).
-- **v1 hook vocabulary (13):** `on-fight-start`, `on-turn-start`, `on-turn-end`, `on-round-end`,
-  `on-damage-dealt`, `on-damage-taken`, `on-kill`, `on-death`, `on-ally-action`, `on-enemy-action`,
-  `on-ally-death`, `on-enemy-death`, `on-status-applied`. Each = firing point + context shape.
+- **v1 hook vocabulary (13, now 17 as of Phase 4 Slice B):** `on-fight-start`, `on-turn-start`,
+  `on-turn-end`, `on-round-end`, `on-damage-dealt`, `on-damage-taken`, `on-kill`, `on-death`,
+  `on-ally-action`, `on-enemy-action`, `on-ally-death`, `on-enemy-death`, `on-status-applied`, plus
+  the Phase 4 `on-[action]` family (`on-attack`, `on-cast`, `on-defend`, `on-provoke` — see above).
+  Each = firing point + context shape.
   Expansion is additive/golden-safe (a new unused firing point emits nothing) if it fires where the
   resolver already reaches; a hook needing new tracked state is a larger change.
 

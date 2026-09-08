@@ -6,6 +6,9 @@ import {
   gatherDealtMods,
   gatherTakenFactors,
   hasStatus,
+  gatherArmorPenetration,
+  gatherCrossStatContribution,
+  gatherExtraInstances,
 } from './effects'
 import { createEffectInstanceId } from './effect-types'
 import { makeCreature } from './__fixtures__/creatures'
@@ -172,5 +175,112 @@ describe('hasStatus', () => {
     }
     const c = makeCreature({ activeEffects: [brutish] })
     expect(hasStatus(c, 'brutish')).toBe(false)
+  })
+})
+
+describe('gatherArmorPenetration (Phase 4 Slice B)', () => {
+  function pen(percent: number, id: string): ActiveEffect {
+    return {
+      category: 'armor-penetration',
+      percent,
+      instanceId: createEffectInstanceId(id),
+      sourceTraitId: id,
+    }
+  }
+
+  it('is 0 for a creature with no armor-penetration effects', () => {
+    expect(gatherArmorPenetration(makeCreature({}))).toBe(0)
+  })
+
+  it('sums across multiple sources, additive', () => {
+    const c = makeCreature({ activeEffects: [pen(0.2, 'a'), pen(0.1, 'b')] })
+    expect(gatherArmorPenetration(c)).toBeCloseTo(0.3)
+  })
+
+  it('clamps the total to [0, 1]', () => {
+    const c = makeCreature({ activeEffects: [pen(0.7, 'a'), pen(0.7, 'b')] })
+    expect(gatherArmorPenetration(c)).toBe(1)
+  })
+})
+
+describe('gatherCrossStatContribution (Phase 4 Slice B)', () => {
+  function crossStat(
+    fromStat: 'defence' | 'attack',
+    percentPerRank: number,
+    appliesTo: 'attack' | 'cast' | 'both',
+    id: string,
+  ): ActiveEffect {
+    return {
+      category: 'cross-stat',
+      fromStat,
+      percentPerRank,
+      appliesTo,
+      instanceId: createEffectInstanceId(id),
+      sourceTraitId: id,
+    }
+  }
+
+  it('is 0 for a creature with no cross-stat effects', () => {
+    expect(gatherCrossStatContribution(makeCreature({}), 'attack')).toBe(0)
+  })
+
+  it('sums percentPerRank * effective(fromStat) for effects matching the action kind', () => {
+    // Shield Bash: 0.5 * Defence(40) = 20, feeding attacks.
+    const c = makeCreature({
+      defence: 40,
+      activeEffects: [crossStat('defence', 0.5, 'attack', 'shield-bash')],
+    })
+    expect(gatherCrossStatContribution(c, 'attack')).toBeCloseTo(20)
+    expect(gatherCrossStatContribution(c, 'cast')).toBe(0) // wrong action kind -- excluded
+  })
+
+  it("'both' applies to attack and cast alike", () => {
+    const c = makeCreature({
+      defence: 10,
+      activeEffects: [crossStat('defence', 1, 'both', 'x')],
+    })
+    expect(gatherCrossStatContribution(c, 'attack')).toBeCloseTo(10)
+    expect(gatherCrossStatContribution(c, 'cast')).toBeCloseTo(10)
+  })
+})
+
+describe('gatherExtraInstances (Phase 4 Slice B)', () => {
+  function instanceGrant(
+    actionKind: 'attack' | 'cast' | 'both',
+    powerPercent: number,
+    id: string,
+  ): ActiveEffect {
+    return {
+      category: 'action-instance',
+      actionKind,
+      powerPercent,
+      instanceId: createEffectInstanceId(id),
+      sourceTraitId: id,
+    }
+  }
+
+  it('is empty for a creature with no action-instance effects (base-only list)', () => {
+    expect(gatherExtraInstances(makeCreature({}), 'attack')).toEqual([])
+  })
+
+  it('returns one powerPercent entry per matching effect, in canonical order', () => {
+    const c = makeCreature({
+      activeEffects: [
+        instanceGrant('attack', 100, 'echo'), // "an additional time"
+        instanceGrant('attack', 30, 'brute-starter'), // "attack again for 30%"
+      ],
+    })
+    expect(gatherExtraInstances(c, 'attack')).toEqual([100, 30])
+  })
+
+  it('filters by actionKind, including the shared "both" bucket', () => {
+    const c = makeCreature({
+      activeEffects: [
+        instanceGrant('cast', 100, 'cast-only'),
+        instanceGrant('both', 50, 'shared'),
+      ],
+    })
+    expect(gatherExtraInstances(c, 'attack')).toEqual([50])
+    expect(gatherExtraInstances(c, 'cast')).toEqual([100, 50])
   })
 })

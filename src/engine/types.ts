@@ -1,7 +1,7 @@
 import type { CreatureId } from './ids'
 import type { SeededRng } from './rng'
 import type { Script } from './scripting-types'
-import type { ActiveEffect, Hook, StatusDef, StatusSpec } from './effect-types'
+import type { ActiveEffect, Hook, StatusDef, StatusSpec, Trait } from './effect-types'
 
 // ---- Stats & affinity ----
 
@@ -25,6 +25,14 @@ export interface Spell {
   readonly affinity: Affinity
   /** Applied to the target(s) after damage lands, if the target survives. */
   readonly appliesStatus?: StatusSpec
+  /** Phase 4 Slice B: the stat this spell's magnitude scales off. Absent = the pre-Slice-B
+   * default, remap-aware Intelligence lookup (getOffensiveStat(caster,'cast',...) -- byte-
+   * identical to every existing spell). An explicit Stat reads it DIRECTLY via getEffectiveStat
+   * (no stat-remap resolution), mirroring deal-damage's scalingStat. 'none' = flat, Int-
+   * independent (offStat 0 -- a utility spell whose magnitude doesn't scale off any stat; not
+   * exercised by any v1 damage-dealing content, a forward reference for Slice E's non-damage
+   * payloads). */
+  readonly scalingStat?: Stat | 'none'
 }
 
 // ---- Creature ----
@@ -127,6 +135,10 @@ export interface CombatState {
   readonly scripts: ReadonlyMap<string, Script>
   /** Status definition registry for this fight, keyed by StatusDef.statusId. */
   readonly statuses: ReadonlyMap<string, StatusDef>
+  /** Trait registry for this fight, keyed by Trait.id. Phase 4 Slice B: `revive`'s death-reset
+   * needs to re-instantiate a target's innateTraitIds mid-fight (createCombat previously only
+   * consulted this at fight-start, never storing it). */
+  readonly traits: ReadonlyMap<string, Trait>
 }
 
 // ---- Events ----
@@ -262,6 +274,17 @@ export interface HealAppliedEvent {
   readonly remainingHp: number
 }
 
+/** Phase 4 Slice B: a dead creature returned to its slot via the `revive` response
+ * (death-reset baseline + pct of that baseline's max HP -- the Unicorn). Event shape is an
+ * ASSUMPTION (not pinned by the brief) -- follows the existing "every consequence gets a
+ * matching event" discipline, mirroring HealApplied's shape. */
+export interface RevivedEvent {
+  readonly type: 'Revived'
+  readonly sourceId: CreatureId
+  readonly targetId: CreatureId
+  readonly currentHp: number
+}
+
 /** Loop-safety: emitted when a trigger cascade would exceed MAX_TRIGGER_CASCADE_DEPTH. */
 export interface CascadeTruncatedEvent {
   readonly type: 'CascadeTruncated'
@@ -279,6 +302,7 @@ export type ConsequenceEvent =
   | HpClampedEvent
   | HealAppliedEvent
   | CascadeTruncatedEvent
+  | RevivedEvent
 
 // Lifecycle events. TurnStarted/TurnEnded are real events (not just internal hook
 // checkpoints) so playback has an explicit boundary even for no-op/skipped turns.

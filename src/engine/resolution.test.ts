@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn, resolveFight } from './combat'
-import { applyStatus, fireHook, newCascade } from './resolution'
+import {
+  applyStatus,
+  dealDamage,
+  executeResponse,
+  fireHook,
+  newCascade,
+} from './resolution'
 import { getEffectiveStat } from './effective-stats'
 import { updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
@@ -527,5 +533,247 @@ describe('heal response (Regen)', () => {
 
     const heal = events.find((e) => e.type === 'HealApplied')
     expect(heal).toMatchObject({ amount: 5, remainingHp: 40 }) // 35+10=45 clamped to 40
+  })
+})
+
+describe('deal-damage scalingStat (Phase 4 Slice B)', () => {
+  const THORNS: Trait = {
+    id: 'thorns',
+    name: 'Thorns',
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-damage-taken',
+        response: {
+          kind: 'deal-damage',
+          target: { kind: 'triggering-source' },
+          scalingStat: 'defence',
+          spellPower: 1.0,
+        },
+      },
+    ],
+  }
+
+  it('scales off the declared Stat via getEffectiveStat (no remap resolution), through the same formula', () => {
+    // Attacker (off 10, def 0) -> target (def 5): core 5, chip 0.1 -> raw 5.1 -> final 5.
+    // Thorns retaliates: off = target's OWN effective Defence (5) x spellPower 1.0 = 5;
+    // vs attacker's def 0: core 5, chip 0.05 -> raw 5.05 -> final 5.
+    const events = firstTurnEventsHitting(THORNS)
+    const retaliation = events.find(
+      (e) => e.type === 'DamageDealt' && e.sourceId === createCreatureId('target'),
+    )
+    expect(retaliation).toMatchObject({
+      targetId: createCreatureId('attacker'),
+      finalDamage: 5,
+    })
+  })
+})
+
+describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
+  it('throws a resolver-invariant error when more than one of offStat/scalingStat/flatAmount is set', () => {
+    const state = createCombat(
+      makeParty('player', [{ id: 'a' }]),
+      makeParty('enemy', [{ id: 'b' }]),
+      1,
+    )
+    expect(() =>
+      executeResponse(
+        {
+          kind: 'deal-damage',
+          target: { kind: 'self' },
+          offStat: 'attack',
+          scalingStat: 'defence',
+        },
+        'fixture',
+        { self: createCreatureId('a') },
+        state,
+        [],
+        newCascade(),
+      ),
+    ).toThrow(/more than one of offStat\/scalingStat\/flatAmount/)
+  })
+})
+
+describe('grant-action-state response (Phase 4 Slice B)', () => {
+  it('sets only the requested flag(s) true, leaving the other untouched', () => {
+    const state = createCombat(
+      makeParty('player', [{ id: 'a' }]),
+      makeParty('enemy', [{ id: 'b' }]),
+      1,
+    )
+    const result = executeResponse(
+      { kind: 'grant-action-state', target: { kind: 'self' }, defending: true },
+      'fixture',
+      { self: createCreatureId('a') },
+      state,
+      [],
+      newCascade(),
+    )
+    const a = [...result.state.playerParty, ...result.state.enemyParty].find(
+      (c) => c.id === createCreatureId('a'),
+    )!
+    expect(a.defending).toBe(true)
+    expect(a.provoking).toBe(false)
+    expect(result.suppressed).toBe(false)
+  })
+})
+
+describe('revive response (Phase 4 Slice B)', () => {
+  const REVIVE_FIXTURE: Trait = {
+    id: 'revive-fixture',
+    name: 'Fixture Revive',
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-attack',
+        response: { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
+      },
+    ],
+  }
+
+  it('revives a dead ally at pct of its death-reset baseline max HP, resetting activeEffects', () => {
+    const player = makeParty('player', [
+      { id: 'reviver', innateTraitIds: ['revive-fixture'] },
+      { id: 'fallen', health: 40, alive: false },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      registry(REVIVE_FIXTURE),
+    )
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
+      'revive-fixture',
+      { self: createCreatureId('reviver') },
+      state,
+      events,
+      newCascade(),
+    )
+    const fallen = [...result.state.playerParty, ...result.state.enemyParty].find(
+      (c) => c.id === createCreatureId('fallen'),
+    )!
+    expect(fallen.alive).toBe(true)
+    expect(fallen.currentHp).toBe(8) // round(40 * 0.2)
+    expect(fallen.activeEffects).toEqual([])
+    expect(events).toEqual([
+      {
+        type: 'Revived',
+        sourceId: createCreatureId('reviver'),
+        targetId: createCreatureId('fallen'),
+        currentHp: 8,
+      },
+    ])
+  })
+
+  it('clears defending/provoking on the revived creature (F1 regression: a creature that died while defending must not return still defending)', () => {
+    const player = makeParty('player', [
+      { id: 'reviver', innateTraitIds: ['revive-fixture'] },
+      {
+        id: 'fallen',
+        health: 40,
+        defence: 10,
+        alive: false,
+        defending: true,
+        provoking: true,
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', attack: 40 }])
+    const state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      registry(REVIVE_FIXTURE),
+    )
+    const events: CombatEvent[] = []
+    const revived = executeResponse(
+      { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
+      'revive-fixture',
+      { self: createCreatureId('reviver') },
+      state,
+      events,
+      newCascade(),
+    ).state
+
+    const fallen = [...revived.playerParty, ...revived.enemyParty].find(
+      (c) => c.id === createCreatureId('fallen'),
+    )!
+    expect(fallen.defending).toBe(false)
+    expect(fallen.provoking).toBe(false)
+
+    // Prove it through the REAL formula, not just the raw field: a subsequent hit deals full
+    // damage -- no Defend ×1.5 effective-defence / ×0.65 taken-factor reduction.
+    const hitEvents: CombatEvent[] = []
+    dealDamage(
+      createCreatureId('foe'),
+      createCreatureId('fallen'),
+      'attack',
+      1.0,
+      'attack',
+      revived,
+      hitEvents,
+      newCascade(),
+    )
+    // off 40, def 10 (undefended): core 30, chip 0.4 -> raw 30.4 -> final 30. A stale
+    // defending:true would instead give effDef 15, core 25, chip 0.4, raw 25.4 x taken 0.65 =
+    // 16.51 -> final 16 -- this assertion catches that regression.
+    expect(hitEvents[0]).toMatchObject({ finalDamage: 30 })
+  })
+
+  it('is a no-op when there are no dead allies to revive', () => {
+    const player = makeParty('player', [{ id: 'reviver' }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
+      'revive-fixture',
+      { self: createCreatureId('reviver') },
+      state,
+      events,
+      newCascade(),
+    )
+    expect(result.state).toEqual(state)
+    expect(events).toEqual([])
+  })
+})
+
+describe('suppress-action scope (Phase 4 Slice B)', () => {
+  it('undeclared/"all" scope still sets suppressed:true -- byte-identical to pre-Slice-B (Stun)', () => {
+    const state = createCombat(
+      makeParty('player', [{ id: 'a' }]),
+      makeParty('enemy', [{ id: 'b' }]),
+      1,
+    )
+    const result = executeResponse(
+      { kind: 'suppress-action' },
+      'fixture',
+      { self: createCreatureId('a') },
+      state,
+      [],
+      newCascade(),
+    )
+    expect(result.suppressed).toBe(true)
+  })
+
+  it('a scoped ("attack" | "cast") suppress-action does NOT set the whole-turn suppressed flag', () => {
+    const state = createCombat(
+      makeParty('player', [{ id: 'a' }]),
+      makeParty('enemy', [{ id: 'b' }]),
+      1,
+    )
+    const result = executeResponse(
+      { kind: 'suppress-action', scope: 'cast' },
+      'fixture',
+      { self: createCreatureId('a') },
+      state,
+      [],
+      newCascade(),
+    )
+    expect(result.suppressed).toBe(false)
   })
 })
