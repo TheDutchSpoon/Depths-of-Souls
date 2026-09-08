@@ -134,8 +134,27 @@ not a ninth). **Hold the line at eight.**
 ### New primitives / capabilities
 - **count-scaling** modifier — factor reads a **live count**: living allies, allies of a
   species/affinity, enemies-with-a-status, **dead allies**, or a per-creature **defend-count**.
-  Recomputed each read.
+  Recomputed each read. **Built in Phase 4 Slice D** as `MagnitudeSource` (`effect-types.ts`):
+  `{ kind: 'flat', value }` | `{ kind: 'count', of, statusId? }` | `{ kind: 'consumed-stacks' }`,
+  an optional sibling field on `DamageModifierDef.magnitude` and the `deal-damage` response.
+  **Interpretation, not literally pinned by this doc's own prose above**: a `magnitudeSource`
+  REPLACES the repetition count a host field's authored rate is already multiplied/exponentiated
+  by — i.e. it substitutes for `stacks` in the existing `magnitude * stacks` / `magnitude **
+  stacks` / `flatAmount * stacks` formulas, NOT for the rate/flat number itself. This keeps every
+  existing formula *shape* unchanged (byte-identical when absent) and is what makes Bulwark's
+  "cap 80%" (`specializations/shieldbarer.md`) read as ordinary exponential taken-factor decay
+  ("trend toward but never reach 0, no clamp needed" below) rather than needing a new hard-clamp
+  mechanism. `StatModifierDef.factor` does **NOT** get this field yet — `getEffectiveStat` is a
+  pure `(creature, stat)` function with no `CombatState` access at most of its ~15+ call sites, so
+  wiring a count-scaled stat-modifier (Swarmhive Striker) is deferred to H1, which will need to
+  decide how `getEffectiveStat` gains state access. **Needs explicit sign-off before Slice F/H1
+  build against either of these two decisions.**
 - **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
+  **Built in Phase 4 Slice D.** SELF-scoped (no `target` field) — always reads/clears the FIRING
+  creature's own stacks. 0/absent stacks is a full no-op (the wrapped effect never fires, not
+  fired-with-magnitude-0); a successful consume emits `StatusExpired` (ASSUMPTION 18) before the
+  wrapped effect executes (continuing the SAME trigger firing — no new `TriggerFired`, no extra
+  cascade-depth bookkeeping).
 - **status-effect immunity** — `{ category: 'status-immunity', statusId }`, a permanent-for-fight
   passive `EffectDef` (Clear Mind/Aggressive/Lucidity), structurally identical to
   armor-penetration/cross-stat. **Built in Phase 4 Slice C.** Consulted at each immune-able
@@ -174,7 +193,14 @@ not a ninth). **Hold the line at eight.**
   OTHER living enemies, with Annihilate) via a full formula recompute against that target's own
   Defence/affinity/pools — never a copy of the main hit's number. No `TriggerFired` (same action,
   not a trigger). Cast never splashes, so no spell-status-on-splash question arises.
-- **cheat-death** — intercept a lethal hit → RNG → survive at 1 HP (Last Stand).
+- **cheat-death** — intercept a lethal hit → RNG → survive at 1 HP (Last Stand). **Built in
+  Phase 4 Slice D**: a permanent-for-fight passive `EffectDef` (`{ chancePercent }`), gathered
+  read-time (additive across sources, clamped `[0, 100]`) and checked inside `applyDamageAndEmit`
+  at the instant a hit would land the target at 0 HP, BEFORE `CreatureDied`/`on-death` fire — one
+  seeded RNG draw, only when the bearer's summed chance is `> 0` (an ordinary creature never
+  touches `state.rng` here). On success `currentHp = 1` exactly; `DamageDealtEvent.finalDamage`
+  is left UNCHANGED (only `remainingHp` reflects the save) — matches the existing overkill
+  precedent, where `finalDamage` already isn't guaranteed to equal actual HP removed.
 - **scoped suppress-action** — suppress a *specific* action (**Silenced**=Cast, **Pacified**=Attack)
   vs Stun's suppress-all; a parameter on `suppress-action`. **Built in Phase 4 Slice B with a
   two-path split** (surfaced for confirmation): undeclared/`'all'` scope is unchanged from Stun's

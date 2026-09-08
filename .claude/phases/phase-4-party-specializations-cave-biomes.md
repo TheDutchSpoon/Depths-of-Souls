@@ -1,7 +1,7 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–C done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
-C: 333/333 tests; lint/format/build green throughout). Built per
+Status: **in progress — Slices A–D done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+C: 337/337 tests, post-review-fix; D: 363/363 tests; lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
@@ -492,7 +492,173 @@ Splashing/Annihilate/Tunnel Vision's actual perk-tree wiring (F); the Zustand st
 biome content incl. Web/Blindclaws/Confusion's actual status definitions (H1–H3 — **H1 needs the
 break-free decision above before authoring Web**); integration (I).
 
+## Slice D — Resource & counter primitives
+
+Built and tested against **fixture** traits/statuses only (no `src/data/` content lands here;
+the real Bulwark/Detonator/Last Stand content is Slice F/H1–H2's job — every fixture below is
+explicitly labeled "-shaped," not the real data). Every row tagged `D` in the brief's
+engine-vocabulary delta table.
+
+### What was built
+
+`src/engine/types.ts`:
+- `Creature.defendCount: number` (ASSUMPTION 17) — cumulative for the whole fight, incremented in
+  `combat.ts`'s `executeDefend`, never reset. A required field (like `innateTraitIds`/
+  `activeEffects` in Phase 3): every raw `Creature` literal across the codebase needed updating
+  (`__fixtures__/creatures.ts`'s `makeCreature`, `generation.ts`'s `materializeCreature`,
+  `effective-stats.test.ts`'s one bare literal, and all 10 literals in `app/demoFight.ts`).
+- `Creature.speciesId?: string` — **own ASSUMPTION, not pinned by the brief**: the
+  `living-allies-of-species` count kind needs a static species reference, but no engine
+  `Creature` field carried one (species is currently only a `generation.ts`-internal grouping
+  concept, never threaded onto the materialized runtime `Creature`). Added as an **optional**
+  field (zero migration) and deliberately **left unwired** in `generation.ts` — no Slice D
+  golden needs real species data, so threading a real `speciesId` through `materializeCreature`
+  is left for whichever slice first authors real species content (H1). Until then,
+  `living-allies-of-species` is inert (always 0), which is correct dormant behavior.
+
+`src/engine/effect-types.ts`:
+- `CountOf` (the six live "board counts": `living-allies`, `living-allies-of-affinity`,
+  `living-allies-of-species`, `enemies-with-status`, `dead-allies`, `self-defend-count`) and
+  `MagnitudeSource` (`{ kind: 'flat', value }` | `{ kind: 'count', of, statusId? }` |
+  `{ kind: 'consumed-stacks' }`). **Interpretation, not literally shaped by the brief**: a
+  `magnitudeSource`, where wired, REPLACES the repetition count a host field's own authored rate
+  is already multiplied/exponentiated by (`stacks` in every existing formula), rather than
+  replacing the rate/flat-number field itself — this keeps every existing formula *shape*
+  unchanged and every Phase 1–3 call site byte-identical when absent (ASSUMPTION 16), while
+  letting the substituted count be a live board reading instead of an applied-status's own
+  bookkeeping.
+- `DamageModifierDef` gains `magnitudeSource?: MagnitudeSource` (Bulwark-shaped): when present,
+  `magnitude ** liveCount` ('taken') / `magnitude * liveCount` ('dealt') replaces
+  `magnitude ** stacks` / `magnitude * stacks` — the live count stands in for `stacks`, letting a
+  status applied ONCE (e.g. at fight-start) keep scaling off live state instead of needing
+  repeated re-application.
+- The `deal-damage` `EffectResponse` gains `magnitudeSource?: MagnitudeSource`: in flat mode it
+  replaces the `stacks` multiplier on `flatAmount`; in offStat/scalingStat (formula) mode it's a
+  multiplier on `spellPower` (absent = ×1, a no-op) — the Detonator-shaped
+  `magnitudeSource: { kind: 'consumed-stacks' }` scales a burst's spellPower by the just-consumed
+  stack count.
+- New response kind (+1, → **eight**, "hold the line" per CONVENTIONS):
+  `{ kind: 'consume-stacks', statusId, effect: EffectResponse }` — SELF-scoped (no `target` field,
+  unlike every other response), reads and clears the firing creature's own `statusId` stacks
+  (ASSUMPTION 18: emits `StatusExpired`, not a mere decrement), then executes the wrapped
+  `effect` with `{ kind: 'consumed-stacks' }` available to it. 0/absent stacks is a **full no-op**
+  (CONVENTIONS: "no status present" and "0 stacks" are the same state) — the wrapped effect never
+  fires at all in that case, not fired-with-magnitude-0.
+- New passive `EffectDef` category, structurally identical to `ArmorPenetrationDef`/
+  `ProvokeImmunityDef` (never a status, gathered read-time, additive across sources): `cheat-death`
+  (`{ chancePercent }`, Last Stand).
+- **`StatModifierDef` deliberately does NOT gain `magnitudeSource` in this slice** — flagged
+  explicitly for review (own inline comment). CONVENTIONS names stat-modifier as an eligible host
+  too (Swarmhive Striker), but `getEffectiveStat(creature, stat)` is a pure, state-free function
+  called from ~15+ sites across the codebase (`conditions.ts`, `turn-order.ts`,
+  `target-selectors.ts`, …), several with no `CombatState` in scope at all — giving it access to
+  live board counts would be an invasive signature change to the whole damage-formula/scripting
+  pipeline, and no Slice D golden needs a count-scaled *stat*. Deferred to whichever slice first
+  authors Swarmhive Striker for real (H1), per this project's "stop and amend the relevant
+  earlier slice" discipline.
+
+`src/engine/effects.ts`:
+- `resolveCount(bearer, of, state, statusId?)` — the six count readers, all relative to `bearer`'s
+  own side/affinity/species, recomputed fresh on every call (never cached). `living-allies`/
+  `-of-affinity`/`-of-species` **include** `bearer` itself while alive (matching `targeting.ts`'s
+  `livingAlliesOf` convention). `enemies-with-status` throws without a `statusId` (mirrors
+  `applyStatus`'s unknown-statusId invariant).
+- `resolveMagnitudeCount(bearer, state, source, consumedStacks?)` — resolves a `MagnitudeSource`;
+  `'consumed-stacks'` throws if resolved outside a consume-stacks response's own wrapped-effect
+  call (no meaning read cold).
+- `gatherCheatDeathChance(creature)` — summed `chancePercent` across active `cheat-death`
+  passives, additive, clamped to `[0, 100]` (the percent-scale mirror of
+  `gatherArmorPenetration`'s `[0, 1]` clamp).
+- `gatherDealtMods`/`gatherTakenFactors` **now take `state: CombatState`** (a breaking signature
+  change, contained to their two call sites — both already had `state` in scope — plus two test
+  call sites in `effects.test.ts`) so a `magnitudeSource`-bearing damage-modifier can resolve a
+  live count at read time.
+
+`src/engine/resolution.ts`:
+- `HookContext` gains `consumedStacks?: number`, populated ONLY by the new `consume-stacks` case
+  before it recurses into `executeResponse` for the wrapped effect — a continuation of the SAME
+  trigger firing (no new `TriggerFired`, no extra cascade-depth increment/self-re-entry-guard
+  bookkeeping; the outer trigger's own instance already holds that).
+- `executeResponse`'s `deal-damage` case resolves `magnitudeSource` once (bearer = the firing
+  creature, via `getCreature(state, context.self)`) before the per-target loop, then uses it in
+  place of `stacks` (flat mode) or as a `spellPower` multiplier (formula mode) — both provably
+  byte-identical when absent.
+- `applyDamageAndEmit` gains the cheat-death interception point: at the instant a hit would
+  reduce a living target to 0 HP, one seeded RNG roll (drawn ONLY when
+  `gatherCheatDeathChance(target) > 0` — an ordinary creature never touches `state.rng` here,
+  mirroring `targeting.ts`'s Confusion "draws nothing when inactive" discipline); on success
+  `currentHp = 1` exactly (ASSUMPTION 19) and `died` flips to `false`, so the rest of the function
+  proceeds through the ordinary non-lethal path unchanged (`DamageDealt.finalDamage` is left
+  UNCHANGED — only `remainingHp` reflects 1, matching the existing overkill precedent where
+  `finalDamage` already isn't guaranteed to equal the actual HP removed).
+
+`src/engine/creature-lookup.ts`: `updateCreature`'s patch type grows `'defendCount'`.
+
+`src/engine/combat.ts`: `executeDefend` increments `defendCount` (read fresh from post-hook
+state, matching the existing `freshActor` re-fetch discipline) alongside setting `defending: true`.
+
+### Tests
+
+363/363 (up from Slice C's 337 — 26 new). Unit coverage in `effects.test.ts` (all six `CountOf`
+variants incl. the species-unset-is-0 default and the enemies-with-status invariant throw, the
+never-cached/live-recompute case, all three `MagnitudeSource` kinds incl. the
+consumed-stacks-outside-context throw, `gatherCheatDeathChance`'s sum/clamp, and a
+`gatherTakenFactors` case proving a `magnitudeSource` genuinely overrides `stacks`) and
+`resolution.test.ts` (`consume-stacks`'s read-clear-execute path and its 0-stacks no-op; cheat-death
+via a directly-stubbed `rng.next()` covering the success/fail/never-drawn-when-inactive branches).
+
+Three new hand-derived (`node -e` calculator) golden pairs, all fixture-scoped:
+`golden-defend-count` (Bulwark-shaped: a `damage-modifier` applied ONCE at fight-start whose
+`magnitude ** liveDefendCount` shrinks the taken factor round-over-round as the bearer keeps
+Defending, ending in the bearer's death on round 2 once combined with the ordinary Defend factor);
+`golden-consume-stacks` (Detonator-shaped: 3 pre-seeded Glow stacks consumed by the very first
+Attack's `on-attack` hook, bursting Intelligence-scaled damage BEFORE the attack's own base hit,
+proving Glow is gone — its own dealt-mod never contributes to either hit); `golden-cheat-death`
+(Last Stand-shaped, two rigged seeds against IDENTICAL parties: SEED 7's first draw succeeds —
+survives at exactly 1 HP, no `CreatureDied`, then wins by counter-killing the attacker on its own
+turn; SEED 1's first draw fails — dies normally, one hit one round).
+
+Full Phase 1–3 + Slice A–C suite re-verified byte-identical (all pre-existing goldens pass
+unmodified) — the `gatherDealtMods`/`gatherTakenFactors` signature change and the
+`applyDamageAndEmit`/`deal-damage` magnitudeSource additions are provably additive no-ops absent
+the new fields. `lint` / `format:check` / `build` all clean.
+
+### Notable decisions surfaced during implementation (flag for review before Slice E)
+
+- **`magnitudeSource` substitutes for a host's repetition count (`stacks`), not for its rate/flat
+  number.** The brief's own wording ("overrides the flat number... computed at read-time
+  instead") reads ambiguously between the two; a literal full-value substitution would break
+  every existing per-stack formula shape (e.g. `magnitude ** stacks` becoming
+  `magnitude ** magnitude` doesn't compose). This interpretation is what makes Bulwark's "cap 80%"
+  (`specializations/shieldbarer.md`) legible as an ordinary exponential-decay taken-factor
+  (CONVENTIONS: "trend toward but never reach 0, no clamp needed") rather than requiring a new
+  hard-clamp mechanism — Slice D's own fixture treats the "cap" as descriptive of the practical
+  curve, not a literal engine clamp. **Needs explicit sign-off before Slice F authors the real
+  Bulwark perk against this shape.**
+- **`StatModifierDef` does not get `magnitudeSource` in this slice** (see effect-types.ts's own
+  flagged comment above) — Swarmhive Striker (H1) will need `getEffectiveStat` to gain
+  `CombatState` access somehow; that design decision is deliberately deferred, not made here.
+- **`Creature.speciesId?: string`** is a new field this slice introduces unprompted (not named by
+  the brief) to make `living-allies-of-species` implementable at all. Left unwired in
+  `generation.ts` — H1 needs to thread a real value through `materializeCreature` before Swarmhive
+  content can use it.
+- **`consume-stacks` is SELF-scoped with no `target` field** — every other response names its
+  target explicitly; this one always reads/clears the firing creature's OWN stacks, matching the
+  self-scoped trigger-condition convention rather than introducing a `ResponseTarget` for "the
+  stack-holder."
+- **Cheat-death's `DamageDealtEvent.finalDamage` is left unchanged, only `remainingHp` moves to
+  1** — the brief only pins `remainingHp`; leaving `finalDamage` as the hit's own computed power
+  (rather than deriving a "HP actually removed" value) matches the existing, already-accepted
+  overkill precedent where the two fields can diverge.
+
+### Deliberately out of scope for Slice D (later slices)
+
+The support-spell model (E); specializations/perks/starters/the Unicorn's real content incl. the
+real Bulwark/Swarmhive/Detonator/Last Stand data and `StatModifierDef`'s deferred
+`magnitudeSource` host (F/H1–H2); the Zustand store (G); real biome content (H1–H3); integration
+(I).
+
 ## Next
 
-Slice D — resource & counter primitives (`magnitudeSource`, count-scaling, consume-stacks,
-cheat-death). See `.claude/briefs/phase-4-implementation-plan.md`.
+Slice E — the support-spell model (`Spell.targetSide`/`payload`, ally/self targeting, heal and
+stat-modifier payloads via Cast). See `.claude/briefs/phase-4-implementation-plan.md`.
