@@ -38,9 +38,11 @@ import type {
   DamageModifierEffect,
   EffectInstanceId,
   EffectResponse,
+  FriendlyFireStatusEffect,
   Hook,
   ResponseTarget,
   StatusSpec,
+  TurnOrderStatusEffect,
 } from './effect-types'
 
 export interface CascadeState {
@@ -692,8 +694,20 @@ export function applyStatus(
 
   const target = getCreature(state, targetId)
   const existing = target.activeEffects.find(
-    (e): e is ConditionStatusEffect | DamageModifierEffect =>
-      (e.category === 'condition-status' || e.category === 'damage-modifier') &&
+    (
+      e,
+    ): e is
+      | ConditionStatusEffect
+      | DamageModifierEffect
+      | TurnOrderStatusEffect
+      | FriendlyFireStatusEffect =>
+      (e.category === 'condition-status' ||
+        e.category === 'damage-modifier' ||
+        // Phase 4 Slice C: re-applying a turn-order-status/friendly-fire-status refreshes
+        // duration and stacks exactly like any other status -- both are still status
+        // instances, just read passively instead of hook-fired.
+        e.category === 'turn-order-status' ||
+        e.category === 'friendly-fire-status') &&
       e.statusId === spec.statusId,
   )
 

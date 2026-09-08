@@ -285,3 +285,71 @@ describe('evaluateCondition -- has-status', () => {
     ).toBe(false)
   })
 })
+
+describe('evaluateCondition -- acted-before-target (Phase 4 Slice C, Blindclaws)', () => {
+  it('is true when the acting creature is earlier in the frozen turn queue than its rule-selected target', () => {
+    const player = makeParty('player', [{ id: 'fast' }])
+    const enemy = makeParty('enemy', [{ id: 'slow' }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      turnQueue: [player[0]!.id, enemy[0]!.id],
+    })
+    expect(
+      evaluateCondition({ kind: 'acted-before-target' }, player[0]!, state, {
+        kind: 'lowest-hp-enemy',
+      }),
+    ).toBe(true)
+  })
+
+  it('is false when the acting creature is later in the queue than its target', () => {
+    const player = makeParty('player', [{ id: 'slow' }])
+    const enemy = makeParty('enemy', [{ id: 'fast' }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      turnQueue: [enemy[0]!.id, player[0]!.id],
+    })
+    expect(
+      evaluateCondition({ kind: 'acted-before-target' }, player[0]!, state, {
+        kind: 'lowest-hp-enemy',
+      }),
+    ).toBe(false)
+  })
+
+  it('is false without a rule targeting selector -- no target to compare against', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const state = makeState({ playerParty: player, turnQueue: [player[0]!.id] })
+    expect(evaluateCondition({ kind: 'acted-before-target' }, player[0]!, state)).toBe(
+      false,
+    )
+  })
+
+  it('is false for a random-enemy selector, and never draws RNG during lookahead', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      turnQueue: [player[0]!.id, enemy[0]!.id],
+      rng: createSeededRng(1),
+    })
+    const sibling = createSeededRng(1)
+    expect(
+      evaluateCondition({ kind: 'acted-before-target' }, player[0]!, state, {
+        kind: 'random-enemy',
+      }),
+    ).toBe(false)
+    expect(state.rng.next()).toBe(sibling.next())
+  })
+
+  it('is false when the rule selector has no valid target', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const state = makeState({ playerParty: player, turnQueue: [player[0]!.id] })
+    expect(
+      evaluateCondition({ kind: 'acted-before-target' }, player[0]!, state, {
+        kind: 'lowest-hp-enemy',
+      }),
+    ).toBe(false)
+  })
+})

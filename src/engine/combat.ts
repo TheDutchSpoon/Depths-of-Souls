@@ -2,7 +2,13 @@ import { createSeededRng } from './rng'
 import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
-import { instantiateTraitEffects, effectiveMaxHp, gatherExtraInstances } from './effects'
+import {
+  instantiateTraitEffects,
+  effectiveMaxHp,
+  gatherExtraInstances,
+  hasAnnihilate,
+  hasSplashing,
+} from './effects'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import {
   applyStatus,
@@ -13,7 +19,11 @@ import {
 } from './resolution'
 import type { CascadeState } from './resolution'
 import { decideAction } from './interpreter'
-import { getDefaultTarget } from './targeting'
+import {
+  adjacentLivingTargets,
+  getDefaultTarget,
+  shouldRedirectAoeToAllies,
+} from './targeting'
 import type { CreatureId } from './ids'
 import type { EffectInstanceId } from './effect-types'
 import type {
@@ -95,7 +105,12 @@ function snapshotStatuses(state: CombatState): StatusSnapshotEntry[] {
     for (const effect of creature.activeEffects) {
       if (
         effect.category === 'condition-status' ||
-        effect.category === 'damage-modifier'
+        effect.category === 'damage-modifier' ||
+        // Phase 4 Slice C: turn-order-status (Web/Blindclaws) and friendly-fire-status
+        // (Confusion) decrement/expire on the same round-end schedule as any other status,
+        // even though both are read PASSIVELY (never fired via a hook).
+        effect.category === 'turn-order-status' ||
+        effect.category === 'friendly-fire-status'
       ) {
         entries.push({
           creatureId: creature.id,
@@ -129,7 +144,10 @@ function decrementAndExpireSnapshot(
     const effect = creature.activeEffects.find((e) => e.instanceId === instanceId)
     if (
       !effect ||
-      (effect.category !== 'condition-status' && effect.category !== 'damage-modifier')
+      (effect.category !== 'condition-status' &&
+        effect.category !== 'damage-modifier' &&
+        effect.category !== 'turn-order-status' &&
+        effect.category !== 'friendly-fire-status')
     ) {
       continue
     }
@@ -224,6 +242,29 @@ function resolveInstanceTarget(
   return getDefaultTarget(enemyParty)
 }
 
+/**
+ * Phase 4 Slice C (Proficient Warrior / Annihilate): the living enemies a Splashing actor's
+ * main hit against `mainTargetId` should also strike -- computed from `state` as it stood
+ * BEFORE the main hit lands (so `mainTargetId` is still among the alive-filtered list
+ * adjacentLivingTargets indexes into; looking this up AFTER the main hit could drop the just-
+ * killed main target out of that list and break the adjacency lookup). Empty when the actor
+ * has no active Splashing. Annihilate upgrades the set to every OTHER living enemy.
+ */
+function splashTargetIds(
+  actor: Creature,
+  mainTargetId: CreatureId,
+  state: CombatState,
+): CreatureId[] {
+  if (!hasSplashing(actor)) return []
+  const opposingParty = actor.side === 'player' ? state.enemyParty : state.playerParty
+  if (hasAnnihilate(actor)) {
+    return opposingParty.filter((c) => c.alive && c.id !== mainTargetId).map((c) => c.id)
+  }
+  const mainTarget = findCreature(state, mainTargetId)
+  if (!mainTarget) return []
+  return adjacentLivingTargets(mainTarget, opposingParty).map((c) => c.id)
+}
+
 function executeAttack(
   actor: Creature,
   targetId: CreatureId,
@@ -239,6 +280,7 @@ function executeAttack(
     if (!resolvedTargetId) break // no living target left for this or any further instance
 
     const thisTargetId = resolvedTargetId
+    const splashIds = splashTargetIds(actor, thisTargetId, working)
     events.push({ type: 'AttackDeclared', attackerId: actor.id, targetId: thisTargetId })
     working = fireHook(
       'on-attack',
@@ -258,6 +300,24 @@ function executeAttack(
       events,
       cascade,
     )
+    // Splashing: recompute the SAME formula (own offStat/spellPower, each splash target's own
+    // Defence/affinity/pools -- never a copy of the main hit's number, ASSUMPTION 15). No
+    // TriggerFired -- it's the same action, not a triggered response. Re-checks aliveness in
+    // case an earlier splash hit's own damage-path cascade (e.g. Retaliate) already killed a
+    // later one.
+    for (const splashId of splashIds) {
+      if (!findCreature(working, splashId)?.alive) continue
+      working = dealDamage(
+        actor.id,
+        splashId,
+        'attack',
+        powerPercent / 100,
+        'attack',
+        working,
+        events,
+        cascade,
+      )
+    }
   }
   return working
 }
@@ -301,6 +361,7 @@ function executeCastSingle(
     if (!resolvedTargetId) break
 
     const thisTargetId = resolvedTargetId
+    const splashIds = splashTargetIds(actor, thisTargetId, working)
     events.push({
       type: 'SpellCast',
       targetShape: 'single',
@@ -316,16 +377,32 @@ function executeCastSingle(
       events,
       cascade,
     ).state
+    const offStat = resolveSpellOffStat(actor, spell, powerPercent / 100)
     working = dealDamageWithOffStat(
       actor.id,
       thisTargetId,
-      resolveSpellOffStat(actor, spell, powerPercent / 100),
+      offStat,
       'cast',
       'cast',
       working,
       events,
       cascade,
     )
+    // Splashing (see executeAttack's matching comment) -- same recomputed offStat, each
+    // splash target's own Defence/affinity/pools, no TriggerFired, no appliesStatus.
+    for (const splashId of splashIds) {
+      if (!findCreature(working, splashId)?.alive) continue
+      working = dealDamageWithOffStat(
+        actor.id,
+        splashId,
+        offStat,
+        'cast',
+        'cast',
+        working,
+        events,
+        cascade,
+      )
+    }
     if (spell.appliesStatus) {
       working = applyStatusIfAlive(
         actor.id,
@@ -368,12 +445,17 @@ function executeCastAoe(
   let working = state
 
   for (const powerPercent of buildInstanceList(actor, 'cast')) {
-    const opposingParty =
-      actor.side === 'player' ? working.enemyParty : working.playerParty
-    // Frozen target list: all living enemies, slot order -- each AOE instance independently
-    // re-freezes its OWN set at that instance's cast-start (no single target to preserve across
-    // instances, unlike the single-target case above).
-    const targetIds = opposingParty.filter((c) => c.alive).map((c) => c.id)
+    // Confusion (ASSUMPTION 13): one roll, per instance, decides whether this WHOLE AOE
+    // instance retargets to the caster's own living side instead of the enemy side -- never
+    // a per-target coin flip. Provoke is exempt for AOE regardless (unchanged).
+    const redirectToAllies = shouldRedirectAoeToAllies(actor, working)
+    const opposingSide = actor.side === 'player' ? 'enemy' : 'player'
+    const targetSide = redirectToAllies ? actor.side : opposingSide
+    const targetParty = targetSide === 'player' ? working.playerParty : working.enemyParty
+    // Frozen target list: all living members of the resolved side, slot order -- each AOE
+    // instance independently re-freezes its OWN set at that instance's cast-start (no single
+    // target to preserve across instances, unlike the single-target case above).
+    const targetIds = targetParty.filter((c) => c.alive).map((c) => c.id)
     events.push({
       type: 'SpellCast',
       targetShape: 'aoe',

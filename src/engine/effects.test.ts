@@ -9,6 +9,11 @@ import {
   gatherArmorPenetration,
   gatherCrossStatContribution,
   gatherExtraInstances,
+  hasStatusImmunity,
+  hasProvokeImmunity,
+  hasSplashing,
+  hasAnnihilate,
+  activeFriendlyFireStatus,
 } from './effects'
 import { createEffectInstanceId } from './effect-types'
 import { makeCreature } from './__fixtures__/creatures'
@@ -282,5 +287,79 @@ describe('gatherExtraInstances (Phase 4 Slice B)', () => {
     })
     expect(gatherExtraInstances(c, 'attack')).toEqual([50])
     expect(gatherExtraInstances(c, 'cast')).toEqual([100, 50])
+  })
+})
+
+describe('hasStatusImmunity / hasProvokeImmunity / hasSplashing / hasAnnihilate (Phase 4 Slice C)', () => {
+  it('hasStatusImmunity matches only a present status-immunity for the exact statusId', () => {
+    const clearMind: ActiveEffect = {
+      category: 'status-immunity',
+      statusId: 'silenced',
+      instanceId: createEffectInstanceId('cm'),
+      sourceTraitId: 'clear-mind',
+    }
+    const c = makeCreature({ activeEffects: [clearMind] })
+    expect(hasStatusImmunity(c, 'silenced')).toBe(true)
+    expect(hasStatusImmunity(c, 'confusion')).toBe(false)
+    expect(hasStatusImmunity(makeCreature({}), 'silenced')).toBe(false)
+  })
+
+  it('hasProvokeImmunity / hasSplashing / hasAnnihilate are simple boolean-presence checks', () => {
+    const tunnelVision: ActiveEffect = {
+      category: 'provoke-immunity',
+      instanceId: createEffectInstanceId('tv'),
+      sourceTraitId: 'tunnel-vision',
+    }
+    const splashing: ActiveEffect = {
+      category: 'splashing',
+      instanceId: createEffectInstanceId('sp'),
+      sourceTraitId: 'proficient-warrior',
+    }
+    const annihilate: ActiveEffect = {
+      category: 'annihilate',
+      instanceId: createEffectInstanceId('an'),
+      sourceTraitId: 'annihilate',
+    }
+    expect(hasProvokeImmunity(makeCreature({ activeEffects: [tunnelVision] }))).toBe(true)
+    expect(hasProvokeImmunity(makeCreature({}))).toBe(false)
+    expect(hasSplashing(makeCreature({ activeEffects: [splashing] }))).toBe(true)
+    expect(hasSplashing(makeCreature({}))).toBe(false)
+    expect(hasAnnihilate(makeCreature({ activeEffects: [annihilate] }))).toBe(true)
+    expect(hasAnnihilate(makeCreature({}))).toBe(false)
+  })
+})
+
+describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
+  const confusion: ActiveEffect = {
+    category: 'friendly-fire-status',
+    statusId: 'confusion',
+    cap: 1,
+    chancePercent: 50,
+    instanceId: createEffectInstanceId('confusion'),
+    sourceTraitId: 'confusion',
+    remainingDuration: 3,
+    stacks: 1,
+  }
+
+  it('returns the active friendly-fire-status effect when present and not immune', () => {
+    const c = makeCreature({ activeEffects: [confusion] })
+    expect(activeFriendlyFireStatus(c)?.statusId).toBe('confusion')
+  })
+
+  it('returns undefined for a creature with no friendly-fire-status', () => {
+    expect(activeFriendlyFireStatus(makeCreature({}))).toBeUndefined()
+  })
+
+  it('returns undefined when the bearer is immune to that specific status (Lucidity) -- immunity suppresses the effect, not the application', () => {
+    const lucidity: ActiveEffect = {
+      category: 'status-immunity',
+      statusId: 'confusion',
+      instanceId: createEffectInstanceId('lucidity'),
+      sourceTraitId: 'lucidity',
+    }
+    const c = makeCreature({ activeEffects: [confusion, lucidity] })
+    expect(activeFriendlyFireStatus(c)).toBeUndefined()
+    // Still counts for has-status -- the status itself is untouched by immunity.
+    expect(hasStatus(c, 'confusion')).toBe(true)
   })
 })

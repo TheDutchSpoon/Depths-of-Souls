@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { decideAction } from './interpreter'
+import { evaluateCondition } from './conditions'
 import { makeParty } from './__fixtures__/creatures'
 import { createSeededRng } from './rng'
 import { createEffectInstanceId } from './effect-types'
@@ -365,5 +366,97 @@ describe('decideAction -- scoped suppress-action (Phase 4 Slice B)', () => {
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
     expect(decideAction(player[0]!, null, state)).toEqual({ kind: 'wait' })
+  })
+})
+
+describe('decideAction -- status-immunity vs scoped suppress-action (Phase 4 Slice C)', () => {
+  const SILENCED_CAST_SUPPRESSION: ActiveEffect = {
+    category: 'condition-status',
+    statusId: 'silenced',
+    cap: 1,
+    hook: 'on-turn-start',
+    response: { kind: 'suppress-action', scope: 'cast' },
+    instanceId: createEffectInstanceId('me#status#silenced'),
+    sourceTraitId: 'silenced',
+    remainingDuration: 2,
+    stacks: 1,
+  }
+  const CLEAR_MIND: ActiveEffect = {
+    category: 'status-immunity',
+    statusId: 'silenced',
+    instanceId: createEffectInstanceId('clear-mind'),
+    sourceTraitId: 'clear-mind',
+  }
+
+  it('a Clear-Mind-immune creature casts freely despite carrying Silenced', () => {
+    const player = makeParty('player', [
+      {
+        id: 'me',
+        equippedSpells: [EMBER_LANCE],
+        activeEffects: [SILENCED_CAST_SUPPRESSION, CLEAR_MIND],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const script: Script = {
+      id: 'test',
+      rules: [
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'cast', gemSlot: 0 },
+          targeting: { kind: 'lowest-hp-enemy' },
+        },
+      ],
+    }
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(decideAction(player[0]!, script, state)).toEqual({
+      kind: 'cast',
+      targetShape: 'single',
+      gemSlot: 0,
+      targetId: enemy[0]!.id,
+    })
+  })
+
+  it('immunity suppresses only the EFFECT -- the creature still reads as has-status: silenced', () => {
+    const player = makeParty('player', [
+      { id: 'me', activeEffects: [SILENCED_CAST_SUPPRESSION, CLEAR_MIND] },
+    ])
+    expect(
+      evaluateCondition(
+        { kind: 'has-status', subject: 'self', statusId: 'silenced' },
+        player[0]!,
+        makeState({ playerParty: player }),
+      ),
+    ).toBe(true)
+  })
+
+  it('without the matching immunity, Silenced still suppresses Cast as before', () => {
+    const player = makeParty('player', [
+      {
+        id: 'me',
+        equippedSpells: [EMBER_LANCE],
+        activeEffects: [SILENCED_CAST_SUPPRESSION],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const script: Script = {
+      id: 'test',
+      rules: [
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'cast', gemSlot: 0 },
+          targeting: { kind: 'lowest-hp-enemy' },
+        },
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'attack' },
+          targeting: { kind: 'lowest-hp-enemy' },
+        },
+      ],
+    }
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(decideAction(player[0]!, script, state)).toEqual({
+      kind: 'attack',
+      targetId: enemy[0]!.id,
+    })
   })
 })
