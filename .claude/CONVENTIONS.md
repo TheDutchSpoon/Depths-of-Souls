@@ -137,18 +137,41 @@ not a ninth). **Hold the line at eight.**
   Recomputed each read. **Built in Phase 4 Slice D** as `MagnitudeSource` (`effect-types.ts`):
   `{ kind: 'flat', value }` | `{ kind: 'count', of, statusId? }` | `{ kind: 'consumed-stacks' }`,
   an optional sibling field on `DamageModifierDef.magnitude` and the `deal-damage` response.
-  **Interpretation, not literally pinned by this doc's own prose above**: a `magnitudeSource`
-  REPLACES the repetition count a host field's authored rate is already multiplied/exponentiated
-  by — i.e. it substitutes for `stacks` in the existing `magnitude * stacks` / `magnitude **
-  stacks` / `flatAmount * stacks` formulas, NOT for the rate/flat number itself. This keeps every
-  existing formula *shape* unchanged (byte-identical when absent) and is what makes Bulwark's
-  "cap 80%" (`specializations/shieldbarer.md`) read as ordinary exponential taken-factor decay
-  ("trend toward but never reach 0, no clamp needed" below) rather than needing a new hard-clamp
-  mechanism. `StatModifierDef.factor` does **NOT** get this field yet — `getEffectiveStat` is a
-  pure `(creature, stat)` function with no `CombatState` access at most of its ~15+ call sites, so
-  wiring a count-scaled stat-modifier (Swarmhive Striker) is deferred to H1, which will need to
-  decide how `getEffectiveStat` gains state access. **Needs explicit sign-off before Slice F/H1
-  build against either of these two decisions.**
+  **Count-source semantics (decided):** a `magnitudeSource` substitutes for the **repetition
+  count** a host field already scales its authored rate by — it stands in for `stacks` in the
+  existing `magnitude * stacks` / `magnitude ** stacks` / `flatAmount * stacks` formulas, **not**
+  for the rate/flat number itself. Absent ⇒ byte-identical to pre-Slice-D behavior. This axis is
+  about *what the count is*; it is orthogonal to the taken-reduction accumulation rule below.
+- **Taken-reduction accumulation (decided) — two authoring modes on a `taken` damage-modifier:**
+  - **multiplicative** (default; the existing `magnitude ** count`): asymptotes toward 0, never
+    clamped, per the taken-pool rule "reductions trend toward but never reach 0, no clamp needed."
+    This is the model for ordinary stacking taken-reductions and for all **future** count-scaled
+    taken sources.
+  - **additive-with-cap** (Bulwark): per-unit reduction **summed** `× count` and **hard-clamped**
+    at a per-source `cap` — `factor = 1 − min(reductionPerUnit × count, cap)`. Bulwark = −5% per
+    Defend, cap 80% (`specializations/shieldbarer.md`, **unchanged** — its text is exactly correct
+    under this decision). An additive-capped source collapses to that **single factor**, which then
+    enters the multiplicative taken pool `Π(takenFactors)` alongside every other source:
+    **additive within a source, multiplicative across sources.**
+  The two modes are the reason the taken pool needs both a summing/clamping path *and* the existing
+  product; a purely multiplicative `magnitude ** count` does **not** implement Bulwark's cap (it
+  sails past 80% toward 100% as the count grows — e.g. `0.95 ** 32 ≈ 0.19`, an 81% reduction), and
+  an earlier draft that claimed otherwise was wrong. The exact authoring field shape (e.g. an
+  `accumulation` discriminator + a `cap`, with the per-unit rate read from `magnitude` or a
+  dedicated field) is the coding agent's implementation plan to propose (ASSUMPTION-tagged) and
+  review; the default **must** be `multiplicative` so every existing taken status stays
+  byte-identical, and the focused golden **must** drive `count` high enough to actually reach the
+  cap (the Slice-D multiplicative fixture only reached ~10% over two rounds, so it never exercised
+  a clamp — which is exactly why the divergence was invisible to green gates).
+- **`StatModifierDef.factor` does NOT get `magnitudeSource` yet (decided — deferred to H1).**
+  `getEffectiveStat(creature, stat)` is a pure `(creature, stat)` function with no `CombatState`
+  at most of its ~15+ call sites; wiring a count-scaled stat-modifier (Swarmhive Striker) means
+  giving it state access — a real, invasive change with no Slice D consumer. Deferred to whichever
+  slice first authors Swarmhive Striker (**H1**), which must land it **together with** (a) a real
+  `speciesId` threaded through `materializeCreature` (the `living-allies-of-species` reader is
+  built but inert — returns 0 — until then), and (b) this stat-modifier host **iff** Striker is
+  authored as a stat buff rather than a `dealt` damage-modifier (a dealt-pool `+%dmg per hive-mate`
+  is already supported today).
 - **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
   **Built in Phase 4 Slice D.** SELF-scoped (no `target` field) — always reads/clears the FIRING
   creature's own stacks. 0/absent stacks is a full no-op (the wrapped effect never fires, not
