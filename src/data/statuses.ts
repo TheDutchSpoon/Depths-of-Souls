@@ -101,6 +101,23 @@ export const VULNERABILITY: DamageModifierDef = {
   polarity: 'debuff',
 }
 
+/** Phase 4 Slice F (Shieldbarer's Bulwark perk): -5% damage taken per Defend this battle,
+ * additive-with-cap at 80% (CONVENTIONS' "Taken-reduction accumulation", proven in Slice D's
+ * golden-defend-count-additive-cap -- specializations/shieldbarer.md's own numbers, unchanged).
+ * Applied once, at on-fight-start, by the perk's own triggered effect (data/specializations.ts)
+ * -- cap: 1 since magnitudeSource (self-defend-count) drives the scaling, not re-application. */
+export const BULWARK: DamageModifierDef = {
+  category: 'damage-modifier',
+  statusId: 'bulwark',
+  cap: 1,
+  direction: 'taken',
+  magnitude: 0.95,
+  magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+  accumulation: 'additive',
+  reductionCap: 0.8,
+  polarity: 'buff',
+}
+
 export const STOCK_STATUSES: readonly StatusDef[] = [
   POISON,
   BURN,
@@ -108,6 +125,7 @@ export const STOCK_STATUSES: readonly StatusDef[] = [
   STUN,
   WEAKEN,
   VULNERABILITY,
+  BULWARK,
 ]
 
 /** Ready to pass directly as createCombat's `statuses` argument. */

@@ -1,7 +1,14 @@
 import type { CreatureId } from './ids'
 import type { SeededRng } from './rng'
 import type { Script } from './scripting-types'
-import type { ActiveEffect, Hook, StatusDef, StatusSpec, Trait } from './effect-types'
+import type {
+  ActiveEffect,
+  EffectDef,
+  Hook,
+  StatusDef,
+  StatusSpec,
+  Trait,
+} from './effect-types'
 
 // ---- Stats & affinity ----
 
@@ -98,8 +105,10 @@ export interface Creature {
   readonly innateTraitIds: readonly string[]
   /**
    * Fight-scoped, mutable effect list (threaded via updateCreature). Instantiated from
-   * innateTraitIds at createCombat; statuses append here in-fight (Slice C). Canonical order:
-   * innate-1 -> innate-2 -> artifact infusions (none in v1) -> applied statuses.
+   * innateTraitIds at createCombat; statuses append here in-fight (Slice C). Canonical order
+   * (Phase 4 Slice F / ASSUMPTION 21 -- gains a `perks` slot, a documented change to the
+   * previously-pinned ordering): innate-1 -> innate-2 -> perks (player-side only) -> equipment
+   * infusions (none in v1) -> applied statuses.
    */
   readonly activeEffects: readonly ActiveEffect[]
   /** Phase 4 Slice D / ASSUMPTION 17: "times Defended this battle" -- cumulative for the whole
@@ -181,6 +190,13 @@ export interface CombatState {
    * needs to re-instantiate a target's innateTraitIds mid-fight (createCombat previously only
    * consulted this at fight-start, never storing it). */
   readonly traits: ReadonlyMap<string, Trait>
+  /** Phase 4 Slice F / ASSUMPTION 21: the flattened, already-resolved perk effects active for
+   * the WHOLE player party this fight (createCombat's `partyWidePlayerEffects` parameter,
+   * stored here so `revive`'s death-reset -- which re-instantiates a target's baseline effects
+   * mid-fight -- can restore a revived PLAYER creature's perks too, via the same
+   * instantiateCreatureEffects call fight-assembly itself uses). Empty when no spec chosen /
+   * nothing purchased -- byte-identical to every pre-Slice-F fight. */
+  readonly playerWideEffects: readonly EffectDef[]
 }
 
 // ---- Events ----

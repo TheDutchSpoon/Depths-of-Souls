@@ -1026,6 +1026,41 @@ describe('revive response (Phase 4 Slice B)', () => {
     expect(result.state).toEqual(state)
     expect(events).toEqual([])
   })
+
+  it("restores a revived PLAYER creature's perks too (ASSUMPTION 21: perks are battle-start-permanent, like innate traits, not in-fight ramp death-reset should wipe)", () => {
+    const player = makeParty('player', [
+      { id: 'reviver', innateTraitIds: ['revive-fixture'] },
+      { id: 'fallen', health: 40, alive: false },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const perks = [{ category: 'stat-modifier', stat: 'attack', factor: 2 } as const]
+    const state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      registry(REVIVE_FIXTURE),
+      new Map(),
+      perks,
+    )
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
+      'revive-fixture',
+      { self: createCreatureId('reviver') },
+      state,
+      events,
+      newCascade(),
+    )
+    const fallen = result.state.playerParty.find(
+      (c) => c.id === createCreatureId('fallen'),
+    )!
+    expect(fallen.alive).toBe(true)
+    // The perk-derived x2 Attack stat-modifier is present on the revived creature, exactly as
+    // it was pre-death (fight-assembly instantiates the SAME playerWideEffects via the SAME
+    // instantiateCreatureEffects call revive itself now reuses).
+    expect(getEffectiveStat(fallen, 'attack')).toBe(fallen.baseStats.attack * 2)
+  })
 })
 
 describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', () => {
@@ -1257,6 +1292,44 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
       const c = result.state.enemyParty.find((x) => x.id === createCreatureId(id))!
       expect(c.activeEffects).toEqual([])
     }
+  })
+})
+
+describe('all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbarer starter)', () => {
+  it('applies to every living ally, INCLUDING the firing creature itself', () => {
+    const player = makeParty('player', [
+      { id: 'provoker', defence: 10 },
+      { id: 'ally', defence: 10 },
+      { id: 'dead-ally', defence: 10, alive: false },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'all-allies' },
+        stat: 'defence',
+        factor: 1.35,
+      },
+      'shieldbarer-starter-rally',
+      { self: createCreatureId('provoker') },
+      state,
+      events,
+      newCascade(),
+    )
+    for (const id of ['provoker', 'ally']) {
+      const c = result.state.playerParty.find((x) => x.id === createCreatureId(id))!
+      expect(getEffectiveStat(c, 'defence')).toBe(13.5)
+    }
+    // A dead ally is skipped -- applyStatModifier reads/writes it fine, but only alive
+    // targets should ever be selected in real content; assert it wasn't silently touched.
+    const deadAlly = result.state.playerParty.find(
+      (x) => x.id === createCreatureId('dead-ally'),
+    )!
+    expect(deadAlly.activeEffects).toEqual([])
+    // Never touches the enemy side.
+    expect(result.state.enemyParty[0]!.activeEffects).toEqual([])
   })
 })
 

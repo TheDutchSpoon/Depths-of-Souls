@@ -89,6 +89,10 @@ export type ResponseTarget =
   | { readonly kind: 'triggering-source' }
   | { readonly kind: 'triggering-ally' }
   | { readonly kind: 'all-enemies' }
+  // Phase 4 Slice F / ASSUMPTION 22 (Shieldbarer starter's "your creatures gain +35% Defence"
+  // team-wide buff): the ally-side mirror of all-enemies, resolved via livingAlliesOf(self) --
+  // "ally" includes the firing creature itself, matching every other ally-side convention.
+  | { readonly kind: 'all-allies' }
   | { readonly kind: 'selector'; readonly selector: TargetSelector }
   // Phase 4 Slice B / ASSUMPTION 7: v1 TargetSelectors are alive-only, so `revive` (whose target
   // must be DEAD) needs its own resolution path -- a random dead member of the firing creature's
@@ -417,6 +421,24 @@ export type CheatDeathDef = {
   readonly chancePercent: number
 }
 
+/** Phase 4 Slice F (Sorcerer starter's "50% on-turn-end, cast a random equipped spell") --
+ * NEW PRIMITIVE, surfaced by this starter's content, flagged for design-owner sign-off. NOT
+ * modeled as a 10th `EffectResponse` verb: CONVENTIONS' "hold the line at nine" pins the
+ * RESPONSE vocabulary specifically, and a real Cast needs combat.ts's own executor functions
+ * (executeCastSingle/executeCastAoe) plus its target-resolution helpers -- resolution.ts's
+ * generic executeResponse has no access to those (and gaining it would mean a resolution.ts ->
+ * combat.ts import cycle). So this is a permanent-for-fight passive `EffectDef` category
+ * instead, structurally in the same family as ArmorPenetrationDef/CrossStatDef/etc. (gathered
+ * read-time, never a status) but consulted directly by combat.ts's resolveTurn -- immediately
+ * after the actor's ordinary on-turn-end hook fires -- rather than through fireHook/
+ * executeResponse. On a successful roll it reuses the EXACT Cast-execution path a chosen action
+ * would (on-cast/on-action-observed still fire, payload/appliesStatus/instance-list all apply
+ * unchanged), picking uniformly among the actor's non-null equipped slots. */
+export type BonusCastDef = {
+  readonly category: 'bonus-cast'
+  readonly chancePercent: number
+}
+
 // EffectDef is what a TRAIT authors (permanent-for-fight passives/triggers -- timed statuses are
 // a separate, parallel concept below, never authored directly on a Trait).
 export type EffectDef =
@@ -432,6 +454,7 @@ export type EffectDef =
   | AnnihilateDef
   | CheatDeathDef
   | ConditionalDamageBonusDef
+  | BonusCastDef
 
 // ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
 // a spell's appliesStatus, never innate. Declared in a separate status registry (data/statuses.ts),
@@ -588,6 +611,7 @@ export type SplashingEffect = SplashingDef & InstanceIdentity
 export type AnnihilateEffect = AnnihilateDef & InstanceIdentity
 export type CheatDeathEffect = CheatDeathDef & InstanceIdentity
 export type ConditionalDamageBonusEffect = ConditionalDamageBonusDef & InstanceIdentity
+export type BonusCastEffect = BonusCastDef & InstanceIdentity
 export type TurnOrderStatusEffect = TurnOrderStatusDef &
   InstanceIdentity &
   StatusInstanceState
@@ -631,6 +655,7 @@ export type ActiveEffect =
   | TurnOrderStatusEffect
   | FriendlyFireStatusEffect
   | ConditionalDamageBonusEffect
+  | BonusCastEffect
 
 // ---- Trait ----
 

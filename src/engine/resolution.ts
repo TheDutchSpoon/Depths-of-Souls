@@ -10,7 +10,7 @@
 import { calculateDamage } from './damage'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
-import { livingEnemiesOf } from './targeting'
+import { livingAlliesOf, livingEnemiesOf } from './targeting'
 import { resolveTargetSelector } from './target-selectors'
 import {
   effectsForHook,
@@ -20,8 +20,8 @@ import {
   gatherCrossStatContribution,
   gatherDealtMods,
   gatherTakenFactors,
+  instantiateCreatureEffects,
   instantiateStatus,
-  instantiateTraitEffects,
   resolveMagnitudeCount,
 } from './effects'
 import { evaluateCondition } from './conditions'
@@ -521,6 +521,8 @@ function resolveResponseTargets(
       return context.source ? [context.source] : []
     case 'all-enemies':
       return livingEnemiesOf(getCreature(state, context.self), state).map((c) => c.id)
+    case 'all-allies':
+      return livingAlliesOf(getCreature(state, context.self), state).map((c) => c.id)
     case 'selector': {
       const id = resolveTargetSelector(
         target.selector,
@@ -733,11 +735,18 @@ export function executeResponse(
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
         if (!target || target.alive) continue // target must be dead
-        // Death-reset: a fresh instantiation of innateTraitIds (no ramp preserved), then
-        // currentHp = round(baselineMaxHp * pct) computed from THAT fresh baseline.
+        // Death-reset: a fresh instantiation of innateTraitIds + (for a player-side target) its
+        // perks (no ramp preserved) -- ASSUMPTION 21: perks are as battle-start-permanent as
+        // innate traits, so a revived player creature keeps them, unlike in-fight-ACCUMULATED
+        // buffs/statuses. Then currentHp = round(baselineMaxHp * pct) computed from THAT fresh
+        // baseline.
         const reset: Creature = {
           ...target,
-          activeEffects: instantiateTraitEffects(target, state.traits),
+          activeEffects: instantiateCreatureEffects(
+            target,
+            state.traits,
+            state.playerWideEffects,
+          ),
         }
         const baselineMaxHp = effectiveMaxHp(reset)
         const currentHp = Math.round(baselineMaxHp * response.pct)

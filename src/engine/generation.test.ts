@@ -299,6 +299,7 @@ describe('generateFloor', () => {
       scripts: new Map(),
       statuses: new Map(),
       traits: new Map(),
+      playerWideEffects: [],
     }
     expect(resolveCount(enemyParty[0]!, 'living-allies-of-species', state)).toBe(
       enemyParty.length,

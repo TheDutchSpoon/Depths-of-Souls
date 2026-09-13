@@ -20,3 +20,9 @@ export const DEFAULT_GEM_SLOT_COUNT = 3
 // does not execute; a mandatory CascadeTruncated event is emitted and resolution unwinds. Depth
 // is transient (call-stack only), never stored in CombatState. Wired in Slice B.
 export const MAX_TRIGGER_CASCADE_DEPTH = 500
+
+// Phase 4 Slice F: a perk-granted status applied once, at on-fight-start (Bulwark), needs a
+// duration long enough to never expire via the round-end decrement sweep within any legal
+// fight -- ROUND_CAP rounds is the hard backstop, so ROUND_CAP + 1 guarantees it outlives the
+// longest possible fight's last round-end decrement.
+export const PERK_STATUS_DURATION = ROUND_CAP + 1

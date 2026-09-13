@@ -125,6 +125,7 @@ describe('round cap', () => {
       scripts: new Map(),
       statuses: new Map(),
       traits: new Map(),
+      playerWideEffects: [],
     }
 
     const { state, events } = resolveTurn(atCap)
@@ -831,5 +832,110 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
       return allEvents.filter((e) => e.type === 'StatusExpired')
     }
     expect(runFourTurns(99)).toEqual(runFourTurns(99))
+  })
+})
+
+describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () => {
+  const BONUS_CASTER_FIXTURE: Trait = {
+    id: 'bonus-caster-fixture',
+    name: 'Bonus Caster (fixture)',
+    effects: [{ category: 'bonus-cast', chancePercent: 50 }],
+  }
+
+  function stubRng(values: number[]): SeededRng {
+    let i = 0
+    return {
+      next(): number {
+        const v = values[i]
+        i += 1
+        if (v === undefined) throw new Error('stubRng exhausted')
+        return v
+      },
+    }
+  }
+
+  function isSpellCast(event: { type: string }): boolean {
+    return event.type === 'SpellCast'
+  }
+
+  it('on a successful roll, casts the (only) equipped spell after the ordinary on-turn-end hook', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        scriptId: 'always-wait',
+        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        equippedSpells: [EMBER_LANCE],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 100, speed: 1 }])
+    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    // roll 1 (0.1 < 0.5): bonus-cast fires. roll 2 (0 -> floor(0*1)=0): picks equipped slot 0.
+    state = { ...state, rng: stubRng([0.1, 0]) }
+    const { events } = resolveTurn(state)
+
+    const turnEndedIndex = events.findIndex((e) => e.type === 'TurnEnded')
+    const spellCastIndex = events.findIndex(isSpellCast)
+    expect(spellCastIndex).toBeGreaterThan(turnEndedIndex)
+    expect(events[spellCastIndex]).toMatchObject({
+      type: 'SpellCast',
+      casterId: createCreatureId('caster'),
+      gemSlot: 0,
+      targetId: createCreatureId('foe'),
+    })
+    expect(events.some((e) => e.type === 'DamageDealt')).toBe(true)
+  })
+
+  it('on a failed roll, never casts', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        scriptId: 'always-wait',
+        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        equippedSpells: [EMBER_LANCE],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    state = { ...state, rng: stubRng([0.9]) } // 0.9 >= 0.5 -- fails, draws nothing further
+    const { events } = resolveTurn(state)
+    expect(events.some(isSpellCast)).toBe(false)
+  })
+
+  it('is a no-op when the actor has no equipped spells, even on a successful roll', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        scriptId: 'always-wait',
+        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        equippedSpells: [null, null, null],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    state = { ...state, rng: stubRng([0.1]) } // succeeds, but there's nothing to cast
+    const { events } = resolveTurn(state)
+    expect(events.some(isSpellCast)).toBe(false)
+  })
+
+  it('casts an AOE-shaped equipped spell through executeCastAoe', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        scriptId: 'always-wait',
+        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        equippedSpells: [CINDER_NOVA],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe1' }, { id: 'foe2' }])
+    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    state = { ...state, rng: stubRng([0.1, 0]) }
+    const { events } = resolveTurn(state)
+    const cast = events.find(isSpellCast)
+    expect(cast).toMatchObject({ type: 'SpellCast', targetShape: 'aoe', gemSlot: 0 })
+    expect(events.filter((e) => e.type === 'DamageDealt')).toHaveLength(2)
   })
 })

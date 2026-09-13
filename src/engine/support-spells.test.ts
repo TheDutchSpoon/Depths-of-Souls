@@ -28,6 +28,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     traits: new Map(),
+    playerWideEffects: [],
     ...overrides,
   }
 }

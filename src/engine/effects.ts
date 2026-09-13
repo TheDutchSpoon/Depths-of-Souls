@@ -11,6 +11,7 @@ import type {
   ActionInstanceEffect,
   ActiveEffect,
   ArmorPenetrationEffect,
+  BonusCastEffect,
   CheatDeathEffect,
   CountOf,
   CrossStatEffect,
@@ -49,6 +50,38 @@ export function instantiateTraitEffects(
   return effects
 }
 
+/**
+ * Phase 4 Slice F / ASSUMPTION 21: perks are PLAYER-LEVEL effects, instantiated onto every
+ * PLAYER-side creature (never enemy) at fight-assembly, appended AFTER a creature's own innate-
+ * trait effects -- the canonical per-creature effect order gains a slot: innate-1 -> innate-2 ->
+ * perks -> infusions (Phase 8, none yet) -> statuses. This is the ONE function both createCombat
+ * (fight-assembly) and `revive`'s death-reset (resolution.ts) call, so a revived player creature
+ * comes back with its perks intact too (they are as permanent/battle-start as innate traits,
+ * unlike in-fight-acquired ramp -- death-reset wipes ACCUMULATED buffs/statuses, not a creature's
+ * own starting kit). Instance ids follow `${creatureId}#perk#${ordinal}` (deterministic, never
+ * RNG); `sourceTraitId` is `perk-${ordinal}` for TriggerFired/debug legibility, since a flattened
+ * EffectDef[] carries no perk-id metadata at this layer (the caller -- eventually the Slice G
+ * store -- already resolved `{chosenSpec, perkSpend}` down to this flat list before passing it
+ * to createCombat, mirroring how `traits`/`statuses` are already plain registries here). A no-op
+ * for an enemy creature or an empty list -- byte-identical to instantiateTraitEffects alone.
+ */
+export function instantiateCreatureEffects(
+  creature: Creature,
+  traits: ReadonlyMap<string, Trait>,
+  playerWideEffects: readonly EffectDef[] = [],
+): ActiveEffect[] {
+  const traitEffects = instantiateTraitEffects(creature, traits)
+  if (creature.side !== 'player' || playerWideEffects.length === 0) return traitEffects
+  const perkEffects = playerWideEffects.map((def, ordinal) =>
+    withInstance(
+      def,
+      createEffectInstanceId(`${creature.id}#perk#${ordinal}`),
+      `perk-${ordinal}`,
+    ),
+  )
+  return [...traitEffects, ...perkEffects]
+}
+
 function withInstance(
   def: EffectDef,
   instanceId: EffectInstanceId,
@@ -78,6 +111,8 @@ function withInstance(
     case 'cheat-death':
       return { ...def, instanceId, sourceTraitId }
     case 'conditional-damage-bonus':
+      return { ...def, instanceId, sourceTraitId }
+    case 'bonus-cast':
       return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
@@ -336,6 +371,17 @@ export function activeFriendlyFireStatus(
   return creature.activeEffects.find(
     (e): e is FriendlyFireStatusEffect =>
       e.category === 'friendly-fire-status' && !hasStatusImmunity(creature, e.statusId),
+  )
+}
+
+/** Phase 4 Slice F (Sorcerer starter): `creature`'s active bonus-cast passive, if any --
+ * consulted directly by combat.ts's resolveTurn (never through fireHook/executeResponse; see
+ * BonusCastDef's own doc comment for why). At most one is expected in v1 content; the first
+ * match wins if content ever stacks more than one (deliberately permissive, matching
+ * activeFriendlyFireStatus's own precedent). */
+export function activeBonusCast(creature: Creature): BonusCastEffect | undefined {
+  return creature.activeEffects.find(
+    (e): e is BonusCastEffect => e.category === 'bonus-cast',
   )
 }
 
