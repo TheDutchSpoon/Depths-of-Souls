@@ -123,14 +123,34 @@ data.
 - **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
   Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5.
 
-### Response vocabulary — now EIGHT
+### Response vocabulary — now NINE
 Was four; `heal` + `revive` are the two justified new verbs, **and** `grant-action-state` +
-`consume-stacks` (listed under New primitives below) are responses too — so the true count is
-**eight top-level kinds**: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress-action`,
-`heal`, `revive`, `grant-action-state`, `consume-stacks` (`consume-stacks` wraps one of the others,
-not a ninth). **Hold the line at eight.**
+`consume-stacks` are responses too. **Phase 4 Slice E2 adds a ninth, `remove-status`** — the prior
+"hold the line at eight" was overturned by a design-owner call that spell-driven status
+cleanse/dispel is a near-term certainty, so a general removal verb (invoked on *other* creatures,
+not just self) earns its place; `consume-stacks`' self-scoped read-and-clear cannot serve it. Nine
+top-level kinds: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress-action`, `heal`,
+`revive`, `grant-action-state`, `consume-stacks`, `remove-status`. **Hold the line at nine.**
 - **`heal`** — restore HP to a *living* target (self / ally / all-allies via targeting); caps at
-  effective max HP (no overheal); distinct from Regen (the over-time status).
+  effective max HP (no overheal) **after any scaling**; distinct from Regen (the over-time status).
+  **Slice E2** gives the triggered `heal` the same magnitude modes as `deal-damage`: flat
+  (`amountPerStack`, Regen), **stat-scaled off the *healer's* stat** (`scalingStat`; Treants Elder →
+  Health), and **`magnitudeSource`** (× a count; Necromoss → dead-allies). Target-%-max-HP heals
+  (reading the *target's* max HP) are deferred — no locked content needs them.
+- **`remove-status`** (Slice E2) — clear a status from a target (`{ target, filter }`). `filter` is
+  a specific `statusId` now; a **polarity** filter (`buff`/`debuff`) lands with the first
+  cleanse/dispel spell. Statuses carry an explicit **`StatusDef.polarity: 'buff' | 'debuff'`**
+  (declared from birth — a status's polarity is not mechanically derivable). Reuses the
+  `StatusExpired` clear path (death-reset + round-end sweep stay consistent); multi-removal iterates
+  active statuses in fixed order. Stat-modifier removal is **out of scope** — deferrable with zero
+  migration, since a stat-modifier's polarity IS derivable (`factor > 1` = buff, uniformly).
+- **`chancePercent`** (probabilistic responses, Slice E2) — an optional gate on a triggered effect,
+  a sibling of `condition` (both decide whether it fires): a plain number, **baked at instantiation**
+  (the perk model computes `1%×rank` and stores the result — the engine carries no rank concept,
+  mirroring how `cross-stat`'s `percentPerRank` is consumed as `percentPerRank × stat`). Rolled
+  **once per firing**, at execution on the winning path (after `condition`, before applying),
+  **only when present** (cheat-death discipline — creatures without it never touch `state.rng`).
+  Concussive Blows, Sleeper.
 - **`revive`** — return a *dead* creature to its slot at **battle-start baseline + a % of baseline
   max HP** (Unicorn: 20%). See Death-reset.
 - **`deal-damage` `scalingStat`** — default **Attack**; can be Defence/etc. — the mirror of spells'
@@ -180,11 +200,18 @@ not a ninth). **Hold the line at eight.**
   `getEffectiveStat(creature, stat)` is a pure `(creature, stat)` function with no `CombatState`
   at most of its ~15+ call sites; wiring a count-scaled stat-modifier (Swarmhive Striker) means
   giving it state access — a real, invasive change with no Slice D consumer. Deferred to whichever
-  slice first authors Swarmhive Striker (**H1**), which must land it **together with** (a) a real
-  `speciesId` threaded through `materializeCreature` (the `living-allies-of-species` reader is
-  built but inert — returns 0 — until then), and (b) this stat-modifier host **iff** Striker is
-  authored as a stat buff rather than a `dealt` damage-modifier (a dealt-pool `+%dmg per hive-mate`
-  is already supported today).
+  slice first authors Swarmhive Striker. **Decided (Slice E2)**: add `magnitudeSource?` to the
+  **`apply-stat-modifier` response** (NOT the standalone `StatModifierDef`), **freeze-at-application**
+  — the response executes once and bakes a fixed `factor` into a new `StatModifierEffect`
+  (`finalFactor = 1 + (factor − 1) × count`), so the count is frozen at apply-time with no live
+  recompute. (An innate `StatModifierDef` in `Trait.effects` is folded *live* by `getEffectiveStat`
+  every read — there is no application moment to freeze at — which is exactly why the host is the
+  response, not the Def.) Striker is therefore an `apply-stat-modifier` response (fires once, e.g.
+  on-fight-start), not a live passive, and the Bulwark-style live-recompute stat host is **not**
+  built. Lands with a real `speciesId` threaded through `materializeCreature` (the
+  `living-allies-of-species` reader is built but inert — returns 0 — until then). Striker was
+  reworded to "scales per hive-mate **in the team**" so the frozen count reads as intended, not as a
+  stale-live-count bug. Necromoss (H3) uses the same route (buff + heal off dead-allies).
 - **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
   **Built in Phase 4 Slice D.** SELF-scoped (no `target` field) — always reads/clears the FIRING
   creature's own stacks. 0/absent stacks is a full no-op (the wrapped effect never fires, not
@@ -260,12 +287,14 @@ not a ninth). **Hold the line at eight.**
   (never hook-fired; read directly by `buildTurnQueue`, which partitions living combatants into an
   act-first pole / normal group / act-last pole, each internally Speed-sorted, concatenated
   first→normal→last). **Built in Phase 4 Slice C.** A bearer carrying both poles at once resolves
-  to **act-first** (first wins). **Web's 10%/turn break-free roll is deliberately NOT built in
-  Slice C** — the brief flagged it as the slice's one genuinely bespoke, unresolved mechanism
-  (ASSUMPTION 10, two competing shapes offered, neither locked), and building it prematurely risked
-  either a 9th response kind (breaking the locked "hold the line at eight" response-vocab count) or
-  a speculative `TurnOrderStatusDef` field ahead of H1's actual Web content. **Open item for H1's
-  kickoff**: decide break-free's concrete shape before authoring Web.
+  to **act-first** (first wins). **Web's 10%/turn break-free roll** was deferred from Slice C (ASSUMPTION 10) and is now **decided
+  (Slice E2)**: a `StatusDef.breakChancePercent` field, rolled in the turn loop at **each creature's
+  turn-start** against every Web-bearer — the roll is per-global-turn, not the bearer's own hook,
+  hence a status field rather than a triggered response — using the `chancePercent` discipline
+  (roll-only-when-present; a non-Webbed board never touches `state.rng`). The 3-turn cap is the
+  status's existing duration. (Sleep's break-on-damage is separate: `on-damage-taken →
+  remove-status(self, sleep)`, firing post-damage so the waking hit still lands its vs-Sleeping
+  bonus.)
 
 ### New statuses (data — several ride the mechanisms above)
 Web (act-last + 10%/turn break-free — **break-free mechanism still undecided, see turn-order
@@ -396,7 +425,23 @@ splash **on attacks only**, **built C** as a permanent passive, not a runtime st
     unconditionally-true kind. **Phase 2 ships only the testable subset** (`always`, HP%, enemy/ally
     counts, turn/round number, affinity-advantage, is-provoking); **`has-status` is deferred to
     Phase 3**, landing with the status framework that produces statuses — the union grows then (no
-    untestable dead union members in Phase 2).
+    untestable dead union members in Phase 2). **Slice E2 adds source-relative conditions**: the
+    subject union gains **`'target'`** — "the creature this effect is being resolved against" —
+    supplied by the damage target (in `calculateDamage`) and by the trigger's source (in `fireHook`);
+    `evaluateCondition` threads it in. With no such creature in scope (scripting-rule lookahead) a
+    `'target'` condition is **false** (same precedent as `acted-before-target`); qualifier is ignored
+    (single creature). It lights up both `hp-percent` and `has-status`. Consumption: a **new trait-level dealt
+    `EffectDef` category, `conditional-damage-bonus`** — `{ percent, condition }`, sibling to
+    `armor-penetration`/`cross-stat` (permanent, additive into the dealt pool `1 + Σ`, never a status,
+    never a hook) — carries a `'target'`-subject condition, gathered against the current target at hit
+    time (`gatherConditionalDamageBonus(attacker, target, state)` folded into the dealt pool). It is
+    **not** a `DamageModifierDef` (that family is status-only — Weaken/Vulnerability — and the
+    consumers here are permanent trait/perk passives, not applied statuses). This is how "+% damage to
+    [Weakened / Webbed / Sleeping] targets" applies (Cull the Weak, Ambusher, both Reapers) and how
+    Gloomjaws' "bonus vs low-HP target" works: **one clean modified hit, not an `on-damage-dealt`
+    follow-up** (a follow-up would be a second instance that re-fires `on-damage-dealt`, re-splashes,
+    and double-counts on-hit effects). A *temporary/status* conditional bonus would grow
+    `DamageModifierDef` a condition later — no locked content needs it.
   - **TargetSelector** = discriminated union on kind; all extremum selectors use the **shared
     tie-break** (primary key, then player side → slot → id by codepoint). The enemy set
     (`lowest-hp-enemy`/`highest-hp-enemy`/`highest-attack-enemy`/`highest-intelligence-enemy`/
@@ -474,7 +519,8 @@ the same interpreter, differing only in how they attach and which hooks they use
      (+% taken). Distinct from `stat-modifier` (a "−Attack" stat change and a "−damage" Weaken are
      different categories, different treatment, never double-count).
   4. **`condition-status`** — tagged timed conditions (Poison/DoT, Regen, Stun); surfaced as icons;
-     what scripting's `has-status` scopes to.
+     what scripting's `has-status` scopes to. Each carries a **`triggers[]`** list (usually one
+     entry; Sleep has two — see below) and a **`polarity`** tag.
 - **Effective stats (invariant)**: base stats are **immutable** (except permanent effects like
   level-up). Current stat = `getEffectiveStat(creature, stat)`, folding active `stat-modifier`
   effects over base **multiplicatively** (`base × Π(factors)`, conditional-passive factors included
@@ -511,13 +557,45 @@ the same interpreter, differing only in how they attach and which hooks they use
   resolve **before** death-reactions (died/kill/observers). **Applying a status emits `StatusApplied`
   then fires `on-status-applied`** (event-before-hook). **Conditional-passive predicates** read
   effective stats but must not depend on the stat they gate (no `getEffectiveStat` read-cycle).
-- **v1 hook vocabulary (13, now 17 as of Phase 4 Slice B):** `on-fight-start`, `on-turn-start`,
-  `on-turn-end`, `on-round-end`, `on-damage-dealt`, `on-damage-taken`, `on-kill`, `on-death`,
-  `on-ally-action`, `on-enemy-action`, `on-ally-death`, `on-enemy-death`, `on-status-applied`, plus
-  the Phase 4 `on-[action]` family (`on-attack`, `on-cast`, `on-defend`, `on-provoke` — see above).
-  Each = firing point + context shape.
+- **v1 hook vocabulary (13, now 17 as of Phase 4 Slice B; Slice E2 revises the observation entry):**
+  `on-fight-start`, `on-turn-start`, `on-turn-end`, `on-round-end`, `on-damage-dealt`,
+  `on-damage-taken`, `on-kill`, `on-death`, `on-ally-death`, `on-enemy-death`, `on-status-applied`,
+  plus the Phase 4 `on-[action]` family (`on-attack`, `on-cast`, `on-defend`, `on-provoke` — see
+  above). The originally-listed `on-ally-action` / `on-enemy-action` pair was **never wired** and is
+  **superseded in Slice E2 by a single general `on-action-observed`** (see the action-reactions
+  routing rule below). Each = firing point + context shape.
   Expansion is additive/golden-safe (a new unused firing point emits nothing) if it fires where the
   resolver already reaches; a hook needing new tracked state is a larger change.
+
+### Action reactions: actor-self hooks vs. observation (routing rule) — Slice E2
+Two mechanisms, chosen by **whose trait it is relative to who acts**. A trait subscribes to exactly
+**one**, so there is no double-firing (a Shieldbarer reacts via `on-provoke`, never also via
+`on-action-observed`):
+- **Trait on the creature performing the action** → its own **`on-attack` / `on-cast` / `on-defend`
+  / `on-provoke`** hook. "When *I* act, do Y" (Y may still target the whole team). Fires once, on
+  the actor.
+- **Trait on a creature watching someone else act** → **`on-action-observed`**. "When *an
+  ally/enemy* acts, *I* react." Fans out to observers.
+
+**`on-action-observed`** (general action-observation system; supersedes the never-wired
+`on-ally-action`/`on-enemy-action`): fired **per action instance** on **all living creatures**
+(cheap — `effectsForHook` returns nothing for non-observers). Reacting effects filter on themselves:
+**`relationship`** (`self`/`ally`/`enemy`/`any`; ally includes self), **`actionKind`**
+(`attack`/`cast`/`defend`/`provoke`), **`excludeActor?`**. Context = **actor + actionKind +
+instanceIndex** (spell/affinity added later when a consumer reads it). Per-instance firing → an
+ally's Echo/Flurry multi-cast is observed once per instance. Rides `MAX_TRIGGER_CASCADE_DEPTH` + the
+re-entry guard. `defend`+`provoke` can co-occur in one action → two observations, one per kind.
+
+**Classification of all locked content** (the routing map — misfiling a trait here is a real bug):
+- **Observation** (`on-action-observed`): **Resonants** (`relationship: ally`, `actionKind: cast`)
+  — the *only* observation consumer across every species, starter, and all three spec trees.
+- **Actor-self** (own action hook): Weaver, Lure, Sleeper, Charger, Setter, Sparkeaters' Drainer,
+  Seeder, Hollowkin, Shieldbarer starter, Unicorn (`on-attack`/`on-cast`/`on-provoke`); Shield up,
+  Defensive Stance, Concussive Blows, Aggressive Caster (perks); Sorcerer's on-turn-end cast
+  (timing/self). Every action-reactive trait except Resonants.
+
+That Resonants is the lone observer is *why* observation is built as the general primitive now — it
+carries the future, not the seed.
 
 ### Loop safety (engine invariant — concrete)
 - **Self-re-entry guard = instance-level, stack-scoped**: a specific effect *instance* cannot
@@ -579,9 +657,18 @@ the same interpreter, differing only in how they attach and which hooks they use
 - **Health is a modifiable stat**: `currentHp` inits to **effective** max Health at fight-start;
   clamps to effective max whenever it changes (Health debuff lowers cap+current; Health buff raises
   cap, no auto-heal). HP% stays 0–100.
-- **Stun is just a `condition-status`** — an `on-turn-start` hook with a **suppress-action** response
-  → the turn is skipped via the Phase 1 empty-bracket (TurnStarted/TurnEnded still emit). No special
-  resolver branch.
+- **Stun is just a `condition-status`** — a single `on-turn-start` trigger with a **suppress-action**
+  response → the turn is skipped via the Phase 1 empty-bracket (TurnStarted/TurnEnded still emit).
+  No special resolver branch.
+- **A `condition-status` holds a list of triggers (Slice E2)** — `triggers: { hook, response,
+  condition?, chancePercent? }[]`, not a single hook/response. Most statuses have one (Poison/Burn/
+  Regen/Stun); **Sleep has two** (`on-turn-start → suppress-action` to skip the sleeper's turn,
+  `on-damage-taken → remove-status(self)` to wake). `effectsForHook` flattens each entry into the
+  same resolved-trigger shape a `TriggeredDef` produces, so `fireHook` treats status triggers and
+  trait triggers identically. **Constraint**: all triggers from one status share the status's
+  `instanceId`, so the self-re-entry guard collapses two triggers on the *same* hook into one
+  firing — fine for all current content (Sleep's two are on different hooks); a future same-hook
+  pair on one status would need per-trigger identity.
 - **Round-end = global sweeps over a start-of-sweep snapshot**: snapshot statuses present at sweep
   start, then **(1)** fire all `on-round-end` hooks (all creatures, tie-break order; incl. DoT ticks;
   cascades incl. `on-death` resolve fully) **→ (2)** decrement durations **for snapshot statuses only**

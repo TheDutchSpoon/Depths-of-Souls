@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { evaluateCondition } from './conditions'
 import { makeCreature, makeParty } from './__fixtures__/creatures'
 import { createSeededRng } from './rng'
+import { createCreatureId } from './ids'
 import { createEffectInstanceId } from './effect-types'
 import type { CombatState } from './types'
 import type { ActiveEffect } from './effect-types'
@@ -101,6 +102,61 @@ describe('evaluateCondition -- hp-percent', () => {
       thresholdPercent: 0,
     }
     expect(evaluateCondition(condition, player[0]!, state)).toBe(false)
+  })
+
+  // Phase 4 Slice E2: 'target' subject -- "the creature this effect is being resolved against",
+  // supplied via evaluateCondition's 5th param (resolvingAgainstId), resolved internally via
+  // findCreature. The qualifier is irrelevant for a single creature -- any/lowest/highest all
+  // degenerate to the same one-element check.
+  it('subject=target reads the resolvingAgainst creature when supplied', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 20, currentHp: 5 }]) // 25%
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    const condition = {
+      kind: 'hp-percent' as const,
+      subject: 'target' as const,
+      qualifier: 'any' as const,
+      comparator: '<' as const,
+      thresholdPercent: 50,
+    }
+    expect(evaluateCondition(condition, player[0]!, state, undefined, enemy[0]!.id)).toBe(
+      true,
+    )
+  })
+
+  it('subject=target evaluates false with no resolvingAgainstId -- same precedent as scripting lookahead', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 20, currentHp: 5 }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    const condition = {
+      kind: 'hp-percent' as const,
+      subject: 'target' as const,
+      qualifier: 'any' as const,
+      comparator: '<' as const,
+      thresholdPercent: 50,
+    }
+    expect(evaluateCondition(condition, player[0]!, state)).toBe(false)
+  })
+
+  it('subject=target evaluates false for an unknown/stale resolvingAgainstId', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const state = makeState({ playerParty: player, enemyParty: [] })
+    const condition = {
+      kind: 'hp-percent' as const,
+      subject: 'target' as const,
+      qualifier: 'any' as const,
+      comparator: '<' as const,
+      thresholdPercent: 100,
+    }
+    expect(
+      evaluateCondition(
+        condition,
+        player[0]!,
+        state,
+        undefined,
+        createCreatureId('nonexistent'),
+      ),
+    ).toBe(false)
   })
 })
 
@@ -207,8 +263,13 @@ describe('evaluateCondition -- has-status', () => {
     category: 'condition-status',
     statusId: 'poison',
     cap: 5,
-    hook: 'on-round-end',
-    response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
+    triggers: [
+      {
+        hook: 'on-round-end',
+        response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
+      },
+    ],
+    polarity: 'debuff',
     instanceId: createEffectInstanceId('p'),
     sourceTraitId: 'poison',
     remainingDuration: 2,
@@ -243,8 +304,8 @@ describe('evaluateCondition -- has-status', () => {
       category: 'condition-status',
       statusId: 'stun',
       cap: 1,
-      hook: 'on-turn-start',
-      response: { kind: 'suppress-action' },
+      triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action' } }],
+      polarity: 'debuff',
       instanceId: createEffectInstanceId('s'),
       sourceTraitId: 'stun',
       remainingDuration: 1,
@@ -265,6 +326,23 @@ describe('evaluateCondition -- has-status', () => {
         makeState(),
       ),
     ).toBe(false)
+  })
+
+  // Phase 4 Slice E2: subject=target -- Ambusher/Sporch's Reaper shape ("+% dmg to
+  // Webbed/Burning targets") reads has-status against the resolvingAgainst creature.
+  it('subject=target checks the resolvingAgainst creature, false without one', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'poisoned', activeEffects: [poisonEffect] }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    const condition = {
+      kind: 'has-status' as const,
+      subject: 'target' as const,
+      statusId: 'poison',
+    }
+    expect(evaluateCondition(condition, player[0]!, state, undefined, enemy[0]!.id)).toBe(
+      true,
+    )
+    expect(evaluateCondition(condition, player[0]!, state)).toBe(false)
   })
 
   it('never matches a stat-modifier/stat-remap/plain-triggered effect', () => {

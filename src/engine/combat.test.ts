@@ -8,6 +8,7 @@ import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
 import type { StatusDef, Trait } from './effect-types'
+import type { SeededRng } from './rng'
 
 const EMBER_LANCE: Spell = {
   id: 'ember-lance',
@@ -499,6 +500,7 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       direction: 'dealt',
       magnitude: -0.1,
       cap: 1,
+      polarity: 'debuff',
     }
     const VULNERABILITY_TEST: StatusDef = {
       category: 'damage-modifier',
@@ -506,6 +508,7 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       direction: 'taken',
       magnitude: 1.2,
       cap: 1,
+      polarity: 'debuff',
     }
     const alwaysWaitScript: Script = {
       id: 'always-wait-sweep-test',
@@ -710,5 +713,123 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
       finalDamage: 1,
       wasChipOnly: true,
     })
+  })
+})
+
+describe('Web break-free (Phase 4 Slice E2)', () => {
+  const WEB_TEST_STATUS: StatusDef = {
+    category: 'turn-order-status',
+    statusId: 'web-test-fixture',
+    cap: 1,
+    position: 'last',
+    breakChancePercent: 50,
+    polarity: 'debuff',
+  }
+
+  const WEB_SELF_FIXTURE: Trait = {
+    id: 'web-self-fixture',
+    name: 'Web Self (fixture)',
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-fight-start',
+        response: {
+          kind: 'apply-status',
+          target: { kind: 'self' },
+          status: { statusId: 'web-test-fixture', duration: 99 },
+        },
+      },
+    ],
+  }
+
+  /** Wraps a real SeededRng to count draws -- proves a code path drew ZERO/exactly-N RNG
+   * values, rather than merely asserting on an outcome that could coincidentally match either
+   * way. */
+  function countingRng(inner: SeededRng): SeededRng & { calls: number } {
+    const wrapper = {
+      calls: 0,
+      next(): number {
+        wrapper.calls += 1
+        return inner.next()
+      },
+    }
+    return wrapper
+  }
+
+  it('a board with no Web draws zero RNG across several turns', () => {
+    const player = makeParty('player', [
+      { id: 'a', attack: 5, speed: 20, scriptId: 'always-attack' },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'b', health: 1000, speed: 10, scriptId: 'always-wait' },
+    ])
+    const created = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const rng = countingRng(created.rng)
+    let state: CombatState = { ...created, rng }
+    for (let i = 0; i < 6; i++) {
+      state = resolveTurn(state).state
+    }
+    expect(rng.calls).toBe(0)
+  })
+
+  it('a Web-bearer draws exactly one roll per turn-start (count == number of TurnStarted events)', () => {
+    // breakChancePercent 0 -- rng.next() (always in [0,1)) can never be < 0, so the roll NEVER
+    // succeeds and the status is never removed. This isolates "one roll per turn-start" from
+    // removal (covered separately by the golden below) -- otherwise a successful break partway
+    // through would stop further rolls, making the count comparison flaky-by-design.
+    const NEVER_BREAKS_STATUS: StatusDef = { ...WEB_TEST_STATUS, breakChancePercent: 0 }
+    const player = makeParty('player', [
+      {
+        id: 'webbed',
+        attack: 5,
+        speed: 20,
+        scriptId: 'always-attack',
+        innateTraitIds: ['web-self-fixture'],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'foe', health: 1000, speed: 10, scriptId: 'always-wait' },
+    ])
+    const statuses = new Map([[NEVER_BREAKS_STATUS.statusId, NEVER_BREAKS_STATUS]])
+    const traits = new Map([[WEB_SELF_FIXTURE.id, WEB_SELF_FIXTURE]])
+    const created = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits, statuses)
+    const rng = countingRng(created.rng)
+    let state: CombatState = { ...created, rng }
+    let turnStartedCount = 0
+    for (let i = 0; i < 4; i++) {
+      const step = resolveTurn(state)
+      state = step.state
+      turnStartedCount += step.events.filter((e) => e.type === 'TurnStarted').length
+    }
+    expect(turnStartedCount).toBeGreaterThan(0)
+    expect(rng.calls).toBe(turnStartedCount)
+  })
+
+  it('same seed -> same break-free turn (determinism)', () => {
+    function runFourTurns(seed: number) {
+      const player = makeParty('player', [
+        {
+          id: 'webbed',
+          attack: 5,
+          speed: 20,
+          scriptId: 'always-attack',
+          innateTraitIds: ['web-self-fixture'],
+        },
+      ])
+      const enemy = makeParty('enemy', [
+        { id: 'foe', health: 1000, speed: 10, scriptId: 'always-wait' },
+      ])
+      const statuses = new Map([[WEB_TEST_STATUS.statusId, WEB_TEST_STATUS]])
+      const traits = new Map([[WEB_SELF_FIXTURE.id, WEB_SELF_FIXTURE]])
+      let state = createCombat(player, enemy, seed, STOCK_SCRIPTS_BY_ID, traits, statuses)
+      const allEvents = []
+      for (let i = 0; i < 4; i++) {
+        const step = resolveTurn(state)
+        state = step.state
+        allEvents.push(...step.events)
+      }
+      return allEvents.filter((e) => e.type === 'StatusExpired')
+    }
+    expect(runFourTurns(99)).toEqual(runFourTurns(99))
   })
 })

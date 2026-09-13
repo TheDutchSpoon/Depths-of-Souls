@@ -6,7 +6,21 @@ export type ComparatorOp = '<' | '<=' | '>' | '>=' | '==' | '!='
 
 // ---- Conditions ----
 
-export type HpSubject = 'self' | 'ally' | 'enemy'
+// Phase 4 Slice E2: 'target' -- "the creature this effect is being resolved against" --
+// supplied by the trigger's source (fireHook) or the current damage target (a
+// conditional-damage-bonus's own gathering). Absent in scripting-rule lookahead (no such
+// creature exists there), so a 'target'-subject condition is always false in that context --
+// same precedent as acted-before-target (ASSUMPTION 11). The qualifier is ignored for 'target'
+// (a single creature, not a pool) -- subjectPool naturally degenerates any/lowest/highest to the
+// same one-element check.
+// Phase 4 Slice E2: 'target' -- "the creature this effect is being resolved against" --
+// supplied by the trigger's source (fireHook) or the current damage target (a
+// conditional-damage-bonus's own gathering). Absent in scripting-rule lookahead (no such
+// creature exists there), so a 'target'-subject condition is always false in that context --
+// same precedent as acted-before-target (ASSUMPTION 11). The qualifier is ignored for 'target'
+// (a single creature, not a pool) -- subjectPool naturally degenerates any/lowest/highest to the
+// same one-element check.
+export type HpSubject = 'self' | 'ally' | 'enemy' | 'target' | 'target'
 export type HpQualifier = 'any' | 'lowest' | 'highest'
 
 export interface AlwaysCondition {
