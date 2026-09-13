@@ -200,9 +200,13 @@ top-level kinds: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress
   `getEffectiveStat(creature, stat)` is a pure `(creature, stat)` function with no `CombatState`
   at most of its ~15+ call sites; wiring a count-scaled stat-modifier (Swarmhive Striker) means
   giving it state access — a real, invasive change with no Slice D consumer. Deferred to whichever
-  slice first authors Swarmhive Striker. **Decided (Slice E2)**: add `magnitudeSource?` to
-  `StatModifierDef`, **freeze-at-application** — the count is read when the modifier is applied and
-  held, no live recompute — so Striker is an **`apply-stat-modifier` response** (fires once, e.g.
+  slice first authors Swarmhive Striker. **Decided (Slice E2)**: add `magnitudeSource?` to the
+  **`apply-stat-modifier` response** (NOT the standalone `StatModifierDef`), **freeze-at-application**
+  — the response executes once and bakes a fixed `factor` into a new `StatModifierEffect`
+  (`finalFactor = 1 + (factor − 1) × count`), so the count is frozen at apply-time with no live
+  recompute. (An innate `StatModifierDef` in `Trait.effects` is folded *live* by `getEffectiveStat`
+  every read — there is no application moment to freeze at — which is exactly why the host is the
+  response, not the Def.) Striker is therefore an `apply-stat-modifier` response (fires once, e.g.
   on-fight-start), not a live passive, and the Bulwark-style live-recompute stat host is **not**
   built. Lands with a real `speciesId` threaded through `materializeCreature` (the
   `living-allies-of-species` reader is built but inert — returns 0 — until then). Striker was
@@ -426,12 +430,18 @@ splash **on attacks only**, **built C** as a permanent passive, not a runtime st
     supplied by the damage target (in `calculateDamage`) and by the trigger's source (in `fireHook`);
     `evaluateCondition` threads it in. With no such creature in scope (scripting-rule lookahead) a
     `'target'` condition is **false** (same precedent as `acted-before-target`); qualifier is ignored
-    (single creature). It lights up both `hp-percent` and `has-status`. Consumption: a **`dealt`
-    damage-modifier may carry a `'target'`-subject condition evaluated against the current target at
-    hit time** — this is how "+% damage to [Weakened / Webbed / Sleeping] targets" applies (Cull the
-    Weak, Ambusher, both Reapers) and how Gloomjaws' "bonus vs low-HP target" works: **one clean
-    modified hit, not an `on-damage-dealt` follow-up** (a follow-up would be a second instance that
-    re-fires `on-damage-dealt`, re-splashes, and double-counts on-hit effects).
+    (single creature). It lights up both `hp-percent` and `has-status`. Consumption: a **new trait-level dealt
+    `EffectDef` category, `conditional-damage-bonus`** — `{ percent, condition }`, sibling to
+    `armor-penetration`/`cross-stat` (permanent, additive into the dealt pool `1 + Σ`, never a status,
+    never a hook) — carries a `'target'`-subject condition, gathered against the current target at hit
+    time (`gatherConditionalDamageBonus(attacker, target, state)` folded into the dealt pool). It is
+    **not** a `DamageModifierDef` (that family is status-only — Weaken/Vulnerability — and the
+    consumers here are permanent trait/perk passives, not applied statuses). This is how "+% damage to
+    [Weakened / Webbed / Sleeping] targets" applies (Cull the Weak, Ambusher, both Reapers) and how
+    Gloomjaws' "bonus vs low-HP target" works: **one clean modified hit, not an `on-damage-dealt`
+    follow-up** (a follow-up would be a second instance that re-fires `on-damage-dealt`, re-splashes,
+    and double-counts on-hit effects). A *temporary/status* conditional bonus would grow
+    `DamageModifierDef` a condition later — no locked content needs it.
   - **TargetSelector** = discriminated union on kind; all extremum selectors use the **shared
     tie-break** (primary key, then player side → slot → id by codepoint). The enemy set
     (`lowest-hp-enemy`/`highest-hp-enemy`/`highest-attack-enemy`/`highest-intelligence-enemy`/
