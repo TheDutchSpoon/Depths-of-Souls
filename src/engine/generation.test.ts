@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createSeededRng, type SeededRng } from './rng'
 import type { BiomeId } from './ids'
+import type { CombatState } from './types'
 import { scaleStatsToLevel } from './leveling'
 import { enemyLevelRange, enemyPartySize, fightCount } from './curves'
 import { biomeForFloor, canEquip, generateFloor, materializeCreature } from './generation'
+import { resolveCount } from './effects'
 import { DEFAULT_GEM_SLOT_COUNT } from './config'
 import {
   FIXTURE_BIOME,
@@ -34,42 +36,78 @@ describe('canEquip', () => {
 
 describe('materializeCreature', () => {
   it('is pure -- identical inputs produce a deep-equal result', () => {
-    const a = materializeCreature(FIXTURE_BRUISER, 5, 'enemy', 2)
-    const b = materializeCreature(FIXTURE_BRUISER, 5, 'enemy', 2)
+    const a = materializeCreature(FIXTURE_BRUISER, 5, 'enemy', 2, 'fixture-species')
+    const b = materializeCreature(FIXTURE_BRUISER, 5, 'enemy', 2, 'fixture-species')
     expect(a).toEqual(b)
   })
 
   it('bakes the level into baseStats via scaleStatsToLevel', () => {
-    const creature = materializeCreature(FIXTURE_BRUISER, 5, 'enemy', 0)
+    const creature = materializeCreature(
+      FIXTURE_BRUISER,
+      5,
+      'enemy',
+      0,
+      'fixture-species',
+    )
     expect(creature.baseStats).toEqual(scaleStatsToLevel(FIXTURE_BRUISER.baseStats, 5))
   })
 
   it('derives a deterministic id from speciesCreature id + side + slot', () => {
-    const creature = materializeCreature(FIXTURE_BRUISER, 1, 'enemy', 2)
+    const creature = materializeCreature(
+      FIXTURE_BRUISER,
+      1,
+      'enemy',
+      2,
+      'fixture-species',
+    )
     expect(creature.id).toBe('fixture-bruiser-enemy-2')
   })
 
   it('copies affinity, defaultScriptId->scriptId, and innateTraitIds', () => {
-    const creature = materializeCreature(FIXTURE_CASTER, 1, 'player', 0)
+    const creature = materializeCreature(
+      FIXTURE_CASTER,
+      1,
+      'player',
+      0,
+      'fixture-species',
+    )
     expect(creature.affinity).toBe('wit')
     expect(creature.scriptId).toBe('always-cast')
     expect(creature.innateTraitIds).toEqual([])
   })
 
   it('leaves currentHp as a placeholder equal to baseStats.health -- createCombat owns real init', () => {
-    const creature = materializeCreature(FIXTURE_BRUISER, 5, 'enemy', 0)
+    const creature = materializeCreature(
+      FIXTURE_BRUISER,
+      5,
+      'enemy',
+      0,
+      'fixture-species',
+    )
     expect(creature.currentHp).toBe(creature.baseStats.health)
   })
 
   it('starts defending/provoking false with no active effects', () => {
-    const creature = materializeCreature(FIXTURE_BRUISER, 1, 'enemy', 0)
+    const creature = materializeCreature(
+      FIXTURE_BRUISER,
+      1,
+      'enemy',
+      0,
+      'fixture-species',
+    )
     expect(creature.defending).toBe(false)
     expect(creature.provoking).toBe(false)
     expect(creature.activeEffects).toEqual([])
   })
 
   it('defaults equippedSpells to all-null slots when omitted', () => {
-    const creature = materializeCreature(FIXTURE_BRUISER, 1, 'enemy', 0)
+    const creature = materializeCreature(
+      FIXTURE_BRUISER,
+      1,
+      'enemy',
+      0,
+      'fixture-species',
+    )
     expect(creature.equippedSpells).toEqual(
       Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null),
     )
@@ -77,8 +115,26 @@ describe('materializeCreature', () => {
 
   it('passes through a supplied equippedSpells loadout unchanged', () => {
     const loadout = [FIXTURE_WIT_BOLT, null, null]
-    const creature = materializeCreature(FIXTURE_CASTER, 1, 'enemy', 0, loadout)
+    const creature = materializeCreature(
+      FIXTURE_CASTER,
+      1,
+      'enemy',
+      0,
+      'fixture-species',
+      loadout,
+    )
     expect(creature.equippedSpells).toBe(loadout)
+  })
+
+  it('copies speciesId onto the materialized creature', () => {
+    const creature = materializeCreature(
+      FIXTURE_BRUISER,
+      1,
+      'enemy',
+      0,
+      'brawlers-fixture',
+    )
+    expect(creature.speciesId).toBe('brawlers-fixture')
   })
 })
 
@@ -220,5 +276,32 @@ describe('generateFloor', () => {
         expect(enemy.equippedSpells[2]).toBeNull()
       }
     }
+  })
+
+  it('speciesId is now real (Phase 4 Slice E2), so living-allies-of-species reads a nonzero count', () => {
+    // Reuses the low-roll trace above: every one of the 6 enemy slots resolves to BRUISER
+    // (BRAWLERS species), so every enemy in the fight shares the same speciesId --
+    // living-allies-of-species was inert (always 0) before this slice wired it through
+    // materializeCreature.
+    const fights = generateFloor(6, FIXTURE_BIOME, constantRng(0.3))
+    const enemyParty = fights[0]!.enemyParty
+    for (const enemy of enemyParty) {
+      expect(enemy.speciesId).toBe('fixture-species-brawlers')
+    }
+    const state: CombatState = {
+      rng: createSeededRng(1),
+      playerParty: [],
+      enemyParty,
+      turnQueue: [],
+      turnCursor: 0,
+      round: 1,
+      result: null,
+      scripts: new Map(),
+      statuses: new Map(),
+      traits: new Map(),
+    }
+    expect(resolveCount(enemyParty[0]!, 'living-allies-of-species', state)).toBe(
+      enemyParty.length,
+    )
   })
 })

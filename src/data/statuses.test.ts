@@ -20,8 +20,10 @@ describe('stock statuses (representative Phase 3 content)', () => {
   it('POISON/BURN are on-round-end flat DoT ticks with no per-tick TriggerFired', () => {
     for (const dot of [POISON, BURN]) {
       expect(dot.category).toBe('condition-status')
-      expect(dot.hook).toBe('on-round-end')
-      expect(dot.response).toMatchObject({
+      expect(dot.polarity).toBe('debuff')
+      expect(dot.triggers).toHaveLength(1)
+      expect(dot.triggers[0]!.hook).toBe('on-round-end')
+      expect(dot.triggers[0]!.response).toMatchObject({
         kind: 'deal-damage',
         damageSource: 'dot',
         emitTriggerFired: false,
@@ -31,14 +33,19 @@ describe('stock statuses (representative Phase 3 content)', () => {
 
   it('REGEN is an on-round-end heal with no per-tick TriggerFired', () => {
     expect(REGEN.category).toBe('condition-status')
-    expect(REGEN.hook).toBe('on-round-end')
-    expect(REGEN.response).toMatchObject({ kind: 'heal', emitTriggerFired: false })
+    expect(REGEN.polarity).toBe('buff')
+    expect(REGEN.triggers[0]!.hook).toBe('on-round-end')
+    expect(REGEN.triggers[0]!.response).toMatchObject({
+      kind: 'heal',
+      emitTriggerFired: false,
+    })
   })
 
   it('STUN is an on-turn-start suppress-action, capped at 1 stack', () => {
     expect(STUN.category).toBe('condition-status')
-    expect(STUN.hook).toBe('on-turn-start')
-    expect(STUN.response).toEqual({ kind: 'suppress-action' })
+    expect(STUN.polarity).toBe('debuff')
+    expect(STUN.triggers[0]!.hook).toBe('on-turn-start')
+    expect(STUN.triggers[0]!.response).toEqual({ kind: 'suppress-action' })
     expect(STUN.cap).toBe(1)
   })
 
@@ -47,11 +54,13 @@ describe('stock statuses (representative Phase 3 content)', () => {
       category: 'damage-modifier',
       direction: 'dealt',
       magnitude: -0.2,
+      polarity: 'debuff',
     })
     expect(VULNERABILITY).toMatchObject({
       category: 'damage-modifier',
       direction: 'taken',
       magnitude: 1.5,
+      polarity: 'debuff',
     })
   })
 })

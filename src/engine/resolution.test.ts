@@ -15,7 +15,13 @@ import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
 import type { CombatEvent } from './types'
-import type { ConditionStatusEffect, StatusDef, Trait } from './effect-types'
+import type {
+  ConditionStatusEffect,
+  ObservationFilter,
+  StatusDef,
+  Trait,
+} from './effect-types'
+import type { SeededRng } from './rng'
 
 function registry(...traits: Trait[]): ReadonlyMap<string, Trait> {
   return new Map(traits.map((t) => [t.id, t]))
@@ -376,14 +382,19 @@ describe('applyStatus + condition-status content (Slice C)', () => {
     category: 'condition-status',
     statusId: 'test-dot',
     cap: 3,
-    hook: 'on-round-end',
-    response: {
-      kind: 'deal-damage',
-      target: { kind: 'self' },
-      flatAmount: 5,
-      emitTriggerFired: false,
-      damageSource: 'dot',
-    },
+    triggers: [
+      {
+        hook: 'on-round-end',
+        response: {
+          kind: 'deal-damage',
+          target: { kind: 'self' },
+          flatAmount: 5,
+          emitTriggerFired: false,
+          damageSource: 'dot',
+        },
+      },
+    ],
+    polarity: 'debuff',
   }
 
   function stateWithTestDot() {
@@ -490,13 +501,18 @@ describe('heal response (Regen)', () => {
     category: 'condition-status',
     statusId: 'test-regen',
     cap: 3,
-    hook: 'on-round-end',
-    response: {
-      kind: 'heal',
-      target: { kind: 'self' },
-      amountPerStack: 10,
-      emitTriggerFired: false,
-    },
+    triggers: [
+      {
+        hook: 'on-round-end',
+        response: {
+          kind: 'heal',
+          target: { kind: 'self' },
+          amountPerStack: 10,
+          emitTriggerFired: false,
+        },
+      },
+    ],
+    polarity: 'buff',
   }
 
   it('emits HealApplied clamped to effective max Health, never past it', () => {
@@ -533,6 +549,91 @@ describe('heal response (Regen)', () => {
 
     const heal = events.find((e) => e.type === 'HealApplied')
     expect(heal).toMatchObject({ amount: 5, remainingHp: 40 }) // 35+10=45 clamped to 40
+  })
+})
+
+describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', () => {
+  it('throws a resolver-invariant error when both amountPerStack and scalingStat are set', () => {
+    const state = createCombat(
+      makeParty('player', [{ id: 'a' }]),
+      makeParty('enemy', [{ id: 'b' }]),
+      1,
+    )
+    expect(() =>
+      executeResponse(
+        {
+          kind: 'heal',
+          target: { kind: 'self' },
+          amountPerStack: 5,
+          scalingStat: 'health',
+        },
+        'fixture',
+        { self: createCreatureId('a') },
+        state,
+        [],
+        newCascade(),
+      ),
+    ).toThrow(/more than one of amountPerStack\/scalingStat/)
+  })
+
+  it('scalingStat mode reads the HEALER’s own effective stat, not the target’s', () => {
+    // Healer's effective Health is 200 (a high-Health "Elder"); target is a DIFFERENT, much
+    // lower-Health ally -- if the response mistakenly read the TARGET's stat instead, the heal
+    // would come out tiny, not 200.
+    const player = makeParty('player', [
+      { id: 'elder', health: 200 },
+      { id: 'ally', health: 30 },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    // createCombat always inits currentHp to full effective max regardless of any raw
+    // `currentHp` override, so "ally is wounded" has to be patched in AFTER creation.
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    state = updateCreature(state, createCreatureId('ally'), { currentHp: 10 })
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'heal',
+        target: { kind: 'selector', selector: { kind: 'lowest-hp-ally' } },
+        scalingStat: 'health',
+        spellPower: 1.0,
+      },
+      'elder-fixture',
+      { self: createCreatureId('elder') },
+      state,
+      events,
+      newCascade(),
+    )
+    const heal = events.find((e) => e.type === 'HealApplied')
+    // amount = getEffectiveStat(elder,'health') x 1.0 = 200; ally 10 + 200 = 210, clamped to 30.
+    expect(heal).toMatchObject({ amount: 20, remainingHp: 30 })
+  })
+
+  it('magnitudeSource (count) scales a flat heal by a live count instead of stacks', () => {
+    const player = makeParty('player', [
+      { id: 'necromoss', health: 100 },
+      { id: 'dead1', alive: false },
+      { id: 'dead2', alive: false },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    state = updateCreature(state, createCreatureId('necromoss'), { currentHp: 50 })
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'heal',
+        target: { kind: 'self' },
+        amountPerStack: 5, // per-unit rate the live count multiplies, not a real "stack"
+        magnitudeSource: { kind: 'count', of: 'dead-allies' },
+      },
+      'necromoss-fixture',
+      { self: createCreatureId('necromoss') },
+      state,
+      events,
+      newCascade(),
+    )
+    const heal = events.find((e) => e.type === 'HealApplied')
+    // 2 dead allies x 5 = 10 healed; 50 + 10 = 60, well under the 100 cap.
+    expect(heal).toMatchObject({ amount: 10, remainingHp: 60 })
   })
 })
 
@@ -591,6 +692,191 @@ describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
         newCascade(),
       ),
     ).toThrow(/more than one of offStat\/scalingStat\/flatAmount/)
+  })
+})
+
+/** Wraps a real SeededRng to count draws -- proves a code path drew ZERO/exactly-ONE RNG value
+ * rather than merely asserting on an outcome that could coincidentally match either way. */
+function countingRng(inner: SeededRng): SeededRng & { calls: number } {
+  const wrapper = {
+    calls: 0,
+    next(): number {
+      wrapper.calls += 1
+      return inner.next()
+    },
+  }
+  return wrapper
+}
+
+describe('chancePercent probabilistic gate (Phase 4 Slice E2)', () => {
+  const WITH_CHANCE: Trait = {
+    id: 'with-chance-fixture',
+    name: 'With Chance (fixture)',
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-attack',
+        chancePercent: 50,
+        response: {
+          kind: 'apply-stat-modifier',
+          target: { kind: 'self' },
+          stat: 'attack',
+          factor: 1.1,
+        },
+      },
+    ],
+  }
+
+  const WITHOUT_CHANCE: Trait = {
+    id: 'without-chance-fixture',
+    name: 'Without Chance (fixture)',
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-attack',
+        response: {
+          kind: 'apply-stat-modifier',
+          target: { kind: 'self' },
+          stat: 'attack',
+          factor: 1.1,
+        },
+      },
+    ],
+  }
+
+  const CONDITION_NEVER_TRUE_WITH_CHANCE: Trait = {
+    id: 'condition-never-true-with-chance-fixture',
+    name: 'Condition Never True, With Chance (fixture)',
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-attack',
+        condition: { kind: 'is-provoking' }, // the attacker never provokes -- always false
+        chancePercent: 50,
+        response: {
+          kind: 'apply-stat-modifier',
+          target: { kind: 'self' },
+          stat: 'attack',
+          factor: 1.1,
+        },
+      },
+    ],
+  }
+
+  function rngDrawsForOneAttack(trait: Trait): number {
+    const player = makeParty('player', [
+      {
+        id: 'atk',
+        attack: 10,
+        defence: 0,
+        speed: 20,
+        affinity: 'vitality',
+        scriptId: 'always-attack',
+        innateTraitIds: [trait.id],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      {
+        id: 'tgt',
+        health: 100,
+        defence: 0,
+        speed: 1,
+        affinity: 'vitality',
+        scriptId: 'always-wait',
+      },
+    ])
+    const created = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const rng = countingRng(created.rng)
+    resolveTurn({ ...created, rng })
+    return rng.calls
+  }
+
+  it('draws exactly one RNG value when a firing effect carries chancePercent', () => {
+    expect(rngDrawsForOneAttack(WITH_CHANCE)).toBe(1)
+  })
+
+  it('draws zero RNG values when chancePercent is absent', () => {
+    expect(rngDrawsForOneAttack(WITHOUT_CHANCE)).toBe(0)
+  })
+
+  it('draws zero RNG values when the condition fails -- never reaches the roll', () => {
+    expect(rngDrawsForOneAttack(CONDITION_NEVER_TRUE_WITH_CHANCE)).toBe(0)
+  })
+})
+
+describe('conditional-damage-bonus (Phase 4 Slice E2, Cull the Weak / Ambusher-shaped)', () => {
+  // +50% dealt when the CURRENT damage target is below 50% HP -- a permanent passive on the
+  // ATTACKER, gathered into dealtMods at hit time (never a trigger, never a second instance).
+  const CULL_THE_WEAK_FIXTURE: Trait = {
+    id: 'cull-the-weak-fixture',
+    name: 'Cull the Weak (fixture)',
+    effects: [
+      {
+        category: 'conditional-damage-bonus',
+        percent: 0.5,
+        condition: {
+          kind: 'hp-percent',
+          subject: 'target',
+          qualifier: 'any',
+          comparator: '<',
+          thresholdPercent: 50,
+        },
+      },
+    ],
+  }
+
+  function oneHit(targetCurrentHp: number) {
+    const player = makeParty('player', [
+      {
+        id: 'attacker',
+        attack: 20,
+        defence: 0,
+        speed: 20,
+        affinity: 'vitality',
+        scriptId: 'always-attack',
+        innateTraitIds: [CULL_THE_WEAK_FIXTURE.id],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      {
+        id: 'target',
+        health: 40,
+        defence: 0,
+        speed: 1,
+        affinity: 'vitality',
+        scriptId: 'always-wait',
+      },
+    ])
+    const created = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      registry(CULL_THE_WEAK_FIXTURE),
+    )
+    const patched = updateCreature(created, createCreatureId('target'), {
+      currentHp: targetCurrentHp,
+    })
+    return resolveTurn(patched).events
+  }
+
+  it('does not apply when the target is at/above the HP threshold -- byte-identical hit', () => {
+    // off 20, def 0: core 20, chip 0.2 -> raw 20.2 -> final 20. No bonus (target at 100%, not <50%).
+    const events = oneHit(40)
+    const dealt = events.find((e) => e.type === 'DamageDealt')
+    expect(dealt).toMatchObject({ rawDamage: 20.2, finalDamage: 20 })
+  })
+
+  it('applies as ONE clean modified hit when the target is below threshold -- no second instance', () => {
+    // Target at 16/40 = 40%, below 50% -> +50% dealt: (20+0.2) x 1.5 = 30.3 -> final 30.
+    const events = oneHit(16)
+    const dealtEvents = events.filter((e) => e.type === 'DamageDealt')
+    expect(dealtEvents).toHaveLength(1) // option (a): one hit, never a follow-up instance
+    const dealt = dealtEvents[0] as Extract<CombatEvent, { type: 'DamageDealt' }>
+    expect(dealt.rawDamage).toBeCloseTo(30.3) // 20.2 x 1.5, float-imprecise at full precision
+    expect(dealt.finalDamage).toBe(30)
+    // A passive dealt-mod, not a triggered response -- no TriggerFired anywhere in the turn.
+    expect(events.some((e) => e.type === 'TriggerFired')).toBe(false)
   })
 })
 
@@ -749,6 +1035,7 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
     cap: 5,
     direction: 'dealt',
     magnitude: 0.1,
+    polarity: 'buff',
   }
 
   function stateWithGlowStacks(stacks: number) {
@@ -834,6 +1121,142 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
     )
     expect(events).toEqual([])
     expect(result.state).toEqual(bareState)
+  })
+})
+
+describe('remove-status response (Phase 4 Slice E2)', () => {
+  const TEST_DEBUFF: StatusDef = {
+    category: 'condition-status',
+    statusId: 'test-debuff',
+    cap: 3,
+    triggers: [
+      {
+        hook: 'on-round-end',
+        response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
+      },
+    ],
+    polarity: 'debuff',
+  }
+
+  function stateWithDebuffOn(targetId: string) {
+    // sufferer's health is deliberately LOWER than healer's, so 'lowest-hp-ally' unambiguously
+    // resolves to it (both would otherwise tie at their own full HP and fall to the slot
+    // tie-break, which would pick healer -- the opposite of what this test needs).
+    const player = makeParty('player', [
+      { id: 'healer', health: 20 },
+      { id: targetId, health: 5 },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const statuses = new Map([[TEST_DEBUFF.statusId, TEST_DEBUFF]])
+    let state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      TRAIT_REGISTRY,
+      statuses,
+    )
+    const events: CombatEvent[] = []
+    state = applyStatus(
+      createCreatureId('healer'),
+      createCreatureId(targetId),
+      { statusId: 'test-debuff', duration: 5 },
+      state,
+      events,
+      newCascade(),
+    )
+    return state
+  }
+
+  it('clears the status and emits StatusExpired, reusing the same clear path as decrement/expiry', () => {
+    const state = stateWithDebuffOn('sufferer')
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'remove-status',
+        target: { kind: 'selector', selector: { kind: 'lowest-hp-ally' } },
+        filter: { statusId: 'test-debuff' },
+      },
+      'cleanse-fixture',
+      { self: createCreatureId('healer') },
+      state,
+      events,
+      newCascade(),
+    )
+
+    expect(events).toEqual([
+      {
+        type: 'StatusExpired',
+        creatureId: createCreatureId('sufferer'),
+        statusId: 'test-debuff',
+      },
+    ])
+    const sufferer = [...result.state.playerParty].find(
+      (c) => c.id === createCreatureId('sufferer'),
+    )!
+    expect(sufferer.activeEffects).toEqual([])
+  })
+
+  it('is a no-op, no event, when the target does not carry the statusId', () => {
+    const state = stateWithDebuffOn('sufferer')
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'remove-status',
+        target: { kind: 'self' },
+        filter: { statusId: 'test-debuff' }, // 'healer' (self) never had it applied
+      },
+      'cleanse-fixture',
+      { self: createCreatureId('healer') },
+      state,
+      events,
+      newCascade(),
+    )
+    expect(events).toEqual([])
+    expect(result.state).toEqual(state)
+  })
+
+  it('targets via the full ResponseTarget vocabulary -- all-enemies removes it from every enemy carrying it', () => {
+    const player = makeParty('player', [{ id: 'healer' }])
+    const enemy = makeParty('enemy', [{ id: 'e1' }, { id: 'e2' }])
+    const statuses = new Map([[TEST_DEBUFF.statusId, TEST_DEBUFF]])
+    let state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      TRAIT_REGISTRY,
+      statuses,
+    )
+    const applyEvents: CombatEvent[] = []
+    for (const id of ['e1', 'e2']) {
+      state = applyStatus(
+        createCreatureId('healer'),
+        createCreatureId(id),
+        { statusId: 'test-debuff', duration: 5 },
+        state,
+        applyEvents,
+        newCascade(),
+      )
+    }
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'remove-status',
+        target: { kind: 'all-enemies' },
+        filter: { statusId: 'test-debuff' },
+      },
+      'dispel-fixture',
+      { self: createCreatureId('healer') },
+      state,
+      events,
+      newCascade(),
+    )
+    expect(events.filter((e) => e.type === 'StatusExpired')).toHaveLength(2)
+    for (const id of ['e1', 'e2']) {
+      const c = result.state.enemyParty.find((x) => x.id === createCreatureId(id))!
+      expect(c.activeEffects).toEqual([])
+    }
   })
 })
 
@@ -938,5 +1361,286 @@ describe('suppress-action scope (Phase 4 Slice B)', () => {
       newCascade(),
     )
     expect(result.suppressed).toBe(false)
+  })
+})
+
+describe('on-action-observed filter (Phase 4 Slice E2, general action-observation system)', () => {
+  function observerTrait(filter: ObservationFilter): Trait {
+    return {
+      id: 'observer-fixture',
+      name: 'Observer (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-action-observed',
+          observationFilter: filter,
+          response: {
+            kind: 'apply-stat-modifier',
+            target: { kind: 'self' },
+            stat: 'attack',
+            factor: 1.1,
+          },
+        },
+      ],
+    }
+  }
+
+  // observer (player slot0) + allyActor (player slot1) + enemyActor (enemy slot0). Every
+  // filter-combination test below re-fires fireHook fresh from this SAME base state (a pure,
+  // read-only call from the events-array's point of view -- we only check whether the response
+  // fired, never chain state between calls).
+  function baseState(filter: ObservationFilter) {
+    const trait = observerTrait(filter)
+    const player = makeParty('player', [
+      { id: 'observer', innateTraitIds: [trait.id] },
+      { id: 'ally-actor' },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
+    return createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+  }
+
+  function fires(
+    filter: ObservationFilter,
+    actorId: string,
+    actionKind: 'attack' | 'cast' | 'defend' | 'provoke',
+  ): boolean {
+    const state = baseState(filter)
+    const livingIds = [...state.playerParty, ...state.enemyParty]
+      .filter((c) => c.alive)
+      .map((c) => c.id)
+    const events: CombatEvent[] = []
+    fireHook(
+      'on-action-observed',
+      livingIds,
+      createCreatureId(actorId),
+      state,
+      events,
+      newCascade(),
+      { actionKind, instanceIndex: 0 },
+    )
+    return events.some((e) => e.type === 'TriggerFired')
+  }
+
+  it("relationship 'ally' + actionKind 'cast' (Resonants' own shape): fires for an ally's cast", () => {
+    expect(
+      fires({ relationship: 'ally', actionKind: 'cast' }, 'ally-actor', 'cast'),
+    ).toBe(true)
+  })
+
+  it("relationship 'ally': does NOT fire for an enemy's action", () => {
+    expect(
+      fires({ relationship: 'ally', actionKind: 'cast' }, 'enemy-actor', 'cast'),
+    ).toBe(false)
+  })
+
+  it('actionKind mismatch: does NOT fire even for a matching relationship', () => {
+    expect(
+      fires({ relationship: 'ally', actionKind: 'cast' }, 'ally-actor', 'attack'),
+    ).toBe(false)
+  })
+
+  it("relationship 'enemy': fires only for the enemy actor, never an ally", () => {
+    expect(fires({ relationship: 'enemy' }, 'enemy-actor', 'attack')).toBe(true)
+    expect(fires({ relationship: 'enemy' }, 'ally-actor', 'attack')).toBe(false)
+  })
+
+  it("relationship 'any' (or absent): fires regardless of side", () => {
+    expect(fires({ relationship: 'any' }, 'ally-actor', 'attack')).toBe(true)
+    expect(fires({}, 'enemy-actor', 'attack')).toBe(true)
+  })
+
+  it("excludeActor: 'ally' relationship normally includes self, but excludeActor drops the observer's own action", () => {
+    expect(fires({ relationship: 'ally' }, 'observer', 'attack')).toBe(true)
+    expect(
+      fires({ relationship: 'ally', excludeActor: true }, 'observer', 'attack'),
+    ).toBe(false)
+    // A DIFFERENT ally is unaffected by excludeActor.
+    expect(
+      fires({ relationship: 'ally', excludeActor: true }, 'ally-actor', 'attack'),
+    ).toBe(true)
+  })
+
+  it("relationship 'self': fires only when the observer IS the actor", () => {
+    expect(fires({ relationship: 'self' }, 'observer', 'attack')).toBe(true)
+    expect(fires({ relationship: 'self' }, 'ally-actor', 'attack')).toBe(false)
+  })
+})
+
+describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
+  it('an actor-self trait fires only on its own hook, never doubles via observation', () => {
+    // A trait subscribed to on-attack (actor-self routing) must NOT also fire when
+    // on-action-observed is raised for that same attack instance.
+    const ACTOR_SELF_ON_ATTACK: Trait = {
+      id: 'actor-self-on-attack-fixture',
+      name: 'Actor-Self On-Attack (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-attack',
+          response: {
+            kind: 'apply-stat-modifier',
+            target: { kind: 'self' },
+            stat: 'attack',
+            factor: 1.1,
+          },
+        },
+      ],
+    }
+    const player = makeParty('player', [
+      {
+        id: 'attacker',
+        attack: 10,
+        speed: 20,
+        scriptId: 'always-attack',
+        innateTraitIds: [ACTOR_SELF_ON_ATTACK.id],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'target', health: 100, speed: 1, scriptId: 'always-wait' },
+    ])
+    const { events } = resolveTurn(
+      createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(ACTOR_SELF_ON_ATTACK)),
+    )
+    // Exactly ONE TriggerFired -- from on-attack. No observationFilter means this trait is
+    // never a candidate for on-action-observed's own hook lookup at all (different hook
+    // entirely), so there's no double-fire to even guard against structurally -- this test
+    // pins that guarantee.
+    const fired = events.filter((e) => e.type === 'TriggerFired')
+    expect(fired).toHaveLength(1)
+    expect(fired[0]).toMatchObject({
+      hook: 'on-attack',
+      effectId: 'actor-self-on-attack-fixture',
+    })
+  })
+
+  it('on-action-observed rides the same MAX_TRIGGER_CASCADE_DEPTH guard as every other hook', () => {
+    // No response verb can itself perform an Attack/Cast/Defend/Provoke action, so there is no
+    // way to build a REAL recursive chain through on-action-observed alone in v1 content -- this
+    // is the same white-box technique the 'loop safety' describe block above uses for
+    // on-damage-taken: fire the hook with a cascade already AT the cap, proving the guard is
+    // wired for this hook too, not just the damage-path ones.
+    const OBSERVER_AT_CAP: Trait = {
+      id: 'observer-at-cap-fixture',
+      name: 'Observer At Cap (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-action-observed',
+          observationFilter: { relationship: 'any' },
+          response: {
+            kind: 'apply-stat-modifier',
+            target: { kind: 'self' },
+            stat: 'attack',
+            factor: 1.1,
+          },
+        },
+      ],
+    }
+    const player = makeParty('player', [
+      { id: 'observer', innateTraitIds: [OBSERVER_AT_CAP.id] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'actor' }])
+    const state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      registry(OBSERVER_AT_CAP),
+    )
+
+    const events: CombatEvent[] = []
+    const atCap = newCascade()
+    atCap.depth = MAX_TRIGGER_CASCADE_DEPTH
+    fireHook(
+      'on-action-observed',
+      [createCreatureId('observer'), createCreatureId('actor')],
+      createCreatureId('actor'),
+      state,
+      events,
+      atCap,
+      { actionKind: 'attack', instanceIndex: 0 },
+    )
+
+    expect(events).toEqual([
+      {
+        type: 'CascadeTruncated',
+        creatureId: createCreatureId('observer'),
+        effectId: 'observer-at-cap-fixture',
+        depth: MAX_TRIGGER_CASCADE_DEPTH + 1,
+      },
+    ])
+  })
+})
+
+describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Striker-shaped: freeze-at-application)', () => {
+  it('bakes a fixed finalFactor at application time; a later change in the live count does NOT retroactively change it', () => {
+    const player = makeParty('player', [
+      { id: 'striker', attack: 100, speciesId: 'hive' },
+      { id: 'mate1', speciesId: 'hive' },
+      { id: 'mate2', speciesId: 'hive' },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'self' },
+        stat: 'attack',
+        factor: 1.02, // per-unit rate: +2% per hive-mate (self included, "in the team")
+        magnitudeSource: { kind: 'count', of: 'living-allies-of-species' },
+      },
+      'striker-fixture',
+      { self: createCreatureId('striker') },
+      state,
+      events,
+      newCascade(),
+    )
+
+    // count = 3 (striker + 2 hive-mates, self included) -> finalFactor = 1 + 0.02*3 = 1.06.
+    const striker = [...result.state.playerParty].find(
+      (c) => c.id === createCreatureId('striker'),
+    )!
+    expect(getEffectiveStat(striker, 'attack')).toBe(106)
+    expect(events).toContainEqual({
+      type: 'StatModifierApplied',
+      sourceId: createCreatureId('striker'),
+      targetId: createCreatureId('striker'),
+      stat: 'attack',
+      factor: 1.06,
+      effectiveBefore: 100,
+      effectiveAfter: 106,
+    })
+
+    // Kill a hive-mate AFTER the modifier was applied -- the already-baked finalFactor must NOT
+    // change (the polar opposite of Bulwark's damage-modifier, which DOES live-recompute).
+    const afterDeath = updateCreature(result.state, createCreatureId('mate1'), {
+      alive: false,
+    })
+    const strikerAfterDeath = [...afterDeath.playerParty].find(
+      (c) => c.id === createCreatureId('striker'),
+    )!
+    expect(getEffectiveStat(strikerAfterDeath, 'attack')).toBe(106) // unchanged -- frozen
+  })
+
+  it('is byte-identical to the plain factor when magnitudeSource is absent', () => {
+    const player = makeParty('player', [{ id: 'a', attack: 100 }])
+    const enemy = makeParty('enemy', [{ id: 'b' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const result = executeResponse(
+      {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'self' },
+        stat: 'attack',
+        factor: 1.5,
+      },
+      'fixture',
+      { self: createCreatureId('a') },
+      state,
+      [],
+      newCascade(),
+    )
+    const a = [...result.state.playerParty].find((c) => c.id === createCreatureId('a'))!
+    expect(getEffectiveStat(a, 'attack')).toBe(150)
   })
 })

@@ -15,14 +15,19 @@ export const POISON: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'poison',
   cap: 5,
-  hook: 'on-round-end',
-  response: {
-    kind: 'deal-damage',
-    target: { kind: 'self' },
-    flatAmount: 3,
-    emitTriggerFired: false,
-    damageSource: 'dot',
-  },
+  triggers: [
+    {
+      hook: 'on-round-end',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: 3,
+        emitTriggerFired: false,
+        damageSource: 'dot',
+      },
+    },
+  ],
+  polarity: 'debuff',
 }
 
 /** DoT: 5 flat damage per stack per round. */
@@ -30,14 +35,19 @@ export const BURN: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'burn',
   cap: 3,
-  hook: 'on-round-end',
-  response: {
-    kind: 'deal-damage',
-    target: { kind: 'self' },
-    flatAmount: 5,
-    emitTriggerFired: false,
-    damageSource: 'dot',
-  },
+  triggers: [
+    {
+      hook: 'on-round-end',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: 5,
+        emitTriggerFired: false,
+        damageSource: 'dot',
+      },
+    },
+  ],
+  polarity: 'debuff',
 }
 
 /** HoT: 4 flat heal per stack per round, clamped to effective max Health (no auto-heal past it). */
@@ -45,13 +55,18 @@ export const REGEN: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'regen',
   cap: 3,
-  hook: 'on-round-end',
-  response: {
-    kind: 'heal',
-    target: { kind: 'self' },
-    amountPerStack: 4,
-    emitTriggerFired: false,
-  },
+  triggers: [
+    {
+      hook: 'on-round-end',
+      response: {
+        kind: 'heal',
+        target: { kind: 'self' },
+        amountPerStack: 4,
+        emitTriggerFired: false,
+      },
+    },
+  ],
+  polarity: 'buff',
 }
 
 /** Just a condition-status: an on-turn-start suppress-action -- the Phase 1 empty-bracket skip,
@@ -60,8 +75,8 @@ export const STUN: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'stun',
   cap: 1,
-  hook: 'on-turn-start',
-  response: { kind: 'suppress-action' },
+  triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action' } }],
+  polarity: 'debuff',
 }
 
 /** Damage-modifier: -20% damage DEALT per stack, additive into (1 + Σ dealtMods). Capped at
@@ -72,6 +87,7 @@ export const WEAKEN: DamageModifierDef = {
   direction: 'dealt',
   magnitude: -0.2,
   cap: 1,
+  polarity: 'debuff',
 }
 
 /** Damage-modifier: x1.5 damage TAKEN per stack, multiplicative (Π(takenFactors), compounding
@@ -82,6 +98,7 @@ export const VULNERABILITY: DamageModifierDef = {
   direction: 'taken',
   magnitude: 1.5,
   cap: 2,
+  polarity: 'debuff',
 }
 
 export const STOCK_STATUSES: readonly StatusDef[] = [

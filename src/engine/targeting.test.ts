@@ -170,6 +170,7 @@ function confusion(chancePercent: number, id = 'confusion'): ActiveEffect {
     statusId: id,
     cap: 3,
     chancePercent,
+    polarity: 'debuff',
     instanceId: createEffectInstanceId(id),
     sourceTraitId: id,
     remainingDuration: 3,

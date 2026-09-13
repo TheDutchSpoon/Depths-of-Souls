@@ -4,7 +4,9 @@ import { getEffectiveStat } from './effective-stats'
 import { getAffinityMultiplier } from './affinity'
 import { hasStatus } from './effects'
 import { peekTargetSelector } from './target-selectors'
+import { findCreature } from './creature-lookup'
 import type { CombatState, Creature } from './types'
+import type { CreatureId } from './ids'
 import type {
   Condition,
   ComparatorOp,
@@ -43,10 +45,19 @@ function hpPercentSatisfied(
   return compare(creature.currentHp * 100, comparator, thresholdPercent * effMaxHp)
 }
 
+/**
+ * Phase 4 Slice E2: `resolvingAgainst` is "the creature this effect is being resolved against"
+ * -- present when a trigger's own source is known (fireHook) or a conditional-damage-bonus is
+ * being gathered against a live target, ABSENT during scripting-rule lookahead (no such creature
+ * exists there yet -- see evaluateCondition's own doc comment). 'target' degenerates to a
+ * 0-or-1-element pool, so hp-percent's any/lowest/highest qualifiers and has-status's
+ * existential `.some()` already do the right thing against it with zero extra branching.
+ */
 function subjectPool(
   subject: HpSubject,
   creature: Creature,
   state: CombatState,
+  resolvingAgainst?: Creature,
 ): readonly Creature[] {
   switch (subject) {
     case 'self':
@@ -55,6 +66,8 @@ function subjectPool(
       return livingAlliesOf(creature, state)
     case 'enemy':
       return livingEnemiesOf(creature, state)
+    case 'target':
+      return resolvingAgainst ? [resolvingAgainst] : []
     default: {
       const exhaustive: never = subject
       throw new Error(`Unhandled HP subject: ${String(exhaustive)}`)
@@ -66,19 +79,28 @@ function subjectPool(
  * Pure -- never touches state.rng. Safe to run during lookahead for every rule.
  * `ruleTargeting` is the evaluating RULE's own targeting selector (absent for a TriggeredDef's
  * condition, which has no rule context) -- consulted ONLY by acted-before-target (Slice C);
- * every other condition kind ignores it.
+ * every other condition kind ignores it. Phase 4 Slice E2: `resolvingAgainstId` is "the
+ * creature this effect is being resolved against" for a 'target'-subject condition -- supplied
+ * by fireHook (the trigger's own `source`) or a conditional-damage-bonus gather (the current
+ * damage target); resolved to a live Creature via findCreature (undefined/unknown id -> no
+ * such creature -> 'target' subject evaluates false, same as scripting-rule lookahead omitting
+ * it entirely).
  */
 export function evaluateCondition(
   condition: Condition,
   creature: Creature,
   state: CombatState,
   ruleTargeting?: TargetSelector,
+  resolvingAgainstId?: CreatureId,
 ): boolean {
+  const resolvingAgainst = resolvingAgainstId
+    ? findCreature(state, resolvingAgainstId)
+    : undefined
   switch (condition.kind) {
     case 'always':
       return true
     case 'hp-percent': {
-      const pool = subjectPool(condition.subject, creature, state)
+      const pool = subjectPool(condition.subject, creature, state, resolvingAgainst)
       if (pool.length === 0) return false
       if (condition.qualifier === 'any') {
         return pool.some((c) =>
@@ -115,7 +137,7 @@ export function evaluateCondition(
     case 'is-provoking':
       return creature.provoking
     case 'has-status':
-      return subjectPool(condition.subject, creature, state).some((c) =>
+      return subjectPool(condition.subject, creature, state, resolvingAgainst).some((c) =>
         hasStatus(c, condition.statusId),
       )
     case 'acted-before-target': {

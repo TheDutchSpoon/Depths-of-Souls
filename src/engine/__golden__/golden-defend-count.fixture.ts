@@ -66,6 +66,7 @@ export const BULWARK_STATUS: DamageModifierDef = {
   magnitude: 0.95,
   magnitudeSource: { kind: 'count', of: 'self-defend-count' },
   accumulation: 'multiplicative', // explicit (== the default) -- this fixture PINS this mode
+  polarity: 'buff',
 }
 
 export const playerParty = makeParty('player', [

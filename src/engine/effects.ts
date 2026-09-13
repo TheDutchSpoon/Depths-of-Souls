@@ -12,7 +12,6 @@ import type {
   ActiveEffect,
   ArmorPenetrationEffect,
   CheatDeathEffect,
-  ConditionStatusEffect,
   CountOf,
   CrossStatEffect,
   DamageModifierEffect,
@@ -21,9 +20,9 @@ import type {
   FriendlyFireStatusEffect,
   Hook,
   MagnitudeSource,
+  ResolvedHookEffect,
   StatusDef,
   Trait,
-  TriggeredEffect,
 } from './effect-types'
 import type { CombatState, Creature } from './types'
 
@@ -78,6 +77,8 @@ function withInstance(
       return { ...def, instanceId, sourceTraitId }
     case 'cheat-death':
       return { ...def, instanceId, sourceTraitId }
+    case 'conditional-damage-bonus':
+      return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
       throw new Error(`Unknown effect def category: ${String(exhaustive)}`)
@@ -86,21 +87,45 @@ function withInstance(
 }
 
 /**
- * The creature's effects registered for `hook`, in canonical active-effects order. Matches BOTH
- * permanent triggered traits (Retaliate, Grudge) and timed condition-status effects (DoT/Regen/
- * Stun) -- both fire via the same hook-dispatch machinery in resolution.ts's fireHook.
- * Scan-and-filter (a hook-type index is deferred until profiling shows it's needed). The
- * alive/death gating is the caller's (fireHook) responsibility, not this lookup's.
+ * The creature's hook reactions registered for `hook`, in canonical active-effects order,
+ * resolved to a uniform `ResolvedHookEffect` shape (Phase 4 Slice E2) regardless of source.
+ * Matches BOTH permanent triggered traits (Retaliate, Grudge -- one hook each) and timed
+ * condition-status effects (DoT/Regen/Stun/Sleep -- each of `triggers[]` checked independently,
+ * since a status may subscribe to more than one hook, e.g. Sleep's on-turn-start suppress +
+ * on-damage-taken wake-up) -- both fire via the same hook-dispatch machinery in resolution.ts's
+ * fireHook, which reads this uniform shape without caring which one supplied it. Scan-and-filter
+ * (a hook-type index is deferred until profiling shows it's needed). The alive/death gating is
+ * the caller's (fireHook) responsibility, not this lookup's.
  */
-export function effectsForHook(
-  creature: Creature,
-  hook: Hook,
-): (TriggeredEffect | ConditionStatusEffect)[] {
-  return creature.activeEffects.filter(
-    (e): e is TriggeredEffect | ConditionStatusEffect =>
-      (e.category === 'triggered' || e.category === 'condition-status') &&
-      e.hook === hook,
-  )
+export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffect[] {
+  const results: ResolvedHookEffect[] = []
+  for (const e of creature.activeEffects) {
+    if (e.category === 'triggered') {
+      if (e.hook !== hook) continue
+      results.push({
+        instanceId: e.instanceId,
+        sourceTraitId: e.sourceTraitId,
+        condition: e.condition,
+        chancePercent: e.chancePercent,
+        observationFilter: e.observationFilter,
+        response: e.response,
+      })
+    } else if (e.category === 'condition-status') {
+      for (const trigger of e.triggers) {
+        if (trigger.hook !== hook) continue
+        results.push({
+          instanceId: e.instanceId,
+          sourceTraitId: e.sourceTraitId,
+          condition: trigger.condition,
+          chancePercent: trigger.chancePercent,
+          response: trigger.response,
+          stacks: e.stacks,
+          statusId: e.statusId,
+        })
+      }
+    }
+  }
+  return results
 }
 
 /**

@@ -32,14 +32,23 @@ function actionNeedsTargeting(action: RuleAction, creature: Creature): boolean {
  * `triggered` suppression (no statusId to key immunity off) is never immune-gated.
  */
 function isActionSuppressed(creature: Creature, kind: 'attack' | 'cast'): boolean {
-  return creature.activeEffects.some((e) => {
-    if (e.category !== 'triggered' && e.category !== 'condition-status') return false
-    if (e.response.kind !== 'suppress-action') return false
-    if (e.category === 'condition-status' && hasStatusImmunity(creature, e.statusId)) {
-      return false
-    }
-    const scope = e.response.scope ?? 'all'
+  const matchesScope = (response: {
+    kind: string
+    scope?: 'all' | 'attack' | 'cast'
+  }) => {
+    if (response.kind !== 'suppress-action') return false
+    const scope = response.scope ?? 'all'
     return scope === 'all' || scope === kind
+  }
+  return creature.activeEffects.some((e) => {
+    if (e.category === 'triggered') return matchesScope(e.response)
+    // Phase 4 Slice E2: a condition-status may carry MORE THAN ONE trigger (e.g. Sleep's
+    // on-turn-start suppress + on-damage-taken wake-up) -- check every trigger's response, not
+    // just one, regardless of which hook it's declared on (this scan doesn't care about hook,
+    // matching its pre-Slice-E2 behavior for the single-trigger case).
+    if (e.category !== 'condition-status') return false
+    if (hasStatusImmunity(creature, e.statusId)) return false
+    return e.triggers.some((t) => matchesScope(t.response))
   })
 }
 

@@ -36,6 +36,7 @@ import type { CreatureId } from './ids'
 import type { CombatEvent, CombatState, Creature, Stat } from './types'
 import type {
   ActiveEffect,
+  ConditionalDamageBonusEffect,
   ConditionStatusEffect,
   DamageModifierEffect,
   EffectInstanceId,
@@ -188,6 +189,28 @@ export function dealDamageWithOffStat(
   )
 }
 
+/**
+ * Phase 4 Slice E2 (Cull the Weak / Ambusher / Gloomjaws / Sporch's Reaper): the attacker's
+ * summed `conditional-damage-bonus` passives whose condition (subject 'target') holds against
+ * the CURRENT damage target -- folded directly into dealtMods alongside gatherDealtMods, so the
+ * bonus lands as one clean modified hit rather than a second on-damage-dealt instance. Lives
+ * here (not effects.ts, unlike the other gatherers) because it needs evaluateCondition, and
+ * conditions.ts already imports hasStatus FROM effects.ts -- effects.ts importing back from
+ * conditions.ts would be a cycle; resolution.ts already sits above both.
+ */
+function gatherConditionalDamageBonus(
+  attacker: Creature,
+  target: Creature,
+  state: CombatState,
+): number[] {
+  return attacker.activeEffects
+    .filter(
+      (e): e is ConditionalDamageBonusEffect => e.category === 'conditional-damage-bonus',
+    )
+    .filter((e) => evaluateCondition(e.condition, attacker, state, undefined, target.id))
+    .map((e) => e.percent)
+}
+
 function dealDamageCore(
   attackerId: CreatureId,
   targetId: CreatureId,
@@ -209,7 +232,10 @@ function dealDamageCore(
     crossStatBonus: gatherCrossStatContribution(attacker, actionKind),
     attackerAffinity: attacker.affinity,
     defenderAffinity: target.affinity,
-    dealtMods: gatherDealtMods(attacker, state),
+    dealtMods: [
+      ...gatherDealtMods(attacker, state),
+      ...gatherConditionalDamageBonus(attacker, target, state),
+    ],
     takenFactors: [...defendFactors, ...gatherTakenFactors(target, state)],
   })
   return applyDamageAndEmit(
@@ -350,6 +376,14 @@ export function fireHook(
   state: CombatState,
   events: CombatEvent[],
   cascade: CascadeState,
+  // Phase 4 Slice E2 (general action-observation system): supplied ONLY by the four action
+  // executors' own 'on-action-observed' call (combat.ts), alongside their existing actor-self
+  // hook call -- every other call site omits it. Consulted below to filter ObservationFilter-
+  // carrying candidates; meaningless (and unread) for any other hook.
+  observed?: {
+    readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
+    readonly instanceIndex: number
+  },
 ): { state: CombatState; suppressed: boolean } {
   let working = state
   let suppressed = false
@@ -370,12 +404,40 @@ export function fireHook(
 
       if (cascade.activeInstances.has(effect.instanceId)) continue // self-re-entry guard
 
+      // Phase 4 Slice E2: on-action-observed's own filter -- relationship (observer vs actor)/
+      // actionKind/excludeActor. Absent fields match everything (permissive default). Checked
+      // BEFORE the generic `condition` (a cheaper, more fundamental "is this candidate even
+      // relevant" gate); a non-matching observer draws nothing and consumes no depth budget,
+      // same silent-skip discipline as a false condition.
+      if (effect.observationFilter && observed) {
+        const actor = source ? findCreature(working, source) : undefined
+        const {
+          relationship = 'any',
+          actionKind,
+          excludeActor = false,
+        } = effect.observationFilter
+        if (actionKind && actionKind !== observed.actionKind) continue
+        if (excludeActor && actor && actor.id === self.id) continue
+        if (relationship !== 'any' && actor) {
+          if (relationship === 'self' && actor.id !== self.id) continue
+          if (relationship === 'ally' && actor.side !== self.side) continue
+          if (relationship === 'enemy' && actor.side === self.side) continue
+        }
+      }
+
       // Optional trigger condition (self-scoped, reusing the scripting Condition union). Evaluated
       // against the LIVE self -- `working` may have changed since `self` was snapshotted, so an
       // earlier same-hook effect's HP change is visible. A false condition means the trigger simply
       // isn't firing: it emits nothing and consumes none of the depth/truncation budget.
       // evaluateCondition is pure (never draws RNG), safe to call for every candidate effect.
-      if (effect.condition && !evaluateCondition(effect.condition, self, working)) {
+      // Phase 4 Slice E2: `source` (the trigger's OTHER creature -- attacker for on-damage-taken,
+      // dead ally for on-ally-death, etc.) is threaded through as the 'target'-subject condition's
+      // resolving-against creature; absent for hooks with no such creature (on-round-end,
+      // on-fight-start), in which case 'target' simply evaluates false, same as scripting lookahead.
+      if (
+        effect.condition &&
+        !evaluateCondition(effect.condition, self, working, undefined, source)
+      ) {
         continue
       }
 
@@ -386,6 +448,20 @@ export function fireHook(
           effectId: effect.sourceTraitId,
           depth: cascade.depth + 1,
         })
+        continue
+      }
+
+      // Phase 4 Slice E2 (Concussive Blows / Sleeper): an optional probabilistic gate, a sibling
+      // of `condition`, read uniformly off the resolved-trigger record regardless of whether it
+      // came from a TriggeredDef or a status's own StatusTrigger. Rolled AFTER the depth-cap
+      // check (a depth-capped effect isn't firing, so it must draw zero RNG -- cheat-death's
+      // "only when it actually fires" discipline), ONLY when chancePercent is present -- a plain
+      // trigger never touches state.rng here. A failed roll skips silently, exactly like a false
+      // condition (no TriggerFired, no depth/truncation accounting).
+      if (
+        effect.chancePercent !== undefined &&
+        !(working.rng.next() < effect.chancePercent / 100)
+      ) {
         continue
       }
 
@@ -404,10 +480,10 @@ export function fireHook(
         })
       }
 
-      // Present only on a status (condition-status); absent for a plain permanent trait.
-      const stacks = effect.category === 'condition-status' ? effect.stacks : undefined
-      const statusId =
-        effect.category === 'condition-status' ? effect.statusId : undefined
+      // Present only when the resolved trigger came from a status (condition-status); absent for
+      // a plain permanent trait.
+      const stacks = effect.stacks
+      const statusId = effect.statusId
 
       cascade.activeInstances.add(effect.instanceId)
       cascade.depth += 1
@@ -561,29 +637,70 @@ export function executeResponse(
       return { state: working, suppressed: false }
     }
     case 'heal': {
+      // Phase 4 Slice E2 (Treants Elder / Necromoss): mirrors deal-damage's own mode-selection
+      // exactly (ASSUMPTION 6-style exclusivity, magnitudeSource-as-repetition-count). Flat mode
+      // (Regen, the pre-Slice-E2 default) scales `amountPerStack` by `stacks` (or the live count,
+      // if magnitudeSource replaces it); `scalingStat` mode reads the HEALER's (firing
+      // creature's) own effective stat × spellPower × the same live count -- never the target's.
+      if (response.amountPerStack !== undefined && response.scalingStat !== undefined) {
+        throw new Error(
+          'resolver invariant violated: heal response set more than one of amountPerStack/scalingStat',
+        )
+      }
       const stacks = context.stacks ?? 1
+      const bearer = getCreature(state, context.self)
+      const count = response.magnitudeSource
+        ? resolveMagnitudeCount(
+            bearer,
+            state,
+            response.magnitudeSource,
+            context.consumedStacks,
+          )
+        : undefined
+      // Absent -> exact pre-Slice-E2 values (byte-identical: `stacks`, or `1` -- a no-op
+      // multiplier on spellPower), same composition as deal-damage's own magnitudeSource.
+      const flatCount = count ?? stacks
+      const formulaMultiplier = count ?? 1
+
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const t = findCreature(working, targetId)
         if (!t || !t.alive) continue
-        working = applyHeal(
-          context.self,
-          targetId,
-          response.amountPerStack * stacks,
-          working,
-          events,
-        )
+        const amount =
+          response.scalingStat !== undefined
+            ? getEffectiveStat(bearer, response.scalingStat) *
+              (response.spellPower ?? 1.0) *
+              formulaMultiplier
+            : (response.amountPerStack ?? 0) * flatCount
+        working = applyHeal(context.self, targetId, amount, working, events)
       }
       return { state: working, suppressed: false }
     }
     case 'apply-stat-modifier': {
+      // Phase 4 Slice E2 (Swarmhive Striker / Necromoss): FREEZE-AT-APPLICATION -- resolved
+      // ONCE here (relative to the FIRING creature, context.self -- the bearer whose own
+      // side/species/etc. the count reads), before the per-target loop; the resulting
+      // finalFactor is a plain number baked into every target's new StatModifierEffect, never
+      // recomputed later (contrast Bulwark's damage-modifier, which DOES live-recompute).
+      const bearer = getCreature(state, context.self)
+      const count = response.magnitudeSource
+        ? resolveMagnitudeCount(
+            bearer,
+            state,
+            response.magnitudeSource,
+            context.consumedStacks,
+          )
+        : undefined
+      const finalFactor =
+        count === undefined ? response.factor : 1 + (response.factor - 1) * count
+
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         working = applyStatModifier(
           context.self,
           targetId,
           response.stat,
-          response.factor,
+          finalFactor,
           sourceTraitId,
           working,
           events,
@@ -705,6 +822,45 @@ export function executeResponse(
         events,
         cascade,
       )
+    }
+    case 'remove-status': {
+      // Phase 4 Slice E2 (Sleep's on-damage-taken wake-up; future cleanse/dispel). Unlike
+      // consume-stacks, this has a real `target` field -- reuses the full ResponseTarget
+      // vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies" get targeting for free.
+      // A no-op, no-event when the target doesn't carry the statusId (mirrors revive's
+      // "target must be dead" / consume-stacks' "0 stacks" skip style) -- reuses the exact
+      // StatusExpired clear path so death-reset and the round-end sweep stay consistent.
+      let working = state
+      for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        const target = findCreature(working, targetId)
+        if (!target) continue
+        const existing = target.activeEffects.find(
+          (
+            e,
+          ): e is
+            | ConditionStatusEffect
+            | DamageModifierEffect
+            | TurnOrderStatusEffect
+            | FriendlyFireStatusEffect =>
+            (e.category === 'condition-status' ||
+              e.category === 'damage-modifier' ||
+              e.category === 'turn-order-status' ||
+              e.category === 'friendly-fire-status') &&
+            e.statusId === response.filter.statusId,
+        )
+        if (!existing) continue
+        working = updateCreature(working, targetId, {
+          activeEffects: target.activeEffects.filter(
+            (e) => e.instanceId !== existing.instanceId,
+          ),
+        })
+        events.push({
+          type: 'StatusExpired',
+          creatureId: targetId,
+          statusId: response.filter.statusId,
+        })
+      }
+      return { state: working, suppressed: false }
     }
     default: {
       const exhaustive: never = response

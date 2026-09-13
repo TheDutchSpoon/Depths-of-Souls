@@ -17,6 +17,7 @@ function confusionFixture(chancePercent: number): ActiveEffect {
     statusId: 'confusion-fixture',
     cap: 1,
     chancePercent,
+    polarity: 'debuff',
     instanceId: createEffectInstanceId('confusion-fixture'),
     sourceTraitId: 'confusion-fixture',
     remainingDuration: 3,

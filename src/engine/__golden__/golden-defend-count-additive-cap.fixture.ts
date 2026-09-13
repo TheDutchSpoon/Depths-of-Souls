@@ -66,6 +66,7 @@ export const BULWARK_ADDITIVE_STATUS: DamageModifierDef = {
   magnitudeSource: { kind: 'count', of: 'self-defend-count' },
   accumulation: 'additive',
   reductionCap: 0.8, // shieldbarer.md's real "cap 80%"
+  polarity: 'buff',
 }
 
 export const playerParty = makeParty('player', [

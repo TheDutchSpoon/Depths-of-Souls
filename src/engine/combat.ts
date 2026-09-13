@@ -1,6 +1,7 @@
 import { createSeededRng } from './rng'
 import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
+import { compareBySideSlotId } from './tie-break'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import {
   instantiateTraitEffects,
@@ -88,6 +89,45 @@ function livingIds(state: CombatState): CreatureId[] {
   return [...state.playerParty, ...state.enemyParty]
     .filter((c) => c.alive)
     .map((c) => c.id)
+}
+
+/**
+ * Phase 4 Slice E2 (Web break-free): rolled at EVERY creature's turn-start (a per-GLOBAL-turn
+ * chance, not the bearer's own hook -- see TurnOrderStatusDef.breakChancePercent's own doc
+ * comment), against every LIVING bearer of an active turn-order-status carrying
+ * breakChancePercent. A board with no such bearer draws nothing (only-when-present discipline).
+ * Bearers are iterated in the canonical side->slot->id tie-break order (not raw activeEffects
+ * array order) so the draw sequence is deterministic and goldens are stable regardless of party
+ * construction order. On a successful roll, the specific effect instance is removed and
+ * StatusExpired is emitted -- the already-frozen CURRENT round's turnQueue is untouched (never
+ * recompute mid-round); breaking free only changes NEXT round's buildTurnQueue.
+ */
+function rollWebBreakFree(state: CombatState, events: CombatEvent[]): CombatState {
+  const bearers = [...state.playerParty, ...state.enemyParty]
+    .filter((c) => c.alive)
+    .sort(compareBySideSlotId)
+
+  let working = state
+  for (const bearer of bearers) {
+    const current = getCreature(working, bearer.id)
+    for (const effect of current.activeEffects) {
+      if (effect.category !== 'turn-order-status') continue
+      if (effect.breakChancePercent === undefined) continue
+      if (working.rng.next() < effect.breakChancePercent / 100) {
+        working = updateCreature(working, bearer.id, {
+          activeEffects: current.activeEffects.filter(
+            (e) => e.instanceId !== effect.instanceId,
+          ),
+        })
+        events.push({
+          type: 'StatusExpired',
+          creatureId: bearer.id,
+          statusId: effect.statusId,
+        })
+      }
+    }
+  }
+  return working
 }
 
 interface StatusSnapshotEntry {
@@ -288,7 +328,10 @@ function executeAttack(
   let working = state
   let resolvedTargetId: CreatureId | null = targetId
 
-  for (const powerPercent of buildInstanceList(actor, 'attack')) {
+  for (const [instanceIndex, powerPercent] of buildInstanceList(
+    actor,
+    'attack',
+  ).entries()) {
     resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working)
     if (!resolvedTargetId) break // no living target left for this or any further instance
 
@@ -302,6 +345,18 @@ function executeAttack(
       working,
       events,
       cascade,
+    ).state
+    // Phase 4 Slice E2 (general action-observation system): fires on ALL living creatures
+    // (cheap -- effectsForHook returns nothing for non-observers), per instance, alongside the
+    // actor's own on-attack hook above -- see CONVENTIONS' actor-vs-observer routing table.
+    working = fireHook(
+      'on-action-observed',
+      livingIds(working),
+      actor.id,
+      working,
+      events,
+      cascade,
+      { actionKind: 'attack', instanceIndex },
     ).state
     working = dealDamage(
       actor.id,
@@ -435,7 +490,10 @@ function executeCastSingle(
   let working = state
   let resolvedTargetId: CreatureId | null = targetId
 
-  for (const powerPercent of buildInstanceList(actor, 'cast')) {
+  for (const [instanceIndex, powerPercent] of buildInstanceList(
+    actor,
+    'cast',
+  ).entries()) {
     resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working, targetSide)
     if (!resolvedTargetId) break
 
@@ -454,6 +512,17 @@ function executeCastSingle(
       working,
       events,
       cascade,
+    ).state
+    // Phase 4 Slice E2 (general action-observation system): Resonants' own consumer shape
+    // (relationship 'ally', actionKind 'cast') -- see CONVENTIONS' actor-vs-observer routing.
+    working = fireHook(
+      'on-action-observed',
+      livingIds(working),
+      actor.id,
+      working,
+      events,
+      cascade,
+      { actionKind: 'cast', instanceIndex },
     ).state
     working = applyCastPayload(
       actor,
@@ -506,7 +575,10 @@ function executeCastAoe(
   const targetSide = spell.targetSide ?? 'enemy'
   let working = state
 
-  for (const powerPercent of buildInstanceList(actor, 'cast')) {
+  for (const [instanceIndex, powerPercent] of buildInstanceList(
+    actor,
+    'cast',
+  ).entries()) {
     // Phase 4 Slice E: an ally-targeting AOE spell always freezes the caster's OWN living side
     // -- no Confusion roll at all (Confusion's redirect is scoped to a "harmful action" per
     // CONVENTIONS; a support cast on your own side is never one, so it must never touch
@@ -538,6 +610,17 @@ function executeCastAoe(
     })
     // AOE has no single target to name as the hook's `source` -- self only.
     working = fireHook('on-cast', [actor.id], undefined, working, events, cascade).state
+    // Phase 4 Slice E2 (general action-observation system): source here IS the actor (needed
+    // for relationship filtering), unlike on-cast's own source above.
+    working = fireHook(
+      'on-action-observed',
+      livingIds(working),
+      actor.id,
+      working,
+      events,
+      cascade,
+      { actionKind: 'cast', instanceIndex },
+    ).state
 
     for (const targetId of targetIds) {
       // Skip a frozen-list target that's no longer alive by the time its hit lands (a prior
@@ -577,13 +660,17 @@ function executeDefend(
   cascade: CascadeState,
 ): CombatState {
   events.push({ type: 'Defended', creatureId: actor.id })
-  const working = fireHook(
-    'on-defend',
-    [actor.id],
-    undefined,
-    state,
+  let working = fireHook('on-defend', [actor.id], undefined, state, events, cascade).state
+  // Phase 4 Slice E2 (general action-observation system): Defend/Provoke are always
+  // single-instance in v1 -- instanceIndex is always 0.
+  working = fireHook(
+    'on-action-observed',
+    livingIds(working),
+    actor.id,
+    working,
     events,
     cascade,
+    { actionKind: 'defend', instanceIndex: 0 },
   ).state
   // Phase 4 Slice D / ASSUMPTION 17: cumulative for the whole fight, never reset -- read fresh
   // from `working` (not the pre-hook `actor`) in case an on-defend response somehow touched it,
@@ -603,13 +690,22 @@ function executeProvoke(
   cascade: CascadeState,
 ): CombatState {
   events.push({ type: 'Provoked', creatureId: actor.id })
-  const working = fireHook(
+  let working = fireHook(
     'on-provoke',
     [actor.id],
     undefined,
     state,
     events,
     cascade,
+  ).state
+  working = fireHook(
+    'on-action-observed',
+    livingIds(working),
+    actor.id,
+    working,
+    events,
+    cascade,
+    { actionKind: 'provoke', instanceIndex: 0 },
   ).state
   return updateCreature(working, actor.id, { provoking: true })
 }
@@ -751,6 +847,12 @@ export function resolveTurn(state: CombatState): {
   // per CONVENTIONS' "explicit boundary even for no-op turns". A dead creature must not
   // trigger start-of-turn effects, hence the hooks (not the events) are alive-gated.
   events.push({ type: 'TurnStarted', creatureId: actor.id })
+
+  // Phase 4 Slice E2 (Web break-free): rolled at EVERY creature's turn-start, unconditional on
+  // the ACTING creature's own aliveness (this is a global per-turn check against every current
+  // Web-bearer on the board, not something scoped to `actor`) -- right after the TurnStarted
+  // boundary, before the acting creature's own turn-start hooks.
+  working = rollWebBreakFree(working, events)
 
   // Turn-start hooks fire on the acting creature (if it entered the turn alive), after the
   // TurnStarted boundary. A suppress-action response (Stun) skips the action entirely -- the

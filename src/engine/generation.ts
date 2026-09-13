@@ -123,13 +123,17 @@ function hashFloorDraw(runSeed: number, floor: number): number {
  * Bakes `scaleStatsToLevel` into baseStats; copies affinity/defaultScriptId->scriptId/
  * innateTraitIds. `currentHp` is a placeholder (baseStats.health) -- createCombat is what
  * actually initializes it, via the exact same fight-start path any other creature goes
- * through, so a materialized creature never bypasses that init.
+ * through, so a materialized creature never bypasses that init. `speciesId` (Phase 4 Slice E2 --
+ * wired here, was left unset since Slice D) is the owning `Species.id`, passed explicitly rather
+ * than embedded on `SpeciesCreature` itself (mirrors `side`/`slot`/`level` already being
+ * explicit params) -- `living-allies-of-species` (effects.ts) was inert (always 0) until now.
  */
 export function materializeCreature(
   speciesCreature: SpeciesCreature,
   level: number,
   side: Side,
   slot: number,
+  speciesId: string,
   equippedSpells?: readonly (Spell | null)[],
 ): Creature {
   const baseStats = scaleStatsToLevel(speciesCreature.baseStats, level)
@@ -148,9 +152,9 @@ export function materializeCreature(
     provoking: false,
     innateTraitIds: speciesCreature.innateTraitIds,
     activeEffects: [],
-    // Phase 4 Slice D: cumulative-per-fight, always starts at 0. `speciesId` is deliberately
-    // left unset here -- see Creature.speciesId's own doc comment (out of this slice's scope).
+    // Phase 4 Slice D: cumulative-per-fight, always starts at 0.
     defendCount: 0,
+    speciesId,
   }
 }
 
@@ -242,7 +246,14 @@ export function generateFloor(
       const level = min + Math.floor(runRng.next() * (max - min + 1))
       const equippedSpells = rollLoadout(speciesCreature, biome, runRng)
       enemyParty.push(
-        materializeCreature(speciesCreature, level, 'enemy', slot, equippedSpells),
+        materializeCreature(
+          speciesCreature,
+          level,
+          'enemy',
+          slot,
+          species.id,
+          equippedSpells,
+        ),
       )
     }
     fights.push({ enemyParty })

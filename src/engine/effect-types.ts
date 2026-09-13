@@ -21,7 +21,10 @@ export function createEffectInstanceId(value: string): EffectInstanceId {
 }
 
 // The v1 hook vocabulary (13, pinned) plus Phase 4 Slice B's on-[action] family (+4, -> 17).
-// on-wait is deliberately omitted (CONVENTIONS' Phase 4 addenda).
+// on-wait is deliberately omitted (CONVENTIONS' Phase 4 addenda). Phase 4 Slice E2: the
+// originally-listed on-ally-action/on-enemy-action pair was NEVER WIRED (confirmed dead -- no
+// fireHook call site anywhere referenced them) and is superseded here by a single general
+// on-action-observed (see the actor-vs-observer routing rule, CONVENTIONS).
 export type Hook =
   | 'on-fight-start'
   | 'on-turn-start'
@@ -31,8 +34,7 @@ export type Hook =
   | 'on-damage-taken'
   | 'on-kill'
   | 'on-death'
-  | 'on-ally-action'
-  | 'on-enemy-action'
+  | 'on-action-observed'
   | 'on-ally-death'
   | 'on-enemy-death'
   | 'on-status-applied'
@@ -140,8 +142,25 @@ export type EffectResponse =
   | {
       readonly kind: 'heal'
       readonly target: ResponseTarget
-      /** Flat per-stack heal amount (Regen); scales by the firing status's current stacks. */
-      readonly amountPerStack: number
+      /** Flat per-stack heal amount (Regen); scales by the firing status's current stacks.
+       * Mutually exclusive with `scalingStat` -- ASSUMPTION (Slice E2, mirrors deal-damage's own
+       * ASSUMPTION 6): setting both throws a resolver-invariant error rather than silently
+       * picking one. */
+      readonly amountPerStack?: number
+      /** Phase 4 Slice E2 (Treants Elder): stat-scaled mode -- `getEffectiveStat(HEALER,
+       * scalingStat) × (spellPower ?? 1)`, mirroring deal-damage's own scalingStat/spellPower
+       * pairing exactly. Reads the HEALER's (the firing creature's) own stat, never the
+       * target's -- same "attacker's own stat" precedent as deal-damage; target-%-max-HP heals
+       * (reading the TARGET's max HP) are deferred, no locked content needs them. */
+      readonly scalingStat?: Stat
+      /** Coefficient on `scalingStat`; only read in that mode. Default 1.0. */
+      readonly spellPower?: number
+      /** Phase 4 Slice E2 (Necromoss): an alternative source for the repetition count this
+       * response's own magnitude is scaled by -- `amountPerStack`'s `× stacks` (flat mode) or,
+       * in `scalingStat` mode, `spellPower`'s own implicit `× 1` -- see deal-damage's own
+       * `magnitudeSource` doc comment for the exact composition (identical shape here). Absent
+       * is byte-identical to pre-Slice-E2 behavior. */
+      readonly magnitudeSource?: MagnitudeSource
       /** Regen ticks emit no TriggerFired, matching DoT; default true. */
       readonly emitTriggerFired?: boolean
     }
@@ -155,6 +174,20 @@ export type EffectResponse =
       readonly target: ResponseTarget
       readonly stat: Stat
       readonly factor: number
+      /** Phase 4 Slice E2 (Swarmhive Striker / Necromoss): FREEZE-AT-APPLICATION -- when
+       * present, the live resolveMagnitudeCount(...) reading is resolved ONCE, at the moment
+       * this response executes (e.g. an on-fight-start trigger), and combined with `factor` as
+       * `finalFactor = 1 + (factor - 1) * count` -- `factor` is reinterpreted as "the per-unit
+       * rate" only in this mode (mirrors how a Slice D magnitudeSource substitutes for a
+       * repetition count elsewhere, never the rate itself). The resulting StatModifierEffect
+       * carries only the flat, already-computed `finalFactor` -- there is no live recompute
+       * afterward (contrast Bulwark's damage-modifier, which DOES recompute on every read); a
+       * later change in the live count (e.g. an ally dying) does NOT retroactively change an
+       * already-applied modifier. Absent -- `factor` used directly, byte-identical to pre-Slice-
+       * E2 behavior. This is why Striker is authored as an apply-stat-modifier RESPONSE (fires
+       * once), not a live passive `StatModifierDef` sitting directly in `Trait.effects` (which
+       * would fold LIVE on every getEffectiveStat read -- no "application moment" to freeze at). */
+      readonly magnitudeSource?: MagnitudeSource
     }
   // Undeclared (or 'all') scope preserves the exact pre-Slice-B behavior: the whole turn is
   // skipped via resolveTurn's on-turn-start `suppressed` flag (Stun). A scoped suppression
@@ -188,6 +221,20 @@ export type EffectResponse =
       readonly statusId: string
       readonly effect: EffectResponse
     }
+  // Phase 4 Slice E2. The 9th and (per CONVENTIONS' "hold the line at nine") final response
+  // verb: clear a status from a target, reusing the existing StatusExpired path (death-reset and
+  // the round-end sweep stay consistent) -- a no-op, no-event when the target doesn't carry it
+  // (mirrors revive's "target must be dead" / consume-stacks' "0 stacks" skip style). `target`
+  // reuses the full ResponseTarget vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies"
+  // get targeting for free. `filter` is a plain statusId for now -- a polarity-based filter
+  // (`'buff' | 'debuff'`, reading StatusDef.polarity) is a natural future widening for the first
+  // cleanse/dispel spell, deliberately not built until there's a real producer/consumer to test
+  // against (no dead union branch).
+  | {
+      readonly kind: 'remove-status'
+      readonly target: ResponseTarget
+      readonly filter: { readonly statusId: string }
+    }
 
 // ---- Effect definitions (as authored in a Trait; no instance identity yet) ----
 
@@ -198,19 +245,18 @@ export type EffectResponse =
 // data, convert this to a declarative Condition-like structure.
 export type ActivationPredicate = (creature: Creature) => boolean
 
-// NOTE (Phase 4 Slice D, flagged for review): CONVENTIONS' count-scaling primitive names
+// NOTE (Phase 4 Slice D, resolved in Slice E2): CONVENTIONS' count-scaling primitive names
 // stat-modifier as an eligible magnitudeSource host too ("a stat/damage-modifier whose factor
-// reads a live board count", species-locked.md's Swarmhive Striker). Deliberately NOT wired here
-// -- getEffectiveStat(creature, stat) is a pure (creature, stat) function called from ~15+ sites
-// across the codebase (conditions.ts, turn-order.ts, target-selectors.ts, ...), several of which
-// have no CombatState in scope at all; giving it access to live board counts would mean an
-// invasive, CombatState-aware signature change to a function the whole damage-formula/scripting
-// pipeline depends on -- out of this slice's own required scope (no Slice D golden needs a
-// count-scaled STAT, only a count-scaled damage-modifier/deal-damage -- see DamageModifierDef's
-// magnitudeSource and the deal-damage response's). Deferred to whichever slice first authors a
-// count-scaled stat-modifier for real (H1's Swarmhive Striker), matching this project's own
-// "stop and amend the relevant earlier slice" discipline for a primitive only a later slice's
-// real content turns out to need.
+// reads a live board count", species-locked.md's Swarmhive Striker). Deliberately NOT wired
+// HERE, on the standalone EffectDef -- getEffectiveStat(creature, stat) is a pure (creature,
+// stat) function called from ~15+ sites across the codebase (conditions.ts, turn-order.ts,
+// target-selectors.ts, ...), several of which have no CombatState in scope at all; giving it
+// access to live board counts would mean an invasive, CombatState-aware signature change to a
+// function the whole damage-formula/scripting pipeline depends on. Slice E2 resolves this
+// WITHOUT that invasive change: `magnitudeSource` lands on the `apply-stat-modifier`
+// EffectResponse instead (see its own doc comment), freeze-at-application -- Swarmhive Striker/
+// Necromoss are authored as a triggered response (fires once, e.g. on-fight-start), never as a
+// live-folding passive `StatModifierDef` sitting directly in a Trait's `effects` array.
 export type StatModifierDef = {
   readonly category: 'stat-modifier'
   readonly stat: Stat
@@ -269,10 +315,37 @@ export type ActionInstanceDef = {
 // at fire time (omission = unconditional). This union is self/global-scoped, so it cannot yet
 // reference the triggering source (e.g. "retaliate only if the attacker is Vitality"); that needs a
 // hook-context condition variant, deferred until content requires it.
+/** Phase 4 Slice E2 (`on-action-observed`, general action-observation system): meaningful only
+ * when the owning TriggeredDef's `hook` is `'on-action-observed'`; ignored otherwise. Reacting
+ * effects filter on THEMSELVES, not on the hook name -- absent fields match everything
+ * (permissive default, matching this project's "unspecified magnitude means 100%" convention).
+ * `relationship` compares the OBSERVER (self) to the ACTOR (the hook's `source`); 'ally' includes
+ * self (matches livingAlliesOf's own convention). `excludeActor` drops the case where the
+ * observer IS the actor (relevant when relationship is 'any' and a creature would otherwise
+ * observe its own action). Resonants (H2) is the only locked consumer:
+ * `{ relationship: 'ally', actionKind: 'cast' }`. */
+export type ObservationFilter = {
+  readonly relationship?: 'self' | 'ally' | 'enemy' | 'any'
+  readonly actionKind?: 'attack' | 'cast' | 'defend' | 'provoke'
+  readonly excludeActor?: boolean
+}
+
 export type TriggeredDef = {
   readonly category: 'triggered'
   readonly hook: Hook
   readonly condition?: Condition
+  /** Phase 4 Slice E2: meaningful only when `hook` is `'on-action-observed'`. See
+   * ObservationFilter's own doc comment. */
+  readonly observationFilter?: ObservationFilter
+  /** Phase 4 Slice E2 (Concussive Blows / Sleeper): an optional probabilistic gate, a sibling of
+   * `condition` -- one is deterministic, the other a roll. Plain number, baked at instantiation
+   * (the perk/trait model does any rank arithmetic and stores the result; the engine carries no
+   * rank concept, mirroring cross-stat's percentPerRank). Rolled ONCE per firing, at execution on
+   * the winning path, AFTER the cascade-depth check (a depth-capped effect isn't firing, so it
+   * must draw zero RNG -- cheat-death's "only when it actually fires" discipline) and BEFORE
+   * TriggerFired/execution -- a failed roll skips silently, exactly like a false `condition`. Only
+   * ever rolled when present; a creature/effect without it never touches state.rng here. */
+  readonly chancePercent?: number
   readonly response: EffectResponse
 }
 
@@ -316,6 +389,20 @@ export type AnnihilateDef = {
   readonly category: 'annihilate'
 }
 
+/** Phase 4 Slice E2 (Cull the Weak / Ambusher / Gloomjaws / Sporch's Reaper): "+% damage to
+ * [Weakened / Webbed / Sleeping / low-HP] targets" -- a permanent-for-fight passive, structurally
+ * identical to ArmorPenetrationDef/CrossStatDef (additive across stacked sources, never a status,
+ * never fired via a hook), DEALT-only. `condition` is evaluated with `subject: 'target'` bound to
+ * the CURRENT damage target (gatherConditionalDamageBonus, effects.ts) -- this is what lets the
+ * bonus land as ONE clean modified hit (folded into dealtMods alongside gatherDealtMods) rather
+ * than a second on-damage-dealt follow-up instance, which would re-fire on-damage-dealt,
+ * re-splash, and double-count on-hit effects (CONVENTIONS' locked "option a" consumption model). */
+export type ConditionalDamageBonusDef = {
+  readonly category: 'conditional-damage-bonus'
+  readonly percent: number
+  readonly condition: Condition
+}
+
 /** Phase 4 Slice D (Last Stand): checked inside applyDamageAndEmit (resolution.ts) at the
  * instant a hit would reduce a living target to 0 HP, BEFORE CreatureDied/on-death fire -- one
  * seeded RNG roll (drawn only when the summed chancePercent is > 0 and the hit would otherwise
@@ -344,6 +431,7 @@ export type EffectDef =
   | SplashingDef
   | AnnihilateDef
   | CheatDeathDef
+  | ConditionalDamageBonusDef
 
 // ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
 // a spell's appliesStatus, never innate. Declared in a separate status registry (data/statuses.ts),
@@ -351,17 +439,35 @@ export type EffectDef =
 
 export type DamageModifierDirection = 'dealt' | 'taken'
 
-/** DoT (Poison/Burn), Regen, Stun: fires `response` on `hook`, same machinery as any trigger.
- * `condition` mirrors TriggeredDef's (self-scoped, optional) so fireHook checks both uniformly;
- * no v1 status content uses it. */
+/** Phase 4 Slice E2: one hook reaction a `ConditionStatusDef` subscribes to. A status may need
+ * MORE THAN ONE (Sleep: `on-turn-start -> suppress-action` so the sleeper's turn is actually
+ * skipped, like Stun, PLUS `on-damage-taken -> remove-status(self)` for the wake-up) -- unlike a
+ * `Trait`, whose `effects: EffectDef[]` already gets multiplicity for free from its own array, a
+ * single `ConditionStatusDef` object had no such list before this slice. `chancePercent` mirrors
+ * `TriggeredDef`'s own field (Slice E2) -- no v1 status content sets it yet, but the unified
+ * resolved-trigger record (effectsForHook) reads it uniformly regardless of source. */
+export type StatusTrigger = {
+  readonly hook: Hook
+  readonly condition?: Condition
+  readonly chancePercent?: number
+  readonly response: EffectResponse
+}
+
+/** DoT (Poison/Burn), Regen, Stun: fires each of `triggers`' responses on its own declared hook,
+ * same machinery as any trigger. `condition`/`chancePercent` mirror TriggeredDef's (self-scoped,
+ * optional) so fireHook checks both uniformly; no v1 status content uses more than one trigger
+ * yet except Sleep (H1). */
 export type ConditionStatusDef = {
   readonly category: 'condition-status'
   readonly statusId: string
   /** Max stacks a re-application can reach. */
   readonly cap: number
-  readonly hook: Hook
-  readonly condition?: Condition
-  readonly response: EffectResponse
+  readonly triggers: readonly StatusTrigger[]
+  /** Phase 4 Slice E2: a status's beneficial/harmful nature isn't mechanically derivable, so it's
+   * declared explicitly on every status from birth -- consumed by `remove-status`'s future
+   * polarity-filter branch (cleanse/dispel spells, not yet built; see remove-status's own doc
+   * comment) and inert everywhere else this slice. */
+  readonly polarity: 'buff' | 'debuff'
 }
 
 /** Weaken/Vulnerability: read PASSIVELY by the damage formula's pools, never fired via a hook. */
@@ -404,6 +510,8 @@ export type DamageModifierDef = {
    * an unrelated axis a magnitudeSource-driven source doesn't use -- Bulwark is applied once and
    * never re-stacked; its own `cap` is 1). */
   readonly reductionCap?: number
+  /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
+  readonly polarity: 'buff' | 'debuff'
 }
 
 /** Web (act-last) / Blindclaws' grant-act-first (act-first) -- same primitive, opposite pole
@@ -416,6 +524,15 @@ export type TurnOrderStatusDef = {
   readonly statusId: string
   readonly cap: number
   readonly position: 'first' | 'last'
+  /** Phase 4 Slice E2 (Web): the per-GLOBAL-turn break-free chance -- rolled in the turn loop
+   * (combat.ts's rollWebBreakFree) at EVERY creature's turn-start against every bearer of this
+   * status, NOT the bearer's own hook (that's why this is a status field, not a triggered
+   * response). Uses the chancePercent discipline: rolled only when present, so a board with no
+   * Web never touches state.rng. Absent for a position with no break-free mechanic (e.g.
+   * Blindclaws' grant-act-first). */
+  readonly breakChancePercent?: number
+  /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
+  readonly polarity: 'buff' | 'debuff'
 }
 
 /** Confusion: a chancePercent roll, consulted once per the bearer's harmful offensive action
@@ -430,6 +547,8 @@ export type FriendlyFireStatusDef = {
   readonly statusId: string
   readonly cap: number
   readonly chancePercent: number
+  /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
+  readonly polarity: 'buff' | 'debuff'
 }
 
 export type StatusDef =
@@ -468,12 +587,32 @@ export type ProvokeImmunityEffect = ProvokeImmunityDef & InstanceIdentity
 export type SplashingEffect = SplashingDef & InstanceIdentity
 export type AnnihilateEffect = AnnihilateDef & InstanceIdentity
 export type CheatDeathEffect = CheatDeathDef & InstanceIdentity
+export type ConditionalDamageBonusEffect = ConditionalDamageBonusDef & InstanceIdentity
 export type TurnOrderStatusEffect = TurnOrderStatusDef &
   InstanceIdentity &
   StatusInstanceState
 export type FriendlyFireStatusEffect = FriendlyFireStatusDef &
   InstanceIdentity &
   StatusInstanceState
+
+/** Phase 4 Slice E2: what `effectsForHook` (effects.ts) returns -- a single hook reaction,
+ * already resolved down to a uniform shape regardless of whether it came from a `TriggeredEffect`
+ * (one hook per effect) or one entry of a `ConditionStatusEffect`'s `triggers[]` (a status may
+ * have several). `fireHook` (resolution.ts) consumes this shape uniformly, never branching on
+ * which one supplied it. `stacks`/`statusId` are present only when the source was a status. */
+export type ResolvedHookEffect = {
+  readonly instanceId: EffectInstanceId
+  readonly sourceTraitId: string
+  readonly condition?: Condition
+  readonly chancePercent?: number
+  /** Phase 4 Slice E2: meaningful only when this resolved trigger's hook is
+   * 'on-action-observed'. Only a TriggeredDef can declare it (no locked status content
+   * observes actions), so this is always undefined when the source was a status trigger. */
+  readonly observationFilter?: ObservationFilter
+  readonly response: EffectResponse
+  readonly stacks?: number
+  readonly statusId?: string
+}
 
 export type ActiveEffect =
   | StatModifierEffect
@@ -491,6 +630,7 @@ export type ActiveEffect =
   | CheatDeathEffect
   | TurnOrderStatusEffect
   | FriendlyFireStatusEffect
+  | ConditionalDamageBonusEffect
 
 // ---- Trait ----
 
