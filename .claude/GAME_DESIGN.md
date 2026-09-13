@@ -560,6 +560,22 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   skipped **via the Phase 1 empty-bracket mechanism** (its `TurnStarted`/`TurnEnded` still emit,
   with no action between). A stun applied earlier in the round lands because the check happens when
   the creature's turn comes up. No special resolver branch — the resolver just fires the hook.
+- **Status polarity & cleanse/dispel** (Phase 4 Slice E2 systems, spells authored later): every
+  status is classified **buff** or **debuff**. This opens a planned spell archetype — **cleanse**
+  (remove debuffs from an ally) and **dispel** (remove buffs from an enemy) — via a general
+  status-removal effect. (Removing raw `stat-modifier` buffs/debuffs is a *later* extension; the
+  first removal spells target statuses.) A few statuses also **self-clear**: **Sleep** ends the
+  instant its bearer takes any damage (the waking hit still lands in full, incl. any "vs Sleeping"
+  bonus), and **Web** self-breaks on a ~10%/turn roll — fragility as design, not a bug.
+- **Three trait design levers surfaced by the Biome 1–3 roster** (Slice E2 systems): **(1)
+  conditional-damage-vs-a-condition** — "+% damage to targets that are [Weakened / Webbed / Sleeping
+  / low-HP]", applied as extra damage on the one hit (the trap-then-exploit and execute archetypes:
+  Ambusher, Reaper, Gloomjaws, Cull the Weak); **(2) chance-to-apply** — a triggered effect that
+  fires a % of the time (Sleeper's on-attack Sleep, Concussive Blows' on-attack Weaken), the
+  probabilistic counterpart to a deterministic condition; **(3) action observation** — a creature
+  reacting to *other* creatures' actions ("power up when an ally casts": Resonants), distinct from a
+  creature reacting to its **own** action (which stays on its own `on-attack`/`on-cast`/etc.). These
+  are general primitives, deliberately built ahead of the simple seed content that first uses them.
 - The system is built to **scale to many future statuses** (e.g. end-of-turn auto-Provoke,
   exotic conditional effects) via new data using existing hooks. New statuses are pure data
   instances of the built primitives (DoT / stat-modifier / heal-over-time / suppress-action) — the

@@ -24,12 +24,12 @@ Makes death meaningful and revive a second chance, not a buff-preserving undo. A
 
 | Species | Affinity lean | Closed mechanic | Roles (illustrative) | Uses |
 |---|---|---|---|---|
-| **Spiders** | Wit | Trap → exploit | Weaver (`on-attack → apply Web`), Ambusher (`+% dmg to Webbed`), Broodmother (rewards multiple Webs out) | **Web** status |
-| **Swarmhive** | Violence | Strength in numbers | Drone (cheap body), Striker (scales per living hive-mate), Queen (anchor, scales hardest) | **Count-scaling** |
+| **Spiders** | Wit | Trap → exploit | Weaver (`on-attack → apply Web`), Ambusher (`+% dmg to Webbed`), Broodmother (rewards multiple Webs out) | **Web** status (break-free: Slice E2) · Ambusher exploit needs target-conditional damage (Slice E2) |
+| **Swarmhive** | Violence | Strength in numbers | Drone (cheap body), Striker (scales per hive-mate **in the team**), Queen (anchor, scales hardest) | **Count-scaling** · needs `speciesId` wired + stat-modifier `magnitudeSource` (Slice E2) |
 | **Treants** | Vitality / Endurance | Health engine (grows over time) | Sapling (`on-round-end → permanent +max-HP / Regen`), Elder (huge sustained wall — heals the line / scales off own max HP) | — |
 | **Pollinators** | Wit / Vitality | Team-buff engine (non-health buffs) | Duster (spreads permanent non-health stat-buffs — Speed/Attack/etc.), Beneficiary (capitalizes on a buffed team) | Count-scaling (reuse) |
 | **Snapjaws** | Violence / Endurance | Bait & punish (carnivorous plants) | Lure (`on-provoke → grant self defending`, pulls aggro + tanks), Jaws (`on-damage-taken → big retaliate`) | Grant-action-state; retaliate |
-| **Lullpollen** | Wit / Instinct | Sleep & punish (sleep-flowers) | Sleeper (`on-attack → Sleep`, chance), Reaper (`+% dmg to Sleeping`) | **Sleep** status |
+| **Lullpollen** | Wit / Instinct | Sleep & punish (sleep-flowers) | Sleeper (`on-attack → Sleep`, chance), Reaper (`+% dmg to Sleeping`) | **Sleep** status (self-removal: Slice E2) · Sleeper needs chance-response + Reaper needs target-conditional damage (Slice E2) |
 
 **New this biome:**
 - **Web** — the webbed creature is stuck at the **bottom of the timeline (acts last)** until it
@@ -58,9 +58,9 @@ at creature-stamping (affinity is per-creature).
 |---|---|---|---|---|
 | **Glowflies** | Wit / Instinct | Charge & release | Charger (`stacks Glow on an ally`), Detonator (`consume all Glow → burst`) | **Glow** status + consume-response |
 | **Blindclaws** | Instinct | Ambush via turn order | Setter (`grant act-first` to an ally), Striker (`+% while acting before its target`) | **Turn-order status** + acted-before condition |
-| **Resonants** | Wit | Caster synergy | members `on-ally-action (cast) → gain Attack/Int` (power up around casters) | free (`on-ally-action` exists) |
+| **Resonants** | Wit | Caster synergy | members `on-ally-action (cast) → gain Attack/Int` (power up around casters) | **needs action-observation system (Slice E2)** — *not free*; the named `on-ally-action` hook is unwired, and Cast-scoping needs `actionKind` |
 | **Sparkeaters** | Wit / Violence | Stat-parasites | Drainers (`on-attack → −stat enemy + same +stat self`, both permanent-for-fight) | ~free (2× apply-stat-modifier) |
-| **Gloomjaws** | Violence | Execute the weak | `on-damage-dealt → bonus vs targets below X% HP` (self-contained) | free (HP% condition) |
+| **Gloomjaws** | Violence | Execute the weak | `on-damage-dealt → bonus vs targets below X% HP` (self-contained) | **needs target-conditional damage-modifier (Slice E2)** — *not free*; pool HP% can't read the just-hit target |
 | **Shellbacks** | Endurance | Armor-as-weapon | Builders (`stack permanent +Defence on allies`), attacker uses `stat-remap` Defence→Attack | free (stat-remap + existing) |
 
 **New this biome:**
@@ -116,7 +116,7 @@ win-or-lose** (the "meant to lose" is narrative, not enforced). Un-parks the §1
 | **Myconet** | Endurance | Death-network | `on-ally-death → survivors +Defence`; `on-death → Poison all-enemies` | free (`all-enemies` exists) |
 | **Necromoss** | Wit / Vitality | Reclaim (grim sustain) | heal/buff **scaling off dead-ally count** (count-scaling variant) | count-scaling + heal |
 | **Hollowkin** | Endurance / Instinct | Puppet | one applies **Confusion** `on-damage-taken`, one `on-attack` | **Confusion** status |
-| **Sporch** | Violence / Wit | Strong non-spreading Burn | Igniter (potent Burn — data, no spread), Reaper (`+% to Burning`) | free (Burn exists) |
+| **Sporch** | Violence / Wit | Strong non-spreading Burn | Igniter (potent Burn — data, no spread), Reaper (`+% to Burning`) | Burn exists, but `+% to Burning` **needs target-conditional damage-modifier (Slice E2)** — *not free* |
 
 **New this biome:**
 - **Spore** — a DoT condition-status that, `on-death` of its host, **spreads to a living,

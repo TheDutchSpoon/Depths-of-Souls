@@ -462,6 +462,22 @@ The single largest engine slice. Every row in the vocabulary table tagged `B`.
 - **Tests**: unit (ally-single/ally-AOE target resolution, Provoke exemption confirmed); goldens
   for a heal-payload single-target Cast and a stat-modifier-payload AOE Cast.
 
+## Slice E2 — content-surfaced engine primitives (round 2)
+
+Inserted after E, **before F** (added post-E; a design pass over the full roster **and the spec
+trees** found six primitives the locked content assumes but A–E don't build, plus heal-scaling —
+all locked in a grill). Same character as Slices B/C/D: engine vocabulary surfaced by content, built
+before the content authors it, so F/H1–H3 stay pure content-assembly. The earliest consumers are
+**Brute perks in Slice F** (Cull the Weak, Concussive Blows), which is why this lands before F.
+
+Full build spec: **`briefs/phase-4-slice-e2-primitives.md`**. In brief: source-relative conditions
+(`'target'` subject) + target-conditional damage-modifiers; `chancePercent` probabilistic responses;
+a `remove-status` verb + `StatusDef.polarity` (the response vocab goes **8 → 9**); a general
+`on-action-observed` system (superseding the never-wired `on-ally-action`/`on-enemy-action`); Web
+`breakChancePercent`; `magnitudeSource` on `StatModifierDef` (freeze-at-application) + `speciesId`
+wired; and `heal` gaining stat/`magnitudeSource` scaling. See CONVENTIONS for the actor-vs-observer
+routing table.
+
 ## Slice F — Specializations, perks, starters & the Unicorn
 
 - **`data/specializations.ts`**: `Specialization { id, name, starterCreatureId, perks:
