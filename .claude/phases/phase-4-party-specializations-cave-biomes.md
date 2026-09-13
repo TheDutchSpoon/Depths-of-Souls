@@ -1,13 +1,16 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–E done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+Status: **in progress — Slices A–F done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
 C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
-post-design-feedback (ally target-selector completion); lint/format/build green throughout). Built
-per
+post-design-feedback (ally target-selector completion); E2: 424/424 tests (its own phase-record
+entry was filled in retroactively during F — see that section); F: 463/463 tests; lint/format/
+build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
-not duplicated here). Eleven slices total (A–I, H split into H1/H2/H3 per biome); this record
-grows one section per slice, in the same style as `phase-3-traits-statuses-effects.md`.
+not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
+plus one inserted mid-sequence (E2, "content-surfaced engine primitives round 2" — added after a
+post-E design pass, landing between E and F); this record grows one section per slice, in the
+same style as `phase-3-traits-statuses-effects.md`.
 
 ---
 
@@ -903,8 +906,237 @@ that will actually USE `targetSide`/`payload` in anger (F); the Zustand store (G
 ~50-spell per-affinity seed set incl. real heal/buff spells (H1–H3, per GAME_DESIGN §5's "Vitality
 is the primary healer/Regen home"); integration (I).
 
+## Slice E2 — content-surfaced engine primitives (round 2)
+
+**Retroactive entry**: this section was never written when Slice E2 merged (PRs `e5040c8`/
+`6ea4376`/`8a168be`/`5093d6f` on `main`, "slice e2 code"/"slice e2 more goldens"/"slice e2
+docs"/"doc sync") — a gap in this growing record, caught and filled in here by the Slice F pass
+(per this project's "verify, don't assert from memory" discipline: the file list and test count
+below are read directly from `git show --stat` on those commits and the current `main` test run,
+not recalled). Full build spec: `briefs/phase-4-slice-e2-primitives.md`; the shipped mechanism
+list is CONVENTIONS' own "Phase 4 systems addenda" / "New primitives / capabilities" sections
+(already updated by that slice's own docs commit) — not re-derived from scratch here.
+
+### What was built (per CONVENTIONS' own addenda, cross-referenced against the diff)
+
+- **Source-relative conditions**: the `Condition` subject union gains `'target'` ("the creature
+  this effect is resolving against"), threaded through `evaluateCondition`'s new optional
+  `resolvingAgainstId` parameter, supplied by `calculateDamage`'s target and `fireHook`'s trigger
+  source. A new dealt-pool `EffectDef` category, `conditional-damage-bonus` (`{percent,
+  condition}`), consumes it — "+% damage to Weakened/Webbed/Sleeping/low-HP targets" (Cull the
+  Weak, Ambusher, Gloomjaws, Sporch's Reaper) as one clean modified hit, not a second
+  `on-damage-dealt` follow-up.
+- **`chancePercent`** — a probabilistic gate on a triggered effect (`TriggeredDef` and
+  `StatusTrigger` both gain it), rolled once per firing, after the depth-cap check, only when
+  present (Concussive Blows, Sleeper).
+- **`remove-status`** — the response vocabulary's ninth and (per CONVENTIONS) final verb: clears
+  a status from a target via the existing `StatusExpired` path. `StatusDef` gains a `polarity:
+  'buff' | 'debuff'` field (declared on every status from birth).
+- **General `on-action-observed`** — supersedes the never-wired `on-ally-action`/`on-enemy-action`
+  pair. Fires per action instance on all living creatures; reacting effects (`TriggeredDef`'s new
+  `observationFilter`) filter by `relationship`/`actionKind`/`excludeActor`. Wired into all four
+  action executors in `combat.ts` alongside their own actor-self hook call.
+- **Web's break-free roll** (deferred from Slice C) — `TurnOrderStatusDef.breakChancePercent`,
+  rolled at every creature's turn-start against every Web-bearer (`combat.ts`'s
+  `rollWebBreakFree`), not the bearer's own hook.
+- **`apply-stat-modifier` gains `magnitudeSource`** (freeze-at-application: resolved once, baked
+  into a fixed `finalFactor`) and `Creature.speciesId` is wired through `materializeCreature` for
+  real, unblocking `living-allies-of-species`.
+- **`heal` gains `scalingStat`/`spellPower`/`magnitudeSource`** (Treants Elder, Necromoss),
+  mirroring `deal-damage`'s own magnitude-mode shape.
+- **New goldens** (7 pairs): `golden-action-observed`, `golden-chance-percent`,
+  `golden-conditional-damage-bonus`, `golden-sleep-wake`, `golden-web-break-free`,
+  `golden-heal-scaling-stat`, `golden-heal-scaling-count`. Existing `golden-consume-stacks`/
+  `golden-defend-count`/`golden-defend-count-additive-cap`/`golden-turn-order-status` fixtures
+  picked up the new required `polarity` field (additive, no behavior change).
+
+### Tests
+
+**424/424** across 63 files on `main` at the start of Slice F (up from Slice E's 385 — 39 new).
+`lint`/`format:check`/`build` green.
+
+### Deliberately out of scope for Slice E2 (later slices)
+
+Specializations/perks/starters/the Unicorn (F, this record's own next section); the Zustand store
+(G); real biome content (H1–H3); integration (I).
+
+## Slice F — Specializations, perks, starters & the Unicorn
+
+Built per `.claude/briefs/phase-4-implementation-plan.md`'s Slice F section, cross-referenced
+against `.claude/specializations/{sorcerer,brute,shieldbarer}.md` and
+`.claude/species/species-locked.md`'s "Starter species" section (the docs, not the brief, win on
+any numeric disagreement — one such conflict surfaced and is documented below, not silently
+resolved). Every Phase-4-functional perk reuses vocabulary already built by Slices A–E2; one
+genuinely new engine primitive (`bonus-cast`) was required for the Sorcerer starter's own
+signature ability, flagged inline and below rather than forced into existing shapes.
+
+### What was built
+
+**`src/engine/effect-types.ts`**:
+- `ResponseTarget` gains `{ kind: 'all-allies' }` (ASSUMPTION 22) — the ally-side mirror of
+  `all-enemies`, resolved via `livingAlliesOf(self)` (so it always includes the firing creature).
+  First consumer: the Shieldbarer starter's team-wide Defence buff.
+- A new permanent-for-fight passive `EffectDef` category, **`bonus-cast`** (`{ chancePercent }`)
+  — see "New primitive" below.
+
+**`src/engine/effects.ts`**:
+- `instantiateCreatureEffects(creature, traits, playerWideEffects?)` — the ASSUMPTION 21
+  implementation: appends the supplied perk `EffectDef`s after a creature's own innate-trait
+  effects, **player-side only**, with deterministic `${creatureId}#perk#${ordinal}` instance ids.
+  This is the ONE function both `createCombat` (fight-assembly) and `revive`'s death-reset now
+  call — a revived player creature keeps its perks (permanent/battle-start, unlike in-fight
+  ramp), for free, by construction (no special-cased "restore perks" branch anywhere).
+  `instantiateTraitEffects` itself is untouched and still exported (existing call sites/tests
+  unchanged).
+- `activeBonusCast(creature)` — the read-time getter `combat.ts` consults directly.
+
+**`src/engine/types.ts`**: `CombatState` gains `playerWideEffects: readonly EffectDef[]` (so
+`revive` can re-derive perks mid-fight); `Creature.activeEffects`'s canonical-order doc comment
+updated to `innate-1 → innate-2 → perks → infusions → statuses` (ASSUMPTION 21 — a documented
+change to a previously-pinned ordering rule).
+
+**`src/engine/combat.ts`**: `createCombat` gains `partyWidePlayerEffects?: readonly EffectDef[] =
+[]` (7th param, additive/optional — every existing call site untouched), threaded into
+`instantiateCreatureEffects` and stored on `CombatState.playerWideEffects`.
+
+**NEW PRIMITIVE — `bonus-cast`** (Sorcerer starter: "50% chance on-turn-end to cast a random
+equipped spell"). **Not** a 10th `EffectResponse` verb — CONVENTIONS' "hold the line at nine"
+pins the response vocabulary specifically, and firing a real Cast needs `combat.ts`'s own
+executor functions (`executeCastSingle`/`executeCastAoe`) plus its target-resolution helpers,
+which `resolution.ts`'s generic `executeResponse` has no access to (gaining it would mean a
+`resolution.ts → combat.ts` import cycle). Instead: a permanent-for-fight passive `EffectDef`
+category, consulted **directly** by `combat.ts`'s `resolveTurn` — right after the actor's
+ordinary `on-turn-end` hook fires, before the end-of-turn win/loss check — via a new
+`maybeFireBonusCast`: rolls `chancePercent` (only when the actor carries the passive), then
+picks uniformly among the actor's non-null equipped slots and runs the picked spell through the
+EXACT executor a chosen action would (so `on-cast`/`on-action-observed`/payload
+routing/instance-list all apply unchanged, for free). A no-op with no equipped spells. Flagged
+for design-owner sign-off, same as Slice B's own `action-instance` category was.
+
+**`src/engine/resolution.ts`**: the `revive` case now calls `instantiateCreatureEffects` (was
+`instantiateTraitEffects`) so a revived player creature's perks survive death-reset;
+`resolveResponseTargets` gains the `all-allies` case (`livingAlliesOf`, imported alongside the
+existing `livingEnemiesOf`).
+
+**`src/engine/config.ts`**: `PERK_STATUS_DURATION = ROUND_CAP + 1` — a perk-granted status
+applied once at `on-fight-start` (Bulwark) needs a duration that outlives any legal fight's last
+round-end decrement.
+
+**`src/data/statuses.ts`**: `BULWARK` (real content) — the Shieldbarer's Bulwark perk's own
+status, `-5%`/Defend additive-with-cap-80%, `magnitudeSource: {kind:'count', of:
+'self-defend-count'}` — the exact mechanism Slice D's `golden-defend-count-additive-cap` proved,
+now given real, shipped numbers. Appended to `STOCK_STATUSES` (additive, per the guardrail).
+
+**`src/data/species/starters.ts`** (new file) — the three starter creatures + the Unicorn, as
+`SpeciesCreature`s (so a future Slice G store materializes a starter through the exact same
+`materializeCreature` path any spawned enemy uses):
+- **Sorcerer starter** (wit, Intelligence 30) — `SORCERER_STARTER_TRAIT` (`bonus-cast`,
+  `chancePercent: 50`) + a new signature spell, `ARCANE_BOLT` (wit-affinity, spellPower 0.5,
+  the first Wit-affinity spell in the codebase), granted as a permanent extra gem in a 4-slot
+  loadout (`SORCERER_STARTER_EQUIPPED_SPELLS`, slot 0 filled so the stock `always-cast` script
+  can use it immediately, slots 1–3 empty for Phase 8).
+- **Brute starter** (violence, Attack 30) — `BRUTE_STARTER_TRAIT` (`action-instance`, `attack`,
+  `powerPercent: 100` — a direct, content-level exercise of Slice B's instance-list model, no new
+  resolver logic).
+- **Shieldbarer starter** (endurance, Defence 30) — `SHIELDBARER_STARTER_TRAIT` (`on-provoke` →
+  `apply-stat-modifier` at `{kind: 'all-allies'}`, `defence × 1.35` — ASSUMPTION 22, ramping team
+  Defence on repeated provokes).
+- **The Unicorn** (vitality) — `UNICORN_TRAIT` (`on-attack` → `revive` at `{kind:
+  'random-dead-ally'}`, `pct: 0.2`) — the same mechanism Slice B's `golden-revive` fixture
+  already proved, now the real shipped creature/trait.
+- **ASSUMPTION**: `species-locked.md` left the Brute/Shieldbarer starters' affinity unpinned
+  ("ideally distinct"). Resolved via CLAUDE.md's own affinity↔stat soft-mapping
+  (Violence↔Attack, Endurance↔Defence) — three distinct affinities across the three starters.
+  Exact base stats (10–30 range) and each starter's/the Unicorn's own stubbed `speciesId` and
+  `rarity: 'rare'` placeholder are likewise parked-balance ASSUMPTIONs (species-locked.md itself:
+  "for now only the starter creature exists").
+
+**`src/data/traits.ts`**: `STOCK_TRAITS` appends the four starter traits (additive, via
+`STARTER_TRAITS` imported from `species/starters.ts`) — the existing Phase 3 representative
+content is untouched, per the guardrail.
+
+**`src/data/specializations.ts`** (new file) — `PerkDef`/`Specialization` types (ASSUMPTION 20:
+`effects: EffectDef[] | ((level: number) => EffectDef[])` for leveled perks),
+`validateSpecialization` (throws at **import time** if a spec's `Σ(maxLevel × costPerLevel) !==
+1000` — all three specs validated at the bottom of the module), `resolvePerkEffects`/
+`resolveSpecializationEffects` (flattens a `{spec, perkSpend}` pair into one `EffectDef[]`, ready
+to pass as `createCombat`'s `partyWidePlayerEffects` — the Slice G store's own eventual job).
+`SORCERER` (12 perks), `BRUTE` (10), `SHIELDBARER` (10), each transcribed from its own `.md`
+table. Every Phase-4-functional perk maps onto an existing primitive (action-instance,
+status-immunity, stat-modifier, armor-penetration, cross-stat, cheat-death, grant-action-state,
+conditional-damage-bonus, chancePercent-gated triggered apply-status) **except**:
+- **Bulwark** — a `triggered` `on-fight-start` → `apply-status(self, 'bulwark')`, not a bare
+  passive (the mechanism is a STATUS, per Slice D; see the new real `BULWARK` status above).
+- **Brute Force / Spell Focus** (unconditional "+1% damage per rank/level") — authored as
+  `conditional-damage-bonus` with `condition: {kind: 'always'}`. **Flagged ASSUMPTION**:
+  `conditional-damage-bonus` has no `actionKind` scoping (it folds into the shared `dealtMods`
+  pool for both Attack and Cast inside `dealDamageCore`), so each perk's bonus technically also
+  applies to the action kind its own flavor text doesn't name (Brute Force → also casts, Spell
+  Focus → also attacks). Accepted as a harmless superset — no existing primitive scopes a
+  dealt-pool % by action kind, and adding one is new engine vocabulary this content-only slice
+  deliberately did not build. Revisit if a future perk/trait needs strict exclusivity.
+- **Phase-8-inert perks** (ASSUMPTION 24) — Sorcerer's five Mastery perks + Arcane Shields/Arcane
+  Versatility/True Wit, Brute's Proficient half of Proficient Warrior, Shieldbarer's Shield
+  Specialist — authored as real, full-cost `PerkDef`s (counted toward the 1000-point sum) whose
+  `effects` is simply `[]`. There is no engine primitive for "equip gems off-affinity"/"equipment
+  Stat Slot benefit" at all yet (the whole forge economy is Phase 8), so `[]` is the honest,
+  correct dormant reading, not a stub.
+
+### Doc conflict, flagged not silently resolved
+
+`briefs/phase-4-implementation-plan.md` (both its Slice B vocabulary table and its Slice F prose)
+describes the Brute starter's second attack instance as `[100%, 30%]` ("attack again for 30%").
+Both content docs — `species/species-locked.md` and `specializations/brute.md` — agree it's
+`[100%, 100%]` ("Attack executes twice at 100%"). Built per the two content docs (this slice's
+own kickoff instructions: "docs win over anything in the brief if they disagree; flag the
+conflict, don't guess"). `BRUTE_STARTER_TRAIT` and its golden use `powerPercent: 100` for the
+second instance. **The brief's own prose needs a correction before it's read again.**
+
+### Tests
+
+**463/463** across 69 files (up from 424/424 at the start of this slice — 39 new): 6 new files
+(`data/specializations.test.ts`, `data/species/starters.test.ts`, and four new golden pairs —
+`golden-brute-starter`, `golden-shieldbarer-starter`, `golden-unicorn-starter`,
+`golden-sorcerer-starter`), plus additions to `effects.test.ts` (`instantiateCreatureEffects`,
+`activeBonusCast`), `resolution.test.ts` (`all-allies` targeting, revive-restores-perks), and
+`combat.test.ts` (`bonus-cast`'s hit/miss/no-equipped-spell/AOE branches, via a small
+queue-based RNG stub rather than a hunted-for real seed, since these are unit-level branch-
+coverage tests, not full-log goldens). All four starter goldens are hand-derived (`node -e`
+arithmetic in each fixture's own header comment) against the REAL shipped trait/creature content
+(imported from `data/`, not re-declared fixture stand-ins) — matching the plan's own instruction
+that these be "a direct, content-level exercise" of already-proven mechanisms, not new ones (true
+for three of the four; `golden-sorcerer-starter` is the one exercising the new `bonus-cast`
+primitive itself). Full Phase 1–3 + Slice A–E2 suite re-verified byte-identical (every new field
+is additive/optional; the seven raw `CombatState` object literals across test files that
+predate `createCombat` needed a `playerWideEffects: []` addition, the same mechanical update
+Slice B's `traits` field and Slice D's `defendCount`/`speciesId` fields each required). `lint` /
+`format:check` / `build` all clean.
+
+### Notable decisions surfaced during implementation (flag for review before Slice G)
+
+- **`bonus-cast` as a new `EffectDef` category, not a response verb** (above) — needs explicit
+  sign-off, same as `action-instance` did in Slice B.
+- **The Brute-starter-power doc conflict** (above) — the brief itself needs a correction pass.
+- **Brute Force/Spell Focus's `conditional-damage-bonus` + `{kind:'always'}` cross-action-kind
+  leak** (above) — accepted, but worth a second look if a future spec wants strict Attack-only or
+  Cast-only damage perks.
+- **Starter/Unicorn affinity, base stats, `speciesId`, `rarity`** — all parked-balance
+  ASSUMPTIONs per `species-locked.md`'s own "stubbed" framing; none are load-bearing design
+  decisions, all clearly flagged inline in `starters.ts`.
+- The scripted-intro-encounter test was **not** built here — it is explicitly a Slice G (store)
+  concern per the plan's own note ("may land as part of G instead if sequencing makes more sense
+  once implementation starts"); the *content* (the Unicorn, its trait, its revive mechanism) is
+  fully built and goldened in this slice.
+
+### Deliberately out of scope for Slice F (later slices)
+
+The Zustand store, `descend()`, the scripted-intro encounter's own store-level handler, spec
+swap/refund (G — this slice built the perk *effect* mechanism and the *data*, not the store that
+spends/tracks perk points or assigns a starter into a collection); real biome content (H1–H3);
+integration (I).
+
 ## Next
 
-Slice F — specializations, perks, starters & the Unicorn (`data/specializations.ts`, the
-player-level perk-effect instantiation model, the three starter creatures, the scripted-intro
-encounter). See `.claude/briefs/phase-4-implementation-plan.md`.
+Slice G — the state layer (`src/state/`, first use in the project): Zustand store owning
+navigation/ownership, `descend()`, the scripted-intro encounter's store-level handler, spec
+swap/refund. See `.claude/briefs/phase-4-implementation-plan.md`.
