@@ -474,7 +474,7 @@ Full build spec: **`briefs/phase-4-slice-e2-primitives.md`**. In brief: source-r
 (`'target'` subject) + target-conditional damage-modifiers; `chancePercent` probabilistic responses;
 a `remove-status` verb + `StatusDef.polarity` (the response vocab goes **8 → 9**); a general
 `on-action-observed` system (superseding the never-wired `on-ally-action`/`on-enemy-action`); Web
-`breakChancePercent`; `magnitudeSource` on `StatModifierDef` (freeze-at-application) + `speciesId`
+`breakChancePercent`; `magnitudeSource` on the `apply-stat-modifier` response (freeze-at-application) + `speciesId`
 wired; and `heal` gaining stat/`magnitudeSource` scaling. See CONVENTIONS for the actor-vs-observer
 routing table.
 

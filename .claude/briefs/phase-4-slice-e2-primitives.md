@@ -150,9 +150,11 @@ per turn-start; same seed → same break turn.
 
 ---
 
-## #6 — `magnitudeSource` on `StatModifierDef` + wire `speciesId`  ·  consumers: Swarmhive Striker (H1), Necromoss (H3)
+## #6 — `magnitudeSource` on the `apply-stat-modifier` response + wire `speciesId`  ·  consumers: Swarmhive Striker (H1), Necromoss (H3)
 
-**LOCKED.** Add **`magnitudeSource?`** to `StatModifierDef`, mirroring `deal-damage`/heal.
+**LOCKED (revised from the original heading).** Add **`magnitudeSource?`** to the **`apply-stat-modifier`
+response** (the discrete-applied path), *not* the passive `StatModifierDef` EffectDef — a live-folding
+passive has no application moment to freeze at. Mirrors `deal-damage`/heal.
 Semantics = **freeze-at-application** (option 2): the count is read when the modifier is applied and
 held — no live recompute. Striker is therefore an **`apply-stat-modifier` response** (fires once,
 e.g. on-fight-start), *not* a live passive; it stays on the discrete-applied side of the

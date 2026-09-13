@@ -519,7 +519,8 @@ the same interpreter, differing only in how they attach and which hooks they use
      (+% taken). Distinct from `stat-modifier` (a "−Attack" stat change and a "−damage" Weaken are
      different categories, different treatment, never double-count).
   4. **`condition-status`** — tagged timed conditions (Poison/DoT, Regen, Stun); surfaced as icons;
-     what scripting's `has-status` scopes to.
+     what scripting's `has-status` scopes to. Each carries a **`triggers[]`** list (usually one
+     entry; Sleep has two — see below) and a **`polarity`** tag.
 - **Effective stats (invariant)**: base stats are **immutable** (except permanent effects like
   level-up). Current stat = `getEffectiveStat(creature, stat)`, folding active `stat-modifier`
   effects over base **multiplicatively** (`base × Π(factors)`, conditional-passive factors included
@@ -656,9 +657,18 @@ carries the future, not the seed.
 - **Health is a modifiable stat**: `currentHp` inits to **effective** max Health at fight-start;
   clamps to effective max whenever it changes (Health debuff lowers cap+current; Health buff raises
   cap, no auto-heal). HP% stays 0–100.
-- **Stun is just a `condition-status`** — an `on-turn-start` hook with a **suppress-action** response
-  → the turn is skipped via the Phase 1 empty-bracket (TurnStarted/TurnEnded still emit). No special
-  resolver branch.
+- **Stun is just a `condition-status`** — a single `on-turn-start` trigger with a **suppress-action**
+  response → the turn is skipped via the Phase 1 empty-bracket (TurnStarted/TurnEnded still emit).
+  No special resolver branch.
+- **A `condition-status` holds a list of triggers (Slice E2)** — `triggers: { hook, response,
+  condition?, chancePercent? }[]`, not a single hook/response. Most statuses have one (Poison/Burn/
+  Regen/Stun); **Sleep has two** (`on-turn-start → suppress-action` to skip the sleeper's turn,
+  `on-damage-taken → remove-status(self)` to wake). `effectsForHook` flattens each entry into the
+  same resolved-trigger shape a `TriggeredDef` produces, so `fireHook` treats status triggers and
+  trait triggers identically. **Constraint**: all triggers from one status share the status's
+  `instanceId`, so the self-re-entry guard collapses two triggers on the *same* hook into one
+  firing — fine for all current content (Sleep's two are on different hooks); a future same-hook
+  pair on one status would need per-trigger identity.
 - **Round-end = global sweeps over a start-of-sweep snapshot**: snapshot statuses present at sweep
   start, then **(1)** fire all `on-round-end` hooks (all creatures, tie-break order; incl. DoT ticks;
   cascades incl. `on-death` resolve fully) **→ (2)** decrement durations **for snapshot statuses only**
