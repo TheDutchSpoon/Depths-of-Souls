@@ -184,6 +184,426 @@ export const CATASTROPHIC_COLLAPSE: Trait = {
   ],
 }
 
+// ---- Phase 4 Slice H1: The Overgrowth (floors 1-10) -- real per-species content, additive
+// (same guardrail as STARTER_TRAITS above). Every creature's own doc comment in
+// data/species/overgrowth.ts explains its ROLE within its species; the mechanism doc comments
+// here explain the trait's own shape. Player-facing plain-language descriptions with exact
+// numbers live in .claude/content/overgrowth.md -- kept in sync with the numbers below.
+
+/** Spiders' Weaver (enabler): every attack Webs its target -- unconditional, no chance (unlike
+ * Lullpollen's Sleeper). Fires on-attack -> apply-status(triggering-source), i.e. the creature
+ * actually being attacked (resolution.ts: on-attack's HookContext.source is the attack's own
+ * target). */
+export const SPIDER_WEAVER_TRAIT: Trait = {
+  id: 'spider-weaver-web-strike',
+  name: 'Web Strike',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-attack',
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'triggering-source' },
+        status: { statusId: 'web' },
+      },
+    },
+  ],
+}
+
+/** Spiders' Ambusher (payoff): a passive conditional-damage-bonus (Slice E2), condition subject
+ * 'target' -- folds straight into the attacker's own dealtMods pool for whichever hit lands on a
+ * Webbed target. Applies to both Attack and Cast (actionKind left unset -> 'both'). */
+export const SPIDER_AMBUSHER_TRAIT: Trait = {
+  id: 'spider-ambusher-exploit',
+  name: 'Exploit',
+  effects: [
+    {
+      category: 'conditional-damage-bonus',
+      percent: 0.4,
+      condition: { kind: 'has-status', subject: 'target', statusId: 'web' },
+    },
+  ],
+}
+
+/** Spiders' Broodwarden (amplifier): Webs its target (like Weaver) AND, on the same attack,
+ * lands a second scaled hit whose power grows with how many enemies are CURRENTLY Webbed --
+ * "rewards multiple Webs out" read as a live count-scaling bonus (deal-damage's own
+ * magnitudeSource, Slice D), not a frozen-at-apply one -- the payoff genuinely grows/shrinks as
+ * Webs land/expire mid-fight, with zero new engine primitive. */
+export const SPIDER_BROODWARDEN_TRAIT: Trait = {
+  id: 'spider-broodwarden-entangling-brood',
+  name: 'Entangling Brood',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-attack',
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'triggering-source' },
+        status: { statusId: 'web' },
+      },
+    },
+    {
+      category: 'triggered',
+      hook: 'on-attack',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'triggering-source' },
+        scalingStat: 'attack',
+        spellPower: 0.2,
+        magnitudeSource: { kind: 'count', of: 'enemies-with-status', statusId: 'web' },
+      },
+    },
+  ],
+}
+
+/** Swarmhive's Drone (enabler): species-locked.md calls it a "cheap body," but every creature
+ * needs its own real mechanic (no trait-less filler) -- a small on-death parting sting fits a
+ * cheap, expendable swarm body without stepping on Striker/Queen's own count-scaling payoff. */
+export const SWARMHIVE_DRONE_TRAIT: Trait = {
+  id: 'swarmhive-drone-final-sting',
+  name: 'Final Sting',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-death',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'triggering-source' },
+        offStat: 'attack',
+        spellPower: 0.3,
+      },
+    },
+  ],
+}
+
+/** Swarmhive's Striker (payoff): "scales per hive-mate in the team" -- the Slice E2-DECIDED
+ * shape for this exact species (CONVENTIONS' own Phase 4 addenda names Swarmhive Striker as
+ * apply-stat-modifier's magnitudeSource consumer): fires once on-fight-start, freeze-at-
+ * application, count = living-allies-of-species (INCLUDES self) at that moment -- never
+ * re-reads live after. */
+export const SWARMHIVE_STRIKER_TRAIT: Trait = {
+  id: 'swarmhive-striker-hive-mind',
+  name: 'Hive Mind',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-fight-start',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'self' },
+        stat: 'attack',
+        factor: 1.1,
+        magnitudeSource: { kind: 'count', of: 'living-allies-of-species' },
+      },
+    },
+  ],
+}
+
+/** Swarmhive's Queen (amplifier): the anchor -- "scales hardest" (species-locked.md), same
+ * mechanism as Striker at a steeper per-unit rate. */
+export const SWARMHIVE_QUEEN_TRAIT: Trait = {
+  id: 'swarmhive-queen-hive-anchor',
+  name: 'Hive Anchor',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-fight-start',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'self' },
+        stat: 'attack',
+        factor: 1.2,
+        magnitudeSource: { kind: 'count', of: 'living-allies-of-species' },
+      },
+    },
+  ],
+}
+
+/** Treants' Sapling (enabler): permanently grows its own max Health every round-end (a fresh
+ * StatModifierEffect instance each firing, compounding multiplicatively -- base x Pi(factors),
+ * per the unified effect framework's own fold rule). */
+export const TREANT_SAPLING_TRAIT: Trait = {
+  id: 'treant-sapling-taking-root',
+  name: 'Taking Root',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-round-end',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'self' },
+        stat: 'health',
+        factor: 1.05,
+      },
+    },
+  ],
+}
+
+/** Treants' Elder (payoff): "heals the line" -- heal's own scalingStat mode (Slice E2, Treants
+ * Elder is the CANONICAL example in that mechanism's own doc comment), scaling off the HEALER's
+ * own effective Health, landing on the lowest-HP ally every round-end. */
+export const TREANT_ELDER_TRAIT: Trait = {
+  id: 'treant-elder-verdant-ward',
+  name: 'Verdant Ward',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-round-end',
+      response: {
+        kind: 'heal',
+        target: { kind: 'selector', selector: { kind: 'lowest-hp-ally' } },
+        scalingStat: 'health',
+        spellPower: 0.1,
+      },
+    },
+  ],
+}
+
+/** Treants' Grovekeep (amplifier): "huge sustained wall" -- both halves at once, smaller
+ * individual rates than a dedicated specialist but compounding together every round. */
+export const TREANT_GROVEKEEP_TRAIT: Trait = {
+  id: 'treant-grovekeep-ancient-growth',
+  name: 'Ancient Growth',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-round-end',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'self' },
+        stat: 'health',
+        factor: 1.04,
+      },
+    },
+    {
+      category: 'triggered',
+      hook: 'on-round-end',
+      response: {
+        kind: 'heal',
+        target: { kind: 'selector', selector: { kind: 'lowest-hp-ally' } },
+        scalingStat: 'health',
+        spellPower: 0.15,
+      },
+    },
+  ],
+}
+
+/** Pollinators' Duster (enabler): spreads a permanent, non-health stat-buff to the whole team
+ * once, at fight-start. */
+export const POLLINATOR_DUSTER_TRAIT: Trait = {
+  id: 'pollinator-duster-pollen-drift',
+  name: 'Pollen Drift',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-fight-start',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'all-allies' },
+        stat: 'speed',
+        factor: 1.15,
+      },
+    },
+  ],
+}
+
+/** Pollinators' Beneficiary (payoff): "capitalizes on a buffed team" -- reads its OWN
+ * (Duster-buffed) effective Speed as bonus Attack via cross-stat (Slice B), so raising the
+ * team's Speed literally raises this creature's own damage; never a status/trigger, folded
+ * straight into the formula. */
+export const POLLINATOR_BENEFICIARY_TRAIT: Trait = {
+  id: 'pollinator-beneficiary-thriving',
+  name: 'Thriving',
+  effects: [
+    {
+      category: 'cross-stat',
+      fromStat: 'speed',
+      percentPerRank: 0.3,
+      appliesTo: 'attack',
+    },
+  ],
+}
+
+/** Pollinators' Pollenlord (amplifier): spreads TWO buffs at once (Speed and Attack), a
+ * stronger version of Duster's own enabling role. */
+export const POLLINATOR_POLLENLORD_TRAIT: Trait = {
+  id: 'pollinator-pollenlord-bloom-surge',
+  name: 'Bloom Surge',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-fight-start',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'all-allies' },
+        stat: 'speed',
+        factor: 1.1,
+      },
+    },
+    {
+      category: 'triggered',
+      hook: 'on-fight-start',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'all-allies' },
+        stat: 'attack',
+        factor: 1.08,
+      },
+    },
+  ],
+}
+
+/** Snapjaws' Lure (enabler): Provoking also grants itself Defending -- pulls aggro AND tanks the
+ * redirected hits (grant-action-state, reusing Defend's existing math verbatim). Needs an
+ * always-provoke script to actually fire on-provoke each turn. */
+export const SNAPJAW_LURE_TRAIT: Trait = {
+  id: 'snapjaw-lure-maw-of-thorns',
+  name: 'Maw of Thorns',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-provoke',
+      response: { kind: 'grant-action-state', target: { kind: 'self' }, defending: true },
+    },
+  ],
+}
+
+/** Snapjaws' Jaws (payoff): a bigger retaliate than the Phase 3 representative RETALIATE trait
+ * (0.3) -- a real "big retaliate" per species-locked.md. */
+export const SNAPJAW_JAWS_TRAIT: Trait = {
+  id: 'snapjaw-jaws-snapback',
+  name: 'Snapback',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-damage-taken',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'triggering-source' },
+        offStat: 'attack',
+        spellPower: 0.6,
+      },
+    },
+  ],
+}
+
+/** Snapjaws' Ironjaw (amplifier): bait AND punish on the same creature -- the ultimate
+ * lure-tank. */
+export const SNAPJAW_IRONJAW_TRAIT: Trait = {
+  id: 'snapjaw-ironjaw-iron-maw',
+  name: 'Iron Maw',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-provoke',
+      response: { kind: 'grant-action-state', target: { kind: 'self' }, defending: true },
+    },
+    {
+      category: 'triggered',
+      hook: 'on-damage-taken',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'triggering-source' },
+        offStat: 'attack',
+        spellPower: 0.5,
+      },
+    },
+  ],
+}
+
+/** Lullpollen's Sleeper (enabler): a CHANCE (unlike Spiders' unconditional Web) to Sleep its
+ * target on attack -- species-locked.md explicitly calls out "chance" for Sleeper, unlike
+ * Weaver. */
+export const LULLPOLLEN_SLEEPER_TRAIT: Trait = {
+  id: 'lullpollen-sleeper-lulling-touch',
+  name: 'Lulling Touch',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-attack',
+      chancePercent: 40,
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'triggering-source' },
+        status: { statusId: 'sleep' },
+      },
+    },
+  ],
+}
+
+/** Lullpollen's Reaper (payoff): "+% dmg to Sleeping" -- the same conditional-damage-bonus shape
+ * as Spiders' Ambusher, gated on Sleep instead of Web. */
+export const LULLPOLLEN_REAPER_TRAIT: Trait = {
+  id: 'lullpollen-reaper-dream-reaper',
+  name: 'Dream Reaper',
+  effects: [
+    {
+      category: 'conditional-damage-bonus',
+      percent: 0.5,
+      condition: { kind: 'has-status', subject: 'target', statusId: 'sleep' },
+    },
+  ],
+}
+
+/** Lullpollen's Dozer (amplifier): both halves at once, at slightly reduced individual rates. */
+export const LULLPOLLEN_DOZER_TRAIT: Trait = {
+  id: 'lullpollen-dozer-drowsy-bloom',
+  name: 'Drowsy Bloom',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-attack',
+      chancePercent: 30,
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'triggering-source' },
+        status: { statusId: 'sleep' },
+      },
+    },
+    {
+      category: 'conditional-damage-bonus',
+      percent: 0.35,
+      condition: { kind: 'has-status', subject: 'target', statusId: 'sleep' },
+    },
+  ],
+}
+
+/** The Broodmother (floor-10 boss, `data/species/overgrowth.ts`'s `BROODMOTHER`). Live
+ * count-scaling (NOT frozen, unlike Swarmhive Striker/Queen): every attack lands a second,
+ * scaled hit whose power grows with her OWN living-allies-of-species count (herself + living
+ * spiderling adds) -- "kill adds to weaken her" requires a LIVE recompute, so this reuses the
+ * exact same on-attack magnitudeSource trick as Broodwarden above, just keyed on her own side's
+ * count instead of the enemy Webbed count. A second effect Webs the whole party each round-end,
+ * at a chance. */
+export const BROODMOTHER_TRAIT: Trait = {
+  id: 'broodmother-swarm-call',
+  name: 'Swarm Call',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-attack',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'triggering-source' },
+        scalingStat: 'attack',
+        spellPower: 0.25,
+        magnitudeSource: { kind: 'count', of: 'living-allies-of-species' },
+      },
+    },
+    {
+      category: 'triggered',
+      hook: 'on-round-end',
+      chancePercent: 40,
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'all-enemies' },
+        status: { statusId: 'web' },
+      },
+    },
+  ],
+}
+
 export const STOCK_TRAITS: readonly Trait[] = [
   BRUTISH,
   BLOODLUST,
@@ -199,6 +619,26 @@ export const STOCK_TRAITS: readonly Trait[] = [
   // its own registry entries alongside the Phase 3 representative-and-temporary set above,
   // never replacing it).
   ...STARTER_TRAITS,
+  // Phase 4 Slice H1: The Overgrowth's 18 species-creature traits + the Broodmother boss trait.
+  SPIDER_WEAVER_TRAIT,
+  SPIDER_AMBUSHER_TRAIT,
+  SPIDER_BROODWARDEN_TRAIT,
+  SWARMHIVE_DRONE_TRAIT,
+  SWARMHIVE_STRIKER_TRAIT,
+  SWARMHIVE_QUEEN_TRAIT,
+  TREANT_SAPLING_TRAIT,
+  TREANT_ELDER_TRAIT,
+  TREANT_GROVEKEEP_TRAIT,
+  POLLINATOR_DUSTER_TRAIT,
+  POLLINATOR_BENEFICIARY_TRAIT,
+  POLLINATOR_POLLENLORD_TRAIT,
+  SNAPJAW_LURE_TRAIT,
+  SNAPJAW_JAWS_TRAIT,
+  SNAPJAW_IRONJAW_TRAIT,
+  LULLPOLLEN_SLEEPER_TRAIT,
+  LULLPOLLEN_REAPER_TRAIT,
+  LULLPOLLEN_DOZER_TRAIT,
+  BROODMOTHER_TRAIT,
 ]
 
 /** Ready to pass directly as createCombat's `traits` argument. */
