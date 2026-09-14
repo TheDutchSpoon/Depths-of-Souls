@@ -36,6 +36,7 @@ export const GLOW: DamageModifierDef = {
   direction: 'dealt',
   magnitude: 0.1, // +10% dealt per stack -- never actually read here, consumed before any hit
   polarity: 'buff',
+  defaultDuration: 3,
 }
 
 export const DETONATOR_FIXTURE: Trait = {

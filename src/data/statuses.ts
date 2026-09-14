@@ -28,6 +28,10 @@ export const POISON: ConditionStatusDef = {
     },
   ],
   polarity: 'debuff',
+  // Phase 4 Slice F (review amendment): every real producer (VENOM_BOLT, golden-dot) already
+  // applies Poison with an explicit duration:3, so this default is never actually read by
+  // current content -- picked to match that existing usage for documentation honesty.
+  defaultDuration: 3,
 }
 
 /** DoT: 5 flat damage per stack per round. */
@@ -48,6 +52,9 @@ export const BURN: ConditionStatusDef = {
     },
   ],
   polarity: 'debuff',
+  // No real producer applies Burn yet (representative Phase 3 content); placeholder matching
+  // its DoT sibling Poison's own default.
+  defaultDuration: 3,
 }
 
 /** HoT: 4 flat heal per stack per round, clamped to effective max Health (no auto-heal past it). */
@@ -67,6 +74,8 @@ export const REGEN: ConditionStatusDef = {
     },
   ],
   polarity: 'buff',
+  // Matches demoFight.ts's own real usage (duration: 3), never actually read by it.
+  defaultDuration: 3,
 }
 
 /** Just a condition-status: an on-turn-start suppress-action -- the Phase 1 empty-bracket skip,
@@ -77,6 +86,8 @@ export const STUN: ConditionStatusDef = {
   cap: 1,
   triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action' } }],
   polarity: 'debuff',
+  // Matches REELING's own real usage (duration: 1), never actually read by it.
+  defaultDuration: 1,
 }
 
 /** Damage-modifier: -20% damage DEALT per stack, additive into (1 + Σ dealtMods). Capped at
@@ -88,6 +99,9 @@ export const WEAKEN: DamageModifierDef = {
   magnitude: -0.2,
   cap: 1,
   polarity: 'debuff',
+  // Phase 4 Slice F (review amendment): Concussive Blows (data/specializations.ts) now omits
+  // its own explicit duration entirely, inheriting this.
+  defaultDuration: 3,
 }
 
 /** Damage-modifier: x1.5 damage TAKEN per stack, multiplicative (Π(takenFactors), compounding
@@ -99,23 +113,8 @@ export const VULNERABILITY: DamageModifierDef = {
   magnitude: 1.5,
   cap: 2,
   polarity: 'debuff',
-}
-
-/** Phase 4 Slice F (Shieldbarer's Bulwark perk): -5% damage taken per Defend this battle,
- * additive-with-cap at 80% (CONVENTIONS' "Taken-reduction accumulation", proven in Slice D's
- * golden-defend-count-additive-cap -- specializations/shieldbarer.md's own numbers, unchanged).
- * Applied once, at on-fight-start, by the perk's own triggered effect (data/specializations.ts)
- * -- cap: 1 since magnitudeSource (self-defend-count) drives the scaling, not re-application. */
-export const BULWARK: DamageModifierDef = {
-  category: 'damage-modifier',
-  statusId: 'bulwark',
-  cap: 1,
-  direction: 'taken',
-  magnitude: 0.95,
-  magnitudeSource: { kind: 'count', of: 'self-defend-count' },
-  accumulation: 'additive',
-  reductionCap: 0.8,
-  polarity: 'buff',
+  // Matches combat.test.ts's own real usage (duration: 3), never actually read by it.
+  defaultDuration: 3,
 }
 
 export const STOCK_STATUSES: readonly StatusDef[] = [
@@ -125,7 +124,6 @@ export const STOCK_STATUSES: readonly StatusDef[] = [
   STUN,
   WEAKEN,
   VULNERABILITY,
-  BULWARK,
 ]
 
 /** Ready to pass directly as createCombat's `statuses` argument. */

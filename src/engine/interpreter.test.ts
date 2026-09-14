@@ -379,6 +379,7 @@ describe('decideAction -- status-immunity vs scoped suppress-action (Phase 4 Sli
       { hook: 'on-turn-start', response: { kind: 'suppress-action', scope: 'cast' } },
     ],
     polarity: 'debuff',
+    defaultDuration: 3,
     instanceId: createEffectInstanceId('me#status#silenced'),
     sourceTraitId: 'silenced',
     remainingDuration: 2,

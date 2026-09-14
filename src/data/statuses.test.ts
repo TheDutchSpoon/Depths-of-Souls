@@ -55,12 +55,14 @@ describe('stock statuses (representative Phase 3 content)', () => {
       direction: 'dealt',
       magnitude: -0.2,
       polarity: 'debuff',
+      defaultDuration: 3,
     })
     expect(VULNERABILITY).toMatchObject({
       category: 'damage-modifier',
       direction: 'taken',
       magnitude: 1.5,
       polarity: 'debuff',
+      defaultDuration: 3,
     })
   })
 })

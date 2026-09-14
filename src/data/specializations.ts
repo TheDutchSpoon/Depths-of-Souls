@@ -18,20 +18,20 @@
 // "equip gems off-affinity" / "equipment Stat Slot benefit" at all yet (the whole gem/equipment
 // forge economy is Phase 8), so `[]` is the honest, correct dormant reading, not a stub.
 //
-// ASSUMPTION (Slice F, ungoverned by any single existing primitive): Brute's "Brute Force" (+1%
-// damage with ATTACKS per rank) and Sorcerer's "Spell Focus" (+1% SPELL damage per level) are
-// each authored as `conditional-damage-bonus` (Slice E2) with an unconditional `{kind: 'always'}`
-// condition -- the only existing dealt-pool-percentage primitive. Flagged because
-// `conditional-damage-bonus` has no actionKind scoping (it folds into `dealtMods` inside
-// `dealDamageCore`, shared by both Attack and Cast) -- so, strictly, each perk's bonus also
-// leaks onto the OTHER action kind the flavor text doesn't name. Accepted: (a) no existing
-// primitive scopes a dealt-pool bonus by action kind, (b) building one would be new engine
-// vocabulary, out of this content slice's reuse-only scope, and (c) the leak is a harmless
-// superset (a Brute's Brute Force very occasionally also boosting a rare cast is not a
-// player-visible regression). Revisit if a future slice needs strict action-kind exclusivity.
+// Review amendment (post-initial-submission): Brute's "Brute Force" (+1% damage with ATTACKS per
+// rank) and Sorcerer's "Spell Focus" (+1% SPELL damage per level) are each authored as
+// `conditional-damage-bonus` (Slice E2) with an unconditional `{kind: 'always'}` condition -- the
+// only existing dealt-pool-percentage primitive. `ConditionalDamageBonusDef` now carries an
+// `actionKind?: 'attack' | 'cast' | 'both'` field (mirroring `CrossStatDef.appliesTo`), so each
+// perk correctly scopes to its own action kind and does NOT leak onto the other one (the initial
+// submission's own flagged caveat, now resolved rather than accepted).
+//
+// Review amendment: Bulwark ("-5% damage taken per Defend, cap 80%") is authored as a genuine
+// permanent passive perk effect (`{ category: 'taken-reduction', ... }`) -- not, as the initial
+// submission had it, a triggered `on-fight-start -> apply-status` smuggling a STATUS into a
+// perk's own `effects: []`. See `TakenReductionDef`'s own doc comment (effect-types.ts).
 
 import type { EffectDef } from '../engine/effect-types'
-import { PERK_STATUS_DURATION } from '../engine/config'
 import { BRUTE_STARTER, SHIELDBARER_STARTER, SORCERER_STARTER } from './species/starters'
 
 export interface PerkDef {
@@ -190,9 +190,8 @@ export const SORCERER: Specialization = {
       effects: [],
     },
     {
-      // "+1% spell damage per level." See this file's own top-of-file ASSUMPTION note on
-      // conditional-damage-bonus + {kind:'always'} standing in for an unconditional dealt-%
-      // bonus.
+      // "+1% spell damage per level." conditional-damage-bonus + {kind:'always'} standing in
+      // for an unconditional dealt-% bonus, scoped to Cast only via actionKind.
       id: 'spell-focus',
       name: 'Spell Focus',
       maxLevel: 100,
@@ -203,6 +202,7 @@ export const SORCERER: Specialization = {
           category: 'conditional-damage-bonus',
           percent: 0.01 * level,
           condition: { kind: 'always' },
+          actionKind: 'cast',
         },
       ],
     },
@@ -236,7 +236,8 @@ export const BRUTE: Specialization = {
       ],
     },
     {
-      // "+1% damage with attacks per rank." See top-of-file ASSUMPTION.
+      // "+1% damage with attacks per rank." conditional-damage-bonus + {kind:'always'}, scoped
+      // to Attack only via actionKind.
       id: 'brute-force',
       name: 'Brute Force',
       maxLevel: 100,
@@ -247,6 +248,7 @@ export const BRUTE: Specialization = {
           category: 'conditional-damage-bonus',
           percent: 0.01 * level,
           condition: { kind: 'always' },
+          actionKind: 'attack',
         },
       ],
     },
@@ -300,7 +302,8 @@ export const BRUTE: Specialization = {
     },
     {
       // "On attack, 1% chance per rank to Weaken the target." chancePercent (Slice E2) gates a
-      // triggered apply-status response; reuses the existing WEAKEN status verbatim.
+      // triggered apply-status response; reuses the existing WEAKEN status verbatim, inheriting
+      // its `defaultDuration` (3) -- no explicit duration to repeat here.
       id: 'concussive-blows',
       name: 'Concussive Blows',
       maxLevel: 25,
@@ -314,7 +317,7 @@ export const BRUTE: Specialization = {
           response: {
             kind: 'apply-status',
             target: { kind: 'triggering-source' },
-            status: { statusId: 'weaken', duration: 2 },
+            status: { statusId: 'weaken' },
           },
         },
       ],
@@ -355,9 +358,10 @@ export const SHIELDBARER: Specialization = {
   starterCreatureId: SHIELDBARER_STARTER.id,
   perks: [
     {
-      // "-5% damage taken (cap 80%) for each time the creature has Defended this battle."
-      // Applies the real BULWARK status (data/statuses.ts) once, at fight-start -- its own
-      // magnitudeSource (self-defend-count) drives the live scaling, not re-application.
+      // "-5% damage taken (cap 80%) for each time the creature has Defended this battle." A
+      // genuine permanent passive (taken-reduction, review amendment) -- not a status; its own
+      // magnitudeSource (self-defend-count) drives the live scaling every read, no application
+      // moment needed.
       id: 'bulwark',
       name: 'Bulwark',
       maxLevel: 1,
@@ -365,13 +369,11 @@ export const SHIELDBARER: Specialization = {
       phase: 'p4',
       effects: [
         {
-          category: 'triggered',
-          hook: 'on-fight-start',
-          response: {
-            kind: 'apply-status',
-            target: { kind: 'self' },
-            status: { statusId: 'bulwark', duration: PERK_STATUS_DURATION },
-          },
+          category: 'taken-reduction',
+          magnitude: 0.95,
+          magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+          accumulation: 'additive',
+          reductionCap: 0.8,
         },
       ],
     },

@@ -23,6 +23,7 @@ import type {
   MagnitudeSource,
   ResolvedHookEffect,
   StatusDef,
+  TakenReductionEffect,
   Trait,
 } from './effect-types'
 import type { CombatState, Creature } from './types'
@@ -112,6 +113,8 @@ function withInstance(
       return { ...def, instanceId, sourceTraitId }
     case 'conditional-damage-bonus':
       return { ...def, instanceId, sourceTraitId }
+    case 'taken-reduction':
+      return { ...def, instanceId, sourceTraitId }
     case 'bonus-cast':
       return { ...def, instanceId, sourceTraitId }
     default: {
@@ -181,18 +184,35 @@ export function clampedHp(creature: Creature): number {
   return Math.min(creature.currentHp, effectiveMaxHp(creature))
 }
 
+/** Phase 4 Slice F (review amendment): the shared structural shape `damageModifierCount`/
+ * `takenFactorFor` read -- satisfied by BOTH `DamageModifierEffect` (a status; always carries a
+ * required `stacks`) and `TakenReductionEffect` (a permanent passive; carries no `stacks` at
+ * all, so it structurally omits the field rather than setting it). Lets Bulwark's new
+ * perk-granted passive reuse these two helpers verbatim instead of duplicating them. */
+interface TakenReductionSource {
+  readonly magnitude: number
+  readonly magnitudeSource?: MagnitudeSource
+  readonly accumulation?: 'multiplicative' | 'additive'
+  readonly reductionCap?: number
+  readonly stacks?: number
+}
+
 /** Phase 4 Slice D: the live repetition count a damage-modifier effect's `magnitude` is
  * multiplied/exponentiated by -- `e.stacks` (pre-Slice-D behavior) unless the effect declares a
  * `magnitudeSource`, in which case the live resolveCount(...) reading is used instead (recomputed
- * every read -- see DamageModifierDef's own doc comment). */
+ * every read -- see DamageModifierDef's own doc comment). Phase 4 Slice F: `e.stacks ?? 1` --
+ * byte-identical for a `DamageModifierEffect` (`stacks` is always a defined number there) and the
+ * correct "flat single application" reading for a `TakenReductionEffect` that omits both
+ * `magnitudeSource` and `stacks` (it carries no stack bookkeeping at all, being a permanent
+ * passive, not a status). */
 function damageModifierCount(
   bearer: Creature,
   state: CombatState,
-  e: DamageModifierEffect,
+  e: TakenReductionSource,
 ): number {
   return e.magnitudeSource
     ? resolveMagnitudeCount(bearer, state, e.magnitudeSource)
-    : e.stacks
+    : (e.stacks ?? 1)
 }
 
 /** Attacker's additive dealt-mod pool contribution from active damage-modifier statuses
@@ -214,11 +234,13 @@ export function gatherDealtMods(creature: Creature, state: CombatState): number[
  * `(1 - magnitude)` summed × count, hard-clamped at `reductionCap` (default 1 -- i.e.
  * unclamped -- if somehow omitted on an additive effect, though real content always sets it).
  * The collapsed factor is what enters the multiplicative `Π(takenFactors)` pool alongside every
- * other source -- additive WITHIN a source, multiplicative ACROSS sources. */
+ * other source -- additive WITHIN a source, multiplicative ACROSS sources. Phase 4 Slice F:
+ * generalized to `TakenReductionSource` so Bulwark's new perk-granted `TakenReductionEffect`
+ * reuses this verbatim alongside `DamageModifierEffect`'s own `taken` entries. */
 function takenFactorFor(
   bearer: Creature,
   state: CombatState,
-  e: DamageModifierEffect,
+  e: TakenReductionSource,
 ): number {
   const count = damageModifierCount(bearer, state, e)
   if (e.accumulation === 'additive') {
@@ -230,15 +252,21 @@ function takenFactorFor(
 }
 
 /** Defender's multiplicative taken-pool contribution from active damage-modifier statuses
- * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks -- or, for an
- * `accumulation: 'additive'` source like Bulwark, its own hard-capped collapsed factor). */
+ * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks) AND (Phase 4 Slice F,
+ * review amendment) permanent perk-granted `taken-reduction` passives (Bulwark) -- both flavors
+ * share the exact same `accumulation: 'additive'`-with-`reductionCap` hard-cap shape, so both
+ * are collapsed via the same `takenFactorFor`. */
 export function gatherTakenFactors(creature: Creature, state: CombatState): number[] {
-  return creature.activeEffects
-    .filter(
-      (e): e is DamageModifierEffect =>
-        e.category === 'damage-modifier' && e.direction === 'taken',
-    )
-    .map((e) => takenFactorFor(creature, state, e))
+  const damageModifiers = creature.activeEffects.filter(
+    (e): e is DamageModifierEffect =>
+      e.category === 'damage-modifier' && e.direction === 'taken',
+  )
+  const takenReductions = creature.activeEffects.filter(
+    (e): e is TakenReductionEffect => e.category === 'taken-reduction',
+  )
+  return [...damageModifiers, ...takenReductions].map((e) =>
+    takenFactorFor(creature, state, e),
+  )
 }
 
 /** True iff `creature` carries the literal statusId among its status-carrying effects

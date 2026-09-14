@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveFight, resolveTurn } from './combat'
+import { hasStatus } from './effects'
 import { makeParty } from './__fixtures__/creatures'
 import { createSeededRng } from './rng'
 import { createCreatureId } from './ids'
@@ -7,7 +8,7 @@ import { ROUND_CAP } from './config'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
-import type { StatusDef, Trait } from './effect-types'
+import type { StatusDef, Trait, TurnOrderStatusDef } from './effect-types'
 import type { SeededRng } from './rng'
 
 const EMBER_LANCE: Spell = {
@@ -502,6 +503,7 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       magnitude: -0.1,
       cap: 1,
       polarity: 'debuff',
+      defaultDuration: 3,
     }
     const VULNERABILITY_TEST: StatusDef = {
       category: 'damage-modifier',
@@ -510,6 +512,7 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       magnitude: 1.2,
       cap: 1,
       polarity: 'debuff',
+      defaultDuration: 3,
     }
     const alwaysWaitScript: Script = {
       id: 'always-wait-sweep-test',
@@ -718,13 +721,14 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
 })
 
 describe('Web break-free (Phase 4 Slice E2)', () => {
-  const WEB_TEST_STATUS: StatusDef = {
+  const WEB_TEST_STATUS: TurnOrderStatusDef = {
     category: 'turn-order-status',
     statusId: 'web-test-fixture',
     cap: 1,
     position: 'last',
     breakChancePercent: 50,
     polarity: 'debuff',
+    defaultDuration: 3,
   }
 
   const WEB_SELF_FIXTURE: Trait = {
@@ -778,7 +782,10 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
     // succeeds and the status is never removed. This isolates "one roll per turn-start" from
     // removal (covered separately by the golden below) -- otherwise a successful break partway
     // through would stop further rolls, making the count comparison flaky-by-design.
-    const NEVER_BREAKS_STATUS: StatusDef = { ...WEB_TEST_STATUS, breakChancePercent: 0 }
+    const NEVER_BREAKS_STATUS: TurnOrderStatusDef = {
+      ...WEB_TEST_STATUS,
+      breakChancePercent: 0,
+    }
     const player = makeParty('player', [
       {
         id: 'webbed',
@@ -937,5 +944,62 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     const cast = events.find(isSpellCast)
     expect(cast).toMatchObject({ type: 'SpellCast', targetShape: 'aoe', gemSlot: 0 })
     expect(events.filter((e) => e.type === 'DamageDealt')).toHaveLength(2)
+  })
+})
+
+describe('taken-reduction passive (Phase 4 Slice F, review amendment -- real Bulwark shape, as a perk)', () => {
+  // Same numbers as Slice D's golden-defend-count-additive-cap (mechanically identical --
+  // magnitude 0.95, additive accumulation, reductionCap 0.8, driven by self-defend-count) but
+  // authored as a permanent PASSIVE (not a status applied via on-fight-start), proving the
+  // mitigation still ramps round-over-round while the bearer carries no status at all.
+  const TAKEN_REDUCTION_FIXTURE: Trait = {
+    id: 'taken-reduction-fixture',
+    name: 'Taken Reduction (fixture)',
+    effects: [
+      {
+        category: 'taken-reduction',
+        magnitude: 0.95,
+        magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+        accumulation: 'additive',
+        reductionCap: 0.8,
+      },
+    ],
+  }
+
+  it('mitigation improves round-over-round as the bearer keeps Defending, with no status on the creature', () => {
+    const player = makeParty('player', [
+      {
+        id: 'bearer',
+        health: 6,
+        defence: 10,
+        speed: 20,
+        scriptId: 'always-defend',
+        innateTraitIds: [TAKEN_REDUCTION_FIXTURE.id],
+        defendCount: 15, // 15 earlier Defends this battle, preset so the cap is reached quickly
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'striker', attack: 40, defence: 0, speed: 10 },
+    ])
+    const traits = new Map([[TAKEN_REDUCTION_FIXTURE.id, TAKEN_REDUCTION_FIXTURE]])
+    const initial = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    const { state, events } = resolveFight(initial)
+
+    // Round 1: defendCount 15 -> 16 (exactly the count that reaches the 80% cap). Round 2:
+    // 16 -> 17 (one PAST the cap) -- the SAME final damage both times proves the clamp holds
+    // rather than merely being asymptotically close (mirroring the golden's own proof).
+    const hits = events.filter((e) => e.type === 'DamageDealt')
+    expect(hits).toHaveLength(2)
+    expect(hits[0]).toMatchObject({ finalDamage: 3 })
+    expect(hits[1]).toMatchObject({ finalDamage: 3 })
+    expect(state.result).toBe('loss') // BEARER dies on the second identical hit (6 -> 3 -> 0)
+
+    // No status anywhere in the log or on the (dead) bearer -- this is a permanent passive.
+    expect(
+      events.some((e) => e.type === 'StatusApplied' || e.type === 'StatusExpired'),
+    ).toBe(false)
+    const bearer = state.playerParty.find((c) => c.id === createCreatureId('bearer'))!
+    expect(bearer.activeEffects.every((e) => e.category === 'taken-reduction')).toBe(true)
+    expect(hasStatus(bearer, 'bulwark')).toBe(false)
   })
 })

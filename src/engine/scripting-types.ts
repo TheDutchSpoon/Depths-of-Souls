@@ -20,7 +20,7 @@ export type ComparatorOp = '<' | '<=' | '>' | '>=' | '==' | '!='
 // same precedent as acted-before-target (ASSUMPTION 11). The qualifier is ignored for 'target'
 // (a single creature, not a pool) -- subjectPool naturally degenerates any/lowest/highest to the
 // same one-element check.
-export type HpSubject = 'self' | 'ally' | 'enemy' | 'target' | 'target'
+export type HpSubject = 'self' | 'ally' | 'enemy' | 'target'
 export type HpQualifier = 'any' | 'lowest' | 'highest'
 
 export interface AlwaysCondition {

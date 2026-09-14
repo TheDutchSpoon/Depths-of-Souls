@@ -67,6 +67,7 @@ export const BULWARK_ADDITIVE_STATUS: DamageModifierDef = {
   accumulation: 'additive',
   reductionCap: 0.8, // shieldbarer.md's real "cap 80%"
   polarity: 'buff',
+  defaultDuration: 3,
 }
 
 export const playerParty = makeParty('player', [

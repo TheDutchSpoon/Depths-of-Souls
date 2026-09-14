@@ -303,10 +303,10 @@ consumable), turn-order (act first *or* last — two-way, **built C**), Spore (D
 spread-on-death), Confusion (3-turn; 50% harmful-action friendly-fire, **built C**), Silenced
 (suppress-Cast; Violence spell), Pacified (suppress-Attack; Wit spell), Splashing (adjacency
 splash **on attacks only**, **built C** as a permanent passive, not a runtime status instance — see above), Proficient
-(**P8**; +equipment benefit), Bulwark (−5% damage taken per Defend this battle, additive-with-
-cap at 80% — **built F** as a real `data/statuses.ts` entry, applied once at `on-fight-start` by
-the Shieldbarer's own perk of the same name; the mechanism itself was already proven in Slice D's
-`golden-defend-count-additive-cap`).
+(**P8**; +equipment benefit). Bulwark (−5% damage taken per Defend this battle, additive-with-cap
+at 80%) is **NOT** a status — see the Slice F addenda below (`taken-reduction`): it's a permanent
+passive perk effect, the taken-pool mirror of `conditional-damage-bonus`, sharing the exact
+accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 
 ### Flow
 - **scripted-intro encounter** — a rigged fight whose outcome triggers a story beat (revive the
@@ -344,15 +344,46 @@ the Shieldbarer's own perk of the same name; the mechanism itself was already pr
   `resolution.ts → combat.ts` import cycle). **Not a 10th response verb** — the response
   vocabulary is unchanged, still nine, per "hold the line at nine." A permanent-for-fight passive,
   structurally alongside `armor-penetration`/`cross-stat`/etc.
-- **Perk-authoring reuse, confirmed against each spec's own perk table**: every Phase-4-functional
-  perk maps onto a Slices-A–E2 primitive with one exception — Brute's **Brute Force** and
-  Sorcerer's **Spell Focus** (each an unconditional "+1% damage per rank/level") are authored as
-  `conditional-damage-bonus` with `condition: {kind: 'always'}`, since that primitive has no
-  `actionKind` scoping (it folds into the shared `dealtMods` pool for both Attack and Cast) —
-  each perk's bonus therefore also leaks onto the action kind its own flavor text doesn't name.
-  Accepted as a harmless superset (no existing primitive scopes a dealt-pool % by action kind, and
-  building one is new engine vocabulary this content-only slice deliberately didn't add); revisit
-  if a future slice needs strict exclusivity.
+- **`conditional-damage-bonus` gains an `actionKind` axis** (review amendment — the damage-formula
+  system, mirroring `CrossStatDef.appliesTo`): `actionKind?: 'attack' | 'cast' | 'both'`, absent =
+  `'both'` (byte-identical for every pre-amendment consumer — Cull the Weak/Ambusher/Gloomjaws/
+  Sporch's Reaper never set it). `gatherConditionalDamageBonus` (resolution.ts) takes the current
+  `actionKind` and filters on it, threaded from `dealDamageCore`'s own already-in-scope
+  `actionKind` (the same value `gatherCrossStatContribution` already reads). First scoped
+  consumers: Brute's **Brute Force** (`actionKind: 'attack'`) and Sorcerer's **Spell Focus**
+  (`actionKind: 'cast'`) — each an unconditional "+1% damage per rank/level" perk authored as
+  `conditional-damage-bonus` + `condition: {kind: 'always'}`, now correctly scoped to its own
+  action kind instead of leaking onto the other one (the initial submission's own flagged caveat,
+  now resolved).
+- **`taken-reduction` — a new permanent-passive `EffectDef` category** (review amendment — the
+  taken-pool system, the TAKEN mirror of `conditional-damage-bonus`): `{ magnitude,
+  magnitudeSource?, accumulation?, reductionCap? }` — no `statusId`/`polarity`, never a status.
+  Gathered by `gatherTakenFactors` (effects.ts) alongside `DamageModifierDef`'s own `taken`
+  entries, reusing the exact same `takenFactorFor`/`damageModifierCount` helpers (both
+  generalized to a shared structural shape, `TakenReductionSource`, so neither's behavior
+  changes: `DamageModifierEffect` always carries a `stacks`, `TakenReductionEffect` never does,
+  and `e.stacks ?? 1` gives the right fallback for each). **Bulwark is now authored as this
+  passive directly** (`effects: [{category:'taken-reduction', magnitude:0.95, magnitudeSource:
+  {kind:'count', of:'self-defend-count'}, accumulation:'additive', reductionCap:0.8}]`) —
+  superseding the initial submission's `on-fight-start → apply-status` shape, which smuggled a
+  STATUS into a perk's own effect list. The real `BULWARK` `data/statuses.ts` entry and the
+  `PERK_STATUS_DURATION` config constant it needed are both **removed** (no longer exist).
+- **`StatusDef.defaultDuration: number`** (review amendment — the status system): every `StatusDef`
+  variant now declares a default duration; `StatusSpec.duration` becomes **optional** —
+  `applyStatus` (resolution.ts) resolves `spec.duration ?? def.defaultDuration` once, up front,
+  and uses that resolved value everywhere (the new instance's `remainingDuration`, a
+  re-application's refreshed `remainingDuration`, and the `StatusApplied` event's own `duration`
+  field). Every pre-amendment `StatusSpec`/`appliesStatus` in real content and goldens already
+  sets `duration` explicitly, so this is byte-identical everywhere it was already used; Concussive
+  Blows (Brute) is the first real content to omit it, inheriting Weaken's `defaultDuration: 3`.
+- **`SpeciesCreature.equippedSpells?: readonly (Spell | null)[]`** (review amendment — generation):
+  a species/creature may declare a FIXED starter loadout (absent for every enemy-spawnable
+  species, whose loadout the generator rolls per-visit from the biome pool).
+  `materializeCreature`'s fallback order: the caller's own `equippedSpells` argument (a generated
+  enemy's rolled loadout) → `speciesCreature.equippedSpells` (a fixed starter loadout) → all-null
+  slots (the pre-Slice-F default). First consumer: the Sorcerer starter's granted extra gem
+  (`ARCANE_BOLT` in slot 0 of a 4-slot array), now carried through the REAL `materializeCreature`
+  path instead of only existing as a hand-assembled test fixture.
 - **Doc conflict, flagged not silently resolved**: `briefs/phase-4-implementation-plan.md`'s own
   Slice B vocabulary table and Slice F prose describe the Brute starter's second attack instance
   as `[100%, 30%]` ("attack again for 30%"). Both content docs — `species/species-locked.md` and
@@ -640,6 +671,19 @@ re-entry guard. `defend`+`provoke` can co-occur in one action → two observatio
 
 That Resonants is the lone observer is *why* observation is built as the general primitive now — it
 carries the future, not the seed.
+
+**Design note (engine audit, not actioned): `on-ally-death`/`on-enemy-death` are `on-death-observed`
+candidates.** These two still exist as their own hooks (`resolution.ts`'s `fireDeathObservers`)
+even though the *action* side of the same actor-vs-observer split was already unified into
+`on-action-observed` above. If a future slice builds a general `on-death-observed` (the death-side
+mirror — "when *an ally/enemy* dies, *I* react," fanned out to observers the same way
+`on-action-observed` fans out per action instance), `on-ally-death`/`on-enemy-death` are its two
+natural candidates to fold into one hook with a `relationship` filter. **`on-death`/`on-kill` stay
+separate** — those are actor-self hooks (the dying/killing creature's own reaction), like
+`on-attack`, not observation. Flagged, not built: no content currently needs it, and folding two
+hooks that already work is real engine surgery (event-shape/call-site changes with golden blast
+radius) with no locked consumer to justify it yet — same "wait for a real content driver" discipline
+`on-action-observed` itself followed before Resonants existed.
 
 ### Loop safety (engine invariant — concrete)
 - **Self-re-entry guard = instance-level, stack-scoped**: a specific effect *instance* cannot

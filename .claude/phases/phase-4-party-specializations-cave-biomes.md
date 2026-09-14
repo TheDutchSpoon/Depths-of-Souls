@@ -3,8 +3,9 @@
 Status: **in progress — Slices A–F done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
 C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
 post-design-feedback (ally target-selector completion); E2: 424/424 tests (its own phase-record
-entry was filled in retroactively during F — see that section); F: 463/463 tests; lint/format/
-build green throughout). Built per
+entry was filled in retroactively during F — see that section); F: 470/470 tests,
+post-review-amendment (actionKind scoping, taken-reduction, StatusDef.defaultDuration,
+SpeciesCreature.equippedSpells); lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
@@ -966,9 +967,11 @@ Built per `.claude/briefs/phase-4-implementation-plan.md`'s Slice F section, cro
 against `.claude/specializations/{sorcerer,brute,shieldbarer}.md` and
 `.claude/species/species-locked.md`'s "Starter species" section (the docs, not the brief, win on
 any numeric disagreement — one such conflict surfaced and is documented below, not silently
-resolved). Every Phase-4-functional perk reuses vocabulary already built by Slices A–E2; one
-genuinely new engine primitive (`bonus-cast`) was required for the Sorcerer starter's own
-signature ability, flagged inline and below rather than forced into existing shapes.
+resolved). Every Phase-4-functional perk reuses vocabulary already built by Slices A–E2 except two
+genuinely new primitives: `bonus-cast` (the Sorcerer starter's own signature ability, flagged
+inline and below rather than forced into existing shapes) and — added in the post-submission
+review amendment below — `taken-reduction` (Bulwark's real mechanism, the taken-pool mirror of
+the already-existing `conditional-damage-bonus`).
 
 ### What was built
 
@@ -1018,23 +1021,21 @@ for design-owner sign-off, same as Slice B's own `action-instance` category was.
 `resolveResponseTargets` gains the `all-allies` case (`livingAlliesOf`, imported alongside the
 existing `livingEnemiesOf`).
 
-**`src/engine/config.ts`**: `PERK_STATUS_DURATION = ROUND_CAP + 1` — a perk-granted status
-applied once at `on-fight-start` (Bulwark) needs a duration that outlives any legal fight's last
-round-end decrement.
+**`src/engine/config.ts`**: no change survives here — an initial `PERK_STATUS_DURATION` constant
+was added and then removed in the review amendment below (Bulwark stopped being a status, so the
+duration it needed no longer exists either).
 
-**`src/data/statuses.ts`**: `BULWARK` (real content) — the Shieldbarer's Bulwark perk's own
-status, `-5%`/Defend additive-with-cap-80%, `magnitudeSource: {kind:'count', of:
-'self-defend-count'}` — the exact mechanism Slice D's `golden-defend-count-additive-cap` proved,
-now given real, shipped numbers. Appended to `STOCK_STATUSES` (additive, per the guardrail).
+**`src/data/statuses.ts`**: no `BULWARK` entry survives here — see the review amendment below.
 
 **`src/data/species/starters.ts`** (new file) — the three starter creatures + the Unicorn, as
 `SpeciesCreature`s (so a future Slice G store materializes a starter through the exact same
 `materializeCreature` path any spawned enemy uses):
 - **Sorcerer starter** (wit, Intelligence 30) — `SORCERER_STARTER_TRAIT` (`bonus-cast`,
   `chancePercent: 50`) + a new signature spell, `ARCANE_BOLT` (wit-affinity, spellPower 0.5,
-  the first Wit-affinity spell in the codebase), granted as a permanent extra gem in a 4-slot
-  loadout (`SORCERER_STARTER_EQUIPPED_SPELLS`, slot 0 filled so the stock `always-cast` script
-  can use it immediately, slots 1–3 empty for Phase 8).
+  the first Wit-affinity spell in the codebase), granted as a permanent extra gem via
+  `SORCERER_STARTER.equippedSpells` (review amendment — see below; a 4-slot array, slot 0 filled
+  so the stock `always-cast` script can use it immediately, slots 1–3 empty for Phase 8), now
+  carried through the REAL `materializeCreature` path, not just present in the raw data.
 - **Brute starter** (violence, Attack 30) — `BRUTE_STARTER_TRAIT` (`action-instance`, `attack`,
   `powerPercent: 100` — a direct, content-level exercise of Slice B's instance-list model, no new
   resolver logic).
@@ -1064,17 +1065,12 @@ to pass as `createCombat`'s `partyWidePlayerEffects` — the Slice G store's own
 `SORCERER` (12 perks), `BRUTE` (10), `SHIELDBARER` (10), each transcribed from its own `.md`
 table. Every Phase-4-functional perk maps onto an existing primitive (action-instance,
 status-immunity, stat-modifier, armor-penetration, cross-stat, cheat-death, grant-action-state,
-conditional-damage-bonus, chancePercent-gated triggered apply-status) **except**:
-- **Bulwark** — a `triggered` `on-fight-start` → `apply-status(self, 'bulwark')`, not a bare
-  passive (the mechanism is a STATUS, per Slice D; see the new real `BULWARK` status above).
+conditional-damage-bonus, taken-reduction, chancePercent-gated triggered apply-status) **except**:
+- **Bulwark** — see the review amendment below; final shape is a genuine permanent passive
+  (`taken-reduction`), not a triggered status application.
 - **Brute Force / Spell Focus** (unconditional "+1% damage per rank/level") — authored as
-  `conditional-damage-bonus` with `condition: {kind: 'always'}`. **Flagged ASSUMPTION**:
-  `conditional-damage-bonus` has no `actionKind` scoping (it folds into the shared `dealtMods`
-  pool for both Attack and Cast inside `dealDamageCore`), so each perk's bonus technically also
-  applies to the action kind its own flavor text doesn't name (Brute Force → also casts, Spell
-  Focus → also attacks). Accepted as a harmless superset — no existing primitive scopes a
-  dealt-pool % by action kind, and adding one is new engine vocabulary this content-only slice
-  deliberately did not build. Revisit if a future perk/trait needs strict exclusivity.
+  `conditional-damage-bonus` with `condition: {kind: 'always'}`, now correctly scoped via the
+  new `actionKind` field (`'attack'`/`'cast'` respectively) — see the review amendment below.
 - **Phase-8-inert perks** (ASSUMPTION 24) — Sorcerer's five Mastery perks + Arcane Shields/Arcane
   Versatility/True Wit, Brute's Proficient half of Proficient Warrior, Shieldbarer's Shield
   Specialist — authored as real, full-cost `PerkDef`s (counted toward the 1000-point sum) whose
@@ -1092,9 +1088,92 @@ own kickoff instructions: "docs win over anything in the brief if they disagree;
 conflict, don't guess"). `BRUTE_STARTER_TRAIT` and its golden use `powerPercent: 100` for the
 second instance. **The brief's own prose needs a correction before it's read again.**
 
+### Review amendment (four fixes, applied before merge)
+
+Design review caught four gaps in the initial submission — all additive/default-preserving, all
+attributed here to the system each one actually belongs to:
+
+1. **`SpeciesCreature.equippedSpells?` (generation)**: the initial submission left the Sorcerer
+   starter's granted gem as a standalone `SORCERER_STARTER_EQUIPPED_SPELLS` constant nothing
+   actually wired through `materializeCreature` — a real `materializeCreature(SORCERER_STARTER,
+   …)` call returned a caster with three empty gem slots, its `always-cast` script and
+   `bonus-cast` trait with nothing to cast. Fixed: `SpeciesCreature` gains an optional
+   `equippedSpells` field (a FIXED starter loadout, absent for enemy-spawnable species);
+   `materializeCreature`'s fallback order is now `equippedSpells` param → `speciesCreature.
+   equippedSpells` → all-null (enemy generation's own explicit-argument path is untouched, so
+   `generateFloor`'s rolled loadouts are unaffected). `SORCERER_STARTER_EQUIPPED_SPELLS` was
+   folded directly into `SORCERER_STARTER.equippedSpells` (no more unreferenced standalone
+   constant). New test: materializes `SORCERER_STARTER` through the real path and asserts slot 0
+   is `ARCANE_BOLT`, length 4.
+2. **`ConditionalDamageBonusDef.actionKind?` (the damage-formula system)**: Brute Force and Spell
+   Focus's "+1% damage per rank/level" folds into the shared `dealtMods` pool inside
+   `dealDamageCore`, which has no attack/cast axis — the initial submission's own flagged caveat
+   was that each perk's bonus therefore also applied to the OTHER action kind its flavor text
+   doesn't name. Fixed properly rather than accepted: `ConditionalDamageBonusDef` gains
+   `actionKind?: 'attack' | 'cast' | 'both'` (absent = `'both'`, byte-identical for every
+   pre-amendment consumer — none set it), mirroring `CrossStatDef.appliesTo`.
+   `gatherConditionalDamageBonus` (resolution.ts) now filters on it, fed the `actionKind` already
+   in scope in `dealDamageCore` (the same value `gatherCrossStatContribution` reads one line
+   over). Brute Force → `'attack'`, Spell Focus → `'cast'`, Cull the Weak stays unset (`'both'`,
+   unaffected). New tests: `actionKind: 'attack'` applies on an Attack and not on a Cast (and the
+   mirror for `'cast'`); an unset `actionKind` still applies to both.
+3. **`taken-reduction` (the taken-pool system, TAKEN mirror of `conditional-damage-bonus`)**:
+   Bulwark's "-5% damage taken per Defend, cap 80%" belongs directly in a perk's own `effects:
+   []`, like every other perk — the initial submission instead applied a STATUS via a triggered
+   `on-fight-start → apply-status`, which needed a faked-permanent duration
+   (`PERK_STATUS_DURATION = ROUND_CAP + 1`) and a real `BULWARK` `data/statuses.ts` entry neither
+   of which should have existed for a perk-granted passive. Fixed: a new permanent-passive
+   `EffectDef` category, `taken-reduction` (`{magnitude, magnitudeSource?, accumulation?,
+   reductionCap?}` — `DamageModifierDef`'s own `taken` shape, minus `statusId`/`polarity`, since
+   it's never a status). `gatherTakenFactors` (effects.ts) now reads BOTH `damage-modifier`
+   (`taken` direction) and `taken-reduction` entries, reusing the exact same
+   `takenFactorFor`/`damageModifierCount` helpers — both generalized to a shared structural
+   interface (`TakenReductionSource`) rather than duplicated, so neither's own behavior changed
+   (`DamageModifierEffect` always carries `stacks`; `TakenReductionEffect` never does, and
+   `e.stacks ?? 1` gives the correct "flat single application" fallback for it). Bulwark's perk
+   effects is now `[{category:'taken-reduction', magnitude:0.95, magnitudeSource:{kind:'count',
+   of:'self-defend-count'}, accumulation:'additive', reductionCap:0.8}]` — no trigger, no
+   `on-fight-start`, no status. The `BULWARK` status and `PERK_STATUS_DURATION` (and its import)
+   are both removed outright. New test: a multi-round `resolveFight` trace (the same numbers as
+   Slice D's `golden-defend-count-additive-cap`, reauthored as a passive) proving mitigation
+   ramps round-over-round and reaches/holds the 80% cap, while asserting NO `StatusApplied`/
+   `StatusExpired` event ever appears and `hasStatus(bearer, 'bulwark')` is `false`.
+4. **`StatusDef.defaultDuration` (the status system)**: a status's duration was previously only
+   ever set at application time (`StatusSpec.duration`, required) — no status declared its own
+   "usual" duration, so every producer had to repeat the same number. Fixed: every `StatusDef`
+   variant gains a required `defaultDuration: number`; `StatusSpec.duration` becomes **optional**;
+   `applyStatus` (resolution.ts) resolves `spec.duration ?? def.defaultDuration` once, up front,
+   and uses that resolved value for the new/refreshed `remainingDuration` AND the
+   `StatusApplied` event's own `duration` field. Every pre-amendment `StatusSpec`/`appliesStatus`
+   in real content and goldens already sets `duration` explicitly, so this is byte-identical
+   everywhere already exercised (confirmed: the full pre-existing suite re-passed unmodified).
+   `WEAKEN.defaultDuration = 3`; Concussive Blows (Brute) is the first real content to omit its
+   own explicit duration, inheriting Weaken's default. The other five stock statuses
+   (Poison/Burn/Regen/Stun/Vulnerability) got placeholder `defaultDuration`s matching their own
+   existing real-usage durations (never actually read by that content, since it always sets
+   `duration` explicitly) — a data-authoring formality, not a design decision; real values land
+   "as the roster is authored" per the review's own framing. New tests: an omitted duration
+   inherits `defaultDuration`; an explicit duration overrides it.
+
+Mechanical ripple from (4): every `StatusDef` object literal across the test/fixture suite needed
+a `defaultDuration` value added (the same kind of required-field ripple Slice D's `defendCount`/
+`speciesId` additions caused) — purely additive, no assertion changed. One incidental fix
+surfaced along the way: `combat.test.ts`'s `WEB_TEST_STATUS`/`NEVER_BREAKS_STATUS` were typed as
+the broad `StatusDef` union and then spread with an extra property (`{...WEB_TEST_STATUS,
+breakChancePercent: 0}`) — TypeScript distributes a union-typed spread per member for excess-
+property checking, and picked the (non-matching) `ConditionStatusDef` branch to report against
+once the four variants' required-field sets grew less trivially distinguishable. Fixed by typing
+both as the concrete `TurnOrderStatusDef` instead of the general `StatusDef` union — narrower and
+more correct regardless of the trigger.
+
+`npm run test` / `lint` / `format:check` / `build` all re-verified green after this amendment
+(470/470, up from the pre-amendment 464 — the new tests listed in each fix above).
+
 ### Tests
 
-**463/463** across 69 files (up from 424/424 at the start of this slice — 39 new): 6 new files
+**463/463 pre-amendment, 470/470 after** (see the review amendment above) across 69 files (up
+from 424/424 at the start of this slice — 39 new pre-amendment, +7 more in the amendment): 6 new
+files
 (`data/specializations.test.ts`, `data/species/starters.test.ts`, and four new golden pairs —
 `golden-brute-starter`, `golden-shieldbarer-starter`, `golden-unicorn-starter`,
 `golden-sorcerer-starter`), plus additions to `effects.test.ts` (`instantiateCreatureEffects`,
@@ -1115,11 +1194,13 @@ Slice B's `traits` field and Slice D's `defendCount`/`speciesId` fields each req
 ### Notable decisions surfaced during implementation (flag for review before Slice G)
 
 - **`bonus-cast` as a new `EffectDef` category, not a response verb** (above) — needs explicit
-  sign-off, same as `action-instance` did in Slice B.
+  sign-off, same as `action-instance` did in Slice B. **Left as-is in review** ("Leave as-is:
+  bonus-cast (a passive EffectDef, not a response verb)").
 - **The Brute-starter-power doc conflict** (above) — the brief itself needs a correction pass.
-- **Brute Force/Spell Focus's `conditional-damage-bonus` + `{kind:'always'}` cross-action-kind
-  leak** (above) — accepted, but worth a second look if a future spec wants strict Attack-only or
-  Cast-only damage perks.
+  **Left as-is in review** ("Do not touch briefs/phase-4-implementation-plan.md... already
+  updated separately").
+- ~~Brute Force/Spell Focus's `conditional-damage-bonus` + `{kind:'always'}` cross-action-kind
+  leak~~ — **resolved in the review amendment above** (`actionKind` scoping), not merely accepted.
 - **Starter/Unicorn affinity, base stats, `speciesId`, `rarity`** — all parked-balance
   ASSUMPTIONs per `species-locked.md`'s own "stubbed" framing; none are load-bearing design
   decisions, all clearly flagged inline in `starters.ts`.

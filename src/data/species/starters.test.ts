@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { materializeCreature } from '../../engine/generation'
 import { TRAIT_REGISTRY } from '../traits'
 import {
   ARCANE_BOLT,
@@ -7,7 +8,6 @@ import {
   SHIELDBARER_STARTER,
   SHIELDBARER_STARTER_TRAIT,
   SORCERER_STARTER,
-  SORCERER_STARTER_EQUIPPED_SPELLS,
   SORCERER_STARTER_TRAIT,
   STARTERS,
   UNICORN,
@@ -57,13 +57,25 @@ describe('starter + Unicorn shape', () => {
 
 describe('Sorcerer starter loadout', () => {
   it('is granted exactly one extra gem slot (4, not the default 3), gem in slot 0', () => {
-    expect(SORCERER_STARTER_EQUIPPED_SPELLS).toHaveLength(4)
-    expect(SORCERER_STARTER_EQUIPPED_SPELLS[0]).toBe(ARCANE_BOLT)
-    expect(SORCERER_STARTER_EQUIPPED_SPELLS.slice(1)).toEqual([null, null, null])
+    expect(SORCERER_STARTER.equippedSpells).toHaveLength(4)
+    expect(SORCERER_STARTER.equippedSpells?.[0]).toBe(ARCANE_BOLT)
+    expect(SORCERER_STARTER.equippedSpells?.slice(1)).toEqual([null, null, null])
   })
 
   it("the granted spell is Wit-affinity, matching the starter's own affinity", () => {
     expect(ARCANE_BOLT.affinity).toBe('wit')
+  })
+
+  it('materializeCreature (the REAL path) carries the fixed loadout through, not just the raw data', () => {
+    const materialized = materializeCreature(
+      SORCERER_STARTER,
+      1,
+      'player',
+      0,
+      'sorcerer-starter-species',
+    )
+    expect(materialized.equippedSpells).toHaveLength(4)
+    expect(materialized.equippedSpells[0]).toBe(ARCANE_BOLT)
   })
 })
 

@@ -44,18 +44,6 @@ export const ARCANE_BOLT: Spell = {
   affinity: 'wit',
 }
 
-/** Placed in slot 0 (immediately castable by the stock `always-cast` script, which targets
- * gemSlot 0) rather than a bonus 4th slot -- a fresh Sorcerer starter otherwise has nothing to
- * cast at all until the Phase 8 gem economy exists. 4 slots total (one more than
- * DEFAULT_GEM_SLOT_COUNT's 3) is the "extra gem slot" itself; slots 1-3 stay empty, player-
- * equippable once Phase 8 lands. */
-export const SORCERER_STARTER_EQUIPPED_SPELLS: readonly (Spell | null)[] = [
-  ARCANE_BOLT,
-  null,
-  null,
-  null,
-]
-
 /** NEW PRIMITIVE (Slice F) -- see effect-types.ts's `BonusCastDef` doc comment for the full
  * reasoning (not a 10th response verb; a passively-consulted EffectDef, read by combat.ts's
  * resolveTurn directly). "50% chance on-turn-end to cast a random equipped spell." */
@@ -72,6 +60,12 @@ export const SORCERER_STARTER: SpeciesCreature = {
   defaultScriptId: 'always-cast',
   innateTraitIds: [SORCERER_STARTER_TRAIT.id],
   rarity: 'rare',
+  // Phase 4 Slice F (review amendment): SpeciesCreature's own FIXED loadout -- placed in slot 0
+  // (immediately castable by the stock `always-cast` script, which targets gemSlot 0) rather
+  // than a bonus 4th slot -- a fresh Sorcerer starter otherwise has nothing to cast at all until
+  // the Phase 8 gem economy exists. 4 slots total (one more than DEFAULT_GEM_SLOT_COUNT's 3) is
+  // the "extra gem slot" itself; slots 1-3 stay empty, player-equippable once Phase 8 lands.
+  equippedSpells: [ARCANE_BOLT, null, null, null],
 }
 
 export const SORCERER_STARTER_SPECIES_ID = 'sorcerer-starter-species'

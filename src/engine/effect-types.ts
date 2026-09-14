@@ -102,7 +102,11 @@ export type ResponseTarget =
 // Applied via a spell or a triggered apply-status response (Slice C).
 export interface StatusSpec {
   readonly statusId: string
-  readonly duration: number
+  /** Phase 4 Slice F (review amendment): OPTIONAL -- an omitted duration inherits the target
+   * status's own `StatusDef.defaultDuration`; an explicit value here overrides it. Lets the same
+   * status land with a consistent duration everywhere it's applied without every producer
+   * (traits/perks/spells) having to repeat the same number. */
+  readonly duration?: number
   /** Stacks added per application; defaults to 1. */
   readonly stacks?: number
 }
@@ -405,6 +409,36 @@ export type ConditionalDamageBonusDef = {
   readonly category: 'conditional-damage-bonus'
   readonly percent: number
   readonly condition: Condition
+  /** Phase 4 Slice F (review amendment): which action kind(s) this bonus applies to, mirroring
+   * `CrossStatDef.appliesTo`. Absent = `'both'` (byte-identical to pre-amendment behavior -- no
+   * existing content sets this, so Cull the Weak/Ambusher/Gloomjaws/Sporch's Reaper are
+   * unaffected). First scoped consumers: Brute Force (`'attack'`) and Spell Focus (`'cast'`) --
+   * each an unconditional "+% damage" perk that must NOT leak onto the other action kind. */
+  readonly actionKind?: 'attack' | 'cast' | 'both'
+}
+
+/** Phase 4 Slice F (review amendment): the TAKEN-pool mirror of `ConditionalDamageBonusDef` --
+ * a permanent-for-fight passive damage REDUCTION, never a status (no `statusId`/`polarity`,
+ * unlike `DamageModifierDef`; not surfaced as a status icon). Carries the exact same
+ * accumulation shape `DamageModifierDef`'s own `taken` direction already proved (Slice D's
+ * `golden-defend-count-additive-cap`): `magnitude` (the per-unit factor), an optional
+ * `magnitudeSource` (a live count substituting for a re-application-driven `stacks` -- absent
+ * means a flat single application, count 1), `accumulation` (`'multiplicative'` default /
+ * `'additive'`-with-`reductionCap`), and `reductionCap` (meaningful only for `'additive'`).
+ * First (and so far only) consumer: Bulwark, now authored as a genuine perk-granted PASSIVE
+ * (`{ category: 'taken-reduction', magnitude: 0.95, magnitudeSource: {kind:'count',
+ * of:'self-defend-count'}, accumulation: 'additive', reductionCap: 0.8 }`) rather than a status
+ * applied via an `on-fight-start` trigger -- a perk's own effect belongs directly in `effects:
+ * []`, like every other perk, not smuggled in as a triggered status application. Gathered by
+ * `gatherTakenFactors` (effects.ts) alongside `DamageModifierDef`'s own `taken` entries, reusing
+ * the exact same `takenFactorFor`/`damageModifierCount` helpers (both generalized to a shared
+ * structural shape so neither DamageModifierEffect's nor this type's behavior changes). */
+export type TakenReductionDef = {
+  readonly category: 'taken-reduction'
+  readonly magnitude: number
+  readonly magnitudeSource?: MagnitudeSource
+  readonly accumulation?: 'multiplicative' | 'additive'
+  readonly reductionCap?: number
 }
 
 /** Phase 4 Slice D (Last Stand): checked inside applyDamageAndEmit (resolution.ts) at the
@@ -454,6 +488,7 @@ export type EffectDef =
   | AnnihilateDef
   | CheatDeathDef
   | ConditionalDamageBonusDef
+  | TakenReductionDef
   | BonusCastDef
 
 // ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
@@ -491,6 +526,12 @@ export type ConditionStatusDef = {
    * polarity-filter branch (cleanse/dispel spells, not yet built; see remove-status's own doc
    * comment) and inert everywhere else this slice. */
   readonly polarity: 'buff' | 'debuff'
+  /** Phase 4 Slice F (review amendment): the duration a fresh application (or re-application)
+   * uses when its own `StatusSpec.duration` is omitted -- so the same status lands consistently
+   * everywhere it's applied without every producer (traits/perks/spells) repeating the same
+   * number. An explicit `StatusSpec.duration` always overrides this. See `applyStatus`
+   * (resolution.ts) for the exact `spec.duration ?? def.defaultDuration` resolution. */
+  readonly defaultDuration: number
 }
 
 /** Weaken/Vulnerability: read PASSIVELY by the damage formula's pools, never fired via a hook. */
@@ -535,6 +576,8 @@ export type DamageModifierDef = {
   readonly reductionCap?: number
   /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
   readonly polarity: 'buff' | 'debuff'
+  /** Phase 4 Slice F: see ConditionStatusDef's own doc comment. */
+  readonly defaultDuration: number
 }
 
 /** Web (act-last) / Blindclaws' grant-act-first (act-first) -- same primitive, opposite pole
@@ -556,6 +599,8 @@ export type TurnOrderStatusDef = {
   readonly breakChancePercent?: number
   /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
   readonly polarity: 'buff' | 'debuff'
+  /** Phase 4 Slice F: see ConditionStatusDef's own doc comment. */
+  readonly defaultDuration: number
 }
 
 /** Confusion: a chancePercent roll, consulted once per the bearer's harmful offensive action
@@ -572,6 +617,8 @@ export type FriendlyFireStatusDef = {
   readonly chancePercent: number
   /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
   readonly polarity: 'buff' | 'debuff'
+  /** Phase 4 Slice F: see ConditionStatusDef's own doc comment. */
+  readonly defaultDuration: number
 }
 
 export type StatusDef =
@@ -611,6 +658,7 @@ export type SplashingEffect = SplashingDef & InstanceIdentity
 export type AnnihilateEffect = AnnihilateDef & InstanceIdentity
 export type CheatDeathEffect = CheatDeathDef & InstanceIdentity
 export type ConditionalDamageBonusEffect = ConditionalDamageBonusDef & InstanceIdentity
+export type TakenReductionEffect = TakenReductionDef & InstanceIdentity
 export type BonusCastEffect = BonusCastDef & InstanceIdentity
 export type TurnOrderStatusEffect = TurnOrderStatusDef &
   InstanceIdentity &
@@ -655,6 +703,7 @@ export type ActiveEffect =
   | TurnOrderStatusEffect
   | FriendlyFireStatusEffect
   | ConditionalDamageBonusEffect
+  | TakenReductionEffect
   | BonusCastEffect
 
 // ---- Trait ----

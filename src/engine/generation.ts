@@ -33,6 +33,12 @@ export interface SpeciesCreature {
   readonly defaultScriptId: string
   readonly innateTraitIds: readonly string[]
   readonly rarity: RarityTier
+  /** Phase 4 Slice F (review amendment): a FIXED starter loadout (e.g. the Sorcerer starter's
+   * granted extra gem) -- absent for every enemy-spawnable species, whose loadout is instead
+   * rolled per-visit from the biome's spell pool (generateFloor's own `equippedSpells` argument
+   * to materializeCreature always wins when supplied; see materializeCreature's own doc comment
+   * for the exact fallback order). */
+  readonly equippedSpells?: readonly (Spell | null)[]
 }
 
 export interface Species {
@@ -127,6 +133,12 @@ function hashFloorDraw(runSeed: number, floor: number): number {
  * wired here, was left unset since Slice D) is the owning `Species.id`, passed explicitly rather
  * than embedded on `SpeciesCreature` itself (mirrors `side`/`slot`/`level` already being
  * explicit params) -- `living-allies-of-species` (effects.ts) was inert (always 0) until now.
+ *
+ * `equippedSpells` fallback order (Phase 4 Slice F, review amendment): the caller's own
+ * argument wins when supplied (generateFloor's per-visit rolled loadout for a spawned enemy),
+ * else `speciesCreature.equippedSpells` when the static data carries a FIXED loadout (a
+ * starter's granted gem), else all-null slots (the pre-Slice-F default -- byte-identical for
+ * every species/enemy that sets neither).
  */
 export function materializeCreature(
   speciesCreature: SpeciesCreature,
@@ -147,7 +159,9 @@ export function materializeCreature(
     alive: true,
     scriptId: speciesCreature.defaultScriptId,
     equippedSpells:
-      equippedSpells ?? Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null),
+      equippedSpells ??
+      speciesCreature.equippedSpells ??
+      Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null),
     defending: false,
     provoking: false,
     innateTraitIds: speciesCreature.innateTraitIds,

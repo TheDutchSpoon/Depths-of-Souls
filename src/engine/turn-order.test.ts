@@ -66,6 +66,7 @@ function turnOrderStatus(position: 'first' | 'last', id: string): ActiveEffect {
     cap: 1,
     position,
     polarity: position === 'first' ? 'buff' : 'debuff',
+    defaultDuration: 3,
     instanceId: createEffectInstanceId(id),
     sourceTraitId: id,
     remainingDuration: 3,

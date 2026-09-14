@@ -395,6 +395,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       },
     ],
     polarity: 'debuff',
+    defaultDuration: 3,
   }
 
   function stateWithTestDot() {
@@ -423,6 +424,37 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       duration: 2,
       sourceId: createCreatureId('e'),
     })
+  })
+
+  it("an omitted duration inherits the status's own defaultDuration (Phase 4 Slice F, review amendment)", () => {
+    const state = stateWithTestDot()
+    const events: CombatEvent[] = []
+    const result = applyStatus(
+      createCreatureId('e'),
+      createCreatureId('p'),
+      { statusId: 'test-dot' }, // no duration -- inherits TEST_DOT.defaultDuration (3)
+      state,
+      events,
+      newCascade(),
+    )
+    expect(events[0]).toMatchObject({ type: 'StatusApplied', duration: 3 })
+    const p = result.playerParty.find((c) => c.id === createCreatureId('p'))!
+    const effect = p.activeEffects.find((e) => e.category === 'condition-status')!
+    expect(effect).toMatchObject({ remainingDuration: 3 })
+  })
+
+  it('an explicit duration overrides defaultDuration', () => {
+    const state = stateWithTestDot()
+    const events: CombatEvent[] = []
+    applyStatus(
+      createCreatureId('e'),
+      createCreatureId('p'),
+      { statusId: 'test-dot', duration: 9 }, // explicit -- overrides the default (3)
+      state,
+      events,
+      newCascade(),
+    )
+    expect(events[0]).toMatchObject({ type: 'StatusApplied', duration: 9 })
   })
 
   it('re-applying refreshes duration and stacks up to the declared cap', () => {
@@ -513,6 +545,7 @@ describe('heal response (Regen)', () => {
       },
     ],
     polarity: 'buff',
+    defaultDuration: 3,
   }
 
   it('emits HealApplied clamped to effective max Health, never past it', () => {
@@ -880,6 +913,75 @@ describe('conditional-damage-bonus (Phase 4 Slice E2, Cull the Weak / Ambusher-s
   })
 })
 
+describe('conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review amendment)', () => {
+  // Attack 20 == Intelligence 20 == Defence 0 on both sides of the comparison, so an unscoped
+  // hit (no bonus) is IDENTICAL whether dealt as an Attack or a Cast: core 20, chip 0.01*20=0.2
+  // -> raw 20.2 -> final 20. A +100% bonus that actually applies doubles the raw hit before the
+  // floor: raw 40.4 -> final 40. Easy to eyeball which branch fired.
+  function finalDamageVia(
+    hitAs: 'attack' | 'cast',
+    bonusActionKind: 'attack' | 'cast' | 'both' | undefined,
+  ): number {
+    const trait: Trait = {
+      id: 'scoped-bonus-fixture',
+      name: 'Scoped Bonus (fixture)',
+      effects: [
+        {
+          category: 'conditional-damage-bonus',
+          percent: 1.0,
+          condition: { kind: 'always' },
+          ...(bonusActionKind === undefined ? {} : { actionKind: bonusActionKind }),
+        },
+      ],
+    }
+    const player = makeParty('player', [
+      {
+        id: 'attacker',
+        attack: 20,
+        intelligence: 20,
+        defence: 0,
+        affinity: 'vitality',
+        innateTraitIds: [trait.id],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'target', health: 1000, defence: 0, affinity: 'vitality' },
+    ])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const events: CombatEvent[] = []
+    dealDamage(
+      createCreatureId('attacker'),
+      createCreatureId('target'),
+      hitAs,
+      1.0,
+      hitAs,
+      state,
+      events,
+      newCascade(),
+    )
+    const dealt = events.find((e) => e.type === 'DamageDealt') as Extract<
+      CombatEvent,
+      { type: 'DamageDealt' }
+    >
+    return dealt.finalDamage
+  }
+
+  it("actionKind: 'attack' applies on an Attack, not on a Cast", () => {
+    expect(finalDamageVia('attack', 'attack')).toBe(40)
+    expect(finalDamageVia('cast', 'attack')).toBe(20) // does NOT leak onto Cast
+  })
+
+  it("actionKind: 'cast' applies on a Cast, not on an Attack", () => {
+    expect(finalDamageVia('cast', 'cast')).toBe(40)
+    expect(finalDamageVia('attack', 'cast')).toBe(20) // does NOT leak onto Attack
+  })
+
+  it("an unset actionKind applies to BOTH (byte-identical to pre-amendment 'both' default)", () => {
+    expect(finalDamageVia('attack', undefined)).toBe(40)
+    expect(finalDamageVia('cast', undefined)).toBe(40)
+  })
+})
+
 describe('grant-action-state response (Phase 4 Slice B)', () => {
   it('sets only the requested flag(s) true, leaving the other untouched', () => {
     const state = createCombat(
@@ -1071,6 +1173,7 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
     direction: 'dealt',
     magnitude: 0.1,
     polarity: 'buff',
+    defaultDuration: 3,
   }
 
   function stateWithGlowStacks(stacks: number) {
@@ -1171,6 +1274,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
       },
     ],
     polarity: 'debuff',
+    defaultDuration: 3,
   }
 
   function stateWithDebuffOn(targetId: string) {
