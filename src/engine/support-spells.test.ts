@@ -28,6 +28,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     traits: new Map(),
+    playerWideEffects: [],
     ...overrides,
   }
 }
@@ -94,6 +95,7 @@ function confusionFixture(chancePercent: number): ActiveEffect {
     cap: 1,
     chancePercent,
     polarity: 'debuff',
+    defaultDuration: 3,
     instanceId: createEffectInstanceId('confusion-fixture'),
     sourceTraitId: 'confusion-fixture',
     remainingDuration: 3,

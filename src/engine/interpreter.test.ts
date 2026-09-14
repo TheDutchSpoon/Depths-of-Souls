@@ -20,6 +20,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     traits: new Map(),
+    playerWideEffects: [],
     ...overrides,
   }
 }
@@ -378,6 +379,7 @@ describe('decideAction -- status-immunity vs scoped suppress-action (Phase 4 Sli
       { hook: 'on-turn-start', response: { kind: 'suppress-action', scope: 'cast' } },
     ],
     polarity: 'debuff',
+    defaultDuration: 3,
     instanceId: createEffectInstanceId('me#status#silenced'),
     sourceTraitId: 'silenced',
     remainingDuration: 2,

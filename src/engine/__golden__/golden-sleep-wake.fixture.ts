@@ -53,6 +53,7 @@ export const SLEEP_FIXTURE: ConditionStatusDef = {
     },
   ],
   polarity: 'debuff',
+  defaultDuration: 3,
 }
 
 export const SLEEP_SELF_FIXTURE: Trait = {

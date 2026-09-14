@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   instantiateTraitEffects,
+  instantiateCreatureEffects,
   effectiveMaxHp,
   clampedHp,
   gatherDealtMods,
@@ -14,6 +15,7 @@ import {
   hasSplashing,
   hasAnnihilate,
   activeFriendlyFireStatus,
+  activeBonusCast,
   resolveCount,
   resolveMagnitudeCount,
   gatherCheatDeathChance,
@@ -36,6 +38,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     traits: new Map(),
+    playerWideEffects: [],
     ...overrides,
   }
 }
@@ -97,6 +100,50 @@ describe('instantiateTraitEffects', () => {
   })
 })
 
+describe('instantiateCreatureEffects (Phase 4 Slice F / ASSUMPTION 21)', () => {
+  const PLAYER_WIDE = [
+    { category: 'stat-modifier', stat: 'attack', factor: 1.5 } as const,
+  ]
+
+  it('appends perk effects AFTER innate-trait effects, for a player-side creature', () => {
+    const c = makeCreature({
+      id: 'hero',
+      side: 'player',
+      innateTraitIds: ['plus-attack'],
+    })
+    const effects = instantiateCreatureEffects(c, REGISTRY, PLAYER_WIDE)
+    expect(effects.map((e) => e.category)).toEqual(['stat-modifier', 'stat-modifier'])
+    expect(effects.map((e) => e.sourceTraitId)).toEqual(['plus-attack', 'perk-0'])
+  })
+
+  it('never applies perk effects to an enemy-side creature', () => {
+    const c = makeCreature({ id: 'foe', side: 'enemy', innateTraitIds: ['plus-attack'] })
+    const effects = instantiateCreatureEffects(c, REGISTRY, PLAYER_WIDE)
+    expect(effects).toHaveLength(1)
+    expect(effects[0]?.sourceTraitId).toBe('plus-attack')
+  })
+
+  it('is byte-identical to instantiateTraitEffects alone when no perks are supplied', () => {
+    const c = makeCreature({
+      id: 'hero',
+      side: 'player',
+      innateTraitIds: ['plus-attack'],
+    })
+    expect(instantiateCreatureEffects(c, REGISTRY)).toEqual(
+      instantiateTraitEffects(c, REGISTRY),
+    )
+    expect(instantiateCreatureEffects(c, REGISTRY, [])).toEqual(
+      instantiateTraitEffects(c, REGISTRY),
+    )
+  })
+
+  it('assigns deterministic, never-RNG perk instance ids', () => {
+    const c = makeCreature({ id: 'hero', side: 'player', innateTraitIds: [] })
+    const effects = instantiateCreatureEffects(c, REGISTRY, PLAYER_WIDE)
+    expect(effects.map((e) => e.instanceId)).toEqual(['hero#perk#0'])
+  })
+})
+
 describe('effectiveMaxHp / clampedHp', () => {
   it('equals base Health with no Health modifier', () => {
     expect(effectiveMaxHp(makeCreature({ health: 30 }))).toBe(30)
@@ -139,6 +186,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     magnitude: -0.2,
     cap: 1,
     polarity: 'debuff',
+    defaultDuration: 3,
     instanceId: createEffectInstanceId('w'),
     sourceTraitId: 'weaken',
     remainingDuration: 2,
@@ -151,6 +199,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     magnitude: 1.5,
     cap: 2,
     polarity: 'debuff',
+    defaultDuration: 3,
     instanceId: createEffectInstanceId('v'),
     sourceTraitId: 'vulnerability',
     remainingDuration: 2,
@@ -183,6 +232,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
       magnitudeSource: { kind: 'count', of: 'self-defend-count' },
       cap: 999,
       polarity: 'buff',
+      defaultDuration: 3,
       instanceId: createEffectInstanceId('b'),
       sourceTraitId: 'bulwark-fixture',
       remainingDuration: 999,
@@ -206,6 +256,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
         reductionCap,
         cap: 1,
         polarity: 'buff',
+        defaultDuration: 3,
         instanceId: createEffectInstanceId('bulwark-additive'),
         sourceTraitId: 'bulwark-additive-fixture',
         remainingDuration: 999,
@@ -240,6 +291,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
         magnitudeSource: { kind: 'count', of: 'self-defend-count' },
         cap: 999,
         polarity: 'buff',
+        defaultDuration: 3,
         instanceId: createEffectInstanceId('b2'),
         sourceTraitId: 'bulwark-fixture',
         remainingDuration: 999,
@@ -267,6 +319,7 @@ describe('hasStatus', () => {
         },
       ],
       polarity: 'debuff',
+      defaultDuration: 3,
       instanceId: createEffectInstanceId('p'),
       sourceTraitId: 'poison',
       remainingDuration: 2,
@@ -443,6 +496,7 @@ describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
     cap: 1,
     chancePercent: 50,
     polarity: 'debuff',
+    defaultDuration: 3,
     instanceId: createEffectInstanceId('confusion'),
     sourceTraitId: 'confusion',
     remainingDuration: 3,
@@ -469,6 +523,23 @@ describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
     expect(activeFriendlyFireStatus(c)).toBeUndefined()
     // Still counts for has-status -- the status itself is untouched by immunity.
     expect(hasStatus(c, 'confusion')).toBe(true)
+  })
+})
+
+describe('activeBonusCast (Phase 4 Slice F, Sorcerer starter)', () => {
+  it('returns the active bonus-cast effect when present', () => {
+    const bonusCast: ActiveEffect = {
+      category: 'bonus-cast',
+      chancePercent: 50,
+      instanceId: createEffectInstanceId('bonus-cast'),
+      sourceTraitId: 'sorcerer-starter-arcane-surge',
+    }
+    const c = makeCreature({ activeEffects: [bonusCast] })
+    expect(activeBonusCast(c)?.chancePercent).toBe(50)
+  })
+
+  it('returns undefined for a creature with no bonus-cast passive', () => {
+    expect(activeBonusCast(makeCreature({}))).toBeUndefined()
   })
 })
 
@@ -533,6 +604,7 @@ describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
         },
       ],
       polarity: 'debuff',
+      defaultDuration: 3,
       instanceId: createEffectInstanceId('p'),
       sourceTraitId: 'poison',
       remainingDuration: 2,

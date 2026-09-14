@@ -1,5 +1,6 @@
 import type { Trait } from '../engine/effect-types'
 import { effectiveMaxHp } from '../engine/effects'
+import { STARTER_TRAITS } from './species/starters'
 
 // Representative & temporary Phase 3 trait content — real data (with tests), exercising each
 // Slice-A passive shape, until the actual creature roster is designed (Phase 4+) and replaces
@@ -193,6 +194,11 @@ export const STOCK_TRAITS: readonly Trait[] = [
   VENGEFUL,
   REELING,
   CATASTROPHIC_COLLAPSE,
+  // Phase 4 Slice F: the three starter creatures' + the Unicorn's signature traits (additive --
+  // see the guardrail in phase-4-implementation-plan.md: real per-species/starter content gets
+  // its own registry entries alongside the Phase 3 representative-and-temporary set above,
+  // never replacing it).
+  ...STARTER_TRAITS,
 ]
 
 /** Ready to pass directly as createCombat's `traits` argument. */

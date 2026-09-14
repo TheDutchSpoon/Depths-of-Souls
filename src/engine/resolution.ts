@@ -10,7 +10,7 @@
 import { calculateDamage } from './damage'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
-import { livingEnemiesOf } from './targeting'
+import { livingAlliesOf, livingEnemiesOf } from './targeting'
 import { resolveTargetSelector } from './target-selectors'
 import {
   effectsForHook,
@@ -20,8 +20,8 @@ import {
   gatherCrossStatContribution,
   gatherDealtMods,
   gatherTakenFactors,
+  instantiateCreatureEffects,
   instantiateStatus,
-  instantiateTraitEffects,
   resolveMagnitudeCount,
 } from './effects'
 import { evaluateCondition } from './conditions'
@@ -197,16 +197,26 @@ export function dealDamageWithOffStat(
  * here (not effects.ts, unlike the other gatherers) because it needs evaluateCondition, and
  * conditions.ts already imports hasStatus FROM effects.ts -- effects.ts importing back from
  * conditions.ts would be a cycle; resolution.ts already sits above both.
+ *
+ * Phase 4 Slice F (review amendment): also filters on `actionKind` (absent -> `'both'`, so every
+ * pre-amendment effect -- none of which set the field -- is unaffected), mirroring
+ * `gatherCrossStatContribution`'s own `appliesTo` gate. Brute Force (`'attack'`)/Spell Focus
+ * (`'cast'`) need this so their unconditional "+% damage" doesn't leak onto the OTHER action kind.
  */
 function gatherConditionalDamageBonus(
   attacker: Creature,
   target: Creature,
+  actionKind: 'attack' | 'cast',
   state: CombatState,
 ): number[] {
   return attacker.activeEffects
     .filter(
       (e): e is ConditionalDamageBonusEffect => e.category === 'conditional-damage-bonus',
     )
+    .filter((e) => {
+      const applies = e.actionKind ?? 'both'
+      return applies === actionKind || applies === 'both'
+    })
     .filter((e) => evaluateCondition(e.condition, attacker, state, undefined, target.id))
     .map((e) => e.percent)
 }
@@ -234,7 +244,7 @@ function dealDamageCore(
     defenderAffinity: target.affinity,
     dealtMods: [
       ...gatherDealtMods(attacker, state),
-      ...gatherConditionalDamageBonus(attacker, target, state),
+      ...gatherConditionalDamageBonus(attacker, target, actionKind, state),
     ],
     takenFactors: [...defendFactors, ...gatherTakenFactors(target, state)],
   })
@@ -521,6 +531,8 @@ function resolveResponseTargets(
       return context.source ? [context.source] : []
     case 'all-enemies':
       return livingEnemiesOf(getCreature(state, context.self), state).map((c) => c.id)
+    case 'all-allies':
+      return livingAlliesOf(getCreature(state, context.self), state).map((c) => c.id)
     case 'selector': {
       const id = resolveTargetSelector(
         target.selector,
@@ -733,11 +745,18 @@ export function executeResponse(
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
         if (!target || target.alive) continue // target must be dead
-        // Death-reset: a fresh instantiation of innateTraitIds (no ramp preserved), then
-        // currentHp = round(baselineMaxHp * pct) computed from THAT fresh baseline.
+        // Death-reset: a fresh instantiation of innateTraitIds + (for a player-side target) its
+        // perks (no ramp preserved) -- ASSUMPTION 21: perks are as battle-start-permanent as
+        // innate traits, so a revived player creature keeps them, unlike in-fight-ACCUMULATED
+        // buffs/statuses. Then currentHp = round(baselineMaxHp * pct) computed from THAT fresh
+        // baseline.
         const reset: Creature = {
           ...target,
-          activeEffects: instantiateTraitEffects(target, state.traits),
+          activeEffects: instantiateCreatureEffects(
+            target,
+            state.traits,
+            state.playerWideEffects,
+          ),
         }
         const baselineMaxHp = effectiveMaxHp(reset)
         const currentHp = Math.round(baselineMaxHp * response.pct)
@@ -931,6 +950,11 @@ export function applyHeal(
  * application creates a new instance at the status's declared duration/stacks; re-applying
  * REFRESHES duration to the new application's value and increments stacks up to the status
  * definition's declared cap. Emits StatusApplied, then fires on-status-applied (event-before-hook).
+ *
+ * Phase 4 Slice F (review amendment): `spec.duration ?? def.defaultDuration` -- an omitted
+ * duration inherits the status's own declared default; an explicit one overrides it. Every
+ * pre-amendment `StatusSpec` in real content/goldens already sets `duration` explicitly, so this
+ * is byte-identical there (`spec.duration` always wins when present).
  */
 export function applyStatus(
   sourceId: CreatureId,
@@ -944,6 +968,7 @@ export function applyStatus(
   if (!def) {
     throw new Error(`resolver invariant violated: unknown statusId ${spec.statusId}`)
   }
+  const duration = spec.duration ?? def.defaultDuration
 
   const target = getCreature(state, targetId)
   const existing = target.activeEffects.find(
@@ -970,7 +995,7 @@ export function applyStatus(
   const nextEffects: ActiveEffect[] = existing
     ? target.activeEffects.map((e) =>
         e.instanceId === existing.instanceId
-          ? { ...e, remainingDuration: spec.duration, stacks: newStacks }
+          ? { ...e, remainingDuration: duration, stacks: newStacks }
           : e,
       )
     : [
@@ -978,7 +1003,7 @@ export function applyStatus(
         instantiateStatus(
           def,
           createEffectInstanceId(`${targetId}#status#${spec.statusId}`),
-          spec.duration,
+          duration,
           newStacks,
         ),
       ]
@@ -990,7 +1015,7 @@ export function applyStatus(
     targetId,
     statusId: spec.statusId,
     stacks: newStacks,
-    duration: spec.duration,
+    duration,
     sourceId,
   })
 

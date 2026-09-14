@@ -303,7 +303,10 @@ consumable), turn-order (act first *or* last — two-way, **built C**), Spore (D
 spread-on-death), Confusion (3-turn; 50% harmful-action friendly-fire, **built C**), Silenced
 (suppress-Cast; Violence spell), Pacified (suppress-Attack; Wit spell), Splashing (adjacency
 splash **on attacks only**, **built C** as a permanent passive, not a runtime status instance — see above), Proficient
-(**P8**; +equipment benefit).
+(**P8**; +equipment benefit). Bulwark (−5% damage taken per Defend this battle, additive-with-cap
+at 80%) is **NOT** a status — see the Slice F addenda below (`taken-reduction`): it's a permanent
+passive perk effect, the taken-pool mirror of `conditional-damage-bonus`, sharing the exact
+accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 
 ### Flow
 - **scripted-intro encounter** — a rigged fight whose outcome triggers a story beat (revive the
@@ -317,6 +320,76 @@ splash **on attacks only**, **built C** as a permanent passive, not a runtime st
 - **Immunity suppresses the *effect*, not the *application*** — an immune creature still receives the
   status (it still counts for "target is X" payoffs); it just ignores what the status does.
   (Clear Mind/Silenced, Aggressive/Pacified, Lucidity/Confusion.)
+
+### Phase 4 Slice F addenda (specializations, perks, starters, the Unicorn)
+
+- **Perks join the canonical per-creature effect order.** ASSUMPTION 21's decision is now built:
+  `createCombat` gains `partyWidePlayerEffects?: readonly EffectDef[]` (a plain array in, computed
+  by the caller — eventually the Slice G store, from `{chosenSpec, perkSpend}` via
+  `data/specializations.ts`'s `resolveSpecializationEffects`), instantiated onto every
+  **player-side** creature only, appended after that creature's own innate-trait effects via one
+  shared helper, `instantiateCreatureEffects` (`effects.ts`) — used identically by fight-assembly
+  and by `revive`'s death-reset, so a revived player creature keeps its perks (they are
+  battle-start-permanent, like innate traits, not in-fight-accumulated ramp). The canonical order
+  is now **innate-1 → innate-2 → perks → equipment infusions (Phase 8) → applied statuses**.
+  `CombatState` gains a `playerWideEffects` field so `revive` can re-derive it mid-fight.
+- **`all-allies` `ResponseTarget`** — the ally-side mirror of `all-enemies` (resolves via
+  `livingAlliesOf(self)`, so it always includes the firing creature). First consumer: the
+  Shieldbarer starter's `on-provoke → team +35% Defence`.
+- **`bonus-cast` — a NEW `EffectDef` category** (the Sorcerer starter's "50% on-turn-end, cast a
+  random equipped spell"), consulted **directly by `combat.ts`'s `resolveTurn`** (right after the
+  actor's ordinary `on-turn-end` hook), never through `fireHook`/`executeResponse` — reusing a
+  real Cast needs `combat.ts`'s own executor functions (`executeCastSingle`/`executeCastAoe`) and
+  target-resolution helpers, which `resolution.ts` has no access to (and gaining it would mean a
+  `resolution.ts → combat.ts` import cycle). **Not a 10th response verb** — the response
+  vocabulary is unchanged, still nine, per "hold the line at nine." A permanent-for-fight passive,
+  structurally alongside `armor-penetration`/`cross-stat`/etc.
+- **`conditional-damage-bonus` gains an `actionKind` axis** (review amendment — the damage-formula
+  system, mirroring `CrossStatDef.appliesTo`): `actionKind?: 'attack' | 'cast' | 'both'`, absent =
+  `'both'` (byte-identical for every pre-amendment consumer — Cull the Weak/Ambusher/Gloomjaws/
+  Sporch's Reaper never set it). `gatherConditionalDamageBonus` (resolution.ts) takes the current
+  `actionKind` and filters on it, threaded from `dealDamageCore`'s own already-in-scope
+  `actionKind` (the same value `gatherCrossStatContribution` already reads). First scoped
+  consumers: Brute's **Brute Force** (`actionKind: 'attack'`) and Sorcerer's **Spell Focus**
+  (`actionKind: 'cast'`) — each an unconditional "+1% damage per rank/level" perk authored as
+  `conditional-damage-bonus` + `condition: {kind: 'always'}`, now correctly scoped to its own
+  action kind instead of leaking onto the other one (the initial submission's own flagged caveat,
+  now resolved).
+- **`taken-reduction` — a new permanent-passive `EffectDef` category** (review amendment — the
+  taken-pool system, the TAKEN mirror of `conditional-damage-bonus`): `{ magnitude,
+  magnitudeSource?, accumulation?, reductionCap? }` — no `statusId`/`polarity`, never a status.
+  Gathered by `gatherTakenFactors` (effects.ts) alongside `DamageModifierDef`'s own `taken`
+  entries, reusing the exact same `takenFactorFor`/`damageModifierCount` helpers (both
+  generalized to a shared structural shape, `TakenReductionSource`, so neither's behavior
+  changes: `DamageModifierEffect` always carries a `stacks`, `TakenReductionEffect` never does,
+  and `e.stacks ?? 1` gives the right fallback for each). **Bulwark is now authored as this
+  passive directly** (`effects: [{category:'taken-reduction', magnitude:0.95, magnitudeSource:
+  {kind:'count', of:'self-defend-count'}, accumulation:'additive', reductionCap:0.8}]`) —
+  superseding the initial submission's `on-fight-start → apply-status` shape, which smuggled a
+  STATUS into a perk's own effect list. The real `BULWARK` `data/statuses.ts` entry and the
+  `PERK_STATUS_DURATION` config constant it needed are both **removed** (no longer exist).
+- **`StatusDef.defaultDuration: number`** (review amendment — the status system): every `StatusDef`
+  variant now declares a default duration; `StatusSpec.duration` becomes **optional** —
+  `applyStatus` (resolution.ts) resolves `spec.duration ?? def.defaultDuration` once, up front,
+  and uses that resolved value everywhere (the new instance's `remainingDuration`, a
+  re-application's refreshed `remainingDuration`, and the `StatusApplied` event's own `duration`
+  field). Every pre-amendment `StatusSpec`/`appliesStatus` in real content and goldens already
+  sets `duration` explicitly, so this is byte-identical everywhere it was already used; Concussive
+  Blows (Brute) is the first real content to omit it, inheriting Weaken's `defaultDuration: 3`.
+- **`SpeciesCreature.equippedSpells?: readonly (Spell | null)[]`** (review amendment — generation):
+  a species/creature may declare a FIXED starter loadout (absent for every enemy-spawnable
+  species, whose loadout the generator rolls per-visit from the biome pool).
+  `materializeCreature`'s fallback order: the caller's own `equippedSpells` argument (a generated
+  enemy's rolled loadout) → `speciesCreature.equippedSpells` (a fixed starter loadout) → all-null
+  slots (the pre-Slice-F default). First consumer: the Sorcerer starter's granted extra gem
+  (`ARCANE_BOLT` in slot 0 of a 4-slot array), now carried through the REAL `materializeCreature`
+  path instead of only existing as a hand-assembled test fixture.
+- **Doc conflict, flagged not silently resolved**: `briefs/phase-4-implementation-plan.md`'s own
+  Slice B vocabulary table and Slice F prose describe the Brute starter's second attack instance
+  as `[100%, 30%]` ("attack again for 30%"). Both content docs — `species/species-locked.md` and
+  `specializations/brute.md` — agree it's `[100%, 100%]` ("Attack executes twice at 100%"). Built
+  per the two content docs (docs win over the brief); the brief's own prose needs a correction
+  before its next read.
 
 ## Combat & scripting
 
@@ -510,7 +583,8 @@ the same interpreter, differing only in how they attach and which hooks they use
      special-casing.
   2. **`stat-remap`** — redirects which stat a formula slot reads (e.g. Speed-as-Attack). Reads the
      **source stat's effective value**; slot stat-modifiers do **not** transfer. Multiple remaps on
-     one slot → **fixed effect order (innate-1 → innate-2 → infusions), last-writer-wins**. The
+     one slot → **fixed effect order (innate-1 → innate-2 → perks → infusions), last-writer-wins**
+     (the `perks` slot lands in Phase 4 Slice F — see its own addenda below). The
      damage formula's OffStat lookup is remap-aware, so no formula change is needed to support it —
      **build this indirection seam in Phase 1** (returns effective Attack when no remap exists).
   3. **`damage-modifier`** — folds into the damage formula's pools: attacker's **additive dealt
@@ -545,8 +619,9 @@ the same interpreter, differing only in how they attach and which hooks they use
   paths and emits the *same* shared consequence events as a chosen action. A hook is a trigger
   *origin*, not new consequence vocabulary.
 - **`TriggerFired`** intent event precedes a trigger's consequences (mirrors `AttackDeclared`).
-- **One shared per-creature effect ordering** — innate-1 → innate-2 → equipment infusions → applied
-  statuses — reused *everywhere* effects are iterated (stat folding, hook firing, remap resolution).
+- **One shared per-creature effect ordering** — innate-1 → innate-2 → perks (Phase 4 Slice F,
+  player-side only) → equipment infusions → applied statuses — reused *everywhere* effects are
+  iterated (stat folding, hook firing, remap resolution).
 - **Interaction edges**: **dead creatures fire only `on-death`** (`fireHook` gates on `alive`
   per-effect — `effectsForHook` is a pure scan-filter and does no alive-gating; lethal damage fires
   `on-death`, not `on-damage-taken` — death pre-empts the victim's reaction).
@@ -596,6 +671,19 @@ re-entry guard. `defend`+`provoke` can co-occur in one action → two observatio
 
 That Resonants is the lone observer is *why* observation is built as the general primitive now — it
 carries the future, not the seed.
+
+**Design note (engine audit, not actioned): `on-ally-death`/`on-enemy-death` are `on-death-observed`
+candidates.** These two still exist as their own hooks (`resolution.ts`'s `fireDeathObservers`)
+even though the *action* side of the same actor-vs-observer split was already unified into
+`on-action-observed` above. If a future slice builds a general `on-death-observed` (the death-side
+mirror — "when *an ally/enemy* dies, *I* react," fanned out to observers the same way
+`on-action-observed` fans out per action instance), `on-ally-death`/`on-enemy-death` are its two
+natural candidates to fold into one hook with a `relationship` filter. **`on-death`/`on-kill` stay
+separate** — those are actor-self hooks (the dying/killing creature's own reaction), like
+`on-attack`, not observation. Flagged, not built: no content currently needs it, and folding two
+hooks that already work is real engine surgery (event-shape/call-site changes with golden blast
+radius) with no locked consumer to justify it yet — same "wait for a real content driver" discipline
+`on-action-observed` itself followed before Resonants existed.
 
 ### Loop safety (engine invariant — concrete)
 - **Self-re-entry guard = instance-level, stack-scoped**: a specific effect *instance* cannot

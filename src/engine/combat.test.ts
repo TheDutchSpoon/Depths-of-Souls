@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveFight, resolveTurn } from './combat'
+import { hasStatus } from './effects'
 import { makeParty } from './__fixtures__/creatures'
 import { createSeededRng } from './rng'
 import { createCreatureId } from './ids'
@@ -7,7 +8,7 @@ import { ROUND_CAP } from './config'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
-import type { StatusDef, Trait } from './effect-types'
+import type { StatusDef, Trait, TurnOrderStatusDef } from './effect-types'
 import type { SeededRng } from './rng'
 
 const EMBER_LANCE: Spell = {
@@ -125,6 +126,7 @@ describe('round cap', () => {
       scripts: new Map(),
       statuses: new Map(),
       traits: new Map(),
+      playerWideEffects: [],
     }
 
     const { state, events } = resolveTurn(atCap)
@@ -501,6 +503,7 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       magnitude: -0.1,
       cap: 1,
       polarity: 'debuff',
+      defaultDuration: 3,
     }
     const VULNERABILITY_TEST: StatusDef = {
       category: 'damage-modifier',
@@ -509,6 +512,7 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       magnitude: 1.2,
       cap: 1,
       polarity: 'debuff',
+      defaultDuration: 3,
     }
     const alwaysWaitScript: Script = {
       id: 'always-wait-sweep-test',
@@ -717,13 +721,14 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
 })
 
 describe('Web break-free (Phase 4 Slice E2)', () => {
-  const WEB_TEST_STATUS: StatusDef = {
+  const WEB_TEST_STATUS: TurnOrderStatusDef = {
     category: 'turn-order-status',
     statusId: 'web-test-fixture',
     cap: 1,
     position: 'last',
     breakChancePercent: 50,
     polarity: 'debuff',
+    defaultDuration: 3,
   }
 
   const WEB_SELF_FIXTURE: Trait = {
@@ -777,7 +782,10 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
     // succeeds and the status is never removed. This isolates "one roll per turn-start" from
     // removal (covered separately by the golden below) -- otherwise a successful break partway
     // through would stop further rolls, making the count comparison flaky-by-design.
-    const NEVER_BREAKS_STATUS: StatusDef = { ...WEB_TEST_STATUS, breakChancePercent: 0 }
+    const NEVER_BREAKS_STATUS: TurnOrderStatusDef = {
+      ...WEB_TEST_STATUS,
+      breakChancePercent: 0,
+    }
     const player = makeParty('player', [
       {
         id: 'webbed',
@@ -831,5 +839,167 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
       return allEvents.filter((e) => e.type === 'StatusExpired')
     }
     expect(runFourTurns(99)).toEqual(runFourTurns(99))
+  })
+})
+
+describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () => {
+  const BONUS_CASTER_FIXTURE: Trait = {
+    id: 'bonus-caster-fixture',
+    name: 'Bonus Caster (fixture)',
+    effects: [{ category: 'bonus-cast', chancePercent: 50 }],
+  }
+
+  function stubRng(values: number[]): SeededRng {
+    let i = 0
+    return {
+      next(): number {
+        const v = values[i]
+        i += 1
+        if (v === undefined) throw new Error('stubRng exhausted')
+        return v
+      },
+    }
+  }
+
+  function isSpellCast(event: { type: string }): boolean {
+    return event.type === 'SpellCast'
+  }
+
+  it('on a successful roll, casts the (only) equipped spell after the ordinary on-turn-end hook', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        scriptId: 'always-wait',
+        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        equippedSpells: [EMBER_LANCE],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 100, speed: 1 }])
+    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    // roll 1 (0.1 < 0.5): bonus-cast fires. roll 2 (0 -> floor(0*1)=0): picks equipped slot 0.
+    state = { ...state, rng: stubRng([0.1, 0]) }
+    const { events } = resolveTurn(state)
+
+    const turnEndedIndex = events.findIndex((e) => e.type === 'TurnEnded')
+    const spellCastIndex = events.findIndex(isSpellCast)
+    expect(spellCastIndex).toBeGreaterThan(turnEndedIndex)
+    expect(events[spellCastIndex]).toMatchObject({
+      type: 'SpellCast',
+      casterId: createCreatureId('caster'),
+      gemSlot: 0,
+      targetId: createCreatureId('foe'),
+    })
+    expect(events.some((e) => e.type === 'DamageDealt')).toBe(true)
+  })
+
+  it('on a failed roll, never casts', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        scriptId: 'always-wait',
+        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        equippedSpells: [EMBER_LANCE],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    state = { ...state, rng: stubRng([0.9]) } // 0.9 >= 0.5 -- fails, draws nothing further
+    const { events } = resolveTurn(state)
+    expect(events.some(isSpellCast)).toBe(false)
+  })
+
+  it('is a no-op when the actor has no equipped spells, even on a successful roll', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        scriptId: 'always-wait',
+        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        equippedSpells: [null, null, null],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    state = { ...state, rng: stubRng([0.1]) } // succeeds, but there's nothing to cast
+    const { events } = resolveTurn(state)
+    expect(events.some(isSpellCast)).toBe(false)
+  })
+
+  it('casts an AOE-shaped equipped spell through executeCastAoe', () => {
+    const player = makeParty('player', [
+      {
+        id: 'caster',
+        scriptId: 'always-wait',
+        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        equippedSpells: [CINDER_NOVA],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe1' }, { id: 'foe2' }])
+    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    state = { ...state, rng: stubRng([0.1, 0]) }
+    const { events } = resolveTurn(state)
+    const cast = events.find(isSpellCast)
+    expect(cast).toMatchObject({ type: 'SpellCast', targetShape: 'aoe', gemSlot: 0 })
+    expect(events.filter((e) => e.type === 'DamageDealt')).toHaveLength(2)
+  })
+})
+
+describe('taken-reduction passive (Phase 4 Slice F, review amendment -- real Bulwark shape, as a perk)', () => {
+  // Same numbers as Slice D's golden-defend-count-additive-cap (mechanically identical --
+  // magnitude 0.95, additive accumulation, reductionCap 0.8, driven by self-defend-count) but
+  // authored as a permanent PASSIVE (not a status applied via on-fight-start), proving the
+  // mitigation still ramps round-over-round while the bearer carries no status at all.
+  const TAKEN_REDUCTION_FIXTURE: Trait = {
+    id: 'taken-reduction-fixture',
+    name: 'Taken Reduction (fixture)',
+    effects: [
+      {
+        category: 'taken-reduction',
+        magnitude: 0.95,
+        magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+        accumulation: 'additive',
+        reductionCap: 0.8,
+      },
+    ],
+  }
+
+  it('mitigation improves round-over-round as the bearer keeps Defending, with no status on the creature', () => {
+    const player = makeParty('player', [
+      {
+        id: 'bearer',
+        health: 6,
+        defence: 10,
+        speed: 20,
+        scriptId: 'always-defend',
+        innateTraitIds: [TAKEN_REDUCTION_FIXTURE.id],
+        defendCount: 15, // 15 earlier Defends this battle, preset so the cap is reached quickly
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'striker', attack: 40, defence: 0, speed: 10 },
+    ])
+    const traits = new Map([[TAKEN_REDUCTION_FIXTURE.id, TAKEN_REDUCTION_FIXTURE]])
+    const initial = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    const { state, events } = resolveFight(initial)
+
+    // Round 1: defendCount 15 -> 16 (exactly the count that reaches the 80% cap). Round 2:
+    // 16 -> 17 (one PAST the cap) -- the SAME final damage both times proves the clamp holds
+    // rather than merely being asymptotically close (mirroring the golden's own proof).
+    const hits = events.filter((e) => e.type === 'DamageDealt')
+    expect(hits).toHaveLength(2)
+    expect(hits[0]).toMatchObject({ finalDamage: 3 })
+    expect(hits[1]).toMatchObject({ finalDamage: 3 })
+    expect(state.result).toBe('loss') // BEARER dies on the second identical hit (6 -> 3 -> 0)
+
+    // No status anywhere in the log or on the (dead) bearer -- this is a permanent passive.
+    expect(
+      events.some((e) => e.type === 'StatusApplied' || e.type === 'StatusExpired'),
+    ).toBe(false)
+    const bearer = state.playerParty.find((c) => c.id === createCreatureId('bearer'))!
+    expect(bearer.activeEffects.every((e) => e.category === 'taken-reduction')).toBe(true)
+    expect(hasStatus(bearer, 'bulwark')).toBe(false)
   })
 })

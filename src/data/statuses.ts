@@ -28,6 +28,10 @@ export const POISON: ConditionStatusDef = {
     },
   ],
   polarity: 'debuff',
+  // Phase 4 Slice F (review amendment): every real producer (VENOM_BOLT, golden-dot) already
+  // applies Poison with an explicit duration:3, so this default is never actually read by
+  // current content -- picked to match that existing usage for documentation honesty.
+  defaultDuration: 3,
 }
 
 /** DoT: 5 flat damage per stack per round. */
@@ -48,6 +52,9 @@ export const BURN: ConditionStatusDef = {
     },
   ],
   polarity: 'debuff',
+  // No real producer applies Burn yet (representative Phase 3 content); placeholder matching
+  // its DoT sibling Poison's own default.
+  defaultDuration: 3,
 }
 
 /** HoT: 4 flat heal per stack per round, clamped to effective max Health (no auto-heal past it). */
@@ -67,6 +74,8 @@ export const REGEN: ConditionStatusDef = {
     },
   ],
   polarity: 'buff',
+  // Matches demoFight.ts's own real usage (duration: 3), never actually read by it.
+  defaultDuration: 3,
 }
 
 /** Just a condition-status: an on-turn-start suppress-action -- the Phase 1 empty-bracket skip,
@@ -77,6 +86,8 @@ export const STUN: ConditionStatusDef = {
   cap: 1,
   triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action' } }],
   polarity: 'debuff',
+  // Matches REELING's own real usage (duration: 1), never actually read by it.
+  defaultDuration: 1,
 }
 
 /** Damage-modifier: -20% damage DEALT per stack, additive into (1 + Σ dealtMods). Capped at
@@ -88,6 +99,9 @@ export const WEAKEN: DamageModifierDef = {
   magnitude: -0.2,
   cap: 1,
   polarity: 'debuff',
+  // Phase 4 Slice F (review amendment): Concussive Blows (data/specializations.ts) now omits
+  // its own explicit duration entirely, inheriting this.
+  defaultDuration: 3,
 }
 
 /** Damage-modifier: x1.5 damage TAKEN per stack, multiplicative (Π(takenFactors), compounding
@@ -99,6 +113,8 @@ export const VULNERABILITY: DamageModifierDef = {
   magnitude: 1.5,
   cap: 2,
   polarity: 'debuff',
+  // Matches combat.test.ts's own real usage (duration: 3), never actually read by it.
+  defaultDuration: 3,
 }
 
 export const STOCK_STATUSES: readonly StatusDef[] = [

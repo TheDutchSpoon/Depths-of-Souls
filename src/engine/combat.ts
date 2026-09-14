@@ -4,7 +4,8 @@ import { buildTurnQueue } from './turn-order'
 import { compareBySideSlotId } from './tie-break'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import {
-  instantiateTraitEffects,
+  activeBonusCast,
+  instantiateCreatureEffects,
   effectiveMaxHp,
   gatherExtraInstances,
   hasAnnihilate,
@@ -28,7 +29,7 @@ import {
   shouldRedirectAoeToAllies,
 } from './targeting'
 import type { CreatureId } from './ids'
-import type { EffectInstanceId } from './effect-types'
+import type { EffectDef, EffectInstanceId } from './effect-types'
 import type {
   Action,
   CombatEvent,
@@ -47,19 +48,25 @@ export function createCombat(
   scripts: ReadonlyMap<string, Script> = new Map(),
   traits: ReadonlyMap<string, Trait> = new Map(),
   statuses: ReadonlyMap<string, StatusDef> = new Map(),
+  // Phase 4 Slice F / ASSUMPTION 21: the flattened, already-resolved perk effects for the
+  // chosen spec (computed by the caller -- eventually the Slice G store, from
+  // `{chosenSpec, perkSpend}` -- createCombat itself stays pure/engine-only, a plain array in,
+  // same as traits/statuses already are). Applied to every PLAYER-side creature only.
+  partyWidePlayerEffects: readonly EffectDef[] = [],
 ): CombatState {
   if (playerParty.length === 0 || enemyParty.length === 0) {
     throw new Error('createCombat: both parties must have at least one creature')
   }
 
-  // Fight-start: instantiate each creature's innate-trait effects onto activeEffects, then set
-  // currentHp to effective max Health (so a +Health trait actually grants the HP). For a
-  // trait-less creature this is a no-op: activeEffects is [] and effective max == base Health,
-  // so currentHp is unchanged -- Phase 1/2 fixtures stay byte-identical.
+  // Fight-start: instantiate each creature's innate-trait (+ player-side perk) effects onto
+  // activeEffects, then set currentHp to effective max Health (so a +Health trait/perk actually
+  // grants the HP). For a trait-less, perk-less creature this is a no-op: activeEffects is [] and
+  // effective max == base Health, so currentHp is unchanged -- Phase 1/2 fixtures stay
+  // byte-identical.
   const instantiate = (creature: Creature): Creature => {
     const withEffects: Creature = {
       ...creature,
-      activeEffects: instantiateTraitEffects(creature, traits),
+      activeEffects: instantiateCreatureEffects(creature, traits, partyWidePlayerEffects),
     }
     return { ...withEffects, currentHp: effectiveMaxHp(withEffects) }
   }
@@ -75,6 +82,7 @@ export function createCombat(
     scripts,
     statuses,
     traits,
+    playerWideEffects: partyWidePlayerEffects,
   }
 }
 
@@ -653,6 +661,45 @@ function executeCastAoe(
   return working
 }
 
+/**
+ * Phase 4 Slice F (Sorcerer starter's bonus-cast passive -- see BonusCastDef's own doc comment
+ * for why this is a passively-consulted EffectDef rather than a 10th response verb). Rolled
+ * ONLY when the actor carries the passive (chancePercent discipline: an ordinary creature never
+ * touches state.rng here); on success, picks uniformly among the actor's non-null equipped
+ * slots and runs a REAL Cast through the exact same executor a chosen action would
+ * (executeCastSingle/executeCastAoe -- on-cast/on-action-observed, payload routing, the
+ * instance-list model all apply unchanged). A no-op if the actor has no equipped spells at all.
+ */
+function maybeFireBonusCast(
+  actorId: CreatureId,
+  state: CombatState,
+  events: CombatEvent[],
+): CombatState {
+  const actor = getCreature(state, actorId)
+  if (!actor.alive) return state
+  const bonusCast = activeBonusCast(actor)
+  if (!bonusCast) return state
+  if (!(state.rng.next() < bonusCast.chancePercent / 100)) return state
+
+  const equipped = actor.equippedSpells
+    .map((spell, slot) => ({ spell, slot }))
+    .filter((entry): entry is { spell: Spell; slot: number } => entry.spell !== null)
+  if (equipped.length === 0) return state
+
+  const index = Math.floor(state.rng.next() * equipped.length)
+  const chosen = equipped[index]
+  if (!chosen) return state
+
+  const cascade = newCascade()
+  if (chosen.spell.targetShape === 'aoe') {
+    return executeCastAoe(actor, chosen.slot, state, events, cascade)
+  }
+  const targetSide = chosen.spell.targetSide ?? 'enemy'
+  const targetId = resolveInstanceTarget(actor, null, state, targetSide)
+  if (!targetId) return state
+  return executeCastSingle(actor, chosen.slot, targetId, state, events, cascade)
+}
+
 function executeDefend(
   actor: Creature,
   state: CombatState,
@@ -900,6 +947,9 @@ export function resolveTurn(state: CombatState): {
       events,
       newCascade(),
     ).state
+    // Phase 4 Slice F (Sorcerer starter): consulted directly, after the ordinary on-turn-end
+    // hook -- see maybeFireBonusCast's own doc comment for why this isn't a hook response.
+    working = maybeFireBonusCast(actor.id, working, events)
   }
 
   // Win/loss/draw is checked after EVERY action, not just round boundaries. This ordering

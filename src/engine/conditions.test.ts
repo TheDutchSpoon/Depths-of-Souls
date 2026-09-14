@@ -19,6 +19,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     traits: new Map(),
+    playerWideEffects: [],
     ...overrides,
   }
 }
@@ -270,6 +271,7 @@ describe('evaluateCondition -- has-status', () => {
       },
     ],
     polarity: 'debuff',
+    defaultDuration: 3,
     instanceId: createEffectInstanceId('p'),
     sourceTraitId: 'poison',
     remainingDuration: 2,
@@ -306,6 +308,7 @@ describe('evaluateCondition -- has-status', () => {
       cap: 1,
       triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action' } }],
       polarity: 'debuff',
+      defaultDuration: 3,
       instanceId: createEffectInstanceId('s'),
       sourceTraitId: 'stun',
       remainingDuration: 1,

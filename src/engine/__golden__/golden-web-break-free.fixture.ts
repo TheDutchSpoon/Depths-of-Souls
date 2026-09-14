@@ -34,6 +34,7 @@ export const WEB_TEST_STATUS: StatusDef = {
   position: 'last',
   breakChancePercent: 50,
   polarity: 'debuff',
+  defaultDuration: 3,
 }
 
 export const WEB_SELF_FIXTURE: Trait = {

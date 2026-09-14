@@ -86,12 +86,18 @@ Each spec's starter belongs to a species found only in a **deep biome**, authore
 only the starter creature exists (species sits below the ≥3-creature minimum on purpose).
 
 - **Sorcerer starter** — **Wit** affinity, high Intelligence. Trait: grants one spell as a
-  permanent extra gem + 50% on-turn-end to cast a random equipped spell.
-- **Brute starter** — high Attack. Trait: **Attack resolves one additional instance** (Attack executes twice at 100% — each a *real attack* firing `on-attack`; same target as the first, default-target fallback if it died). An **instance-list** modifier, not an on-attack trigger.
-  (default-target fallback if it died).
-- **Shieldbarer starter** — high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide; permanent-for-fight, so repeated provokes stack). *(The old `on-provoke → grant self defending` trait became the Shieldbarer's **Shield up** perk.)*
+  permanent extra gem + 50% on-turn-end to cast a random equipped spell. The "permanent extra
+  gem" is a **fixed equipped-spell loadout carried on the starter's own data** (its granted Wit
+  gem sits in slot 0 of a 4-slot loadout — one more than the default 3; slots 1–3 are
+  player-equippable in Phase 8), materialized through the same path as any creature's loadout —
+  distinct from the generator rolling *enemy* spells from a biome pool.
+- **Brute starter** — **Violence** affinity, high Attack. Trait: **Attack resolves one additional instance** (Attack executes twice at 100% — each a *real attack* firing `on-attack`; same target as the first, default-target fallback if it died). An **instance-list** modifier, not an on-attack trigger.
+- **Shieldbarer starter** — **Endurance** affinity, high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide; permanent-for-fight, so repeated provokes stack). *(The old `on-provoke → grant self defending` trait became the Shieldbarer's **Shield up** perk.)*
 
-*(Brute/Shieldbarer affinities settle when their species are authored — ideally distinct.)*
+*(Starter affinities **ratified** (grill follow-up, PR #56 review): Sorcerer = **Wit**, Brute =
+**Violence**, Shieldbarer = **Endurance**, Unicorn = **Vitality** — four distinct, each matching
+its "high stat" via CLAUDE.md's affinity→stat soft-mapping. The starters' own species stay stubbed;
+the affinities are now pinned regardless.)*
 
 **The Unicorn (intro helper — unique, permanent).** A rigged **scripted intro encounter** before
 floor 1: you attack the Unicorn, (intend to) lose, and it **revives your starter and joins your

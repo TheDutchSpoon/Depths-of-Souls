@@ -36,6 +36,7 @@ export const WEB_FIXTURE_STATUS: StatusDef = {
   cap: 1,
   position: 'last',
   polarity: 'debuff',
+  defaultDuration: 3,
 }
 
 export const HASTE_FIXTURE_STATUS: StatusDef = {
@@ -44,6 +45,7 @@ export const HASTE_FIXTURE_STATUS: StatusDef = {
   cap: 1,
   position: 'first',
   polarity: 'buff',
+  defaultDuration: 3,
 }
 
 export const WEBBED_TRAIT: Trait = {

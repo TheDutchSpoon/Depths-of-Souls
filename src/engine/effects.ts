@@ -11,6 +11,7 @@ import type {
   ActionInstanceEffect,
   ActiveEffect,
   ArmorPenetrationEffect,
+  BonusCastEffect,
   CheatDeathEffect,
   CountOf,
   CrossStatEffect,
@@ -22,6 +23,7 @@ import type {
   MagnitudeSource,
   ResolvedHookEffect,
   StatusDef,
+  TakenReductionEffect,
   Trait,
 } from './effect-types'
 import type { CombatState, Creature } from './types'
@@ -47,6 +49,38 @@ export function instantiateTraitEffects(
     })
   }
   return effects
+}
+
+/**
+ * Phase 4 Slice F / ASSUMPTION 21: perks are PLAYER-LEVEL effects, instantiated onto every
+ * PLAYER-side creature (never enemy) at fight-assembly, appended AFTER a creature's own innate-
+ * trait effects -- the canonical per-creature effect order gains a slot: innate-1 -> innate-2 ->
+ * perks -> infusions (Phase 8, none yet) -> statuses. This is the ONE function both createCombat
+ * (fight-assembly) and `revive`'s death-reset (resolution.ts) call, so a revived player creature
+ * comes back with its perks intact too (they are as permanent/battle-start as innate traits,
+ * unlike in-fight-acquired ramp -- death-reset wipes ACCUMULATED buffs/statuses, not a creature's
+ * own starting kit). Instance ids follow `${creatureId}#perk#${ordinal}` (deterministic, never
+ * RNG); `sourceTraitId` is `perk-${ordinal}` for TriggerFired/debug legibility, since a flattened
+ * EffectDef[] carries no perk-id metadata at this layer (the caller -- eventually the Slice G
+ * store -- already resolved `{chosenSpec, perkSpend}` down to this flat list before passing it
+ * to createCombat, mirroring how `traits`/`statuses` are already plain registries here). A no-op
+ * for an enemy creature or an empty list -- byte-identical to instantiateTraitEffects alone.
+ */
+export function instantiateCreatureEffects(
+  creature: Creature,
+  traits: ReadonlyMap<string, Trait>,
+  playerWideEffects: readonly EffectDef[] = [],
+): ActiveEffect[] {
+  const traitEffects = instantiateTraitEffects(creature, traits)
+  if (creature.side !== 'player' || playerWideEffects.length === 0) return traitEffects
+  const perkEffects = playerWideEffects.map((def, ordinal) =>
+    withInstance(
+      def,
+      createEffectInstanceId(`${creature.id}#perk#${ordinal}`),
+      `perk-${ordinal}`,
+    ),
+  )
+  return [...traitEffects, ...perkEffects]
 }
 
 function withInstance(
@@ -78,6 +112,10 @@ function withInstance(
     case 'cheat-death':
       return { ...def, instanceId, sourceTraitId }
     case 'conditional-damage-bonus':
+      return { ...def, instanceId, sourceTraitId }
+    case 'taken-reduction':
+      return { ...def, instanceId, sourceTraitId }
+    case 'bonus-cast':
       return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
@@ -146,18 +184,35 @@ export function clampedHp(creature: Creature): number {
   return Math.min(creature.currentHp, effectiveMaxHp(creature))
 }
 
+/** Phase 4 Slice F (review amendment): the shared structural shape `damageModifierCount`/
+ * `takenFactorFor` read -- satisfied by BOTH `DamageModifierEffect` (a status; always carries a
+ * required `stacks`) and `TakenReductionEffect` (a permanent passive; carries no `stacks` at
+ * all, so it structurally omits the field rather than setting it). Lets Bulwark's new
+ * perk-granted passive reuse these two helpers verbatim instead of duplicating them. */
+interface TakenReductionSource {
+  readonly magnitude: number
+  readonly magnitudeSource?: MagnitudeSource
+  readonly accumulation?: 'multiplicative' | 'additive'
+  readonly reductionCap?: number
+  readonly stacks?: number
+}
+
 /** Phase 4 Slice D: the live repetition count a damage-modifier effect's `magnitude` is
  * multiplied/exponentiated by -- `e.stacks` (pre-Slice-D behavior) unless the effect declares a
  * `magnitudeSource`, in which case the live resolveCount(...) reading is used instead (recomputed
- * every read -- see DamageModifierDef's own doc comment). */
+ * every read -- see DamageModifierDef's own doc comment). Phase 4 Slice F: `e.stacks ?? 1` --
+ * byte-identical for a `DamageModifierEffect` (`stacks` is always a defined number there) and the
+ * correct "flat single application" reading for a `TakenReductionEffect` that omits both
+ * `magnitudeSource` and `stacks` (it carries no stack bookkeeping at all, being a permanent
+ * passive, not a status). */
 function damageModifierCount(
   bearer: Creature,
   state: CombatState,
-  e: DamageModifierEffect,
+  e: TakenReductionSource,
 ): number {
   return e.magnitudeSource
     ? resolveMagnitudeCount(bearer, state, e.magnitudeSource)
-    : e.stacks
+    : (e.stacks ?? 1)
 }
 
 /** Attacker's additive dealt-mod pool contribution from active damage-modifier statuses
@@ -179,11 +234,13 @@ export function gatherDealtMods(creature: Creature, state: CombatState): number[
  * `(1 - magnitude)` summed × count, hard-clamped at `reductionCap` (default 1 -- i.e.
  * unclamped -- if somehow omitted on an additive effect, though real content always sets it).
  * The collapsed factor is what enters the multiplicative `Π(takenFactors)` pool alongside every
- * other source -- additive WITHIN a source, multiplicative ACROSS sources. */
+ * other source -- additive WITHIN a source, multiplicative ACROSS sources. Phase 4 Slice F:
+ * generalized to `TakenReductionSource` so Bulwark's new perk-granted `TakenReductionEffect`
+ * reuses this verbatim alongside `DamageModifierEffect`'s own `taken` entries. */
 function takenFactorFor(
   bearer: Creature,
   state: CombatState,
-  e: DamageModifierEffect,
+  e: TakenReductionSource,
 ): number {
   const count = damageModifierCount(bearer, state, e)
   if (e.accumulation === 'additive') {
@@ -195,15 +252,21 @@ function takenFactorFor(
 }
 
 /** Defender's multiplicative taken-pool contribution from active damage-modifier statuses
- * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks -- or, for an
- * `accumulation: 'additive'` source like Bulwark, its own hard-capped collapsed factor). */
+ * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks) AND (Phase 4 Slice F,
+ * review amendment) permanent perk-granted `taken-reduction` passives (Bulwark) -- both flavors
+ * share the exact same `accumulation: 'additive'`-with-`reductionCap` hard-cap shape, so both
+ * are collapsed via the same `takenFactorFor`. */
 export function gatherTakenFactors(creature: Creature, state: CombatState): number[] {
-  return creature.activeEffects
-    .filter(
-      (e): e is DamageModifierEffect =>
-        e.category === 'damage-modifier' && e.direction === 'taken',
-    )
-    .map((e) => takenFactorFor(creature, state, e))
+  const damageModifiers = creature.activeEffects.filter(
+    (e): e is DamageModifierEffect =>
+      e.category === 'damage-modifier' && e.direction === 'taken',
+  )
+  const takenReductions = creature.activeEffects.filter(
+    (e): e is TakenReductionEffect => e.category === 'taken-reduction',
+  )
+  return [...damageModifiers, ...takenReductions].map((e) =>
+    takenFactorFor(creature, state, e),
+  )
 }
 
 /** True iff `creature` carries the literal statusId among its status-carrying effects
@@ -336,6 +399,17 @@ export function activeFriendlyFireStatus(
   return creature.activeEffects.find(
     (e): e is FriendlyFireStatusEffect =>
       e.category === 'friendly-fire-status' && !hasStatusImmunity(creature, e.statusId),
+  )
+}
+
+/** Phase 4 Slice F (Sorcerer starter): `creature`'s active bonus-cast passive, if any --
+ * consulted directly by combat.ts's resolveTurn (never through fireHook/executeResponse; see
+ * BonusCastDef's own doc comment for why). At most one is expected in v1 content; the first
+ * match wins if content ever stacks more than one (deliberately permissive, matching
+ * activeFriendlyFireStatus's own precedent). */
+export function activeBonusCast(creature: Creature): BonusCastEffect | undefined {
+  return creature.activeEffects.find(
+    (e): e is BonusCastEffect => e.category === 'bonus-cast',
   )
 }
 
