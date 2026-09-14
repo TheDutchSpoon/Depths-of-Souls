@@ -1,11 +1,13 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–F done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+Status: **in progress — Slices A–G done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
 C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
 post-design-feedback (ally target-selector completion); E2: 424/424 tests (its own phase-record
 entry was filled in retroactively during F — see that section); F: 470/470 tests,
 post-review-amendment (actionKind scoping, taken-reduction, StatusDef.defaultDuration,
-SpeciesCreature.equippedSpells); lint/format/build green throughout). Built per
+SpeciesCreature.equippedSpells); G: 494/494 tests, post-review-fix (currency banks per kill not
+per fight won, a mid-fight-wipe reward-banking regression test, a perk-plumbing regression test,
+fail-loud on an unresolved enemy kill); lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
@@ -1216,8 +1218,235 @@ swap/refund (G — this slice built the perk *effect* mechanism and the *data*, 
 spends/tracks perk points or assigns a starter into a collection); real biome content (H1–H3);
 integration (I).
 
+## Slice G — State layer (`src/state/`, first use in the project)
+
+The Zustand store CONVENTIONS' "Generation & the run layer" describes: owns navigation +
+ownership only, and *calls* Slice A's pure generation module — it never owns the deterministic
+derivation of a floor's contents. In-memory only, no persistence middleware (Phase 5, wholesale,
+per the brief's own scope boundary — no `idb` dependency added).
+
+### What was built
+
+New directory `src/state/`:
+- `ids.ts` — `InstanceId` (+ `createInstanceId`), the same branded-string pattern as every other
+  id space in the project. **ASSUMPTION 25's own disambiguation**: the brief's own
+  `collection: Map<CreatureId, Instance[]>` shorthand is read as using "CreatureId" loosely for
+  the STATIC creature id an Instance references (`SpeciesCreature.id`, a plain, unbranded
+  string) — not the engine's branded `CreatureId` (`src/engine/ids.ts`), which is a transient
+  **per-fight** identity, freshly derived by `materializeCreature` every combat and never reused
+  for a persistent owned instance. Only `InstanceId` itself is branded, per ASSUMPTION 25's own
+  literal text.
+- `rewards.ts` — pure, independently-testable run-layer reward/lookup helpers, mirroring the
+  engine's own file-per-concern convention (`curves.ts`/`leveling.ts` alongside `combat.ts`):
+  - `Instance` (`{id, creatureId, level, xp}`) and `applyXpGain(instance, xpGain)` — banks a flat
+    XP gain and resolves any resulting level-ups purely via the existing `xpForNextLevel`
+    (Slice A), looping since a single large gain can cascade through multiple levels in one call.
+    Level-ups happen **only** here, post-fight — CONVENTIONS: "the engine never sees a mid-fight
+    level change."
+  - `Currencies` (`{essence, ore, bricks, lifeforce}`) + `ZERO_CURRENCIES`/`addCurrencies` — the
+    project's first modeling of these four currencies anywhere in the codebase (ASSUMPTION 26:
+    tracked now, unbounded, nothing spends them until Phase 8).
+  - `currencyDropForKill(floor)` — a flat, floor-scaled placeholder (parked balance,
+    GAME_DESIGN §13), banked per **KILL** — the same treatment as soul%/XP, per GAME_DESIGN §7
+    and CONVENTIONS both grouping soul%/XP/currency as banking per kill-event, never held
+    pending the fight's outcome. Creature-independent (no rarity skew, unlike soul%): GAME_DESIGN
+    §4's "global depth-scaled drop table... independent of which specific creature was defeated"
+    clause scopes to recipe drops, not currency generally, but the creature-independence itself
+    still holds here — a flat per-kill amount gives both properties at once. (The initial
+    submission read this as a currency-vs-kill doc tension and shipped "per fight won" instead;
+    corrected in PR review — see the review-fix section below. Named `currencyDropForFightWin`
+    at that point.)
+  - `perkPointsFor(bossesCleared)` — `bossesCleared.size * 100`, derived, never stored (per the
+    brief's own framing).
+  - `StaticCreatureRef` + `findStaticCreature(creatureId, standalone, biomes)` — checks a
+    standalone list (starters/the Unicorn, which live outside any biome spawn pool by design —
+    see `starters.ts`'s own header comment) before falling back to a scan of every biome's
+    species pool.
+- `store.ts` — `createGameStore(overrides): UseBoundStore<...>` (Zustand `create`, no
+  middleware) + the default zero-config singleton `useGameStore = createGameStore()` (real
+  `src/data` content wired in). **ASSUMPTION, beyond the brief's literal "store.ts" framing**: a
+  dependency-injecting factory rather than a bare module-level `create()` call — necessary for
+  testability without a UI (no Phase-4.5-style demo exists yet to exercise this against), and the
+  same shape `createCombat`/`generateFloor` already take (explicit registries in, not reaching
+  into `src/data` directly). `GameStoreDeps` covers `biomes`/`scripts`/`traits`/`statuses`/
+  `specializations`/`standaloneCreatures`/`runSeed`/`createRng` (the generation-RNG factory
+  only — combat's own internal RNG always goes through the real `createSeededRng` inside
+  `createCombat`, not overridable without an engine change, and not needed since combat's own
+  determinism is already proven by the existing engine goldens).
+  - **State** (`GameState`): `deepestFloor`, `currentFloor`, `discoveredBiomes`, `atlasPins`,
+    `collection` (keyed by the static creature id, per the ids.ts disambiguation above),
+    `activeParty` (a fixed 6-slot `(InstanceId | null)[]`), `soulProgress` (0–100 per static
+    creature id), `chosenSpec`, `perkSpend`, `bossesCleared`, `currencies`, and — **ASSUMPTION
+    27** — `runSeed`/`runCounter` (the RNG stream's seed + an advance counter, NOT a live
+    `SeededRng` object, keeping the store a plain serializable-shaped record ready for Phase 5's
+    save format; a fresh `SeededRng` is re-derived from `(runSeed, runCounter)` via a private
+    `hashRunDraw` — mirroring `biomeForFloor`'s own per-floor re-derivation, ASSUMPTION 4's
+    precedent — whenever a draw is needed, rather than threading a stateful object through
+    Zustand). Plus `nextInstanceOrdinal` (own addition, not named by the brief): a monotonic
+    counter used only to mint unique, deterministic `InstanceId`s (`` `${creatureId}#${ordinal}` ``),
+    unrelated to `runCounter`/RNG.
+  - **`descend(floor)`** — the integration action. Bounded to `1..deepestFloor+1` (own
+    ASSUMPTION: can re-farm any already-cleared floor, or push exactly one floor past the current
+    frontier — can't skip ahead; throws `RangeError` otherwise). Resolves the spec's
+    `partyWideEffects` (`resolveSpecializationEffects`, Slice F), resolves the floor's biome
+    (`biomeForFloor`, Slice A) against the injected `biomes` list, generates the floor
+    (`generateFloor`, Slice A) from a freshly-derived generation RNG, builds the resolver-ready
+    player `Creature[]` from `activeParty` (`resolvePlayerParty` — filters empty slots and
+    re-assigns CONTIGUOUS slot indices 0..k-1, since the engine's tie-break rule expects a dense
+    slot space), then runs each fight through `createCombat`/`resolveFight` in sequence. Per
+    fight: every `CreatureDied` event is joined back to the generated `enemyParty` by id, the
+    static creature is recovered by stripping the engine's own `` `-${side}-${slot}` `` id suffix
+    (reliable since both fields are recorded on the dying `Creature` itself — no string-parsing
+    guesswork) and looked up via `findStaticCreature`, and soul%/XP are banked immediately
+    (CONVENTIONS: "never held pending fight outcome") — **before** checking whether that fight
+    was even won. The loop stops (without attempting the floor's remaining fights) at the first
+    non-`'win'` result; `deepestFloor` only advances on a full clear. Returns a `FloorOutcome`
+    summarizing fight-by-fight results, total soul/XP/currency gained this call, and the
+    concatenated event log.
+  - **`runScriptedIntro()`** — **ASSUMPTION 23**, built exactly as pinned: NOT a new engine
+    mechanism, a fixed 1-enemy fight (the Unicorn, level 1) run through the ordinary resolver;
+    regardless of the result, the Unicorn is unconditionally granted into the collection (and the
+    first open party slot) if not already owned, via the same `grantCreatureIfUnowned` helper
+    `setSpec` uses. The engine has zero awareness this fight is special — the store's own
+    post-fight handler doesn't even branch on `finalState.result`.
+  - **`setSpec(specId)`** — refunds `perkSpend` (cleared — perk points are derived from
+    `bossesCleared`, so "refund" is just clearing spend) and grants the new spec's starter if not
+    already owned (**ASSUMPTION 28**: never removes a previously-owned starter — confirmed by a
+    swap-back-doesn't-duplicate test).
+  - **`travelTo(floor)`** — fast-travel, bounded to `1..deepestFloor` (already-cleared floors
+    only, no combat) — a separate, narrower bound than `descend`'s `1..deepestFloor+1`. Returns
+    `false` (state unchanged) rather than throwing on an out-of-bounds floor, since this is a
+    UI-facing nav action, not an integration boundary.
+  - **`recordBossKill(bossId)`** / **`pinBiome(floor, biomeId)`** — own additions, not named by
+    the brief's own bullet list, but needed for `bossesCleared`/`atlasPins` (both explicitly
+    named STATE fields) to ever become non-empty at all. Both trivial, idempotent-where-it
+    matters (`recordBossKill`) Map/Set mutations — no facility-unlock gating for `pinBiome` (the
+    Biome Atlas's own "unlocked once all 10 biomes discovered" gate is Phase 8/facilities scope,
+    not this slice's).
+
+### Tests
+
+**494/494** (up from Slice F's 470 — 24 new, post-review-fix: +2 over the pre-fix 492 — a
+mid-fight-wipe reward-banking regression test and a perk-plumbing regression test, see the
+review-fix note below) across 73 files. `rewards.test.ts` — focused unit
+coverage per helper, hand-derived (`applyXpGain`'s no-level-up / single-level-up /
+multi-level-cascade cases traced by hand against `xpForNextLevel(level) = 100 * level`;
+`currencyDropForKill`'s floor-scaling + the `bricks = max(1, floor(floor/10))` cases;
+`findStaticCreature`'s standalone-hit / biome-pool-hit / miss branches).
+
+`store.test.ts` — the brief's own named `descend()` integration test, covering every item on its
+list, plus `travelTo`/`runScriptedIntro`/`setSpec`/`recordBossKill`/`pinBiome`. Built against a
+small custom fixture biome (never `src/engine/__fixtures__/biomes.ts`'s own two-species fixture,
+nor real `src/data/biomes.ts` content — H1–H3 still land those as placeholder-shaped/empty) with
+a deliberately EXTREME stat gap between a weak "fodder" creature and an overwhelming
+"juggernaut," so every win/loss outcome is deterministic **by construction**, not by tuning
+close to a threshold: the player's fixture starter one-shots fodder regardless of its rolled
+level, and is one-shot BY the juggernaut (faster, so it always acts first) regardless of ITS
+rolled level. WHICH creature spawns per fight is controlled the same way `generation.test.ts`
+(Slice A) already established — a stubbed `SeededRng` (`deps.createRng` override) returning a
+hand-picked value sequence, exploiting `weightedPick`'s known cumulative-weight math (documented
+inline: a single-species pool is draw-invariant; the two-creature rarity-weighted draw's exact
+threshold, `6/7`, is derived in a comment from `RARITY_DRAW_WEIGHT`). This is the "hand-derived,
+arithmetic in comments" discipline, not a generated-then-pasted checkpoint, despite exercising
+the full `descend()` integration path. Covers: a full-clear win (banks 3 kills' worth of
+soul%/XP/currency, advances `deepestFloor`, discovers the biome); a win-then-loss (keeps fight
+1's rewards, stops before fight 3, `deepestFloor` unchanged); the `1..deepestFloor+1` bound
+(throws past the frontier); `travelTo`'s separate, narrower bound; `runScriptedIntro` adding the
+Unicorn on BOTH a forced win and a forced loss (an overwhelming Unicorn stand-in substituted via
+`deps.standaloneCreatures`, same id, proving the store's handler doesn't branch on outcome);
+`setSpec`'s refund-without-losing-the-collection + no-duplicate-on-swap-back; `recordBossKill`'s
+idempotency.
+
+Full Phase 1–3 + Slice A–F engine suite re-verified byte-identical (this slice touches no
+existing engine call site's behavior — see the two additive-only engine changes below).
+`lint` / `format:check` / `build` all clean.
+
+### PR review fixes (design-agent review, actioned before merge)
+
+Four items, reviewed against the docs on `main` (not the PR's own claims):
+
+1. **Currency banks per kill, not per fight won.** `rewards.ts`'s `currencyDropForFightWin`
+   (below) was renamed `currencyDropForKill`; `store.ts`'s `descend()` moved the currency
+   accumulation into the per-`CreatureDied` loop, alongside soul%/XP banking, instead of after
+   each fight's win check. GAME_DESIGN §7 and CONVENTIONS both group soul%/XP/currency as
+   banking per kill-event, never held pending the fight's outcome — the initial submission's
+   "doc tension" framing (below, superseded) misread GAME_DESIGN §4's "independent of which
+   specific creature was defeated" as scoping to currency generally, when that clause actually
+   scopes to recipe drops; per-kill and creature-independence aren't in tension (a flat per-kill
+   amount gives both).
+2. **New regression test** (`store.test.ts`, `descend()`): clears floor 1, then `descend(2)`
+   (`enemyPartySize(2) = 2`, so a kill and a wipe can land in the SAME fight) with a fodder enemy
+   the player kills on round 1 and a slower-but-overwhelming enemy that then one-shots the
+   player — proves the fodder kill's soul%/XP/currency bank despite that fight being a loss.
+   Floor 1's 1-enemy fights couldn't distinguish per-kill from per-fight-won banking (a win
+   always had exactly one kill, a loss always had zero).
+3. **New regression test** (`store.test.ts`): proves `resolveSpecializationEffects`'s output
+   actually reaches `createCombat`'s `partyWidePlayerEffects`, not just that the wiring compiles
+   — an identical fixture fight loses with an empty `perkSpend` and wins once a large
+   `stat-modifier` perk is purchased (`perkSpend` set directly via `setState`, since no
+   `purchasePerk` action exists — still correctly out of scope).
+4. **Fail loud on an unresolved enemy kill.** `descend()`'s reward loop's `!staticRef` branch (a
+   dead enemy whose derived static id doesn't resolve to any known static creature) now throws a
+   descriptive error instead of `continue`-ing silently — every generated enemy is derived from
+   static data by construction, so a miss there means the engine's id format and this store's
+   `-${side}-${slot}` suffix-stripping have drifted apart; a future format change should surface
+   loudly, not vanish rewards silently. The sibling `!deadEnemy` branch (a player-side death, not
+   a reward source) is unchanged, still a plain `continue`.
+
+`npm run test` — **494/494** across 73 files (up from the pre-fix 492 — the two new regression
+tests above). `lint` / `format:check` / `build` re-verified clean after the fixes.
+
+### Two small additive engine changes (own ASSUMPTIONs, not pinned by the brief)
+
+Both are new, optional-consumer, parked-balance placeholders in the same family as existing
+entries in their files — no existing export's signature changed, no golden-affecting behavior:
+
+- `engine/curves.ts` gains `SOUL_GAIN_PERCENT: Record<RarityTier, number>` (own ASSUMPTION —
+  GAME_DESIGN §13 parks "soul-per-kill % per rarity tier" but only `RARITY_DRAW_WEIGHT`, the
+  spawn-weight side, existed before this slice). Rarer creatures grant LESS % per GAME_DESIGN
+  §5's "slower to complete" framing.
+- `engine/leveling.ts` gains `xpAwardForKill(floor: number): number` (own ASSUMPTION — GAME_DESIGN
+  never pins a per-kill XP amount at all, only the level-up COST curve `xpForNextLevel`). Scales
+  off FLOOR depth rather than the defeated enemy's own level: `materializeCreature` bakes a
+  rolled level into `baseStats` and never stores the raw level on the resulting `Creature`, so a
+  defeated `Creature` has no level field to read post-hoc at the run layer (this slice's sole
+  consumer) — floor is already in scope wherever a kill is processed and is a reasonable
+  depth-scaled proxy instead.
+
+### Notable decisions surfaced during implementation (flag for review before H1)
+
+- ~~**The currency-per-kill vs. currency-per-floor doc tension**~~ — **resolved in the PR review
+  fixes above**: currency banks per kill (same as soul%/XP), stays creature-independent (a flat
+  per-kill amount, no rarity skew) per the corrected reading of GAME_DESIGN §4's "independent of
+  which specific creature was defeated" clause (scoped to recipe drops, not currency generally).
+  Not merely accepted as the initial submission's "per fight won" call — actually changed.
+- **`collection`'s key type** — the brief's own `Map<CreatureId, Instance[]>` shorthand is read
+  as the STATIC creature id (a plain string), never the engine's branded per-fight `CreatureId`
+  — flagged inline in `ids.ts` and `store.ts`'s `GameState.collection` doc comment.
+- **`createGameStore` as a DI factory, not a bare `create()` call** — needed for testability with
+  no UI yet to exercise the store against; the default `useGameStore` singleton still exists for
+  whenever a UI does land.
+- **`descend`'s `1..deepestFloor+1` bound vs. `travelTo`'s `1..deepestFloor`** — two different
+  bounds by design (re-farm-or-push-one-deeper vs. already-cleared-only), not an oversight; not
+  explicitly spelled out by the brief, which only asked for "fast-travel bounds-checks against
+  deepestFloor" as one of `descend()`'s own test items.
+- **`recordBossKill`/`pinBiome` as own-addition actions** — the brief names `bossesCleared`/
+  `atlasPins` only as STATE, not action entry points; both were added since otherwise those
+  fields could never become non-empty except via raw `setState` poking in tests, which felt like
+  the wrong place to draw the line for two nearly-trivial mutations.
+
+### Deliberately out of scope for Slice G (later slices)
+
+Real biome content replacing `data/biomes.ts`'s placeholder slots (H1–H3); the integration pass
+(I); any UI (`src/ui`/`src/app` — visibility comes from a future Phase-4.5-style demo, per the
+brief's own scope boundary); persistence/save-load (Phase 5, wholesale — `runSeed`/`runCounter`
+are shaped to be save-ready but nothing serializes them yet); perk-purchase budget/spend
+validation (the brief names only `setSpec` as a `perkSpend`-touching action; a `purchasePerk`
+action with budget-checking was deliberately NOT built — out of the brief's named scope, and its
+exact failure-mode semantics (throw? clamp? no-op?) aren't specified anywhere).
+
 ## Next
 
-Slice G — the state layer (`src/state/`, first use in the project): Zustand store owning
-navigation/ownership, `descend()`, the scripted-intro encounter's store-level handler, spec
-swap/refund. See `.claude/briefs/phase-4-implementation-plan.md`.
+Slices H1/H2/H3 — real seed content (The Overgrowth, Glimmerdark, Rotcap Hollow), one PR per
+biome, replacing `data/biomes.ts`'s placeholder slots and wiring real `speciesId`s through
+`materializeCreature`. See `.claude/briefs/phase-4-implementation-plan.md`.

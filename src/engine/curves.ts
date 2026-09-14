@@ -54,3 +54,17 @@ export const RARITY_DRAW_WEIGHT: Record<RarityTier, number> = {
   uncommon: 3,
   rare: 1,
 }
+
+/**
+ * Phase 4 Slice G (own ASSUMPTION, not pinned by the brief): GAME_DESIGN §13 parks
+ * "soul-per-kill % per rarity tier" as balance but never pins actual numbers -- only the
+ * spawn-weight side (RARITY_DRAW_WEIGHT, above) existed before this slice. A simple descending
+ * placeholder -- rarer creatures grant LESS % per defeat (GAME_DESIGN §5: "slower to
+ * complete") -- tuned in playtest. Consumed by the run-layer's per-kill reward banking
+ * (src/state/store.ts's descend()), never by combat itself.
+ */
+export const SOUL_GAIN_PERCENT: Record<RarityTier, number> = {
+  common: 10,
+  uncommon: 5,
+  rare: 2,
+}
