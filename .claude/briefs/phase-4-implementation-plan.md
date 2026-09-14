@@ -263,8 +263,12 @@ The single largest engine slice. Every row in the vocabulary table tagged `B`.
   an Attack or Cast resolves as a **list of `{ powerPercent }` instances**, built **once, up
   front**, from the acting creature's active count/power modifiers, *before* any instance
   resolves — base `[100%]`; "an additional time" (Flurry/Echo) appends another `[100%]`;
-  "attack again for 30%" (the Brute starter) appends `[30%]`; both on one creature compose
-  **linearly**: `[100%, 100%, 30%]` — three instances, full stop, never a re-multiplied entry.
+  "attack again" (the Brute starter) appends `[100%]`; both on one creature compose
+  **linearly**: `[100%, 100%, 100%]` — three instances, full stop, never a re-multiplied entry.
+  (Corrected: the Brute starter's second instance is **full power** — `species-locked.md` and
+  `brute.md` both say "Attack executes twice at 100%"; an earlier draft of this brief said 30%.
+  A partial-power instance like `[30%]` remains a supported *mechanism*, just not what the Brute
+  starter uses.)
   `resolveTurn`'s action-execution branch calls a new `buildAttackInstanceList(actor)`/
   `buildCastInstanceList(actor)` (gathers `magnitudeSource`-style count/power contributions the
   same way Slice D's counters will), then **runs the list**: each entry executes as a genuine,
@@ -319,7 +323,7 @@ The single largest engine slice. Every row in the vocabulary table tagged `B`.
 - **Tests**: unit coverage per new response kind and per formula extension (armor-pen at 0%/
   50%/100%, cross-stat at 0 and nonzero, scoped suppression blocking exactly the scoped action
   and nothing else) and per instance-list composition (base-only, +extra-instance, +partial-
-  power instance, both together confirmed **linear** — `[100%,100%,30%]`, never a re-multiplied
+  power instance, both together confirmed **linear** — `[100%,100%,100%]`, never a re-multiplied
   entry); new goldens: `golden-on-action-hooks` (a fixture trait on each of the four
   new hooks, hand-derived), `golden-attack-instance-list` (a Flurry/Brute-starter-shaped fixture:
   a two-instance attack where the *second* instance's `on-attack` procs a fixture trigger,
@@ -511,7 +515,7 @@ routing table.
   list decision).
 - **`data/species/starters.ts`**: the three starter creatures (Wit Sorcerer starter with its
   extra-gem + 50%-on-turn-end-random-cast trait, high-Attack Brute starter with its
-  on-attack-strike-again trait — itself just a `[100%, 30%]` instance-list entry, confirming the
+  on-attack-strike-again trait — itself just a `[100%, 100%]` instance-list entry, confirming the
   instance-list model reads naturally as "seed" content and not merely a systems abstraction —
   high-Defence Shieldbarer starter with its
   on-provoke→team+35%-Defence trait via `grant-action-state`... **ASSUMPTION 22**: "team gains
@@ -534,7 +538,7 @@ routing table.
   authored as a **real but currently-always-zero-effect** definition, e.g. Arcane Shields keys
   off "equipped gems not of the creature's affinity" — with no gem-equip system yet, this reads
   as 0 always, which is correct dormant behavior, not a stub to special-case); goldens for each
-  starter's signature trait (the Brute starter's `[100%, 30%]` two-instance attack is a direct,
+  starter's signature trait (the Brute starter's `[100%, 100%]` two-instance attack is a direct,
   content-level exercise of Slice B's `golden-attack-instance-list` mechanism, not a new one); a
   scripted-intro-encounter test at the store level (Slice G dependency — may land as part of G
   instead if sequencing makes more sense once implementation starts; noted here since the
