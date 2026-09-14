@@ -60,17 +60,15 @@ export function addCurrencies(a: Currencies, b: Currencies): Currencies {
 }
 
 /**
- * Doc-conflict flag, resolved here rather than guessed past: GAME_DESIGN §4 frames currency
- * drops as a FLOOR-level, creature-independent "global depth-scaled drop table" ("independent
- * of which specific creature was defeated -- not a per-creature loot table"), while the brief /
- * CONVENTIONS' Slice G prose loosely bundles "soul% + XP + currency" under one "rewards banked
- * per kill" umbrella. Resolved: currency is granted per FIGHT WON (not per kill, so it stays
- * creature-independent per GAME_DESIGN) but still banked immediately as each fight resolves
- * (not held pending the whole floor's outcome -- CONVENTIONS' "never held pending fight
- * outcome" read at the per-event granularity it's actually about). A flat, floor-scaled
- * placeholder; exact drop rates are parked balance (GAME_DESIGN §13).
+ * Banks per KILL (per CreatureDied enemy) -- the same treatment as soul%/XP, per GAME_DESIGN §7
+ * and CONVENTIONS both grouping soul%/XP/currency together as banking per kill-event, never
+ * held pending the fight's outcome. Creature-INDEPENDENT (GAME_DESIGN §4's "global depth-scaled
+ * drop table... independent of which specific creature was defeated" -- that clause scopes to
+ * recipe drops, but the creature-independence itself still applies here: a flat per-kill amount,
+ * unlike soul%, doesn't skew by rarity). A flat, floor-scaled placeholder; exact drop rates are
+ * parked balance (GAME_DESIGN §13).
  */
-export function currencyDropForFightWin(floor: number): Currencies {
+export function currencyDropForKill(floor: number): Currencies {
   return {
     essence: floor,
     ore: floor,

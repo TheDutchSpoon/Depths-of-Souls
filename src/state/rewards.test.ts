@@ -8,7 +8,7 @@ import { createInstanceId } from './ids'
 import {
   addCurrencies,
   applyXpGain,
-  currencyDropForFightWin,
+  currencyDropForKill,
   findStaticCreature,
   perkPointsFor,
   ZERO_CURRENCIES,
@@ -62,21 +62,21 @@ describe('applyXpGain', () => {
   })
 })
 
-describe('currencyDropForFightWin', () => {
+describe('currencyDropForKill', () => {
   test('scales flat currencies 1:1 with floor; bricks is floor(floor/10), min 1', () => {
-    expect(currencyDropForFightWin(1)).toEqual({
+    expect(currencyDropForKill(1)).toEqual({
       essence: 1,
       ore: 1,
       bricks: 1,
       lifeforce: 1,
     })
-    expect(currencyDropForFightWin(25)).toEqual({
+    expect(currencyDropForKill(25)).toEqual({
       essence: 25,
       ore: 25,
       bricks: 2,
       lifeforce: 25,
     })
-    expect(currencyDropForFightWin(100)).toEqual({
+    expect(currencyDropForKill(100)).toEqual({
       essence: 100,
       ore: 100,
       bricks: 10,

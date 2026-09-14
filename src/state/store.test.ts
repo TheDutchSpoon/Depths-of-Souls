@@ -127,6 +127,119 @@ function makeDeps(overrides: Partial<GameStoreDeps>): Partial<GameStoreDeps> {
   }
 }
 
+// ---- Fixtures for the "wipe with a mid-fight kill" regression (Fix 2) ----
+// Slower than HERO (speed 1 << HERO's 50, so HERO always acts first) but overwhelming enough to
+// one-shot HERO on its own turn -- proves a kill banks even when the FIGHT it happened in is
+// ultimately lost.
+const SLOW_JUGGERNAUT: SpeciesCreature = {
+  id: 'fixture-g-slow-juggernaut',
+  affinity: 'violence',
+  baseStats: { health: 100, attack: 1000, intelligence: 10, defence: 100, speed: 1 },
+  defaultScriptId: 'always-attack',
+  innateTraitIds: [],
+  rarity: 'rare',
+}
+
+const FIXTURE_SPECIES_MIXED: Species = {
+  id: 'fixture-g-species-mixed',
+  name: 'Fixture Species Mixed',
+  weight: 1,
+  creatures: [FODDER, SLOW_JUGGERNAUT], // same common/rare weight split as FIXTURE_SPECIES
+}
+
+const FIXTURE_BIOME_MIXED: BiomeData = {
+  id: createBiomeId('fixture-g-biome-mixed'),
+  name: 'Fixture Biome Mixed',
+  speciesPool: [FIXTURE_SPECIES_MIXED],
+  spellPool: [],
+}
+
+// floor 2 -> enemyPartySize=2, fightCount=3 -> 3 fights x 2 slots x 3 calls = 18 values. Only
+// fight 1 matters (the loop stops there); its two slots: [species,creature,level] x2, same
+// <0.857/>=0.857 FODDER/rare threshold as WIN_THEN_LOSS_SEQUENCE above.
+const MIXED_FIGHT_SEQUENCE = [
+  0,
+  0.1,
+  0, // fight1 slot0 -> FODDER
+  0,
+  0.95,
+  0, // fight1 slot1 -> SLOW_JUGGERNAUT
+  0,
+  0.1,
+  0,
+  0,
+  0.1,
+  0, // fight2 (unused)
+  0,
+  0.1,
+  0,
+  0,
+  0.1,
+  0, // fight3 (unused)
+]
+
+// ---- Fixtures for the perk-plumbing regression (Fix 3) ----
+// An extreme stat gap engineered so a single stat-modifier perk flips the fight's outcome
+// outright (loss with the perk absent, win with it applied), rather than merely changing a
+// damage number -- proves resolveSpecializationEffects's output genuinely reaches createCombat's
+// partyWidePlayerEffects, not just that the wiring compiles.
+const WEAK_HERO: SpeciesCreature = {
+  id: 'fixture-g-weak-hero',
+  affinity: 'violence',
+  baseStats: { health: 10, attack: 1, intelligence: 10, defence: 1, speed: 50 },
+  defaultScriptId: 'always-attack',
+  innateTraitIds: [],
+  rarity: 'rare',
+}
+
+const WEAK_HERO_STANDALONE: StaticCreatureRef = {
+  speciesCreature: WEAK_HERO,
+  speciesId: 'fixture-g-weak-hero-species',
+}
+
+// Far tougher than WEAK_HERO can scratch (unmodified attack1 vs defence1000 chips 1 dmg/hit) but
+// far slower (speed1 << WEAK_HERO's 50, so WEAK_HERO always acts first) -- WEAK_HERO reliably
+// loses unmodified (TOUGH_TARGET one-shots it back on round 1) and reliably wins once its own
+// attack is massively boosted (one-shots TOUGH_TARGET before it ever acts).
+const TOUGH_TARGET: SpeciesCreature = {
+  id: 'fixture-g-tough-target',
+  affinity: 'violence',
+  baseStats: { health: 50, attack: 1000, intelligence: 10, defence: 1000, speed: 1 },
+  defaultScriptId: 'always-attack',
+  innateTraitIds: [],
+  rarity: 'common',
+}
+
+const FIXTURE_SPECIES_TOUGH: Species = {
+  id: 'fixture-g-species-tough',
+  name: 'Fixture Species Tough',
+  weight: 1,
+  creatures: [TOUGH_TARGET],
+}
+
+const FIXTURE_BIOME_TOUGH: BiomeData = {
+  id: createBiomeId('fixture-g-biome-tough'),
+  name: 'Fixture Biome Tough',
+  speciesPool: [FIXTURE_SPECIES_TOUGH],
+  spellPool: [],
+}
+
+const HUGE_ATTACK_PERK_SPEC: Specialization = {
+  id: 'fixture-perk-spec-g',
+  name: 'Fixture Perk Spec G',
+  starterCreatureId: WEAK_HERO.id,
+  perks: [
+    {
+      id: 'huge-attack',
+      name: 'Huge Attack',
+      maxLevel: 1,
+      costPerLevel: 1000,
+      phase: 'p4',
+      effects: [{ category: 'stat-modifier', stat: 'attack', factor: 2000 }],
+    },
+  ],
+}
+
 describe('descend()', () => {
   test('a win banks rewards and advances depth', () => {
     const store = createGameStore(
@@ -143,7 +256,7 @@ describe('descend()', () => {
     expect(outcome.soulGained.get(FODDER.id)).toBe(30)
     // xpAwardForKill(floor=1) = 10, 3 kills.
     expect(outcome.xpBanked).toBe(30)
-    // currencyDropForFightWin(1) = {essence:1,ore:1,bricks:1,lifeforce:1}, 3 fights won.
+    // currencyDropForKill(1) = {essence:1,ore:1,bricks:1,lifeforce:1}, banked per kill -- 3 kills.
     expect(outcome.currencyGained).toEqual({
       essence: 3,
       ore: 3,
@@ -177,7 +290,8 @@ describe('descend()', () => {
     expect(outcome.soulGained.get(FODDER.id)).toBe(10)
     expect(outcome.soulGained.has(JUGGERNAUT.id)).toBe(false)
     expect(outcome.xpBanked).toBe(10)
-    // Currency only banks per FIGHT WON -- fight 1 only.
+    // Currency banks per KILL, same as soul%/XP -- fight 2's loss has no kill, so only fight 1's
+    // single kill contributes.
     expect(outcome.currencyGained).toEqual({
       essence: 1,
       ore: 1,
@@ -188,6 +302,43 @@ describe('descend()', () => {
     const state = store.getState()
     expect(state.deepestFloor).toBe(0) // never advanced -- the floor wasn't cleared
     expect(state.soulProgress.get(FODDER.id)).toBe(10) // kept, not rolled back
+  })
+
+  test('a wipe after some enemies died keeps that kill banked (per-kill, not per-fight-won)', () => {
+    // enemyPartySize(2)=2 -- two enemy slots in the same fight, so a kill and a wipe can both
+    // happen within ONE fight (floor 1's single-enemy fights can't distinguish per-kill from
+    // per-fight-won banking, since a win always has exactly one kill and a loss always has zero).
+    const store = createGameStore(
+      makeDeps({
+        biomes: [FIXTURE_BIOME_MIXED],
+        createRng: stubRngFactory(MIXED_FIGHT_SEQUENCE),
+      }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    store.setState({ deepestFloor: 1 }) // precondition: floor 1 already cleared
+
+    const outcome = store.getState().descend(2)
+
+    // Slot0 (FODDER) dies to HERO's first attack; slot1 (SLOW_JUGGERNAUT) then one-shots HERO on
+    // its own turn -- the fight is a loss with exactly one enemy dead.
+    expect(outcome.fightResults).toEqual(['loss'])
+    expect(outcome.cleared).toBe(false)
+    expect(outcome.deepestFloorAdvanced).toBe(false)
+    expect(outcome.soulGained.get(FODDER.id)).toBe(10) // FODDER is common
+    expect(outcome.soulGained.has(SLOW_JUGGERNAUT.id)).toBe(false) // never died
+    expect(outcome.xpBanked).toBe(20) // xpAwardForKill(floor=2) = 20, one kill
+    // currencyDropForKill(2) = {essence:2,ore:2,bricks:max(1,floor(2/10))=1,lifeforce:2}.
+    expect(outcome.currencyGained).toEqual({
+      essence: 2,
+      ore: 2,
+      bricks: 1,
+      lifeforce: 2,
+    })
+
+    const state = store.getState()
+    expect(state.deepestFloor).toBe(1) // unchanged -- floor 2 wasn't cleared
+    expect(state.soulProgress.get(FODDER.id)).toBe(10)
+    expect(state.currencies).toEqual({ essence: 2, ore: 2, bricks: 1, lifeforce: 2 })
   })
 
   test('throws when asked to skip past the frontier', () => {
@@ -346,5 +497,34 @@ describe('pinBiome()', () => {
     const store = createGameStore(makeDeps({}))
     store.getState().pinBiome(5, FIXTURE_BIOME.id)
     expect(store.getState().atlasPins.get(5)).toBe(FIXTURE_BIOME.id)
+  })
+})
+
+describe('perk effects reach combat', () => {
+  function makePerkDeps(overrides: Partial<GameStoreDeps> = {}): Partial<GameStoreDeps> {
+    return {
+      biomes: [FIXTURE_BIOME_TOUGH],
+      specializations: new Map([[HUGE_ATTACK_PERK_SPEC.id, HUGE_ATTACK_PERK_SPEC]]),
+      standaloneCreatures: [WEAK_HERO_STANDALONE],
+      runSeed: 99,
+      ...overrides,
+    }
+  }
+
+  test('an empty perkSpend loses; a purchased huge-attack perk wins the SAME fight', () => {
+    // FIXTURE_BIOME_TOUGH's pool has exactly one creature, so species/creature draws are
+    // invariant regardless of RNG -- the real createRng is fine here, no stub needed. The level
+    // roll (within enemyLevelRange(1)) doesn't matter either, given the extreme stat gap.
+    const storeWithoutPerk = createGameStore(makePerkDeps())
+    storeWithoutPerk.getState().setSpec(HUGE_ATTACK_PERK_SPEC.id)
+    const outcomeWithoutPerk = storeWithoutPerk.getState().descend(1)
+    expect(outcomeWithoutPerk.fightResults[0]).toBe('loss')
+
+    const storeWithPerk = createGameStore(makePerkDeps())
+    storeWithPerk.getState().setSpec(HUGE_ATTACK_PERK_SPEC.id)
+    storeWithPerk.setState({ perkSpend: new Map([['huge-attack', 1]]) })
+    const outcomeWithPerk = storeWithPerk.getState().descend(1)
+    expect(outcomeWithPerk.fightResults).toEqual(['win', 'win', 'win'])
+    expect(outcomeWithPerk.cleared).toBe(true)
   })
 })

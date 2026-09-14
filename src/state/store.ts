@@ -44,7 +44,7 @@ import { createInstanceId, type InstanceId } from './ids'
 import {
   addCurrencies,
   applyXpGain,
-  currencyDropForFightWin,
+  currencyDropForKill,
   findStaticCreature,
   ZERO_CURRENCIES,
   type Currencies,
@@ -392,17 +392,26 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
             deps.standaloneCreatures,
             deps.biomes,
           )
-          if (!staticRef) continue // defensive; every generated enemy resolves
+          if (!staticRef) {
+            // Every generated enemy is derived from static data by construction (generateFloor
+            // only ever materializes creatures out of deps.biomes' own species pools) -- a miss
+            // here means the engine's id format and this store's suffix-stripping have drifted
+            // apart. Not a normal skip: fail loud rather than silently dropping rewards.
+            throw new Error(
+              `descend: generated enemy ${deadEnemy.id} has no resolvable static creature ` +
+                `(derived static id: ${staticId})`,
+            )
+          }
           const gain = SOUL_GAIN_PERCENT[staticRef.speciesCreature.rarity]
           soulGainedThisCall.set(staticId, (soulGainedThisCall.get(staticId) ?? 0) + gain)
           xpBanked += xpAwardForKill(floor)
+          currencyGained = addCurrencies(currencyGained, currencyDropForKill(floor))
         }
 
         if (finalState.result !== 'win') {
           cleared = false
           break
         }
-        currencyGained = addCurrencies(currencyGained, currencyDropForFightWin(floor))
       }
 
       set((s) => {

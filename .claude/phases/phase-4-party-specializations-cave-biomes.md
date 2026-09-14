@@ -5,7 +5,9 @@ C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 3
 post-design-feedback (ally target-selector completion); E2: 424/424 tests (its own phase-record
 entry was filled in retroactively during F — see that section); F: 470/470 tests,
 post-review-amendment (actionKind scoping, taken-reduction, StatusDef.defaultDuration,
-SpeciesCreature.equippedSpells); G: 492/492 tests; lint/format/build green throughout). Built per
+SpeciesCreature.equippedSpells); G: 494/494 tests, post-review-fix (currency banks per kill not
+per fight won, a mid-fight-wipe reward-banking regression test, a perk-plumbing regression test,
+fail-loud on an unresolved enemy kill); lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
@@ -1244,17 +1246,16 @@ New directory `src/state/`:
   - `Currencies` (`{essence, ore, bricks, lifeforce}`) + `ZERO_CURRENCIES`/`addCurrencies` — the
     project's first modeling of these four currencies anywhere in the codebase (ASSUMPTION 26:
     tracked now, unbounded, nothing spends them until Phase 8).
-  - `currencyDropForFightWin(floor)` — a flat, floor-scaled placeholder (parked balance,
-    GAME_DESIGN §13). **Doc-conflict flag, resolved rather than guessed past**: GAME_DESIGN §4
-    frames currency drops as a FLOOR-level, creature-INDEPENDENT "global depth-scaled drop
-    table" ("independent of which specific creature was defeated — not a per-creature loot
-    table"), while the brief/CONVENTIONS' own Slice G prose loosely bundles "soul% + XP +
-    currency" under one "rewards banked per kill" umbrella. Resolved: currency is granted per
-    **FIGHT WON** (not per kill, keeping it creature-independent per GAME_DESIGN) but still
-    banked immediately as each fight resolves, not held pending the floor's overall outcome
-    (CONVENTIONS' "never held pending fight outcome" read at the per-event granularity it's
-    actually about). Flagged here for explicit review — this is a genuine tension between the
-    two docs, not a mechanical ambiguity.
+  - `currencyDropForKill(floor)` — a flat, floor-scaled placeholder (parked balance,
+    GAME_DESIGN §13), banked per **KILL** — the same treatment as soul%/XP, per GAME_DESIGN §7
+    and CONVENTIONS both grouping soul%/XP/currency as banking per kill-event, never held
+    pending the fight's outcome. Creature-independent (no rarity skew, unlike soul%): GAME_DESIGN
+    §4's "global depth-scaled drop table... independent of which specific creature was defeated"
+    clause scopes to recipe drops, not currency generally, but the creature-independence itself
+    still holds here — a flat per-kill amount gives both properties at once. (The initial
+    submission read this as a currency-vs-kill doc tension and shipped "per fight won" instead;
+    corrected in PR review — see the review-fix section below. Named `currencyDropForFightWin`
+    at that point.)
   - `perkPointsFor(bossesCleared)` — `bossesCleared.size * 100`, derived, never stored (per the
     brief's own framing).
   - `StaticCreatureRef` + `findStaticCreature(creatureId, standalone, biomes)` — checks a
@@ -1325,10 +1326,12 @@ New directory `src/state/`:
 
 ### Tests
 
-**492/492** (up from Slice F's 470 — 22 new) across 73 files. `rewards.test.ts` — focused unit
+**494/494** (up from Slice F's 470 — 24 new, post-review-fix: +2 over the pre-fix 492 — a
+mid-fight-wipe reward-banking regression test and a perk-plumbing regression test, see the
+review-fix note below) across 73 files. `rewards.test.ts` — focused unit
 coverage per helper, hand-derived (`applyXpGain`'s no-level-up / single-level-up /
 multi-level-cascade cases traced by hand against `xpForNextLevel(level) = 100 * level`;
-`currencyDropForFightWin`'s floor-scaling + the `bricks = max(1, floor(floor/10))` cases;
+`currencyDropForKill`'s floor-scaling + the `bricks = max(1, floor(floor/10))` cases;
 `findStaticCreature`'s standalone-hit / biome-pool-hit / miss branches).
 
 `store.test.ts` — the brief's own named `descend()` integration test, covering every item on its
@@ -1358,6 +1361,41 @@ Full Phase 1–3 + Slice A–F engine suite re-verified byte-identical (this sli
 existing engine call site's behavior — see the two additive-only engine changes below).
 `lint` / `format:check` / `build` all clean.
 
+### PR review fixes (design-agent review, actioned before merge)
+
+Four items, reviewed against the docs on `main` (not the PR's own claims):
+
+1. **Currency banks per kill, not per fight won.** `rewards.ts`'s `currencyDropForFightWin`
+   (below) was renamed `currencyDropForKill`; `store.ts`'s `descend()` moved the currency
+   accumulation into the per-`CreatureDied` loop, alongside soul%/XP banking, instead of after
+   each fight's win check. GAME_DESIGN §7 and CONVENTIONS both group soul%/XP/currency as
+   banking per kill-event, never held pending the fight's outcome — the initial submission's
+   "doc tension" framing (below, superseded) misread GAME_DESIGN §4's "independent of which
+   specific creature was defeated" as scoping to currency generally, when that clause actually
+   scopes to recipe drops; per-kill and creature-independence aren't in tension (a flat per-kill
+   amount gives both).
+2. **New regression test** (`store.test.ts`, `descend()`): clears floor 1, then `descend(2)`
+   (`enemyPartySize(2) = 2`, so a kill and a wipe can land in the SAME fight) with a fodder enemy
+   the player kills on round 1 and a slower-but-overwhelming enemy that then one-shots the
+   player — proves the fodder kill's soul%/XP/currency bank despite that fight being a loss.
+   Floor 1's 1-enemy fights couldn't distinguish per-kill from per-fight-won banking (a win
+   always had exactly one kill, a loss always had zero).
+3. **New regression test** (`store.test.ts`): proves `resolveSpecializationEffects`'s output
+   actually reaches `createCombat`'s `partyWidePlayerEffects`, not just that the wiring compiles
+   — an identical fixture fight loses with an empty `perkSpend` and wins once a large
+   `stat-modifier` perk is purchased (`perkSpend` set directly via `setState`, since no
+   `purchasePerk` action exists — still correctly out of scope).
+4. **Fail loud on an unresolved enemy kill.** `descend()`'s reward loop's `!staticRef` branch (a
+   dead enemy whose derived static id doesn't resolve to any known static creature) now throws a
+   descriptive error instead of `continue`-ing silently — every generated enemy is derived from
+   static data by construction, so a miss there means the engine's id format and this store's
+   `-${side}-${slot}` suffix-stripping have drifted apart; a future format change should surface
+   loudly, not vanish rewards silently. The sibling `!deadEnemy` branch (a player-side death, not
+   a reward source) is unchanged, still a plain `continue`.
+
+`npm run test` — **494/494** across 73 files (up from the pre-fix 492 — the two new regression
+tests above). `lint` / `format:check` / `build` re-verified clean after the fixes.
+
 ### Two small additive engine changes (own ASSUMPTIONs, not pinned by the brief)
 
 Both are new, optional-consumer, parked-balance placeholders in the same family as existing
@@ -1377,9 +1415,11 @@ entries in their files — no existing export's signature changed, no golden-aff
 
 ### Notable decisions surfaced during implementation (flag for review before H1)
 
-- **The currency-per-kill vs. currency-per-floor doc tension** (above, `rewards.ts`'s own
-  comment) — resolved as "per fight won," not silently picked either way. Needs explicit
-  sign-off; H1+ content shouldn't assume currency is creature-keyed.
+- ~~**The currency-per-kill vs. currency-per-floor doc tension**~~ — **resolved in the PR review
+  fixes above**: currency banks per kill (same as soul%/XP), stays creature-independent (a flat
+  per-kill amount, no rarity skew) per the corrected reading of GAME_DESIGN §4's "independent of
+  which specific creature was defeated" clause (scoped to recipe drops, not currency generally).
+  Not merely accepted as the initial submission's "per fight won" call — actually changed.
 - **`collection`'s key type** — the brief's own `Map<CreatureId, Instance[]>` shorthand is read
   as the STATIC creature id (a plain string), never the engine's branded per-fight `CreatureId`
   — flagged inline in `ids.ts` and `store.ts`'s `GameState.collection` doc comment.
