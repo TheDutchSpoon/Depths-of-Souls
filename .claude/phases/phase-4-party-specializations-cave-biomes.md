@@ -1620,6 +1620,71 @@ kept explicitly in sync with the numbers in `traits.ts`/`spells.ts` -- if the tw
 the source file wins and the doc is stale. Includes the full spell table (missing from the
 initial submission, flagged alongside the Drone/file-organization items above).
 
+### Follow-up pass: numeric/mechanic adjustments + a new ResponseTarget
+
+Flagged by the design owner after the slice above shipped (still ahead of this slice's own
+formal review), addressed in the same working tree before merge:
+
+- **New primitive**: `ResponseTarget` gains `{ kind: 'all-allies-of-species' }`
+  (`effect-types.ts`), the species-scoped mirror of `all-allies` -- resolved in
+  `resolveResponseTargets` (`resolution.ts`) via `livingAlliesOf(self, state)` further filtered to
+  `c.speciesId === self.speciesId` (the same filter `resolveCount`'s `living-allies-of-species`
+  count kind already uses, now as a target list). First (and so far only) consumer: Swarmhive
+  Queen, below.
+- **Mechanic redesigns** (not just numeric retuning) -- EVERY amplifier that previously combined
+  its species-mates' effects, in any form (full-power or diluted), now has its own distinct
+  mechanic instead. This landed in two passes: the first pass fixed Queen/Pollenlord/Ironjaw (the
+  full-power duplicates) and, on a first read, judged Grovekeep/Broodwarden's DILUTED hybrids
+  (each half at a reduced rate vs. the dedicated specialist) acceptably different in kind --
+  that judgment call was wrong and got corrected on a second follow-up: dilution doesn't change
+  that the mechanic is still "do both siblings' jobs," so Grovekeep/Broodwarden (and Dozer, its
+  Lullpollen counterpart, missed in the first pass entirely) were redesigned too. Final shapes:
+  **Queen** (was frozen-at-fight-start count-scaled self-buff, same shape as Striker at a bigger
+  number) is now `on-turn-start -> apply-stat-modifier(all-allies-of-species, attack, +10%)`,
+  repeating every round she acts and buffing the whole team, not just herself. **Pollenlord** (was
+  two fight-start team buffs, Speed + Attack) is now a single `on-turn-start` Speed buff, repeating
+  every round instead of firing once. **Ironjaw** (was Lure's on-provoke-Defend + Jaws'
+  on-damage-taken retaliate, both diluted) is now `on-turn-start -> apply-stat-modifier(self,
+  defence, +20%)`, a self-ramping wall unrelated to either sibling; its `SpeciesCreature` entry
+  (`overgrowth.ts`) dropped `always-provoke` for `always-attack` since its trait no longer needs
+  Provoke to fire. **Weaver** changed from `on-attack -> apply-status(triggering-source, web)` to
+  `on-turn-start -> apply-status(random-enemy selector, web)` -- decoupled from attacking
+  entirely. **Drone**'s on-death strike retargeted from `triggering-source` (its own killer) to a
+  `random-enemy` selector. **Broodwarden** (was Weaver's own Web-application + a live count-scaled
+  bonus hit) dropped the Web-application half entirely -- it now ONLY lands the count-scaled bonus
+  hit (`spellPower` 0.2 -> 0.25, since it lost a whole half of its kit), a pure "payoff of the
+  payoff" that depends entirely on its species-mates having done their own jobs. **Grovekeep** (was
+  Sapling's self-growth + Elder's single-ally heal, both diluted) is now a single
+  `on-fight-start -> apply-stat-modifier(all-allies, health, +15%)` -- a one-time, team-wide effect
+  neither sibling does. **Dozer** (Lullpollen, was Sleeper's chance-to-Sleep + Reaper's flat
+  conditional bonus, both diluted) mirrors Broodwarden's fix exactly, for Sleep instead of Web: a
+  single `on-attack -> deal-damage(triggering-source, scalingStat attack, spellPower 0.25,
+  magnitudeSource: count 'enemies-with-status' sleep)`, no Sleep-application, no flat bonus.
+- **Numeric retuning** (species-locked.md/CONVENTIONS still satisfied, only the parked-balance
+  numbers themselves moved): Striker 10% -> 20% per hive-mate; Sapling 5% -> 10% max-Health/round;
+  Elder 10% -> 15% heal; Duster 15% -> 25% team Speed. (Grovekeep's own former 4%/15% hybrid
+  numbers are moot -- replaced outright by the redesign above, not retuned.)
+- **Spell rebalance** (`spells.ts`): a new damage-spell power-coefficient convention -- a
+  single-target damage-only spell ~100% Intelligence, ~80-90% if it also applies a status; an AOE
+  damage-only spell ~50%, ~30-40% if it also applies a status. Applied: Thorn Lash/Root
+  Grasp/Stinger Swarm (single, no upside) 0.5/0.4/0.45 -> 1.0 each; Vine Snare (single + Web)
+  0.3 -> 0.85; Pollen Cloud (AOE + Sleep) 0.25 -> 0.35. Violence's own second entry, Snapping Bite
+  (a second plain-damage spell -- flagged: no affinity should carry two), was replaced outright
+  by **Weakening Bite** (`payload: 'stat-modifier'`, `-20%` enemy Defence, permanent) rather than
+  retuned -- `data/traits.ts`'s guardrail-style additive discipline doesn't apply to a same-slice,
+  not-yet-merged spell, so the swap is a straight replacement, not an addition alongside it.
+- **Doc pass**: `.claude/content/overgrowth.md` gained an explicit Affinity column on every
+  species table (previously only inferrable from `overgrowth.ts`) and replaced "strikes" with
+  "attacks" throughout for player-facing consistency; Snapjaws' Lure/Ironjaw wording simplified
+  from "enters a defensive stance (as if it had Defended)" to plainly "also Defends" -- confirmed
+  `grant-action-state`'s `defending: true` IS the real Defend flag, not a distinct mechanic, so
+  the hedge was misleading, not merely verbose.
+
+`npm run test` -- 509/509 unchanged (one golden fixture, `golden-overgrowth-web-exploit`, was
+re-derived for Weaver's new on-turn-start/random-enemy shape and Web's own break-free roll now
+firing at Ambusher's turn-start once Web exists on the board -- see that fixture's own header
+comment for the full two-draw RNG trace). `lint` / `format:check` / `build` all clean.
+
 ### Deliberately out of scope for Slice H1 (later slices)
 
 Glimmerdark / Rotcap Hollow real content (H2/H3, including Web's own two-way turn-order-status

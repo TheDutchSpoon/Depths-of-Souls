@@ -533,6 +533,12 @@ function resolveResponseTargets(
       return livingEnemiesOf(getCreature(state, context.self), state).map((c) => c.id)
     case 'all-allies':
       return livingAlliesOf(getCreature(state, context.self), state).map((c) => c.id)
+    case 'all-allies-of-species': {
+      const self = getCreature(state, context.self)
+      return livingAlliesOf(self, state)
+        .filter((c) => c.speciesId !== undefined && c.speciesId === self.speciesId)
+        .map((c) => c.id)
+    }
     case 'selector': {
       const id = resolveTargetSelector(
         target.selector,

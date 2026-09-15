@@ -93,6 +93,13 @@ export type ResponseTarget =
   // team-wide buff): the ally-side mirror of all-enemies, resolved via livingAlliesOf(self) --
   // "ally" includes the firing creature itself, matching every other ally-side convention.
   | { readonly kind: 'all-allies' }
+  // Phase 4 Slice H1 (Swarmhive Queen's "increase Attack of every Swarmhive ally every turn"):
+  // the species-scoped mirror of all-allies -- resolved via livingAlliesOf(self) further filtered
+  // to creatures sharing the firing creature's own speciesId (same filter resolveCount's
+  // 'living-allies-of-species' count kind already uses, now as a target list instead of a count).
+  // Includes the firing creature itself, matching every other ally-side convention. Inert (empty)
+  // for a bearer with no speciesId set, same dormant-until-wired precedent as the count kind.
+  | { readonly kind: 'all-allies-of-species' }
   | { readonly kind: 'selector'; readonly selector: TargetSelector }
   // Phase 4 Slice B / ASSUMPTION 7: v1 TargetSelectors are alive-only, so `revive` (whose target
   // must be DEAD) needs its own resolution path -- a random dead member of the firing creature's

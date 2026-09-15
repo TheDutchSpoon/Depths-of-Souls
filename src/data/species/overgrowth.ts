@@ -36,10 +36,10 @@ import {
   POLLEN_CLOUD,
   REGROWTH,
   ROOT_GRASP,
-  SNAPPING_BITE,
   STINGER_SWARM,
   THORN_LASH,
   VINE_SNARE,
+  WEAKENING_BITE,
   WILD_VIGOR,
 } from '../spells'
 import {
@@ -70,7 +70,7 @@ import {
 
 export const OVERGROWTH_SPELLS = [
   THORN_LASH,
-  SNAPPING_BITE,
+  WEAKENING_BITE,
   VINE_SNARE,
   POLLEN_CLOUD,
   ROOT_GRASP,
@@ -257,7 +257,9 @@ export const SNAPJAW_IRONJAW: SpeciesCreature = {
   id: 'snapjaw-ironjaw',
   affinity: 'violence',
   baseStats: { health: 20, attack: 22, intelligence: 10, defence: 22, speed: 12 },
-  defaultScriptId: 'always-provoke',
+  // Its own trait fires on-turn-start regardless of chosen action (unlike the old provoke-gated
+  // shape) -- attacks while it ramps, rather than tying up a turn provoking.
+  defaultScriptId: 'always-attack',
   innateTraitIds: [SNAPJAW_IRONJAW_TRAIT.id],
   rarity: 'rare',
 }
