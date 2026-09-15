@@ -4,3 +4,4 @@
 // never a flat spell list), so it wasn't recreated.
 export * from './core'
 export * from './overgrowth'
+export * from './glimmerdark'
