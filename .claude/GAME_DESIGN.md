@@ -124,7 +124,11 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
     interaction spans, not how shallow it is. Biomes 1–3 use **self-contained** or
     **within-species-closed**, **single-condition** interactions (each species is authored as a
     closed mini-system); **cross-species, chained, and multi-condition** combos are deferred to
-    **biome 4+**. There is **no difficulty ramp across biomes 1–3** — the enemy-level curve carries
+    **biome 4+**. This closes each species' **trait kit**, not the shared **spell pool** — a spell
+    may apply any status (incl. another species' signature status like Web/Sleep); spell-supplied
+    statuses are a shared primitive, not a deferred cross-species *trait*-chain, so a species
+    amplifier that reads "enemies currently [status]" may legitimately have no source present in
+    a given fight. There is **no difficulty ramp across biomes 1–3** — the enemy-level curve carries
     escalation; only interaction *scope* widens with later biomes.
   - **Seed biomes (Phase 4):** the first three authored biomes are **The Overgrowth** (lush,
     sunlit entrance), **Glimmerdark** (light thins, life adapts, bioluminescence), and **Rotcap

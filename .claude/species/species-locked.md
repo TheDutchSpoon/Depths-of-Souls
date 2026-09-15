@@ -13,6 +13,15 @@ Target per biome: **≥6 species × ≥3 creatures**, biome affinity-complete, s
 **Design principle (locked):** *every status has an intrinsic effect — no inert markers.* A status
 must **do** something on its own; it *may additionally* be a payoff hook a species exploits.
 
+**Closed-mechanic scope (clarified — spells excepted):** the "closed / no cross-species combos in
+biomes 1–3" rule governs a **species' own trait kit** (each species is a self-contained
+trap→exploit). It does **not** restrict the shared **spell pool**: a spell may apply any status,
+including another species' signature one (a Wit spell applying Web or Sleep is fine). Statuses are
+shared primitives, so a "+% / bonus vs enemies currently [Webbed/Sleeping]" amplifier may be
+authored **inert-without-a-source** — that source can be a species-mate *or* a spell, present or
+not in a given fight. Deferred to biome 4+ are cross-species *trait*-chains, not spell-supplied
+statuses.
+
 **Death-reset rule (locked):** on death, a creature's accumulated buffs, debuffs, statuses, and
 stat-mods are **wiped** — if revived, it returns at **battle-start baseline** (no ramp preserved).
 Makes death meaningful and revive a second chance, not a buff-preserving undo. Applies to all deaths.
@@ -24,7 +33,7 @@ Makes death meaningful and revive a second chance, not a buff-preserving undo. A
 
 | Species | Affinity lean | Closed mechanic | Roles (illustrative) | Uses |
 |---|---|---|---|---|
-| **Spiders** | Wit | Trap → exploit | Weaver (`on-attack → apply Web`), Ambusher (`+% dmg to Webbed`), Broodmother (rewards multiple Webs out) | **Web** status (break-free: Slice E2) · Ambusher exploit needs target-conditional damage (Slice E2) |
+| **Spiders** | Wit | Trap → exploit | Weaver (`on-turn-start → apply Web to a random enemy`), Ambusher (`+% dmg to Webbed`), Broodwarden (bonus hit scaling with Webbed-enemy count) | **Web** status (break-free: Slice E2) · Ambusher exploit needs target-conditional damage (Slice E2) |
 | **Swarmhive** | Violence | Strength in numbers | Drone (cheap body), Striker (scales per hive-mate **in the team**), Queen (anchor, scales hardest) | **Count-scaling** · needs `speciesId` wired + stat-modifier `magnitudeSource` (Slice E2) |
 | **Treants** | Vitality / Endurance | Health engine (grows over time) | Sapling (`on-round-end → permanent +max-HP / Regen`), Elder (huge sustained wall — heals the line / scales off own max HP) | — |
 | **Pollinators** | Wit / Vitality | Team-buff engine (non-health buffs) | Duster (spreads permanent non-health stat-buffs — Speed/Attack/etc.), Beneficiary (capitalizes on a buffed team) | Count-scaling (reuse) |
