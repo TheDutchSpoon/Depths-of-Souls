@@ -1437,6 +1437,76 @@ describe('all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbare
   })
 })
 
+describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Queen)', () => {
+  it("applies to every living ally SHARING the firing creature's speciesId, INCLUDING itself", () => {
+    const player = makeParty('player', [
+      { id: 'queen', defence: 10, speciesId: 'swarmhive' },
+      { id: 'hive-mate', defence: 10, speciesId: 'swarmhive' },
+      { id: 'other-species', defence: 10, speciesId: 'treants' },
+      { id: 'dead-hive-mate', defence: 10, speciesId: 'swarmhive', alive: false },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', speciesId: 'swarmhive' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'all-allies-of-species' },
+        stat: 'defence',
+        factor: 1.1,
+      },
+      'swarmhive-queen-fixture',
+      { self: createCreatureId('queen') },
+      state,
+      events,
+      newCascade(),
+    )
+    for (const id of ['queen', 'hive-mate']) {
+      const c = result.state.playerParty.find((x) => x.id === createCreatureId(id))!
+      expect(getEffectiveStat(c, 'defence')).toBe(11)
+    }
+    // A different species on the SAME side is never touched, even though it's a living ally.
+    const otherSpecies = result.state.playerParty.find(
+      (x) => x.id === createCreatureId('other-species'),
+    )!
+    expect(otherSpecies.activeEffects).toEqual([])
+    // A dead hive-mate is skipped.
+    const deadHiveMate = result.state.playerParty.find(
+      (x) => x.id === createCreatureId('dead-hive-mate'),
+    )!
+    expect(deadHiveMate.activeEffects).toEqual([])
+    // Never touches the enemy side, even a same-speciesId enemy.
+    expect(result.state.enemyParty[0]!.activeEffects).toEqual([])
+  })
+
+  it('is empty for a bearer with no speciesId set (dormant, matching living-allies-of-species)', () => {
+    const player = makeParty('player', [
+      { id: 'bearer', defence: 10 }, // speciesId left unset
+      { id: 'ally', defence: 10, speciesId: 'swarmhive' },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'all-allies-of-species' },
+        stat: 'defence',
+        factor: 1.1,
+      },
+      'swarmhive-queen-fixture',
+      { self: createCreatureId('bearer') },
+      state,
+      events,
+      newCascade(),
+    )
+    expect(events.filter((e) => e.type === 'StatModifierApplied')).toHaveLength(0)
+    for (const c of result.state.playerParty) {
+      expect(c.activeEffects).toEqual([])
+    }
+  })
+})
+
 describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
   const LAST_STAND: Trait = {
     id: 'last-stand-fixture',

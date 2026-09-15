@@ -1,13 +1,18 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–G done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+Status: **in progress — Slices A–H1 done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
 C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
 post-design-feedback (ally target-selector completion); E2: 424/424 tests (its own phase-record
 entry was filled in retroactively during F — see that section); F: 470/470 tests,
 post-review-amendment (actionKind scoping, taken-reduction, StatusDef.defaultDuration,
 SpeciesCreature.equippedSpells); G: 494/494 tests, post-review-fix (currency banks per kill not
 per fight won, a mid-fight-wipe reward-banking regression test, a perk-plumbing regression test,
-fail-loud on an unresolved enemy kill); lint/format/build green throughout). Built per
+fail-loud on an unresolved enemy kill); H1: 517/517 tests, real Overgrowth content + one small
+engine addition (`all-allies-of-species` ResponseTarget), post-PR-#58-review (Queen/Pollenlord/
+Ironjaw/Broodwarden/Grovekeep/Dozer redesigned unique per-amplifier, Drone given a real mechanic,
+traits/spells moved to the central `traits.ts`/`spells.ts` registries, the player-facing content
+doc gained exact numbers + a spell table, and goldens added for all six redesigned amplifiers +
+the new ResponseTarget); lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
@@ -1445,8 +1450,320 @@ validation (the brief names only `setSpec` as a `perkSpend`-touching action; a `
 action with budget-checking was deliberately NOT built — out of the brief's named scope, and its
 exact failure-mode semantics (throw? clamp? no-op?) aren't specified anywhere).
 
+## Slice H1 — The Overgrowth (floors 1–10)
+
+Real `src/data/` content for Biome 1, against `.claude/species/species-locked.md`'s own table --
+built entirely on primitives already proven through Slice E2. Per the plan's own "stop and amend
+the relevant earlier slice" discipline: nothing in the INITIAL roster needed anything not already
+built (confirmed while authoring). **Correction**: this stopped being true once the design-owner
+follow-up passes landed (below) -- Swarmhive Queen's redesign needed one small, genuinely new
+engine primitive, `{ kind: 'all-allies-of-species' }` (a `ResponseTarget` addition to
+`effect-types.ts` + one resolver case in `resolution.ts`). The slice is content-and-one-primitive,
+not pure content -- see "Follow-up pass" below for the addition itself and PR #58's own review for
+where an earlier draft of this section overstated "zero engine changes."
+
+### What was built
+
+New file `src/data/species/overgrowth.ts`: 6 species x 3 creatures (18 total), following
+species-locked.md's own "roles ... enabler / payoff / amplifier" framing uniformly across every
+species (common = sets the mechanic up, uncommon = benefits from it, rare = usually both at once)
+-- per the locked design principle ("rarity governs spawn-frequency + soul-gain only, NOT power"),
+each creature's stat BUDGET stays comparable within its species regardless of rarity. This file is
+COMPOSITION ONLY (`Species`/`SpeciesCreature`/`BiomeData` + boss data) -- see the follow-up fix
+below for where the actual `Trait`/`Spell` object definitions live and why.
+
+- **Spiders** (Wit lean; Broodwarden stamped Instinct, coverage): Weaver (`on-attack` -> apply
+  Web, unconditional), Ambusher (`conditional-damage-bonus`, +40% dealt vs a Webbed target --
+  Slice E2's `subject: 'target'` condition, folded straight into the hit), Broodwarden (Webs +
+  a second on-attack bonus hit scaled LIVE by the current Webbed-enemy count via
+  `deal-damage.magnitudeSource` -- "rewards multiple Webs out" read as a live recompute, not a
+  frozen-at-apply one, needing zero new primitive).
+- **Swarmhive** (Violence lean; Queen stamped Endurance, coverage): Drone (follow-up fix, below --
+  `on-death -> deal-damage(triggering-source, 0.3x Attack)`, a small parting sting;
+  species-locked.md calls Drone a "cheap body," but the first draft gave it only a flavor +10%
+  Speed stat-modifier with no real mechanic, contradicting "no trait-less filler"), Striker/Queen
+  (`on-fight-start -> apply-stat-modifier(self, attack,
+  magnitudeSource: living-allies-of-species)` -- the EXACT Slice E2-decided shape CONVENTIONS
+  names for this species; `speciesId` is threaded automatically by `generateFloor`'s existing
+  `materializeCreature(..., species.id, ...)` call, so no engine change was needed here either).
+- **Treants** (Vitality/Endurance lean): Sapling (`on-round-end -> apply-stat-modifier(self,
+  health)`, compounding growth), Elder (`on-round-end -> heal(lowest-hp-ally, scalingStat:
+  health)` -- the canonical Slice E2 example, now real), Grovekeep (both, smaller individual
+  rates).
+- **Pollinators** (Wit/Vitality lean): Duster (`on-fight-start -> apply-stat-modifier(all-allies,
+  speed)`), Beneficiary (`cross-stat` fromStat speed -> attack, so a Duster-buffed team hits
+  harder through it specifically), Pollenlord (both a Speed AND Attack team buff; the biome's
+  ONE cast-role creature, `defaultScriptId: 'always-cast'`, exercising `generateFloor`'s real
+  spell-loadout roll against real wit-affinity spells for the first time).
+- **Snapjaws** (Violence/Endurance lean): Lure (`on-provoke -> grant-action-state(self,
+  defending: true)`), Jaws (`on-damage-taken -> deal-damage(triggering-source, 0.6x Attack)`,
+  a bigger retaliate than the Phase 3 representative RETALIATE), Ironjaw (both).
+- **Lullpollen** (Wit/Instinct lean; Reaper/Dozer stamped Instinct, coverage): Sleeper
+  (`on-attack`, `chancePercent: 40` -> apply Sleep), Reaper (`conditional-damage-bonus`, +50%
+  dealt vs a Sleeping target), Dozer (both, smaller rates).
+
+10 spells (`OVERGROWTH_SPELLS`), 2 per affinity: THORN_LASH/SNAPPING_BITE (violence, damage),
+VINE_SNARE (wit, damage + applies Web -- a second, independent Web producer alongside Spiders'
+own traits), POLLEN_CLOUD (wit, AOE + applies Sleep), ROOT_GRASP (endurance, `scalingStat:
+'defence'`), BRAMBLE_WARD (endurance, ally-AOE stat-modifier buff), REGROWTH (vitality,
+ally-single heal, `scalingStat: 'health'`), WILD_VIGOR (vitality, ally-single stat-modifier buff),
+STINGER_SWARM (instinct, damage), HOWLING_INSTINCT (instinct, ally-AOE stat-modifier buff) --
+between them exercising every Slice E support-spell-model field (`targetSide`/`payload`/
+`statModifier`/`scalingStat`) against real content for the first time.
+
+New statuses (`src/data/statuses.ts`, additive): **WEB** (`turn-order-status`, `position: 'last'`,
+`breakChancePercent: 10`, `defaultDuration: 3`, `cap: 1`) and **SLEEP** (`condition-status` with
+TWO triggers -- `on-turn-start -> suppress-action` (Stun's own mechanism) plus `on-damage-taken ->
+remove-status(self, sleep)` for the wake-up; `defaultDuration: 3`, `cap: 1`). Both are the first
+real (non-fixture) consumers of their respective Slice C/E2-built mechanisms.
+
+**The Broodmother** (floor-10 boss, `BROODMOTHER`/`BROODMOTHER_TRAIT`/`BROODMOTHER_ADDS`/
+`BROODMOTHER_BOSS_ID`): an elevated `SpeciesCreature`-shaped Instance (never spawn-pool-drawn),
+authored as DATA only -- her signature trait reuses the SAME on-attack
+`deal-damage.magnitudeSource` trick as Broodwarden above, keyed on `living-allies-of-species`
+instead of enemies-with-status(web), so her bonus hit is a LIVE reading of her own living
+spiderling-add count ("kill adds to weaken her" -- this is why she does NOT use Swarmhive's
+frozen-at-apply `apply-stat-modifier` shape, despite superficially looking like the same
+"count-scales off allies" idea). A second effect, `on-round-end` at `chancePercent: 40`, Webs the
+whole party. Her adds (`BROODMOTHER_ADDS`) are real Spider-roster members (Weaver + Ambusher),
+sharing `SPIDERS_SPECIES_ID` with her by convention (whoever eventually materializes her passes
+that same `speciesId` string to both her and her adds -- see the scope-boundary ASSUMPTION below).
+
+`src/data/biomes.ts`: `BIOMES[0]` (floor decade 1, floors 1-10) now returns the real
+`OVERGROWTH_BIOME` in place of Slice A's placeholder; slots 2-10 are untouched (still the Slice A
+placeholder shape, per the guardrail -- H2/H3 replace slots 2/3 the same way). `data/traits.ts`'s
+`STOCK_TRAITS` gains the 18 species traits + `BROODMOTHER_TRAIT` (additive, per the guardrail --
+the Phase 3 representative set and Slice F's starter traits are untouched).
+
+### Follow-up fix: where species-authored content lives
+
+Flagged by the design owner on a first look at the initial submission (ahead of this slice's own
+formal review), not silently accepted: the initial submission defined all 18 traits and all 10
+spells directly INSIDE `data/species/overgrowth.ts`, mirroring Slice F's `starters.ts` (which
+defines `ARCANE_BOLT` and its 4 starter traits inline the same way). That's a real, already-shipped
+precedent -- but it's also inconsistent with how this SAME slice placed Web/Sleep (correctly, in
+the central `data/statuses.ts`, alongside every other status) -- the same *kind* of content (a
+definition, referenced by id/object from creature data) ending up in two different homes depending
+on which slice touched it. That inconsistency, not merely "a species folder feels like an odd
+place for a Spell," is the actual problem.
+
+**Decided: traits/spells/statuses all live in their one central registry file
+(`traits.ts`/`spells.ts`/`statuses.ts`), always.** Species files (`starters.ts`,
+`overgrowth.ts`, and H2/H3's future `glimmerdark.ts`/`rotcap-hollow.ts`) hold ONLY composition --
+`Species`/`SpeciesCreature`/`BiomeData`/boss data -- and reference trait/spell objects imported by
+name from the central files, the same way they already reference a status by its id string. Three
+reasons, in order of weight:
+
+1. **One place to find "every trait in the game."** Under the old pattern, that question's answer
+   was "traits.ts, PLUS every species file that happens to define its own." That gets WORSE, not
+   better, as biomes 2-10 each add their own trait/spell pile into their own file -- eventually
+   content is scattered across a dozen files with no single list, and "is this trait already
+   defined somewhere" becomes a grep across the whole `data/` tree instead of one file.
+2. **Removes the one exception instead of adding a second one.** Statuses already followed the
+   central-registry rule with zero pushback (nobody suggested Web/Sleep belonged inside
+   `overgrowth.ts`). Extending the same rule to traits/spells makes the codebase's OWN rule
+   internally consistent, rather than leaving traits/spells as a standing exception content
+   authors have to remember.
+3. **Matches CLAUDE.md's own directory sketch** ("`data/` creatures, traits, spells, biomes,
+   facilities as data") -- read literally, `traits.ts`/`spells.ts` are meant to be the canonical
+   homes for that content TYPE; which creature references which trait/spell is a separate,
+   compositional concern.
+
+**Scope: fixed going forward (this slice), `starters.ts` deliberately NOT retrofitted in the same
+PR.** `starters.ts` already merged in Slice F, and Slice G's store/tests reference its exports by
+name -- moving its consts to `traits.ts`/`spells.ts` is a safe, pure reorg (same exported names,
+zero behavior change) but it's churn in an already-shipped file that deserves its own small,
+focused PR rather than being bundled into H1's content diff. Flagged here as a known, deliberate
+follow-up, not an oversight -- do this before H2 lands another species file, so the "two patterns
+coexist" window stays as short as possible.
+
+**Mechanical result of this amendment**: `data/traits.ts` gained the 18 Overgrowth trait consts +
+`BROODMOTHER_TRAIT` directly (same flat-list-then-`STOCK_TRAITS`-array shape every Phase 3 trait
+already uses, not a spread-in import); `data/spells.ts` gained the 10 Overgrowth spell consts
+directly (same shape `EMBER_LANCE`/`CINDER_NOVA`/`VENOM_BOLT` already use); `data/species/
+overgrowth.ts` shrank to composition only, importing every `Trait`/`Spell` object it references by
+name (so `SpeciesCreature.innateTraitIds` can still read `SOME_TRAIT.id` with full type/refactor
+safety, not a bare string literal) and still exporting `OVERGROWTH_SPELLS` (a `data/spells.ts`
+subset grouped for this biome's own `BiomeData.spellPool`). One test dropped as redundant by
+construction (`overgrowth.test.ts`'s "OVERGROWTH_TRAITS are all registered in TRAIT_REGISTRY" --
+trivially true now that the trait consts live inside `traits.ts` itself, not appended via import).
+
+### ASSUMPTION (scope boundary, flagged not silently built)
+
+Actually *running* the Broodmother's fight (assembling her + her adds into a hardcoded encounter,
+then calling the store's existing `recordBossKill`) is deliberately **not** built in this slice --
+no such "boss encounter runner" exists yet for any boss (Slice G's store ships
+`recordBossKill`/`bossesCleared` as state only, the same way the Unicorn's own scripted-intro
+runner was its own dedicated Slice G store action, not automatic). This slice's own checklist item
+only asks to author the boss as an elevated Instance + signature trait(s) + adds; the runner is
+future UI/store wiring.
+
+### Tests
+
+**509/509** (up from Slice G's 494 -- 15 net new: the follow-up fix above dropped one
+redundant test) across 73 files (up from 71 -- 2 new: a loader/shape test,
+`data/species/overgrowth.test.ts` -- every creature's trait reference resolves in
+`TRAIT_REGISTRY`, base stats fall in the 10-30 range, the roster is affinity-complete across all
+5 affinities, the one cast-role creature has >=1 affinity-matched spell in the pool, every
+spell-applied status resolves in `STATUS_REGISTRY`, the Broodmother's adds are real Spider-roster
+members -- and one hand-derived golden pair, `golden-overgrowth-web-exploit`, proving the
+biome's signature combo (Weaver Webs its target -> Ambusher's real, shipped `conditional-damage-
+bonus` trait lands +40% on that same Webbed target, `20.2 -> 28.28 (floored 28)`) end-to-end
+through `createCombat`/`resolveFight` against the REAL registered content, now imported from
+`traits.ts` per the follow-up fix above (matching the Slice F starter-golden precedent).
+`data/biomes.test.ts` updated in place (not a new file) to assert slot 1 is the real, non-empty
+Overgrowth biome and slots 2-10 keep the Slice A placeholder shape. Full Phase 1–3 + Slice A–G
+suite re-verified byte-identical (confirmed via a clean `git stash -u` baseline run: 494/494
+across 71 files, unchanged) -- as of THIS submission, the slice touched no engine file at all,
+only `src/data/` (**no longer true of the slice's final state** -- the design-owner follow-up
+pass below adds one engine primitive; see that section's own final test count, 517/517, which
+supersedes the count in this paragraph). `lint` / `format:check` / `build` all clean at this point
+in the slice's history.
+
+### Player-facing content doc
+
+`.claude/content/overgrowth.md` -- written for a future in-game tooltip/reference, not as a
+narrative summary: every trait/spell is one literal sentence with its exact number baked in
+("When this creature attacks, it applies Web to its target." / "At the end of every round, this
+creature heals its lowest-HP ally for an amount equal to 10% of its own effective Health."),
+kept explicitly in sync with the numbers in `traits.ts`/`spells.ts` -- if the two ever disagree,
+the source file wins and the doc is stale. Includes the full spell table (missing from the
+initial submission, flagged alongside the Drone/file-organization items above).
+
+### Follow-up pass: numeric/mechanic adjustments + a new ResponseTarget
+
+Flagged by the design owner after the slice above shipped (still ahead of this slice's own
+formal review), addressed in the same working tree before merge:
+
+- **New primitive**: `ResponseTarget` gains `{ kind: 'all-allies-of-species' }`
+  (`effect-types.ts`), the species-scoped mirror of `all-allies` -- resolved in
+  `resolveResponseTargets` (`resolution.ts`) via `livingAlliesOf(self, state)` further filtered to
+  `c.speciesId === self.speciesId` (the same filter `resolveCount`'s `living-allies-of-species`
+  count kind already uses, now as a target list). First (and so far only) consumer: Swarmhive
+  Queen, below.
+- **Mechanic redesigns** (not just numeric retuning) -- EVERY amplifier that previously combined
+  its species-mates' effects, in any form (full-power or diluted), now has its own distinct
+  mechanic instead. This landed in two passes: the first pass fixed Queen/Pollenlord/Ironjaw (the
+  full-power duplicates) and, on a first read, judged Grovekeep/Broodwarden's DILUTED hybrids
+  (each half at a reduced rate vs. the dedicated specialist) acceptably different in kind --
+  that judgment call was wrong and got corrected on a second follow-up: dilution doesn't change
+  that the mechanic is still "do both siblings' jobs," so Grovekeep/Broodwarden (and Dozer, its
+  Lullpollen counterpart, missed in the first pass entirely) were redesigned too. Final shapes:
+  **Queen** (was frozen-at-fight-start count-scaled self-buff, same shape as Striker at a bigger
+  number) is now `on-turn-start -> apply-stat-modifier(all-allies-of-species, attack, +10%)`,
+  repeating every round she acts and buffing the whole team, not just herself. **Pollenlord** (was
+  two fight-start team buffs, Speed + Attack) is now a single `on-turn-start` Speed buff, repeating
+  every round instead of firing once. **Ironjaw** (was Lure's on-provoke-Defend + Jaws'
+  on-damage-taken retaliate, both diluted) is now `on-turn-start -> apply-stat-modifier(self,
+  defence, +20%)`, a self-ramping wall unrelated to either sibling; its `SpeciesCreature` entry
+  (`overgrowth.ts`) dropped `always-provoke` for `always-attack` since its trait no longer needs
+  Provoke to fire. **Weaver** changed from `on-attack -> apply-status(triggering-source, web)` to
+  `on-turn-start -> apply-status(random-enemy selector, web)` -- decoupled from attacking
+  entirely. **Drone**'s on-death strike retargeted from `triggering-source` (its own killer) to a
+  `random-enemy` selector. **Broodwarden** (was Weaver's own Web-application + a live count-scaled
+  bonus hit) dropped the Web-application half entirely -- it now ONLY lands the count-scaled bonus
+  hit (`spellPower` 0.2 -> 0.25, since it lost a whole half of its kit), a pure "payoff of the
+  payoff" that depends entirely on its species-mates having done their own jobs. **Grovekeep** (was
+  Sapling's self-growth + Elder's single-ally heal, both diluted) is now a single
+  `on-fight-start -> apply-stat-modifier(all-allies, health, +15%)` -- a one-time, team-wide effect
+  neither sibling does. **Dozer** (Lullpollen, was Sleeper's chance-to-Sleep + Reaper's flat
+  conditional bonus, both diluted) mirrors Broodwarden's fix exactly, for Sleep instead of Web: a
+  single `on-attack -> deal-damage(triggering-source, scalingStat attack, spellPower 0.25,
+  magnitudeSource: count 'enemies-with-status' sleep)`, no Sleep-application, no flat bonus.
+- **Numeric retuning** (species-locked.md/CONVENTIONS still satisfied, only the parked-balance
+  numbers themselves moved): Striker 10% -> 20% per hive-mate; Sapling 5% -> 10% max-Health/round;
+  Elder 10% -> 15% heal; Duster 15% -> 25% team Speed. (Grovekeep's own former 4%/15% hybrid
+  numbers are moot -- replaced outright by the redesign above, not retuned.)
+- **Spell rebalance** (`spells.ts`): a new damage-spell power-coefficient convention -- a
+  single-target damage-only spell ~100% Intelligence, ~80-90% if it also applies a status; an AOE
+  damage-only spell ~50%, ~30-40% if it also applies a status. Applied: Thorn Lash/Root
+  Grasp/Stinger Swarm (single, no upside) 0.5/0.4/0.45 -> 1.0 each; Vine Snare (single + Web)
+  0.3 -> 0.85; Pollen Cloud (AOE + Sleep) 0.25 -> 0.35. Violence's own second entry, Snapping Bite
+  (a second plain-damage spell -- flagged: no affinity should carry two), was replaced outright
+  by **Weakening Bite** (`payload: 'stat-modifier'`, `-20%` enemy Defence, permanent) rather than
+  retuned -- `data/traits.ts`'s guardrail-style additive discipline doesn't apply to a same-slice,
+  not-yet-merged spell, so the swap is a straight replacement, not an addition alongside it.
+- **Doc pass**: `.claude/content/overgrowth.md` gained an explicit Affinity column on every
+  species table (previously only inferrable from `overgrowth.ts`) and replaced "strikes" with
+  "attacks" throughout for player-facing consistency; Snapjaws' Lure/Ironjaw wording simplified
+  from "enters a defensive stance (as if it had Defended)" to plainly "also Defends" -- confirmed
+  `grant-action-state`'s `defending: true` IS the real Defend flag, not a distinct mechanic, so
+  the hedge was misleading, not merely verbose.
+
+`npm run test` -- 509/509 unchanged (one golden fixture, `golden-overgrowth-web-exploit`, was
+re-derived for Weaver's new on-turn-start/random-enemy shape and Web's own break-free roll now
+firing at Ambusher's turn-start once Web exists on the board -- see that fixture's own header
+comment for the full two-draw RNG trace). `lint` / `format:check` / `build` all clean.
+
+### PR #58 review (design agent): blockers fixed, phase record reconciled
+
+A real review pass, distinct from the design-owner's own pre-review follow-up notes above. Gates
+were already green and the additive invariant already held; two items were flagged as blockers
+before merge, both actioned:
+
+1. **Test coverage for `all-allies-of-species`** -- shipped with zero coverage in the follow-up
+   pass above. Added: two focused unit tests in `resolution.test.ts` (`all-allies-of-species
+   ResponseTarget` describe block) -- applies to every living ally SHARING the firing creature's
+   `speciesId`, INCLUDING itself; skips a same-side ally of a different species; skips the dead;
+   skips the enemy side entirely, even a same-`speciesId` enemy; is empty (zero
+   `StatModifierApplied`) for a bearer with no `speciesId` set. And a new hand-derived golden pair,
+   `golden-swarmhive-queen`, against Queen's REAL shipped trait (`SWARMHIVE_QUEEN_TRAIT`,
+   `TRAIT_REGISTRY`-sourced, not a fixture stand-in): 5 explicit `resolveTurn` steps across 2
+   rounds prove the buff lands on every living Swarmhive ally including Queen herself, skips a
+   same-side non-Swarmhive ally, skips an enemy sharing the same `speciesId` string (side-scoped,
+   not a bare string match), and COMPOUNDS round over round (`20 -> 22 -> 24.200000000000003`,
+   a fresh `StatModifierEffect` appended each firing, not a refreshed one).
+2. **Phase record reconciliation** -- this section and the H1 intro paragraph both asserted "zero
+   engine changes"/"touches no engine file at all," which the follow-up pass's own addition of
+   `all-allies-of-species` (`effect-types.ts` + `resolution.ts`) had already contradicted. Both
+   corrected in place (see the H1 intro's own "Correction" note and the Tests section's
+   superseded-count note) rather than silently rewritten, per this project's own "verify, don't
+   assert from memory" phase-docs-precision discipline.
+
+Also actioned, flagged "optional/recommended/low priority" in the review but done in the same
+pass since the six redesigned amplifiers (round 2 above) shipped with ZERO behavioral coverage of
+their own: five more hand-derived golden pairs, all against REAL shipped trait content --
+`golden-treant-grovekeep` (one-time team-wide +15% max Health at fight-start), `golden-pollinator-
+pollenlord` (recurring team +10% Speed, 2 rounds, compounding), `golden-snapjaw-ironjaw`
+(recurring self +20% Defence, 2 rounds, compounding, proven SELF-only), `golden-spider-
+broodwarden` and `golden-lullpollen-dozer` (the "payoff of the payoff" on-attack bonus hit,
+scaled by a LIVE count of 2 Webbed/Sleeping enemies -- proving the multiplication, not just
+presence/absence; Web/Sleep themselves set up via a fixture-only `on-fight-start` trait rather
+than a raw `activeEffects` preset, since `createCombat` recomputes `activeEffects` from
+`innateTraitIds` at fight-start and would silently wipe a raw preset; Dozer's own golden
+additionally surfaces Sleep's real wake-on-damage interaction -- the bonus hit itself wakes the
+target via `on-damage-taken -> remove-status(self)` before the main hit lands).
+
+**`npm run test` -- 517/517** (up from 509/509 -- 8 new: 2 focused unit tests +
+6 golden-pair `it` blocks) across **79 files** (up from 73 -- 6 new golden-pair files; each pair
+is a `.fixture.ts` + `.test.ts`, only the latter counts as a vitest file). `lint` / `format:check`
+/ `build` all clean. This is the slice's actual final state -- supersedes every earlier count in
+this H1 section.
+
+**Captured for a later slice, per the review's own request (not lost, not actioned here):**
+- **Broodmother boss-encounter runner contract**: her signature (`Swarm Call`'s
+  `living-allies-of-species` count-scaling) only works if the future runner materializes her and
+  her spiderling adds (`BROODMOTHER_ADDS`) with the SAME `speciesId` string
+  (`SPIDERS_SPECIES_ID`) passed to `materializeCreature`'s explicit `speciesId` parameter for
+  both. No data field enforces this today (the boss's own `SpeciesCreature` shape carries no
+  `speciesId` -- it's a `materializeCreature` call argument, not stored data), so it is currently
+  unenforceable and untested. Whichever future slice builds the boss-runner (or a dedicated
+  boss-runner brief, if one lands first) must pass `SPIDERS_SPECIES_ID` explicitly to both calls.
+- **`starters.ts` registry retrofit**: move its inline trait/spell consts into
+  `traits.ts`/`spells.ts`, closing the two-pattern window this slice's own earlier follow-up
+  fixed for `overgrowth.ts` (see "Follow-up fix: where species-authored content lives" above).
+  Flagged there as a deliberate, not-yet-done follow-up; the review repeats the same
+  recommendation, ideally before H2 lands another species file.
+
+### Deliberately out of scope for Slice H1 (later slices)
+
+Glimmerdark / Rotcap Hollow real content (H2/H3, including Web's own two-way turn-order-status
+sibling at Blindclaws' act-first pole); the Broodmother boss-encounter runner (see the ASSUMPTION
+above -- future UI/store wiring); the integration pass and this record's closing section (I).
+
 ## Next
 
-Slices H1/H2/H3 — real seed content (The Overgrowth, Glimmerdark, Rotcap Hollow), one PR per
-biome, replacing `data/biomes.ts`'s placeholder slots and wiring real `speciesId`s through
-`materializeCreature`. See `.claude/briefs/phase-4-implementation-plan.md`.
+Slice H2 — Glimmerdark (floors 11–20): Glowflies, Blindclaws, Resonants, Sparkeaters, Gloomjaws,
+Shellbacks; Glow + consume-stacks, turn-order status (Blindclaws' act-first pole, alongside H1's
+Web act-last), acted-before-target; boss: Leech Sovereign. Replaces `data/biomes.ts`'s
+`BIOMES[1]` slot. See `.claude/briefs/phase-4-implementation-plan.md`.
