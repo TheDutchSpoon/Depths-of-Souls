@@ -38,7 +38,9 @@ Rules:
   engine, doesn't leak into it.
 
 Output: a PR against `main`, a short note of anything that surfaced a spec
-question (so the docs get updated before the next slice), plus an update to, or new phase document.
+question (so the docs get updated before the next slice), plus an update to, or new
+phase document. For content slices, create a doc in .claude/content folder with the
+designed content, that you made, with plain text explainations of how the content works.
 ```
 
 ## Review kickoff (paste at the top of each review chat — one PR per chat)
