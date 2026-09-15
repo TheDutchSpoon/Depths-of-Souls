@@ -7,10 +7,12 @@ entry was filled in retroactively during F — see that section); F: 470/470 tes
 post-review-amendment (actionKind scoping, taken-reduction, StatusDef.defaultDuration,
 SpeciesCreature.equippedSpells); G: 494/494 tests, post-review-fix (currency banks per kill not
 per fight won, a mid-fight-wipe reward-banking regression test, a perk-plumbing regression test,
-fail-loud on an unresolved enemy kill); H1: 509/509 tests, real Overgrowth content, zero engine
-changes, post-follow-up-fixes (Drone given a real mechanic, traits/spells moved to the central
-`traits.ts`/`spells.ts` registries, the player-facing content doc gained exact numbers + a spell
-table); lint/format/build green throughout). Built per
+fail-loud on an unresolved enemy kill); H1: 517/517 tests, real Overgrowth content + one small
+engine addition (`all-allies-of-species` ResponseTarget), post-PR-#58-review (Queen/Pollenlord/
+Ironjaw/Broodwarden/Grovekeep/Dozer redesigned unique per-amplifier, Drone given a real mechanic,
+traits/spells moved to the central `traits.ts`/`spells.ts` registries, the player-facing content
+doc gained exact numbers + a spell table, and goldens added for all six redesigned amplifiers +
+the new ResponseTarget); lint/format/build green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
@@ -1452,8 +1454,13 @@ exact failure-mode semantics (throw? clamp? no-op?) aren't specified anywhere).
 
 Real `src/data/` content for Biome 1, against `.claude/species/species-locked.md`'s own table --
 built entirely on primitives already proven through Slice E2. Per the plan's own "stop and amend
-the relevant earlier slice" discipline: nothing in this roster needed anything not already built
-(confirmed while authoring), so this slice is pure content, no engine changes.
+the relevant earlier slice" discipline: nothing in the INITIAL roster needed anything not already
+built (confirmed while authoring). **Correction**: this stopped being true once the design-owner
+follow-up passes landed (below) -- Swarmhive Queen's redesign needed one small, genuinely new
+engine primitive, `{ kind: 'all-allies-of-species' }` (a `ResponseTarget` addition to
+`effect-types.ts` + one resolver case in `resolution.ts`). The slice is content-and-one-primitive,
+not pure content -- see "Follow-up pass" below for the addition itself and PR #58's own review for
+where an earlier draft of this section overstated "zero engine changes."
 
 ### What was built
 
@@ -1607,8 +1614,11 @@ through `createCombat`/`resolveFight` against the REAL registered content, now i
 `data/biomes.test.ts` updated in place (not a new file) to assert slot 1 is the real, non-empty
 Overgrowth biome and slots 2-10 keep the Slice A placeholder shape. Full Phase 1–3 + Slice A–G
 suite re-verified byte-identical (confirmed via a clean `git stash -u` baseline run: 494/494
-across 71 files, unchanged) -- this slice touches no engine file at all, only `src/data/`.
-`lint` / `format:check` / `build` all clean.
+across 71 files, unchanged) -- as of THIS submission, the slice touched no engine file at all,
+only `src/data/` (**no longer true of the slice's final state** -- the design-owner follow-up
+pass below adds one engine primitive; see that section's own final test count, 517/517, which
+supersedes the count in this paragraph). `lint` / `format:check` / `build` all clean at this point
+in the slice's history.
 
 ### Player-facing content doc
 
@@ -1684,6 +1694,66 @@ formal review), addressed in the same working tree before merge:
 re-derived for Weaver's new on-turn-start/random-enemy shape and Web's own break-free roll now
 firing at Ambusher's turn-start once Web exists on the board -- see that fixture's own header
 comment for the full two-draw RNG trace). `lint` / `format:check` / `build` all clean.
+
+### PR #58 review (design agent): blockers fixed, phase record reconciled
+
+A real review pass, distinct from the design-owner's own pre-review follow-up notes above. Gates
+were already green and the additive invariant already held; two items were flagged as blockers
+before merge, both actioned:
+
+1. **Test coverage for `all-allies-of-species`** -- shipped with zero coverage in the follow-up
+   pass above. Added: two focused unit tests in `resolution.test.ts` (`all-allies-of-species
+   ResponseTarget` describe block) -- applies to every living ally SHARING the firing creature's
+   `speciesId`, INCLUDING itself; skips a same-side ally of a different species; skips the dead;
+   skips the enemy side entirely, even a same-`speciesId` enemy; is empty (zero
+   `StatModifierApplied`) for a bearer with no `speciesId` set. And a new hand-derived golden pair,
+   `golden-swarmhive-queen`, against Queen's REAL shipped trait (`SWARMHIVE_QUEEN_TRAIT`,
+   `TRAIT_REGISTRY`-sourced, not a fixture stand-in): 5 explicit `resolveTurn` steps across 2
+   rounds prove the buff lands on every living Swarmhive ally including Queen herself, skips a
+   same-side non-Swarmhive ally, skips an enemy sharing the same `speciesId` string (side-scoped,
+   not a bare string match), and COMPOUNDS round over round (`20 -> 22 -> 24.200000000000003`,
+   a fresh `StatModifierEffect` appended each firing, not a refreshed one).
+2. **Phase record reconciliation** -- this section and the H1 intro paragraph both asserted "zero
+   engine changes"/"touches no engine file at all," which the follow-up pass's own addition of
+   `all-allies-of-species` (`effect-types.ts` + `resolution.ts`) had already contradicted. Both
+   corrected in place (see the H1 intro's own "Correction" note and the Tests section's
+   superseded-count note) rather than silently rewritten, per this project's own "verify, don't
+   assert from memory" phase-docs-precision discipline.
+
+Also actioned, flagged "optional/recommended/low priority" in the review but done in the same
+pass since the six redesigned amplifiers (round 2 above) shipped with ZERO behavioral coverage of
+their own: five more hand-derived golden pairs, all against REAL shipped trait content --
+`golden-treant-grovekeep` (one-time team-wide +15% max Health at fight-start), `golden-pollinator-
+pollenlord` (recurring team +10% Speed, 2 rounds, compounding), `golden-snapjaw-ironjaw`
+(recurring self +20% Defence, 2 rounds, compounding, proven SELF-only), `golden-spider-
+broodwarden` and `golden-lullpollen-dozer` (the "payoff of the payoff" on-attack bonus hit,
+scaled by a LIVE count of 2 Webbed/Sleeping enemies -- proving the multiplication, not just
+presence/absence; Web/Sleep themselves set up via a fixture-only `on-fight-start` trait rather
+than a raw `activeEffects` preset, since `createCombat` recomputes `activeEffects` from
+`innateTraitIds` at fight-start and would silently wipe a raw preset; Dozer's own golden
+additionally surfaces Sleep's real wake-on-damage interaction -- the bonus hit itself wakes the
+target via `on-damage-taken -> remove-status(self)` before the main hit lands).
+
+**`npm run test` -- 517/517** (up from 509/509 -- 8 new: 2 focused unit tests +
+6 golden-pair `it` blocks) across **79 files** (up from 73 -- 6 new golden-pair files; each pair
+is a `.fixture.ts` + `.test.ts`, only the latter counts as a vitest file). `lint` / `format:check`
+/ `build` all clean. This is the slice's actual final state -- supersedes every earlier count in
+this H1 section.
+
+**Captured for a later slice, per the review's own request (not lost, not actioned here):**
+- **Broodmother boss-encounter runner contract**: her signature (`Swarm Call`'s
+  `living-allies-of-species` count-scaling) only works if the future runner materializes her and
+  her spiderling adds (`BROODMOTHER_ADDS`) with the SAME `speciesId` string
+  (`SPIDERS_SPECIES_ID`) passed to `materializeCreature`'s explicit `speciesId` parameter for
+  both. No data field enforces this today (the boss's own `SpeciesCreature` shape carries no
+  `speciesId` -- it's a `materializeCreature` call argument, not stored data), so it is currently
+  unenforceable and untested. Whichever future slice builds the boss-runner (or a dedicated
+  boss-runner brief, if one lands first) must pass `SPIDERS_SPECIES_ID` explicitly to both calls.
+- **`starters.ts` registry retrofit**: move its inline trait/spell consts into
+  `traits.ts`/`spells.ts`, closing the two-pattern window this slice's own earlier follow-up
+  fixed for `overgrowth.ts` (see "Follow-up fix: where species-authored content lives" above).
+  Flagged there as a deliberate, not-yet-done follow-up; the review repeats the same
+  recommendation, ideally before H2 lands another species file.
 
 ### Deliberately out of scope for Slice H1 (later slices)
 
