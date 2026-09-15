@@ -1,40 +1,11 @@
-import type { Spell } from '../engine/types'
+import type { Spell } from '../../engine/types'
 
-// Real shipped content, not test fixtures. Phase 8 (Gem Forge/augments/leveling) will
-// wrap these in the full Gem economy; for now Creature.equippedSpells holds bare Spells.
-
-export const EMBER_LANCE: Spell = {
-  id: 'ember-lance',
-  name: 'Ember Lance',
-  targetShape: 'single',
-  spellPower: 0.5,
-  affinity: 'violence',
-}
-
-// The "30%-Intelligence" spell anchor from GAME_DESIGN.md §7's own example.
-export const CINDER_NOVA: Spell = {
-  id: 'cinder-nova',
-  name: 'Cinder Nova',
-  targetShape: 'aoe',
-  spellPower: 0.3,
-  affinity: 'violence',
-}
-
-// Slice C: a spell-applied status, per CONVENTIONS' "Spell gains an optional status-application."
-export const VENOM_BOLT: Spell = {
-  id: 'venom-bolt',
-  name: 'Venom Bolt',
-  targetShape: 'single',
-  spellPower: 0.4,
-  affinity: 'instinct',
-  appliesStatus: { statusId: 'poison', duration: 3 },
-}
-
-// ---- Phase 4 Slice H1: The Overgrowth (floors 1-10) -- 10 real spells, 2 per affinity, so any
-// affinity-matched caster (this biome's own Pollenlord, or a player's own creature via Phase 8
-// equipping) has something to draw on. Support-spell-model fields (targetSide/payload/
-// statModifier -- Slice E) exercised alongside plain damage spells. Grouped into this biome's
-// own spellPool by data/species/overgrowth.ts's OVERGROWTH_SPELLS (imports these by name).
+// ---- Phase 4 Slice H1: The Overgrowth (floors 1-10) -- 11 real spells, so any affinity-matched
+// caster (this biome's own Pollenlord, or a player's own creature via Phase 8 equipping) has
+// something to draw on. Wit carries a third spell (ARCANE_BOLT, see its own doc comment below) --
+// every other affinity has two. Support-spell-model fields (targetSide/payload/statModifier --
+// Slice E) exercised alongside plain damage spells. Grouped into this biome's own spellPool by
+// data/species/overgrowth.ts's OVERGROWTH_SPELLS (imports these by name).
 
 // Damage-spell power-coefficient convention for this biome (design-owner guidance): single-target
 // damage-only spells land around 100% Intelligence; single-target spells that ALSO apply a status
@@ -85,6 +56,20 @@ export const POLLEN_CLOUD: Spell = {
   spellPower: 0.35,
   affinity: 'wit',
   appliesStatus: { statusId: 'sleep', duration: 2 },
+}
+
+/** Arcane Bolt: a normal biome-1 Wit spawn-pool spell (data-layer carrier reorg -- previously
+ * kept starter-local as the Sorcerer starter's one granted gem, and unreachable from the spawn
+ * pool; there was never a design reason for that, so it's been promoted here like every other
+ * spell). The Sorcerer starter (`data/species/starters.ts`) still references it directly for its
+ * fixed slot-0 loadout; it also now rolls normally for any Wit-affinity caster. Single-target,
+ * no upside -> the plain ~100% band. */
+export const ARCANE_BOLT: Spell = {
+  id: 'arcane-bolt',
+  name: 'Arcane Bolt',
+  targetShape: 'single',
+  spellPower: 0.5,
+  affinity: 'wit',
 }
 
 /** Root Grasp: scales off Defence instead of Intelligence (Spell.scalingStat, Slice B) -- a
@@ -151,19 +136,3 @@ export const HOWLING_INSTINCT: Spell = {
   payload: 'stat-modifier',
   statModifier: { stat: 'speed', factor: 1.1 },
 }
-
-export const STOCK_SPELLS: readonly Spell[] = [
-  EMBER_LANCE,
-  CINDER_NOVA,
-  VENOM_BOLT,
-  THORN_LASH,
-  WEAKENING_BITE,
-  VINE_SNARE,
-  POLLEN_CLOUD,
-  ROOT_GRASP,
-  BRAMBLE_WARD,
-  REGROWTH,
-  WILD_VIGOR,
-  STINGER_SWARM,
-  HOWLING_INSTINCT,
-]

@@ -8,18 +8,30 @@ import {
   VENGEFUL,
   REELING,
   CATASTROPHIC_COLLAPSE,
-  STOCK_TRAITS,
-  TRAIT_REGISTRY,
-} from './traits'
-import { getEffectiveStat, getOffensiveStat } from '../engine/effective-stats'
-import { instantiateTraitEffects } from '../engine/effects'
-import { makeCreature } from '../engine/__fixtures__/creatures'
+} from './core'
+import { STARTER_TRAITS } from './starters'
+import { BROODMOTHER_TRAIT } from './overgrowth'
+import { STOCK_TRAITS, TRAIT_REGISTRY } from './index'
+import { getEffectiveStat, getOffensiveStat } from '../../engine/effective-stats'
+import { instantiateTraitEffects } from '../../engine/effects'
+import { makeCreature } from '../../engine/__fixtures__/creatures'
 
 describe('stock traits (representative Phase 3 content)', () => {
   it('registers every stock trait by id', () => {
     expect([...TRAIT_REGISTRY.keys()].sort()).toEqual(
       STOCK_TRAITS.map((t) => t.id).sort(),
     )
+  })
+
+  // Guardrail against an unwired library grouping (CONVENTIONS "Data layer — carriers vs.
+  // composition"): a representative const from each of core/starters/overgrowth must actually
+  // land in STOCK_TRAITS, not just exist in its own file.
+  it('every library grouping (core/starters/overgrowth) is actually spread into STOCK_TRAITS', () => {
+    expect(STOCK_TRAITS).toContain(BRUTISH)
+    for (const starterTrait of STARTER_TRAITS) {
+      expect(STOCK_TRAITS).toContain(starterTrait)
+    }
+    expect(STOCK_TRAITS).toContain(BROODMOTHER_TRAIT)
   })
 
   it('BRUTISH is a flat +30% Attack passive', () => {

@@ -1,4 +1,4 @@
-// Golden: the Shieldbarer starter's real signature trait (data/species/starters.ts's
+// Golden: the Shieldbarer starter's real signature trait (data/traits/starters.ts's
 // SHIELDBARER_STARTER_TRAIT) -- "on-provoke -> your creatures gain +35% Defence" (team-wide).
 // ASSUMPTION 22: authored as an apply-stat-modifier response targeted at the new `all-allies`
 // ResponseTarget (not grant-action-state -- it's a stat buff, not an action-state flag).
@@ -18,8 +18,7 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
-import { TRAIT_REGISTRY } from '../../data/traits'
-import { SHIELDBARER_STARTER_TRAIT } from '../../data/species/starters'
+import { TRAIT_REGISTRY, SHIELDBARER_STARTER_TRAIT } from '../../data/traits'
 import type { CombatEvent } from '../types'
 
 export const SEED = 4004 // No RNG consumed; seed is inert.

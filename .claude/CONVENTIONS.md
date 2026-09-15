@@ -982,6 +982,24 @@ src/
   app/       wiring, game loop, top-level screens (no router in v1; hash routing only if ever needed).
 ```
 
+### Data layer — carriers vs. composition
+- **Effect-carrier definitions** (traits, spells; later gem augments, equipment infusions — all
+  instances of the one effect framework, see *Unified effect framework*) live in a **library**
+  directory per carrier type: `data/traits/`, `data/spells/`. Each is split by grouping —
+  `core.ts` (cross-cutting / Phase-3 generics), `starters.ts`, and **one file per biome**
+  (`overgrowth.ts`, …) — aggregated to its registry by an `index.ts` that keeps the **stable
+  exported names** (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the spell equivalents). Affinity is a
+  **field** on a spell, never the file axis; spawn pools are biome-scoped.
+- **Composition** files — `data/species/*` (and later `data/gems/`, `data/equipment/`) — only
+  **reference** carriers by id/object; a composition file **never defines a carrier**. A biome's
+  `spellPool` is a *selection* of library spells, so it is composition and stays with the biome.
+- `data/statuses.ts` stays **flat** — global vocabulary, not biome-organized.
+- **Why**: a trait/spell is **not** owned by a species — it's a shared registry entry the model
+  grants via `innateTraitIds` / equip (and will grant via gems + equipment). Defining a carrier
+  inside a species file bakes in a false ownership the effect framework denies. The loader/shape
+  test's "every creature's trait id resolves in the registry" assertion is the guardrail: an
+  unwired library module fails loudly rather than shipping inert.
+
 ## Implementation plans
 
 - When a phase or task is worked up as an **implementation plan** (e.g. a `briefs/` doc or a plan

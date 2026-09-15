@@ -1,4 +1,4 @@
-// Golden: the Unicorn's real signature trait (data/species/starters.ts's UNICORN_TRAIT) --
+// Golden: the Unicorn's real signature trait (data/traits/starters.ts's UNICORN_TRAIT) --
 // "whenever this creature attacks, it resurrects a random dead ally at 20% of its baseline max
 // HP." Same arithmetic as Slice B's golden-revive.fixture.ts (small, hand-derivable stats, not
 // the Unicorn's own real baseStats -- this golden's point is proving the SHIPPED trait content,
@@ -21,8 +21,7 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
-import { TRAIT_REGISTRY } from '../../data/traits'
-import { UNICORN_TRAIT } from '../../data/species/starters'
+import { TRAIT_REGISTRY, UNICORN_TRAIT } from '../../data/traits'
 import type { CombatEvent, FightResult } from '../types'
 
 export const SEED = 2222 // Consumes exactly one RNG draw (the revive target pick); pool size 1,

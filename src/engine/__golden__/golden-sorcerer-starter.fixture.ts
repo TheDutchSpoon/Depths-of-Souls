@@ -1,5 +1,7 @@
-// Golden: the Sorcerer starter's real signature trait (data/species/starters.ts's
-// SORCERER_STARTER_TRAIT, the new `bonus-cast` primitive) + its real granted spell (ARCANE_BOLT)
+// Golden: the Sorcerer starter's real signature trait (data/traits/starters.ts's
+// SORCERER_STARTER_TRAIT, the new `bonus-cast` primitive) + its real granted spell (ARCANE_BOLT,
+// data/spells/overgrowth.ts -- also a normal biome-1 Wit spawn-pool spell as of the data-layer
+// carrier reorg)
 // -- "50% chance on-turn-end to cast a random equipped spell." A single equipped spell (pool
 // size 1, matching the starter's own real slot-0 loadout) makes the "random" slot pick
 // deterministic regardless of its own RNG draw, isolating this golden to proving the ONE thing
@@ -20,8 +22,8 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
-import { TRAIT_REGISTRY } from '../../data/traits'
-import { ARCANE_BOLT, SORCERER_STARTER_TRAIT } from '../../data/species/starters'
+import { TRAIT_REGISTRY, SORCERER_STARTER_TRAIT } from '../../data/traits'
+import { ARCANE_BOLT } from '../../data/spells'
 import type { CombatEvent, FightResult } from '../types'
 
 export const SEED = 7 // First mulberry32 draw ~0.0117 -- the bonus-cast roll succeeds (< 50%).

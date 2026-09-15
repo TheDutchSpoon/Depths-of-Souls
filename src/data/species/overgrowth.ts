@@ -21,16 +21,18 @@
 // individual creatures are stamped into those affinities to round out the full 5-affinity spread.
 //
 // This file is COMPOSITION ONLY (Species/SpeciesCreature/BiomeData + boss data) -- the actual
-// Trait/Spell object definitions live in the central `../traits`/`../spells` registries, the same
+// Trait/Spell object definitions live in the central `../traits`/`../spells` library, the same
 // place every other trait/spell/status in the game lives (matching how Web/Sleep already live in
-// `../statuses`, not here). See the phase record's own "Where species-authored content lives"
-// note for the reasoning and why this deliberately does NOT retrofit Slice F's `starters.ts`,
-// which still defines its own trait/spell consts inline.
+// `../statuses`, not here). `../traits` and `../spells` are themselves grouping directories --
+// see the data-layer carrier reorg phase record. `../species/starters.ts` was retrofit to the
+// same composition-only shape in that same reorg (it used to define its own trait/spell consts
+// inline).
 
 import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
 import type { BiomeData, Species, SpeciesCreature } from '../../engine/generation'
 import {
+  ARCANE_BOLT,
   BRAMBLE_WARD,
   HOWLING_INSTINCT,
   POLLEN_CLOUD,
@@ -64,15 +66,18 @@ import {
   TREANT_SAPLING_TRAIT,
 } from '../traits'
 
-// ---- Overgrowth spell pool (~10 of the ~50-spell total spread across the three biomes) ----
-// The Spell object definitions themselves live in data/spells.ts (STOCK_SPELLS); this is just
-// this biome's own subset, grouped for BiomeData.spellPool.
+// ---- Overgrowth spell pool (~11 of the ~50-spell total spread across the three biomes) ----
+// The Spell object definitions themselves live in data/spells/ (the library); this is just this
+// biome's own subset, grouped for BiomeData.spellPool. Includes ARCANE_BOLT (data-layer carrier
+// reorg: promoted from Sorcerer-starter-only to a normal Wit pool spell), giving Wit a third
+// entry here while every other affinity keeps two.
 
 export const OVERGROWTH_SPELLS = [
   THORN_LASH,
   WEAKENING_BITE,
   VINE_SNARE,
   POLLEN_CLOUD,
+  ARCANE_BOLT,
   ROOT_GRASP,
   BRAMBLE_WARD,
   REGROWTH,
