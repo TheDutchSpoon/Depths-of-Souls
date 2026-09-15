@@ -1,6 +1,6 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–H1 done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+Status: **in progress — Slices A–H2 done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
 C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
 post-design-feedback (ally target-selector completion); E2: 424/424 tests (its own phase-record
 entry was filled in retroactively during F — see that section); F: 470/470 tests,
@@ -12,7 +12,13 @@ engine addition (`all-allies-of-species` ResponseTarget), post-PR-#58-review (Qu
 Ironjaw/Broodwarden/Grovekeep/Dozer redesigned unique per-amplifier, Drone given a real mechanic,
 traits/spells moved to the central `traits.ts`/`spells.ts` registries, the player-facing content
 doc gained exact numbers + a spell table, and goldens added for all six redesigned amplifiers +
-the new ResponseTarget); lint/format/build green throughout). Built per
+the new ResponseTarget); data-layer carrier reorg (between H1/H2): `traits.ts`/`spells.ts` split
+into `traits/`/`spells/` library directories (`core.ts`/`starters.ts`/`overgrowth.ts` +
+`index.ts` barrels), `species/starters.ts`/`species/overgrowth.ts` retrofitted to
+composition-only — see `phases/phase-4-data-layer-carrier-reorg.md`; H2: 537/537 tests, real
+Glimmerdark content, zero new engine primitives (built entirely on B–E2), one new stock script
+(`ambush-strike`, the first real-content consumer of `acted-before-target`); lint/format/build
+green throughout). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
@@ -1761,9 +1767,160 @@ Glimmerdark / Rotcap Hollow real content (H2/H3, including Web's own two-way tur
 sibling at Blindclaws' act-first pole); the Broodmother boss-encounter runner (see the ASSUMPTION
 above -- future UI/store wiring); the integration pass and this record's closing section (I).
 
+## Slice H2 — Glimmerdark (floors 11–20)
+
+Built against `.claude/species/species-locked.md`'s Biome 2 table, directly into the new
+`data/traits/`/`data/spells/` library shape the carrier reorg left in place. **Zero new engine
+primitives** — every mechanism this biome needed (Glow/consume-stacks, turn-order-status,
+on-action-observed, conditional-damage-bonus, armor-penetration, stat-remap, cross-stat,
+apply-stat-modifier pairs, `deal-damage.scalingStat`) was already built and proven through Slice
+E2; this slice is pure content-assembly, exactly as the plan's own checklist expects.
+
+### What was built
+
+`src/data/traits/glimmerdark.ts` — 18 real per-creature traits + the Leech Sovereign's boss
+trait, following the same enabler/payoff/amplifier (common/uncommon/rare) framing H1 used, except
+where species-locked.md names one SHARED mechanic instead of a two-role chain (Resonants,
+Gloomjaws) — there, all three creatures play the same mechanic at escalating scope/strength by
+rarity instead:
+
+- **Glowflies** (Wit/Instinct) — Charger (`on-turn-start` → apply a Glow stack to the
+  highest-Attack living ally, deterministic selector); Detonator (`on-attack` → the CANONICAL
+  `consume-stacks` shape from `effect-types.ts`'s own doc comment: reads/clears its own Glow,
+  bursts Intelligence-scaled damage at its target, scaled by the consumed count); Radiant
+  (amplifier, Vitality coverage sprinkle — `on-fight-start` → charges the WHOLE team with 2 Glow
+  stacks at once, breadth over depth, never combining Charger/Detonator's own halves).
+- **Blindclaws** (Instinct) — Setter (`on-turn-start` → grants `grant-act-first` to the
+  highest-Attack living ally); Striker (payoff — see the ASSUMPTION below); Vanguard (amplifier —
+  `on-turn-start` → re-grants itself `grant-act-first` every turn, self-sufficient, never needing
+  Setter).
+- **Resonants** (Wit) — all three share `on-action-observed` (`relationship: 'ally', actionKind:
+  'cast'`), the species-locked.md-confirmed lone real consumer of that system: Chorus (+5%
+  Attack, and the biome's one cast-role creature — reinforces its own "caster synergy" identity
+  by being a caster itself), Adept (+8% Intelligence), Overtone (amplifier — both stats at once,
+  two `TriggeredDef` entries on the same hook).
+- **Sparkeaters** (Wit/Violence) — a flat "stat parasite" identity with no enabler/payoff chain:
+  Leech (drains 10% Attack per hit, `~free` per species-locked.md's own note — two
+  `apply-stat-modifier` responses on one hook), Gorger (drains 10% Defence), Voidmaw (amplifier,
+  Vitality coverage sprinkle — drains BOTH stats at once, four `apply-stat-modifier` responses;
+  broader, not a bigger single steal, since this species has no exploit chain to keep distinct
+  from).
+- **Gloomjaws** (Violence) — all three share `conditional-damage-bonus` with a `hp-percent`
+  condition scoped to `subject: 'target'` (the exact primitive CONVENTIONS names this species
+  under): Stalker (+30% dmg below 30% HP), Executioner (+50% below 20%), Ravager (amplifier —
+  +70% below 15% **and** a flat 20% armor-penetration, a genuinely distinct ANGLE — gets through
+  armor to put targets there faster, not just a bigger execute number).
+- **Shellbacks** (Endurance) — Warden (`on-turn-start` → +10% team Defence, compounding, the
+  "Builder"); Brawler (payoff/"attacker" — `stat-remap` slot `attack` ← `defence`, armor-as-weapon
+  literally, paired with a correspondingly high-Defence/low-Attack base stat line); Bulwark
+  (amplifier — `on-damage-taken` → `deal-damage` with `scalingStat: 'defence'`, the DEFENSIVE
+  mirror of Brawler's offensive trick, CONVENTIONS' own named Thorns/Shield Bash example).
+- **The Leech Sovereign** (floor-20 boss) — `on-attack` → the exact Sparkeater-Leech shape at
+  boss scale (steal 20% Attack per hit, permanent, both directions), deliberately the ONE
+  mechanic species-locked.md's own "lean identity (no heavy add layer)" calls for — no
+  `_ADDS` export, unlike the Broodmother.
+
+`src/data/spells/glimmerdark.ts` — 10 real spells (two per affinity, mirroring H1's exact
+density/pattern: a plain single-target damage spell + a support/debuff spell per affinity, no
+affinity carries two plain damage spells). One notable cross-species tie-in: **Beacon Charge**
+(Wit, `heal` payload + `appliesStatus: glow`) lets ANY caster charge an ally with Glow, not just
+Glowflies — a direct exercise of species-locked.md's own "a spell may apply any status, including
+another species' signature one" rule.
+
+`src/data/statuses.ts` — two new real statuses, additive alongside the Phase 3/H1 set (same
+guardrail as H1): **Glow** (an ordinary `damage-modifier`, direction `'dealt'`, `polarity:
+'buff'`, +8%/stack, cap 5, duration 4 — no new StatusDef category needed, "+% damage dealt per
+stack while held" IS the dealt pool's existing per-stack additive term) and **grant-act-first**
+(a `turn-order-status`, `position: 'first'`, the exact same primitive Web already proved at the
+opposite pole — no `breakChancePercent`, unlike Web, since nothing breaks this early per
+species-locked.md).
+
+`src/data/scripts.ts` — one new stock script, **`ambush-strike`** (additive to `STOCK_SCRIPTS`,
+now 6). See the ASSUMPTION below for why this exists.
+
+`src/data/biomes.ts` — `BIOMES[1]` (floors 11–20) now the real `GLIMMERDARK_BIOME`, replacing its
+Slice A placeholder; slots 3–10 unchanged.
+
+### ASSUMPTION (flagged, ships as designed): `acted-before-target` can only ever be real content via a SCRIPT
+
+Blindclaws' Striker payoff reads "+% while acting before its target" in species-locked.md — but
+`acted-before-target` (Slice C) is only ever `true` when `evaluateCondition` receives a
+`ruleTargeting` argument, and the ONLY call site that supplies one is the interpreter's own rule
+evaluation (`interpreter.ts:151`, `rule.targeting`). Every other call site — a `TriggeredDef`'s
+own `condition` (`resolution.ts`'s `fireHook`) and `conditional-damage-bonus`'s gathering
+(`resolution.ts`'s `gatherConditionalDamageBonus`) — passes no rule context, so the condition
+evaluates `false` there by construction (confirmed by reading both call sites directly, not
+assumed). There is therefore **no way to express "+% damage while acting first" as a passive
+trait effect** — the only legal, engine-real way to consume this condition as actual content is
+via the creature's own script. Built as a genuine behavioral difference instead of a numeric one:
+Striker's `defaultScriptId` is the new `ambush-strike` script — it attacks the lowest-HP enemy
+only when it would act before that enemy this round, and Defends otherwise. Striker's own trait
+(`cross-stat`, Speed → Attack) is a small, separate, legal mechanic that complements the ambush
+identity without touching the blocked condition. This is the first real-roster use of
+`acted-before-target`, per species-locked.md's own "first roster use" note — it just isn't the
+shape the design doc's prose implied, and that gap is surfaced here rather than silently
+resolved.
+
+### Tests
+
+**537/537** (up from the data-layer-carrier-reorg's 518 — 19 new) across **85 files** (up from 79
+— 6 new: `data/species/glimmerdark.test.ts` + 5 golden `.test.ts` files, each paired with its own
+`.fixture.ts`; `data/scripts.test.ts`/`data/biomes.test.ts` gained new `it` blocks without
+becoming new files). New coverage:
+
+- `data/species/glimmerdark.test.ts` — the loader/shape test (H1/H2 common checklist item 6):
+  6×3 = 18 creatures, unique species/creature ids, positive draw weights, exactly one innate
+  trait per creature resolving in `TRAIT_REGISTRY`, every `defaultScriptId` resolving in
+  `STOCK_SCRIPTS_BY_ID` (including `ambush-strike`), base stats in the 10–30 range,
+  affinity-complete across all 5 affinities, exactly one cast-role creature with ≥1
+  affinity-matched spell, every status-applying spell resolving in `STATUS_REGISTRY`, the biome
+  wiring its real pools, and the Leech Sovereign's own trait/stat-range checks.
+- `data/scripts.test.ts` — `ambush-strike`'s own `decideAction` behavior: attacks when it would
+  act before its target, Defends when it wouldn't (table-driven via `turnQueue` overrides,
+  mirroring the file's existing per-script unit-test style); the stock-script-count assertion
+  updated 5 → 6.
+- `data/biomes.test.ts` — slot 2 now asserted as the real, non-empty Glimmerdark biome; slots
+  3–10 keep the placeholder shape (was 2–10).
+- Five hand-derived `__golden__` pairs, all against REAL shipped content (never fixture
+  stand-ins), each proving one species' or the boss's signature mechanic end-to-end through
+  `createCombat`/`resolveTurn`:
+  - `golden-glowfly-detonator` — Charger charges Detonator (real `highest-attack-ally` pick, real
+    stats), Detonator's `on-attack` consumes it for an Intelligence-scaled burst BEFORE its own
+    base hit, proving Glow's dealt-mod never contributes to either hit once consumed (same
+    invariant the Slice D fixture-shaped `golden-consume-stacks` proved, now against real
+    content).
+  - `golden-blindclaws-striker` — the full round-1-negative / round-2-positive contrast in one
+    fixture: round 1's queue is frozen before Setter's grant lands, so Striker (still last)
+    Defends; round 2's queue reflects the (still-active) grant, so Striker (now first) Attacks,
+    with its own cross-stat Speed bonus folded in.
+  - `golden-resonant-harmonize` — a single cast observed by BOTH the caster itself (Chorus,
+    `relationship: 'ally'` includes self) and a separate ally (Adept) in the same firing, proving
+    the "ally includes self" rule concretely against real content.
+  - `golden-gloomjaw-stalker` — two real hits, one round apart (a rigged low-HP `currentHp`
+    override doesn't survive `createCombat`'s fight-start reset to effective max HP, confirmed by
+    grep — no existing golden does this): no bonus at full HP, +30% once the target's first hit
+    drops it below the 30% threshold.
+  - `golden-leech-sovereign` — two hits proving the snowball COMPOUNDS (fresh
+    `StatModifierEffect`s appended each firing, folding multiplicatively — never a refreshed
+    single instance): the Sovereign's own Attack and its target's both shift further on hit 2
+    purely from hit 1's own steal.
+
+Full Phase 1–3 + Slice A–G + H1 + carrier-reorg suite re-verified byte-identical (the full
+`npm run test` run above includes every pre-existing test file passing unmodified — this slice
+touched no engine file at all, only `src/data/`). `lint` / `format:check` / `build` all clean.
+
+### Deliberately out of scope for Slice H2 (later slices)
+
+Rotcap Hollow real content (H3, including Spore's spread-on-death and Confusion's own real
+statuses); the Broodmother/Leech Sovereign boss-encounter runner (still not built by any slice —
+Slice G's store only ships `recordBossKill`/`bossesCleared` as state); the integration pass and
+this record's closing section (I).
+
 ## Next
 
-Slice H2 — Glimmerdark (floors 11–20): Glowflies, Blindclaws, Resonants, Sparkeaters, Gloomjaws,
-Shellbacks; Glow + consume-stacks, turn-order status (Blindclaws' act-first pole, alongside H1's
-Web act-last), acted-before-target; boss: Leech Sovereign. Replaces `data/biomes.ts`'s
-`BIOMES[1]` slot. See `.claude/briefs/phase-4-implementation-plan.md`.
+Slice H3 — Rotcap Hollow (floors 21–30): Sporecloud, Rotfeeders, Myconet, Necromoss, Hollowkin,
+Sporch; Spore (DoT + spread-on-death, a selector composition per ASSUMPTION 30, no new
+primitive), Confusion (engine already proven in C — its own real `friendly-fire-status` data
+lands here for the first time), the `heal` response's `magnitudeSource`/`scalingStat` modes
+(Slice E2, also still awaiting real content); boss: Rot Sovereign. Replaces `data/biomes.ts`'s
+`BIOMES[2]` slot. See `.claude/briefs/phase-4-implementation-plan.md`.

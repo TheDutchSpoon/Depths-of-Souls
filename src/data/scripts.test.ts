@@ -5,6 +5,7 @@ import {
   ALWAYS_DEFEND_SCRIPT,
   ALWAYS_PROVOKE_SCRIPT,
   ALWAYS_WAIT_SCRIPT,
+  AMBUSH_STRIKE_SCRIPT,
   STOCK_SCRIPTS_BY_ID,
 } from './scripts'
 import { EMBER_LANCE } from './spells'
@@ -88,7 +89,7 @@ describe('stock scripts', () => {
     expect(decideAction(player[0]!, ALWAYS_WAIT_SCRIPT, state)).toEqual({ kind: 'wait' })
   })
 
-  it('STOCK_SCRIPTS_BY_ID contains exactly the 5 stock scripts, keyed by id', () => {
+  it('STOCK_SCRIPTS_BY_ID contains exactly the 6 stock scripts, keyed by id', () => {
     expect([...STOCK_SCRIPTS_BY_ID.keys()].sort()).toEqual(
       [
         'always-attack',
@@ -96,7 +97,36 @@ describe('stock scripts', () => {
         'always-defend',
         'always-provoke',
         'always-wait',
+        'ambush-strike',
       ].sort(),
     )
+  })
+
+  // Phase 4 Slice H2 (Glimmerdark, Blindclaws' Striker) -- the first real-content consumer of
+  // acted-before-target (Slice C). See data/traits/glimmerdark.ts's BLINDCLAWS_STRIKER_TRAIT doc
+  // comment for why this is a script, not a trait effect.
+  it('ambush-strike attacks the lowest-HP enemy when it would act before it, else Defends', () => {
+    const ahead = makeParty('player', [{ id: 'me', speed: 20 }])
+    const behindTarget = makeParty('enemy', [{ id: 'slow-foe', speed: 5 }])
+    const aheadState = makeState({
+      playerParty: ahead,
+      enemyParty: behindTarget,
+      turnQueue: [ahead[0]!.id, behindTarget[0]!.id],
+    })
+    expect(decideAction(ahead[0]!, AMBUSH_STRIKE_SCRIPT, aheadState)).toEqual({
+      kind: 'attack',
+      targetId: behindTarget[0]!.id,
+    })
+
+    const behind = makeParty('player', [{ id: 'me', speed: 5 }])
+    const aheadTarget = makeParty('enemy', [{ id: 'fast-foe', speed: 20 }])
+    const behindState = makeState({
+      playerParty: behind,
+      enemyParty: aheadTarget,
+      turnQueue: [aheadTarget[0]!.id, behind[0]!.id],
+    })
+    expect(decideAction(behind[0]!, AMBUSH_STRIKE_SCRIPT, behindState)).toEqual({
+      kind: 'defend',
+    })
   })
 })

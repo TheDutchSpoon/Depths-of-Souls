@@ -165,6 +165,35 @@ export const SLEEP: ConditionStatusDef = {
   defaultDuration: 3,
 }
 
+/** Phase 4 Slice H2 (Glimmerdark, Glowflies): a stacking RESOURCE status -- an ordinary
+ * `damage-modifier` (direction 'dealt'), structurally identical to Weaken/Vulnerability except
+ * `polarity: 'buff'` and a positive `magnitude` -- "+% damage dealt per stack while held" is
+ * exactly what the dealt-pool's existing per-stack additive term already means; no new StatusDef
+ * category needed. Its own intrinsic effect (the dealt-mod) applies whether or not it's ever
+ * consumed; Glowflies' Detonator (`consume-stacks`) is the payoff hook, not a requirement. */
+export const GLOW: DamageModifierDef = {
+  category: 'damage-modifier',
+  statusId: 'glow',
+  direction: 'dealt',
+  magnitude: 0.08,
+  cap: 5,
+  polarity: 'buff',
+  defaultDuration: 4,
+}
+
+/** Phase 4 Slice H2 (Glimmerdark, Blindclaws): the act-FIRST pole of the same `turn-order-status`
+ * primitive Web (act-last, H1) already proved -- "same tool, opposite pole"
+ * (species-locked.md). No `breakChancePercent` -- unlike Web, nothing breaks this early; it just
+ * runs its duration. Single-instance (cap 1): re-applying just refreshes it. */
+export const GRANT_ACT_FIRST: TurnOrderStatusDef = {
+  category: 'turn-order-status',
+  statusId: 'grant-act-first',
+  cap: 1,
+  position: 'first',
+  polarity: 'buff',
+  defaultDuration: 3,
+}
+
 export const STOCK_STATUSES: readonly StatusDef[] = [
   POISON,
   BURN,
@@ -176,6 +205,9 @@ export const STOCK_STATUSES: readonly StatusDef[] = [
   // phase-4-implementation-plan.md, the Phase 3 representative set above stays untouched).
   WEB,
   SLEEP,
+  // Phase 4 Slice H2: real per-species Glimmerdark statuses (additive, same guardrail).
+  GLOW,
+  GRANT_ACT_FIRST,
 ]
 
 /** Ready to pass directly as createCombat's `statuses` argument. */
