@@ -1,4 +1,4 @@
-// Golden: the Brute starter's real signature trait (data/species/starters.ts's
+// Golden: the Brute starter's real signature trait (data/traits/starters.ts's
 // BRUTE_STARTER_TRAIT) -- "Attack resolves one additional instance" (species-locked.md /
 // brute.md: "Attack executes TWICE AT 100%"). A direct, content-level exercise of Slice B's
 // action instance-list model (golden-attack-instance-list.fixture.ts's own mechanism), not a
@@ -26,8 +26,7 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
-import { TRAIT_REGISTRY } from '../../data/traits'
-import { BRUTE_STARTER_TRAIT } from '../../data/species/starters'
+import { TRAIT_REGISTRY, BRUTE_STARTER_TRAIT } from '../../data/traits'
 import type { CombatEvent, FightResult } from '../types'
 
 export const SEED = 3003 // No RNG consumed (single enemy, no provokers); seed is inert.

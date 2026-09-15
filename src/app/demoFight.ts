@@ -18,7 +18,7 @@ import {
 // exist yet, see GAME_DESIGN.md §13), just enough to run the real engine and show its
 // output. This file and CombatDemo.tsx are a throwaway harness; Phase 7 replaces them.
 // Successor to the Phase 2.5 harness: Phase 3.5 wires real trait/status/spell content
-// (src/data/traits.ts, src/data/statuses.ts, src/data/spells.ts) onto the same scripted
+// (src/data/traits/, src/data/statuses.ts, src/data/spells/) onto the same scripted
 // parties so triggers, DoT, stun, and stat-modifier statuses actually fire in the log.
 
 export const DEMO_SEED = 20260702

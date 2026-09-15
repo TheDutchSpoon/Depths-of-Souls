@@ -1,6 +1,6 @@
 # Brief: Data-layer carrier reorg (traits/spells → library dirs; composition references by id)
 
-**Status:** planned
+**Status:** shipped — see phases/phase-4-data-layer-carrier-reorg.md
 **Type:** structural refactor (no new gameplay). Runs before Slice H2 so H2 authors into the new shape.
 
 ## Goal

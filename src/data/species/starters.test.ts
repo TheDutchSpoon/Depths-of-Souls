@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { materializeCreature } from '../../engine/generation'
-import { TRAIT_REGISTRY } from '../traits'
 import {
-  ARCANE_BOLT,
-  BRUTE_STARTER,
+  TRAIT_REGISTRY,
   BRUTE_STARTER_TRAIT,
-  SHIELDBARER_STARTER,
   SHIELDBARER_STARTER_TRAIT,
-  SORCERER_STARTER,
   SORCERER_STARTER_TRAIT,
+  UNICORN_TRAIT,
+} from '../traits'
+import { ARCANE_BOLT } from '../spells'
+import {
+  BRUTE_STARTER,
+  SHIELDBARER_STARTER,
+  SORCERER_STARTER,
   STARTERS,
   UNICORN,
-  UNICORN_TRAIT,
 } from './starters'
 
 describe('starter + Unicorn shape', () => {
