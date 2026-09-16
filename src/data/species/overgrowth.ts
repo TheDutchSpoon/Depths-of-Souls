@@ -66,11 +66,15 @@ import {
   TREANT_SAPLING_TRAIT,
 } from '../traits'
 
-// ---- Overgrowth spell pool (~11 of the ~50-spell total spread across the three biomes) ----
-// The Spell object definitions themselves live in data/spells/ (the library); this is just this
-// biome's own subset, grouped for BiomeData.spellPool. Includes ARCANE_BOLT (data-layer carrier
-// reorg: promoted from Sorcerer-starter-only to a normal Wit pool spell), giving Wit a third
-// entry here while every other affinity keeps two.
+// ---- Overgrowth's own authored spells (11 of the ~17-spell global total) ----
+// The Spell object definitions themselves live in data/spells/ (the library). Phase 4
+// interstitial slice (cumulative spell unlock): this grouping is no longer fed into
+// `BiomeData` (that field, `spellPool`, is gone -- `generateFloor` now rolls a cast-role
+// loadout from the GLOBAL `ALL_SPELLS` registry, filtered by `unlockedAtBiome`, see
+// engine/generation.ts's `spellsUnlockedAt`); it's kept purely as a documentation/test grouping
+// of "the spells this biome introduces" (every entry here is tagged `unlockedAtBiome: 1`).
+// Includes ARCANE_BOLT (data-layer carrier reorg: promoted from Sorcerer-starter-only to a
+// normal Wit pool spell), giving Wit a third entry here while every other affinity keeps two.
 
 export const OVERGROWTH_SPELLS = [
   THORN_LASH,
@@ -368,7 +372,6 @@ export const OVERGROWTH_BIOME: BiomeData = {
   id: OVERGROWTH_BIOME_ID,
   name: 'The Overgrowth',
   speciesPool: OVERGROWTH_SPECIES_POOL,
-  spellPool: OVERGROWTH_SPELLS,
 }
 
 // Re-exported for the loader test / anyone wanting a plain Affinity sanity check without

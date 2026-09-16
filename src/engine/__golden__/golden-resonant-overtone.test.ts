@@ -15,6 +15,6 @@ describe('golden replay: Glimmerdark Resonant Overtone echo-cast (Phase 4 Slice 
     const { state, events } = resolveTurn(initial)
 
     expect(events).toEqual(expectedEvents)
-    expect(state.result).toBeNull() // TARGET survives at 60 HP
+    expect(state.result).toBeNull() // TARGET survives at 80 HP
   })
 })

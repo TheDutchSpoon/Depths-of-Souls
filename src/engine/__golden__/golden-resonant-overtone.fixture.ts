@@ -1,9 +1,15 @@
 // Golden: Glimmerdark's Resonant Overtone (PR #60 review, E2) -- echo-cast, against REAL shipped
-// content (data/species/glimmerdark.ts's real RESONANT_OVERTONE_TRAIT, data/spells/glimmerdark.ts's
-// real GLOWSPARK_BOLT), at its real 10% chancePercent (not a fixture stand-in -- the mechanism's
-// own dedup/depth-cap/self-re-entry edge cases are unit-tested directly against fireHook in
-// resolution.test.ts's 'echo-cast' describe block, where a chancePercent:100 fixture is the
-// right tool; THIS golden proves the real, shipped content actually fires end-to-end).
+// content (data/species/glimmerdark.ts's real RESONANT_OVERTONE_TRAIT), at its real 10%
+// chancePercent (not a fixture stand-in -- the mechanism's own dedup/depth-cap/self-re-entry edge
+// cases are unit-tested directly against fireHook in resolution.test.ts's 'echo-cast' describe
+// block, where a chancePercent:100 fixture is the right tool; THIS golden proves the real,
+// shipped content actually fires end-to-end).
+//
+// Phase 4 interstitial slice (cumulative spell unlock): originally cast GLOWSPARK_BOLT
+// (Glimmerdark, spellPower 1.0), since deleted as a near-dup of ARCANE_BOLT (Overgrowth, now
+// inherited at every deeper biome -- see data/spells/glimmerdark.ts's own header comment).
+// Retargeted to ARCANE_BOLT (spellPower 0.5, same wit/single/damage shape) per design-owner
+// call -- every damage number below is RECOMPUTED against the new spellPower, not preserved.
 //
 // Hand-derived (independent `node -e` mulberry32 trace, verified via Bash -- SEED 7's exact
 // sequence). Both wit -> neutral (x1.0, same-affinity). Party: CASTER (always-cast) + OVERTONE
@@ -21,13 +27,13 @@
 // resumes after the whole nested chain unwinds) -- so the echo's DamageDealt appears BEFORE the
 // original cast's own, even though the original cast was declared first.
 //
-//   Both hits: off = Intelligence(20) x spellPower(1.0); vs def 0: core 20, chip 0.2 -> raw 20.2
-//     -> final 20. TARGET 100 -20 (echo) -20 (original) = 60, survives.
+//   Both hits: off = Intelligence(20) x spellPower(0.5) = 10; vs def 0: core 10, chip 0.1 -> raw
+//     10.1 -> final 10. TARGET 100 -10 (echo) -10 (original) = 80, survives.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
-import { GLOWSPARK_BOLT } from '../../data/spells'
+import { ARCANE_BOLT } from '../../data/spells'
 import { RESONANT_OVERTONE_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import type { CombatEvent } from '../types'
 
@@ -46,7 +52,7 @@ export const playerParty = makeParty('player', [
     speed: 20,
     affinity: 'wit',
     scriptId: 'always-cast',
-    equippedSpells: [GLOWSPARK_BOLT],
+    equippedSpells: [ARCANE_BOLT],
   },
   {
     id: 'overtone',
@@ -103,11 +109,11 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: CASTER,
     targetId: TARGET,
-    rawDamage: 20.2,
-    finalDamage: 20,
+    rawDamage: 10.1,
+    finalDamage: 10,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 80,
+    remainingHp: 90,
     damageSource: 'cast',
   },
   // Only now does the ORIGINAL cast's own damage land -- the whole echo chain resolved and
@@ -116,11 +122,11 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: CASTER,
     targetId: TARGET,
-    rawDamage: 20.2,
-    finalDamage: 20,
+    rawDamage: 10.1,
+    finalDamage: 10,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 60,
+    remainingHp: 80,
     damageSource: 'cast',
   },
   { type: 'TurnEnded', creatureId: CASTER },

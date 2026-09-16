@@ -15,6 +15,6 @@ describe('golden replay: Glimmerdark Resonants Harmonize/Resonate (Phase 4 Slice
     const { state, events } = resolveTurn(initial)
 
     expect(events).toEqual(expectedEvents)
-    expect(state.result).toBeNull() // TARGET survives at 76 HP
+    expect(state.result).toBeNull() // TARGET survives at 88 HP
   })
 })

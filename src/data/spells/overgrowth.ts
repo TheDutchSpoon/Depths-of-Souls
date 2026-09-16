@@ -18,6 +18,7 @@ export const THORN_LASH: Spell = {
   targetShape: 'single',
   spellPower: 1.0,
   affinity: 'violence',
+  unlockedAtBiome: 1,
 }
 
 /** Weakening Bite: Violence's second spell is a debuff, not a second damage spell (design-owner
@@ -32,6 +33,7 @@ export const WEAKENING_BITE: Spell = {
   affinity: 'violence',
   payload: 'stat-modifier',
   statModifier: { stat: 'defence', factor: 0.8 },
+  unlockedAtBiome: 1,
 }
 
 /** Vine Snare: a spell-authored Web application (a second, independent producer of the status
@@ -44,6 +46,7 @@ export const VINE_SNARE: Spell = {
   spellPower: 0.85,
   affinity: 'wit',
   appliesStatus: { statusId: 'web', duration: 3 },
+  unlockedAtBiome: 1,
 }
 
 /** Pollen Cloud: AOE, applies Sleep to everything it hits (a shorter duration than the
@@ -56,6 +59,7 @@ export const POLLEN_CLOUD: Spell = {
   spellPower: 0.35,
   affinity: 'wit',
   appliesStatus: { statusId: 'sleep', duration: 2 },
+  unlockedAtBiome: 1,
 }
 
 /** Arcane Bolt: a normal biome-1 Wit spawn-pool spell (data-layer carrier reorg -- previously
@@ -70,6 +74,7 @@ export const ARCANE_BOLT: Spell = {
   targetShape: 'single',
   spellPower: 0.5,
   affinity: 'wit',
+  unlockedAtBiome: 1,
 }
 
 /** Root Grasp: scales off Defence instead of Intelligence (Spell.scalingStat, Slice B) -- a
@@ -83,6 +88,7 @@ export const ROOT_GRASP: Spell = {
   spellPower: 1.0,
   affinity: 'endurance',
   scalingStat: 'defence',
+  unlockedAtBiome: 1,
 }
 
 export const BRAMBLE_WARD: Spell = {
@@ -94,6 +100,7 @@ export const BRAMBLE_WARD: Spell = {
   targetSide: 'ally',
   payload: 'stat-modifier',
   statModifier: { stat: 'defence', factor: 1.2 },
+  unlockedAtBiome: 1,
 }
 
 export const REGROWTH: Spell = {
@@ -105,6 +112,7 @@ export const REGROWTH: Spell = {
   scalingStat: 'health',
   targetSide: 'ally',
   payload: 'heal',
+  unlockedAtBiome: 1,
 }
 
 export const WILD_VIGOR: Spell = {
@@ -116,6 +124,7 @@ export const WILD_VIGOR: Spell = {
   targetSide: 'ally',
   payload: 'stat-modifier',
   statModifier: { stat: 'attack', factor: 1.15 },
+  unlockedAtBiome: 1,
 }
 
 export const STINGER_SWARM: Spell = {
@@ -124,6 +133,7 @@ export const STINGER_SWARM: Spell = {
   targetShape: 'single',
   spellPower: 1.0,
   affinity: 'instinct',
+  unlockedAtBiome: 1,
 }
 
 export const HOWLING_INSTINCT: Spell = {
@@ -135,4 +145,5 @@ export const HOWLING_INSTINCT: Spell = {
   targetSide: 'ally',
   payload: 'stat-modifier',
   statModifier: { stat: 'speed', factor: 1.1 },
+  unlockedAtBiome: 1,
 }

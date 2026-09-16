@@ -15,7 +15,6 @@ function placeholderBiome(slot: number): BiomeData {
     id: createBiomeId(`biome-${slot}`),
     name: `Biome ${slot} (unauthored)`,
     speciesPool: [],
-    spellPool: [],
   }
 }
 

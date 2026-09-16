@@ -89,9 +89,14 @@ describe('Glimmerdark: shape', () => {
     }
   })
 
-  it('GLIMMERDARK_BIOME wires the real species/spell pools', () => {
+  it('GLIMMERDARK_BIOME wires the real species pool', () => {
     expect(GLIMMERDARK_BIOME.speciesPool).toBe(GLIMMERDARK_SPECIES_POOL)
-    expect(GLIMMERDARK_BIOME.spellPool).toBe(GLIMMERDARK_SPELLS)
+  })
+
+  it('every GLIMMERDARK_SPELLS entry is tagged unlockedAtBiome:2 (this biome is the second tier)', () => {
+    for (const spell of GLIMMERDARK_SPELLS) {
+      expect(spell.unlockedAtBiome).toBe(2)
+    }
   })
 })
 
