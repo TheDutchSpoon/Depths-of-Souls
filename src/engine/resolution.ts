@@ -379,6 +379,20 @@ function fireDeathObservers(
  * are skipped -- a creature killed mid-sweep fires only on-death, per GAME_DESIGN's round-end
  * interaction rule.
  */
+/** Phase 4 Slice H2 (PR #60 review, E2): combat.ts's injected escape hatch for `echoCast`-flagged
+ * effects -- see `TriggeredDef.echoCast`'s own doc comment for why `executeResponse` can't reach
+ * this itself. `observerId` is the effect's bearer (the Overtone-holder that granted the echo);
+ * `casterId` is the hook's own `source` (the OBSERVED actor, who actually casts). The callback
+ * threads the ambient `CascadeState` through (E2.2 -- never a fresh one, so depth keeps
+ * accumulating across chained echoes). */
+export type EchoCastExecutor = (
+  observerId: CreatureId,
+  casterId: CreatureId,
+  state: CombatState,
+  events: CombatEvent[],
+  cascade: CascadeState,
+) => CombatState
+
 export function fireHook(
   hook: Hook,
   selfIds: readonly CreatureId[],
@@ -394,10 +408,19 @@ export function fireHook(
     readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
     readonly instanceIndex: number
   },
+  // Phase 4 Slice H2 (PR #60 review, E2): supplied ONLY by combat.ts's two `on-action-observed`
+  // dispatch sites, alongside `observed` above -- every other call site omits it, so an
+  // `echoCast`-flagged effect is inert (never fires) anywhere else.
+  onEchoCast?: EchoCastExecutor,
 ): { state: CombatState; suppressed: boolean } {
   let working = state
   let suppressed = false
   const isDeathHook = hook === 'on-death'
+  // Phase 4 Slice H2 (PR #60 review, E2.1): sourceTraitIds that have already claimed their one
+  // `stacks: false` slot THIS fireHook call -- claimed the moment an effect is about to roll
+  // chancePercent (see below), regardless of whether that roll succeeds, so the AGGREGATE chance
+  // of firing stays exactly chancePercent no matter how many creatures carry the same effect.
+  const claimedNonStacking = new Set<string>()
 
   for (const selfId of selfIds) {
     const initial = findCreature(working, selfId)
@@ -461,6 +484,15 @@ export function fireHook(
         continue
       }
 
+      // Phase 4 Slice H2 (PR #60 review, E2.1): a `stacks: false` effect claims its one dedup
+      // slot HERE -- before the chancePercent roll below, not just on success -- so a second
+      // matching effect (e.g. a second Overtone) never gets to roll at all this firing, keeping
+      // the aggregate chance at exactly chancePercent regardless of how many creatures carry it.
+      if (effect.nonStacking) {
+        if (claimedNonStacking.has(effect.sourceTraitId)) continue
+        claimedNonStacking.add(effect.sourceTraitId)
+      }
+
       // Phase 4 Slice E2 (Concussive Blows / Sleeper): an optional probabilistic gate, a sibling
       // of `condition`, read uniformly off the resolved-trigger record regardless of whether it
       // came from a TriggeredDef or a status's own StatusTrigger. Rolled AFTER the depth-cap
@@ -494,6 +526,21 @@ export function fireHook(
       // a plain permanent trait.
       const stacks = effect.stacks
       const statusId = effect.statusId
+
+      // Phase 4 Slice H2 (PR #60 review, E2/E2.3): echoCast bypasses executeResponse entirely
+      // (its `response` field is a structurally-required, functionally-inert placeholder -- see
+      // TriggeredDef.echoCast's own doc comment) and is deliberately EXEMPTED from the
+      // self-re-entry guard below (no `activeInstances.add`/`delete`) so a later chain hop can
+      // revisit the SAME Overtone instance -- only `cascade.depth`/MAX_TRIGGER_CASCADE_DEPTH
+      // bounds it, never self-re-entry.
+      if (effect.echoCast) {
+        if (onEchoCast && source) {
+          cascade.depth += 1
+          working = onEchoCast(self.id, source, working, events, cascade)
+          cascade.depth -= 1
+        }
+        continue
+      }
 
       cascade.activeInstances.add(effect.instanceId)
       cascade.depth += 1
@@ -1001,7 +1048,15 @@ export function applyStatus(
   const nextEffects: ActiveEffect[] = existing
     ? target.activeEffects.map((e) =>
         e.instanceId === existing.instanceId
-          ? { ...e, remainingDuration: duration, stacks: newStacks }
+          ? // Phase 4 Slice H2 (PR #60 review): spread `existing` (already narrowed to the four
+            // status variants by the `.find()` above), not the loop's own `e: ActiveEffect` --
+            // now that `TriggeredEffect` also carries an UNRELATED `stacks?: boolean` field
+            // (E2.1's dedup flag), spreading the raw union member no longer type-checks cleanly
+            // against `ActiveEffect` (a real conflict TS now catches, not a spurious one: `e`
+            // could type-widen to `TriggeredEffect`, whose `stacks` is a boolean, not this
+            // status's numeric stack count). `existing` carries the exact same runtime value at
+            // this index (that's how it was found) with a type that's actually correct.
+            { ...existing, remainingDuration: duration, stacks: newStacks }
           : e,
       )
     : [

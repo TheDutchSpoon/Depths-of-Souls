@@ -433,4 +433,71 @@ describe('evaluateCondition -- acted-before-target (Phase 4 Slice C, Blindclaws)
       }),
     ).toBe(false)
   })
+
+  // Phase 4 Slice H2 (PR #60 review, E1): completes the case for the non-scripting call sites --
+  // a trigger's own source (fireHook) or a conditional-damage-bonus's current damage target
+  // (resolution.ts), threaded in as `resolvingAgainstId` -- so this condition is a real,
+  // real-content-usable passive-trait ingredient (Blindclaws' Striker), not scripting-only.
+  it('falls back to resolvingAgainstId when no ruleTargeting is supplied', () => {
+    const player = makeParty('player', [{ id: 'fast' }])
+    const enemy = makeParty('enemy', [{ id: 'slow' }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      turnQueue: [player[0]!.id, enemy[0]!.id],
+    })
+    expect(
+      evaluateCondition(
+        { kind: 'acted-before-target' },
+        player[0]!,
+        state,
+        undefined,
+        enemy[0]!.id,
+      ),
+    ).toBe(true)
+  })
+
+  it('is false via resolvingAgainstId when the acting creature is later in the queue', () => {
+    const player = makeParty('player', [{ id: 'slow' }])
+    const enemy = makeParty('enemy', [{ id: 'fast' }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      turnQueue: [enemy[0]!.id, player[0]!.id],
+    })
+    expect(
+      evaluateCondition(
+        { kind: 'acted-before-target' },
+        player[0]!,
+        state,
+        undefined,
+        enemy[0]!.id,
+      ),
+    ).toBe(false)
+  })
+
+  it('ruleTargeting still wins when both it and resolvingAgainstId are present', () => {
+    const player = makeParty('player', [{ id: 'fast' }])
+    const enemy = makeParty('enemy', [
+      { id: 'decoy' },
+      { id: 'real-target', currentHp: 1 },
+    ])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      // 'decoy' (the resolvingAgainstId) is EARLIER than self; 'real-target' (the rule's own
+      // lowest-hp-enemy selector) is LATER -- if ruleTargeting won, this is true; if
+      // resolvingAgainstId won instead, this would be false.
+      turnQueue: [enemy[0]!.id, player[0]!.id, enemy[1]!.id],
+    })
+    expect(
+      evaluateCondition(
+        { kind: 'acted-before-target' },
+        player[0]!,
+        state,
+        { kind: 'lowest-hp-enemy' },
+        enemy[0]!.id,
+      ),
+    ).toBe(true)
+  })
 })

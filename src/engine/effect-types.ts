@@ -361,6 +361,32 @@ export type TriggeredDef = {
    * TriggerFired/execution -- a failed roll skips silently, exactly like a false `condition`. Only
    * ever rolled when present; a creature/effect without it never touches state.rng here. */
   readonly chancePercent?: number
+  /** Phase 4 Slice H2 (PR #60 review, E2.1): a general dedup flag -- default absent/`true`
+   * (today's behavior, every matching effect fires independently). `false` means: across ALL
+   * living creatures, at most ONE instance of this exact effect (matched by `sourceTraitId`) is
+   * even given a chance to roll `chancePercent` per firing of this hook -- the "claim" happens
+   * BEFORE the roll (fireHook, resolution.ts), not just on success, so the AGGREGATE probability
+   * of the effect firing at all stays exactly `chancePercent` regardless of how many creatures
+   * carry it (two Overtones must not raise the echo chance above 10% -- branching factor stays
+   * 1). Kept general (not echo-cast-specific), though Resonant Overtone is its only v1 consumer. */
+  readonly stacks?: boolean
+  /** Phase 4 Slice H2 (PR #60 review, E2 -- Resonant Overtone's echo-cast). When true, firing
+   * this effect does NOT call `executeResponse` on `response` at all -- `response` is a
+   * structurally-required, functionally-inert placeholder (a `grant-action-state` with neither
+   * flag set is the convention; see RESONANT_OVERTONE_TRAIT). Instead, fireHook invokes its
+   * caller-supplied `onEchoCast` callback with the hook's own `source` (the OBSERVED actor, e.g.
+   * the ally who just cast -- NOT this effect's own bearer) as the one who casts again. This is
+   * deliberately NOT a 10th `EffectResponse` verb -- `executeResponse` (resolution.ts) cannot
+   * reach `executeCastSingle`/`executeCastAoe` (combat.ts) without a resolution.ts -> combat.ts
+   * import cycle, the same reason `bonus-cast` (a passive EffectDef, not a response) exists.
+   * `onEchoCast` is combat.ts's injected escape hatch for this one case; every fireHook call site
+   * except the two `on-action-observed` dispatches (combat.ts) omits it, so `echoCast` is inert
+   * (never fires) anywhere else. Also exempted from the self-re-entry guard (fireHook does not
+   * add this effect's `instanceId` to `cascade.activeInstances` around the callback) so a chain
+   * can revisit the SAME Overtone instance on a later hop -- termination relies on
+   * `cascade.depth`/`MAX_TRIGGER_CASCADE_DEPTH`, which the callback still increments, never on
+   * self-re-entry. Meaningful only when `hook` is `'on-action-observed'`. */
+  readonly echoCast?: boolean
   readonly response: EffectResponse
 }
 
@@ -691,6 +717,15 @@ export type ResolvedHookEffect = {
   readonly response: EffectResponse
   readonly stacks?: number
   readonly statusId?: string
+  /** Phase 4 Slice H2 (PR #60 review, E2.1): derived from a `TriggeredDef`'s own `stacks: false`
+   * (renamed here to avoid colliding with the STATUS stack-count field above, which is an
+   * unrelated number) -- `true` iff this effect must claim a fireHook-call-scoped dedup slot
+   * before it's even allowed to roll `chancePercent`. Always undefined for a status-sourced
+   * entry (no v1 status declares it). */
+  readonly nonStacking?: boolean
+  /** Phase 4 Slice H2 (PR #60 review, E2): mirrors a `TriggeredDef`'s own `echoCast`. Always
+   * undefined for a status-sourced entry. */
+  readonly echoCast?: boolean
 }
 
 export type ActiveEffect =

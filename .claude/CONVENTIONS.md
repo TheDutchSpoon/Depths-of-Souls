@@ -282,6 +282,13 @@ top-level kinds: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress
   way to "peek" a random pick without consuming randomness, and interpreter lookahead must never
   do that) — so a rule targeted at `random-enemy` never satisfies this condition. True iff the
   acting creature's frozen-turn-queue index is lower than its resolved target's.
+  **Phase 4 Slice H2 completion:** the case now falls back to the current damage target
+  (`resolvingAgainst`, already threaded into `evaluateCondition` by the `conditional-damage-bonus`
+  gather at `resolution.ts`) when `ruleTargeting` is absent — so it is **no longer always-false in a
+  passive**, and is a valid `conditional-damage-bonus` condition. This is what makes Blindclaws'
+  **Striker** a numeric TRAIT (`conditional-damage-bonus` + `condition: acted-before-target`,
+  `actionKind: 'attack'`) rather than a bespoke script. RNG-free (peek discipline unchanged); the
+  scripting path is untouched (fallback fires only when there is no rule context).
 - **turn-order status** (`{ category: 'turn-order-status', statusId, cap, position: 'first' |
   'last' }`) — a third new passively-read `StatusDef` category alongside friendly-fire-status
   (never hook-fired; read directly by `buildTurnQueue`, which partitions living combatants into an
@@ -390,6 +397,39 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   `specializations/brute.md` — agree it's `[100%, 100%]` ("Attack executes twice at 100%"). Built
   per the two content docs (docs win over the brief); the brief's own prose needs a correction
   before its next read.
+
+### Phase 4 Slice H2 addenda (Glimmerdark)
+
+- **`echo-cast` — Resonant Overtone's reactive re-cast — is NOT a 10th response verb.** It reuses
+  the **bonus-cast pattern**: a mechanism consulted directly by `combat.ts` (which alone can reach
+  `executeCastSingle`/`executeCastAoe` and random-gem selection — the same import-cycle reason
+  `bonus-cast` isn't a response), invoked at the **`on-action-observed` dispatch** rather than at
+  `resolveTurn`. So the response vocabulary is **still nine** — "hold the line at nine" holds.
+  Structure it as a sibling of `maybeFireBonusCast`: on an observed **cast** by an **ally**, an
+  observer carrying the echo-cast effect rolls its `chancePercent` (10) and, on success, makes the
+  **observed caster** (the hook's `source`, not the observer) cast a **uniformly-random equipped
+  gem** (may repeat the just-cast spell) at a **random valid target** (Duncan's call — random, not a
+  canonical default). Reuses bonus-cast's RNG discipline (roll-only-when-present) and executor path;
+  the echoed cast fires `on-cast`/`on-action-observed` like any cast.
+- **Echoes are observable → chains, and the chain must be BOUNDED — but not by copying bonus-cast's
+  cascade handling.** `maybeFireBonusCast` calls `newCascade()` (fresh, depth 0) because a turn-end
+  bonus cast never chains. An echo *does* chain (it re-fires `on-action-observed`), so echo-cast must
+  **thread the ambient `CascadeState`** into the echoed cast (increment depth per hop) so
+  `MAX_TRIGGER_CASCADE_DEPTH` (500) + `CascadeTruncated` bound it — a fresh cascade per echo would
+  reset the counter and leave the chain bounded only by the 10% roll. The **self-re-entry guard**
+  (`activeInstances`) must NOT be allowed to kill the chain (the same Overtone must be able to fire
+  on successive echoes): bound by **depth**, not by self-re-entry. RNG draw order per observed
+  instance, in `livingIds` dispatch order: gate → random gem → random target — document it; goldens
+  depend on it. Emit a minimal `echoed: true` marker (or `EchoGranted` event) so an echo is
+  distinguishable from a base cast in replays/goldens.
+- **`TriggeredDef.stacks?: boolean` — a new dedup flag** (default absent/`true` = today's behavior).
+  `stacks: false` means: across all living creatures, **at most one** instance of that exact effect
+  fires per observed action. This is what keeps multiple Overtones from compounding the echo chance —
+  branching factor stays 1, so the chain is **linear** and self-terminating (the 500-depth guard is
+  only the pathological-seed backstop). Kept general, though echo-cast is its only v1 consumer.
+- **`acted-before-target` completion** — see the condition's own entry above (now valid in a passive
+  `conditional-damage-bonus`, powering Striker). Landed in this slice alongside echo-cast; H2 is
+  therefore **not** content-only.
 
 ## Combat & scripting
 

@@ -1,0 +1,110 @@
+import { describe, expect, it } from 'vitest'
+import { LEECH_SOVEREIGN_TRAIT, TRAIT_REGISTRY } from '../traits'
+import { STATUS_REGISTRY } from '../statuses'
+import { STOCK_SCRIPTS_BY_ID } from '../scripts'
+import { canEquip } from '../../engine/generation'
+import {
+  GLIMMERDARK_AFFINITIES,
+  GLIMMERDARK_BIOME,
+  GLIMMERDARK_SPECIES_POOL,
+  GLIMMERDARK_SPELLS,
+  LEECH_SOVEREIGN,
+} from './glimmerdark'
+
+// Loader/shape test (per the H1/H2 common checklist item 6): every creature has a valid
+// affinity/species/rarity/trait/script reference; every trait/spell/status referenced actually
+// exists in a registry.
+
+const ALL_CREATURES = GLIMMERDARK_SPECIES_POOL.flatMap((s) => s.creatures)
+
+describe('Glimmerdark: shape', () => {
+  it('ships exactly 6 species x 3 creatures (18 total)', () => {
+    expect(GLIMMERDARK_SPECIES_POOL).toHaveLength(6)
+    for (const species of GLIMMERDARK_SPECIES_POOL) {
+      expect(species.creatures).toHaveLength(3)
+    }
+    expect(ALL_CREATURES).toHaveLength(18)
+  })
+
+  it('every species has a unique id, every creature within it a unique id', () => {
+    const speciesIds = new Set(GLIMMERDARK_SPECIES_POOL.map((s) => s.id))
+    expect(speciesIds.size).toBe(6)
+    const creatureIds = new Set(ALL_CREATURES.map((c) => c.id))
+    expect(creatureIds.size).toBe(18)
+  })
+
+  it('every species declares a positive draw weight (ASSUMPTION 5)', () => {
+    for (const species of GLIMMERDARK_SPECIES_POOL) {
+      expect(species.weight).toBeGreaterThan(0)
+    }
+  })
+
+  it('every creature carries exactly one innate trait, referencing a real TRAIT_REGISTRY entry', () => {
+    for (const creature of ALL_CREATURES) {
+      expect(creature.innateTraitIds).toHaveLength(1)
+      for (const traitId of creature.innateTraitIds) {
+        expect(TRAIT_REGISTRY.has(traitId)).toBe(true)
+      }
+    }
+  })
+
+  it('every creature references a real STOCK_SCRIPTS_BY_ID script', () => {
+    for (const creature of ALL_CREATURES) {
+      expect(STOCK_SCRIPTS_BY_ID.has(creature.defaultScriptId)).toBe(true)
+    }
+  })
+
+  it("base stats fall within GAME_DESIGN's 10-30 range for every stat", () => {
+    for (const creature of ALL_CREATURES) {
+      for (const value of Object.values(creature.baseStats)) {
+        expect(value).toBeGreaterThanOrEqual(10)
+        expect(value).toBeLessThanOrEqual(30)
+      }
+    }
+  })
+
+  it('is affinity-complete (all 5 affinities present, "Coverage" note)', () => {
+    const affinities = new Set(GLIMMERDARK_AFFINITIES)
+    expect(affinities).toEqual(
+      new Set(['vitality', 'violence', 'wit', 'endurance', 'instinct']),
+    )
+  })
+
+  it('exactly one cast-role creature, and every spell it could roll is affinity-matched', () => {
+    const casters = ALL_CREATURES.filter((c) => c.defaultScriptId === 'always-cast')
+    expect(casters).toHaveLength(1)
+    for (const caster of casters) {
+      const matching = GLIMMERDARK_SPELLS.filter((spell) =>
+        canEquip(spell, caster.affinity),
+      )
+      expect(matching.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('every spell that applies a status references a real STATUS_REGISTRY entry', () => {
+    for (const spell of GLIMMERDARK_SPELLS) {
+      if (spell.appliesStatus) {
+        expect(STATUS_REGISTRY.has(spell.appliesStatus.statusId)).toBe(true)
+      }
+    }
+  })
+
+  it('GLIMMERDARK_BIOME wires the real species/spell pools', () => {
+    expect(GLIMMERDARK_BIOME.speciesPool).toBe(GLIMMERDARK_SPECIES_POOL)
+    expect(GLIMMERDARK_BIOME.spellPool).toBe(GLIMMERDARK_SPELLS)
+  })
+})
+
+describe('Leech Sovereign (floor-20 boss)', () => {
+  it('references a real registered trait', () => {
+    expect(TRAIT_REGISTRY.get(LEECH_SOVEREIGN_TRAIT.id)).toBe(LEECH_SOVEREIGN_TRAIT)
+    expect(LEECH_SOVEREIGN.innateTraitIds).toEqual([LEECH_SOVEREIGN_TRAIT.id])
+  })
+
+  it('base stats fall within the 10-30 range (elevated power comes from level, not raw base)', () => {
+    for (const value of Object.values(LEECH_SOVEREIGN.baseStats)) {
+      expect(value).toBeGreaterThanOrEqual(10)
+      expect(value).toBeLessThanOrEqual(30)
+    }
+  })
+})
