@@ -101,13 +101,14 @@ slice — this slice only authors her as content: her stats, her signature trait
 roster members accompany her, the same content/runner split the Unicorn's own scripted intro had
 in Slice F.
 
-## Spells (10, two per affinity)
+## Spells (11 of The Overgrowth's own, plus 3 shared "core" spells — all unlocked at biome 1)
 
 Damage-spell power convention: a single-target spell with no other effect deals damage around
 **100%** of the caster's Intelligence; one that also applies a status pulls back to roughly
 **80–90%**. An AOE spell with no other effect would land around **50%**; one that also applies a
 status pulls back to roughly **30–40%**. No affinity in this biome carries two plain damage
-spells — every affinity's second entry does something else instead.
+spells — every affinity's second entry does something else instead (except Wit, which carries a
+third, plain-damage entry: Arcane Bolt).
 
 | Spell | Affinity | Description |
 |---|---|---|
@@ -115,6 +116,7 @@ spells — every affinity's second entry does something else instead.
 | Weakening Bite | Violence | Permanently lowers a single enemy's Defence by **20%** for the rest of the fight. |
 | Vine Snare | Wit | A single-target hit dealing **85% of the caster's Intelligence**, and applies Web to its target for 3 turns. |
 | Pollen Cloud | Wit | Hits every enemy for **35% of the caster's Intelligence** each, and puts all of them to Sleep for 2 turns. |
+| Arcane Bolt | Wit | A single-target hit dealing damage equal to **50% of the caster's Intelligence**. Also the Sorcerer starter's fixed granted gem. |
 | Root Grasp | Endurance | A single-target hit dealing damage equal to **100% of the caster's own Defence** (instead of Intelligence). |
 | Bramble Ward | Endurance | Permanently raises the whole team's Defence by **20%** for the rest of the fight. |
 | Regrowth | Vitality | Heals a single ally for an amount equal to **30% of the caster's own effective Health**. |
@@ -127,3 +129,24 @@ the normal damage formula (the target's Defence, affinity, all the usual modifie
 percentage is the spell's own power coefficient, not a flat number. Every ally-targeting entry
 above (Bramble Ward, Regrowth, Wild Vigor, Howling Instinct) can be cast on any living ally,
 including the caster itself.
+
+### Shared "core" spells (`src/data/spells/core.ts`)
+
+Three affinity-generic spells, authored before any biome existed, that were never actually wired
+into any biome's roll until the Phase 4 interstitial slice (cumulative spell unlock) — they're
+tagged `unlockedAtBiome: 1` and reachable at The Overgrowth and every deeper biome, same as the
+11 above:
+
+| Spell | Affinity | Description |
+|---|---|---|
+| Ember Lance | Violence | A single-target hit dealing damage equal to **50% of the caster's Intelligence**. |
+| Cinder Nova | Violence | Hits every enemy for **30% of the caster's Intelligence** each. |
+| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns. |
+
+### Cumulative unlock
+
+Spell unlock is **cumulative, not per-biome-exclusive** (GAME_DESIGN §4): every spell above is
+tagged `unlockedAtBiome: 1`, meaning it stays rollable by any affinity-matched caster in every
+biome from here on — Glimmerdark and Rotcap Hollow inherit this entire list rather than
+re-authoring their own version of it. See `.claude/content/glimmerdark.md` for what biome 2 adds
+on top.

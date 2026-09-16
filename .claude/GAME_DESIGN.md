@@ -130,6 +130,18 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
     amplifier that reads "enemies currently [status]" may legitimately have no source present in
     a given fight. There is **no difficulty ramp across biomes 1–3** — the enemy-level curve carries
     escalation; only interaction *scope* widens with later biomes.
+  - **Spells unlock cumulatively (Phase 4 interstitial slice, pinned here):** unlike species/
+    creatures, which are **biome-exclusive** (see below), the **shared spell pool is additive** —
+    every `Spell` carries an `unlockedAtBiome` (1-based biome number); a cast-role enemy's
+    loadout, and the player's own equip options once Phase 8 lands, are rolled/offered from
+    **every spell whose `unlockedAtBiome` is `≤` the current biome**, filtered by affinity. A
+    biome-1 spell stays available at every deeper biome; nothing is re-authored per biome once
+    it exists. This is **the opposite rule from species/creature biome-exclusivity** below —
+    don't conflate the two: a biome's own roster (which creatures spawn there) resets every
+    biome, but its casters draw from the FULL inherited spell list, not just that biome's own
+    additions. A new biome's own spell contribution should therefore be small ("spice" on top of
+    an inherited base), not a re-authored full kit per affinity — re-authoring one caused Phase 4
+    Slice H2's own near-duplicate spells (since deleted; see `.claude/phases/` for the record).
   - **Seed biomes (Phase 4):** the first three authored biomes are **The Overgrowth** (lush,
     sunlit entrance), **Glimmerdark** (light thins, life adapts, bioluminescence), and **Rotcap
     Hollow** (fungal — colonies, spores, spread). Mood is a **creature-design filter** — it shapes
