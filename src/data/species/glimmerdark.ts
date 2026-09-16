@@ -119,14 +119,11 @@ export const BLINDCLAWS_SETTER: SpeciesCreature = {
   rarity: 'common',
 }
 
-/** Uses the new `ambush-strike` stock script (data/scripts.ts), not `always-attack` -- see
- * `BLINDCLAWS_STRIKER_TRAIT`'s own doc comment for why this creature's signature mechanic lives
- * in its script, not a trait effect. */
 export const BLINDCLAWS_STRIKER: SpeciesCreature = {
   id: 'blindclaws-striker',
   affinity: 'instinct',
   baseStats: { health: 14, attack: 24, intelligence: 10, defence: 10, speed: 26 },
-  defaultScriptId: 'ambush-strike',
+  defaultScriptId: 'always-attack',
   innateTraitIds: [BLINDCLAWS_STRIKER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -187,11 +184,15 @@ export const RESONANTS: Species = {
   creatures: [RESONANT_CHORUS, RESONANT_ADEPT, RESONANT_OVERTONE],
 }
 
-// ---- Sparkeaters (Wit/Violence lean) -- closed mechanic: stat parasites ----
+// ---- Sparkeaters (Wit/Violence lean per species-locked.md) -- closed mechanic: stat parasites ----
+// PR #60 review (C2): per-creature affinity stamped to match the stat each one steals, not the
+// species-level lean -- see traits/glimmerdark.ts's own header comment for the full rationale.
 
 export const SPARKEATER_LEECH: SpeciesCreature = {
   id: 'sparkeater-leech',
-  affinity: 'wit',
+  // PR #60 review (C2): affinity now matches the stat it steals (CLAUDE.md's affinity->stat
+  // soft-mapping) -- Attack -> violence.
+  affinity: 'violence',
   baseStats: { health: 16, attack: 18, intelligence: 16, defence: 12, speed: 18 },
   defaultScriptId: 'always-attack',
   innateTraitIds: [SPARKEATER_LEECH_TRAIT.id],
@@ -200,7 +201,8 @@ export const SPARKEATER_LEECH: SpeciesCreature = {
 
 export const SPARKEATER_GORGER: SpeciesCreature = {
   id: 'sparkeater-gorger',
-  affinity: 'violence',
+  // PR #60 review (C2): Defence -> endurance.
+  affinity: 'endurance',
   baseStats: { health: 18, attack: 20, intelligence: 12, defence: 16, speed: 14 },
   defaultScriptId: 'always-attack',
   innateTraitIds: [SPARKEATER_GORGER_TRAIT.id],
@@ -225,7 +227,8 @@ export const SPARKEATERS: Species = {
   creatures: [SPARKEATER_LEECH, SPARKEATER_GORGER, SPARKEATER_VOIDMAW],
 }
 
-// ---- Gloomjaws (Violence lean) -- closed mechanic: execute the weak ----
+// ---- Gloomjaws (Violence lean) -- execute the weak, via three distinct verbs (PR #60 review,
+// C4 -- see traits/glimmerdark.ts's own header comment) ----
 
 export const GLOOMJAW_STALKER: SpeciesCreature = {
   id: 'gloomjaw-stalker',

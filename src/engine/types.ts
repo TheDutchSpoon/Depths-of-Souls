@@ -253,6 +253,18 @@ export interface TriggerFiredEvent {
   readonly effectId: string
 }
 
+/** Phase 4 Slice H2 (PR #60 review, E2.5): precedes an echo-cast's own SpellCast, marking it as
+ * an echo rather than a chosen action or a bonus-cast (per CONVENTIONS' "emit a minimal
+ * echoed:true marker... or an EchoGranted event" -- this project took the dedicated-event
+ * option, mirroring TriggerFired's own precedent, rather than growing SpellCastEvent's shape,
+ * which many non-echo call sites share). `sourceId` is the effect's bearer (the observer whose
+ * Overtone-shaped trait granted this); `casterId` is who actually casts (the observed actor). */
+export interface EchoCastGrantedEvent {
+  readonly type: 'EchoCastGranted'
+  readonly sourceId: CreatureId
+  readonly casterId: CreatureId
+}
+
 export type IntentEvent =
   | AttackDeclaredEvent
   | SpellCastEvent
@@ -260,6 +272,7 @@ export type IntentEvent =
   | ProvokedEvent
   | WaitedEvent
   | TriggerFiredEvent
+  | EchoCastGrantedEvent
 
 // Consequence events: shared across any future source, not just Attack.
 export interface DamageDealtEvent {

@@ -141,8 +141,17 @@ export function evaluateCondition(
         hasStatus(c, condition.statusId),
       )
     case 'acted-before-target': {
-      if (!ruleTargeting) return false
-      const targetId = peekTargetSelector(ruleTargeting, creature, state)
+      // Phase 4 Slice H2 (PR #60 review, E1): completes the case for the non-scripting call
+      // sites -- gatherConditionalDamageBonus (resolution.ts) already passes the CURRENT damage
+      // target as resolvingAgainstId, and this function already resolves it into
+      // `resolvingAgainst` above (for 'target'-subject hp-percent/has-status conditions); this
+      // case just hadn't consulted it yet. `ruleTargeting` (scripting) still wins when present
+      // (unchanged path, RNG-free peek); falls back to the already-resolved trigger/gather target
+      // when it's the only context available. Blindclaws' Striker (data/traits/glimmerdark.ts) is
+      // the first real consumer, via conditional-damage-bonus.
+      const targetId = ruleTargeting
+        ? peekTargetSelector(ruleTargeting, creature, state)
+        : resolvingAgainst?.id
       if (!targetId) return false
       const selfIndex = state.turnQueue.indexOf(creature.id)
       const targetIndex = state.turnQueue.indexOf(targetId)

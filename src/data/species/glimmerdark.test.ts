@@ -4,7 +4,6 @@ import { STATUS_REGISTRY } from '../statuses'
 import { STOCK_SCRIPTS_BY_ID } from '../scripts'
 import { canEquip } from '../../engine/generation'
 import {
-  BLINDCLAWS_STRIKER,
   GLIMMERDARK_AFFINITIES,
   GLIMMERDARK_BIOME,
   GLIMMERDARK_SPECIES_POOL,
@@ -49,11 +48,10 @@ describe('Glimmerdark: shape', () => {
     }
   })
 
-  it('every creature references a real STOCK_SCRIPTS_BY_ID script (incl. ambush-strike)', () => {
+  it('every creature references a real STOCK_SCRIPTS_BY_ID script', () => {
     for (const creature of ALL_CREATURES) {
       expect(STOCK_SCRIPTS_BY_ID.has(creature.defaultScriptId)).toBe(true)
     }
-    expect(BLINDCLAWS_STRIKER.defaultScriptId).toBe('ambush-strike')
   })
 
   it("base stats fall within GAME_DESIGN's 10-30 range for every stat", () => {

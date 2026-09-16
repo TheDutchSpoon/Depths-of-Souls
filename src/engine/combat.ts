@@ -21,13 +21,14 @@ import {
   fireHook,
   newCascade,
 } from './resolution'
-import type { CascadeState } from './resolution'
+import type { CascadeState, EchoCastExecutor } from './resolution'
 import { decideAction } from './interpreter'
 import {
   adjacentLivingTargets,
   getDefaultTarget,
   shouldRedirectAoeToAllies,
 } from './targeting'
+import { resolveTargetSelector } from './target-selectors'
 import type { CreatureId } from './ids'
 import type { EffectDef, EffectInstanceId } from './effect-types'
 import type {
@@ -523,6 +524,8 @@ function executeCastSingle(
     ).state
     // Phase 4 Slice E2 (general action-observation system): Resonants' own consumer shape
     // (relationship 'ally', actionKind 'cast') -- see CONVENTIONS' actor-vs-observer routing.
+    // Phase 4 Slice H2 (PR #60 review, E2): runEchoCast threaded in as the echoCast escape hatch
+    // (Resonant Overtone) -- inert everywhere no effect declares echoCast.
     working = fireHook(
       'on-action-observed',
       livingIds(working),
@@ -531,6 +534,7 @@ function executeCastSingle(
       events,
       cascade,
       { actionKind: 'cast', instanceIndex },
+      runEchoCast,
     ).state
     working = applyCastPayload(
       actor,
@@ -619,7 +623,8 @@ function executeCastAoe(
     // AOE has no single target to name as the hook's `source` -- self only.
     working = fireHook('on-cast', [actor.id], undefined, working, events, cascade).state
     // Phase 4 Slice E2 (general action-observation system): source here IS the actor (needed
-    // for relationship filtering), unlike on-cast's own source above.
+    // for relationship filtering), unlike on-cast's own source above. Phase 4 Slice H2 (PR #60
+    // review, E2): runEchoCast threaded in, same as executeCastSingle's own call above.
     working = fireHook(
       'on-action-observed',
       livingIds(working),
@@ -628,6 +633,7 @@ function executeCastAoe(
       events,
       cascade,
       { actionKind: 'cast', instanceIndex },
+      runEchoCast,
     ).state
 
     for (const targetId of targetIds) {
@@ -698,6 +704,56 @@ function maybeFireBonusCast(
   const targetId = resolveInstanceTarget(actor, null, state, targetSide)
   if (!targetId) return state
   return executeCastSingle(actor, chosen.slot, targetId, state, events, cascade)
+}
+
+/**
+ * Phase 4 Slice H2 (PR #60 review, E2 -- Resonant Overtone's echo-cast). A `maybeFireBonusCast`
+ * SIBLING, per CONVENTIONS' own H2 addenda: the chancePercent gate/`stacks:false` dedup/
+ * observationFilter match are already handled generically by fireHook before this is even
+ * called (see `TriggeredDef.echoCast`'s doc comment); this function's only job is running the
+ * actual cast, threading the AMBIENT `cascade` (never a fresh one -- E2.2, so depth keeps
+ * accumulating across chained echoes instead of resetting). `casterId` is the OBSERVED actor
+ * (fireHook's own `source`), never the effect's bearer -- "it makes the observed caster cast,
+ * not the observer." E2.4's RNG order: the chancePercent gate already rolled (by fireHook,
+ * before this call) -> random gem (may repeat the just-cast spell) -> random target.
+ */
+const runEchoCast: EchoCastExecutor = (observerId, casterId, state, events, cascade) => {
+  const caster = findCreature(state, casterId)
+  // E2.5: caster dead by resolution (an earlier chain hop's own damage could have killed it) ->
+  // fizzle silently, same discipline as applyStatusIfAlive's corpse guard.
+  if (!caster || !caster.alive) return state
+
+  const equipped = caster.equippedSpells
+    .map((spell, slot) => ({ spell, slot }))
+    .filter((entry): entry is { spell: Spell; slot: number } => entry.spell !== null)
+  if (equipped.length === 0) return state // E2.5: 0 equipped -> no-op
+
+  const gemIndex = Math.floor(state.rng.next() * equipped.length)
+  const chosen = equipped[gemIndex]
+  if (!chosen) return state
+
+  if (chosen.spell.targetShape === 'aoe') {
+    // An AOE echo always "happens" (matches every other AOE cast site -- an empty living-enemy
+    // side just means zero targets, not a fizzle).
+    events.push({ type: 'EchoCastGranted', sourceId: observerId, casterId })
+    return executeCastAoe(caster, chosen.slot, state, events, cascade)
+  }
+  // E2/CONVENTIONS: "randomised -- the echoed spell hits a random valid target for its
+  // shape/side" -- random-ally for an ally-targeting spell, random-enemy otherwise, mirroring
+  // resolveInstanceTarget's own targetSide branch but drawing fresh instead of preserving a
+  // prior instance's target (there is no prior instance here to preserve). Draws NOTHING when
+  // the pool is empty (target-selectors.ts's own "draws nothing when inactive" discipline).
+  const targetSide = chosen.spell.targetSide ?? 'enemy'
+  const targetId = resolveTargetSelector(
+    { kind: targetSide === 'ally' ? 'random-ally' : 'random-enemy' },
+    caster,
+    state,
+  )
+  // E2.5: no valid target -> fizzle silently, no event at all (same discipline as Spore's own
+  // spread-on-death: "fizzles if none qualify").
+  if (!targetId) return state
+  events.push({ type: 'EchoCastGranted', sourceId: observerId, casterId })
+  return executeCastSingle(caster, chosen.slot, targetId, state, events, cascade)
 }
 
 function executeDefend(

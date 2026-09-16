@@ -147,6 +147,10 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
         chancePercent: e.chancePercent,
         observationFilter: e.observationFilter,
         response: e.response,
+        // Phase 4 Slice H2 (PR #60 review, E2.1/E2): only a TriggeredDef can declare either (no
+        // status content uses them), so both stay undefined via the condition-status branch below.
+        nonStacking: e.stacks === false ? true : undefined,
+        echoCast: e.echoCast,
       })
     } else if (e.category === 'condition-status') {
       for (const trigger of e.triggers) {

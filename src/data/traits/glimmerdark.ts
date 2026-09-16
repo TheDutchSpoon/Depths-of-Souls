@@ -102,30 +102,23 @@ export const BLINDCLAWS_SETTER_TRAIT: Trait = {
   ],
 }
 
-/** Blindclaws' Striker (payoff): "+% while acting before its target" (species-locked.md) --
- * ASSUMPTION (H2, flagged): `acted-before-target` (Slice C) can only ever evaluate true when
- * checked against a scripting RULE's own `targeting` selector (`evaluateCondition`'s
- * `ruleTargeting` parameter) -- every OTHER call site (a `TriggeredDef`/`conditional-damage-
- * bonus`'s own condition, resolution.ts:220/449) passes no rule context, so the condition is
- * always false there by construction. There is therefore no way to express "+% damage while
- * acting first" as a passive trait effect; the only legal, engine-real way to consume this
- * condition as actual content is via the creature's own SCRIPT. Built here as a real behavioral
- * difference instead of a numeric one: Striker's `defaultScriptId` (species/glimmerdark.ts) is
- * the new `ambush-strike` stock script (data/scripts.ts) -- it strikes the lowest-HP enemy only
- * when it can act before that enemy this round (i.e. it has the initiative, whether from raw
- * Speed or a Setter/Vanguard grant), and holds position (Defends) otherwise. This is the first
- * real roster use of `acted-before-target`, per species-locked.md's own "first roster use" note.
- * Its OWN trait is a small, separate, legal mechanic that complements the ambush identity without
- * touching the blocked condition: bonus Attack scaled off its own (high) Speed. */
+/** Blindclaws' Striker (payoff): "+% while acting before its target" (species-locked.md), now
+ * the spec'd numeric payoff (PR #60 review, C1) -- a real `conditional-damage-bonus` on the
+ * `acted-before-target` condition, made possible by E1 (conditions.ts) completing that
+ * condition's non-scripting path. Action-selection (attack-or-Defend) is the scripting layer's
+ * job, never a creature-identity trait -- the previous `ambush-strike` script (data/scripts.ts)
+ * has been removed; Striker is back on the plain `always-attack` script
+ * (species/glimmerdark.ts), and this is its whole identity. Scoped to `actionKind: 'attack'`
+ * (species-locked.md's own wording is Attack-specific; Striker has no Cast loadout anyway). */
 export const BLINDCLAWS_STRIKER_TRAIT: Trait = {
   id: 'blindclaws-striker-killing-instinct',
   name: 'Killing Instinct',
   effects: [
     {
-      category: 'cross-stat',
-      fromStat: 'speed',
-      percentPerRank: 0.2,
-      appliesTo: 'attack',
+      category: 'conditional-damage-bonus',
+      percent: 0.35,
+      actionKind: 'attack',
+      condition: { kind: 'acted-before-target' },
     },
   ],
 }
@@ -198,9 +191,16 @@ export const RESONANT_ADEPT_TRAIT: Trait = {
   ],
 }
 
-/** Resonant Overtone (rare, amplifier): gains BOTH stats per ally cast -- literally "gain
- * Attack/Int" (species-locked.md), the fullest harmonization. Two separate TriggeredDef entries
- * on the same hook, same shape as Sparkeaters' two-stat steal below. */
+/** Resonant Overtone (rare, amplifier): PR #60 review -- replaces the previous "gain both
+ * stats" (a bigger numeric copy of Chorus+Adept) with echo-cast, species-locked.md's actual
+ * spec'd mechanic: `on-ally-action (cast) -> 10% the caster echo-casts a random one of its own
+ * spells` (non-stacking; echoes are themselves observable -> chains). Built on the `echoCast`
+ * primitive (effect-types.ts's `TriggeredDef.echoCast`, CONVENTIONS' H2 addenda) -- NOT a new
+ * response verb, reusing the bonus-cast pattern via combat.ts's `runEchoCast`. `response` is a
+ * structurally-required but functionally-inert placeholder (a `grant-action-state` with neither
+ * flag set is a true no-op) -- never actually executed; firing this effect calls `runEchoCast`
+ * instead (see fireHook's own echoCast branch, resolution.ts). `stacks: false` keeps the
+ * aggregate 10% chance from compounding when multiple Overtones are on the board. */
 export const RESONANT_OVERTONE_TRAIT: Trait = {
   id: 'resonant-overtone-crescendo',
   name: 'Crescendo',
@@ -209,33 +209,21 @@ export const RESONANT_OVERTONE_TRAIT: Trait = {
       category: 'triggered',
       hook: 'on-action-observed',
       observationFilter: { relationship: 'ally', actionKind: 'cast' },
-      response: {
-        kind: 'apply-stat-modifier',
-        target: { kind: 'self' },
-        stat: 'attack',
-        factor: 1.05,
-      },
-    },
-    {
-      category: 'triggered',
-      hook: 'on-action-observed',
-      observationFilter: { relationship: 'ally', actionKind: 'cast' },
-      response: {
-        kind: 'apply-stat-modifier',
-        target: { kind: 'self' },
-        stat: 'intelligence',
-        factor: 1.05,
-      },
+      chancePercent: 10,
+      stacks: false,
+      echoCast: true,
+      response: { kind: 'grant-action-state', target: { kind: 'self' } },
     },
   ],
 }
 
-// ---- Sparkeaters (Wit/Violence lean) -- closed mechanic: stat parasites ----
+// ---- Sparkeaters (Wit/Violence lean per species-locked.md) -- closed mechanic: stat parasites ----
 // species-locked.md: "Drainers (on-attack -> -stat enemy + same +stat self, both
 // permanent-for-fight)" -- a flat "stat parasite" identity with no enabler/payoff chain (like
-// Resonants above), so each creature drains a different stat, escalating to both at once for the
-// amplifier -- broader, not merely bigger, per this species' own identity (no exploit chain to
-// keep distinct from, unlike Overgrowth's trap->exploit species).
+// Resonants above), so each creature drains a different stat. PR #60 review (C2): per-creature
+// affinity now matches the stat each one drains, per CLAUDE.md's affinity->stat soft-mapping --
+// Leech (Attack) -> violence, Gorger (Defence) -> endurance; Voidmaw stays vitality (species/
+// glimmerdark.ts). Side effect: the biome's affinity spread flattens to 4/4/4/4/2.
 
 /** Sparkeater Leech (common): every attack, permanently steals 10% Attack from its target to
  * itself (two apply-stat-modifier responses on the same hook -- "free", per species-locked.md's
@@ -295,9 +283,14 @@ export const SPARKEATER_GORGER_TRAIT: Trait = {
   ],
 }
 
-/** Sparkeater Voidmaw (rare, amplifier, Vitality coverage sprinkle): drains BOTH Attack and
- * Defence in the same hit -- broader than either specialist, not a bigger single steal. Four
- * apply-stat-modifier responses on the same hook. */
+/** Sparkeater Voidmaw (rare, amplifier, Vitality coverage sprinkle): PR #60 review (C3) --
+ * replaces the previous "steal Attack+Defence" (a diluted copy of Leech+Gorger, not a distinct
+ * mechanic) with a genuinely different one -- a max-HP parasite that feeds the whole team, not
+ * just itself. Every attack, it steals 10% max Health from its target (which also clamps the
+ * target's CURRENT hp down, resolution.ts's post-stat-modifier clamp -- it bites now) and raises
+ * every living ally's (including itself) max Health by 5% (a ceiling raise only -- no auto-heal,
+ * same `clampedHp` asymmetry Treant Grovekeep's one-time team +max-HP already established;
+ * Voidmaw's version repeats every attack instead of firing once, so a smaller per-hit number). */
 export const SPARKEATER_VOIDMAW_TRAIT: Trait = {
   id: 'sparkeater-voidmaw-consume',
   name: 'Consume',
@@ -308,7 +301,7 @@ export const SPARKEATER_VOIDMAW_TRAIT: Trait = {
       response: {
         kind: 'apply-stat-modifier',
         target: { kind: 'triggering-source' },
-        stat: 'attack',
+        stat: 'health',
         factor: 0.9,
       },
     },
@@ -317,41 +310,22 @@ export const SPARKEATER_VOIDMAW_TRAIT: Trait = {
       hook: 'on-attack',
       response: {
         kind: 'apply-stat-modifier',
-        target: { kind: 'self' },
-        stat: 'attack',
-        factor: 1.1,
-      },
-    },
-    {
-      category: 'triggered',
-      hook: 'on-attack',
-      response: {
-        kind: 'apply-stat-modifier',
-        target: { kind: 'triggering-source' },
-        stat: 'defence',
-        factor: 0.9,
-      },
-    },
-    {
-      category: 'triggered',
-      hook: 'on-attack',
-      response: {
-        kind: 'apply-stat-modifier',
-        target: { kind: 'self' },
-        stat: 'defence',
-        factor: 1.1,
+        target: { kind: 'all-allies' },
+        stat: 'health',
+        factor: 1.05,
       },
     },
   ],
 }
 
 // ---- Gloomjaws (Violence lean) -- closed mechanic: execute the weak ----
-// species-locked.md: "on-damage-dealt -> bonus vs targets below X% HP (self-contained)" -- a
-// single shared mechanic (like Resonants), escalating threshold/magnitude by rarity. Built as
-// `conditional-damage-bonus` (Slice E2), condition subject 'target' -- the exact primitive
-// CONVENTIONS names Gloomjaws under.
+// PR #60 review (C4): three DISTINCT verbs, superseding species-locked.md's original "single
+// shared mechanic (on-damage-dealt -> bonus vs targets below X% HP, self-contained)" framing --
+// that doc entry is stale as of this review; see the doc-sync note in the phase record. All three
+// verbs were already built (conditional-damage-bonus/Slice E2, apply-stat-modifier/Slice C,
+// armor-penetration/Slice B); this is pure content-assembly, no new engine work.
 
-/** Gloomjaw Stalker (common): +30% damage to enemies below 30% HP. */
+/** Gloomjaw Stalker (common): the finisher -- unchanged, +30% damage to enemies below 30% HP. */
 export const GLOOMJAW_STALKER_TRAIT: Trait = {
   id: 'gloomjaw-stalker-predatory-instinct',
   name: 'Predatory Instinct',
@@ -370,46 +344,37 @@ export const GLOOMJAW_STALKER_TRAIT: Trait = {
   ],
 }
 
-/** Gloomjaw Executioner (uncommon): a bigger bonus at a tighter threshold. */
+/** Gloomjaw Executioner (uncommon): PR #60 review (C4) -- replaces the previous "bigger execute
+ * bonus" (a numeric duplicate of Stalker) with a genuinely different verb: snowballs off
+ * finishing blows. Every kill permanently raises its own Attack by 15% for the rest of the fight
+ * (apply-stat-modifier, same on-kill shape Overgrowth's Rotfeeders will use in H3) -- it doesn't
+ * need a low-HP target to pay off, it needs kills. */
 export const GLOOMJAW_EXECUTIONER_TRAIT: Trait = {
   id: 'gloomjaw-executioner-finishing-blow',
   name: 'Finishing Blow',
   effects: [
     {
-      category: 'conditional-damage-bonus',
-      percent: 0.5,
-      condition: {
-        kind: 'hp-percent',
-        subject: 'target',
-        qualifier: 'any',
-        comparator: '<',
-        thresholdPercent: 20,
+      category: 'triggered',
+      hook: 'on-kill',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'self' },
+        stat: 'attack',
+        factor: 1.15,
       },
     },
   ],
 }
 
-/** Gloomjaw Ravager (rare, amplifier): a genuinely distinct ANGLE, not just a bigger number --
- * on top of the biggest execute bonus, it also ignores 20% of every target's Defence outright
- * (armor-penetration, Slice B), unconditionally -- it doesn't just hit low-HP targets harder, it
- * gets through armor to put them there faster. */
+/** Gloomjaw Ravager (rare, amplifier): PR #60 review (C4) -- replaces the previous "biggest
+ * execute bonus + armor-pen" combo (still numerically anchored to Stalker/Executioner's own
+ * verb) with armor-penetration as its WHOLE identity, unconditional -- it doesn't hit low-HP
+ * targets harder, it ignores 30% of EVERY target's Defence outright, softening healthy targets
+ * into the rest of the species' execute range faster. */
 export const GLOOMJAW_RAVAGER_TRAIT: Trait = {
   id: 'gloomjaw-ravager-annihilating-strike',
   name: 'Annihilating Strike',
-  effects: [
-    {
-      category: 'conditional-damage-bonus',
-      percent: 0.7,
-      condition: {
-        kind: 'hp-percent',
-        subject: 'target',
-        qualifier: 'any',
-        comparator: '<',
-        thresholdPercent: 15,
-      },
-    },
-    { category: 'armor-penetration', percent: 0.2 },
-  ],
+  effects: [{ category: 'armor-penetration', percent: 0.3 }],
 }
 
 // ---- Shellbacks (Endurance lean) -- closed mechanic: armor-as-weapon ----

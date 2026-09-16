@@ -1,9 +1,9 @@
 # Glimmerdark (Biome 2, floors 11–20) — content reference
 
-Status: shipped — Phase 4 Slice H2. Source: creature/species composition in
-`src/data/species/glimmerdark.ts`; trait definitions in `src/data/traits/glimmerdark.ts`; spell
-definitions in `src/data/spells/glimmerdark.ts`; Glow/grant-act-first in `src/data/statuses.ts`;
-the `ambush-strike` script in `src/data/scripts.ts`. Design source:
+Status: shipped — Phase 4 Slice H2, revised per PR #60 design review. Source: creature/species
+composition in `src/data/species/glimmerdark.ts`; trait definitions in
+`src/data/traits/glimmerdark.ts`; spell definitions in `src/data/spells/glimmerdark.ts`;
+Glow/grant-act-first in `src/data/statuses.ts`. Design source:
 `.claude/species/species-locked.md`'s Biome 2 table.
 
 This doc is the **player-facing reference** — every trait and spell below is written as a single,
@@ -39,41 +39,39 @@ the *front* of the round's turn order instead of the back. Lasts up to **3 turns
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Setter | Instinct | Enabler | At the start of its own turn, this creature grants Grant Act First to whichever living ally (including itself) has the highest Attack. |
-| Striker | Instinct | Payoff | Two separate things, not one combo: **(1) its behavior** — each round it checks the turn order; if it would act *before* the enemy it'd attack (from its own Speed, or a grant from Setter/Vanguard), it attacks that enemy, otherwise it holds back and Defends instead of trading blindly. **(2) a separate, unconditional bonus** — whenever it *does* attack (for any reason), that attack deals extra damage equal to **20% of its own effective Speed**, on top of its normal Attack damage. The bonus isn't a reward for going first; the two effects just both belong to this creature. |
+| Striker | Instinct | Payoff | Deals **35% more damage** with its attacks whenever it would act *before* the enemy it's attacking this round (from its own Speed, or a grant from Setter/Vanguard) — a real, permanent-feeling passive bonus, not a change in *what* it does. (Revised from an earlier draft that made this an attack-or-Defend behavior choice — action-selection belongs to scripting/AI, never to a creature's own identity.) |
 | Vanguard | Instinct | Amplifier | At the start of every one of its own turns, this creature re-grants itself Grant Act First — it never needs Setter's help; it's always at the front of the next round's turn order. |
 
 ## Resonants (Wit) — Caster Synergy
 
-All three share the same reaction — whenever a living ally (including themselves) casts a spell,
-they react. Escalates by rarity instead of chaining an enabler/payoff.
+All three react whenever a living ally (including themselves) casts a spell.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Chorus | Wit | — | Whenever an ally casts a spell, this creature's Attack permanently increases by **5%**. The biome's only spellcaster. |
 | Adept | Wit | — | Whenever an ally casts a spell, this creature's Intelligence permanently increases by **8%**. |
-| Overtone | Wit | — | Whenever an ally casts a spell, this creature's Attack **and** Intelligence both permanently increase by **5%** each. |
+| Overtone | Wit | Amplifier | Whenever an ally casts a spell, there's a **10% chance** the caster immediately casts again — a random one of its own equipped spells (possibly the same one), at a random valid target. If that echoed cast is itself observed by an ally (Chorus, Adept, even Overtone again), it reacts too, and the echo can chain into another echo. Only one Overtone-granted echo can happen per cast, no matter how many Overtones are on the field. |
 
 ## Sparkeaters (Wit/Violence) — Stat Parasites
 
-A flat family identity — every creature permanently drains a stat from whatever it attacks into
-itself. No enabler/payoff chain; the amplifier drains more stats, not a bigger single steal.
+A flat family identity — every creature permanently drains a stat from whatever it attacks. Each
+one's affinity now matches the stat it steals.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Leech | Wit | — | When this creature attacks, it permanently drains **10% Attack** from its target into itself. |
-| Gorger | Violence | — | The same, draining **10% Defence** instead. |
-| Voidmaw | Vitality | — | Drains **both** 10% Attack and 10% Defence from its target into itself in the same hit. |
+| Leech | Violence | — | When this creature attacks, it permanently drains **10% Attack** from its target into itself. |
+| Gorger | Endurance | — | The same, draining **10% Defence** instead. |
+| Voidmaw | Vitality | Amplifier | A different kind of parasite — every attack, it permanently drains **10% of its target's maximum HP** (which also immediately clamps that target's current HP down if it's above the new max) and raises **every living ally's maximum HP (including its own) by 5%** (a ceiling raise only — it doesn't heal anyone, it just grows how much the team can hold going forward). |
 
 ## Gloomjaws (Violence) — Execute the Weak
 
-All three share the same mechanic — bonus damage against a low-HP target — at an escalating
-threshold and magnitude.
+Three distinct verbs toward the same theme, not one shared mechanic repeated at bigger numbers.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Stalker | Violence | — | Deals **30% more damage** to enemies below 30% HP. |
-| Executioner | Violence | — | Deals **50% more damage** to enemies below 20% HP. |
-| Ravager | Violence | — | Deals **70% more damage** to enemies below 15% HP, and permanently ignores **20%** of every target's Defence outright — it doesn't just hit low-HP targets harder, it gets through armor to put them there faster. |
+| Stalker | Violence | Finisher | Deals **30% more damage** to enemies below 30% HP. |
+| Executioner | Violence | Snowball | Every kill permanently raises its own Attack by **15%** for the rest of the fight — it doesn't need a weak target to pay off, it needs kills, and it keeps hitting harder the more of them it gets. |
+| Ravager | Violence | Armor-breaker | Permanently ignores **30%** of every target's Defence, unconditionally — it doesn't hit low-HP targets harder, it gets every target *into* low-HP range faster by punching straight through their armor. |
 
 ## Shellbacks (Endurance) — Armor as Weapon
 

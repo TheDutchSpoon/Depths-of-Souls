@@ -44,30 +44,12 @@ export const ALWAYS_WAIT_SCRIPT: Script = {
   rules: [{ condition: { kind: 'always' }, action: { kind: 'wait' } }],
 }
 
-/** Phase 4 Slice H2 (Glimmerdark, Blindclaws' Striker): the first real-content consumer of the
- * `acted-before-target` condition (Slice C) -- see `data/traits/glimmerdark.ts`'s
- * `BLINDCLAWS_STRIKER_TRAIT` doc comment for why this had to be a script, not a trait effect.
- * Strikes the lowest-HP enemy only when it can act before that enemy this round (i.e. it has the
- * initiative); otherwise holds position and Defends rather than trading blindly. */
-export const AMBUSH_STRIKE_SCRIPT: Script = {
-  id: 'ambush-strike',
-  rules: [
-    {
-      condition: { kind: 'acted-before-target' },
-      action: { kind: 'attack' },
-      targeting: { kind: 'lowest-hp-enemy' },
-    },
-    { condition: { kind: 'always' }, action: { kind: 'defend' } },
-  ],
-}
-
 export const STOCK_SCRIPTS: readonly Script[] = [
   ALWAYS_ATTACK_SCRIPT,
   ALWAYS_CAST_SCRIPT,
   ALWAYS_DEFEND_SCRIPT,
   ALWAYS_PROVOKE_SCRIPT,
   ALWAYS_WAIT_SCRIPT,
-  AMBUSH_STRIKE_SCRIPT,
 ]
 
 /** Ready to pass directly as createCombat's `scripts` argument. */

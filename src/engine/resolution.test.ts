@@ -14,7 +14,8 @@ import { createCreatureId } from './ids'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
-import type { CombatEvent } from './types'
+import type { CreatureId } from './ids'
+import type { CombatEvent, CombatState } from './types'
 import type {
   ConditionStatusEffect,
   ObservationFilter,
@@ -1761,11 +1762,14 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
   })
 
   it('on-action-observed rides the same MAX_TRIGGER_CASCADE_DEPTH guard as every other hook', () => {
-    // No response verb can itself perform an Attack/Cast/Defend/Provoke action, so there is no
-    // way to build a REAL recursive chain through on-action-observed alone in v1 content -- this
-    // is the same white-box technique the 'loop safety' describe block above uses for
-    // on-damage-taken: fire the hook with a cascade already AT the cap, proving the guard is
-    // wired for this hook too, not just the damage-path ones.
+    // No RESPONSE VERB can itself perform an Attack/Cast/Defend/Provoke action -- this fixture's
+    // own plain apply-stat-modifier response can't build a real recursive chain through
+    // on-action-observed alone. (Phase 4 Slice H2: `echoCast` IS now a real exception -- it
+    // bypasses the response vocabulary entirely to re-fire a real Cast; see the dedicated
+    // 'echo-cast' describe block below for its own depth-cap coverage.) This is the same
+    // white-box technique the 'loop safety' describe block above uses for on-damage-taken: fire
+    // the hook with a cascade already AT the cap, proving the guard is wired for this hook too,
+    // not just the damage-path ones.
     const OBSERVER_AT_CAP: Trait = {
       id: 'observer-at-cap-fixture',
       name: 'Observer At Cap (fixture)',
@@ -1816,6 +1820,223 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
         depth: MAX_TRIGGER_CASCADE_DEPTH + 1,
       },
     ])
+  })
+})
+
+describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)', () => {
+  // A response with an obvious, easy-to-detect side effect (StatModifierApplied) stands in for
+  // RESONANT_OVERTONE_TRAIT's real inert grant-action-state placeholder -- proves executeResponse
+  // is never invoked for an echoCast-flagged effect (not just "the placeholder happens to be a
+  // no-op"), since this one very much ISN'T.
+  function echoObserverTrait(id: string, chancePercent: number): Trait {
+    return {
+      id,
+      name: 'Echo Observer (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-action-observed',
+          observationFilter: { relationship: 'ally', actionKind: 'cast' },
+          chancePercent,
+          stacks: false,
+          echoCast: true,
+          response: {
+            kind: 'apply-stat-modifier',
+            target: { kind: 'self' },
+            stat: 'attack',
+            factor: 2,
+          },
+        },
+      ],
+    }
+  }
+
+  it('calls onEchoCast with (observerId, casterId) and never executes the placeholder response', () => {
+    const trait = echoObserverTrait('echo-fixture', 100)
+    const player = makeParty('player', [
+      { id: 'observer', innateTraitIds: [trait.id] },
+      { id: 'caster' },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+
+    const calls: Array<{ observerId: string; casterId: string }> = []
+    const events: CombatEvent[] = []
+    fireHook(
+      'on-action-observed',
+      [createCreatureId('observer'), createCreatureId('caster')],
+      createCreatureId('caster'),
+      state,
+      events,
+      newCascade(),
+      { actionKind: 'cast', instanceIndex: 0 },
+      (observerId, casterId, s) => {
+        calls.push({ observerId, casterId })
+        return s
+      },
+    )
+
+    expect(calls).toEqual([{ observerId: 'observer', casterId: 'caster' }])
+    expect(events.some((e) => e.type === 'TriggerFired')).toBe(true)
+    // The placeholder's own factor:2 would be unmistakable (doubles Attack) -- proves
+    // executeResponse genuinely never ran for this effect.
+    expect(events.some((e) => e.type === 'StatModifierApplied')).toBe(false)
+  })
+
+  it('stacks:false: two creatures carrying the SAME effect id -- only one onEchoCast call per firing', () => {
+    const trait = echoObserverTrait('echo-fixture-dedup', 100)
+    const player = makeParty('player', [
+      { id: 'observer-a', innateTraitIds: [trait.id] },
+      { id: 'observer-b', innateTraitIds: [trait.id] },
+      { id: 'caster' },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+
+    let callCount = 0
+    const events: CombatEvent[] = []
+    fireHook(
+      'on-action-observed',
+      [
+        createCreatureId('observer-a'),
+        createCreatureId('observer-b'),
+        createCreatureId('caster'),
+      ],
+      createCreatureId('caster'),
+      state,
+      events,
+      newCascade(),
+      { actionKind: 'cast', instanceIndex: 0 },
+      (_observerId, _casterId, s) => {
+        callCount += 1
+        return s
+      },
+    )
+
+    // Only observer-a (first in dispatch order) claims the slot; observer-b's own roll never
+    // even happens -- the AGGREGATE chance of an echo stays exactly chancePercent, not
+    // 1-(1-chancePercent)^2.
+    expect(callCount).toBe(1)
+  })
+
+  it('is exempted from the self-re-entry guard, so the SAME effect instance can fire again within the same cascade', () => {
+    // Simulates chaining: onEchoCast recursively re-fires fireHook against the SAME cascade (the
+    // real combat.ts path an echoed cast's own nested on-action-observed dispatch takes). If
+    // echoCast were NOT exempted from `cascade.activeInstances`, the second call would find the
+    // observer's effect instance already "active" and silently skip it -- the chain would die
+    // after exactly one hop regardless of chancePercent.
+    const trait = echoObserverTrait('echo-fixture-chain', 100)
+    const player = makeParty('player', [
+      { id: 'observer', innateTraitIds: [trait.id] },
+      { id: 'caster' },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const selfIds = [createCreatureId('observer'), createCreatureId('caster')]
+
+    let callCount = 0
+    const events: CombatEvent[] = []
+    const cascade = newCascade()
+    const onEchoCast = (
+      _observerId: CreatureId,
+      casterId: CreatureId,
+      s: CombatState,
+    ): CombatState => {
+      callCount += 1
+      if (callCount >= 2) return s // stop after exactly one re-fire (two calls total)
+      return fireHook(
+        'on-action-observed',
+        selfIds,
+        casterId,
+        s,
+        events,
+        cascade,
+        { actionKind: 'cast', instanceIndex: 0 },
+        onEchoCast,
+      ).state
+    }
+    fireHook(
+      'on-action-observed',
+      selfIds,
+      createCreatureId('caster'),
+      state,
+      events,
+      cascade,
+      { actionKind: 'cast', instanceIndex: 0 },
+      onEchoCast,
+    )
+
+    expect(callCount).toBe(2)
+    expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(2)
+    // The guard's own bookkeeping is symmetric (add/delete in lockstep) -- fully unwound after
+    // both recursive calls return, exactly as if echoCast had never touched it (it never did).
+    expect(cascade.activeInstances.size).toBe(0)
+  })
+
+  it('a chancePercent:100 chain terminates at MAX_TRIGGER_CASCADE_DEPTH via CascadeTruncated, never via self-re-entry', () => {
+    // Real play bounds an echo chain by the chancePercent roll (Overtone's own 10% -- CONVENTIONS:
+    // "a fresh cascade per echo would reset the counter and leave the chain bounded only by the
+    // 10% roll"). A chancePercent:100 fixture is the pathological case that same roll can never
+    // bound, so it exercises the depth-cap backstop instead -- white-boxed the same way the
+    // 'loop safety' describe block's own depth-cap test does: start the cascade artificially
+    // close to the cap so the exact, small number of hops before truncation is hand-derivable
+    // without writing out hundreds of events.
+    const trait = echoObserverTrait('echo-fixture-depth', 100)
+    const player = makeParty('player', [
+      { id: 'observer', innateTraitIds: [trait.id] },
+      { id: 'caster' },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const selfIds = [createCreatureId('observer'), createCreatureId('caster')]
+
+    let callCount = 0
+    const events: CombatEvent[] = []
+    const nearCap = newCascade()
+    nearCap.depth = MAX_TRIGGER_CASCADE_DEPTH - 2 // exactly 2 more hops fit before the cap.
+    const onEchoCast = (
+      _observerId: CreatureId,
+      casterId: CreatureId,
+      s: CombatState,
+    ): CombatState => {
+      callCount += 1
+      return fireHook(
+        'on-action-observed',
+        selfIds,
+        casterId,
+        s,
+        events,
+        nearCap,
+        { actionKind: 'cast', instanceIndex: 0 },
+        onEchoCast,
+      ).state
+    }
+    fireHook(
+      'on-action-observed',
+      selfIds,
+      createCreatureId('caster'),
+      state,
+      events,
+      nearCap,
+      { actionKind: 'cast', instanceIndex: 0 },
+      onEchoCast,
+    )
+
+    // depth 498 -> 499 (hop 1, calls onEchoCast) -> 500 (hop 2, calls onEchoCast) -> 501 would
+    // exceed the cap -> CascadeTruncated, no 3rd TriggerFired, no 3rd onEchoCast call.
+    expect(callCount).toBe(2)
+    expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(2)
+    const truncations = events.filter(
+      (e): e is Extract<CombatEvent, { type: 'CascadeTruncated' }> =>
+        e.type === 'CascadeTruncated',
+    )
+    expect(truncations).toHaveLength(1)
+    expect(truncations[0]).toMatchObject({
+      creatureId: createCreatureId('observer'),
+      effectId: 'echo-fixture-depth',
+      depth: MAX_TRIGGER_CASCADE_DEPTH + 1,
+    })
+    expect(nearCap.depth).toBe(MAX_TRIGGER_CASCADE_DEPTH - 2) // fully unwound back to the start.
   })
 })
 
