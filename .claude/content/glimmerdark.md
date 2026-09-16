@@ -31,7 +31,7 @@ the *front* of the round's turn order instead of the back. Lasts up to **3 turns
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Charger | Wit | Enabler | At the start of its own turn, this creature applies a stack of Glow to whichever living ally (including itself) has the highest Attack. |
-| Detonator | Instinct | Payoff | When this creature attacks, it first consumes all of its own Glow stacks and deals bonus damage equal to **its own Intelligence, once per consumed stack**, to the creature it's attacking — then its normal attack lands as usual. With no Glow stacked, nothing extra happens. |
+| Detonator | Instinct | Payoff | When this creature attacks, it first consumes all of its own Glow stacks in one burst of bonus damage against the creature it's attacking — **its own Intelligence, multiplied by how many stacks it had** (e.g. 3 stacks = one hit worth 3x Intelligence, not three separate hits). Its normal attack then lands on top, as usual. With no Glow stacked, nothing extra happens. |
 | Radiant | Vitality | Amplifier | At the start of the fight, this creature charges its **entire team** with 2 stacks of Glow at once — a one-time, team-wide jolt, unlike Charger's repeating single-target trickle. |
 
 ## Blindclaws (Instinct) — Ambush via Turn Order
@@ -39,7 +39,7 @@ the *front* of the round's turn order instead of the back. Lasts up to **3 turns
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Setter | Instinct | Enabler | At the start of its own turn, this creature grants Grant Act First to whichever living ally (including itself) has the highest Attack. |
-| Striker | Instinct | Payoff | This creature only attacks when it would act *before* its target this round (whether from its own Speed or a grant from Setter/Vanguard) — otherwise it holds position and Defends instead. Its Attack also gets a bonus equal to **20% of its own effective Speed**. |
+| Striker | Instinct | Payoff | Two separate things, not one combo: **(1) its behavior** — each round it checks the turn order; if it would act *before* the enemy it'd attack (from its own Speed, or a grant from Setter/Vanguard), it attacks that enemy, otherwise it holds back and Defends instead of trading blindly. **(2) a separate, unconditional bonus** — whenever it *does* attack (for any reason), that attack deals extra damage equal to **20% of its own effective Speed**, on top of its normal Attack damage. The bonus isn't a reward for going first; the two effects just both belong to this creature. |
 | Vanguard | Instinct | Amplifier | At the start of every one of its own turns, this creature re-grants itself Grant Act First — it never needs Setter's help; it's always at the front of the next round's turn order. |
 
 ## Resonants (Wit) — Caster Synergy

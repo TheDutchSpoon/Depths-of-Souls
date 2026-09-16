@@ -67,9 +67,9 @@ at creature-stamping (affinity is per-creature).
 |---|---|---|---|---|
 | **Glowflies** | Wit / Instinct | Charge & release | Charger (`stacks Glow on an ally`), Detonator (`consume all Glow → burst`) | **Glow** status + consume-response |
 | **Blindclaws** | Instinct | Ambush via turn order | Setter (`grant act-first` to an ally), Striker (`+% while acting before its target`) | **Turn-order status** + acted-before condition |
-| **Resonants** | Wit | Caster synergy | members `on-ally-action (cast) → gain Attack/Int` (power up around casters) | **needs action-observation system (Slice E2)** — *not free*; the named `on-ally-action` hook is unwired, and Cast-scoping needs `actionKind` |
-| **Sparkeaters** | Wit / Violence | Stat-parasites | Drainers (`on-attack → −stat enemy + same +stat self`, both permanent-for-fight) | ~free (2× apply-stat-modifier) |
-| **Gloomjaws** | Violence | Execute the weak | `on-damage-dealt → bonus vs targets below X% HP` (self-contained) | **needs target-conditional damage-modifier (Slice E2)** — *not free*; pool HP% can't read the just-hit target |
+| **Resonants** | Wit | Caster synergy | Chorus/Adept `on-ally-action (cast) → gain Attack / Int`; **Overtone** (rare payoff) `on-ally-action (cast) → 10% the caster echo-casts a random one of its own spells` (non-stacking; echoes are themselves observable) | `on-action-observed` (built) + **echo-cast via the bonus-cast pattern** (H2 — a `combat.ts` mechanism like the Sorcerer's bonus-cast, **not** a new response verb; nine holds), bounded by threading the ambient cascade — see CONVENTIONS |
+| **Sparkeaters** | Violence / Endurance / Vitality (each drainer's affinity = the stat it steals, per CLAUDE.md soft-mapping) | Stat-parasites | Leech (`on-attack → −Attack enemy + same +Attack self`, Violence), Gorger (same shape on Defence, Endurance), **Voidmaw** (rare, Vitality — genuinely distinct: `on-attack → steal max-HP from target + feed that max-HP to the WHOLE team`, apex parasite) | ~free (apply-stat-modifier pairs; Voidmaw uses the `health` stat + `all-allies`, precedent: Treant Grovekeep) |
+| **Gloomjaws** | Violence | Execute the weak (three DISTINCT verbs, not one shared mechanic ×3 numbers) | Stalker (`conditional-damage-bonus` +% vs low-HP — the finisher), Executioner (`on-kill → permanent +Attack self` — snowballs off finishing blows), Ravager (`armor-penetration` — softens healthy targets *into* execute range) | all free/built (conditional-damage-bonus, `on-kill`, armor-penetration all exist post-E2); intra-species synergy: Ravager softens → Stalker executes → Executioner snowballs |
 | **Shellbacks** | Endurance | Armor-as-weapon | Builders (`stack permanent +Defence on allies`), attacker uses `stat-remap` Defence→Attack | free (stat-remap + existing) |
 
 **New this biome:**
@@ -82,11 +82,18 @@ at creature-stamping (affinity is per-creature).
   turn-order step to read it (position override; precedent: Stun suppresses a turn). Intrinsic effect
   = the position change itself. Edge-cases for the coding agent: act-first + act-last on one creature
   (tiebreak), and ordering among multiple same-pole creatures (by Speed).
-- **acted-before-target condition** — new condition predicate: "this creature is acting before its
-  target has acted this round" (Blindclaws' Striker payoff).
+- **acted-before-target condition** — condition predicate: "this creature is acting before its
+  target has acted this round" (Blindclaws' Striker payoff). Consumed as a **passive
+  `conditional-damage-bonus`** (+% damage while acting before the target): the Slice-C condition is
+  **completed in H2** to read the current damage target (`resolvingAgainst`) when there is no
+  scripting-rule context, so Striker is a numeric TRAIT — never a bespoke script (action-selection
+  is the scripting layer's job, not a creature-identity trait).
 
-**Coverage:** leans Wit ×3 / Instinct ×2 / Violence ×2 / Endurance ×1; **Vitality absent at species
-level** — resolved by sprinkling Vitality creatures into these species at stamping (agreed).
+**Coverage:** leans Wit ×2 / Instinct ×2 / Violence ×2 / Endurance ×2 / Vitality ×1 (Sparkeaters now
+span Violence/Endurance/Vitality via the stat-aligned drainer affinities, so Vitality is carried at
+species level by Voidmaw; Glowfly Radiant remains the extra sprinkle). *(Superseded: earlier this read
+"Vitality absent at species level — resolved by sprinkling Vitality creatures in at stamping"; the
+stat-aligned Sparkeater affinities now carry Vitality at species level directly.)*
 
 ---
 
