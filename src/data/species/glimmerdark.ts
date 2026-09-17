@@ -21,7 +21,14 @@
 import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
 import type { BiomeData, Species, SpeciesCreature } from '../../engine/generation'
-import { BEACON_CHARGE, DISORIENT, OVERCHARGE } from '../spells'
+import {
+  AFTERGLOW,
+  BEACON_CHARGE,
+  BLINDING_FLARE,
+  DISORIENT,
+  LUMINOUS_TIDE,
+  OVERCHARGE,
+} from '../spells'
 import {
   BLINDCLAWS_SETTER_TRAIT,
   BLINDCLAWS_STRIKER_TRAIT,
@@ -44,15 +51,23 @@ import {
   SPARKEATER_VOIDMAW_TRAIT,
 } from '../traits'
 
-// ---- Glimmerdark's own authored spells (3 of the ~17-spell global total) ----
+// ---- Glimmerdark's own authored spells (6 of the ~20-spell global total) ----
 // Phase 4 interstitial slice (cumulative spell unlock): H2 originally authored 10 here (a
 // near-complete reskinned kit); 9 were deleted as exact-or-near reskins of Overgrowth spells
 // once unlock became cumulative (see data/spells/glimmerdark.ts's own header comment for the
-// full list). This grouping is no longer fed into `BiomeData` (see overgrowth.ts's own comment
-// on the same change) -- kept purely as "the spells this biome introduces" documentation, every
-// entry here tagged `unlockedAtBiome: 2`.
+// full list). Five new spells were added to meet the design owner's >=4-5-own-spells-per-biome
+// bar (GAME_DESIGN §4). This grouping is no longer fed into `BiomeData` (see overgrowth.ts's own
+// comment on the same change) -- kept purely as "the spells this biome introduces" documentation,
+// every entry here tagged `unlockedAtBiome: 2`.
 
-export const GLIMMERDARK_SPELLS = [BEACON_CHARGE, OVERCHARGE, DISORIENT]
+export const GLIMMERDARK_SPELLS = [
+  BEACON_CHARGE,
+  OVERCHARGE,
+  DISORIENT,
+  BLINDING_FLARE,
+  AFTERGLOW,
+  LUMINOUS_TIDE,
+]
 
 // ---- Glowflies (Wit/Instinct lean) -- closed mechanic: Charge & release (Glow + consume-stacks) ----
 

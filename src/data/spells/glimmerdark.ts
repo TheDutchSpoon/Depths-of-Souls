@@ -13,10 +13,11 @@ import type { Spell } from '../../engine/types'
 // Bolt (near-dup of Arcane Bolt), Stoneshell Bash (=Root Grasp), Bastion Chant (=Bramble Ward),
 // Echo Fang (=Stinger Swarm), Pack Howl (=Howling Instinct), Bioglow Mend (=Regrowth), Luminous
 // Vigor (=Wild Vigor). Only Beacon Charge was genuinely Glimmerdark's own (heal + Glow, no
-// Overgrowth equivalent) -- kept, retagged `unlockedAtBiome: 2`. Two new spells (Overcharge,
-// Disorient -- both ASSUMPTION-tagged below, ~3-4 total Glimmerdark-own spells including Beacon
-// Charge per the brief's own "not 10" framing) round out this biome's contribution as spice on
-// top of the inherited biome-1 base, not a re-authored kit.
+// Overgrowth equivalent) -- kept, retagged `unlockedAtBiome: 2`. Five new spells (Overcharge,
+// Disorient, Blinding Flare, Afterglow, Luminous Tide -- all ASSUMPTION-tagged below) join it,
+// for 6 Glimmerdark-own spells total, meeting the design owner's >=4-5-own-spells-per-biome bar
+// (GAME_DESIGN §4) as spice on top of the inherited biome-1 base, not a re-authored kit -- each
+// on a mechanic no biome-1 spell already uses.
 
 /** Beacon Charge: a small heal (the support-spell model's `heal` payload) that ALSO charges the
  * target with a stack of Glow (`appliesStatus`, applied after the heal lands) -- ties the
@@ -29,6 +30,7 @@ export const BEACON_CHARGE: Spell = {
   targetShape: 'single',
   spellPower: 0.3,
   affinity: 'wit',
+  scalingStat: 'health',
   targetSide: 'ally',
   payload: 'heal',
   appliesStatus: { statusId: 'glow' },
@@ -84,5 +86,56 @@ export const DISORIENT: Spell = {
   spellPower: 0.85,
   affinity: 'instinct',
   appliesStatus: { statusId: 'web', duration: 3 },
+  unlockedAtBiome: 2,
+}
+
+/**
+ * ASSUMPTION (interstitial slice expansion, NEW CONTENT -- design-agent proposal, numbers deferred):
+ * Blinding Flare -- first spell to apply Vulnerability (statuses.ts: x1.5 damage TAKEN/stack); an
+ * offensive setup debuff no biome-1 spell provides. Violence's first Glimmerdark-own spell. Unique
+ * under the dedup guard by spellPower (0.7 vs Ember Lance 0.5 / Thorn Lash 1.0). */
+export const BLINDING_FLARE: Spell = {
+  id: 'blinding-flare',
+  name: 'Blinding Flare',
+  targetShape: 'single',
+  spellPower: 0.7,
+  affinity: 'violence',
+  appliesStatus: { statusId: 'vulnerability', duration: 3 },
+  unlockedAtBiome: 2,
+}
+
+/**
+ * ASSUMPTION (interstitial slice expansion, NEW CONTENT -- design-agent proposal, numbers deferred):
+ * Afterglow -- burst heal + Regen (statuses.ts: heal-over-time). First Regen-applier, so not a
+ * reskin of Regrowth (biome-1 vitality plain heal). Vitality's Glimmerdark-own sustain heal.
+ * scalingStat health like every Glimmerdark heal; unique vs Regrowth by spellPower (0.5 vs 0.3). */
+export const AFTERGLOW: Spell = {
+  id: 'afterglow',
+  name: 'Afterglow',
+  targetShape: 'single',
+  spellPower: 0.5,
+  affinity: 'vitality',
+  scalingStat: 'health',
+  targetSide: 'ally',
+  payload: 'heal',
+  appliesStatus: { statusId: 'regen', duration: 3 },
+  unlockedAtBiome: 2,
+}
+
+/**
+ * ASSUMPTION (interstitial slice expansion, NEW CONTENT -- design-agent proposal, numbers deferred):
+ * Luminous Tide -- small AOE ally heal + team-wide Glow. First AOE support spell and first team
+ * Glow application -- a new SHAPE, not another single-target heal+status. Unique under the dedup
+ * guard: no other wit|aoe|heal exists (Pollen Cloud is wit|aoe|damage). */
+export const LUMINOUS_TIDE: Spell = {
+  id: 'luminous-tide',
+  name: 'Luminous Tide',
+  targetShape: 'aoe',
+  spellPower: 0.2,
+  affinity: 'wit',
+  scalingStat: 'health',
+  targetSide: 'ally',
+  payload: 'heal',
+  appliesStatus: { statusId: 'glow' },
   unlockedAtBiome: 2,
 }

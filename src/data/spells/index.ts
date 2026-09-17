@@ -13,7 +13,14 @@ import {
   WEAKENING_BITE,
   WILD_VIGOR,
 } from './overgrowth'
-import { BEACON_CHARGE, DISORIENT, OVERCHARGE } from './glimmerdark'
+import {
+  AFTERGLOW,
+  BEACON_CHARGE,
+  BLINDING_FLARE,
+  DISORIENT,
+  LUMINOUS_TIDE,
+  OVERCHARGE,
+} from './glimmerdark'
 
 // The library barrel (CONVENTIONS "Data layer — carriers vs. composition"): re-exports every
 // individual spell const from its grouping file.
@@ -26,9 +33,11 @@ export * from './glimmerdark'
  * `generateFloor` no longer rolls a cast-role loadout from a per-biome `BiomeData.spellPool`
  * (removed; see engine/generation.ts), it rolls from THIS list filtered to `unlockedAtBiome <=
  * currentBiomeIndex` then by affinity (`spellsUnlockedAt`). Also what wires core.ts's three
- * spells into the roll for the first time -- previously unreferenced by any biome. Order is
- * cosmetic (never re-sorted; `spellsUnlockedAt`'s filter + `weightedPick`'s own iteration don't
- * care about registry order).
+ * spells into the roll for the first time -- previously unreferenced by any biome. Order IS
+ * determinism-relevant: `weightedPick` (generation.ts) walks the affinity-filtered slice of this
+ * list in order, subtracting weights, so registry order maps each RNG roll to a spell -- the
+ * generation tests rely on exactly that. Keep this list APPEND-ONLY; reordering it would silently
+ * change which spell a given seed rolls in real playthroughs (determinism is sacred).
  */
 export const ALL_SPELLS: readonly Spell[] = [
   EMBER_LANCE,
@@ -48,4 +57,7 @@ export const ALL_SPELLS: readonly Spell[] = [
   BEACON_CHARGE,
   OVERCHARGE,
   DISORIENT,
+  BLINDING_FLARE,
+  AFTERGLOW,
+  LUMINOUS_TIDE,
 ]

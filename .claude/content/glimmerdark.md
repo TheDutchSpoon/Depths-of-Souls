@@ -12,8 +12,9 @@ Glow/grant-act-first in `src/data/statuses.ts`. Design source:
 and every deeper biome. Glimmerdark originally shipped 10 of its own spells (two per affinity,
 mirroring Overgrowth's density); 8 turned out to be exact mechanical reskins of an Overgrowth
 spell and a 9th (Glowspark Bolt) was a near-dup of Arcane Bolt — all 9 are **deleted**. Only
-**Beacon Charge** was genuinely Glimmerdark's own; two new spells (**Overcharge**, **Disorient**)
-join it below. See "Spells" for the current (short) list.
+**Beacon Charge** was genuinely Glimmerdark's own; **five** new spells (**Overcharge**,
+**Disorient**, **Blinding Flare**, **Afterglow**, **Luminous Tide**) join it below. See "Spells"
+for the current list.
 
 This doc is the **player-facing reference** — every trait and spell below is written as a single,
 literal description of what it does, exact numbers included, in the phrasing style a future
@@ -100,22 +101,26 @@ fight with one mechanic, no adds.
   the party hollows out while the Sovereign snowballs, so the fight is a race to burst it down
   before the steal compounds too far.
 
-## Spells (3 of Glimmerdark's own, unlocked at biome 2 — plus every biome-1 spell, inherited)
+## Spells (6 of Glimmerdark's own, unlocked at biome 2 — plus every biome-1 spell, inherited)
 
 Spell unlock is cumulative (GAME_DESIGN §4): a Glimmerdark caster can roll ANY biome-1 spell
 (The Overgrowth's 11 + the 3 shared "core" spells — see `.claude/content/overgrowth.md` and
-`src/data/spells/core.ts`) in addition to the 3 spells below, which unlock starting at biome 2.
+`src/data/spells/core.ts`) in addition to the 6 spells below, which unlock starting at biome 2.
 Glimmerdark deliberately does not re-author a full per-affinity kit — the inherited biome-1 base
-already covers every affinity; these three are spice on top of it, not a replacement kit.
+already covers every affinity; these are spice on top of it, not a replacement kit (per GAME_DESIGN §4's ≥4–5-own-spells-per-biome bar).
 
 | Spell | Affinity | Description |
 |---|---|---|
 | Beacon Charge | Wit | Heals a single ally for **30% of the caster's effective Health**, and charges that ally with a stack of Glow. |
 | Overcharge | Wit | Heals a single ally for **15% of the caster's effective Health** (half of Beacon Charge's heal), and charges that ally with **2 stacks** of Glow at once (double Beacon Charge's one). |
 | Disorient | Instinct | A single-target hit dealing damage equal to **85% of the caster's Intelligence**, and applies Web (act-last) to the target for **3 turns** — the same status Overgrowth's Vine Snare applies, reused rather than re-authored under a new name. |
+| Blinding Flare | Violence | A single-target hit dealing damage equal to **70% of the caster's Intelligence**, and leaves the target **Vulnerable** (takes ×1.5 damage) for **3 turns** — a light-burst setup debuff; no other spell applies Vulnerability. |
+| Afterglow | Vitality | Heals a single ally for **50% of the caster's effective Health**, and grants **Regen** (heals a further 4 HP at the end of each round) for **3 turns** — a lingering-light sustain heal, distinct from Regrowth's plain burst. |
+| Luminous Tide | Wit | Heals **every ally** for **20% of the caster's effective Health** and charges each with a stack of **Glow** — a party-wide wave of light; the game's first AOE support spell. |
 
-Every ally-targeting entry above (Beacon Charge, Overcharge) can be cast on any living ally,
-including the caster itself.
+Every ally-targeting entry above (Beacon Charge, Overcharge, Afterglow, Luminous Tide) can be
+cast on any living ally, including the caster itself; Luminous Tide hits the whole ally side at
+once.
 
 **Deleted (Phase 4 interstitial slice):** Crystal Shard, Fracture Strike, and Glowspark Bolt
 (Violence/Wit), Stoneshell Bash and Bastion Chant (Endurance), Echo Fang and Pack Howl

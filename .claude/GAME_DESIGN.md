@@ -139,9 +139,13 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
     it exists. This is **the opposite rule from species/creature biome-exclusivity** below —
     don't conflate the two: a biome's own roster (which creatures spawn there) resets every
     biome, but its casters draw from the FULL inherited spell list, not just that biome's own
-    additions. A new biome's own spell contribution should therefore be small ("spice" on top of
-    an inherited base), not a re-authored full kit per affinity — re-authoring one caused Phase 4
-    Slice H2's own near-duplicate spells (since deleted; see `.claude/phases/` for the record).
+    additions. A new biome authors a focused set of its OWN
+    spells — **target ≥4–5 per biome** (its own mechanics or fresh takes; a cross-affinity clone
+    of an existing spell does NOT count toward the bar) — layered as *spice* on top of the large
+    inherited base, never a re-authored full kit per affinity. Two failure modes bracket the bar:
+    re-authoring a full kit caused Phase 4 Slice H2's own near-duplicate spells (since deleted; see
+    `.claude/phases/` for the record); under-authoring (shipping only 2–3) leaves later biomes thin.
+    H3 (Rotcap Hollow) and every biome after author to this same ≥4–5 bar.
   - **Seed biomes (Phase 4):** the first three authored biomes are **The Overgrowth** (lush,
     sunlit entrance), **Glimmerdark** (light thins, life adapts, bioluminescence), and **Rotcap
     Hollow** (fungal — colonies, spores, spread). Mood is a **creature-design filter** — it shapes
