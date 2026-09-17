@@ -1,6 +1,6 @@
 # Brief — Cumulative spell unlock (Phase 4, between Slice H2 and H3)
 
-Status: planned
+Status: shipped — see phases/phase-4-cumulative-spell-unlock.md
 Depends on: H2 merged. Do before: H3 (Rotcap Hollow) authors its spells.
 
 ## Problem

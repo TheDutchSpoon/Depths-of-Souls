@@ -57,8 +57,6 @@ export interface BiomeData {
   readonly id: BiomeId
   readonly name: string
   readonly speciesPool: readonly Species[]
-  /** The affinity-matched pool a cast-role enemy's spell(s) are rolled from. */
-  readonly spellPool: readonly Spell[]
 }
 
 // ---- Equip gating (CONVENTIONS "Spell affinity & equip-gating") ----
@@ -204,12 +202,28 @@ function isCastRole(speciesCreature: SpeciesCreature): boolean {
   return speciesCreature.defaultScriptId === 'always-cast'
 }
 
+/**
+ * Phase 4 interstitial slice (cumulative spell unlock): every spell whose `unlockedAtBiome` is
+ * `<=` the current biome's 1-based number -- spells unlock cumulatively as the player descends,
+ * so a biome-1 spell stays rollable at every deeper biome too. Pure filter, no RNG.
+ */
+export function spellsUnlockedAt(
+  biomeIndex: number,
+  allSpells: readonly Spell[],
+): readonly Spell[] {
+  return allSpells.filter((spell) => (spell.unlockedAtBiome ?? 1) <= biomeIndex)
+}
+
 /** A cast-role creature is generated with >=1 castable spell (CONVENTIONS: coherence, never an
  * empty loadout); everyone else spawns with empty gem slots. Rolls exactly one spell into slot
- * 0 from the biome's affinity-matched pool -- gem-slot count itself isn't rolled in v1. */
+ * 0 from the cumulative-unlocked, affinity-matched pool -- gem-slot count itself isn't rolled in
+ * v1. Replaces the old per-biome `spellPool` exclusivity (Phase 4 Slice A-H2): the pool a
+ * cast-role enemy draws from is no longer scoped to its own biome's authored spells, it's every
+ * spell unlocked at or before the current biome. */
 function rollLoadout(
   speciesCreature: SpeciesCreature,
-  biome: BiomeData,
+  biomeIndex: number,
+  allSpells: readonly Spell[],
   rng: SeededRng,
 ): readonly (Spell | null)[] {
   const slots: (Spell | null)[] = Array.from(
@@ -218,7 +232,7 @@ function rollLoadout(
   )
   if (!isCastRole(speciesCreature)) return slots
 
-  const matchingSpells = biome.spellPool.filter((spell) =>
+  const matchingSpells = spellsUnlockedAt(biomeIndex, allSpells).filter((spell) =>
     canEquip(spell, speciesCreature.affinity),
   )
   if (matchingSpells.length === 0) return slots // defensive; a real biome always has a match
@@ -234,14 +248,22 @@ export interface Fight {
 }
 
 /**
- * `(floor, biomeData, runRng) -> Fight[]`, one entry per `fightCount(floor)`. Advances
- * `runRng` (the caller's persistent run RNG stream, per CONVENTIONS) -- re-descending the same
- * floor with the stream at a different position re-rolls its creatures, while `biomeForFloor`
- * keeps the biome itself fixed.
+ * `(floor, biomeData, biomeIndex, allSpells, runRng) -> Fight[]`, one entry per
+ * `fightCount(floor)`. Advances `runRng` (the caller's persistent run RNG stream, per
+ * CONVENTIONS) -- re-descending the same floor with the stream at a different position
+ * re-rolls its creatures, while `biomeForFloor` keeps the biome itself fixed.
+ *
+ * `biomeIndex` is the current biome's 1-based number (the caller's own resolved position in its
+ * ordered biome list, per CONVENTIONS' "biomeForFloor's fixed 1-100 sequence is positional" --
+ * generation.ts stays ignorant of array position itself, it just receives the number) and
+ * `allSpells` is the GLOBAL spell registry (no longer a per-biome `spellPool`, Phase 4
+ * interstitial slice) -- together they drive `rollLoadout`'s cumulative-unlock filter.
  */
 export function generateFloor(
   floor: number,
   biome: BiomeData,
+  biomeIndex: number,
+  allSpells: readonly Spell[],
   runRng: SeededRng,
 ): readonly Fight[] {
   const fights: Fight[] = []
@@ -258,7 +280,7 @@ export function generateFloor(
         runRng,
       )
       const level = min + Math.floor(runRng.next() * (max - min + 1))
-      const equippedSpells = rollLoadout(speciesCreature, biome, runRng)
+      const equippedSpells = rollLoadout(speciesCreature, biomeIndex, allSpells, runRng)
       enemyParty.push(
         materializeCreature(
           speciesCreature,

@@ -22,16 +22,12 @@ import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
 import type { BiomeData, Species, SpeciesCreature } from '../../engine/generation'
 import {
-  BASTION_CHANT,
+  AFTERGLOW,
   BEACON_CHARGE,
-  BIOGLOW_MEND,
-  CRYSTAL_SHARD,
-  ECHO_FANG,
-  FRACTURE_STRIKE,
-  GLOWSPARK_BOLT,
-  LUMINOUS_VIGOR,
-  PACK_HOWL,
-  STONESHELL_BASH,
+  BLINDING_FLARE,
+  DISORIENT,
+  LUMINOUS_TIDE,
+  OVERCHARGE,
 } from '../spells'
 import {
   BLINDCLAWS_SETTER_TRAIT,
@@ -55,19 +51,22 @@ import {
   SPARKEATER_VOIDMAW_TRAIT,
 } from '../traits'
 
-// ---- Glimmerdark spell pool (10 of the ~50-spell total spread across the three biomes) ----
+// ---- Glimmerdark's own authored spells (6 of the ~20-spell global total) ----
+// Phase 4 interstitial slice (cumulative spell unlock): H2 originally authored 10 here (a
+// near-complete reskinned kit); 9 were deleted as exact-or-near reskins of Overgrowth spells
+// once unlock became cumulative (see data/spells/glimmerdark.ts's own header comment for the
+// full list). Five new spells were added to meet the design owner's >=4-5-own-spells-per-biome
+// bar (GAME_DESIGN §4). This grouping is no longer fed into `BiomeData` (see overgrowth.ts's own
+// comment on the same change) -- kept purely as "the spells this biome introduces" documentation,
+// every entry here tagged `unlockedAtBiome: 2`.
 
 export const GLIMMERDARK_SPELLS = [
-  CRYSTAL_SHARD,
-  FRACTURE_STRIKE,
-  GLOWSPARK_BOLT,
   BEACON_CHARGE,
-  STONESHELL_BASH,
-  BASTION_CHANT,
-  ECHO_FANG,
-  PACK_HOWL,
-  BIOGLOW_MEND,
-  LUMINOUS_VIGOR,
+  OVERCHARGE,
+  DISORIENT,
+  BLINDING_FLARE,
+  AFTERGLOW,
+  LUMINOUS_TIDE,
 ]
 
 // ---- Glowflies (Wit/Instinct lean) -- closed mechanic: Charge & release (Glow + consume-stacks) ----
@@ -148,7 +147,9 @@ export const BLINDCLAWS: Species = {
 // ---- Resonants (Wit lean) -- closed mechanic: caster synergy (on-action-observed) ----
 
 /** The biome's one cast-role creature (defaultScriptId 'always-cast') -- exercises
- * generateFloor's real spell-loadout roll against GLIMMERDARK_SPELLS' wit-affinity entries. */
+ * generateFloor's real spell-loadout roll against the cumulative-unlocked wit-affinity pool
+ * (every biome-1 wit spell plus GLIMMERDARK_SPELLS' own wit entries -- see
+ * engine/generation.ts's spellsUnlockedAt). */
 export const RESONANT_CHORUS: SpeciesCreature = {
   id: 'resonant-chorus',
   affinity: 'wit',
@@ -345,7 +346,6 @@ export const GLIMMERDARK_BIOME: BiomeData = {
   id: GLIMMERDARK_BIOME_ID,
   name: 'Glimmerdark',
   speciesPool: GLIMMERDARK_SPECIES_POOL,
-  spellPool: GLIMMERDARK_SPELLS,
 }
 
 // Re-exported for the loader test / anyone wanting a plain Affinity sanity check without

@@ -20,8 +20,9 @@ import { SOUL_GAIN_PERCENT } from '../engine/curves'
 import { xpAwardForKill } from '../engine/leveling'
 import { createSeededRng, type SeededRng } from '../engine/rng'
 import type { Script } from '../engine/scripting-types'
-import type { CombatEvent, Creature, FightResult } from '../engine/types'
+import type { CombatEvent, Creature, FightResult, Spell } from '../engine/types'
 import { BIOMES } from '../data/biomes'
+import { ALL_SPELLS } from '../data/spells'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import {
   resolveSpecializationEffects,
@@ -58,6 +59,10 @@ export const PARTY_SIZE = 6
 
 export interface GameStoreDeps {
   readonly biomes: readonly BiomeData[]
+  /** Phase 4 interstitial slice (cumulative spell unlock): the GLOBAL spell registry
+   * `generateFloor` rolls a cast-role loadout from (filtered by `unlockedAtBiome` then
+   * affinity) -- replaces the old per-biome `BiomeData.spellPool`. */
+  readonly allSpells: readonly Spell[]
   readonly scripts: ReadonlyMap<string, Script>
   readonly traits: ReadonlyMap<string, Trait>
   readonly statuses: ReadonlyMap<string, StatusDef>
@@ -78,6 +83,7 @@ const DEFAULT_RUN_SEED = 20260914
 
 const DEFAULT_DEPS: GameStoreDeps = {
   biomes: BIOMES,
+  allSpells: ALL_SPELLS,
   scripts: STOCK_SCRIPTS_BY_ID,
   traits: TRAIT_REGISTRY,
   statuses: STATUS_REGISTRY,
@@ -351,9 +357,14 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       if (!biome) {
         throw new Error(`descend: no biome data for resolved biome id ${String(biomeId)}`)
       }
+      // Phase 4 interstitial slice (cumulative spell unlock): the biome's 1-based number is its
+      // position in the caller's own ordered `deps.biomes` list (CONVENTIONS'
+      // "biomeForFloor's fixed 1-100 sequence is positional (array index = floor decade)" --
+      // generation.ts stays ignorant of array position itself, it just receives the number).
+      const biomeIndex = deps.biomes.findIndex((b) => b.id === biomeId) + 1
 
       const genRng = deps.createRng(hashRunDraw(state.runSeed, state.runCounter))
-      const fights = generateFloor(floor, biome, genRng)
+      const fights = generateFloor(floor, biome, biomeIndex, deps.allSpells, genRng)
       const playerCreatures = resolvePlayerParty(state, deps)
 
       const soulGainedThisCall = new Map<string, number>()

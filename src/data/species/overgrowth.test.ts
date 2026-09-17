@@ -84,9 +84,14 @@ describe('The Overgrowth: shape', () => {
     }
   })
 
-  it('OVERGROWTH_BIOME wires the real species/spell pools', () => {
+  it('OVERGROWTH_BIOME wires the real species pool', () => {
     expect(OVERGROWTH_BIOME.speciesPool).toBe(OVERGROWTH_SPECIES_POOL)
-    expect(OVERGROWTH_BIOME.spellPool).toBe(OVERGROWTH_SPELLS)
+  })
+
+  it('every OVERGROWTH_SPELLS entry is tagged unlockedAtBiome:1 (this biome is the base tier)', () => {
+    for (const spell of OVERGROWTH_SPELLS) {
+      expect(spell.unlockedAtBiome).toBe(1)
+    }
   })
 })
 

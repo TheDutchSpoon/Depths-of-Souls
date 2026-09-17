@@ -63,6 +63,7 @@ export const FIXTURE_WIT_BOLT: Spell = {
   targetShape: 'single',
   spellPower: 0.4,
   affinity: 'wit',
+  unlockedAtBiome: 1,
 }
 
 // Off-affinity for FIXTURE_CASTER -- proves the affinity gate actually filters, not just
@@ -73,14 +74,35 @@ export const FIXTURE_VIOLENCE_BOLT: Spell = {
   targetShape: 'single',
   spellPower: 0.4,
   affinity: 'violence',
+  unlockedAtBiome: 1,
 }
+
+// unlockedAtBiome:2 -- proves the cumulative-unlock filter actually filters, not just "picks
+// something": never reachable at biomeIndex 1, always in-pool (alongside FIXTURE_WIT_BOLT) at
+// biomeIndex 2+.
+export const FIXTURE_WIT_BOLT_TIER2: Spell = {
+  id: 'fixture-wit-bolt-tier2',
+  name: 'Fixture Wit Bolt (Tier 2)',
+  targetShape: 'single',
+  spellPower: 0.6,
+  affinity: 'wit',
+  unlockedAtBiome: 2,
+}
+
+/** The global spell registry a generateFloor call rolls a cast-role loadout from (Phase 4
+ * interstitial slice: no longer a per-biome `spellPool` -- every biome shares one cumulative
+ * list, filtered by `unlockedAtBiome <= biomeIndex` then by affinity). */
+export const FIXTURE_ALL_SPELLS: readonly Spell[] = [
+  FIXTURE_WIT_BOLT,
+  FIXTURE_VIOLENCE_BOLT,
+  FIXTURE_WIT_BOLT_TIER2,
+]
 
 /** A fully-populated fixture biome -- used by generateFloor tests. */
 export const FIXTURE_BIOME: BiomeData = {
   id: createBiomeId('fixture-biome'),
   name: 'Fixture Biome',
   speciesPool: [FIXTURE_SPECIES_BRAWLERS, FIXTURE_SPECIES_CASTERS],
-  spellPool: [FIXTURE_WIT_BOLT, FIXTURE_VIOLENCE_BOLT],
 }
 
 /** Ten distinct, otherwise-empty biomes -- used only by biomeForFloor's fixed-sequence tests
@@ -91,6 +113,5 @@ export const FIXTURE_BIOME_SEQUENCE: readonly BiomeData[] = Array.from(
     id: createBiomeId(`fixture-sequence-biome-${index + 1}`),
     name: `Fixture Sequence Biome ${index + 1}`,
     speciesPool: [],
-    spellPool: [],
   }),
 )

@@ -23,20 +23,17 @@ describe('BIOMES (Slice A shape + Slice H1/H2 real content)', () => {
     const overgrowth = BIOMES[0]
     expect(overgrowth?.id).toBe(OVERGROWTH_BIOME_ID)
     expect(overgrowth?.speciesPool.length).toBeGreaterThan(0)
-    expect(overgrowth?.spellPool.length).toBeGreaterThan(0)
   })
 
   it('slot 2 (floors 11-20) is the real Glimmerdark biome, non-empty', () => {
     const glimmerdark = BIOMES[1]
     expect(glimmerdark?.id).toBe(GLIMMERDARK_BIOME_ID)
     expect(glimmerdark?.speciesPool.length).toBeGreaterThan(0)
-    expect(glimmerdark?.spellPool.length).toBeGreaterThan(0)
   })
 
   it('slots 3-10 keep the Slice A placeholder shape (empty spawn pools)', () => {
     for (const biome of BIOMES.slice(2)) {
       expect(biome.speciesPool).toEqual([])
-      expect(biome.spellPool).toEqual([])
     }
   })
 

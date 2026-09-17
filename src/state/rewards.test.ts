@@ -138,7 +138,6 @@ describe('findStaticCreature', () => {
     id: createBiomeId('biome-y'),
     name: 'Biome Y',
     speciesPool: [species],
-    spellPool: [],
   }
 
   test('resolves a standalone (starter/Unicorn) creature by id', () => {

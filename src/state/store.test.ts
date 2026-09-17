@@ -62,7 +62,6 @@ const FIXTURE_BIOME: BiomeData = {
   id: createBiomeId('fixture-g-biome'),
   name: 'Fixture Biome G',
   speciesPool: [FIXTURE_SPECIES],
-  spellPool: [],
 }
 
 const HERO_STANDALONE: StaticCreatureRef = {
@@ -151,7 +150,6 @@ const FIXTURE_BIOME_MIXED: BiomeData = {
   id: createBiomeId('fixture-g-biome-mixed'),
   name: 'Fixture Biome Mixed',
   speciesPool: [FIXTURE_SPECIES_MIXED],
-  spellPool: [],
 }
 
 // floor 2 -> enemyPartySize=2, fightCount=3 -> 3 fights x 2 slots x 3 calls = 18 values. Only
@@ -221,7 +219,6 @@ const FIXTURE_BIOME_TOUGH: BiomeData = {
   id: createBiomeId('fixture-g-biome-tough'),
   name: 'Fixture Biome Tough',
   speciesPool: [FIXTURE_SPECIES_TOUGH],
-  spellPool: [],
 }
 
 const HUGE_ATTACK_PERK_SPEC: Specialization = {

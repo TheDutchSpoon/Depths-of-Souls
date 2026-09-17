@@ -68,6 +68,17 @@ export interface Spell {
    * stacking -- stat-modifier is uncapped/additive-across-sources by design, CONVENTIONS' Unified
    * effect framework §1). */
   readonly statModifier?: { readonly stat: Stat; readonly factor: number }
+  /** Phase 4 interstitial slice (cumulative spell unlock): the biome number (1-based, matching
+   * GAME_DESIGN's "Biome 1"/"Biome 2" numbering) at which this spell enters the shared pool.
+   * `generateFloor` rolls a cast-role enemy's loadout from every spell whose `unlockedAtBiome` is
+   * `<=` the current biome's number, filtered by affinity -- so a spell unlocked at biome 1 stays
+   * available at every deeper biome too (spells unlock cumulatively; this is distinct from
+   * species/creature biome-exclusivity, which is unaffected). Optional, defaulting to `1`
+   * (`spellsUnlockedAt`, generation.ts) -- byte-identical for every pre-existing Spell literal
+   * across the engine's own combat/resolution/interpreter tests and golden fixtures, none of
+   * which touch generation at all; every REAL spawn-pool spell in `data/spells/` sets it
+   * explicitly regardless. */
+  readonly unlockedAtBiome?: number
 }
 
 // ---- Creature ----
