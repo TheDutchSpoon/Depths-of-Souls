@@ -2076,11 +2076,198 @@ statuses); the Broodmother/Leech Sovereign boss-encounter runner (still not buil
 Slice G's store only ships `recordBossKill`/`bossesCleared` as state); the integration pass and
 this record's closing section (I).
 
+## Slice H3 — Rotcap Hollow (floors 21–30)
+
+Built against `.claude/species/species-locked.md`'s Biome 3 table, directly into the same
+`data/traits/`/`data/spells/` library shape H1/H2 established. **One small, genuinely new
+ResponseTarget-only addition** was needed (see its own subsection below) — everything else is
+pure content-assembly against primitives already proven through Slice E2/H2, confirmed while
+authoring: nothing else here needed anything not already built.
+
+### What was built
+
+`src/data/traits/rotcap-hollow.ts` — 18 real per-creature traits + the Rot Sovereign's boss
+trait, the same enabler/payoff/amplifier (common/uncommon/rare) framing H1/H2 use, except
+**Necromoss** (like Glimmerdark's Resonants) shares ONE mechanic across all three creatures,
+escalating scope/strength by rarity rather than chaining a two-role trick:
+
+- **Sporecloud** (Wit) — Seeder (`on-attack` → apply Spore to its target); Reaper (`on-attack` →
+  a bonus `deal-damage` rider, Intelligence-scaled, magnitude a LIVE `magnitudeSource` count of
+  `enemies-with-status: spore` — the exact Broodmother "Swarm Call" shape, never frozen); Bloomer
+  (amplifier — `on-fight-start` → Spore the WHOLE enemy line at once, breadth over Seeder's
+  per-hit trickle, the Glowfly-Radiant/Swarmhive-Queen pattern).
+- **Rotfeeders** (Violence) — Scavenger (`on-enemy-death`, an OBSERVER hook — permanent +8% self
+  Attack on ANY enemy death, not just its own kills); Ripper (`on-kill` → `heal` in `scalingStat`
+  mode, 15% of its own effective Health); **Gorgemaw** (amplifier — a third, genuinely distinct
+  verb: `on-kill` → heals itself 10% AND permanently raises its own max Health 5%, "grows fatter,
+  not just angrier," never a numeric combination of its species-mates' own effects).
+- **Myconet** (Endurance) — Warder (`on-ally-death` → +15% Defence to all surviving allies, a
+  fresh `StatModifierEffect` per firing); Rotcore (`on-death` → Poison the whole `all-enemies`
+  side); **Gravedigger** (amplifier — `on-ally-death` → heals ITSELF 20% instead of buffing the
+  team, a genuinely distinct SELF-sustain reaction).
+- **Necromoss** (Wit/Vitality) — the Resonants-shaped "one mechanic, escalating by rarity"
+  species: Wisp (`on-turn-start` → `heal` in `scalingStat` mode with `magnitudeSource: {kind:
+  'count', of: 'dead-allies'}` — Slice E2's own named Necromoss consumer, exercised for the first
+  time against real content); Thicket (the BUFF half of the same idea — `on-ally-death` →
+  `apply-stat-modifier` with `magnitudeSource`, freeze-at-application, the Swarmhive-Striker
+  route); **Hollowroot** (amplifier — the same heal as Wisp, targeted at `all-allies` instead of
+  `self`; the biome's one cast-role creature, `defaultScriptId: 'always-cast'` — its `on-turn-
+  start` trigger is unaffected by which action it takes).
+- **Hollowkin** (Endurance/Instinct) — Wretch (`on-damage-taken` → Confuse whoever just struck
+  it); Marionette (`on-attack` → Confuse whoever it hits); **Puppeteer** (payoff, not another
+  enabler — a `conditional-damage-bonus` on `has-status(target, confusion)`, +30% dealt, the
+  amplifier that profits from Confusion rather than applying it).
+- **Sporch** (Violence/Wit) — Igniter (`on-attack` → apply Burn at 2 stacks, potent and
+  deliberately non-spreading); Ashborn (`conditional-damage-bonus` on `has-status(target,
+  burn)`, +30% dealt — the target-conditional damage-modifier species-locked.md's own table
+  flagged this species as needing Slice E2 for); **Cinderlord** (amplifier — `on-kill` → Burn the
+  WHOLE remaining `all-enemies` side, a creature-level death-burst, not the Burn STATUS itself
+  gaining a spread trigger — Burn stays non-spreading at the status level).
+- **The Rot Sovereign** (floor-30 boss) — two death-reactive growth hooks realizing species-
+  locked.md's "any creature that dies feeds it" without inventing a new `CountOf`:
+  `on-ally-death` (her own adds dying — the LIVE count-scaling primitive by name,
+  `magnitudeSource: {kind: 'count', of: 'dead-allies'}`, freeze-at-application, +15%/dead-ally)
+  AND `on-enemy-death` (the PLAYER's own creatures dying ALSO feeds her, a flatter +5% compounding
+  bump, since `dead-allies` always reads HER OWN side regardless of which hook fired) — plus an
+  unconditional `on-turn-start` → Spore the whole `all-enemies` side. `ROT_SOVEREIGN_ADDS`
+  (Sporecloud Seeder + Rotfeeder Scavenger, real roster members) follows the Broodmother's own
+  `_ADDS` export precedent.
+
+`src/data/spells/rotcap-hollow.ts` — 5 real spells (one per affinity, per GAME_DESIGN §4's
+≥4–5-own-spells-per-biome bar), each introducing a mechanic the inherited biome-1/2 pool doesn't
+already carry: **Spore Cyst** (Wit, first spell-authored Spore), **Rasping Chant** (Endurance,
+first single-target enemy Defence debuff on this affinity), **Puppet String** (Instinct, first
+spell-authored Confusion), **Charnel Feast** (Vitality, first AOE support spell on this
+affinity), **Withering Bolt** (Violence, first spell-authored Burn). Verified unique under the
+dedup guard (`data/spells/index.test.ts`'s `(affinity, targetShape, payload, spellPower)` key)
+against all 17 pre-existing spells by hand before picking each `spellPower`.
+
+`src/data/statuses.ts` — two new real statuses, additive alongside the Phase 3/H1/H2 set (same
+guardrail as H1/H2): **Spore** (a `ConditionStatusDef` with TWO triggers, the Sleep-established
+pattern — an `on-round-end` DoT tick, 4% of the bearer's own effective max HP/stack/round, PLUS
+an `on-death` → spread trigger, see the engine addition below) and **Confusion** (a
+`FriendlyFireStatusDef`, `chancePercent: 50`, `defaultDuration: 3` — the primitive itself was
+built in Slice C; this is its first real producer/consumer).
+
+`src/data/biomes.ts` — `BIOMES[2]` (floors 21–30) now the real `ROTCAP_HOLLOW_BIOME`, replacing
+its Slice A placeholder; slots 4–10 unchanged (renumbered from the prior "slots 3–10" placeholder
+range now that this slot is real).
+
+### Engine addition: `random-ally-without-status` (ASSUMPTION 30)
+
+Spore's spread-on-death ("spreads to a living, non-Spored enemy... fizzles if none",
+species-locked.md) needs a target selection no existing `TargetSelector`/`ResponseTarget` could
+express — "a living ally of the dying bearer that does NOT carry a given status." The
+implementation-plan's own ASSUMPTION 30 pins the shape as "a selector composition... not a new
+engine primitive," read here (consistently with the codebase's own vocabulary — a "primitive" in
+this project's parlance means a new Hook/response-verb/`EffectDef` category) as: a single new
+`ResponseTarget`-only variant, the EXACT precedent `random-dead-ally` (Slice B) already set for
+"an existing selector kind can't express this specific exclusion":
+
+- `effect-types.ts` — `ResponseTarget` grows `{ kind: 'random-ally-without-status', statusId:
+  string }`.
+- `resolution.ts` — `resolveResponseTargets` grows a matching case: `livingAlliesOf(self,
+  state).filter(c => !hasStatus(c, target.statusId))`, then a random pick via `state.rng` (reused
+  from `hasStatus`, `effects.ts`, no new helper needed); an empty pool returns `[]`, which every
+  downstream response consumer already treats as a silent no-op (the same "fizzle if none"
+  discipline `revive`'s "target must be dead" skip and `consume-stacks`' "0 stacks" skip already
+  use) — no special-casing needed for the loop-guard species-locked.md calls for.
+- Also read relative to `self` (the dying Spore bearer) — `livingAlliesOf` resolves off
+  `self.side` only, never `self.alive`, so this works correctly even when `self` is the just-died
+  creature firing its own `on-death` trigger (confirmed by the `golden-spore-spread` test below,
+  not just asserted).
+
+**Interpretation note, flagged not silently decided:** species-locked.md's own wording,
+"spreads to a living, non-Spored *enemy*," reads (in the design doc's own loose usage) as "an
+enemy of whoever applied Spore" — i.e. another member of the SAME side as the dying bearer (the
+population the contagion originally infected), not the opposing side relative to the bearer's own
+engine-`self`. This matches the biome's own "colonies, spores, decay... spread" mood far better
+than a literal engine-relative "enemy" reading (which would jump the infection across sides,
+implying Spore benefits whoever applies it rather than spreading through whoever it's already
+hit) — surfaced here for explicit sign-off, since GAME_DESIGN/CONVENTIONS never disambiguated it
+and a different reading would need the target changed to an `all-enemies`-relative pool instead.
+
+### Tests
+
+**95 files / 586 tests** (up from the percent-hp-condition-ticks slice's 90 files / 567 tests —
+5 new files, 19 net new tests): `data/species/rotcap-hollow.test.ts` (the loader/shape test, 14
+cases — 6×3=18 creatures, unique ids, positive draw weights, one innate trait per creature
+resolving in `TRAIT_REGISTRY`, real `defaultScriptId`s, base stats in 10–30, affinity-complete
+across all 5 affinities, exactly one cast-role creature with ≥1 affinity-matched spell, every
+status-applying spell resolving in `STATUS_REGISTRY`, the biome wiring its real pool, every spell
+tagged `unlockedAtBiome: 3`, plus the Rot Sovereign's own trait/stat-range/adds checks);
+`data/biomes.test.ts` gains one new case (slot 3 asserted as the real, non-empty Rotcap Hollow
+biome; slots 4–10 keep the placeholder shape). Four hand-derived `__golden__` pairs, all against
+REAL shipped content:
+
+- `golden-spore-spread` — Sporecloud Seeder's real `on-attack` trait both infects AND (against a
+  pre-wounded target) kills in the same hit; Spore's own `on-death` trigger spreads to the dying
+  creature's only living, still-healthy ally via the new `random-ally-without-status` target — the
+  first real exercise of this slice's one engine addition, not a fixture stand-in.
+- `golden-hollowkin-wretch` — a chip-only hit (`core === 0`, the unconditional min-1 floor)
+  provokes Wretch's real retaliatory Confusion application; the friendly-fire REDIRECT roll itself
+  is already covered generically against fixture content in `confusion.test.ts` (Slice C), so this
+  golden proves the real producer's application chain, not a re-proof of the roll.
+- `golden-necromoss-reclaim` — Necromoss Wisp's real `heal` response scales with the LIVE count
+  of its own side's dead allies (2 dead allies → a nonzero, hand-computed heal), the first real
+  content to exercise `heal`'s `magnitudeSource` mode (Slice E2, named for Necromoss in
+  `effect-types.ts`'s own doc comment when the mechanism was built).
+- `golden-rot-sovereign` — both signature halves in one fight: an add's death grows her Attack
+  live (`magnitudeSource: dead-allies`, freeze-at-application, verified via an independent `node
+  -e` float calculation since `22 * 1.15` isn't exactly representable in binary), and that growth
+  demonstrably feeds her very next attack's damage against a real target, alongside her own
+  turn-start Spore blanket.
+
+Full Phase 1–3 + Slice A–H2 + carrier-reorg + cumulative-spell-unlock + percent-hp-condition-ticks
+suite re-verified byte-identical (the full `npm run test` run above includes every pre-existing
+test file passing unmodified). `lint` / `format:check` / `build` all clean.
+
+### Content review (post-submission pass, same branch)
+
+Design-owner review of the initial submission's numbers/affinities/doc wording (not a correctness
+review — no bug, no engine change). All actioned before merge:
+
+- **Rotfeeder Gorgemaw**: affinity `violence` → `vitality` (its identity is HP growth, not a raw
+  Violence hit).
+- **Myconet Rotcore**: affinity `endurance` → `wit` (its identity is a Poison-application
+  death-burst, not a raw Endurance tank trick). Together these shift the biome's per-creature
+  affinity spread from the species-locked.md species-lean tally (Wit×3/Violence×2/Endurance×2/
+  Instinct×1/Vitality×1) to 7 Wit/4 Violence/4 Endurance/2 Vitality/1 Instinct — still
+  affinity-complete (all 5 present), the loader test's only actual assertion.
+- **Rounder trait numbers**: every trait balance number is now a multiple of 5% — Rotfeeder
+  Scavenger's Attack-on-any-enemy-death rise, 8% → 10%; Necromoss Wisp's and Hollowroot's
+  heal-per-dead-ally rate, 3% → 5% (their final `golden-necromoss-reclaim` numbers are
+  unchanged — `18 × 0.05 × 2 = 1.8` floors to 1, same as `18 × 0.03 × 2 = 1.08` did — but the
+  fixture's own hand-derivation comment is updated to the real 0.05 math). Spore's own DoT rate
+  (4%/round, a STATUS field, not a trait) is deliberately left as-is — the review's own wording
+  scoped this to trait numbers specifically.
+- **Puppet String**: `spellPower` 0.9 → 0.8 (a status-application spell's damage half shouldn't
+  lead the single-target-with-upside band) — still distinct from Disorient's 0.85 under the dedup
+  guard.
+- **Doc rewrite**: `.claude/content/rotcap-hollow.md` had several descriptions that explained a
+  creature's mechanic by contrasting it with a sibling ("the same idea as Wisp, but...", "a
+  different growth path than either of its kin") rather than stating it literally — every
+  description is now self-contained. The Rot Sovereign's own entry gained the actual numbers
+  behind "permanently rises" (15% per own-side death, compounding — her 1st ally death is +15%,
+  her 2nd a separate +30% stacking on top, etc. — plus a flat +5% per opposing-side death), which
+  the initial submission described only qualitatively. The doc's health-heal wording is
+  standardized on "maximum HP" throughout (dropping "effective Health," the engine's own internal
+  term for the same folded stat) — a wording-only change, not a new target-relative heal mechanism
+  (which stays deferred, per `effect-types.ts`'s own `heal.scalingStat` doc comment: "reads the
+  HEALER's own effective Health, never the target's").
+
+### Deliberately out of scope for Slice H3 (later slices)
+
+The boss-encounter RUNNER for any of the three seed bosses (Broodmother/Leech Sovereign/Rot
+Sovereign) — still not built by any slice (Slice G's store only ships
+`recordBossKill`/`bossesCleared` as state); the integration pass and this record's closing
+section (I).
+
 ## Next
 
-Slice H3 — Rotcap Hollow (floors 21–30): Sporecloud, Rotfeeders, Myconet, Necromoss, Hollowkin,
-Sporch; Spore (DoT + spread-on-death, a selector composition per ASSUMPTION 30, no new
-primitive), Confusion (engine already proven in C — its own real `friendly-fire-status` data
-lands here for the first time), the `heal` response's `magnitudeSource`/`scalingStat` modes
-(Slice E2, also still awaiting real content); boss: Rot Sovereign. Replaces `data/biomes.ts`'s
-`BIOMES[2]` slot. See `.claude/briefs/phase-4-implementation-plan.md`.
+Slice I — Integration pass: wire `data/biomes.ts`'s real 3-biome spawn pools into `generation.ts`
+in place of Slice A's remaining fixtures (biomes 4–10 stay placeholder), an end-to-end
+generated-then-checkpoint-verified integration test (starter party → scripted intro → `descend()`
+through floor 1's real Overgrowth fights), full regression across every golden from Phases 1–3
+plus every new one from B–H3, and this phase record's own closing section. See
+`.claude/briefs/phase-4-implementation-plan.md`.

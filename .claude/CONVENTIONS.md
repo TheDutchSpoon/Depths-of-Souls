@@ -454,6 +454,27 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   `conditional-damage-bonus`, powering Striker). Landed in this slice alongside echo-cast; H2 is
   therefore **not** content-only.
 
+### Phase 4 Slice H3 addenda (Rotcap Hollow)
+
+- **`random-ally-without-status` — a new `ResponseTarget`-only variant** (Spore's spread-on-death,
+  ASSUMPTION 30). No existing `TargetSelector`/`ResponseTarget` could express "a living ally of the
+  firing creature that does NOT carry a given status" — the exact same kind of gap `random-dead-
+  ally` (Slice B) already filled for "excluding aliveness." `{ kind: 'random-ally-without-status',
+  statusId: string }`, resolved in `resolveResponseTargets` (resolution.ts) as `livingAlliesOf(self,
+  state).filter(c => !hasStatus(c, statusId))` then a random pick via `state.rng`; an empty pool
+  returns `[]`, which every response consumer already treats as a silent no-op (the same
+  "fizzle if none" discipline `revive`/`consume-stacks` already use). Not a new hook/response-verb/
+  `EffectDef` category, so it stays within ASSUMPTION 30's "a selector composition... not a new
+  engine primitive." `livingAlliesOf` resolves off `self.side` only (never `self.alive`), so this
+  resolves correctly even when `self` is the just-died Spore bearer firing its own `on-death`
+  trigger.
+- **Interpretation note (flagged, not silently decided):** species-locked.md's "spreads to a
+  living, non-Spored *enemy*" reads as "an enemy of whoever applied Spore" — another member of the
+  SAME side as the dying bearer (the population the contagion already infected), not the opposing
+  side relative to the bearer's own engine-`self`. Built this way (matches the biome's "spread"
+  mood far better than a literal engine-relative reading, which would jump the infection across
+  sides) — see the Slice H3 phase record for the full reasoning.
+
 ## Combat & scripting
 
 - **Resolver shape** (three pieces): `createCombat(playerParty, enemyParty, seed) -> CombatState`
