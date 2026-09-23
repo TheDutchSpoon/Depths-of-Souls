@@ -4,8 +4,10 @@ Status: **done.**
 
 An engine slice per the brief (`.claude/briefs/phase-4-percent-hp-condition-ticks.md`): Regen,
 Poison and Burn no longer tick for a flat number — each ticks for a percentage of the *bearer's*
-own effective max HP per stack, so they stay meaningful as Health scales with level instead of
-going insignificant.
+own effective max HP per stack, so each tick is the same fraction of max HP at every level. At
+current content levels (base Health 14–30, biomes 1–2 up to about level 24) this is a **net
+reduction** versus the old flat values — the crossover is at 100 max HP for Poison/Burn and 80 for
+Regen. Numbers are parked placeholders for the balance pass.
 
 ## What was built
 
@@ -84,6 +86,11 @@ All hand-derived with arithmetic in comments, calling `executeResponse` directly
   floor to 26.
 - A non-integer or non-positive `percent` throws the resolver-invariant error.
 - A literal-number `flatAmount` still behaves exactly as before (regression guard for the union).
+- **(Plan-review addition, ASSUMPTION 3)** The bearer's stat is read **floored** before
+  multiplying: base Health 49 with a ×1.5 stat-modifier (effective max HP 73.5) and 5 stacks at
+  3% ticks for `floor(floor(73.5) × 3 × 5 / 100) = 10`, not the `11` an unfloored read would give
+  (`floor(73.5 × 15 / 100) = 11`) — no existing case exercised this because every other test uses
+  an integer max HP, so this pins the inner floor against a silent regression.
 
 No other test file needed edits: `resolution.test.ts`'s pre-existing `TEST_DOT`/`TEST_REGEN`
 suites author their own literal-number `EffectResponse` objects inline (never import
@@ -103,10 +110,36 @@ confirmed unaffected, byte-identical.
 
 ## Verification
 
-All four gates green: `npm run test` — 90 files / 566 tests passed; `npm run lint` — clean;
+All four gates green: `npm run test` — 90 files / 567 tests passed; `npm run lint` — clean;
 `npm run format:check` — clean; `npm run build` — `tsc -b && vite build` succeeded.
+
+## Post-ship doc review (design agent, folded in before merge)
+
+- **ASSUMPTION 3 test gap** — no existing test failed if `resolveFlatTotal`'s inner
+  `Math.floor(getEffectiveStat(...))` were removed, since every case used an integer max HP.
+  Closed with the floored-stat test above (test-only; no engine/data behavior change).
+- **Wording** — "stays meaningful at every level instead of going insignificant" overstated the
+  effect at current content levels (it's actually a net reduction below ~80–100 max HP); reworded
+  throughout (`CONVENTIONS.md`, `GAME_DESIGN.md`, this record, `data/statuses.ts`'s POISON
+  comment) to "the same fraction of max HP at every level," with the reduction/crossover numbers
+  stated explicitly where relevant.
+- **Heal targeting note** — `CONVENTIONS.md`'s heal bullet's old "target-%-max-HP heals... are
+  deferred" line was ambiguous about what `StatPercent` reads; replaced with an explicit statement
+  that it always reads the firing creature (`context.self`), and a percentage of a *different*
+  target's stat remains a deferred, separate mechanism.
+- **Heal minimum** — `CONVENTIONS.md` now states explicitly that heal ticks have no minimum
+  (unlike flat damage's min-1), so a stat-derived Regen can tick for 0 below a small max-HP
+  threshold; accepted, not special-cased.
+- **`GAME_DESIGN.md` §13** — added the percent-of-max-HP condition ticks to the parked balance
+  numbers list (net reduction below ~80–100 max HP, single-stack Poison sits on the min-1 floor
+  early, compare to attacks landing ~40% of max HP per hit, a fully stacked DoT kills anything in
+  ~7 rounds).
+- **"Next" section correction below** — this record originally claimed `app/demoFight.ts` ticks
+  get *bigger*; corrected, since demo creatures sit at 18–50 max HP (below both crossovers).
 
 ## Next
 
-No specific follow-on named by the brief. `app/demoFight.ts` output shifts (ticks are bigger) —
-expected, not a golden.
+No specific follow-on named by the brief. `app/demoFight.ts` output shifts, but ticks get
+**smaller**, not bigger, at these low demo HP values: Venom Bolt's Poison drops from 3 to 1 (the
+min-1 floor), and the demo's regen-on-hit front-liner (50 HP) drops from 4 to 2 per stack. Still
+expected, still not a golden.

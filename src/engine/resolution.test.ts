@@ -16,6 +16,7 @@ import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
 import type { CreatureId } from './ids'
 import type { CombatEvent, CombatState } from './types'
+import { createEffectInstanceId } from './effect-types'
 import type {
   ConditionStatusEffect,
   ObservationFilter,
@@ -824,6 +825,45 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     )
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 15, remainingHp: 85 })
+  })
+
+  it('reads the bearer’s stat FLOORED before multiplying (ASSUMPTION 3) -- a fractional effective stat does not leak through', () => {
+    // Base Health 49, x1.5 stat-modifier -> effective max HP 73.5. Reading it floored:
+    // floor(floor(73.5) * 3 * 5 / 100) = floor(floor(73) * 15 / 100) = floor(1095 / 100) =
+    // floor(10.95) = 10. Reading it UNFLOORED instead would give floor(73.5 * 15 / 100) =
+    // floor(11.025) = 11 -- this test guards against that regression (it fails, returning 11,
+    // if resolveFlatTotal's inner Math.floor over getEffectiveStat is removed).
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 49 }])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    state = updateCreature(state, createCreatureId('victim'), {
+      activeEffects: [
+        {
+          category: 'stat-modifier',
+          stat: 'health',
+          factor: 1.5,
+          instanceId: createEffectInstanceId('health-buff-fixture'),
+          sourceTraitId: 'health-buff-fixture',
+        },
+      ],
+      currentHp: 73,
+    })
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 3 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim'), stacks: 5 },
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 10 })
   })
 
   it('DoT: keeps the existing minimum of 1 at very low max HP', () => {

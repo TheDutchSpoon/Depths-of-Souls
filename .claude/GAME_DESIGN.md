@@ -575,9 +575,9 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   per-stat/per-status special-casing.
 - **DoT damage** uses its **own value from the source** and **bypasses Defence** (not the
   Attack/Defence formula) — making DoT a distinct answer to high-Defence enemies. That own value
-  scales with the target's own max HP rather than being a flat number: Regen, Poison and Burn
-  each tick for a percentage of the *bearer's* effective max HP per stack (so they stay meaningful
-  at every level), still bypassing Defence/affinity/pools entirely.
+  is a percentage of the bearer's own effective max HP per stack (Poison, Burn), so a DoT is the
+  same fraction of max HP at every level, still bypassing Defence/affinity/pools entirely. Regen
+  (heal-over-time) uses the same stat-derived per-stack rule.
 - **Stun** is **just a `condition-status`**, not a special mechanic — it registers an
   `on-turn-start` hook whose response is **suppress-action**, so the affected creature's turn is
   skipped **via the Phase 1 empty-bracket mechanism** (its `TurnStarted`/`TurnEnded` still emit,
@@ -1072,6 +1072,11 @@ the hot autosave path.
   only — structure is decided in §4, numbers are not).
 - Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
   round-cap value (structure decided in §7, number TBD).
+- **Percent-of-max-HP condition ticks** (Regen 5% / Poison 3% / Burn 5% per stack): these match
+  the old flat values only at about 100 max HP (80 for Regen), so at current content levels they
+  are a net reduction. Single-stack Poison sits on the min-1 floor through the early levels.
+  Compare against attacks, which land about 40% of max HP per hit. A fully stacked DoT kills
+  anything, bosses included, in about 7 rounds.
 
 **Design items parked (decided to defer, not undecided):**
 - **Behavioral traits** (scripting-altering / extra-action traits) — post-v1.

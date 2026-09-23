@@ -10,11 +10,12 @@ import type {
 // primitives -- no per-status special-casing in the engine.
 
 /** DoT: 3% of the bearer's own effective max HP per stack per round (percent-hp-condition-ticks
- * brief -- stays meaningful at every level, unlike a flat number), bypassing Defence/affinity/
- * pools entirely (GAME_DESIGN: "own value from the source"). Deliberately flat mode with a
- * stat-derived amount, not `scalingStat` -- `scalingStat` would route the victim through its own
- * damage formula (own Defence/dealt-buffs applying to its own poison); see resolveFlatTotal
- * (resolution.ts). No TriggerFired per tick -- its StatusApplied already announced it. */
+ * brief -- the same fraction of max HP at every level, unlike a flat number), bypassing
+ * Defence/affinity/pools entirely (GAME_DESIGN: "own value from the source"). Deliberately flat
+ * mode with a stat-derived amount, not `scalingStat` -- `scalingStat` would route the victim
+ * through its own damage formula (own Defence/dealt-buffs applying to its own poison); see
+ * resolveFlatTotal (resolution.ts). No TriggerFired per tick -- its StatusApplied already
+ * announced it. */
 export const POISON: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'poison',
