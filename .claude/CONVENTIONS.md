@@ -234,7 +234,22 @@ top-level kinds: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress
   built. Lands with a real `speciesId` threaded through `materializeCreature` (the
   `living-allies-of-species` reader is built but inert — returns 0 — until then). Striker was
   reworded to "scales per hive-mate **in the team**" so the frozen count reads as intended, not as a
-  stale-live-count bug. Necromoss (H3) uses the same route (buff + heal off dead-allies).
+  stale-live-count bug.
+- **Never put `magnitudeSource` on a trigger that already fires once per counted event (decided,
+  PR #64 review).** An `on-ally-death` trigger fires once per death, so it already *is* the count;
+  adding `magnitudeSource: dead-allies` counts every earlier death again on each firing, compounding
+  as Π(1 + r·k) (5 deaths at r = 10% → ×3.60, not ×1.61). A per-event trigger uses a **flat**
+  per-event factor; `magnitudeSource` belongs on fire-once hosts (Striker's `on-fight-start`) or
+  on **instantaneous** responses read fresh each firing (a `heal` or `deal-damage` — nothing
+  accumulates). Necromoss (H3): Wisp/Hollowroot heal via the live `dead-allies` count on
+  `on-turn-start` (correct); Thicket's buff is a flat Defence rise per ally death. The Rot
+  Sovereign: one flat Attack rise per death on **either** side (same rate on `on-ally-death` and
+  `on-enemy-death`).
+- **Zero count ⇒ full no-op (decided, PR #64 review).** A `deal-damage` or `heal` response whose
+  `magnitudeSource` resolves to **0** does nothing: no `DamageDealt`/heal, no min-1 chip floor, no
+  downstream hooks (`on-damage-taken`, Sleep's wake, …). `TriggerFired` is still emitted (the
+  uniform fizzle shape — see the H3 addenda). Mirrors `consume-stacks`' "0 stacks is a full no-op,
+  not fired-with-magnitude-0." Affects Sporecloud Reaper, Spider Broodwarden, Lullpollen Dozer.
 - **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
   **Built in Phase 4 Slice D.** SELF-scoped (no `target` field) — always reads/clears the FIRING
   creature's own stacks. 0/absent stacks is a full no-op (the wrapped effect never fires, not
@@ -330,7 +345,7 @@ top-level kinds: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress
 Web (act-last + 10%/turn break-free — **break-free mechanism still undecided, see turn-order
 status above**), Sleep (breaks on damage; 3-turn), Glow (stacking resource; +%dmg/stack;
 consumable), turn-order (act first *or* last — two-way, **built C**), Spore (DoT +
-spread-on-death), Confusion (3-turn; 50% harmful-action friendly-fire, **built C**), Silenced
+spread-on-death to the host's own side, **built H3**), Confusion (3-turn; 50% harmful-action friendly-fire, **built C**), Silenced
 (suppress-Cast; Violence spell), Pacified (suppress-Attack; Wit spell), Splashing (adjacency
 splash **on attacks only**, **built C** as a permanent passive, not a runtime status instance — see above), Proficient
 (**P8**; +equipment benefit). Bulwark (−5% damage taken per Defend this battle, additive-with-cap
@@ -456,24 +471,33 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 
 ### Phase 4 Slice H3 addenda (Rotcap Hollow)
 
-- **`random-ally-without-status` — a new `ResponseTarget`-only variant** (Spore's spread-on-death,
-  ASSUMPTION 30). No existing `TargetSelector`/`ResponseTarget` could express "a living ally of the
-  firing creature that does NOT carry a given status" — the exact same kind of gap `random-dead-
-  ally` (Slice B) already filled for "excluding aliveness." `{ kind: 'random-ally-without-status',
-  statusId: string }`, resolved in `resolveResponseTargets` (resolution.ts) as `livingAlliesOf(self,
-  state).filter(c => !hasStatus(c, statusId))` then a random pick via `state.rng`; an empty pool
-  returns `[]`, which every response consumer already treats as a silent no-op (the same
-  "fizzle if none" discipline `revive`/`consume-stacks` already use). Not a new hook/response-verb/
-  `EffectDef` category, so it stays within ASSUMPTION 30's "a selector composition... not a new
-  engine primitive." `livingAlliesOf` resolves off `self.side` only (never `self.alive`), so this
-  resolves correctly even when `self` is the just-died Spore bearer firing its own `on-death`
-  trigger.
-- **Interpretation note (flagged, not silently decided):** species-locked.md's "spreads to a
-  living, non-Spored *enemy*" reads as "an enemy of whoever applied Spore" — another member of the
-  SAME side as the dying bearer (the population the contagion already infected), not the opposing
-  side relative to the bearer's own engine-`self`. Built this way (matches the biome's "spread"
-  mood far better than a literal engine-relative reading, which would jump the infection across
-  sides) — see the Slice H3 phase record for the full reasoning.
+- **Spore spreads host-relative (decided, PR #64 review).** When a Spore bearer dies, Spore
+  spreads to **one random living, non-Spored creature on the dying host's own side** (fizzles if
+  none). This is the rule regardless of who applied Spore (a Sporecloud, a spell, a Confused
+  ally's friendly fire, the Rot Sovereign) and whether the applier is still alive —
+  species-locked.md's "enemy" was written from the Sporecloud's point of view. The spread is a
+  **trigger on the Spore status itself** (`on-death`), not a trait: a trait's `on-death` fires when
+  its *owner* dies, never the host.
+- **`random-ally-without-status` — one new `ResponseTarget` variant.** ASSUMPTION 30 ("a selector
+  composition, no new engine primitive") did **not** hold: no `TargetSelector` can filter by
+  status. `{ kind: 'random-ally-without-status', statusId: string }`, resolved in
+  `resolveResponseTargets` as `livingAlliesOf(self, state).filter(c => !hasStatus(c, statusId))`,
+  then one `state.rng` draw — **only when the pool is non-empty** (an empty pool draws no RNG).
+  `livingAlliesOf` keys off `self.side`, not `self.alive`, so it resolves correctly from the
+  just-died host's own `on-death`. Precedent: `random-dead-ally` (Slice B). Keep this list short —
+  a new `ResponseTarget` variant still needs a review, same as any other vocabulary growth.
+- **Empty-target / zero-count fizzles emit `TriggerFired` and nothing else (decided).** One uniform
+  shape for every "fizzle": the trigger has already passed its condition/chance/depth gates, so
+  `TriggerFired` is emitted, and then the response produces **no** further events and **no**
+  downstream hooks. Applies to: an empty `ResponseTarget` pool (Spore's spread with every ally
+  already Spored; `revive` with no dead ally), `triggering-source` resolving to self, a zero
+  `magnitudeSource` count, and `consume-stacks` with 0 stacks. Docs must never describe these as
+  "no event."
+- **Sporch Cinderlord's kill-burst is creature-level and applies exactly 1 Burn stack per enemy
+  (decided).** `on-kill → apply-status(all-enemies, burn, stacks: 1)` — `stacks: 1` is written
+  explicitly in the data, not left to the `StatusSpec` default. On an enemy already Burning it adds
+  1 stack (up to Burn's cap of 3) and refreshes duration, same as any re-application. The Burn
+  **status** carries no spread trigger; "non-spreading Burn" refers to the status.
 
 ## Combat & scripting
 
@@ -805,6 +829,12 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   event→condition→response→target→magnitude sentence; the hook **context** supplies reference actors
   (`{self, source}`, etc.); the response names its target (`self`, `triggering-source`,
   `triggering-ally`, `all-enemies`, a `TargetSelector`, …).
+- **`triggering-source` never resolves to the firing creature itself (decided, PR #64 review).**
+  A DoT/Regen tick's source is its own bearer, so under `on-damage-taken` a "retaliate against
+  whoever hit me" response would otherwise target itself (Snapjaws Jaws hitting itself on Poison;
+  Hollowkin Wretch Confusing itself). `triggering-source` resolves to **no target** when the source
+  is `self`; the hook itself still fires (Sleep must still wake on DoT), and the fizzle emits
+  `TriggerFired` only.
 - **"attack" / "cast" in a trait or spell = the real actions** — same damage formula, OffStat,
   affinity, Defence, pools, min-1 floor; the trait/spell supplies only the spellPower coefficient +
   target. No separate trigger-damage formula. **DoT is the lone Defence-bypass exception**; a
@@ -839,16 +869,24 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   Regen/Stun); **Sleep has two** (`on-turn-start → suppress-action` to skip the sleeper's turn,
   `on-damage-taken → remove-status(self)` to wake). `effectsForHook` flattens each entry into the
   same resolved-trigger shape a `TriggeredDef` produces, so `fireHook` treats status triggers and
-  trait triggers identically. **Constraint**: all triggers from one status share the status's
-  `instanceId`, so the self-re-entry guard collapses two triggers on the *same* hook into one
-  firing — fine for all current content (Sleep's two are on different hooks); a future same-hook
-  pair on one status would need per-trigger identity.
+  trait triggers identically. **Per-trigger identity (decided, PR #64 review):** each flattened
+  status trigger carries its own guard identity (`${statusInstanceId}#trigger#${index}`), exactly
+  as a trait's effects each carry a per-effect ordinal id. The self-re-entry guard is therefore
+  scoped to *one trigger*, never to the whole status. (Previously all triggers shared the status's
+  `instanceId`, which silently blocked nested firings: Spore's `on-round-end` tick killing its
+  host left the instance "active," so the same status's `on-death` spread was skipped.) The
+  status's own `instanceId` is unchanged for everything else (refresh, removal, snapshot).
 - **Round-end = global sweeps over a start-of-sweep snapshot**: snapshot statuses present at sweep
   start, then **(1)** fire all `on-round-end` hooks (all creatures, tie-break order; incl. DoT ticks;
   cascades incl. `on-death` resolve fully) **→ (2)** decrement durations **for snapshot statuses only**
   **→ (3)** expire snapshot statuses at 0 (`StatusExpired`). **Statuses born mid-sweep** (e.g. from an
   `on-death` trait) are not in the snapshot — they keep full duration and start counting next
-  round-end. A **refresh** of a status already in the snapshot is treated the same: because
+  round-end. **They also do not fire their own `on-round-end` triggers (tick) in that sweep**
+  (GAME_DESIGN status lifecycle): during step (1), a condition-status's `on-round-end` triggers fire
+  only if that status is in the snapshot **and** its `(creature, statusId)` has not been
+  (re)applied earlier in the same sweep. Without this gate, a mid-sweep status ticks immediately
+  whenever its bearer comes later in tie-break order — side-asymmetric (player side sweeps first).
+  Trait `on-round-end` triggers are unaffected. A **refresh** of a status already in the snapshot is treated the same: because
   re-application reuses the same `instanceId`, step (2) must additionally **skip** decrement/expiry
   for any `(creature, statusId)` that emitted a `StatusApplied` during step (1) — derived from those
   sweep-fired events, not from extra state threaded through `applyStatus`. A creature killed

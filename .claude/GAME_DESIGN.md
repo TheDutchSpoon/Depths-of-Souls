@@ -443,7 +443,10 @@ self-perpetuating chains are truncated. Truncation is deterministic. Concretely 
 - **Self-re-entry guard = instance-level, stack-scoped** — a specific effect *instance* cannot
   re-enter while it is already unwinding on the active resolution stack. This blocks true
   self-loops (a retaliation triggering its own retaliation) but leaves legitimate cross-creature
-  cascades alone (A hits B, B's trait fires — not re-entry of A's).
+  cascades alone (A hits B, B's trait fires — not re-entry of A's). **Each trigger of a status is
+  its own instance for this guard** (a status with several triggers is several instances), so one
+  trigger can cause another trigger of the same status: Spore's round-end tick killing its host
+  still fires Spore's own on-death spread.
 - **Depth = chain nesting**, not breadth. N effects firing on one hook point is breadth N at the
   current depth; each trigger that *causes a new hook to fire* increments depth for that sub-chain.
 - **On the cap**: the over-cap trigger simply does **not execute** (no crash, no partial fire);
@@ -538,7 +541,9 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   *"when this creature is dealt damage by another creature, attack that creature for 30% Attack."*
   The hook **context** supplies the reference actors (`{self, source}` etc.); the response names its
   target via a vocabulary (`self`, `triggering-source`, `triggering-ally`, `all-enemies`, a full
-  `TargetSelector`, …).
+  `TargetSelector`, …). **`triggering-source` is never the creature itself**: a damage-over-time
+  tick's source is its own bearer, so "retaliate against whoever hit me" simply has no target on a
+  tick (the hook still fires — a DoT still wakes a sleeper).
 - **"attack" / "cast" in a trait or spell mean the real actions** — same damage formula, OffStat
   (Attack / Intelligence), affinity, Defence interaction, pools, and min-1 floor as a creature
   choosing that action; the trait/spell supplies only the spellPower coefficient and target. There
