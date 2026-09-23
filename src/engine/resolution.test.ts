@@ -16,6 +16,7 @@ import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
 import type { CreatureId } from './ids'
 import type { CombatEvent, CombatState } from './types'
+import { createEffectInstanceId } from './effect-types'
 import type {
   ConditionStatusEffect,
   ObservationFilter,
@@ -726,6 +727,366 @@ describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
         newCascade(),
       ),
     ).toThrow(/more than one of offStat\/scalingStat\/flatAmount/)
+  })
+})
+
+describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', () => {
+  it('heal: 1 stack scales off the bearer’s own floored max HP', () => {
+    // Bearer max HP 100, percent 5, 1 stack (default): floor(floor(100) * 5 * 1 / 100) =
+    // floor(5) = 5. 90 + 5 = 95, well under the 100 cap.
+    const player = makeParty('player', [{ id: 'p', health: 100 }])
+    const enemy = makeParty('enemy', [{ id: 'e' }])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    state = updateCreature(state, createCreatureId('p'), { currentHp: 90 })
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'heal',
+        target: { kind: 'self' },
+        amountPerStack: { ofStat: 'health', percent: 5 },
+      },
+      'fixture',
+      { self: createCreatureId('p') },
+      state,
+      events,
+      newCascade(),
+    )
+    const heal = events.find((e) => e.type === 'HealApplied')
+    expect(heal).toMatchObject({ amount: 5, remainingHp: 95 })
+  })
+
+  it('heal: cap stacks (3) clamp to effective max HP, never overheal', () => {
+    // Bearer max HP 100, percent 5, 3 stacks: floor(floor(100) * 5 * 3 / 100) = floor(15) = 15.
+    // 97 + 15 = 112, clamped to 100 -- HealApplied.amount is the CLAMPED delta (3), not the
+    // requested 15.
+    const player = makeParty('player', [{ id: 'p', health: 100 }])
+    const enemy = makeParty('enemy', [{ id: 'e' }])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    state = updateCreature(state, createCreatureId('p'), { currentHp: 97 })
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'heal',
+        target: { kind: 'self' },
+        amountPerStack: { ofStat: 'health', percent: 5 },
+      },
+      'fixture',
+      { self: createCreatureId('p'), stacks: 3 },
+      state,
+      events,
+      newCascade(),
+    )
+    const heal = events.find((e) => e.type === 'HealApplied')
+    expect(heal).toMatchObject({ amount: 3, remainingHp: 100 })
+  })
+
+  it('DoT: 1 stack tick is unaffected by the victim’s own (huge) Defence -- flat mode bypasses the formula', () => {
+    // Bearer max HP 100, percent 3, 1 stack: floor(floor(100) * 3 * 1 / 100) = floor(3) = 3.
+    // Defence 999 would zero out any formula-based hit; flat mode never reads it.
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 100, defence: 999 }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 3 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim') },
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 3, remainingHp: 97 })
+  })
+
+  it('DoT: cap stacks (5) tick', () => {
+    // Bearer max HP 100, percent 3, 5 stacks: floor(floor(100) * 3 * 5 / 100) = floor(15) = 15.
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 3 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim'), stacks: 5 },
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 15, remainingHp: 85 })
+  })
+
+  it('reads the bearer’s stat FLOORED before multiplying (ASSUMPTION 3) -- a fractional effective stat does not leak through', () => {
+    // Base Health 49, x1.5 stat-modifier -> effective max HP 73.5. Reading it floored:
+    // floor(floor(73.5) * 3 * 5 / 100) = floor(floor(73) * 15 / 100) = floor(1095 / 100) =
+    // floor(10.95) = 10. Reading it UNFLOORED instead would give floor(73.5 * 15 / 100) =
+    // floor(11.025) = 11 -- this test guards against that regression (it fails, returning 11,
+    // if resolveFlatTotal's inner Math.floor over getEffectiveStat is removed).
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 49 }])
+    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    state = updateCreature(state, createCreatureId('victim'), {
+      activeEffects: [
+        {
+          category: 'stat-modifier',
+          stat: 'health',
+          factor: 1.5,
+          instanceId: createEffectInstanceId('health-buff-fixture'),
+          sourceTraitId: 'health-buff-fixture',
+        },
+      ],
+      currentHp: 73,
+    })
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 3 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim'), stacks: 5 },
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 10 })
+  })
+
+  it('DoT: keeps the existing minimum of 1 at very low max HP', () => {
+    // Bearer max HP 10, percent 3, 1 stack: floor(floor(10) * 3 * 1 / 100) = floor(0.3) = 0,
+    // min-1'd by applyFlatDamage's existing Math.max(1, ...) to 1.
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 10 }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 3 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim') },
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ rawDamage: 0.3, finalDamage: 1, remainingHp: 9 })
+  })
+
+  it('DoT: the victim’s own damage-dealt buff does not amplify its own tick -- flat mode never reads dealtMods', () => {
+    const DEALT_BUFF_FIXTURE: StatusDef = {
+      category: 'damage-modifier',
+      statusId: 'dealt-buff-fixture',
+      cap: 1,
+      direction: 'dealt',
+      magnitude: 0.5, // +50% dealt on a real formula hit -- irrelevant to flat mode
+      polarity: 'buff',
+      defaultDuration: 3,
+    }
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
+    const statuses = new Map([[DEALT_BUFF_FIXTURE.statusId, DEALT_BUFF_FIXTURE]])
+    let state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      TRAIT_REGISTRY,
+      statuses,
+    )
+    const setupEvents: CombatEvent[] = []
+    state = applyStatus(
+      createCreatureId('victim'),
+      createCreatureId('victim'),
+      { statusId: 'dealt-buff-fixture', duration: 3 },
+      state,
+      setupEvents,
+      newCascade(),
+    )
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 3 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim') },
+      state,
+      events,
+      newCascade(),
+    )
+    // Still floor(100 * 3 * 1 / 100) = 3, not 4 (3 x 1.5 floored) -- the +50% dealt buff never
+    // applies to a flat-mode tick.
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 3 })
+  })
+
+  it('DoT: the victim’s own taken-damage multiplier does not change its own tick -- flat mode never reads takenFactors', () => {
+    const VULNERABLE_FIXTURE: StatusDef = {
+      category: 'damage-modifier',
+      statusId: 'vulnerable-fixture',
+      cap: 1,
+      direction: 'taken',
+      magnitude: 1.5, // x1.5 taken on a real formula hit -- irrelevant to flat mode
+      polarity: 'debuff',
+      defaultDuration: 3,
+    }
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
+    const statuses = new Map([[VULNERABLE_FIXTURE.statusId, VULNERABLE_FIXTURE]])
+    let state = createCombat(
+      player,
+      enemy,
+      1,
+      STOCK_SCRIPTS_BY_ID,
+      TRAIT_REGISTRY,
+      statuses,
+    )
+    const setupEvents: CombatEvent[] = []
+    state = applyStatus(
+      createCreatureId('victim'),
+      createCreatureId('victim'),
+      { statusId: 'vulnerable-fixture', duration: 3 },
+      state,
+      setupEvents,
+      newCascade(),
+    )
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 3 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim') },
+      state,
+      events,
+      newCascade(),
+    )
+    // Still 3, not 4 (3 x 1.5 floored) -- Vulnerable's taken multiplier never applies to a flat
+    // DoT tick.
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 3 })
+  })
+
+  it('floors once over stat x percent x stacks, never per stack', () => {
+    // Bearer max HP 30, percent 5, 3 stacks: floor(30 * 5 * 3 / 100) = floor(4.5) = 4. A
+    // (wrong) per-stack floor would compute floor(30 * 5 / 100) = 1 per stack x 3 stacks = 3.
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 30 }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 5 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim'), stacks: 3 },
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 4 })
+  })
+
+  it('is exact where a float-fraction implementation would floor one too low (the "float trap")', () => {
+    // Bearer max HP 180, percent 3, 5 stacks: floor(180 * 3 * 5 / 100) = floor(2700 / 100) =
+    // floor(27) = 27 exactly, because percent/stacks are multiplied in as integers BEFORE
+    // dividing by 100. A float-fraction equivalent (180 * 0.03 * 5) evaluates to
+    // 26.999999999999996 in IEEE-754 double precision and would floor to 26 -- one too low.
+    expect(180 * 0.03 * 5).toBeLessThan(27) // the float trap this brief exists to avoid
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 180 }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 3 },
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim'), stacks: 5 },
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 27 })
+  })
+
+  it('throws a resolver-invariant error when percent is not a positive integer', () => {
+    const state = createCombat(
+      makeParty('player', [{ id: 'a' }]),
+      makeParty('enemy', [{ id: 'b' }]),
+      1,
+    )
+    for (const percent of [2.5, 0, -3]) {
+      expect(() =>
+        executeResponse(
+          {
+            kind: 'deal-damage',
+            target: { kind: 'self' },
+            flatAmount: { ofStat: 'health', percent },
+          },
+          'fixture',
+          { self: createCreatureId('a') },
+          state,
+          [],
+          newCascade(),
+        ),
+      ).toThrow(/stat-derived flat amount needs a positive integer percent/)
+    }
+  })
+
+  it('a literal number flatAmount/amountPerStack still behaves exactly as before (regression)', () => {
+    // Unchanged: 7 x 2 stacks = 14, exactly the pre-existing literal-number behavior -- the
+    // StatPercent union is purely additive.
+    const player = makeParty('player', [{ id: 'attacker' }])
+    const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
+    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: 7,
+        damageSource: 'dot',
+      },
+      'fixture',
+      { self: createCreatureId('victim'), stacks: 2 },
+      state,
+      events,
+      newCascade(),
+    )
+    const tick = events.find((e) => e.type === 'DamageDealt')
+    expect(tick).toMatchObject({ finalDamage: 14 })
   })
 })
 

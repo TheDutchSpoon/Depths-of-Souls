@@ -9,9 +9,13 @@ import type {
 // Phase 4+). Each is a data instance of the built condition-status / damage-modifier
 // primitives -- no per-status special-casing in the engine.
 
-/** DoT: 3 flat damage per stack per round, bypassing Defence/affinity/pools entirely
- * (GAME_DESIGN: "own value from the source"). No TriggerFired per tick -- its StatusApplied
- * already announced it. */
+/** DoT: 3% of the bearer's own effective max HP per stack per round (percent-hp-condition-ticks
+ * brief -- the same fraction of max HP at every level, unlike a flat number), bypassing
+ * Defence/affinity/pools entirely (GAME_DESIGN: "own value from the source"). Deliberately flat
+ * mode with a stat-derived amount, not `scalingStat` -- `scalingStat` would route the victim
+ * through its own damage formula (own Defence/dealt-buffs applying to its own poison); see
+ * resolveFlatTotal (resolution.ts). No TriggerFired per tick -- its StatusApplied already
+ * announced it. */
 export const POISON: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'poison',
@@ -22,7 +26,7 @@ export const POISON: ConditionStatusDef = {
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
-        flatAmount: 3,
+        flatAmount: { ofStat: 'health', percent: 3 },
         emitTriggerFired: false,
         damageSource: 'dot',
       },
@@ -35,7 +39,8 @@ export const POISON: ConditionStatusDef = {
   defaultDuration: 3,
 }
 
-/** DoT: 5 flat damage per stack per round. */
+/** DoT: 5% of the bearer's own effective max HP per stack per round. Same stat-derived flat
+ * mode as POISON -- see its doc comment for why this isn't `scalingStat`. */
 export const BURN: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'burn',
@@ -46,7 +51,7 @@ export const BURN: ConditionStatusDef = {
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
-        flatAmount: 5,
+        flatAmount: { ofStat: 'health', percent: 5 },
         emitTriggerFired: false,
         damageSource: 'dot',
       },
@@ -58,7 +63,9 @@ export const BURN: ConditionStatusDef = {
   defaultDuration: 3,
 }
 
-/** HoT: 4 flat heal per stack per round, clamped to effective max Health (no auto-heal past it). */
+/** HoT: 5% of the bearer's (the healed creature's) own effective max HP per stack per round,
+ * clamped to effective max Health (no auto-heal past it). Same stat-derived flat mode as
+ * POISON/BURN's own deal-damage, mirrored onto heal. */
 export const REGEN: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'regen',
@@ -69,7 +76,7 @@ export const REGEN: ConditionStatusDef = {
       response: {
         kind: 'heal',
         target: { kind: 'self' },
-        amountPerStack: 4,
+        amountPerStack: { ofStat: 'health', percent: 5 },
         emitTriggerFired: false,
       },
     },
