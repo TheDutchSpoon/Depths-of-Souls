@@ -2199,7 +2199,7 @@ design owner's ratified reading, not an open question.
 Design-owner review of the PR, driven by a four-case repro file (`pr64-repro.test.ts`,
 scratch, never committed) that failed all four cases on the branch as submitted. All eight items
 were actioned in this same branch; every engine fix was verified to keep the full pre-review
-suite (582 tests at the time) byte-identical before its own new golden was added.
+suite (586 tests at the time) byte-identical before its own new golden was added.
 
 **Engine fixes:**
 
@@ -2282,10 +2282,11 @@ suite (582 tests at the time) byte-identical before its own new golden was added
 
 ### Tests
 
-**102 files / 593 tests** (up from this slice's own post-content-review state of 95 files / 586
-tests — 7 new files, 7 net new tests: two golden fixtures were re-derived in place, not added,
+**103 files / 594 tests** (up from this slice's own post-content-review state of 95 files / 586
+tests — 8 new files, 8 net new tests: two golden fixtures were re-derived in place, not added,
 since items 5/10/11 changed their own scenarios rather than adding new ones). Full breakdown of
-the `__golden__` suite added or changed by this review:
+the `__golden__` suite added or changed by this review (including its own follow-up cleanup
+pass):
 
 - `golden-spore-spread` (unchanged) — Sporecloud Seeder's real `on-attack` trait both infects AND
   (against a pre-wounded target) kills in the same hit; Spore's own `on-death` trigger spreads to
@@ -2293,9 +2294,11 @@ the `__golden__` suite added or changed by this review:
 - `golden-spore-spread-filter` (new, review item 9) — a real 2-candidate draw (3 living allies,
   one already Spored, filtered out before the draw) — `Math.floor(state.rng.next() * 2)` at SEED
   1 draws index 1, verified via an independent mulberry32 replica matching `rng.ts` exactly.
-- `golden-spore-spread-fizzle` (new, review item 9) — every living ally already Spored:
-  `TriggerFired` fires, nothing follows it, no RNG draw at all (the empty-pool check returns
-  before ever calling `state.rng.next()`).
+- `golden-spore-spread-fizzle` (new, review item 9; cleanup pass moved it to SEED 1 and added a
+  trailing `expect(state.rng.next()).toBe(0.6270739405881613)` so the "no RNG draw" claim is
+  proven, not just asserted) — every living ally already Spored: `TriggerFired` fires, nothing
+  follows it, no RNG draw at all (the empty-pool check returns before ever calling
+  `state.rng.next()`).
 - `golden-spore-spread-dot-kill` (new, review item 9 / fix 1) — the host dies to its OWN
   round-end DoT tick, not an outside hit; proves fix 1's per-trigger guard identity end to end,
   across a full round-end sweep.
@@ -2312,8 +2315,14 @@ the `__golden__` suite added or changed by this review:
   own attack) with zero Spored enemies on the board.
 - `golden-round-end-mid-sweep-poison` (new, fix 2) — the dedicated Myconet-Rotcore repro scenario
   as a full 3-round golden: Rotcore's death-Poison does not tick in its own birth sweep, then
-  ticks normally starting round 2.
-- `golden-sporch-cinderlord-burn-stacks` (new, fix 6) — a fresh target ends at 1 Burn stack; a
+  ticks normally starting round 2. Covers the "born mid-sweep" half of fix 2's own gate.
+- `golden-round-end-mid-sweep-poison-refresh` (new, cleanup-pass follow-up to fix 2) — the OTHER
+  half of the gate's AND condition: E1 already carries 1 Poison stack before the fight; Rotcore's
+  death-Poison REFRESHES it to 2 stacks mid-sweep instead of newly applying it, and it still
+  doesn't tick that sweep, then ticks for `2 x 3% x 100 = 6` starting round 2.
+- `golden-sporch-cinderlord-burn-stacks` (new, fix 6; cleanup pass added `duration: 1` to
+  ENEMY_B's pre-applied stacks so Cinderlord's own re-application visibly refreshes it 1 -> 3,
+  rather than landing on the same value it already had) — a fresh target ends at 1 Burn stack; a
   target already at 2 stacks caps at 3 with duration refreshed.
 - `golden-rot-sovereign` (re-derived, review item 11 / fix 5) — now covers BOTH an add's death
   (`on-ally-death`) and a player creature's death (`on-enemy-death`) in one fight, each a flat
