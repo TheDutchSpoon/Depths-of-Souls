@@ -1,15 +1,20 @@
 // Golden: Spore's spread-on-death fizzles when every living member of the dying host's own side
 // is already Spored -- species-locked.md's own "fizzles if none [qualify]" loop-guard. The
 // trigger's own `TriggerFired` still fires (it's a targeting fizzle, not a suppressed trigger),
-// but nothing follows it: no `StatusApplied`, and no RNG draw at all (the empty-pool check in
+// but nothing follows it: no `StatusApplied`, and NO RNG DRAW AT ALL (the empty-pool check in
 // `resolveResponseTargets`'s `random-ally-without-status` case returns before ever calling
-// `state.rng.next()`).
+// `state.rng.next()`) -- this is PROVEN, not just asserted, by the test's own trailing check: it
+// calls `state.rng.next()` itself, once, after the whole run, and asserts that value equals SEED
+// 1's own first draw (0.6270739405881613, the exact value `golden-spore-spread-filter.fixture.ts`
+// independently verified via its own mulberry32 replica) -- if anything inside the run had
+// consumed even one draw, the PRNG's internal state would have advanced and this call would
+// return a different number.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). Both BEARER and its only
 // living ally, ALLY, are pre-applied Spore before any turn resolves (a throwaway events array),
 // so `random-ally-without-status` relative to BEARER has zero candidates once BEARER dies. No
 // random selectors anywhere in this scenario either (ATTACKER's `always-attack` deterministically
-// targets the lower-HP BEARER) -- SEED is inert.
+// targets the lower-HP BEARER).
 //
 //   ATTACKER->BEARER (off 20, def 0): core = 20. chip = 0.01*20 = 0.2. raw = 20.2 -> final =
 //     floor(20.2) = 20. BEARER (wounded to 10 post-createCombat) 10 - 20 -> 0, dies.
@@ -24,7 +29,14 @@ import { TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
 
-export const SEED = 42 // No RNG consumed anywhere in this fixture (empty pool); seed is inert.
+export const SEED = 1 // No RNG consumed anywhere in this fixture (empty pool) -- the test's own
+// trailing check asserts state.rng.next() still returns seed 1's untouched first draw.
+
+/** Seed 1's own first mulberry32 draw (verified via an independent `node -e` replica, matching
+ * src/engine/rng.ts's own createSeededRng exactly -- see golden-spore-spread-filter.fixture.ts's
+ * own header comment, which independently verifies the same value). Asserted post-run by the
+ * test to prove no RNG draw happened anywhere in this fixture. */
+export const SEED_1_FIRST_DRAW = 0.6270739405881613
 
 export const ATTACKER = createCreatureId('attacker')
 export const BEARER = createCreatureId('bearer')

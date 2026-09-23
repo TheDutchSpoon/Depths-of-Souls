@@ -16,9 +16,12 @@
 //     ENEMY_B (living-enemies-of-self order, i.e. slot order among the living):
 //     ENEMY_A (no prior Burn): newStacks = min(cap 3, 0 + 1) = 1 -- StatusApplied(ENEMY_A, burn,
 //       1 stack, duration 3).
-//     ENEMY_B (pre-applied 2 Burn stacks before any turn resolves, into a throwaway events
-//       array): newStacks = min(cap 3, 2 + 1) = 3 (the cap) -- StatusApplied(ENEMY_B, burn,
-//       3 stacks, duration REFRESHED to 3, per applyStatus's own re-application rule).
+//     ENEMY_B (pre-applied 2 Burn stacks at duration:1 -- deliberately NOT Burn's own default of
+//       3, so the refresh below is actually VISIBLE -- before any turn resolves, into a throwaway
+//       events array): newStacks = min(cap 3, 2 + 1) = 3 (the cap) -- StatusApplied(ENEMY_B, burn,
+//       3 stacks, duration REFRESHED 1 -> 3, per applyStatus's own re-application rule (the NEW
+//       application carries no explicit duration, so it inherits Burn's own defaultDuration: 3,
+//       overwriting the pre-existing 1).
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'

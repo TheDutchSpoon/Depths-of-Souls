@@ -69,7 +69,7 @@ Nothing happens until an ally has actually fallen.
 |---|---|---|---|
 | Wisp | Wit | — | At the start of its own turn, heals itself for **5% of its own maximum HP, once for every dead ally on its side** (e.g. 2 dead allies = a 10%-of-maximum-HP heal). |
 | Thicket | Vitality | — | Whenever an ally dies, this creature's Defence permanently rises by a flat **10%**. This happens once per death — a 2nd death is a separate, additional +10% rise on top of the first, not a bigger single jump. |
-| Hollowroot | Vitality | Amplifier | At the start of its own turn, heals **every living ally** for **5% of this creature's own maximum HP, once for every dead ally on its side** — the same heal as Wisp, but for the whole team at once. The biome's one spellcaster; this heal fires regardless of what it casts. |
+| Hollowroot | Vitality | Amplifier | At the start of its own turn, heals **every living ally** for **5% of this creature's own maximum HP, once for every dead ally on its side** (e.g. 2 dead allies = every ally healed for 10% of this creature's maximum HP). The biome's one spellcaster; this heal fires regardless of what it casts. |
 
 ## Hollowkin (Endurance/Instinct) — Puppet
 

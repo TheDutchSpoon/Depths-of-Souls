@@ -4,6 +4,7 @@ import { applyStatus, newCascade } from '../resolution'
 import { updateCreature } from '../creature-lookup'
 import {
   SEED,
+  SEED_1_FIRST_DRAW,
   ALLY,
   BEARER,
   BEARER_STARTING_HP,
@@ -43,5 +44,9 @@ describe('golden replay: Spore spread-on-death fizzles when every living ally is
 
     expect(events).toEqual(expectedEvents)
     expect(state.result).toBeNull()
+    // Proves the "no RNG draw at all" claim, not just asserts it: if anything in the run above
+    // had consumed a draw, the PRNG's internal state would have advanced and this call would
+    // return a different value than a fresh seed-1 stream's own untouched first draw.
+    expect(state.rng.next()).toBe(SEED_1_FIRST_DRAW)
   })
 })

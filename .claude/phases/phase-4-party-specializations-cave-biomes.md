@@ -2196,7 +2196,7 @@ design owner's ratified reading, not an open question.
 
 ### PR #64 review: four engine bugs, four content revisions
 
-Design-owner review of the merged PR, driven by a four-case repro file (`pr64-repro.test.ts`,
+Design-owner review of the PR, driven by a four-case repro file (`pr64-repro.test.ts`,
 scratch, never committed) that failed all four cases on the branch as submitted. All eight items
 were actioned in this same branch; every engine fix was verified to keep the full pre-review
 suite (582 tests at the time) byte-identical before its own new golden was added.

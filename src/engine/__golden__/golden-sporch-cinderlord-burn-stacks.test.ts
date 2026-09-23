@@ -18,14 +18,16 @@ import {
 import type { CombatEvent } from '../types'
 
 describe('golden replay: PR #64 fix 6 -- Sporch Cinderlord applies Burn with an explicit stacks:1 (real content)', () => {
-  it('matches the committed event log exactly (a fresh target ends at 1 stack, a stacked target caps at 3 with duration refreshed)', () => {
+  it('matches the committed event log exactly (a fresh target ends at 1 stack, a stacked target caps at 3 with duration visibly refreshed 1 -> 3)', () => {
     const created = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
-    // Pre-apply 2 Burn stacks to ENEMY_B and wound VICTIM, both before any turn resolves -- into
-    // a throwaway events array.
+    // Pre-apply 2 Burn stacks to ENEMY_B at duration:1 (not Burn's own default of 3) and wound
+    // VICTIM, both before any turn resolves -- into a throwaway events array. Duration 1 (rather
+    // than the default 3) is what makes Cinderlord's own re-application visibly REFRESH it back
+    // up to 3, instead of landing on the same value it already had.
     let state = applyStatus(
       ENEMY_B,
       ENEMY_B,
-      { statusId: 'burn', stacks: 2 },
+      { statusId: 'burn', stacks: 2, duration: 1 },
       created,
       [],
       newCascade(),
