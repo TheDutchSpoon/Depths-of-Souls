@@ -20,6 +20,7 @@ import {
   gatherCrossStatContribution,
   gatherDealtMods,
   gatherTakenFactors,
+  hasStatus,
   instantiateCreatureEffects,
   instantiateStatus,
   resolveMagnitudeCount,
@@ -413,6 +414,15 @@ export function fireHook(
   // dispatch sites, alongside `observed` above -- every other call site omits it, so an
   // `echoCast`-flagged effect is inert (never fires) anywhere else.
   onEchoCast?: EchoCastExecutor,
+  // PR #64 review fix 2: supplied ONLY by combat.ts's resolveRoundEndSweep, alongside its own
+  // 'on-round-end' call -- every other call site omits it, so this gate is inert (always fires)
+  // everywhere else. Consulted for every STATUS-sourced candidate (effect.statusId !== undefined
+  // -- trait-sourced triggers have no statusId and are never gated): a condition-status's
+  // on-round-end trigger fires only if `(creatureId, statusId)` existed at the SWEEP'S OWN start
+  // (the snapshot) and has not been (re)applied EARLIER in this same sweep -- a status born or
+  // refreshed mid-sweep must not tick until next round's sweep. Skips silently, like a false
+  // `condition` -- no TriggerFired, no depth/truncation accounting.
+  statusTriggerGate?: (creatureId: CreatureId, statusId: string) => boolean,
 ): { state: CombatState; suppressed: boolean } {
   let working = state
   let suppressed = false
@@ -437,6 +447,15 @@ export function fireHook(
       if (isDeathHook ? self.alive : !self.alive) continue
 
       if (cascade.activeInstances.has(effect.instanceId)) continue // self-re-entry guard
+
+      // PR #64 review fix 2: see statusTriggerGate's own doc comment above.
+      if (
+        effect.statusId !== undefined &&
+        statusTriggerGate &&
+        !statusTriggerGate(self.id, effect.statusId)
+      ) {
+        continue
+      }
 
       // Phase 4 Slice E2: on-action-observed's own filter -- relationship (observer vs actor)/
       // actionKind/excludeActor. Absent fields match everything (permissive default). Checked
@@ -576,7 +595,18 @@ function resolveResponseTargets(
       return [context.self]
     case 'triggering-source':
     case 'triggering-ally':
-      return context.source ? [context.source] : []
+      // PR #64 review fix 3: never resolves to the firing creature itself. A DoT tick's
+      // deal-damage response targets `{kind:'self'}` (the bearer damages itself), so
+      // applyDamageAndEmit's sourceId===targetId -- on-damage-taken's hook context then has
+      // context.source === context.self, and without this check a retaliatory trait (e.g.
+      // Hollowkin Wretch's on-damage-taken -> apply-status(triggering-source, confusion)) would
+      // apply its response to its OWN bearer. TriggerFired has already been emitted by the time
+      // this resolves (fireHook, before executeResponse runs) -- only the response's actual
+      // effect fizzles, the same "no valid target -> empty list -> no-op" discipline every other
+      // ResponseTarget already uses. on-damage-taken itself still fires unconditionally for a
+      // DoT tick (Sleep's wake-on-damage depends on it) -- this fix only narrows targeting, never
+      // hook firing.
+      return context.source && context.source !== context.self ? [context.source] : []
     case 'all-enemies':
       return livingEnemiesOf(getCreature(state, context.self), state).map((c) => c.id)
     case 'all-allies':
@@ -602,6 +632,19 @@ function resolveResponseTargets(
       if (deadAllies.length === 0) return []
       const index = Math.floor(state.rng.next() * deadAllies.length)
       const chosen = deadAllies[index]
+      return chosen ? [chosen.id] : []
+    }
+    case 'random-ally-without-status': {
+      // Phase 4 Slice H3 (Spore's spread-on-death, ASSUMPTION 30): livingAlliesOf resolves off
+      // `self.side` only (never `self.alive`), so this works correctly even when self is the
+      // just-died Spore bearer firing its own on-death trigger.
+      const self = getCreature(state, context.self)
+      const pool = livingAlliesOf(self, state).filter(
+        (c) => !hasStatus(c, target.statusId),
+      )
+      if (pool.length === 0) return []
+      const index = Math.floor(state.rng.next() * pool.length)
+      const chosen = pool[index]
       return chosen ? [chosen.id] : []
     }
     default: {
@@ -678,6 +721,17 @@ export function executeResponse(
             context.consumedStacks,
           )
         : undefined
+      // PR #64 review fix 4: a magnitudeSource resolving to exactly 0 is a FULL no-op -- no
+      // DamageDealt, no downstream damage-path hooks (on-damage-dealt/on-damage-taken/death). The
+      // damage formula's own MIN(1, floor(raw)) floor would otherwise still deal 1 damage even at
+      // 0 effective offense (0 * spellPower = 0 through the whole formula, but the "a hit always
+      // removes >=1 HP" floor doesn't know this was never really a hit). TriggerFired was already
+      // emitted by fireHook before executeResponse runs, so it is NOT retracted here -- only the
+      // response's own consequence is skipped. Absent magnitudeSource is untouched (count stays
+      // undefined, this branch never taken) -- byte-identical to pre-fix-4 behavior.
+      if (response.magnitudeSource && count === 0) {
+        return { state, suppressed: false }
+      }
       // Absent -> exact pre-Slice-D values (byte-identical: `stacks`, or `1` -- a no-op
       // multiplier on spellPower).
       const flatCount = count ?? stacks
@@ -752,6 +806,13 @@ export function executeResponse(
             context.consumedStacks,
           )
         : undefined
+      // PR #64 review fix 4: mirrors deal-damage's own zero-count no-op -- see its comment above.
+      // A heal has no min-1 floor to worry about (applyHeal's own Math.max(0, ...) already
+      // allows a 0 heal), but this still skips emitting a HealApplied event for a "heal" that
+      // never really happened.
+      if (response.magnitudeSource && count === 0) {
+        return { state, suppressed: false }
+      }
       // Absent -> exact pre-Slice-E2 values (byte-identical: `stacks`, or `1` -- a no-op
       // multiplier on spellPower), same composition as deal-damage's own magnitudeSource.
       const flatCount = count ?? stacks

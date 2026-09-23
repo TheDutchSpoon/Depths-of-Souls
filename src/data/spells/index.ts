@@ -21,12 +21,20 @@ import {
   LUMINOUS_TIDE,
   OVERCHARGE,
 } from './glimmerdark'
+import {
+  CHARNEL_FEAST,
+  PUPPET_STRING,
+  RASPING_CHANT,
+  SPORE_CYST,
+  WITHERING_BOLT,
+} from './rotcap-hollow'
 
 // The library barrel (CONVENTIONS "Data layer — carriers vs. composition"): re-exports every
 // individual spell const from its grouping file.
 export * from './core'
 export * from './overgrowth'
 export * from './glimmerdark'
+export * from './rotcap-hollow'
 
 /**
  * Phase 4 interstitial slice (cumulative spell unlock): the GLOBAL spell registry --
@@ -60,4 +68,9 @@ export const ALL_SPELLS: readonly Spell[] = [
   BLINDING_FLARE,
   AFTERGLOW,
   LUMINOUS_TIDE,
+  SPORE_CYST,
+  RASPING_CHANT,
+  PUPPET_STRING,
+  CHARNEL_FEAST,
+  WITHERING_BOLT,
 ]

@@ -153,10 +153,20 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
         echoCast: e.echoCast,
       })
     } else if (e.category === 'condition-status') {
-      for (const trigger of e.triggers) {
-        if (trigger.hook !== hook) continue
+      e.triggers.forEach((trigger, index) => {
+        if (trigger.hook !== hook) return
         results.push({
-          instanceId: e.instanceId,
+          // PR #64 fix 1: a per-TRIGGER guard identity, not the status's own shared instanceId.
+          // A status with more than one trigger (Sleep, Spore) previously had every trigger
+          // resolve to the SAME instanceId here -- fireHook's self-re-entry guard
+          // (cascade.activeInstances) then blocked a later trigger (e.g. Spore's on-death spread)
+          // from firing while an EARLIER, unrelated trigger on the same status instance (Spore's
+          // own on-round-end DoT tick) was still unwinding on the call stack, since both shared
+          // one guard key. Each trigger now gets its own derived id for this guard-only purpose;
+          // everything that keys off the REAL status instance -- refresh, removal, the round-end
+          // sweep snapshot -- still reads `ActiveEffect.instanceId` directly (e.instanceId, never
+          // this derived one), so status identity/stacking/duration are completely unaffected.
+          instanceId: createEffectInstanceId(`${e.instanceId}#trigger#${index}`),
           sourceTraitId: e.sourceTraitId,
           condition: trigger.condition,
           chancePercent: trigger.chancePercent,
@@ -164,7 +174,7 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
           stacks: e.stacks,
           statusId: e.statusId,
         })
-      }
+      })
     }
   }
   return results

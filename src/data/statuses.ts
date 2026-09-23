@@ -1,6 +1,7 @@
 import type {
   ConditionStatusDef,
   DamageModifierDef,
+  FriendlyFireStatusDef,
   StatusDef,
   TurnOrderStatusDef,
 } from '../engine/effect-types'
@@ -201,6 +202,64 @@ export const GRANT_ACT_FIRST: TurnOrderStatusDef = {
   defaultDuration: 3,
 }
 
+/** Phase 4 Slice H3 (Rotcap Hollow, Sporecloud): a DoT condition-status with TWO triggers (the
+ * Sleep-established pattern for a status needing more than one hook) -- 4% of the bearer's own
+ * effective max HP per stack per round (same stat-derived flat mode as POISON/BURN), PLUS an
+ * `on-death -> apply-status({kind:'random-ally-without-status', statusId:'spore'}, spore)` --
+ * this trigger lives on the STATUS itself (not a species trait), so any Spore bearer spreads it
+ * on death regardless of which creature/spell originally applied it. When the bearer dies, the
+ * contagion spreads to one living, still-healthy member of the BEARER'S OWN side -- host-relative
+ * (ratified reading of "spreads to a living, non-Spored enemy": a fungal contagion spreading
+ * through the population it already infected, matching the mood "colonies, spores, decay ...
+ * spread", GAME_DESIGN §4). No existing `ResponseTarget` could express "exclude a status" for
+ * this pick, so `random-ally-without-status` (effect-types.ts) is a genuinely new
+ * `ResponseTarget` variant (PR #64 review: ASSUMPTION 30's original "no new engine primitive"
+ * framing did not hold -- see the Slice H3 phase record). It resolves relative to `self` (the
+ * dying bearer); when every living ally already carries Spore, resolution.ts's
+ * `resolveResponseTargets` returns an empty target list, so the trigger's own `TriggerFired` is
+ * still emitted but nothing follows it -- a fizzle, not a silent no-op -- which is what keeps the
+ * disease spreading to FRESH hosts instead of endlessly refreshing one. */
+export const SPORE: ConditionStatusDef = {
+  category: 'condition-status',
+  statusId: 'spore',
+  cap: 3,
+  triggers: [
+    {
+      hook: 'on-round-end',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 4 },
+        emitTriggerFired: false,
+        damageSource: 'dot',
+      },
+    },
+    {
+      hook: 'on-death',
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'random-ally-without-status', statusId: 'spore' },
+        status: { statusId: 'spore' },
+      },
+    },
+  ],
+  polarity: 'debuff',
+  defaultDuration: 3,
+}
+
+/** Phase 4 Slice H3 (Rotcap Hollow, Hollowkin): a `friendly-fire-status` (built in Slice C,
+ * given its first real producer/consumer here) -- a 50% roll, consulted once per the bearer's
+ * harmful offensive action (species-locked.md's own "3-turn default ... 50% chance it strikes
+ * its own side"), that redirects the whole action to the bearer's own living side instead. */
+export const CONFUSION: FriendlyFireStatusDef = {
+  category: 'friendly-fire-status',
+  statusId: 'confusion',
+  cap: 1,
+  chancePercent: 50,
+  polarity: 'debuff',
+  defaultDuration: 3,
+}
+
 export const STOCK_STATUSES: readonly StatusDef[] = [
   POISON,
   BURN,
@@ -215,6 +274,9 @@ export const STOCK_STATUSES: readonly StatusDef[] = [
   // Phase 4 Slice H2: real per-species Glimmerdark statuses (additive, same guardrail).
   GLOW,
   GRANT_ACT_FIRST,
+  // Phase 4 Slice H3: real per-species Rotcap Hollow statuses (additive, same guardrail).
+  SPORE,
+  CONFUSION,
 ]
 
 /** Ready to pass directly as createCombat's `statuses` argument. */

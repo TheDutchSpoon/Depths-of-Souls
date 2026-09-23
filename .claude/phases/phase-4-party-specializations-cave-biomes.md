@@ -2076,11 +2076,285 @@ statuses); the Broodmother/Leech Sovereign boss-encounter runner (still not buil
 Slice G's store only ships `recordBossKill`/`bossesCleared` as state); the integration pass and
 this record's closing section (I).
 
+## Slice H3 — Rotcap Hollow (floors 21–30)
+
+Built against `.claude/species/species-locked.md`'s Biome 3 table, directly into the same
+`data/traits/`/`data/spells/` library shape H1/H2 established. This section describes the
+slice's **final shipped state**, after both a content-review pass and a PR #64 design review
+(four real engine bugs + eight content/doc revisions) — see those reviews' own subsections below
+for exactly what changed and why, per this project's own phase-docs-precision discipline.
+
+### What was built (final state)
+
+`src/data/traits/rotcap-hollow.ts` — 18 real per-creature traits + the Rot Sovereign's boss
+trait, the same enabler/payoff/amplifier (common/uncommon/rare) framing H1/H2 use, except
+**Necromoss** (like Glimmerdark's Resonants) shares ONE mechanic across all three creatures,
+escalating scope/strength by rarity rather than chaining a two-role trick:
+
+- **Sporecloud** (Wit) — Seeder (`on-attack` → apply Spore to its target); Reaper (`on-attack` →
+  a bonus `deal-damage` rider, Intelligence-scaled, magnitude a LIVE `magnitudeSource` count of
+  `enemies-with-status: spore` — the exact Broodmother "Swarm Call" shape, never frozen; PR #64
+  review fix 4 makes this a true no-op, not a min-1 chip hit, when that count is 0); Bloomer
+  (amplifier — `on-fight-start` → Spore the WHOLE enemy line at once, breadth over Seeder's
+  per-hit trickle, the Glowfly-Radiant/Swarmhive-Queen pattern).
+- **Rotfeeders** (Violence/Vitality) — Scavenger (`on-enemy-death`, an OBSERVER hook — permanent
+  +10% self Attack on ANY enemy death, not just its own kills); Ripper (`on-kill` → `heal` in
+  `scalingStat` mode, 15% of its own effective Health); **Gorgemaw** (amplifier, Vitality — a
+  third, genuinely distinct verb: `on-kill` → heals itself 10% AND permanently raises its own max
+  Health 5%, "grows fatter, not just angrier," never a numeric combination of its species-mates'
+  own effects).
+- **Myconet** (Endurance/Wit) — Warder (`on-ally-death` → +15% Defence to all surviving allies, a
+  fresh `StatModifierEffect` per firing); Rotcore (Wit — `on-death` → Poison the whole
+  `all-enemies` side); **Gravedigger** (amplifier — `on-ally-death` → heals ITSELF 20% instead of
+  buffing the team, a genuinely distinct SELF-sustain reaction).
+- **Necromoss** (Wit/Vitality) — the Resonants-shaped "one mechanic, escalating by rarity"
+  species: Wisp (`on-turn-start` → `heal` in `scalingStat` mode with `magnitudeSource: {kind:
+  'count', of: 'dead-allies'}` — Slice E2's own named Necromoss consumer, exercised for the first
+  time against real content); Thicket (the BUFF half of the same idea — `on-ally-death` →
+  `apply-stat-modifier`, a FLAT +10% per death, no `magnitudeSource` — PR #64 review fix 5
+  simplified this from an earlier draft that scaled the same response's own factor by the live
+  dead-ally count); **Hollowroot** (amplifier, Vitality — the same heal as Wisp, targeted at
+  `all-allies` instead of `self`; the biome's one cast-role creature, `defaultScriptId:
+  'always-cast'` — its `on-turn-start` trigger is unaffected by which action it takes).
+- **Hollowkin** (Endurance/Instinct) — Wretch (`on-damage-taken` → Confuse whoever just struck
+  it); Marionette (`on-attack` → Confuse whoever it hits); **Puppeteer** (Instinct, payoff, not
+  another enabler — a `conditional-damage-bonus` on `has-status(target, confusion)`, +30% dealt,
+  the amplifier that profits from Confusion rather than applying it).
+- **Sporch** (Violence/Wit) — Igniter (`on-attack` → apply Burn at 2 stacks, potent and
+  deliberately non-spreading); Ashborn (`conditional-damage-bonus` on `has-status(target,
+  burn)`, +30% dealt — the target-conditional damage-modifier species-locked.md's own table
+  flagged this species as needing Slice E2 for); **Cinderlord** (amplifier — `on-kill` → Burn the
+  WHOLE remaining `all-enemies` side at an explicit `stacks: 1` — PR #64 review fix 6 — a
+  creature-level death-burst, not the Burn STATUS itself gaining a spread trigger; Burn stays
+  non-spreading at the status level).
+- **The Rot Sovereign** (floor-30 boss) — two death-reactive growth hooks realizing species-
+  locked.md's "any creature that dies feeds it" without inventing a new `CountOf`:
+  `on-ally-death` (her own adds dying) AND `on-enemy-death` (the PLAYER's own creatures dying ALSO
+  feeds her), both a FLAT +10% Attack per death event, the SAME rate either way, no
+  `magnitudeSource` on either (PR #64 review fix 5 — replacing an earlier draft's mismatched
+  +15%-scaled/+5%-flat split) — plus an unconditional `on-turn-start` → Spore the whole
+  `all-enemies` side. `ROT_SOVEREIGN_ADDS` (Sporecloud Seeder + Rotfeeder Scavenger, real roster
+  members) follows the Broodmother's own `_ADDS` export precedent.
+
+`src/data/spells/rotcap-hollow.ts` — 5 real spells (one per affinity, per GAME_DESIGN §4's
+≥4–5-own-spells-per-biome bar), each introducing a mechanic the inherited biome-1/2 pool doesn't
+already carry: **Spore Cyst** (Wit, first spell-authored Spore, `spellPower` 0.45 — PR #64 review
+fix 8), **Rasping Chant** (Endurance, first single-target enemy Defence debuff on this affinity),
+**Puppet String** (Instinct, first spell-authored Confusion, `spellPower` 0.8 — content review),
+**Charnel Feast** (Vitality, first AOE support spell on this affinity), **Withering Bolt**
+(Violence, first spell-authored Burn, `spellPower` 0.45 — PR #64 review fix 8). Verified unique
+under the dedup guard (`data/spells/index.test.ts`'s `(affinity, targetShape, payload,
+spellPower)` key) against all 17 pre-existing spells by hand before picking each `spellPower`.
+
+`src/data/statuses.ts` — two new real statuses, additive alongside the Phase 3/H1/H2 set (same
+guardrail as H1/H2): **Spore** (a `ConditionStatusDef` with TWO triggers, the Sleep-established
+pattern — an `on-round-end` DoT tick, 4% of the bearer's own effective max HP/stack/round, PLUS
+an `on-death` → spread trigger living on the STATUS itself, not a species trait — see the engine
+addition below) and **Confusion** (a `FriendlyFireStatusDef`, `chancePercent: 50`,
+`defaultDuration: 3` — the primitive itself was built in Slice C; this is its first real
+producer/consumer).
+
+`src/data/biomes.ts` — `BIOMES[2]` (floors 21–30) now the real `ROTCAP_HOLLOW_BIOME`, replacing
+its Slice A placeholder; slots 4–10 unchanged (renumbered from the prior "slots 3–10" placeholder
+range now that this slot is real).
+
+### Engine addition: `random-ally-without-status`
+
+Spore's spread-on-death ("spreads to a living, non-Spored enemy... fizzles if none",
+species-locked.md) needs a target selection no existing `TargetSelector`/`ResponseTarget` could
+express — "a living ally of the dying bearer that does NOT carry a given status." The
+implementation-plan's own ASSUMPTION 30 originally proposed this could land without a new engine
+primitive; **that did not hold** — no existing selector can filter by status, so this slice adds
+one genuinely new `ResponseTarget` variant, `{ kind: 'random-ally-without-status', statusId:
+string }`, the same shape `random-dead-ally` (Slice B) already set precedent for ("an existing
+selector kind can't express this specific exclusion"):
+
+- `effect-types.ts` — `ResponseTarget` grows the new variant.
+- `resolution.ts` — `resolveResponseTargets` grows a matching case: `livingAlliesOf(self,
+  state).filter(c => !hasStatus(c, target.statusId))`, then a random pick via `state.rng` (reused
+  from `hasStatus`, `effects.ts`, no new helper needed).
+- `statuses.ts` — Spore's spread is a **trigger declared on the STATUS itself** (its own
+  `on-death` entry in `SPORE.triggers`), not a species trait — any Spore bearer spreads it on
+  death regardless of which creature or spell originally applied the status.
+- Read relative to `self` (the dying Spore bearer) — `livingAlliesOf` resolves off `self.side`
+  only, never `self.alive`, so this works correctly even when `self` is the just-died creature
+  firing its own `on-death` trigger (confirmed by `golden-spore-spread` and
+  `golden-spore-spread-dot-kill` below, not just asserted).
+- An empty pool returns `[]` from `resolveResponseTargets`. This is a **targeting fizzle, not a
+  suppressed trigger**: the owning trigger's `TriggerFired` has already been emitted by `fireHook`
+  before `executeResponse` runs, so it still fires — only the response's own consequence (the
+  `StatusApplied` that would otherwise follow) is skipped. (An earlier draft of this doc described
+  this as a "silent no-op" with "no event" — wrong; corrected per PR #64 review item 13, along
+  with the matching wording in `effect-types.ts`'s and `data/statuses.ts`'s own doc comments.)
+
+**Host-relative reading, ratified:** species-locked.md's own wording, "spreads to a living,
+non-Spored *enemy*," means another member of the SAME side as the dying bearer — the population
+the contagion already infected — not the opposing side relative to the bearer's own engine-`self`.
+This matches the biome's own "colonies, spores, decay... spread" mood (a contagion spreading
+through the population it's already hit, not jumping to benefit whoever applied it) and is the
+design owner's ratified reading, not an open question.
+
+### PR #64 review: four engine bugs, four content revisions
+
+Design-owner review of the PR, driven by a four-case repro file (`pr64-repro.test.ts`,
+scratch, never committed) that failed all four cases on the branch as submitted. All eight items
+were actioned in this same branch; every engine fix was verified to keep the full pre-review
+suite (586 tests at the time) byte-identical before its own new golden was added.
+
+**Engine fixes:**
+
+1. **Spore must spread when its own DoT tick kills the host.** Both of Spore's triggers (the
+   `on-round-end` tick and the `on-death` spread) shared the status's single `instanceId` as their
+   self-re-entry guard key in `effectsForHook` (`effects.ts`) — the tick's own firing added that
+   instanceId to `cascade.activeInstances` and had not yet removed it by the time its own lethal
+   damage cascaded into `on-death`, so the guard skipped the spread trigger as if it were trying to
+   re-enter ITSELF. Fixed: each `ConditionStatusDef` trigger now gets its own derived guard
+   identity, `` `${instanceId}#trigger#${index}` ``, for this guard-only purpose — refresh,
+   removal, and the round-end sweep snapshot all still key off the REAL status `instanceId`
+   (`ActiveEffect.instanceId`), untouched. Golden: `golden-spore-spread-dot-kill`.
+2. **A status born or refreshed mid-sweep must not tick in that same sweep.** `resolveRoundEndSweep`
+   (`combat.ts`) fired `on-round-end` unconditionally for every living creature's current
+   `activeEffects`, with no check against the sweep's own start-of-sweep snapshot — a status
+   applied MID-sweep (e.g. Myconet Rotcore's `on-death` Poison-burst, itself triggered by a DoT
+   tick killing Rotcore earlier in the same sweep) would also tick before that sweep finished.
+   Fixed: `fireHook` (`resolution.ts`) gains a 9th, optional `statusTriggerGate` parameter,
+   supplied only by `resolveRoundEndSweep` — a condition-status's on-round-end trigger now fires
+   only if `(creatureId, statusId)` existed in the sweep's own snapshot AND has not been
+   (re)applied earlier in that same sweep (a live scan of `events` from the sweep's own start,
+   checked fresh at each candidate's own firing point — order-dependent by design, since an early
+   `StatusApplied` must gate a LATER creature's tick of that same status within the one sweep
+   pass). Trait-sourced (non-status) triggers have no `statusId` and are never gated. The
+   pre-existing decrement/expiry gate (`decrementAndExpireSnapshot`'s own snapshot-only iteration)
+   was already correct and untouched — this fix only closes the analogous gap on the TICK side.
+   Golden: `golden-round-end-mid-sweep-poison`. `golden-round-end-interaction` and `golden-dot`
+   (the two prior goldens flagged as most likely affected) re-verified byte-identical.
+3. **`triggering-source` never resolves to the firing creature itself.** A DoT tick's
+   `deal-damage` response targets `{kind:'self'}` (the bearer damages itself), so
+   `applyDamageAndEmit`'s `sourceId === targetId` — `on-damage-taken`'s hook context then has
+   `context.source === context.self`, and a retaliatory trait (e.g. Hollowkin Wretch's real
+   `on-damage-taken → apply-status(triggering-source, confusion)`) would apply its response to its
+   OWN bearer. Fixed: `resolveResponseTargets`'s `triggering-source`/`triggering-ally` cases
+   (`resolution.ts`) now return `[]` when `context.source === context.self` — `TriggerFired` still
+   fires (already emitted before this resolves), only the response's own effect fizzles.
+   `on-damage-taken` itself still fires unconditionally for a DoT tick (Sleep's wake-on-damage
+   depends on it) — this fix narrows targeting only, never hook firing. Golden:
+   `golden-hollowkin-wretch-self-dot`.
+4. **A zero `magnitudeSource` count is a full no-op.** A `deal-damage`/`heal` response whose live
+   count resolved to 0 (e.g. Sporecloud Reaper's bonus rider with zero Spored enemies) still went
+   through the full damage formula at `spellPower × 0 = 0` — and the formula's own unconditional
+   `MAX(1, floor(raw))` clamp still landed a "hit" for 1 damage, since the clamp has no way to know
+   the magnitude was meant to be nothing at all. Fixed: both `executeResponse` cases
+   (`resolution.ts`) now short-circuit to a full no-op — no `DamageDealt`/`HealApplied`, no
+   downstream damage-path hooks — the instant `response.magnitudeSource` is present and its
+   resolved count is exactly 0; `TriggerFired` is unaffected (already emitted). Also affects Spider
+   Broodwarden and Lullpollen Dozer (H1) at the zero-count edge, though neither's own existing
+   golden happened to exercise that edge, so neither needed re-deriving. Golden:
+   `golden-sporecloud-reaper-no-spore`.
+
+**Content revisions:**
+
+5. **Per-death stacking, simplified.** Necromoss Thicket and the Rot Sovereign both lose
+   `magnitudeSource` from their `on-ally-death`/`on-enemy-death` `apply-stat-modifier` responses,
+   replaced with a flat factor per event (Thicket: Defence ×1.10 per ally death; Sovereign: Attack
+   ×1.10 on both `on-ally-death` and `on-enemy-death`, the same rate for either side) — the
+   compounding still happens naturally, since a repeating `apply-stat-modifier` trigger APPENDS a
+   fresh `StatModifierEffect` per firing and the fold is multiplicative (two deaths is ×1.1×1.1 =
+   ×1.21, not one bigger scaled jump). See `golden-rot-sovereign` (re-derived) for both hooks
+   compounding in one fight.
+6. **Cinderlord's Burn stack count.** `stacks: 1` is now written explicitly in the on-kill
+   `StatusSpec` rather than relying on the default (also 1) — makes the intent visible at the call
+   site. New golden, `golden-sporch-cinderlord-burn-stacks`: a fresh target ends at 1 stack; a
+   target already at 2 stacks caps at 3 (Burn's own `cap`) with duration refreshed to 3.
+7. **Affinity changes.** Necromoss Hollowroot: `wit` → `vitality` (it's the team healer and the
+   biome's only caster, and Vitality is this game's healer affinity — it now rolls
+   Regrowth/Wild Vigor/Afterglow/Charnel Feast instead of Wit damage spells). Hollowkin Puppeteer:
+   `endurance` → `instinct` (evens out that species' own Endurance/Instinct lean). The biome's
+   per-creature affinity tally is now **Wit 6 / Violence 4 / Endurance 3 / Vitality 3 / Instinct
+   2** (18 total) — still affinity-complete (all 5 present) and still exactly one cast-role
+   creature with ≥1 affinity-matched spell, the loader test's two actual assertions; no test
+   pinned either creature's OLD affinity directly, so no test needed updating beyond the loader's
+   own tally expectations (which only check set-membership and counts, unaffected).
+8. **Spell power for the two DoT-applying spells.** Spore Cyst 0.9 → 0.45, Withering Bolt 0.85 →
+   0.45 — the same rule already applied to Puppet String (content review, item above): a spell
+   that also applies a status shouldn't lead its band on upfront damage. The reference point is
+   Venom Bolt (Instinct), the game's other damage-plus-DoT spell, at 0.4. Neither value collides
+   under the dedup guard.
+
+### Tests
+
+**103 files / 594 tests** (up from this slice's own post-content-review state of 95 files / 586
+tests — 8 new files, 8 net new tests: two golden fixtures were re-derived in place, not added,
+since items 5/10/11 changed their own scenarios rather than adding new ones). Full breakdown of
+the `__golden__` suite added or changed by this review (including its own follow-up cleanup
+pass):
+
+- `golden-spore-spread` (unchanged) — Sporecloud Seeder's real `on-attack` trait both infects AND
+  (against a pre-wounded target) kills in the same hit; Spore's own `on-death` trigger spreads to
+  the dying creature's only living, still-healthy ally.
+- `golden-spore-spread-filter` (new, review item 9) — a real 2-candidate draw (3 living allies,
+  one already Spored, filtered out before the draw) — `Math.floor(state.rng.next() * 2)` at SEED
+  1 draws index 1, verified via an independent mulberry32 replica matching `rng.ts` exactly.
+- `golden-spore-spread-fizzle` (new, review item 9; cleanup pass moved it to SEED 1 and added a
+  trailing `expect(state.rng.next()).toBe(0.6270739405881613)` so the "no RNG draw" claim is
+  proven, not just asserted) — every living ally already Spored: `TriggerFired` fires, nothing
+  follows it, no RNG draw at all (the empty-pool check returns before ever calling
+  `state.rng.next()`).
+- `golden-spore-spread-dot-kill` (new, review item 9 / fix 1) — the host dies to its OWN
+  round-end DoT tick, not an outside hit; proves fix 1's per-trigger guard identity end to end,
+  across a full round-end sweep.
+- `golden-hollowkin-wretch` (unchanged) — a chip-only hit provokes Wretch's real retaliatory
+  Confusion application (the redirect ROLL itself stays covered generically in `confusion.test.ts`,
+  Slice C).
+- `golden-hollowkin-wretch-self-dot` (new, fix 3) — Wretch's own Poison tick does not confuse
+  itself.
+- `golden-necromoss-reclaim` (re-derived, review item 10) — stats changed (50 max HP, 3 dead
+  allies, wounded to 5) so BOTH the 5% rate and the dead-ally count actually change the floored
+  heal (7, vs. 4 at the old rate or 5 at the old count) — the prior numbers (18 HP, 2 dead allies)
+  floored to 1 either way and couldn't have caught a rate regression.
+- `golden-sporecloud-reaper-no-spore` (new, fix 4) — Reaper lands exactly one `DamageDealt` (its
+  own attack) with zero Spored enemies on the board.
+- `golden-round-end-mid-sweep-poison` (new, fix 2) — the dedicated Myconet-Rotcore repro scenario
+  as a full 3-round golden: Rotcore's death-Poison does not tick in its own birth sweep, then
+  ticks normally starting round 2. Covers the "born mid-sweep" half of fix 2's own gate.
+- `golden-round-end-mid-sweep-poison-refresh` (new, cleanup-pass follow-up to fix 2) — the OTHER
+  half of the gate's AND condition: E1 already carries 1 Poison stack before the fight; Rotcore's
+  death-Poison REFRESHES it to 2 stacks mid-sweep instead of newly applying it, and it still
+  doesn't tick that sweep, then ticks for `2 x 3% x 100 = 6` starting round 2.
+- `golden-sporch-cinderlord-burn-stacks` (new, fix 6; cleanup pass added `duration: 1` to
+  ENEMY_B's pre-applied stacks so Cinderlord's own re-application visibly refreshes it 1 -> 3,
+  rather than landing on the same value it already had) — a fresh target ends at 1 Burn stack; a
+  target already at 2 stacks caps at 3 with duration refreshed.
+- `golden-rot-sovereign` (re-derived, review item 11 / fix 5) — now covers BOTH an add's death
+  (`on-ally-death`) and a player creature's death (`on-enemy-death`) in one fight, each a flat
+  ×1.10, compounding multiplicatively (22 → 24.200000000000003 → 26.620000000000005, verified via
+  an independent `node -e` float calculation, not hand-rounded), alongside her own turn-start
+  Spore blanket (which also incidentally re-exercises Spore's own spread-fizzle when the Spored
+  WEAK dies with its only living ally already Spored too).
+
+`data/species/rotcap-hollow.test.ts` and `data/biomes.test.ts` are unchanged from the
+content-review state (no new assertions needed — the affinity/spell-power changes above don't add
+new invariants, they just move within the ones already checked).
+
+**Byte-identity confirmation:** every Phase 1–3 / Slice A–H2 / carrier-reorg / cumulative-spell-
+unlock / percent-hp-condition-ticks golden, and this slice's own pre-review
+`golden-spore-spread`/`golden-hollowkin-wretch` pair, passed unmodified and untouched throughout
+this review — `git status` after all eight fixes shows no changed file outside
+`data/{species,spells,statuses,traits}/rotcap-hollow.ts`, `.claude/content/rotcap-hollow.md`, the
+four engine files named in the fixes above, and the `__golden__` files listed here. `lint` /
+`format:check` / `build` all clean throughout.
+
+### Deliberately out of scope for Slice H3 (later slices)
+
+The boss-encounter RUNNER for any of the three seed bosses (Broodmother/Leech Sovereign/Rot
+Sovereign) — still not built by any slice (Slice G's store only ships
+`recordBossKill`/`bossesCleared` as state); the integration pass and this record's closing
+section (I).
+
 ## Next
 
-Slice H3 — Rotcap Hollow (floors 21–30): Sporecloud, Rotfeeders, Myconet, Necromoss, Hollowkin,
-Sporch; Spore (DoT + spread-on-death, a selector composition per ASSUMPTION 30, no new
-primitive), Confusion (engine already proven in C — its own real `friendly-fire-status` data
-lands here for the first time), the `heal` response's `magnitudeSource`/`scalingStat` modes
-(Slice E2, also still awaiting real content); boss: Rot Sovereign. Replaces `data/biomes.ts`'s
-`BIOMES[2]` slot. See `.claude/briefs/phase-4-implementation-plan.md`.
+Slice I — Integration pass: wire `data/biomes.ts`'s real 3-biome spawn pools into `generation.ts`
+in place of Slice A's remaining fixtures (biomes 4–10 stay placeholder), an end-to-end
+generated-then-checkpoint-verified integration test (starter party → scripted intro → `descend()`
+through floor 1's real Overgrowth fights), full regression across every golden from Phases 1–3
+plus every new one from B–H3, and this phase record's own closing section. See
+`.claude/briefs/phase-4-implementation-plan.md`.

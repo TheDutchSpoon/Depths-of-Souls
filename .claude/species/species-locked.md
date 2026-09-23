@@ -136,14 +136,19 @@ win-or-lose** (the "meant to lose" is narrative, not enforced). Un-parks the §1
 | **Sporecloud** | Wit | Contagion | Seeder (`on-attack → Spore`), Reaper (`+% / count-scaling per Spored enemy`) | **Spore** status |
 | **Rotfeeders** | Violence | Carrion snowball | `on-enemy-death → permanent +Attack`; `on-kill → heal self` | heal response |
 | **Myconet** | Endurance | Death-network | `on-ally-death → survivors +Defence`; `on-death → Poison all-enemies` | free (`all-enemies` exists) |
-| **Necromoss** | Wit / Vitality | Reclaim (grim sustain) | heal/buff **scaling off dead-ally count** (count-scaling variant) | count-scaling + heal |
+| **Necromoss** | Wit / Vitality | Reclaim (grim sustain) | heal/buff **scaling off dead-ally count**: heals read the live dead-ally count each firing; the buff is a flat rise **per ally death** (each death counted once — never a count on a per-death trigger, see CONVENTIONS) | count-scaling + heal |
 | **Hollowkin** | Endurance / Instinct | Puppet | one applies **Confusion** `on-damage-taken`, one `on-attack` | **Confusion** status |
-| **Sporch** | Violence / Wit | Strong non-spreading Burn | Igniter (potent Burn — data, no spread), Reaper (`+% to Burning`) | Burn exists, but `+% to Burning` **needs target-conditional damage-modifier (Slice E2)** — *not free* |
+| **Sporch** | Violence / Wit | Strong non-spreading Burn | Igniter (potent Burn — data, no spread), Reaper (`+% to Burning`), Cinderlord (`on-kill → 1 Burn stack on every enemy` — a creature-level kill-burst, exactly 1 stack; the Burn *status* never spreads) | Burn exists, but `+% to Burning` **needs target-conditional damage-modifier (Slice E2)** — *not free* |
 
 **New this biome:**
-- **Spore** — a DoT condition-status that, `on-death` of its host, **spreads to a living,
-  non-Spored enemy** (loop-guarded: fizzles if none). Intrinsic effect = the DoT; Sporecloud's
-  payoff reads Spored-enemy count via count-scaling.
+- **Spore** — a DoT condition-status that, `on-death` of its host, **spreads to one random
+  living, non-Spored creature on the host's own side** (loop-guarded: fizzles if none). The rule
+  is **host-relative** whoever applied it (Sporecloud, a spell, Confused friendly fire, the Rot
+  Sovereign) — "enemy" in earlier drafts meant "the Sporecloud's enemy," i.e. the infected
+  population. The spread is a trigger on the status itself and fires however the host dies,
+  including from Spore's own tick. Intrinsic effect = the DoT; Sporecloud's payoff reads
+  Spored-enemy count via count-scaling. *(Ratified PR #64 review; built H3 via one new
+  `ResponseTarget`, `random-ally-without-status`.)*
 - **Confusion** — condition-status, **3-turn default**: each turn the confused creature takes a
   **harmful action** (attack / harmful cast), **50% chance it strikes its own side** instead
   (friendly fire). Consumes combat RNG; rides the Provoke targeting-override slot. Edge-cases for the
@@ -173,7 +178,7 @@ race-fights). **Zero new engine cost — all recombinations of already-locked pr
 |---|---|---|---|
 | **Broodmother** *(giant spider)* | 10 — The Overgrowth | Target-priority | **Count-scales** off living spiderling adds + periodically **Webs** the party (act-last). Kill adds to weaken her. Adds: spiderlings (Spider pool). |
 | **Leech Sovereign** | 20 — Glimmerdark | Fast steal-race | Every hit **steals a stat** (permanent −you / +it, same as Sparkeaters); you hollow out over time — answer is raw burst. Lean identity (no heavy add layer). |
-| **Rot Sovereign** | 30 — Rotcap Hollow | Attrition-management (finale) | Grows via **count-scaling off deaths** (any creature that dies feeds it) + blankets the party in spreading **Spore**. Puzzle = don't-feed-it + out-manage the rot, not pure DPS. |
+| **Rot Sovereign** | 30 — Rotcap Hollow | Attrition-management (finale) | Grows with **every death**: a flat, permanent Attack rise **per death, the same rate whichever side died** (her adds or your creatures — any creature that dies feeds it; each death counted once) + blankets the party in spreading **Spore**. Puzzle = don't-feed-it + out-manage the rot, not pure DPS. |
 
 Power seam: elevated **level** (a few above the floor's range, via the curve) + signature traits +
 adds. Exact stats/numbers are parked balance.
@@ -187,6 +192,8 @@ adds. Exact stats/numbers are parked balance.
 - Statuses: **Sleep** (breaks-on-damage suppress), **Glow** (stacking resource), **turn-order**
   (act first *or* last — two-way primitive; **Web** = act-last consumer + 10%/turn break-free),
   **Spore** (DoT + spread-on-death), **Confusion** (3-turn, 50%/harmful-action friendly-fire).
+- Targets: **`random-ally-without-status`** `ResponseTarget` (H3, Spore's spread — a random living
+  ally of the firing creature lacking a given status; the one vocabulary addition H3 needed).
 - Primitives/responses: **count-scaling** modifier (reads live-board *or* dead-ally counts),
   **consume-stacks** response, **grant-action-state** response, **acted-before-target** condition,
   **targeting-override** (Provoke=narrow, Confusion=randomize-to-allies), **stat-remap** (existing,
