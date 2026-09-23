@@ -119,6 +119,18 @@ export type ResponseTarget =
   // must be DEAD) needs its own resolution path -- a random dead member of the firing creature's
   // OWN side (the Unicorn's "resurrects a random dead ally" wording).
   | { readonly kind: 'random-dead-ally' }
+  // Phase 4 Slice H3 (Rotcap Hollow, Spore's spread-on-death) / ASSUMPTION 30: no existing
+  // TargetSelector can express "excluding a status" -- a `random-ally-without-status` variant,
+  // the exact same kind of minimal ResponseTarget-only addition `random-dead-ally` already was
+  // for "excluding aliveness" (not a new hook/response/EffectDef category, so it stays within
+  // ASSUMPTION 30's "a selector composition, not a new engine primitive"). Resolved exactly like
+  // `random-dead-ally` -- a random pick among the firing creature's own LIVING allies (self
+  // naturally excluded once dead, since livingAlliesOf filters on `alive`) that do NOT carry
+  // `statusId`, via `hasStatus` (effects.ts). Empty pool -> no targets -> the response silently
+  // no-ops (same "fizzle if none" discipline as revive's "target must be dead" skip / consume-
+  // stacks' "0 stacks" skip) -- this is what makes Spore's contagion infect only fresh hosts
+  // instead of endlessly refreshing the same one.
+  | { readonly kind: 'random-ally-without-status'; readonly statusId: string }
 
 // Applied via a spell or a triggered apply-status response (Slice C).
 export interface StatusSpec {

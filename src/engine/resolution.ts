@@ -20,6 +20,7 @@ import {
   gatherCrossStatContribution,
   gatherDealtMods,
   gatherTakenFactors,
+  hasStatus,
   instantiateCreatureEffects,
   instantiateStatus,
   resolveMagnitudeCount,
@@ -602,6 +603,19 @@ function resolveResponseTargets(
       if (deadAllies.length === 0) return []
       const index = Math.floor(state.rng.next() * deadAllies.length)
       const chosen = deadAllies[index]
+      return chosen ? [chosen.id] : []
+    }
+    case 'random-ally-without-status': {
+      // Phase 4 Slice H3 (Spore's spread-on-death, ASSUMPTION 30): livingAlliesOf resolves off
+      // `self.side` only (never `self.alive`), so this works correctly even when self is the
+      // just-died Spore bearer firing its own on-death trigger.
+      const self = getCreature(state, context.self)
+      const pool = livingAlliesOf(self, state).filter(
+        (c) => !hasStatus(c, target.statusId),
+      )
+      if (pool.length === 0) return []
+      const index = Math.floor(state.rng.next() * pool.length)
+      const chosen = pool[index]
       return chosen ? [chosen.id] : []
     }
     default: {
