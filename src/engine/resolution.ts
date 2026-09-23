@@ -44,6 +44,7 @@ import type {
   FriendlyFireStatusEffect,
   Hook,
   ResponseTarget,
+  StatPercent,
   StatusSpec,
   TurnOrderStatusEffect,
 } from './effect-types'
@@ -610,6 +611,35 @@ function resolveResponseTargets(
   }
 }
 
+/** Flat mode's per-stack magnitude (deal-damage's `flatAmount` / heal's `amountPerStack`),
+ * scaled by `count` (stacks, or the live magnitudeSource count that replaces them) -- the exact
+ * multiplication both call sites did inline before this brief (`response.flatAmount * flatCount`
+ * / `response.amountPerStack * flatCount`), now also accepting a `StatPercent`. Reads the
+ * BEARER's (`context.self`) own stat, floored (the integer value the game actually uses -- an
+ * effective stat can be fractional under modifiers, e.g. 240 * 1.1 = 264.00000000000006),
+ * multiplies in the integer `percent` and `count` BEFORE dividing by 100 -- `percent` is a
+ * positive integer specifically so this is exact in floating point (a float fraction like `*
+ * 0.03` can land just below an integer, e.g. 180 * 0.03 * 5 = 26.999999999999996, and floor one
+ * too low). The one remaining floor (over the whole `stat * percent * count / 100`, never
+ * per-stack) stays where it already lived: applyFlatDamage's `Math.floor` (with its minimum of
+ * 1) and applyHeal's `Math.floor` (clamped to effective max HP) -- this function returns an
+ * unfloored value on purpose so that single downstream floor is the only one. */
+function resolveFlatTotal(
+  bearer: Creature,
+  amount: number | StatPercent,
+  count: number,
+): number {
+  if (typeof amount === 'number') return amount * count
+  if (!Number.isInteger(amount.percent) || amount.percent <= 0) {
+    throw new Error(
+      'resolver invariant violated: stat-derived flat amount needs a positive integer percent',
+    )
+  }
+  return (
+    (Math.floor(getEffectiveStat(bearer, amount.ofStat)) * amount.percent * count) / 100
+  )
+}
+
 export function executeResponse(
   response: EffectResponse,
   sourceTraitId: string,
@@ -663,7 +693,7 @@ export function executeResponse(
           working = applyFlatDamage(
             context.self,
             targetId,
-            response.flatAmount * flatCount,
+            resolveFlatTotal(bearer, response.flatAmount, flatCount),
             response.damageSource ?? 'dot',
             working,
             events,
@@ -736,7 +766,7 @@ export function executeResponse(
             ? getEffectiveStat(bearer, response.scalingStat) *
               (response.spellPower ?? 1.0) *
               formulaMultiplier
-            : (response.amountPerStack ?? 0) * flatCount
+            : resolveFlatTotal(bearer, response.amountPerStack ?? 0, flatCount)
         working = applyHeal(context.self, targetId, amount, working, events)
       }
       return { state: working, suppressed: false }

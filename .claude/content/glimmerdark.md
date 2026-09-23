@@ -115,7 +115,7 @@ already covers every affinity; these are spice on top of it, not a replacement k
 | Overcharge | Wit | Heals a single ally for **15% of the caster's effective Health** (half of Beacon Charge's heal), and charges that ally with **2 stacks** of Glow at once (double Beacon Charge's one). |
 | Disorient | Instinct | A single-target hit dealing damage equal to **85% of the caster's Intelligence**, and applies Web (act-last) to the target for **3 turns** — the same status Overgrowth's Vine Snare applies, reused rather than re-authored under a new name. |
 | Blinding Flare | Violence | A single-target hit dealing damage equal to **70% of the caster's Intelligence**, and leaves the target **Vulnerable** (takes ×1.5 damage) for **3 turns** — a light-burst setup debuff; no other spell applies Vulnerability. |
-| Afterglow | Vitality | Heals a single ally for **50% of the caster's effective Health**, and grants **Regen** (heals a further 4 HP at the end of each round) for **3 turns** — a lingering-light sustain heal, distinct from Regrowth's plain burst. |
+| Afterglow | Vitality | Heals a single ally for **50% of the caster's effective Health**, and grants **Regen** (heals a further **5% of the target's own effective max HP per stack** at the end of each round) for **3 turns** — a lingering-light sustain heal, distinct from Regrowth's plain burst. |
 | Luminous Tide | Wit | Heals **every ally** for **20% of the caster's effective Health** and charges each with a stack of **Glow** — a party-wide wave of light; the game's first AOE support spell. |
 
 Every ally-targeting entry above (Beacon Charge, Overcharge, Afterglow, Luminous Tide) can be

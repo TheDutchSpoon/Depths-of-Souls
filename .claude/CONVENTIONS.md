@@ -137,6 +137,23 @@ top-level kinds: `deal-damage`, `apply-status`, `apply-stat-modifier`, `suppress
   (`amountPerStack`, Regen), **stat-scaled off the *healer's* stat** (`scalingStat`; Treants Elder →
   Health), and **`magnitudeSource`** (× a count; Necromoss → dead-allies). Target-%-max-HP heals
   (reading the *target's* max HP) are deferred — no locked content needs them.
+- **Flat-mode stat-derived magnitude** (percent-hp-condition-ticks brief) — `deal-damage.flatAmount`
+  and `heal.amountPerStack` each accept either a literal number (unchanged) or a `StatPercent`
+  (`{ ofStat, percent }`, `percent` a **positive integer**), a percentage of the **bearer's**
+  (`context.self`) own effective stat — Regen/Poison/Burn read `{ ofStat: 'health', percent }` so
+  their ticks stay meaningful at every level instead of going insignificant as max HP scales up.
+  Composition: `floor(floor(getEffectiveStat(bearer, ofStat)) × percent × count / 100)`, where
+  `count` is `stacks` or the live `magnitudeSource` count that already replaces `stacks` in flat
+  mode today (unchanged) — the stat is read **floored** and `percent`/`count` are multiplied in
+  **before** dividing by 100, so the whole thing is exact integer arithmetic; a float fraction
+  (`stat × 0.03`) can land just below an integer and floor one too low (180 × 0.03 × 5 =
+  26.999999999999996 → 26 instead of 27), which is why this is an integer percent, not a fraction.
+  The floor happens **once**, at the existing single `Math.floor` in `applyFlatDamage`/`applyHeal`
+  — never per stack. **`scalingStat` mode is deliberately NOT used for DoTs**: for damage, that
+  mode runs the response's `context.self` through the real damage formula as the *attacker*, and
+  for a DoT `context.self` is the poisoned creature itself — its own Defence would mitigate its
+  own poison, and its own damage-dealt buffs (Glow, cross-stat, armor penetration) would amplify
+  it. Flat mode's formula-bypass is what keeps a DoT's tick independent of the victim's own kit.
 - **`remove-status`** (Slice E2) — clear a status from a target (`{ target, filter }`). `filter` is
   a specific `statusId` now; a **polarity** filter (`buff`/`debuff`) lands with the first
   cleanse/dispel spell. Statuses carry an explicit **`StatusDef.polarity: 'buff' | 'debuff'`**
@@ -509,7 +526,9 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     action resolves fully (all `DamageDealt`/`CreatureDied`) **before** win/loss is checked — the
     win-check stays at the action boundary, never inside the per-target loop.
 - **DoT damage** does **not** use the damage formula — its own value from the source, **bypasses
-  Defence**.
+  Defence**. That "own value" may itself be stat-derived (a percentage of the bearer's own max
+  HP, not a literal) — see "Flat-mode stat-derived magnitude" above; it is still flat mode, still
+  formula-bypassing, only the per-stack number's source changes.
 - **Provoke targeting**: single-target offensive actions (Attack / single-target Cast) against the
   enemy side target a **random provoking enemy** (seeded combat RNG, never `Math.random()`) if any
   enemy provokes, else the script's selector. Implement as a **target-set override applied after**

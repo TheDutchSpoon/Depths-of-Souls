@@ -47,6 +47,20 @@ export type Hook =
 // to effective-stats' ActionKind ('attack' | 'cast').
 export type RemapSlot = 'attack' | 'cast'
 
+/** Phase 4 (percent-hp-condition-ticks brief): an alternative to a literal flat-mode magnitude
+ * (`deal-damage.flatAmount` / `heal.amountPerStack`) -- a percentage of the BEARER's own
+ * (`context.self`) effective stat, e.g. Regen/Poison/Burn's "X% of max HP per stack". `percent`
+ * is a positive integer, not a float fraction: `floor(floor(stat) * percent * count / 100)` is
+ * exact in integer arithmetic, whereas a float fraction (e.g. `stat * 0.03`) can land just below
+ * an integer and floor one too low (180 * 0.03 * 5 = 26.999999999999996 -> 26, not 27). See
+ * resolveFlatTotal (resolution.ts) for the exact composition with the stack/magnitudeSource
+ * count. A plain number keeps meaning exactly what it means today -- this is purely an
+ * additional mode. */
+export type StatPercent = {
+  readonly ofStat: Stat
+  readonly percent: number
+}
+
 // ---- Forward surface for Slices B/C (declared, not yet consumed) ----
 
 // ---- Phase 4 Slice D: the count-scaling / resource-primitive vocabulary ----
@@ -140,8 +154,12 @@ export type EffectResponse =
       // entirely (not merely zeroing Defence). Mutually exclusive with offStat/scalingStat
       // (enforced -- see ASSUMPTION 6 above); presence of flatAmount selects this mode and its
       // sibling spellPower field is simply never read. Scales by the firing status's current
-      // stacks.
-      readonly flatAmount?: number
+      // stacks. May also be a `StatPercent` (percent-hp-condition-ticks brief: Poison/Burn) --
+      // still flat mode, still formula-bypassing; only the per-stack number's SOURCE changes,
+      // read from the bearer (context.self), never the applier. Deliberately NOT `scalingStat`
+      // mode: that would route the victim through its own damage formula (own Defence/dealt-
+      // buffs would apply to its own DoT) -- see resolveFlatTotal (resolution.ts).
+      readonly flatAmount?: number | StatPercent
       /** DoT ticks emit no TriggerFired (their StatusApplied already announced them); default true. */
       readonly emitTriggerFired?: boolean
       /** Overrides the DamageDealt tag; default derived from offStat ('dot' when flatAmount is set). */
@@ -160,8 +178,10 @@ export type EffectResponse =
       /** Flat per-stack heal amount (Regen); scales by the firing status's current stacks.
        * Mutually exclusive with `scalingStat` -- ASSUMPTION (Slice E2, mirrors deal-damage's own
        * ASSUMPTION 6): setting both throws a resolver-invariant error rather than silently
-       * picking one. */
-      readonly amountPerStack?: number
+       * picking one. May also be a `StatPercent` (percent-hp-condition-ticks brief: Regen) --
+       * read from the bearer (the creature being healed), same composition as deal-damage's own
+       * flatAmount -- see resolveFlatTotal (resolution.ts). */
+      readonly amountPerStack?: number | StatPercent
       /** Phase 4 Slice E2 (Treants Elder): stat-scaled mode -- `getEffectiveStat(HEALER,
        * scalingStat) × (spellPower ?? 1)`, mirroring deal-damage's own scalingStat/spellPower
        * pairing exactly. Reads the HEALER's (the firing creature's) own stat, never the

@@ -574,7 +574,10 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   in the log/UI rather than silently inferred. All are **data instances of the built primitives** — no
   per-stat/per-status special-casing.
 - **DoT damage** uses its **own value from the source** and **bypasses Defence** (not the
-  Attack/Defence formula) — making DoT a distinct answer to high-Defence enemies.
+  Attack/Defence formula) — making DoT a distinct answer to high-Defence enemies. That own value
+  scales with the target's own max HP rather than being a flat number: Regen, Poison and Burn
+  each tick for a percentage of the *bearer's* effective max HP per stack (so they stay meaningful
+  at every level), still bypassing Defence/affinity/pools entirely.
 - **Stun** is **just a `condition-status`**, not a special mechanic — it registers an
   `on-turn-start` hook whose response is **suppress-action**, so the affected creature's turn is
   skipped **via the Phase 1 empty-bracket mechanism** (its `TurnStarted`/`TurnEnded` still emit,
