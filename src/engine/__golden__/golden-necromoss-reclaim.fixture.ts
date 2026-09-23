@@ -3,18 +3,26 @@
 // dead allies, proving `heal`'s `magnitudeSource` mode (Slice E2, named for Necromoss in
 // effect-types.ts's own doc comment) against real content for the first time.
 //
+// PR #64 review: WISP's health (50, not the species' own real 18) and dead-ally count (3, not 2)
+// are deliberately chosen so BOTH the 5% rate and the count actually change the FLOORED result --
+// at the old numbers (18 max HP, 2 dead allies), 18*0.05*2 = 1.8 floors to 1, which is also what
+// 18*0.03*2 = 1.08 (the pre-review rate) floors to, so that scenario couldn't have caught a
+// regression to the wrong rate. Here: 50*0.05*3 = 7.5 -> floors to 7; the WRONG rate (0.03) would
+// give 50*0.03*3 = 4.5 -> 4, and the WRONG count (2) would give 50*0.05*2 = 5.0 -> 5 -- both
+// visibly different from 7, so this scenario is sensitive to either mistake.
+//
 // Hand-derived (independent `node -e` calculator, verified via Bash). WISP (speed 16) acts
-// before DUMMY (player, speed 5, always-wait, never reached in 1 step) -- WISP's own two dead
+// before DUMMY (player, speed 5, always-wait, never reached in 1 step) -- WISP's own three dead
 // allies are excluded from the round-1 turn queue build entirely (alive-filtered), so WISP is
-// simply the queue's first (and only-reached) entry. WISP starts the fight wounded to 10 HP
+// simply the queue's first (and only-reached) entry. WISP starts the fight wounded to 5 HP
 // (applied post-createCombat, same idiom golden-dot.fixture.ts uses -- createCombat resets
 // currentHp to effective max, so a raw `currentHp` override on the party literal would be
 // discarded).
 //
 //   WISP's on-turn-start: heal(self, scalingStat health, spellPower 0.05,
-//     magnitudeSource: count of dead-allies) -- 2 dead allies among WISP's own side ->
-//     amount = getEffectiveStat(WISP, 'health') [18, unmodified] * 0.05 * 2 = 1.8 ->
-//     applyHeal floors: floor(1.8) = 1. WISP 10 -> 11 (well under its 18 max, no clamp).
+//     magnitudeSource: count of dead-allies) -- 3 dead allies among WISP's own side ->
+//     amount = getEffectiveStat(WISP, 'health') [50, unmodified] * 0.05 * 3 = 7.5 ->
+//     applyHeal floors: floor(7.5) = 7. WISP 5 -> 12 (well under its 50 max, no clamp).
 //   WISP's own action this turn (always-wait, unrelated to the trait) -> Waited.
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -29,7 +37,7 @@ export const SEED = 5005 // No RNG consumed anywhere in this fixture; seed is in
 export const WISP = createCreatureId('necromoss-wisp')
 
 /** Applied post-createCombat by golden-necromoss-reclaim.test.ts -- see the header comment above. */
-export const WISP_STARTING_HP = 10
+export const WISP_STARTING_HP = 5
 
 export const playerParty = makeParty('player', [
   {
@@ -42,7 +50,7 @@ export const playerParty = makeParty('player', [
 export const enemyParty = makeParty('enemy', [
   {
     id: 'necromoss-wisp',
-    health: 18,
+    health: 50,
     attack: 10,
     intelligence: 20,
     defence: 12,
@@ -58,6 +66,11 @@ export const enemyParty = makeParty('enemy', [
   },
   {
     id: 'fallen-2',
+    alive: false,
+    scriptId: 'always-wait',
+  },
+  {
+    id: 'fallen-3',
     alive: false,
     scriptId: 'always-wait',
   },
@@ -83,8 +96,8 @@ export const expectedEvents: CombatEvent[] = [
     type: 'HealApplied',
     sourceId: WISP,
     targetId: WISP,
-    amount: 1,
-    remainingHp: 11,
+    amount: 7,
+    remainingHp: 12,
   },
   { type: 'Waited', creatureId: WISP },
   { type: 'TurnEnded', creatureId: WISP },

@@ -206,16 +206,19 @@ export const GRANT_ACT_FIRST: TurnOrderStatusDef = {
  * Sleep-established pattern for a status needing more than one hook) -- 4% of the bearer's own
  * effective max HP per stack per round (same stat-derived flat mode as POISON/BURN), PLUS an
  * `on-death -> apply-status({kind:'random-ally-without-status', statusId:'spore'}, spore)` --
- * when the bearer dies, the contagion spreads to one living, still-healthy member of the
- * BEARER'S OWN side (ASSUMPTION 30: "spreads to a living, non-Spored enemy" reads as "an enemy
- * of whoever applied it," i.e. another member of the infected side -- not the opposing side
- * relative to the dying bearer, since a fungal contagion spreading through a population is the
- * mood/theme "colonies, spores, decay ... spread", GAME_DESIGN §4). The new
- * `random-ally-without-status` ResponseTarget (effect-types.ts) resolves relative to `self`
- * (the dying bearer) and naturally fizzles with NO event when every living ally already carries
- * Spore (loop-guarded per species-locked.md's own "fizzles if none" -- see resolveResponseTargets,
- * resolution.ts) -- this is what keeps the disease spreading to FRESH hosts instead of endlessly
- * refreshing one. */
+ * this trigger lives on the STATUS itself (not a species trait), so any Spore bearer spreads it
+ * on death regardless of which creature/spell originally applied it. When the bearer dies, the
+ * contagion spreads to one living, still-healthy member of the BEARER'S OWN side -- host-relative
+ * (ratified reading of "spreads to a living, non-Spored enemy": a fungal contagion spreading
+ * through the population it already infected, matching the mood "colonies, spores, decay ...
+ * spread", GAME_DESIGN §4). No existing `ResponseTarget` could express "exclude a status" for
+ * this pick, so `random-ally-without-status` (effect-types.ts) is a genuinely new
+ * `ResponseTarget` variant (PR #64 review: ASSUMPTION 30's original "no new engine primitive"
+ * framing did not hold -- see the Slice H3 phase record). It resolves relative to `self` (the
+ * dying bearer); when every living ally already carries Spore, resolution.ts's
+ * `resolveResponseTargets` returns an empty target list, so the trigger's own `TriggerFired` is
+ * still emitted but nothing follows it -- a fizzle, not a silent no-op -- which is what keeps the
+ * disease spreading to FRESH hosts instead of endlessly refreshing one. */
 export const SPORE: ConditionStatusDef = {
   category: 'condition-status',
   statusId: 'spore',

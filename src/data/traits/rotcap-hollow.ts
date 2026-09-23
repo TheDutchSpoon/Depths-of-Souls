@@ -235,14 +235,14 @@ export const NECROMOSS_WISP_TRAIT: Trait = {
   ],
 }
 
-/** Necromoss Thicket (uncommon): the same "off dead-ally count" idea, on the BUFF half instead
- * of the heal half -- an `apply-stat-modifier` response with `magnitudeSource`
- * (freeze-at-application, Slice E2's named Necromoss consumer alongside Swarmhive Striker),
- * fired once per ally death (not every turn, unlike the heal above -- a repeating
- * `apply-stat-modifier` trigger APPENDS a fresh modifier each firing and compounds, the same
- * "compounding round over round" shape every other repeating buff in this game already uses, so
- * this is deliberately event-scoped to stay proportional to the roster's own size rather than
- * the round count). */
+/** Necromoss Thicket (uncommon): the BUFF half of the same "off dead allies" idea, not the heal
+ * half -- a flat +10% Defence every time an ally dies (a fresh `apply-stat-modifier`
+ * `StatModifierEffect` per firing, `factor: 1.1`, no `magnitudeSource`). PR #64 review: the
+ * earlier draft scaled the SAME response's own `factor` by the live dead-ally count
+ * (freeze-at-application) so a single death's rise grew with how many had already died -- the
+ * review simplified this to a flat rate per event; the compounding still happens naturally, since
+ * a repeating `apply-stat-modifier` trigger APPENDS a fresh modifier each firing and the fold is
+ * multiplicative (base x Pi(factors)) -- two deaths is x1.1 x1.1 = x1.21, not one bigger jump. */
 export const NECROMOSS_THICKET_TRAIT: Trait = {
   id: 'necromoss-thicket-grim-ward',
   name: 'Grim Ward',
@@ -255,7 +255,6 @@ export const NECROMOSS_THICKET_TRAIT: Trait = {
         target: { kind: 'self' },
         stat: 'defence',
         factor: 1.1,
-        magnitudeSource: { kind: 'count', of: 'dead-allies' },
       },
     },
   ],
@@ -388,7 +387,11 @@ export const SPORCH_CINDERLORD_TRAIT: Trait = {
       response: {
         kind: 'apply-status',
         target: { kind: 'all-enemies' },
-        status: { statusId: 'burn' },
+        // PR #64 review fix 6: `stacks: 1` written explicitly rather than relying on
+        // StatusSpec's own default (also 1) -- makes the intent (exactly one fresh Burn stack
+        // per remaining enemy, stacking toward Burn's own cap like any other application) visible
+        // at the call site instead of implicit.
+        status: { statusId: 'burn', stacks: 1 },
       },
     },
   ],
@@ -397,14 +400,15 @@ export const SPORCH_CINDERLORD_TRAIT: Trait = {
 // ---- The Rot Sovereign (floor-30 boss, the biome-3 finale) ----
 // species-locked.md: "Attrition-management (finale) ... Grows via count-scaling off deaths (any
 // creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it +
-// out-manage the rot, not pure DPS." Two death-reactive growth hooks -- `on-ally-death` (her own
-// adds dying feeds her, the LIVE count-scaling primitive species-locked.md names by name:
-// magnitudeSource `dead-allies`, freeze-at-application) AND `on-enemy-death` (the PLAYER's own
-// creatures dying ALSO feeds her, a simpler flat compounding buff -- 'dead-allies' always reads
-// HER OWN side regardless of which hook fired, so it can't distinguish "which side died", making
-// it meaningful only on the on-ally-death half) -- realizing "ANY creature that dies feeds it"
-// without inventing a new CountOf. Plus the spreading-Spore blanket, unconditional each of her own
-// turns.
+// out-manage the rot, not pure DPS." Two death-reactive growth hooks, BOTH a flat +10% Attack per
+// death -- `on-ally-death` (her own adds dying) and `on-enemy-death` (the player's own creatures
+// dying), the SAME rate either way, realizing "ANY creature that dies feeds it" without needing
+// death-side to change the magnitude. PR #64 review: the earlier draft used `magnitudeSource`
+// (freeze-at-application) on the on-ally-death half only, at a different rate (+15%) than the
+// flat on-enemy-death half (+5%) -- the review simplified both to the same flat +10% per event
+// (see Necromoss Thicket's own comment for why a flat per-event factor still compounds across
+// repeated firings without needing a live count). Plus the spreading-Spore blanket, unconditional
+// each of her own turns.
 
 export const ROT_SOVEREIGN_TRAIT: Trait = {
   id: 'rot-sovereign-attrition',
@@ -417,8 +421,7 @@ export const ROT_SOVEREIGN_TRAIT: Trait = {
         kind: 'apply-stat-modifier',
         target: { kind: 'self' },
         stat: 'attack',
-        factor: 1.15,
-        magnitudeSource: { kind: 'count', of: 'dead-allies' },
+        factor: 1.1,
       },
     },
     {
@@ -428,7 +431,7 @@ export const ROT_SOVEREIGN_TRAIT: Trait = {
         kind: 'apply-stat-modifier',
         target: { kind: 'self' },
         stat: 'attack',
-        factor: 1.05,
+        factor: 1.1,
       },
     },
     {

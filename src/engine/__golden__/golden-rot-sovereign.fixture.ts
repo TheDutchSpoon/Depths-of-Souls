@@ -1,33 +1,43 @@
 // Golden: Rotcap Hollow's floor-30 boss, the Rot Sovereign (species-locked.md's "Attrition-
-// management ... grows via count-scaling off deaths + blankets the party in spreading Spore") --
-// the real, shipped `ROT_SOVEREIGN_TRAIT` proving BOTH signature halves end to end: an add's
-// death growing her Attack (the LIVE `magnitudeSource` count-scaling primitive, freeze-at-
-// application, per species-locked.md's own wording) feeding directly into her own very next
-// attack's damage, and her own turn-start Spore blanket.
+// management ... grows via count-scaling off deaths (any creature that dies feeds it) + blankets
+// the party in spreading Spore") -- the real, shipped `ROT_SOVEREIGN_TRAIT` proving all three
+// signature pieces end to end: an add's death growing her Attack (`on-ally-death`), a PLAYER
+// creature's death ALSO growing her Attack at the SAME flat rate (`on-enemy-death`, PR #64
+// review fix 5 -- both hooks now apply a flat +10% per event, no `magnitudeSource`, replacing the
+// earlier draft's mismatched +15%-scaled/+5%-flat split), the two compounding multiplicatively
+// across both death sources, and her own turn-start Spore blanket.
 //
-// Hand-derived (independent `node -e` calculator, verified via Bash). TARGET (speed 30) acts
-// before SOVEREIGN (speed 16, real base stats) before ADD (speed 1, a plain fixture stand-in for
-// one of her real adds -- never reached; this golden stops after SOVEREIGN's own turn).
-// Endurance-vs-Endurance (TARGET/ADD/SOVEREIGN all endurance) is always neutral (same
-// affinity) -- x1.0 everywhere, no complication. No random selectors anywhere (both attacks'
-// targets are each side's sole living member by the time they're chosen) -- SEED is inert.
+// Hand-derived (independent `node -e` calculator, verified via Bash). TARGET (speed 40) acts
+// before SOVEREIGN (speed 30, real base stats) before WEAK (speed 10) before ADD (speed 1 --
+// never reached; this golden stops after SOVEREIGN's own turn). Endurance-vs-Endurance
+// (everyone here is endurance) is always neutral -- x1.0 everywhere, no complication. No random
+// selectors anywhere (every attack's target is deterministically the lowest-HP living enemy) --
+// SEED is inert.
 //
 //   TARGET->ADD (off 20, def 0): core = 20. chip = 0.01*20 = 0.2. raw = 20.2 -> final =
-//     floor(20.2) = 20. ADD (wounded to 5 post-createCombat, see ADD_STARTING_HP) 5 - 20 -> 0,
-//     dies.
-//   fireDeathObservers: on-ally-death fires on SOVEREIGN (ADD's only living ally) -> Attrition's
-//     on-ally-death effect: apply-stat-modifier(self, attack, factor 1.15,
-//     magnitudeSource: count of dead-allies) -- 1 dead ally (ADD, just died, already reflected)
-//     -> finalFactor = 1 + (1.15-1)*1 = 1.15. effectiveBefore = 22 (base, unmodified).
-//     effectiveAfter = 22 * 1.15 = 25.299999999999997 (JS float -- 1.15 isn't exactly
-//     representable in binary; verified via node, not hand-rounded).
+//     floor(20.2) = 20. ADD (wounded to 5 post-createCombat) 5 - 20 -> 0, dies.
+//   fireDeathObservers(ADD): on-ally-death fires on SOVEREIGN (ADD's only living ally) ->
+//     Attrition's flat +10% Attack: effectiveBefore = 22 (base, unmodified), factor 1.1 ->
+//     effectiveAfter = 22 * 1.1 = 24.200000000000003 (JS float, not hand-rounded -- verified via
+//     node). on-enemy-death fires on TARGET (ADD's opposing side) -- TARGET carries no matching
+//     trait, nothing.
 //   SOVEREIGN's own on-turn-start: Attrition's Spore-blanket effect -> apply-status(all-enemies,
-//     spore) -> TARGET (her only living enemy).
-//   SOVEREIGN->TARGET (off 25.299999999999997 [carrying the growth from the ally death above],
-//     def 10): core = 25.299999999999997 - 10 = 15.299999999999997. chip =
-//     0.01*25.299999999999997 = 0.253. raw = 15.552999999999997 -> final =
-//     floor(15.552999999999997) = 15. TARGET (100 max HP) 100 - 15 = 85, survives -- proving the
-//     growth from ADD's death already fed this very next attack.
+//     spore) -> TARGET then WEAK (her living enemies, player-party slot order).
+//   SOVEREIGN->WEAK (off 24.200000000000003 [carrying the growth from ADD's death], def 0):
+//     core = 24.200000000000003. chip = 0.01*24.200000000000003 = 0.24200000000000002. raw =
+//     24.442000000000004 -> final = floor(24.442000000000004) = 24. WEAK (wounded to 5
+//     post-createCombat) 5 - 24 -> 0, dies -- proving the ally-death growth already fed this very
+//     next attack.
+//   WEAK itself was blanketed with Spore by the on-turn-start effect above; its death fires
+//     Spore's OWN on-death spread trigger too -- fizzling (TriggerFired, no StatusApplied) since
+//     TARGET (WEAK's only living ally) was ALSO blanketed with Spore in that same firing and is
+//     filtered out by random-ally-without-status.
+//   fireDeathObservers(WEAK): on-ally-death fires on TARGET (WEAK's living ally) -- no matching
+//     trait, nothing. on-enemy-death fires on SOVEREIGN (WEAK's opposing side, living) ->
+//     Attrition's SAME flat +10% Attack, fired a second time: effectiveBefore =
+//     24.200000000000003, factor 1.1 -> effectiveAfter = 24.200000000000003 * 1.1 =
+//     26.620000000000005 -- the two death sources compounding multiplicatively
+//     (22 * 1.1 * 1.1 = 26.62), at the identical rate regardless of which side died.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -39,10 +49,12 @@ import type { CombatEvent } from '../types'
 export const SEED = 3030 // No RNG consumed anywhere in this fixture; seed is inert.
 
 export const TARGET = createCreatureId('target')
+export const WEAK = createCreatureId('weak')
 export const SOVEREIGN = createCreatureId('rot-sovereign')
 export const ADD = createCreatureId('add')
 
 /** Applied post-createCombat by golden-rot-sovereign.test.ts -- see the header comment above. */
+export const WEAK_STARTING_HP = 5
 export const ADD_STARTING_HP = 5
 
 export const playerParty = makeParty('player', [
@@ -51,9 +63,17 @@ export const playerParty = makeParty('player', [
     health: 100,
     attack: 20,
     defence: 10,
-    speed: 30,
+    speed: 40,
     affinity: 'endurance',
     scriptId: 'always-attack',
+  },
+  {
+    id: 'weak',
+    health: 30,
+    defence: 0,
+    speed: 10,
+    affinity: 'endurance',
+    scriptId: 'always-wait',
   },
 ])
 
@@ -64,7 +84,7 @@ export const enemyParty = makeParty('enemy', [
     attack: 22,
     intelligence: 20,
     defence: 26,
-    speed: 16,
+    speed: 30,
     affinity: 'endurance',
     scriptId: 'always-attack',
     innateTraitIds: [ROT_SOVEREIGN_TRAIT.id],
@@ -83,8 +103,8 @@ export const scripts = STOCK_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
 export const statuses = STATUS_REGISTRY
 
-export const TURN_STEPS = 2 // TARGET's turn (kills ADD), then SOVEREIGN's turn -- ADD's own
-// (now-empty, skipped-since-dead) queue slot is never reached.
+export const TURN_STEPS = 2 // TARGET's turn (kills ADD), then SOVEREIGN's turn (kills WEAK) --
+// WEAK's and ADD's own (now-empty, skipped-since-dead) queue slots are never reached.
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },
@@ -115,9 +135,9 @@ export const expectedEvents: CombatEvent[] = [
     sourceId: SOVEREIGN,
     targetId: SOVEREIGN,
     stat: 'attack',
-    factor: 1.15,
+    factor: 1.1,
     effectiveBefore: 22,
-    effectiveAfter: 25.299999999999997,
+    effectiveAfter: 24.200000000000003,
   },
   { type: 'TurnEnded', creatureId: TARGET },
   { type: 'TurnStarted', creatureId: SOVEREIGN },
@@ -135,18 +155,47 @@ export const expectedEvents: CombatEvent[] = [
     duration: 3,
     sourceId: SOVEREIGN,
   },
-  { type: 'AttackDeclared', attackerId: SOVEREIGN, targetId: TARGET },
+  {
+    type: 'StatusApplied',
+    targetId: WEAK,
+    statusId: 'spore',
+    stacks: 1,
+    duration: 3,
+    sourceId: SOVEREIGN,
+  },
+  { type: 'AttackDeclared', attackerId: SOVEREIGN, targetId: WEAK },
   {
     type: 'DamageDealt',
     sourceId: SOVEREIGN,
-    targetId: TARGET,
-    rawDamage: 15.552999999999997,
-    finalDamage: 15,
+    targetId: WEAK,
+    rawDamage: 24.442000000000004,
+    finalDamage: 24,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 85,
+    remainingHp: 0,
     damageSource: 'attack',
     statusId: undefined,
+  },
+  { type: 'CreatureDied', creatureId: WEAK },
+  // WEAK itself was blanketed with Spore by SOVEREIGN's own on-turn-start effect above, so its
+  // death also fires Spore's OWN on-death spread trigger -- fizzling (TriggerFired only, no
+  // StatusApplied) since TARGET, WEAK's only living ally, was blanketed with Spore in that same
+  // on-turn-start firing and is filtered out.
+  { type: 'TriggerFired', sourceId: WEAK, hook: 'on-death', effectId: 'spore' },
+  {
+    type: 'TriggerFired',
+    sourceId: SOVEREIGN,
+    hook: 'on-enemy-death',
+    effectId: ROT_SOVEREIGN_TRAIT.id,
+  },
+  {
+    type: 'StatModifierApplied',
+    sourceId: SOVEREIGN,
+    targetId: SOVEREIGN,
+    stat: 'attack',
+    factor: 1.1,
+    effectiveBefore: 24.200000000000003,
+    effectiveAfter: 26.620000000000005,
   },
   { type: 'TurnEnded', creatureId: SOVEREIGN },
 ]

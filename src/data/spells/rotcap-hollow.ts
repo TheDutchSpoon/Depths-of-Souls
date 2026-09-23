@@ -9,23 +9,27 @@ import type { Spell } from '../../engine/types'
 
 /** Spore Cyst: the first spell-authored producer of Spore (species-locked.md: "a spell may
  * apply any status, including another species' signature one" -- statuses are shared
- * primitives, precedented by Vine Snare/Web and Disorient/Web). Single-target + upside ->
- * ~80-90% band; 0.9 keeps it distinct from Vine Snare's own 0.85 under the dedup guard. */
+ * primitives, precedented by Vine Snare/Web and Disorient/Web). PR #64 review: `spellPower`
+ * lowered 0.9 -> 0.45 -- the "~80-90% band" reasoning below no longer applies. A DoT-applying
+ * spell's upfront damage shouldn't lead its band (the same rule already applied to Puppet
+ * String); the reference point is Venom Bolt's own DoT spell, 0.4. Distinct from every other
+ * wit|single|damage entry under the dedup guard. */
 export const SPORE_CYST: Spell = {
   id: 'spore-cyst',
   name: 'Spore Cyst',
   targetShape: 'single',
-  spellPower: 0.9,
+  spellPower: 0.45,
   affinity: 'wit',
   appliesStatus: { statusId: 'spore', duration: 3 },
   unlockedAtBiome: 3,
 }
 
 /** Rasping Chant: Endurance's first single-target enemy debuff (Root Grasp is plain damage,
- * Bramble Ward is an ALLY buff) -- permanently cracks a single enemy's Defence for the rest of
- * the fight, the support-spell model's stat-modifier payload (mirrors Weakening Bite's shape,
- * on Endurance/Defence instead of Violence/Defence-on-attack... i.e. genuinely distinct target
- * stat from Weakening Bite, which lowers the SAME stat it reads off Attack-affinity flavor). */
+ * Bramble Ward is an ally buff, not an enemy debuff). Permanently lowers a single enemy's
+ * Defence to 80% of its current value, for the rest of the fight -- the support-spell model's
+ * stat-modifier payload. Same shape as Weakening Bite (Violence, also a Defence-lowering
+ * stat-modifier spell), but a different AFFINITY, which is what the dedup guard's own key reads
+ * -- no collision. */
 export const RASPING_CHANT: Spell = {
   id: 'rasping-chant',
   name: 'Rasping Chant',
@@ -68,13 +72,16 @@ export const CHARNEL_FEAST: Spell = {
 
 /** Withering Bolt: Violence's first spell-authored producer of Burn (statuses.ts's BURN had no
  * real producer before this slice besides Sporch's own on-attack trait -- statuses are never
- * producer-exclusive). Single-target + upside -> ~80-90% band; 0.85 keeps it distinct from
- * Ember Lance (0.5)/Thorn Lash (1.0)/Blinding Flare (0.7, applies vulnerability not burn). */
+ * producer-exclusive). PR #64 review: `spellPower` lowered 0.85 -> 0.45 -- the "~80-90% band"
+ * reasoning below no longer applies. A DoT-applying spell's upfront damage shouldn't lead its
+ * band (the same rule already applied to Puppet String and Spore Cyst); the reference point is
+ * Venom Bolt's own DoT spell, 0.4. Distinct from Ember Lance (0.5) / Thorn Lash (1.0) /
+ * Blinding Flare (0.7, applies Vulnerability not Burn) under the dedup guard. */
 export const WITHERING_BOLT: Spell = {
   id: 'withering-bolt',
   name: 'Withering Bolt',
   targetShape: 'single',
-  spellPower: 0.85,
+  spellPower: 0.45,
   affinity: 'violence',
   appliesStatus: { statusId: 'burn', duration: 3 },
   unlockedAtBiome: 3,

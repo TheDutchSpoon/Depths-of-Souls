@@ -13,11 +13,14 @@
 // percent/factor balance number are parked balance (GAME_DESIGN §13), picked only to be
 // flavorful and internally consistent. Per-creature affinity mostly follows species-locked.md's
 // own dual leans (Necromoss: Wit/Vitality, Hollowkin: Endurance/Instinct, Sporch: Violence/Wit),
-// with two content-review revisions off the family default: Rotfeeder Gorgemaw is Vitality (its
-// identity is HP growth, not a raw Violence hit) and Myconet Rotcore is Wit (its identity is a
-// Poison-application death-burst, not a raw Endurance tank trick) -- see each creature's own
-// doc comment. All 5 affinities remain present across the 18 creatures (7 Wit / 4 Violence /
-// 4 Endurance / 2 Vitality / 1 Instinct) without needing any extra coverage-sprinkle creature
+// with four content-review revisions off the family default -- see each creature's own doc
+// comment: Rotfeeder Gorgemaw is Vitality (its identity is HP growth, not a raw Violence hit);
+// Myconet Rotcore is Wit (its identity is a Poison-application death-burst, not a raw Endurance
+// tank trick); Necromoss Hollowroot is Vitality (the team healer and the biome's only caster,
+// matching this game's healer affinity, so it rolls Vitality heal/buff spells instead of Wit
+// damage spells); Hollowkin Puppeteer is Instinct (evens out that species' own Endurance/Instinct
+// lean). All 5 affinities remain present across the 18 creatures -- Wit 6 / Violence 4 /
+// Endurance 3 / Vitality 3 / Instinct 2 -- without needing any extra coverage-sprinkle creature
 // (unlike H1/H2, whose single-lean species needed one).
 //
 // Composition ONLY (Species/SpeciesCreature/BiomeData + boss data) -- Trait/Spell objects live in
@@ -209,10 +212,13 @@ export const NECROMOSS_THICKET: SpeciesCreature = {
 
 /** The biome's one cast-role creature (defaultScriptId 'always-cast') -- its trait fires on
  * on-turn-start regardless of the chosen action, so casting never blunts it; exercises
- * generateFloor's real spell-loadout roll against the cumulative-unlocked wit-affinity pool. */
+ * generateFloor's real spell-loadout roll against the cumulative-unlocked vitality-affinity pool.
+ * PR #64 review revision: affinity `wit` -> `vitality` -- Hollowroot is the team healer (and the
+ * biome's only caster), and Vitality is this game's healer affinity; as Vitality it rolls
+ * Regrowth/Wild Vigor/Afterglow/Charnel Feast instead of Wit damage spells. */
 export const NECROMOSS_HOLLOWROOT: SpeciesCreature = {
   id: 'necromoss-hollowroot',
-  affinity: 'wit',
+  affinity: 'vitality',
   baseStats: { health: 20, attack: 10, intelligence: 22, defence: 14, speed: 14 },
   defaultScriptId: 'always-cast',
   innateTraitIds: [NECROMOSS_HOLLOWROOT_TRAIT.id],
@@ -247,9 +253,11 @@ export const HOLLOWKIN_MARIONETTE: SpeciesCreature = {
   rarity: 'uncommon',
 }
 
+/** PR #64 review revision: affinity `endurance` -> `instinct` -- evens out Hollowkin's
+ * Endurance/Instinct lean (Wretch stays Endurance, Marionette stays Instinct). */
 export const HOLLOWKIN_PUPPETEER: SpeciesCreature = {
   id: 'hollowkin-puppeteer',
-  affinity: 'endurance',
+  affinity: 'instinct',
   baseStats: { health: 20, attack: 16, intelligence: 12, defence: 20, speed: 16 },
   defaultScriptId: 'always-attack',
   innateTraitIds: [HOLLOWKIN_PUPPETEER_TRAIT.id],

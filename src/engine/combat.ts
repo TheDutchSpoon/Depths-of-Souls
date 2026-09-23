@@ -233,7 +233,32 @@ function decrementAndExpireSnapshot(
  */
 function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): CombatState {
   const snapshot = snapshotStatuses(state)
+  // PR #64 review fix 2: a condition-status's on-round-end trigger may only fire for a
+  // (creature, statusId) pair that existed at THIS sweep's own start -- a status applied mid-
+  // sweep (e.g. Myconet Rotcore's on-death Poison-burst, itself triggered by a DoT tick killing
+  // Rotcore earlier in this same sweep) must not also tick in the sweep that just created it.
+  const snapshotKeys = new Set(
+    snapshot.map((entry) => `${entry.creatureId}#${entry.statusId}`),
+  )
   const firstSweepEventIndex = events.length
+  // Live (not precomputed): checked fresh at each candidate trigger's own firing point, since
+  // "(re)applied EARLIER in this same sweep" is itself a function of how far the sweep has
+  // progressed -- an early StatusApplied must gate a LATER creature's tick of that same status,
+  // even though both happen inside this one fireHook pass.
+  const statusTriggerGate = (creatureId: CreatureId, statusId: string): boolean => {
+    if (!snapshotKeys.has(`${creatureId}#${statusId}`)) return false // born mid-sweep
+    for (let i = firstSweepEventIndex; i < events.length; i++) {
+      const event = events[i]
+      if (
+        event?.type === 'StatusApplied' &&
+        event.targetId === creatureId &&
+        event.statusId === statusId
+      ) {
+        return false // (re)applied earlier in this same sweep
+      }
+    }
+    return true
+  }
   const fired = fireHook(
     'on-round-end',
     livingIds(state),
@@ -241,6 +266,9 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
     state,
     events,
     newCascade(),
+    undefined,
+    undefined,
+    statusTriggerGate,
   ).state
 
   const reappliedThisSweep = new Set<string>()
