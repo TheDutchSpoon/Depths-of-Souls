@@ -4,11 +4,13 @@
 // no idb/Dexie (Phase 5, wholesale, per the brief's scope boundary).
 //
 // Dependency-injected via `createGameStore(overrides)` rather than a bare module-level `create`
-// call: the default deps wire in real src/data content (`useGameStore`, below), but every test
-// needs a fully isolated, deterministic instance against Slice A's FIXTURE biome data (never the
-// real, still-placeholder-shaped biomes 1-10) -- this is an ASSUMPTION beyond the brief's literal
-// "store.ts" framing, necessary for testability without a UI (no Slice-4.5-style demo exists yet
-// to exercise this against).
+// call: the default deps wire in real src/data content (`useGameStore`, below), but most tests
+// (store.test.ts) run against a fully isolated, deterministic instance built on Slice A's own
+// FIXTURE biome/spec data instead -- this is an ASSUMPTION beyond the brief's literal "store.ts"
+// framing, necessary for testability without a UI (no Slice-4.5-style demo exists yet to
+// exercise this against). Slice I's `integration.test.ts` is the deliberate exception: it runs
+// the zero-override, real-content store end to end (real biomes 1-3 landed in H1-H3; biomes
+// 4-10 stay the Slice A placeholder shape -- see data/biomes.ts).
 
 import { create } from 'zustand'
 import { createCombat, resolveFight } from '../engine/combat'
@@ -498,8 +500,9 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
 }
 
 /** The default, zero-config store instance -- real src/data content wired in (Phase 4 Slice G:
- * "first use in the project"). Biomes 1-3 stay Slice A's placeholder shape until H1-H3 land, so
- * descend() against real floors will throw (empty spawn pool) until then -- expected, forward-
- * referenced (see data/biomes.ts's own header comment); every OTHER action (setSpec,
- * recordBossKill, pinBiome, travelTo, runScriptedIntro) works today against real data. */
+ * "first use in the project"). Biomes 1-3 (The Overgrowth/Glimmerdark/Rotcap Hollow) are real,
+ * playable content as of Slices H1-H3; biomes 4-10 stay Slice A's placeholder shape (empty
+ * spawn pools) until a future phase authors them -- `descend()` against floor 31+ will throw
+ * (see data/biomes.ts's own header comment) until then. See integration.test.ts for an
+ * end-to-end exercise of this exact instance against real floor 1. */
 export const useGameStore = createGameStore()
