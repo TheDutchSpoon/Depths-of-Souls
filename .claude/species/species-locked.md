@@ -187,7 +187,9 @@ adds. Exact stats/numbers are parked balance.
 - **Response vocab 4 → 8:** add **`heal`** (restore HP to a living target; caps at max; no
   overheal; distinct from Regen), **`revive`** (return a *dead* creature at baseline + % HP — see
   death-reset rule), and — already-present-but-now-counted — **`grant-action-state`** and
-  **`consume-stacks`**. Eight top-level response kinds; hold the line at eight.
+  **`consume-stacks`**. Eight top-level response kinds at seed-content lock. *(Slice E2 later
+  added a ninth, **`remove-status`**; the line is now held at nine — see CONVENTIONS "Response
+  vocabulary — now NINE".)*
 - **Flow:** **scripted-intro encounter** (a rigged fight with a story outcome instead of wipe→hub).
 - Statuses: **Sleep** (breaks-on-damage suppress), **Glow** (stacking resource), **turn-order**
   (act first *or* last — two-way primitive; **Web** = act-last consumer + 10%/turn break-free),

@@ -1,6 +1,6 @@
 # Phase 4 — Party, Specializations, the Cave & Biomes: Implementation Plan
 
-Status: planned
+Status: shipped — see phases/phase-4-party-specializations-cave-biomes.md
 
 ## Context
 
@@ -638,9 +638,9 @@ creatures, that biome's new statuses, ~10 affinity-matched spells contributed to
 three slots) — stated explicitly since GAME_DESIGN's "(floors 1–30)" aside could be misread as
 each biome spanning all 30.
 
-## Slice I — Integration pass
+## Slice I — Integration pass (+ boss floors)
 
-No new mechanism. Proves the whole phase works together against **real** content:
+No new *engine* mechanism. Proves the whole phase works together against **real** content:
 
 - Wire `data/biomes.ts`'s real 3-biome spawn pools into `generation.ts` in place of Slice A's
   fixtures (biomes 4–10 stay Slice-A-style placeholders — empty/minimal spawn pools, valid
@@ -653,6 +653,19 @@ No new mechanism. Proves the whole phase works together against **real** content
   checkpoint-verify the load-bearing facts (result, floor advanced, soul% banked, at least one
   species-signature mechanic visibly fired in at least one fight's event log) rather than a
   full hand-traced log.
+- **Boss floors** *(added at the PR #65 review — design-owner call: folded into Slice I rather
+  than a separate slice).* H1–H3 authored the three bosses as data but deferred the runner, which
+  left floors 10/20/30 generating ordinary spawn-pool fights and perk points unreachable in play.
+  The rules are in CONVENTIONS "Generation & the run layer" (boss floors + rewards). Build:
+  `FLOORS_PER_BIOME` (replacing the inline 10 in `biomeForFloor`, behavior-identical);
+  `BiomeData.boss?` + `Fight.boss?`; the boss-floor branch in `generateFloor`; `bossLevel(floor)`
+  in `curves.ts` (**ASSUMPTION 32**); wire the three authored bosses into their biomes; in
+  `descend()`, boss kills bank XP/currency without soul%, and a boss-fight win records the boss in
+  `bossesCleared`. Tests: focused generation/store tests on fixture data, a **hand-derived**
+  Broodmother golden that closes H1's runner contract (Swarm Call's count includes her adds), a
+  data test (every authored biome has a boss, adds are pool members), and a real-content floor-10
+  checkpoint added to the integration test. Prior goldens stay byte-identical (every fixture
+  biome is boss-less).
 - Full regression: every golden from Phases 1–3 plus every new one from B–H3, `lint`,
   `format:check`, `build`.
 - Write the phase record (`.claude/phases/phase-4-party-specializations-cave-biomes.md`)
@@ -696,8 +709,8 @@ No new mechanism. Proves the whole phase works together against **real** content
 
 Numbered in document order (1–30); every inline `**ASSUMPTION N**` citation above matches its
 number here exactly — no split labels (a prior draft's `6a`/`6b` are now plain `6`/`7`), no
-gaps, no collisions. **#31 is a single later addition**, appended after the pass that fixed
-1–30 rather than triggering a second full renumber; it's cross-referenced from the vocabulary
+gaps, no collisions. **#31 and #32 are later additions**, appended after the pass that fixed
+1–30 rather than triggering a second full renumber (#32 at the Slice I review). #31 is cross-referenced from the vocabulary
 table's instance-list row and belongs conceptually beside #6–8 in Slice B. One assumption from
 the prior draft (an "execute-the-action-again loop" for Flurry/Echo) is **removed outright**,
 not renumbered — it's superseded by the locked action
@@ -771,6 +784,9 @@ instance-list decision (see Slice B), which is a settled decision, not an open a
     instance), falling back to normal default-target selection only if that target has since
     died — matching the Brute starter's own wording exactly. AOE instances independently
     re-freeze their own target set per instance (no single target to preserve).
+32. *(Added at the Slice I review.)* `bossLevel(floor)` = `enemyLevelRange(floor).max +
+    BOSS_LEVEL_OFFSET`, with a placeholder offset of 3 ("a few above the floor's range",
+    species-locked.md). Parked balance, like #1–3.
 
 **Locked decisions (resolved with the design owner, not open for review):**
 - The **action instance-list model** for Attack/Cast (Slice B) — see the vocabulary table and
@@ -781,4 +797,5 @@ instance-list decision (see Slice B), which is a settled decision, not an open a
 `A` (generation) → `B` (response vocab + hooks + formula) → `C` (targeting/turn-order/immunity)
 → `D` (counters/resources) → `E` (support spells) → `F` (specs/perks/starters/Unicorn) → `G`
 (state layer) → `H1` (Overgrowth) → `H2` (Glimmerdark) → `H3` (Rotcap Hollow) → `I`
-(integration + phase record). Eleven PRs, each merged to `main` before the next branches.
+(integration + boss floors + phase record). Eleven PRs, each merged to `main` before the next
+branches.
