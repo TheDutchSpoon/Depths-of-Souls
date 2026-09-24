@@ -1,6 +1,7 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **in progress — Slices A–H2 done** (A: 260/260 tests; B: 299/299 tests, post-review-fix;
+Status: **shipped — all eleven slices (A–I, H split H1/H2/H3) complete**, 104 files / 595 tests
+green at close, `lint`/`format:check`/`build` all clean (A: 260/260 tests; B: 299/299 tests, post-review-fix;
 C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
 post-design-feedback (ally target-selector completion); E2: 424/424 tests (its own phase-record
 entry was filled in retroactively during F — see that section); F: 470/470 tests,
@@ -24,7 +25,13 @@ from a bespoke script to a real trait (deleting `ambush-strike` entirely — act
 the scripting layer's job, never a creature-identity trait), reassigned Sparkeaters' affinities
 to match the stat each drains, redesigned Sparkeater Voidmaw (max-HP parasite) and all three
 Gloomjaws (three distinct verbs, not one shared mechanic), and added five new goldens + four
-engine-level `fireHook` unit tests; lint/format/build green throughout). Built per
+engine-level `fireHook` unit tests; lint/format/build green throughout); two interstitial slices
+landed between H2 and H3, each with its own phase-record file (not folded into this one):
+cumulative spell unlock (`phases/phase-4-cumulative-spell-unlock.md`) and percent-HP condition
+ticks (`phases/phase-4-percent-hp-condition-ticks.md`); H3: **594/594 tests**, post-PR-#64-review
+— real Rotcap Hollow content, four engine bugs + four content revisions (see that section below);
+I: **595/595 tests** — the integration pass, one new end-to-end test against real content, no new
+engine mechanism (see that section below). Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
@@ -2350,11 +2357,92 @@ Sovereign) — still not built by any slice (Slice G's store only ships
 `recordBossKill`/`bossesCleared` as state); the integration pass and this record's closing
 section (I).
 
-## Next
+## Slice I — Integration pass
 
-Slice I — Integration pass: wire `data/biomes.ts`'s real 3-biome spawn pools into `generation.ts`
-in place of Slice A's remaining fixtures (biomes 4–10 stay placeholder), an end-to-end
-generated-then-checkpoint-verified integration test (starter party → scripted intro → `descend()`
-through floor 1's real Overgrowth fights), full regression across every golden from Phases 1–3
-plus every new one from B–H3, and this phase record's own closing section. See
-`.claude/briefs/phase-4-implementation-plan.md`.
+No new engine mechanism, per the brief. Proves the whole phase composes against **real** content
+and closes the phase out.
+
+### What was built
+
+**Real biome wiring — already done, verified rather than redone.** The brief's own first bullet
+("wire `data/biomes.ts`'s real 3-biome spawn pools into `generation.ts` in place of Slice A's
+fixtures") turned out to already be complete: `generation.ts` never held fixture data itself (its
+own fixtures live only in its test file, `__fixtures__/biomes.ts`, per Slice A's own design — the
+module takes `BiomeData` as an explicit parameter, never importing `src/data` directly); H1/H2/H3
+each already replaced their own slot in `data/biomes.ts` (`BIOMES[0..2]`) with real content as
+they landed, and `src/state/store.ts`'s `DEFAULT_DEPS.biomes` already pointed at that same real
+`BIOMES` export from Slice G onward. Confirmed by grep: no production file under `src/engine` or
+`src/state` references `__fixtures__`. The only actual work here was **doc cleanup** — two stale
+comments in `store.ts` still described biomes 1–3 as placeholder-shaped (true when Slice G
+shipped, false since H3): the file-header comment (now notes `integration.test.ts` as the
+deliberate real-content exception to the fixture-based test convention) and `useGameStore`'s own
+doc comment (now describes biomes 1–3 as real, playable content and only 4–10 as the remaining
+placeholder).
+
+**`src/state/integration.test.ts`** (new file) — the phase's one **generated-then-checkpoint-
+verified** integration test, per CONVENTIONS' two-tier golden discipline: run once against the
+real, zero-override store (`createGameStore()`, real biomes/specializations/starters, the fixed
+default run seed), its actual output inspected, then the assertions pinned to match. Per-mechanism
+correctness already rests on Slices A–H3's own focused/hand-derived goldens; this test's job is
+only to prove the whole stack composes end to end and stays deterministic. Scenario: `setSpec
+('brute')` → `runScriptedIntro()` (the Unicorn joins) → `descend(1)` through real floor 1's
+Overgrowth content. The Brute spec was picked deliberately over Sorcerer/Shieldbarer: its
+starter's signature trait is a direct, content-level exercise of Slice B's action instance-list
+model (Attack resolves as two full-power instances), so this run also re-proves that mechanism
+against real content, not just Slice B's own fixture-scoped golden.
+
+Checkpointed facts (all confirmed by an actual run, not hand-traced from the formula):
+- Floor outcome: all 3 of floor 1's fights won (`enemyPartySize(1)=1`, `fightCount(1)=3`),
+  `cleared`/`deepestFloorAdvanced` both true, `deepestFloor` advances to 1,
+  `discoveredBiomes` gains the real Overgrowth biome id.
+- Reward banking: 3 kills (Treant Grovekeep — rare, Swarmhive Striker — uncommon, Snapjaw Jaws —
+  uncommon), soul% gains matching `SOUL_GAIN_PERCENT` per rarity (2/5/5), `xpBanked=30`
+  (`xpAwardForKill(1)=10` × 3), `currencyGained={essence:3,ore:3,bricks:3,lifeforce:3}`.
+- Real species-signature mechanics fired, checked by `effectId` against the actual trait
+  constants (`TREANT_GROVEKEEP_TRAIT`/`SWARMHIVE_STRIKER_TRAIT`/`SNAPJAW_JAWS_TRAIT`/
+  `UNICORN_TRAIT`), not string literals: Grovekeep's team-wide +15% max-Health `on-fight-start`
+  amplifier, Striker's count-scaling +20%-per-living-Swarmhive-ally `on-fight-start` payoff
+  (Slice D's `magnitudeSource` against real content), Jaws' `on-damage-taken` 60%-Attack
+  retaliation, and the Unicorn's `on-attack` → `revive` trigger (Slice B's mechanism against real
+  content) — firing 26 times across the floor, resolving into 10 real `Revived` events (the rest
+  are documented targeting fizzles, per CONVENTIONS: an empty dead-ally pool is a fizzle, not a
+  suppressed trigger — `TriggerFired` still fires either way).
+- The two `StatModifierApplied` events land the exact documented factors (Grovekeep ×1.15 on
+  Health, Striker ×1.2 on Attack).
+- Determinism: an independent second `createGameStore()` run against the same fixed seed produces
+  a byte-identical `FloorOutcome` (`toEqual`, not just spot fields).
+
+### Tests
+
+**104 files / 595 tests** (up from H3's 594 — the one new `integration.test.ts` file/test).
+Full Phase 1–3 + Slice A–H3 suite re-verified: all 594 prior tests pass unmodified alongside the
+new one. `lint` / `format:check` / `build` all clean.
+
+### Deliberately out of scope for Slice I (future phases)
+
+Per the brief's own scope boundary, restated: no UI (`src/ui`/`src/app` — Phase 4.5's job), no
+persistence (Phase 5), no equipment/gem forge economy/fusion/catch-up leveling (Phase 8), no
+scripting/combat UI (Phase 6/7), biomes 4–10 content, behavioral traits. Also still not built by
+any Phase 4 slice: the boss-encounter runner for Broodmother/Leech Sovereign/Rot Sovereign (the
+store only ships `recordBossKill`/`bossesCleared` as state, unchanged by this slice).
+
+## Phase 4 close-out
+
+All eleven slices (A–I, H split H1/H2/H3) shipped, plus one inserted mid-sequence (E2) and two
+interstitial slices between H2/H3 with their own phase-record files (cumulative spell unlock,
+percent-HP condition ticks). Final state: **104 test files / 595 tests**, `lint`/`format:check`/
+`build` all clean. The engine's hook vocabulary grew from Phase 3's 13 to Slice B's 17 (the four
+`on-[action]` hooks), then settled at a final **16** once Slice E2's general `on-action-observed`
+superseded the never-wired `on-ally-action`/`on-enemy-action` pair (net −1); the response
+vocabulary grew from six to nine top-level kinds (Slice E2's own `remove-status` addition beyond
+this doc's earlier eight-kind tally — see `briefs/phase-4-slice-e2-primitives.md`); and the engine
+gained the action instance-list model, armor
+penetration, cross-stat contribution, count-scaling magnitude sources, consume-stacks, cheat-death,
+turn-order statuses, status immunity, the targeting-override pipeline, splashing/annihilate, and
+the support-spell model — all proven additive to every Phase 1–3 golden throughout. `src/data`
+gained three full biomes (54+ real creatures across Overgrowth/Glimmerdark/Rotcap Hollow, their
+traits/spells/statuses, and three bosses), three full specialization/perk trees summing to exactly
+1000 points each, and the three starters + the Unicorn. `src/state` became a real directory for
+the first time, with an in-memory Zustand store owning navigation/ownership/`descend()`. Not yet
+built, by design: any UI, persistence, or the Phase-8-gated economy — see each slice's own "out of
+scope" note above for the complete list.
