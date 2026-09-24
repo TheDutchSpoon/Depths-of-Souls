@@ -1,6 +1,6 @@
 # Phase 4 — Party, specializations, the cave & biomes
 
-Status: **shipped — all eleven slices (A–I, H split H1/H2/H3) complete**, 104 files / 595 tests
+Status: **shipped — all eleven slices (A–I, H split H1/H2/H3) complete**, 105 files / 610 tests
 green at close, `lint`/`format:check`/`build` all clean (A: 260/260 tests; B: 299/299 tests, post-review-fix;
 C: 337/337 tests, post-review-fix; D: 368/368 tests, post-review-amendment; E: 385/385 tests,
 post-design-feedback (ally target-selector completion); E2: 424/424 tests (its own phase-record
@@ -30,8 +30,10 @@ landed between H2 and H3, each with its own phase-record file (not folded into t
 cumulative spell unlock (`phases/phase-4-cumulative-spell-unlock.md`) and percent-HP condition
 ticks (`phases/phase-4-percent-hp-condition-ticks.md`); H3: **594/594 tests**, post-PR-#64-review
 — real Rotcap Hollow content, four engine bugs + four content revisions (see that section below);
-I: **595/595 tests** — the integration pass, one new end-to-end test against real content, no new
-engine mechanism (see that section below). Built per
+I: **610/610 tests** (595/595 at the original integration-pass submission, then 610/610 after the
+PR #65 review folded boss floors into the same slice — see that section below); no new engine
+mechanism at the original submission, `isBossFloor`/`bossLevel`/`BiomeData.boss` added at review.
+Built per
 the approved plan at `.claude/briefs/phase-4-implementation-plan.md` (kept there for the full
 slice sequencing, the engine-vocabulary delta table, and the numbered `ASSUMPTION` checklist —
 not duplicated here). Eleven slices originally planned (A–I, H split into H1/H2/H3 per biome),
@@ -1768,6 +1770,11 @@ this H1 section.
   `speciesId` -- it's a `materializeCreature` call argument, not stored data), so it is currently
   unenforceable and untested. Whichever future slice builds the boss-runner (or a dedicated
   boss-runner brief, if one lands first) must pass `SPIDERS_SPECIES_ID` explicitly to both calls.
+  **Resolved in Slice I** (PR #65 review): `BossEncounter.speciesId` is now real, enforced data
+  (`generateFloor`'s boss branch passes it to `materializeCreature` for the boss herself, and each
+  add's own speciesId is separately resolved from the biome's `speciesPool`, invariant-checked) --
+  see `data/biomes.test.ts`'s "Boss floors" describe block and `golden-broodmother.test.ts` (the
+  count-3/count-2 Swarm Call trace this bullet was itself waiting on).
 - **`starters.ts` registry retrofit**: move its inline trait/spell consts into
   `traits.ts`/`spells.ts`, closing the two-pattern window this slice's own earlier follow-up
   fixed for `overgrowth.ts` (see "Follow-up fix: where species-authored content lives" above).
@@ -2411,38 +2418,151 @@ Checkpointed facts (all confirmed by an actual run, not hand-traced from the for
   Health, Striker ×1.2 on Attack).
 - Determinism: an independent second `createGameStore()` run against the same fixed seed produces
   a byte-identical `FloorOutcome` (`toEqual`, not just spot fields).
+- **PR #65 review addition**: the Brute's own action instance-list is now asserted directly, not
+  just claimed by the header comment — `attacksPerTurn` buckets `AttackDeclared` events by the
+  Brute's own `TurnStarted`…`TurnEnded` bracket across all 18 turns she takes on floor 1; 17
+  brackets declare exactly 2 (the double-strike), 1 declares exactly 1 (fight 2's second turn,
+  where instance 1 alone kills the already-wounded Swarmhive Striker and instance 2 has no living
+  target left to fall back to).
 
 ### Tests
 
-**104 files / 595 tests** (up from H3's 594 — the one new `integration.test.ts` file/test).
-Full Phase 1–3 + Slice A–H3 suite re-verified: all 594 prior tests pass unmodified alongside the
-new one. `lint` / `format:check` / `build` all clean.
+**105 files / 610 tests** (up from H3's 594/103 — 2 new files, `integration.test.ts` and
+`golden-broodmother.test.ts`; the other 4 touched test files gained cases without becoming new
+files; 16 new test cases total, see the "Boss floors" subsection below for the exact per-file
+split). Full Phase 1–3 + Slice A–H3 suite re-verified: every prior test passes unmodified
+alongside the new ones. `lint` / `format:check` / `build` all clean.
+
+### Boss floors (PR #65 review addition, folded into this slice)
+
+*Design-owner call at PR #65 review*: H1/H2/H3 each authored their boss as data (an elevated
+`SpeciesCreature` + adds + signature trait) but deliberately deferred the actual **runner** —
+nothing materialized a boss on its own floor, so floors 10/20/30 generated ordinary spawn-pool
+fights and perk points were unreachable in play. Rather than a twelfth slice, the design owner
+folded this into Slice I's own review pass (same PR, same branch) since it's the natural
+completion of "prove the whole phase composes against real content" — a boss floor IS real-content
+integration, just one Slice I's original scope happened to skip.
+
+**Engine** (`src/engine/generation.ts`, `src/engine/curves.ts`): `FLOORS_PER_BIOME` (replacing the
+inline `10` in `biomeForFloor`, behavior-identical — the existing `biomeForFloor` test suite proves
+it) and `isBossFloor(floor) = floor % FLOORS_PER_BIOME === 0`, checked at every depth (floor 101+
+included, no special case). New `BossEncounter` interface (`{bossId, creature, speciesId, adds}`)
+on `BiomeData.boss?`; `Fight` gains `boss?: {bossId, creatureId}`. `generateFloor`'s new boss
+branch (checked before the ordinary path): when `isBossFloor(floor) && biome.boss`, returns exactly
+ONE `Fight` — the boss materialized at `bossLevel(floor)` (curves.ts, **ASSUMPTION 32**:
+`enemyLevelRange(floor).max + BOSS_LEVEL_OFFSET(3)`, parked balance like #1-3) at slot 0, then her
+adds (each rolling a level within `enemyLevelRange(floor)` and a loadout via `rollLoadout` — the
+SAME per-slot calls an ordinary spawn makes, minus the species/creature draws a fixed add doesn't
+need). Each add's `speciesId` is resolved from the biome's own `speciesPool` by a new
+`resolveAddSpeciesId` (throws, invariant-checked, if the add isn't actually a member) — never
+carried as separate authored data. `fightCount`/`enemyPartySize` are not consulted for a boss
+floor, per CONVENTIONS.
+
+**Data** (`src/data/species/{overgrowth,glimmerdark,rotcap-hollow}.ts`): each real biome's `.boss`
+now wires its already-shipped boss constants — Broodmother (`speciesId: SPIDERS_SPECIES_ID`,
+`adds: BROODMOTHER_ADDS`, sharing her Spider adds' own species per species-locked.md), Leech
+Sovereign (`speciesId` is her own id — no natural species, `adds: []`, lean by design), Rot
+Sovereign (`speciesId` is her own id; her two adds span TWO different real species, each
+independently resolved by `resolveAddSpeciesId`). Each file's old H1/H2/H3 "boss-encounter runner
+not built" comment is rewritten to point at this wiring instead of flagging it as a gap.
+
+**Store** (`src/state/store.ts`): `descend()`'s reward loop special-cases a dead enemy whose id
+matches `fight.boss.creatureId` — banks XP/currency through the same per-kill path but skips
+`findStaticCreature` entirely and grants no soul% (CONVENTIONS: bosses aren't collectable); every
+other enemy (including a boss's own adds) is unaffected. A won boss fight now sets a new local
+`bossDefeated` and folds it into `bossesCleared` via a new `withBossCleared` helper — extracted so
+`recordBossKill` and `descend()` share the exact same idempotent-add logic rather than two
+independently-written copies. `FloorOutcome` gains `bossDefeated: string | null`.
+
+**Tests** (10 new files, 16 new cases — none of them touch an existing test):
+- `generation.test.ts` (+6, fixture data): a new `FIXTURE_BIOME_WITH_BOSS` (deliberately a
+  SEPARATE fixture — `FIXTURE_BIOME` itself stays boss-less, keeping every earlier
+  `generateFloor` test byte-identical); floor 10 returns boss@0 + her add, at `bossLevel(10)`,
+  the add's speciesId resolved from the pool; floors 9/11 and a boss-less biome at floor 10 stay
+  ordinary; floor 110 (>100) is still a boss floor, no special case; an add absent from the pool
+  throws.
+- `store.test.ts` (+3, fixture data): a boss win (`bossDefeated` set, `bossesCleared` banks it,
+  boss XP/currency with no soul%, the add gets soul%), re-clearing leaves `bossesCleared.size`
+  unchanged, a boss loss records nothing boss-related but still banks the add's kill.
+- `data/biomes.test.ts` (+4, real content): every authored (non-placeholder) biome has a boss;
+  every boss add is a real pool member; the Broodmother's `speciesId` matches
+  `SPIDERS_SPECIES_ID`; a real `generateFloor(10, OVERGROWTH_BIOME, …)` roster carries that
+  speciesId on all three creatures.
+- `golden-broodmother.fixture.ts` / `.test.ts` (+1, hand-derived, real `BROODMOTHER_TRAIT`): the
+  H1 "boss-encounter runner contract" golden that slice's own doc comment flagged as untested —
+  closes it. Two generic adds (not the real Spider Weaver/Ambusher — their own mechanics already
+  have H1 goldens; this one's job is Swarm Call's count math) share `SPIDERS_SPECIES_ID` with the
+  Broodmother. `TURN_STEPS=5` (`resolveTurn`, not `resolveFight` — mirrors `golden-rot-sovereign`'s
+  own technique): Swarm Call fires at count 3 (round 1, all three alive) for 18 bonus damage, an
+  add dies to the player striker later that same round, then Swarm Call fires again at count 2
+  (round 2) for 12 — the exact count-scaling `magnitudeSource` end-to-end proof H1 deferred. The
+  round-end 40% Web roll is independently verified (an `node`-replicated mulberry32 at the chosen
+  seed) to fail, so nothing else complicates the trace.
+- `state/integration.test.ts` (+1, real content, generated-then-checkpoint-verified): the SAME
+  Brute+Unicorn party from the floor-1 case, leveled to 20 (chosen after level 50 was tried and
+  rejected — at 50 the party kills every enemy, including the boss, before her own turn ever
+  arrives, so Swarm Call never fires; 20 still guarantees a win while letting her act at least
+  once) then `deepestFloor` fast-forwarded to 9. Checkpoints one fight, the real roster (Broodmother
+  + both real spiderling adds, ids confirmed from the run), Swarm Call firing, `bossDefeated`,
+  `bossesCleared`, soul%/XP/currency split between the boss and her adds, `deepestFloor=10`, and
+  idempotent re-clearing. The floor-1 case is untouched by this addition.
+
+### Event-log legibility read (the plan's own Verification step, floor 1, default seed)
+
+Per-mechanism correctness already rests on the focused/golden tests above; this is the
+"`/verify` a full `descend()` run... and read the event log end-to-end for legibility" step the
+brief's own Verification section calls for — recorded here as playtest/balance INPUT (GAME_DESIGN
+§13 parks the numbers), not a code change:
+- **Fight 1** (Treant Grovekeep, scripted to always-defend): 15 rounds. Every one of the Brute's
+  hits lands as a 1-damage chip (45 total across the fight) against the Treant's Defend-boosted
+  Defence; the Treant itself never attacks. Grovekeep's own +15% max-Health amplifier raises the
+  cap only — no accompanying heal, the established precedent (no status auto-heals a raised cap).
+- **Fight 2** (Swarmhive Striker, Attack 33 → 39.6 via her own fight-start count-scaling): hits
+  the Brute (20 HP) for 24 — more than her whole HP pool. The Brute dies twice and is revived
+  twice by the Unicorn at 4 HP each time. Won in round 2 (per the instance-list note above, its
+  second instance never fires — the Striker is already dead).
+- **Fight 3** (Snapjaw Jaws): the Brute dies in round 1 itself (a 15-damage main hit plus two
+  3-damage Snapback retaliations off her own double-strike). From round 2 on she is revived and
+  re-killed every round (8 deaths, 8 `Revived` events total) without ever acting again — she is
+  dead at each round's start, so she is simply absent from that round's frozen turn queue
+  (CONVENTIONS), and Jaws kills her again before the next round starts. The Unicorn alone finishes
+  Jaws off with 1-damage chips over many rounds.
+- **Floor 2** (not attempted by this test, but observed while exploring the run): the SAME party
+  — still level 1, 30 total XP after floor 1 — loses its very first fight. The floor→level curve's
+  gap is already real at floor 2 for a level-1 starter party; nothing here is a bug, it is exactly
+  GAME_DESIGN §13's "master difficulty lever" doing its job. Recorded as direct input for the
+  Phase 4.5 demo's own balance pass and for playtest, not actioned as a code change in this slice.
 
 ### Deliberately out of scope for Slice I (future phases)
 
 Per the brief's own scope boundary, restated: no UI (`src/ui`/`src/app` — Phase 4.5's job), no
 persistence (Phase 5), no equipment/gem forge economy/fusion/catch-up leveling (Phase 8), no
-scripting/combat UI (Phase 6/7), biomes 4–10 content, behavioral traits. Also still not built by
-any Phase 4 slice: the boss-encounter runner for Broodmother/Leech Sovereign/Rot Sovereign (the
-store only ships `recordBossKill`/`bossesCleared` as state, unchanged by this slice).
+scripting/combat UI (Phase 6/7), biomes 4–10 content, behavioral traits.
 
 ## Phase 4 close-out
 
-All eleven slices (A–I, H split H1/H2/H3) shipped, plus one inserted mid-sequence (E2) and two
+All eleven slices (A–I, H split H1/H2/H3) shipped, plus one inserted mid-sequence (E2), two
 interstitial slices between H2/H3 with their own phase-record files (cumulative spell unlock,
-percent-HP condition ticks). Final state: **104 test files / 595 tests**, `lint`/`format:check`/
-`build` all clean. The engine's hook vocabulary grew from Phase 3's 13 to Slice B's 17 (the four
-`on-[action]` hooks), then settled at a final **16** once Slice E2's general `on-action-observed`
-superseded the never-wired `on-ally-action`/`on-enemy-action` pair (net −1); the response
-vocabulary grew from six to nine top-level kinds (Slice E2's own `remove-status` addition beyond
-this doc's earlier eight-kind tally — see `briefs/phase-4-slice-e2-primitives.md`); and the engine
-gained the action instance-list model, armor
-penetration, cross-stat contribution, count-scaling magnitude sources, consume-stacks, cheat-death,
-turn-order statuses, status immunity, the targeting-override pipeline, splashing/annihilate, and
-the support-spell model — all proven additive to every Phase 1–3 golden throughout. `src/data`
-gained three full biomes (54+ real creatures across Overgrowth/Glimmerdark/Rotcap Hollow, their
-traits/spells/statuses, and three bosses), three full specialization/perk trees summing to exactly
-1000 points each, and the three starters + the Unicorn. `src/state` became a real directory for
-the first time, with an in-memory Zustand store owning navigation/ownership/`descend()`. Not yet
+percent-HP condition ticks), and boss floors — folded into Slice I at the PR #65 review by a
+design-owner call, closing the "boss-encounter runner" gap H1/H2/H3 each deferred. Final state:
+**105 test files / 610 tests**, `lint`/`format:check`/`build` all clean. The engine's hook
+vocabulary grew from Phase 3's 13 to Slice B's 17 (the four `on-[action]` hooks), then settled at a
+final **16** once Slice E2's general `on-action-observed` superseded the never-wired
+`on-ally-action`/`on-enemy-action` pair (net −1); the response vocabulary grew from Phase 3's
+**four** (`deal-damage`/`apply-status`/`apply-stat-modifier`/`suppress-action` — CLAUDE.md's own
+pinned Phase 3 list) to Phase 4's **nine** top-level kinds (`revive`/`grant-action-state`/
+`consume-stacks` in Slice B/D, `remove-status` in Slice E2 — see
+`briefs/phase-4-slice-e2-primitives.md`); and the engine gained the action instance-list model,
+armor penetration, cross-stat contribution, count-scaling magnitude sources, consume-stacks,
+cheat-death, turn-order statuses, status immunity, the targeting-override pipeline,
+splashing/annihilate, the support-spell model, and boss floors (`isBossFloor`/`bossLevel`/
+`BiomeData.boss`) — all proven additive to every Phase 1–3 golden throughout. `src/data` gained
+three full biomes (54+ real creatures across Overgrowth/Glimmerdark/Rotcap Hollow, their
+traits/spells/statuses, and three now-fully-wired bosses — the Broodmother, Leech Sovereign, and
+Rot Sovereign are fought on floors 10/20/30 respectively, each a genuine perk-point source in play,
+100 points on first clear per GAME_DESIGN §9), three full specialization/perk trees summing to
+exactly 1000 points each, and the three starters + the Unicorn. `src/state` became a real
+directory for the first time, with an in-memory Zustand store owning
+navigation/ownership/`descend()`, including boss-floor reward banking and `bossesCleared`. Not yet
 built, by design: any UI, persistence, or the Phase-8-gated economy — see each slice's own "out of
 scope" note above for the complete list.

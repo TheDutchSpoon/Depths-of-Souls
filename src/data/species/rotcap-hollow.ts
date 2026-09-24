@@ -29,7 +29,12 @@
 
 import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
-import type { BiomeData, Species, SpeciesCreature } from '../../engine/generation'
+import type {
+  BiomeData,
+  BossEncounter,
+  Species,
+  SpeciesCreature,
+} from '../../engine/generation'
 import {
   CHARNEL_FEAST,
   PUPPET_STRING,
@@ -329,10 +334,11 @@ export const ROTCAP_HOLLOW_SPECIES_POOL: readonly Species[] = [
 // Spore alongside her own blanket) and Rotfeeder Scavenger (a body that feeds the "any creature
 // that dies" half of her own growth when it falls), both real Rotcap Hollow roster members.
 //
-// ASSUMPTION (Slice H3, scope boundary -- mirrors H1/H2's own): the actual boss-encounter RUNNER
-// is still not built by any slice (Slice G's store only ships recordBossKill/bossesCleared as
-// STATE) -- this slice only authors the boss as content: her stats, her signature trait, and her
-// adds.
+// The boss floor itself (materializing her + her adds on floor 30, banking rewards, recording
+// bossesCleared) is wired through `BiomeData.boss` below (Phase 4 Slice I, PR #65 review) -- see
+// `generation.ts`'s `generateFloor` boss branch and CONVENTIONS' "Boss floors". H3 authored her
+// as data only and deliberately left the runner unbuilt, mirroring H1/H2's own bosses; that gap
+// is what Slice I closes.
 
 export const ROT_SOVEREIGN: SpeciesCreature = {
   id: 'rot-sovereign',
@@ -340,7 +346,7 @@ export const ROT_SOVEREIGN: SpeciesCreature = {
   baseStats: { health: 30, attack: 22, intelligence: 20, defence: 26, speed: 16 },
   defaultScriptId: 'always-attack',
   innateTraitIds: [ROT_SOVEREIGN_TRAIT.id],
-  rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, see the ASSUMPTION above
+  rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, an authored boss encounter
 }
 
 /** The adds accompanying her fight -- real Rotcap Hollow roster members, per the boss-authoring
@@ -353,6 +359,17 @@ export const ROT_SOVEREIGN_ADDS: readonly SpeciesCreature[] = [
 
 export const ROT_SOVEREIGN_BOSS_ID = 'rot-sovereign'
 
+/** Phase 4 Slice I (PR #65 review): wires the Rot Sovereign into `ROTCAP_HOLLOW_BIOME.boss`.
+ * `speciesId` is her OWN id -- like the Leech Sovereign (and unlike the Broodmother), she has no
+ * natural species of her own; her adds span TWO different real species (Sporecloud/Rotfeeder),
+ * each resolved independently against this biome's `speciesPool` by `resolveAddSpeciesId`. */
+export const ROTCAP_HOLLOW_BOSS: BossEncounter = {
+  bossId: ROT_SOVEREIGN_BOSS_ID,
+  creature: ROT_SOVEREIGN,
+  speciesId: ROT_SOVEREIGN.id,
+  adds: ROT_SOVEREIGN_ADDS,
+}
+
 // ---- The biome itself ----
 
 export const ROTCAP_HOLLOW_BIOME_ID = createBiomeId('rotcap-hollow')
@@ -361,6 +378,7 @@ export const ROTCAP_HOLLOW_BIOME: BiomeData = {
   id: ROTCAP_HOLLOW_BIOME_ID,
   name: 'Rotcap Hollow',
   speciesPool: ROTCAP_HOLLOW_SPECIES_POOL,
+  boss: ROTCAP_HOLLOW_BOSS,
 }
 
 // Re-exported for the loader test / anyone wanting a plain Affinity sanity check without

@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { createSeededRng, type SeededRng } from './rng'
-import type { BiomeId } from './ids'
+import { createBiomeId, type BiomeId } from './ids'
+import type { BiomeData, SpeciesCreature } from './generation'
 import type { CombatState } from './types'
 import { scaleStatsToLevel } from './leveling'
-import { enemyLevelRange, enemyPartySize, fightCount } from './curves'
+import { bossLevel, enemyLevelRange, enemyPartySize, fightCount } from './curves'
 import {
   biomeForFloor,
   canEquip,
   generateFloor,
+  isBossFloor,
   materializeCreature,
   spellsUnlockedAt,
 } from './generation'
@@ -17,8 +19,13 @@ import {
   FIXTURE_ALL_SPELLS,
   FIXTURE_BIOME,
   FIXTURE_BIOME_SEQUENCE,
+  FIXTURE_BIOME_WITH_BOSS,
+  FIXTURE_BOSS,
+  FIXTURE_BOSS_ADD,
+  FIXTURE_BOSS_CREATURE,
   FIXTURE_BRUISER,
   FIXTURE_CASTER,
+  FIXTURE_SPECIES_BRAWLERS,
   FIXTURE_VIOLENCE_BOLT,
   FIXTURE_WIT_BOLT,
   FIXTURE_WIT_BOLT_TIER2,
@@ -342,6 +349,108 @@ describe('generateFloor', () => {
     expect(resolveCount(enemyParty[0]!, 'living-allies-of-species', state)).toBe(
       enemyParty.length,
     )
+  })
+})
+
+describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
+  it('isBossFloor is true only on a floor%FLOORS_PER_BIOME===0, at any depth', () => {
+    expect(isBossFloor(10)).toBe(true)
+    expect(isBossFloor(20)).toBe(true)
+    expect(isBossFloor(110)).toBe(true) // no special-casing past floor 100
+    expect(isBossFloor(9)).toBe(false)
+    expect(isBossFloor(11)).toBe(false)
+  })
+
+  it('floor 10 against a boss-carrying biome returns exactly one Fight: boss@0, adds after, the boss at bossLevel(10), each add speciesId resolved from the pool', () => {
+    const fights = generateFloor(
+      10,
+      FIXTURE_BIOME_WITH_BOSS,
+      1,
+      FIXTURE_ALL_SPELLS,
+      createSeededRng(5),
+    )
+    expect(fights).toHaveLength(1)
+    const fight = fights[0]!
+    // fightCount/enemyPartySize are NOT consulted -- the roster size is boss + adds.length, not
+    // fightCount(10)*enemyPartySize(10).
+    expect(fight.enemyParty).toHaveLength(1 + FIXTURE_BOSS.adds.length)
+
+    const boss = fight.enemyParty[0]!
+    expect(boss.baseStats).toEqual(
+      scaleStatsToLevel(FIXTURE_BOSS_CREATURE.baseStats, bossLevel(10)),
+    )
+    expect(boss.speciesId).toBe(FIXTURE_BOSS.speciesId)
+    expect(fight.boss).toEqual({ bossId: FIXTURE_BOSS.bossId, creatureId: boss.id })
+
+    const add = fight.enemyParty[1]!
+    // FIXTURE_BOSS_ADD (FIXTURE_BRUISER) is a real member of FIXTURE_SPECIES_BRAWLERS -- its
+    // speciesId is RESOLVED from FIXTURE_BIOME_WITH_BOSS's own pool, never carried as separate
+    // boss data.
+    expect(add.speciesId).toBe(FIXTURE_SPECIES_BRAWLERS.id)
+    const { min, max } = enemyLevelRange(10)
+    expect(add.baseStats.health).toBeGreaterThanOrEqual(
+      scaleStatsToLevel(FIXTURE_BOSS_ADD.baseStats, min).health,
+    )
+    expect(add.baseStats.health).toBeLessThanOrEqual(
+      scaleStatsToLevel(FIXTURE_BOSS_ADD.baseStats, max).health,
+    )
+  })
+
+  it('floors 9 and 11 (not boss floors) generate the ordinary spawn-pool path even against a boss-carrying biome', () => {
+    for (const floor of [9, 11]) {
+      const fights = generateFloor(
+        floor,
+        FIXTURE_BIOME_WITH_BOSS,
+        1,
+        FIXTURE_ALL_SPELLS,
+        createSeededRng(3),
+      )
+      expect(fights).toHaveLength(fightCount(floor))
+      for (const fight of fights) {
+        expect(fight.boss).toBeUndefined()
+        expect(fight.enemyParty).toHaveLength(enemyPartySize(floor))
+      }
+    }
+  })
+
+  it('floor 10 against a boss-LESS biome (every other fixture) generates the ordinary path', () => {
+    const fights = generateFloor(
+      10,
+      FIXTURE_BIOME,
+      1,
+      FIXTURE_ALL_SPELLS,
+      createSeededRng(3),
+    )
+    expect(fights).toHaveLength(fightCount(10))
+    for (const fight of fights) {
+      expect(fight.boss).toBeUndefined()
+      expect(fight.enemyParty).toHaveLength(enemyPartySize(10))
+    }
+  })
+
+  it('a floor >=101 that lands on a boss-carrying biome is still a boss floor -- the same rule, no special case', () => {
+    const fights = generateFloor(
+      110,
+      FIXTURE_BIOME_WITH_BOSS,
+      1,
+      FIXTURE_ALL_SPELLS,
+      createSeededRng(5),
+    )
+    expect(fights).toHaveLength(1)
+    expect(fights[0]!.boss?.bossId).toBe(FIXTURE_BOSS.bossId)
+  })
+
+  it('throws when a boss add is not a member of the biome speciesPool (invariant)', () => {
+    const strayAdd: SpeciesCreature = { ...FIXTURE_CASTER, id: 'fixture-stray-add' }
+    const badBiome: BiomeData = {
+      id: createBiomeId('fixture-bad-boss-biome'),
+      name: 'Bad Boss Biome',
+      speciesPool: [FIXTURE_SPECIES_BRAWLERS], // strayAdd is deliberately NOT a member
+      boss: { ...FIXTURE_BOSS, adds: [strayAdd] },
+    }
+    expect(() =>
+      generateFloor(10, badBiome, 1, FIXTURE_ALL_SPELLS, createSeededRng(1)),
+    ).toThrow(/generation invariant violated/)
   })
 })
 

@@ -68,3 +68,15 @@ export const SOUL_GAIN_PERCENT: Record<RarityTier, number> = {
   uncommon: 5,
   rare: 2,
 }
+
+/**
+ * ASSUMPTION 32 (Slice I, PR #65 review): a boss floor's boss spawns a few levels above that
+ * floor's own `enemyLevelRange(floor).max` -- species-locked.md's "a few levels above the
+ * floor's range" stands in as a flat +3 offset, parked balance like #1-3 above (tuned in
+ * playtest, never a literal scattered through generateFloor).
+ */
+export const BOSS_LEVEL_OFFSET = 3
+
+export function bossLevel(floor: number): number {
+  return enemyLevelRange(floor).max + BOSS_LEVEL_OFFSET
+}

@@ -30,7 +30,12 @@
 
 import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
-import type { BiomeData, Species, SpeciesCreature } from '../../engine/generation'
+import type {
+  BiomeData,
+  BossEncounter,
+  Species,
+  SpeciesCreature,
+} from '../../engine/generation'
 import {
   ARCANE_BOLT,
   BRAMBLE_WARD,
@@ -338,13 +343,11 @@ export const OVERGROWTH_SPECIES_POOL: readonly Species[] = [
 // BROODMOTHER_TRAIT, lives in ../traits alongside every other trait), per the fixed-authored-
 // encounter path (same mechanism as the Unicorn's scripted intro).
 //
-// ASSUMPTION (Slice H1, scope boundary): wiring an actual store-level "run this hardcoded boss
-// fight, then recordBossKill" action is deliberately NOT built here -- no such runner exists yet
-// for ANY boss (Slice G's store only ships recordBossKill/bossesCleared as STATE, the same way
-// the Unicorn's own scripted-intro runner was a dedicated Slice G store action, not automatic).
-// This slice's own checklist item 4 only asks to AUTHOR the boss as an elevated Instance +
-// signature trait(s) + adds; the runner is future UI/store wiring, flagged here rather than
-// improvised.
+// The boss floor itself (materializing her + her adds on floor 10, banking rewards, recording
+// bossesCleared) is wired through `BiomeData.boss` below (Phase 4 Slice I, PR #65 review) -- see
+// `generation.ts`'s `generateFloor` boss branch and CONVENTIONS' "Boss floors". H1 authored her
+// as data only and deliberately left the runner unbuilt (no such mechanism existed for ANY boss
+// yet); that gap is what Slice I closes.
 
 export const BROODMOTHER: SpeciesCreature = {
   id: 'broodmother',
@@ -352,7 +355,7 @@ export const BROODMOTHER: SpeciesCreature = {
   baseStats: { health: 30, attack: 24, intelligence: 24, defence: 20, speed: 20 },
   defaultScriptId: 'always-attack',
   innateTraitIds: [BROODMOTHER_TRAIT.id],
-  rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, see the ASSUMPTION above
+  rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, an authored boss encounter
 }
 
 /** The spiderling adds accompanying her fight -- real Spider-roster members, per
@@ -364,6 +367,16 @@ export const BROODMOTHER_ADDS: readonly SpeciesCreature[] = [
 
 export const BROODMOTHER_BOSS_ID = 'broodmother'
 
+/** Phase 4 Slice I (PR #65 review): wires the Broodmother into `OVERGROWTH_BIOME.boss` --
+ * `generateFloor`'s boss branch materializes her at `bossLevel(10)` plus her two adds, each
+ * resolved against this biome's own `speciesPool` (`resolveAddSpeciesId`'s invariant check). */
+export const OVERGROWTH_BOSS: BossEncounter = {
+  bossId: BROODMOTHER_BOSS_ID,
+  creature: BROODMOTHER,
+  speciesId: SPIDERS_SPECIES_ID,
+  adds: BROODMOTHER_ADDS,
+}
+
 // ---- The biome itself ----
 
 export const OVERGROWTH_BIOME_ID = createBiomeId('overgrowth')
@@ -372,6 +385,7 @@ export const OVERGROWTH_BIOME: BiomeData = {
   id: OVERGROWTH_BIOME_ID,
   name: 'The Overgrowth',
   speciesPool: OVERGROWTH_SPECIES_POOL,
+  boss: OVERGROWTH_BOSS,
 }
 
 // Re-exported for the loader test / anyone wanting a plain Affinity sanity check without

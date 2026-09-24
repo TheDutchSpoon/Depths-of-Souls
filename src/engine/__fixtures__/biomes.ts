@@ -6,6 +6,7 @@ import { createBiomeId } from '../ids'
 import {
   BIOME_COUNT,
   type BiomeData,
+  type BossEncounter,
   type Species,
   type SpeciesCreature,
 } from '../generation'
@@ -115,3 +116,36 @@ export const FIXTURE_BIOME_SEQUENCE: readonly BiomeData[] = Array.from(
     speciesPool: [],
   }),
 )
+
+// ---- Boss floors (Phase 4 Slice I, PR #65 review) ----
+// A SEPARATE fixture biome, deliberately never merged into FIXTURE_BIOME itself -- "every fixture
+// biome is boss-less" is the invariant that keeps every pre-Slice-I generateFloor golden/test
+// byte-identical (see CONVENTIONS "Boss floors").
+
+export const FIXTURE_BOSS_CREATURE: SpeciesCreature = {
+  id: 'fixture-boss',
+  affinity: 'wit',
+  baseStats: { ...BASE_STATS, attack: 30 },
+  defaultScriptId: 'always-attack',
+  innateTraitIds: [],
+  rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, an authored boss encounter
+}
+
+/** A real member of FIXTURE_SPECIES_BRAWLERS (below) -- proves the add's speciesId is resolved
+ * from the biome's own pool, not carried as separate boss data. */
+export const FIXTURE_BOSS_ADD = FIXTURE_BRUISER
+
+export const FIXTURE_BOSS: BossEncounter = {
+  bossId: 'fixture-boss-id',
+  creature: FIXTURE_BOSS_CREATURE,
+  speciesId: 'fixture-species-boss',
+  adds: [FIXTURE_BOSS_ADD],
+}
+
+/** Otherwise identical to FIXTURE_BIOME (same populated speciesPool), plus a boss. */
+export const FIXTURE_BIOME_WITH_BOSS: BiomeData = {
+  id: createBiomeId('fixture-biome-with-boss'),
+  name: 'Fixture Biome With Boss',
+  speciesPool: [FIXTURE_SPECIES_BRAWLERS, FIXTURE_SPECIES_CASTERS],
+  boss: FIXTURE_BOSS,
+}
