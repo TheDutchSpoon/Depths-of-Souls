@@ -33,12 +33,14 @@ scripts). Affinities (behavioral drive, soft-mapped to HP/Atk/Int/Def/Spd resp.)
 Endurance, Instinct**, cycle **Vitality > Violence > Wit > Endurance > Instinct > Vitality**. Incremental power lives
 in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
 statuses, gem augments, equipment infusions are ONE data-driven hook-based model (4 categories:
-stat-modifier, stat-remap, damage-modifier, condition-status). Hooks live as of Phase 3: 13-hook
-v1 vocab (Phase 4 adds the `on-[action]` family: on-attack/cast/defend/provoke), fired via `effectsForHook` (scoped iteration, shared per-creature effect order), reusing
+stat-modifier, stat-remap, damage-modifier, condition-status). Hooks: 16-hook
+v1 vocab as of Phase 4 (Phase 3's 13 + the `on-[action]` family on-attack/cast/defend/provoke;
+`on-action-observed` replaced the never-wired on-ally-/on-enemy-action pair), fired via `effectsForHook` (scoped iteration, shared per-creature effect order), reusing
 action machinery; a **`TriggerFired`** event precedes triggered consequences. **Traits** =
 `{id,name,effects[]}` — passive (incl. conditional via read-time predicate) + triggered
-(`{hook,condition?,response}`; responses: deal-damage/apply-status/apply-stat-modifier/
-suppress-action, explicit targets, no keywords). **"attack"/"cast" in a trait/spell mean the real
+(`{hook,condition?,response}`; nine responses: deal-damage/apply-status/apply-stat-modifier/
+suppress-action/heal/revive/grant-action-state/consume-stacks/remove-status — hold the line at
+nine; explicit targets, no keywords). **"attack"/"cast" in a trait/spell mean the real
 actions** (full formula; DoT the lone Defence-bypass). **Statuses**: round-based countdown at
 round-end, DoT-tick-is-a-round-end-hook, **Stun = a condition-status** (turn-start suppress-action),
 single-instance stacking to a declared cap. **Loop safety**: instance-level stack-scoped
