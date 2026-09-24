@@ -7,10 +7,10 @@ import { ROTCAP_HOLLOW_BIOME } from './species/rotcap-hollow'
 // Phase 4 Slice A ships the SHAPE only: 10 fixed biome slots (GAME_DESIGN §4's decade
 // cadence), each a valid-shape, empty spawn pool. Slice H1 replaced slot 1 (floors 1-10) with
 // real The Overgrowth content; Slice H2 replaced slot 2 (floors 11-20) with real Glimmerdark
-// content; Slice H3 replaces slot 3 (floors 21-30) with real Rotcap Hollow content. Biomes 4-10
-// stay this placeholder shape through v1 (no content authored past floor 30 yet -- see Slice I).
-// Never touch an existing slot's `id` -- biomeForFloor's fixed 1-100 sequence is positional
-// (array index = floor decade).
+// content; Slice H3 replaced slot 3 (floors 21-30) with real Rotcap Hollow content. Biomes 4-10
+// stay this placeholder shape until a later phase authors them (v1 needs all 10 biomes, per
+// ROADMAP). Never touch an existing slot's `id` -- biomeForFloor's fixed 1-100 sequence is
+// positional (array index = floor decade).
 
 function placeholderBiome(slot: number): BiomeData {
   return {

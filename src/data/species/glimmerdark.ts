@@ -20,7 +20,12 @@
 
 import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
-import type { BiomeData, Species, SpeciesCreature } from '../../engine/generation'
+import type {
+  BiomeData,
+  BossEncounter,
+  Species,
+  SpeciesCreature,
+} from '../../engine/generation'
 import {
   AFTERGLOW,
   BEACON_CHARGE,
@@ -322,10 +327,11 @@ export const GLIMMERDARK_SPECIES_POOL: readonly Species[] = [
 // layer)." Deliberately no `_ADDS` export (unlike the Broodmother) -- the design doc explicitly
 // calls out this boss as lean, single-mechanic, no add layer.
 //
-// ASSUMPTION (Slice H2, scope boundary -- mirrors H1's own): the actual boss-encounter RUNNER
-// (assembling the fight, awarding perk points on first clear) is still not built by any slice
-// (Slice G's store only ships recordBossKill/bossesCleared as state) -- this slice only authors
-// the boss as content: her stats and her signature trait.
+// The boss floor itself (materializing her on floor 20, banking rewards, recording bossesCleared)
+// is wired through `BiomeData.boss` below (Phase 4 Slice I, PR #65 review) -- see
+// `generation.ts`'s `generateFloor` boss branch and CONVENTIONS' "Boss floors". H2 authored her
+// as data only and deliberately left the runner unbuilt, mirroring H1's own Broodmother; that gap
+// is what Slice I closes.
 
 export const LEECH_SOVEREIGN: SpeciesCreature = {
   id: 'leech-sovereign',
@@ -333,10 +339,21 @@ export const LEECH_SOVEREIGN: SpeciesCreature = {
   baseStats: { health: 30, attack: 26, intelligence: 20, defence: 20, speed: 22 },
   defaultScriptId: 'always-attack',
   innateTraitIds: [LEECH_SOVEREIGN_TRAIT.id],
-  rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, see the ASSUMPTION above
+  rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, an authored boss encounter
 }
 
 export const LEECH_SOVEREIGN_BOSS_ID = 'leech-sovereign'
+
+/** Phase 4 Slice I (PR #65 review): wires the Leech Sovereign into `GLIMMERDARK_BIOME.boss`.
+ * `speciesId` is her OWN id -- unlike the Broodmother, she has no natural species (no shared
+ * roster members to count alongside), and `adds` is empty (lean by design, per the doc comment
+ * above). */
+export const GLIMMERDARK_BOSS: BossEncounter = {
+  bossId: LEECH_SOVEREIGN_BOSS_ID,
+  creature: LEECH_SOVEREIGN,
+  speciesId: LEECH_SOVEREIGN.id,
+  adds: [],
+}
 
 // ---- The biome itself ----
 
@@ -346,6 +363,7 @@ export const GLIMMERDARK_BIOME: BiomeData = {
   id: GLIMMERDARK_BIOME_ID,
   name: 'Glimmerdark',
   speciesPool: GLIMMERDARK_SPECIES_POOL,
+  boss: GLIMMERDARK_BOSS,
 }
 
 // Re-exported for the loader test / anyone wanting a plain Affinity sanity check without

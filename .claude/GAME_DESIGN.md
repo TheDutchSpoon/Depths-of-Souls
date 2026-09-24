@@ -101,7 +101,10 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   for the next fight regardless of outcome. Defend/Regen/healing are purely *intra-fight* tools.
 - **Milestone bosses**: every 10th floor (each biome transition) is a tougher **boss** fight —
   a difficulty checkpoint and reward spike, and the **sole source of perk points** (see §9).
-  Bosses are unique, **cannot be soul-collected**, and grant no soul%.
+  Bosses are unique, **cannot be soul-collected**, and grant no soul%. A boss floor is **the boss
+  encounter alone** (the boss plus a few adds from the biome's own pool; no ordinary fights). Bosses
+  still drop XP and currency like any kill. The first win grants the boss's perk points, and the
+  floor can be re-fought afterwards for ordinary rewards (no further perk points).
 - **Difficulty model**: each floor maps to an **enemy level range** (min–max), not a separate
   stat multiplier — enemies are ordinary creature instances at some level, using the **same
   linear growth formula** as the player's creatures (§5). Enemy level grows **faster than floor
@@ -507,10 +510,13 @@ The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
   predicate gating a modifier of stat X may reference *other* effective stats, but must not depend on
   X's own effective value (read base X if truly needed). Prevents `getEffectiveStat` recursion.
 
-**v1 hook vocabulary (13, pinned):** `on-fight-start`, `on-turn-start`, `on-turn-end`,
+**v1 hook vocabulary (16, as of Phase 4):** `on-fight-start`, `on-turn-start`, `on-turn-end`,
 `on-round-end`, `on-damage-dealt`, `on-damage-taken`, `on-kill` (dealt a killing blow), `on-death`
-(self died), `on-ally-action`, `on-enemy-action`, `on-ally-death`, `on-enemy-death`,
-`on-status-applied`. Each hook = a firing point + a **context** (e.g. `on-damage-taken` provides
+(self died), `on-action-observed` (an ally/enemy acted — replaced Phase 3's never-wired
+`on-ally-action`/`on-enemy-action` pair), `on-ally-death`, `on-enemy-death`,
+`on-status-applied`, and the actor-self `on-attack`/`on-cast`/`on-defend`/`on-provoke` family
+(Phase 4). Phase 3 pinned 13; CONVENTIONS holds the routing rule between the actor-self hooks and
+`on-action-observed`. Each hook = a firing point + a **context** (e.g. `on-damage-taken` provides
 `{self, source, amount}`). Expanding the set later is **additive and golden-safe** — a new firing
 point no trait listens to emits zero events — provided the hook fires at a point the resolver
 already reaches; a hook needing newly-tracked state is a larger change (none of v1's are).
@@ -533,9 +539,12 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   correct on read.
 - **Triggered traits** = `{ hook, condition?, response }`. The **v1 response vocabulary** (each
   fully parameterized by **target** and **magnitude**): **(a) deal damage, (b) apply a status,
-  (c) apply a stat-modifier, (d) suppress-action** (skip a turn — what Stun uses). Design-space
-  breadth comes from the **hook × condition × parameter cross-product**, not from more response
-  types (13 hooks × conditions × targets/magnitudes is ample for the v1 trait roster).
+  (c) apply a stat-modifier, (d) suppress-action** (skip a turn — what Stun uses) — Phase 3's
+  four — plus Phase 4's **(e) heal, (f) revive, (g) grant-action-state, (h) consume-stacks,
+  (i) remove-status**: nine, and the line is held there (CONVENTIONS "Response vocabulary — now
+  NINE"). Design-space breadth comes from the **hook × condition × parameter cross-product**, not
+  from more response types (16 hooks × conditions × targets/magnitudes is ample for the v1 trait
+  roster).
 - **No keywords, no implicit targets.** There is no "Retaliate" (or similar) concept — every trait
   is expressed as an explicit event→condition→response→target→magnitude sentence in data, e.g.
   *"when this creature is dealt damage by another creature, attack that creature for 30% Attack."*

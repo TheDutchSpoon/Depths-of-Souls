@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { createSeededRng } from '../engine/rng'
+import { generateFloor } from '../engine/generation'
 import { BIOMES, BIOMES_BY_ID } from './biomes'
-import { OVERGROWTH_BIOME_ID } from './species/overgrowth'
+import { ALL_SPELLS } from './spells'
+import {
+  BROODMOTHER_BOSS_ID,
+  OVERGROWTH_BIOME,
+  OVERGROWTH_BIOME_ID,
+  SPIDERS_SPECIES_ID,
+} from './species/overgrowth'
 import { GLIMMERDARK_BIOME_ID } from './species/glimmerdark'
 import { ROTCAP_HOLLOW_BIOME_ID } from './species/rotcap-hollow'
 
@@ -48,6 +56,42 @@ describe('BIOMES (Slice A shape + Slice H1/H2/H3 real content)', () => {
   it('BIOMES_BY_ID indexes every slot by its id', () => {
     for (const biome of BIOMES) {
       expect(BIOMES_BY_ID.get(biome.id)).toBe(biome)
+    }
+  })
+})
+
+describe('Boss floors (Phase 4 Slice I, PR #65 review)', () => {
+  it('every authored biome (non-empty speciesPool) has a boss', () => {
+    for (const biome of BIOMES) {
+      if (biome.speciesPool.length === 0) continue // placeholder slots 4-10, not authored yet
+      expect(biome.boss).toBeDefined()
+    }
+  })
+
+  it('every boss add is a real member of its own biome speciesPool', () => {
+    for (const biome of BIOMES) {
+      if (!biome.boss) continue
+      for (const add of biome.boss.adds) {
+        const isMember = biome.speciesPool.some((species) =>
+          species.creatures.some((c) => c.id === add.id),
+        )
+        expect(isMember).toBe(true)
+      }
+    }
+  })
+
+  it("the Broodmother's speciesId matches the Spiders species (so living-allies-of-species counts her together with her adds)", () => {
+    expect(OVERGROWTH_BIOME.boss?.speciesId).toBe(SPIDERS_SPECIES_ID)
+    expect(OVERGROWTH_BIOME.boss?.bossId).toBe(BROODMOTHER_BOSS_ID)
+  })
+
+  it('generateFloor(10, OVERGROWTH_BIOME, ...) roster carries SPIDERS_SPECIES_ID on all three creatures (boss + both spiderling adds)', () => {
+    const fights = generateFloor(10, OVERGROWTH_BIOME, 1, ALL_SPELLS, createSeededRng(42))
+    expect(fights).toHaveLength(1) // a boss floor is exactly one fight
+    const enemyParty = fights[0]!.enemyParty
+    expect(enemyParty).toHaveLength(3) // the Broodmother + her two spiderling adds
+    for (const enemy of enemyParty) {
+      expect(enemy.speciesId).toBe(SPIDERS_SPECIES_ID)
     }
   })
 })

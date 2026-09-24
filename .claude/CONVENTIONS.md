@@ -42,6 +42,20 @@ derivation of a floor's contents.
   descent, reproducible from the run seed): re-descending a floor re-rolls its creatures (the
   soul-grind loop) while its biome stays fixed.
 - **`fightCount(floor)`** — deterministic; no per-visit roll.
+- **Boss floors** (built in Phase 4 Slice I) — a floor is a boss floor **iff** `floor %
+  FLOORS_PER_BIOME === 0` **and** its resolved biome carries a boss encounter (`BiomeData.boss?` —
+  `{ bossId, creature, speciesId, adds[] }`); otherwise it is an ordinary floor. One rule at every
+  depth: floor 101+ included (a drawn or pinned biome brings its own boss), and a biome with no
+  authored boss (placeholder biomes 4–10, test fixtures) simply generates ordinary floors. A boss
+  floor is **boss-only**: exactly **one** fight — the boss at slot 0, then its authored adds — with
+  no trash fights (`fightCount` is not consulted). Only *which* creatures appear is authored;
+  everything else is the ordinary spawn path: adds roll their level within `enemyLevelRange(floor)`
+  and their loadout like any spawned enemy, and the boss sits at **`bossLevel(floor)`** (a curve —
+  a few levels above the range max; the offset is parked balance). Every add must be a member of
+  the biome's own `speciesPool`, and its `speciesId` is resolved from that pool (invariant-checked,
+  never re-typed). The boss's `speciesId` is explicit data (the Broodmother carries the Spiders
+  species, so `living-allies-of-species` counts her together with her spiderlings). `Fight.boss?`
+  marks the boss creature for the run layer.
 - **`enemyPartySize(floor)`** — deterministic; no per-visit roll. Enemy count **scales with depth**,
   ramping from 1 toward the full 6-slot slate as floors deepen (an authored curve alongside
   `enemyLevelRange`/`fightCount`, clamped at the 6v6 max). Exact ramp shape is parked balance
@@ -59,7 +73,11 @@ derivation of a floor's contents.
 - **Rewards** (XP / soul% / currency) are a **run-layer consumer of the event log**
   (`CreatureDied.creatureId` joined against the generated enemy roster), never engine state. XP goes
   to the **whole active party regardless of survival**, banked per kill, kept on wipe; **level-ups
-  apply post-fight** — the engine never sees a mid-fight level change.
+  apply post-fight** — the engine never sees a mid-fight level change. A **boss kill** banks XP and
+  currency through the same per-kill path but **no soul%** (bosses are not collectable). **Winning**
+  a boss fight adds its `bossId` to `bossesCleared` (idempotent, so perk points come from the first
+  clear only). A cleared boss floor can be re-fought for ordinary rewards and no further points; a
+  loss banks the adds' kills as usual and records nothing.
 
 ## Phase 4 systems addenda (surfaced during content design)
 
@@ -742,7 +760,8 @@ the same interpreter, differing only in how they attach and which hooks they use
   resolve **before** death-reactions (died/kill/observers). **Applying a status emits `StatusApplied`
   then fires `on-status-applied`** (event-before-hook). **Conditional-passive predicates** read
   effective stats but must not depend on the stat they gate (no `getEffectiveStat` read-cycle).
-- **v1 hook vocabulary (13, now 17 as of Phase 4 Slice B; Slice E2 revises the observation entry):**
+- **v1 hook vocabulary (16 at Phase 4 close — Phase 3's 13, +4 `on-[action]` in Slice B = 17, then
+  −1 net in Slice E2 when `on-action-observed` replaced the never-wired pair below):**
   `on-fight-start`, `on-turn-start`, `on-turn-end`, `on-round-end`, `on-damage-dealt`,
   `on-damage-taken`, `on-kill`, `on-death`, `on-ally-death`, `on-enemy-death`, `on-status-applied`,
   plus the Phase 4 `on-[action]` family (`on-attack`, `on-cast`, `on-defend`, `on-provoke` — see
@@ -816,7 +835,8 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   **read-time activation predicate** evaluated during `getEffectiveStat` folding (never cached).
 - **Triggered traits** = `{ hook, condition?, response }`. **Response vocabulary (each
   parameterized by target + magnitude): deal-damage, apply-status, apply-stat-modifier,
-  suppress-action, heal, revive, grant-action-state, consume-stacks** (eight — see Phase 4 addenda).
+  suppress-action, heal, revive, grant-action-state, consume-stacks, remove-status** (nine — see
+  "Response vocabulary — now NINE" above).
   Breadth = hook × condition × parameter cross-product, not more response types.
   The optional `condition?` **reuses the scripting `Condition` union** (declarative data — *not* a
   predicate, unlike the conditional-*passive* which is the one deliberately non-serializable spot),
@@ -962,7 +982,8 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   All combat-dropped except perk points; all currencies are **unbounded** (no storage cap).
 - **Biomes** are data (name, theme, **species spawn pool**, scaling tweaks, visuals); a floor
   picks a species from the pool, then a specific creature by **rarity-weighted seeded RNG**.
-  Biome changes **every 10 floors** (10 in v1) — keep cadence/count as config constants. Floors
+  Biome changes **every 10 floors** (10 in v1) — keep cadence/count as config constants
+  (`FLOORS_PER_BIOME`, `BIOME_COUNT`). Floors
   1–100 use the fixed sequence; floor 101+ draws a biome by **seeded RNG** unless pinned via the
   Biome Atlas (pinning may retroactively override a visited floor). v1 content target: **≥6
   species/biome, ≥3 creatures/species** (~180+ creatures total). **Bosses** every 10th floor are

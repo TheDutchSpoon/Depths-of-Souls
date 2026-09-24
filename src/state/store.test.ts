@@ -1,13 +1,18 @@
 // Phase 4 Slice G: the descend() integration test (per the brief's own test list), built
-// against fixture biome/specialization data (never real content -- biomes 1-10 stay Slice A's
-// placeholder shape until H1-H3 land, see data/biomes.ts). All win/loss outcomes below are
-// engineered to be deterministic by construction (see the header comment on each fixture),
+// against fixture biome/specialization data -- real content is integration.test.ts's own
+// deliberate exception (see its header comment), never this file's. All win/loss outcomes below
+// are engineered to be deterministic by construction (see the header comment on each fixture),
 // following Slice A's own precedent (generation.test.ts's constant-stub-RNG traces) rather than
 // a generated-then-pasted checkpoint.
 
 import { describe, expect, test } from 'vitest'
 import { createBiomeId } from '../engine/ids'
-import type { BiomeData, Species, SpeciesCreature } from '../engine/generation'
+import type {
+  BiomeData,
+  BossEncounter,
+  Species,
+  SpeciesCreature,
+} from '../engine/generation'
 import type { SeededRng } from '../engine/rng'
 import { UNICORN, UNICORN_SPECIES_ID } from '../data/species/starters'
 import type { Specialization } from '../data/specializations'
@@ -523,5 +528,180 @@ describe('perk effects reach combat', () => {
     const outcomeWithPerk = storeWithPerk.getState().descend(1)
     expect(outcomeWithPerk.fightResults).toEqual(['win', 'win', 'win'])
     expect(outcomeWithPerk.cleared).toBe(true)
+  })
+})
+
+describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
+  // Stat gaps here are EXTREME (matching the file's own established style, e.g. HERO vs FODDER
+  // above) rather than hand-tuned near a threshold, for a reason specific to boss floors: the
+  // ADD's level is a real RNG draw within enemyLevelRange(10)={min:10,max:13} (never stubbed --
+  // its single-item species pool makes the species/creature picks invariant regardless of RNG,
+  // same reasoning as the perk-effects test above), so its SCALED stats aren't a fixed number.
+  // The boss's own level is NOT rolled (bossLevel(10) = enemyLevelRange(10).max + 3 = 16, fixed),
+  // so her scaled stats below (in comments) are exact. Gaps are wide enough that every outcome
+  // is robust to whichever level the add actually rolls.
+
+  const BOSS_ADD_WIN: SpeciesCreature = {
+    id: 'fixture-boss-win-add',
+    affinity: 'violence',
+    // Scaled at level 10-13 (factor 3.25-4.0): health 1 -> 3 or 4, speed 5 -> 16-20 (still <<
+    // HERO's 50, and << the boss's own fixed scaled health of 48 -- see below).
+    baseStats: { health: 1, attack: 1, intelligence: 1, defence: 0, speed: 5 },
+    defaultScriptId: 'always-wait', // never acts before dying; keeps the log minimal
+    innateTraitIds: [],
+    rarity: 'common', // SOUL_GAIN_PERCENT.common = 10
+  }
+  const BOSS_SPECIES_WIN: Species = {
+    id: 'fixture-boss-win-species',
+    name: 'Fixture Boss Win Species',
+    weight: 1,
+    creatures: [BOSS_ADD_WIN],
+  }
+  // Scaled at the FIXED bossLevel(10)=16 (factor 4.75): health 10 -> round(47.5)=48, attack
+  // 1 -> round(4.75)=5, speed 1 -> round(4.75)=5 (<< HERO's 50 -- HERO always acts first).
+  const BOSS_CREATURE_WIN: SpeciesCreature = {
+    id: 'fixture-boss-win-boss',
+    affinity: 'violence',
+    baseStats: { health: 10, attack: 1, intelligence: 1, defence: 0, speed: 1 },
+    defaultScriptId: 'always-wait', // harmless even across the extra round it takes to kill her
+    innateTraitIds: [],
+    rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn
+  }
+  const BOSS_ENCOUNTER_WIN: BossEncounter = {
+    bossId: 'fixture-boss-win-id',
+    creature: BOSS_CREATURE_WIN,
+    speciesId: 'fixture-boss-win-standalone-species',
+    adds: [BOSS_ADD_WIN],
+  }
+  const BIOME_BOSS_WIN: BiomeData = {
+    id: createBiomeId('fixture-boss-win-biome'),
+    name: 'Fixture Boss Win Biome',
+    speciesPool: [BOSS_SPECIES_WIN],
+    boss: BOSS_ENCOUNTER_WIN,
+  }
+
+  function makeBossWinDeps(): Partial<GameStoreDeps> {
+    return {
+      biomes: [BIOME_BOSS_WIN],
+      specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
+      standaloneCreatures: [HERO_STANDALONE],
+      runSeed: 99,
+    }
+  }
+
+  test('a boss win: bossDefeated is set, bossesCleared banks it, the boss gives XP/currency with no soul entry, the add gives soul%', () => {
+    const store = createGameStore(makeBossWinDeps())
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    store.setState({ deepestFloor: 9 }) // precondition: floor 9 already cleared
+
+    const outcome = store.getState().descend(10)
+
+    // A boss floor is exactly ONE fight (fightCount is not consulted): HERO (speed 50, attack
+    // 50) always acts first, kills the ADD (lowest scaled HP, round 1), then the boss (round 2,
+    // her only remaining enemy) -- both one-shot regardless of the add's exact rolled level.
+    expect(outcome.fightResults).toEqual(['win'])
+    expect(outcome.cleared).toBe(true)
+    expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId)
+    expect(outcome.soulGained.get(BOSS_ADD_WIN.id)).toBe(10)
+    expect(outcome.soulGained.has(BOSS_CREATURE_WIN.id)).toBe(false) // bosses grant no soul%
+    // xpAwardForKill(floor=10) = 10*10 = 100 per kill x 2 kills (add + boss) = 200.
+    expect(outcome.xpBanked).toBe(200)
+    // currencyDropForKill(10) = {essence:10,ore:10,bricks:max(1,floor(10/10))=1,lifeforce:10},
+    // banked per kill -- 2 kills.
+    expect(outcome.currencyGained).toEqual({
+      essence: 20,
+      ore: 20,
+      bricks: 2,
+      lifeforce: 20,
+    })
+
+    const state = store.getState()
+    expect(state.bossesCleared.has(BOSS_ENCOUNTER_WIN.bossId)).toBe(true)
+    expect(state.deepestFloor).toBe(10)
+  })
+
+  test('re-clearing an already-cleared boss floor leaves bossesCleared.size unchanged (idempotent, no further perk points)', () => {
+    const store = createGameStore(makeBossWinDeps())
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    store.setState({ deepestFloor: 9 })
+    store.getState().descend(10)
+    expect(store.getState().bossesCleared.size).toBe(1)
+
+    const outcome = store.getState().descend(10) // re-fight the now-cleared floor 10
+
+    expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId) // still reports the win...
+    expect(store.getState().bossesCleared.size).toBe(1) // ...but grants no further perk points
+  })
+
+  const BOSS_ADD_LOSS: SpeciesCreature = {
+    id: 'fixture-boss-loss-add',
+    affinity: 'violence',
+    // Same shape as BOSS_ADD_WIN above -- dies to HERO's first hit regardless of rolled level.
+    baseStats: { health: 1, attack: 1, intelligence: 1, defence: 0, speed: 5 },
+    defaultScriptId: 'always-wait',
+    innateTraitIds: [],
+    rarity: 'common',
+  }
+  // Overwhelming and fixed (bossLevel(10)=16, factor 4.75): attack 1000 -> round(4750)=4750, far
+  // beyond HERO's 50 HP -- one-shots her on the boss's own turn, AFTER HERO has already killed
+  // the (lower-HP) add earlier in the same round.
+  const BOSS_CREATURE_LOSS: SpeciesCreature = {
+    id: 'fixture-boss-loss-boss',
+    affinity: 'violence',
+    baseStats: { health: 1000, attack: 1000, intelligence: 1, defence: 0, speed: 1 },
+    defaultScriptId: 'always-attack',
+    innateTraitIds: [],
+    rarity: 'rare',
+  }
+  const BOSS_SPECIES_LOSS: Species = {
+    id: 'fixture-boss-loss-species',
+    name: 'Fixture Boss Loss Species',
+    weight: 1,
+    creatures: [BOSS_ADD_LOSS],
+  }
+  const BOSS_ENCOUNTER_LOSS: BossEncounter = {
+    bossId: 'fixture-boss-loss-id',
+    creature: BOSS_CREATURE_LOSS,
+    speciesId: 'fixture-boss-loss-standalone-species',
+    adds: [BOSS_ADD_LOSS],
+  }
+  const BIOME_BOSS_LOSS: BiomeData = {
+    id: createBiomeId('fixture-boss-loss-biome'),
+    name: 'Fixture Boss Loss Biome',
+    speciesPool: [BOSS_SPECIES_LOSS],
+    boss: BOSS_ENCOUNTER_LOSS,
+  }
+
+  test('a boss loss: nothing boss-related is recorded, but the add kill still banks', () => {
+    const store = createGameStore({
+      biomes: [BIOME_BOSS_LOSS],
+      specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
+      standaloneCreatures: [HERO_STANDALONE],
+      runSeed: 99,
+    })
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    store.setState({ deepestFloor: 9 })
+
+    const outcome = store.getState().descend(10)
+
+    // HERO (speed 50) still acts first and kills the ADD (round 1) -- rewards bank per kill,
+    // immediately, regardless of the fight's eventual outcome (CONVENTIONS). The boss then
+    // one-shots HERO on its own turn, later in the SAME round -- a loss, zero further turns.
+    expect(outcome.fightResults).toEqual(['loss'])
+    expect(outcome.cleared).toBe(false)
+    expect(outcome.bossDefeated).toBeNull()
+    expect(outcome.soulGained.get(BOSS_ADD_LOSS.id)).toBe(10)
+    expect(outcome.soulGained.has(BOSS_CREATURE_LOSS.id)).toBe(false)
+    expect(outcome.xpBanked).toBe(100) // one kill (the add) x xpAwardForKill(10) = 100
+    expect(outcome.currencyGained).toEqual({
+      essence: 10,
+      ore: 10,
+      bricks: 1,
+      lifeforce: 10,
+    })
+
+    const state = store.getState()
+    expect(state.bossesCleared.size).toBe(0)
+    expect(state.deepestFloor).toBe(9) // unchanged -- the boss floor wasn't cleared
   })
 })

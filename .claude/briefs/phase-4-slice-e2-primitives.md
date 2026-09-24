@@ -1,6 +1,6 @@
 # Phase 4 — Slice E2: content-surfaced engine primitives (round 2)
 
-Status: planned
+Status: shipped — see phases/phase-4-party-specializations-cave-biomes.md ("Slice E2" section)
 
 > **Slice naming.** Working name **E2** — a systems slice inserted **between E and F**, in the
 > spirit of Slices B/C/D (engine vocabulary surfaced by content design). Deliberately *not* "E.5":

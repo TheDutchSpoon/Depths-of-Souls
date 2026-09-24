@@ -4,11 +4,13 @@
 // no idb/Dexie (Phase 5, wholesale, per the brief's scope boundary).
 //
 // Dependency-injected via `createGameStore(overrides)` rather than a bare module-level `create`
-// call: the default deps wire in real src/data content (`useGameStore`, below), but every test
-// needs a fully isolated, deterministic instance against Slice A's FIXTURE biome data (never the
-// real, still-placeholder-shaped biomes 1-10) -- this is an ASSUMPTION beyond the brief's literal
-// "store.ts" framing, necessary for testability without a UI (no Slice-4.5-style demo exists yet
-// to exercise this against).
+// call: the default deps wire in real src/data content (`useGameStore`, below), but most tests
+// (store.test.ts) run against a fully isolated, deterministic instance built on Slice A's own
+// FIXTURE biome/spec data instead -- this is an ASSUMPTION beyond the brief's literal "store.ts"
+// framing, necessary for testability without a UI (no Slice-4.5-style demo exists yet to
+// exercise this against). Slice I's `integration.test.ts` is the deliberate exception: it runs
+// the zero-override, real-content store end to end (real biomes 1-3 landed in H1-H3; biomes
+// 4-10 stay the Slice A placeholder shape -- see data/biomes.ts).
 
 import { create } from 'zustand'
 import { createCombat, resolveFight } from '../engine/combat'
@@ -143,6 +145,11 @@ export interface FloorOutcome {
   readonly xpBanked: number
   readonly currencyGained: Currencies
   readonly events: readonly CombatEvent[]
+  /** Phase 4 Slice I (PR #65 review, boss floors): the bossId, iff this floor's (single) fight
+   * was a boss encounter AND it was won -- else null. Idempotent at the bossesCleared level (a
+   * re-fought, already-cleared boss still reports bossDefeated here, but grants no further perk
+   * points -- see `withBossCleared`). */
+  readonly bossDefeated: string | null
 }
 
 export interface GameActions {
@@ -275,6 +282,19 @@ function grantCreatureIfUnowned(
   return { collection, activeParty, nextInstanceOrdinal: state.nextInstanceOrdinal + 1 }
 }
 
+/** Idempotent add -- a boss already in `bossesCleared` returns the SAME Set reference (a no-op,
+ * first-clear-only per GAME_DESIGN §9). Shared by `recordBossKill` and `descend()`'s own
+ * boss-floor-win path (Phase 4 Slice I, PR #65 review) so the two never drift. */
+function withBossCleared(
+  bossesCleared: ReadonlySet<string>,
+  bossId: string,
+): ReadonlySet<string> {
+  if (bossesCleared.has(bossId)) return bossesCleared
+  const next = new Set(bossesCleared)
+  next.add(bossId)
+  return next
+}
+
 /** Small, deterministic, non-cryptographic combine of the run seed and an advance counter --
  * mirrors generation.ts's own hashFloorDraw (ASSUMPTION 4's precedent), distinct constants so
  * the two hashes never collide by construction. */
@@ -314,12 +334,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
     },
 
     recordBossKill(bossId) {
-      set((s) => {
-        if (s.bossesCleared.has(bossId)) return s
-        const bossesCleared = new Set(s.bossesCleared)
-        bossesCleared.add(bossId)
-        return { bossesCleared }
-      })
+      set((s) => ({ bossesCleared: withBossCleared(s.bossesCleared, bossId) }))
     },
 
     pinBiome(floor, biomeId) {
@@ -373,6 +388,10 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       const fightResults: FightResult[] = []
       const allEvents: CombatEvent[] = []
       let cleared = true
+      // Phase 4 Slice I (PR #65 review, boss floors): set iff this floor's (single) fight is a
+      // boss encounter AND it's won -- CONVENTIONS "winning a boss fight adds its bossId to
+      // bossesCleared."
+      let bossDefeated: string | null = null
 
       for (let i = 0; i < fights.length; i++) {
         const fight = fights[i]!
@@ -396,6 +415,18 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
           if (event.type !== 'CreatureDied') continue
           const deadEnemy = fight.enemyParty.find((c) => c.id === event.creatureId)
           if (!deadEnemy) continue // a player-side death, not a reward source
+
+          // A boss kill banks XP/currency through the same per-kill path but NO soul% (bosses
+          // are not collectable, CONVENTIONS' Rewards clause) -- and isn't looked up via
+          // findStaticCreature at all: she isn't spawn-pool-drawn, so there's no static entry to
+          // find (an add's death still falls through to the ordinary path below and DOES get
+          // soul%, per the same clause).
+          if (fight.boss && deadEnemy.id === fight.boss.creatureId) {
+            xpBanked += xpAwardForKill(floor)
+            currencyGained = addCurrencies(currencyGained, currencyDropForKill(floor))
+            continue
+          }
+
           const suffix = `-${deadEnemy.side}-${deadEnemy.slot}`
           const staticId = deadEnemy.id.slice(0, deadEnemy.id.length - suffix.length)
           const staticRef = findStaticCreature(
@@ -423,6 +454,8 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
           cleared = false
           break
         }
+
+        if (fight.boss) bossDefeated = fight.boss.bossId
       }
 
       set((s) => {
@@ -440,6 +473,10 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
           deepestFloor: cleared ? Math.max(s.deepestFloor, floor) : s.deepestFloor,
           currencies: addCurrencies(s.currencies, currencyGained),
           runCounter: s.runCounter + fights.length + 1,
+          bossesCleared:
+            bossDefeated !== null
+              ? withBossCleared(s.bossesCleared, bossDefeated)
+              : s.bossesCleared,
         }
       })
 
@@ -447,6 +484,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         floor,
         fightResults,
         cleared,
+        bossDefeated,
         deepestFloorAdvanced: cleared && floor > state.deepestFloor,
         soulGained: soulGainedThisCall,
         xpBanked,
@@ -498,8 +536,9 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
 }
 
 /** The default, zero-config store instance -- real src/data content wired in (Phase 4 Slice G:
- * "first use in the project"). Biomes 1-3 stay Slice A's placeholder shape until H1-H3 land, so
- * descend() against real floors will throw (empty spawn pool) until then -- expected, forward-
- * referenced (see data/biomes.ts's own header comment); every OTHER action (setSpec,
- * recordBossKill, pinBiome, travelTo, runScriptedIntro) works today against real data. */
+ * "first use in the project"). Biomes 1-3 (The Overgrowth/Glimmerdark/Rotcap Hollow) are real,
+ * playable content as of Slices H1-H3; biomes 4-10 stay Slice A's placeholder shape (empty
+ * spawn pools) until a future phase authors them -- `descend()` against floor 31+ will throw
+ * (see data/biomes.ts's own header comment) until then. See integration.test.ts for an
+ * end-to-end exercise of this exact instance against real floor 1. */
 export const useGameStore = createGameStore()
