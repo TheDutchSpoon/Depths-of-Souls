@@ -604,7 +604,7 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId)
     expect(outcome.soulGained.get(BOSS_ADD_WIN.id)).toBe(10)
     expect(outcome.soulGained.has(BOSS_CREATURE_WIN.id)).toBe(false) // bosses grant no soul%
-    // 2 kills (add + boss) x xpAwardForKill(floor=10) = 10*10 = 100.
+    // xpAwardForKill(floor=10) = 10*10 = 100 per kill x 2 kills (add + boss) = 200.
     expect(outcome.xpBanked).toBe(200)
     // currencyDropForKill(10) = {essence:10,ore:10,bricks:max(1,floor(10/10))=1,lifeforce:10},
     // banked per kill -- 2 kills.

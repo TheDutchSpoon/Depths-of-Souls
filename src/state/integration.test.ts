@@ -227,7 +227,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
       ['spider-ambusher', 'spider-weaver'].sort(),
     )
     expect(outcome.soulGained.has('broodmother')).toBe(false)
-    // 3 kills (boss + both adds) x xpAwardForKill(floor=10) = 10*10 = 100.
+    // xpAwardForKill(floor=10) = 10*10 = 100 per kill x 3 kills (boss + both adds) = 300.
     expect(outcome.xpBanked).toBe(300)
     // currencyDropForKill(10) = {essence:10,ore:10,bricks:max(1,floor(10/10))=1,lifeforce:10},
     // banked per kill -- 3 kills.

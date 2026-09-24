@@ -2456,7 +2456,12 @@ SAME per-slot calls an ordinary spawn makes, minus the species/creature draws a 
 need). Each add's `speciesId` is resolved from the biome's own `speciesPool` by a new
 `resolveAddSpeciesId` (throws, invariant-checked, if the add isn't actually a member) — never
 carried as separate authored data. `fightCount`/`enemyPartySize` are not consulted for a boss
-floor, per CONVENTIONS.
+floor, per CONVENTIONS. **Review nit, fixed same-branch**: the boss herself now also rolls a
+loadout via `rollLoadout` (she skips only the level roll, since her level is the fixed
+`bossLevel(floor)`, not the species/creature draws) — without this, a hypothetical cast-role boss
+would spawn with an empty loadout, breaking the "casters always get a spell" coherence rule
+(`generateFloor`'s own doc comment). A no-op RNG-wise for all three currently-shipped bosses
+(`always-attack`, never cast-role) — confirmed by the full suite passing byte-identical.
 
 **Data** (`src/data/species/{overgrowth,glimmerdark,rotcap-hollow}.ts`): each real biome's `.boss`
 now wires its already-shipped boss constants — Broodmother (`speciesId: SPIDERS_SPECIES_ID`,
@@ -2549,10 +2554,10 @@ design-owner call, closing the "boss-encounter runner" gap H1/H2/H3 each deferre
 vocabulary grew from Phase 3's 13 to Slice B's 17 (the four `on-[action]` hooks), then settled at a
 final **16** once Slice E2's general `on-action-observed` superseded the never-wired
 `on-ally-action`/`on-enemy-action` pair (net −1); the response vocabulary grew from Phase 3's
-**four** (`deal-damage`/`apply-status`/`apply-stat-modifier`/`suppress-action` — CLAUDE.md's own
-pinned Phase 3 list) to Phase 4's **nine** top-level kinds (`revive`/`grant-action-state`/
-`consume-stacks` in Slice B/D, `remove-status` in Slice E2 — see
-`briefs/phase-4-slice-e2-primitives.md`); and the engine gained the action instance-list model,
+**four** (`deal-damage`/`apply-status`/`apply-stat-modifier`/`suppress-action` — see
+`phases/phase-3-traits-statuses-effects.md`) to Phase 4's **nine** top-level kinds (`revive`/
+`grant-action-state`/`consume-stacks` in Slice B/D, `heal` in Slice E, `remove-status` in Slice E2
+— see `briefs/phase-4-slice-e2-primitives.md`); and the engine gained the action instance-list model,
 armor penetration, cross-stat contribution, count-scaling magnitude sources, consume-stacks,
 cheat-death, turn-order statuses, status immunity, the targeting-override pipeline,
 splashing/annihilate, the support-spell model, and boss floors (`isBossFloor`/`bossLevel`/

@@ -314,13 +314,15 @@ function resolveAddSpeciesId(biome: BiomeData, add: SpeciesCreature): string {
  *
  * Phase 4 Slice I (PR #65 review, boss floors): when `isBossFloor(floor)` and the resolved
  * `biome` carries a `boss`, this returns exactly ONE Fight -- the boss at slot 0 (materialized at
- * `bossLevel(floor)`, no per-visit level/loadout roll of her own -- an authored, elevated
- * Instance, not a spawn-pool draw) followed by her authored adds (each rolling a level within
- * `enemyLevelRange(floor)` and a loadout via `rollLoadout`, the SAME per-slot RNG calls an
- * ordinary spawn makes, minus the species/creature draws a fixed add doesn't need).
- * `fightCount`/`enemyPartySize` are NOT consulted -- only which creatures appear is authored,
- * per CONVENTIONS. A boss-less biome (the placeholder biomes, every fixture) falls through to the
- * ordinary path below unchanged.
+ * `bossLevel(floor)`, no per-visit LEVEL roll of her own -- an authored, elevated Instance, not a
+ * spawn-pool draw -- but still rolling a loadout via `rollLoadout` like any spawn, so a cast-role
+ * boss never breaks the "casters always get a spell" coherence rule; a no-op RNG-wise for every
+ * currently-shipped boss, all of which are `always-attack`) followed by her authored adds (each
+ * rolling a level within `enemyLevelRange(floor)` and a loadout via `rollLoadout`, the SAME
+ * per-slot RNG calls an ordinary spawn makes, minus the species/creature draws a fixed add
+ * doesn't need). `fightCount`/`enemyPartySize` are NOT consulted -- only which creatures appear
+ * is authored, per CONVENTIONS. A boss-less biome (the placeholder biomes, every fixture) falls
+ * through to the ordinary path below unchanged.
  */
 export function generateFloor(
   floor: number,
@@ -331,12 +333,14 @@ export function generateFloor(
 ): readonly Fight[] {
   if (isBossFloor(floor) && biome.boss) {
     const boss = biome.boss
+    const bossLoadout = rollLoadout(boss.creature, biomeIndex, allSpells, runRng)
     const bossCreature = materializeCreature(
       boss.creature,
       bossLevel(floor),
       'enemy',
       0,
       boss.speciesId,
+      bossLoadout,
     )
     const { min, max } = enemyLevelRange(floor)
     const enemyParty: Creature[] = [bossCreature]
