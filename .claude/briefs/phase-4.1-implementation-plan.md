@@ -448,6 +448,16 @@ B2 (including rule 4) and B5 change no existing golden, so each needs a new disc
 
     The corpus digest changes in C2b. The PR lists how many corpus fights changed and which of the
     flips above accounts for them.
+  - **C2b is built as two PRs (decided at the 4.1-C2b plan review).** Both follow the same policy,
+    and the flip order above is kept.
+    - **C2b = B1 + the castable-filtered gem draw.** It deletes `ruleNeedsExplicitTargeting`.
+    - **C2c = B2.1–B2.4 + B5.** It deletes `legacyGrantedTargeting`, `legacyDefaultTarget` and
+      `getDefaultTarget`.
+
+    Between the two PRs, `legacyDefaultTarget`/`getDefaultTarget` survive only for rule 4's
+    instance fallback, and `legacyGrantedTargeting` survives unchanged. Each PR regenerates the
+    digest once and attributes its own flips. The phase record gets a `4.1-C2b` section and a
+    `4.1-C2c` section.
 
 ### A1 — `actions.ts`
 - **Intent** = `{ action: RuleAction, targeting?: TargetSelector }`; `RuleAction`'s cast gains
