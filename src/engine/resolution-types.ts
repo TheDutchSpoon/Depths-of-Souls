@@ -24,7 +24,7 @@ export interface RunActionOptions {
   /** An event to push AFTER the intent resolves (gem/target draws happened) but BEFORE the
    * resolved action executes -- e.g. `EchoCastGranted`, matching today's exact emission point. */
   readonly announce?: CombatEvent
-  /** C2a-only. Deleted in C2b (B2.3), whose goldens prove the flip. Skips the Confusion -> Tunnel
+  /** C2a-only. Deleted in C2c (B2.3), whose goldens prove the flip. Skips the Confusion -> Tunnel
    * Vision -> Provoke override pipeline for an enemy-side single target -- resolves it via the
    * explicit-selector-or-default path directly, matching today's exact bonus-cast/echo behaviour
    * (neither goes through that pipeline on `main`). Passed only by `maybeFireBonusCast`

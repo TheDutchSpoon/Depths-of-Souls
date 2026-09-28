@@ -972,3 +972,110 @@ draw replaces the unfiltered one), B5 (the pre-hit fizzle). Each lands with its 
 discriminating golden, shown to fail with its mechanism removed; every existing golden (now
 including this PR's own) stays byte-identical. The corpus digest is expected to change in C2b --
 the PR reports how many fights changed and attributes each count to one of the listed flips.
+
+## 4.1-C2b -- B1 and the castable-filtered gem draw
+
+The 4.1-C2b plan review split the brief's "C2b" into two PRs, in the fixed flip order: **C2b = B1 +
+the castable-filtered gem draw** (this section), **C2c = B2.1-B2.4 + B5** (its own section, when
+built). The plan-review doc-sync (CONVENTIONS "Default targeting", B2 rules 1-2, B5; the brief's
+"built as two PRs" note) was committed first, verbatim, as its own commit. Golden policy: every
+existing golden byte-identical; each flip lands with a new, hand-derived golden.
+
+### What was built
+
+- **B1 -- the side-aware default.** `resolveIntent` resolves the gem first, then
+  `intent.targeting ?? defaultTargetingFor(actor, <resolved action>)`. For a `gemSlot: 'random'`
+  cast the default therefore follows the DRAWN spell's side. Attack defaults to `lowest-hp-enemy`.
+  The implicit fallback is unchanged in shape (`{ action: attack }`), so it now gets the
+  lowest-HP-enemy default. `resolveExplicitOrDefaultTarget` became `resolveSelectorTarget`
+  (resolves an already-defaulted selector).
+- **Targeting-less rules are valid.** `interpreter.isRuleValid` is `checkLegality` alone;
+  `ruleNeedsExplicitTargeting` is **deleted**. `always-cast` drops its `targeting`
+  (`data/scripts.ts`); both changes had to land together (dropping the selector while the gate
+  still stood makes the rule invalid and looks like it breaks nine goldens; it doesn't).
+- **The `acted-before-target` peek.** The interpreter passes
+  `rule.targeting ?? defaultTargetingFor(creature, rule.action)` as `ruleTargeting`; pure, draws
+  nothing. `conditions.ts` is untouched (importing `actions.ts` there would be a cycle). With no
+  single default before the draw (`gemSlot: 'random'`, AOE, self-only) the peek is `undefined` and
+  the condition is false (CONVENTIONS).
+- **The castable-filtered draw.** `resolveGemSlot('random')` draws `floor(r x n)` over
+  `castableGemSlots(actor, state)` -- the set `checkLegality` already uses. Order is unchanged
+  (gem draw, then target). No castable slot means no draw at all (before: equipped spells but none
+  castable cost one wasted draw). This is the C2b source of RNG-stream change (ASSUMPTION C2b-5;
+  the C2c source is legality inside `runAction`).
+- **Still alive until C2c (by design, per the split):** `legacyDefaultTarget` and
+  `getDefaultTarget` (only `resolveInstanceTarget`'s post-death fallback, i.e. rule 4, uses them)
+  and `legacyGrantedTargeting` (unchanged). Comments naming "C2b" for those deletions now say C2c.
+
+### Golden impact -- no existing golden changes
+
+Each flip applied alone to `main` @ `34d7c5b` (before building), full suite:
+
+| Flip alone | Existing goldens changed | Other tests changed | Corpus fights changed (of 500) |
+|---|---|---|---|
+| B1 (default + gate removal + `always-cast` drop) | **0** | the one interpreter test below | 134 |
+| Castable-filtered draw | 0 | none | **0** |
+
+`git diff --stat main -- 'src/engine/__golden__/*'` shows only **added** files (the three new
+goldens below); no existing fixture or test under `__golden__/` is modified.
+
+### Corpus-digest attribution (fixed order; regenerated once, via `npm run corpus:update`)
+
+Per-fight event-log hashes dumped after each step (a scratch, untracked dump test, deleted) and
+compared with the previous step:
+
+| Step | Fights changed vs previous step | Cumulative vs committed digest |
+|---|---|---|
+| 1. B1 | **134** | 134 |
+| 2. Castable-filtered draw | **0** -- proven by its golden only (no corpus fight ends with a granted cast against an empty enemy side, and none has an uncastable equipped spell at a random gem draw) | 134 |
+
+The committed fixture diff is 134 changed rows.
+
+### New goldens (all hand-derived, arithmetic in the fixture header comments)
+
+Each was shown failing with its flip undone, then reverted:
+
+| Golden | Undo | Result |
+|---|---|---|
+| `golden-b1-fallback-lowest-hp` (script-less attacker; enemies slot 0 HP 25, slot 1 HP 15; hits slot 1) | Default -> first-by-slot (the retired Phase-1 default) | fails (hits slot 0) |
+| `golden-b1-support-heals-own-side` (enemy support, stock `always-cast`, ally heal; the healed ally is wounded in-fight, heal 10 < missing 15, no clamp) | Default -> first-by-slot; and separately, `always-cast` regains `targeting: lowest-hp-enemy` | both fail (heal lands on the wrong creature) |
+| `golden-castable-draw` (bonus-caster, post-`createCombat` slots [enemy-side innate, ally heal]; seed 8002: chance roll 0.8341, gem draw 0.2492 -> unfiltered picks slot 0 = the enemy spell, which fizzles; filtered pool is [slot 1]) | Unfiltered draw | fails (no `SpellCast`/`HealApplied`); the same golden also fails under the first-by-slot default undo (the heal would land on the caster) |
+
+The castable-draw test also asserts the post-`createCombat` `equippedSpells` order, since fight
+setup prepends innate spells. The two 1-fight goldens are frozen-sweep-covered too (+3 replay
+tests). The other new goldens for the split (Stun/Silence/Confusion/Provoke echo, B5 + rule 4)
+belong to C2c.
+
+### Changed unit tests
+
+- `interpreter.test` "skips a targeting-required rule with no targeting field and falls through"
+  -> **rewritten** to "a targeting-less rule is valid (B1)": it matches, the intent carries no
+  targeting, and it resolves to the lowest-HP enemy (slot 1, not slot 0). The one change the brief
+  names. Nothing else changed an expected value.
+- New: an ally-side targeting-less cast defaults to the lowest-HP ally; the `acted-before-target`
+  peek (true only via the side-aware default; draws no RNG -- `rng.position` unchanged; an explicit
+  rule targeting still wins; false for a `gemSlot: 'random'` rule) -- shown failing with the peek
+  reduced to `rule.targeting`; `actions.test`: the random gem draws over castable slots only and
+  draws nothing when none is castable, and a `gemSlot: 'random'` cast defaults by the drawn spell's
+  side.
+
+### Verification
+
+`npx tsc -b`, `npm run lint`, `npm run format:check`, `npm run build` clean;
+`npx vitest run`: **118 files / 766 tests** (from 115 / 754: +3 golden tests, +3 sweep replays, +4
+interpreter, +2 actions). Frozen double-resolve and replay sweep green.
+
+### Spec notes
+
+None new: the plan-review doc-sync already answered every question this slice raised (peek in the
+interpreter; `acted-before-target` false with no single default; default from the resolved
+action). One fixture comment in `golden-heal-cast.fixture.ts` still says the stock `always-cast`
+targets `lowest-hp-enemy`; it's stale since B1 but left untouched, because the `__golden__/`
+diff must stay empty for existing fixtures.
+
+### Next
+
+**4.1-C2c** -- B2.1-B2.4 + B5: the skipped-turn refusal (roll first), `checkLegality` inside
+`runAction` (a refused action draws nothing), delete `legacyGrantedTargeting`, rule 4, the pre-hit
+fizzle; deletes `legacyDefaultTarget`/`getDefaultTarget` (retiring the two `getDefaultTarget`
+tests with the function); goldens 3-7 as amended at the plan review.

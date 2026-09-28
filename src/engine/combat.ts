@@ -335,7 +335,7 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
  * pipeline (`gemSlot: 'random'`, no explicit targeting -- `ctx.runAction` reproduces today's
  * exact gem/target draw order and "no castable gem -> no-op" fizzle, see actions.ts's own header
  * comment on what's deliberately NOT yet wired here in C2a: no legality/lock check, matching
- * today -- that gating is Phase 4.1-C2b, B2).
+ * today -- that gating is Phase 4.1-C2c, B2).
  */
 function maybeFireBonusCast(
   actorId: CreatureId,
@@ -350,7 +350,7 @@ function maybeFireBonusCast(
 
   const ctx = createResolutionContext(events, newCascade())
   const intent: Intent = { action: { kind: 'cast', gemSlot: 'random' } }
-  // C2a-only (deleted in C2b, B2.3): keeps today's exact behaviour -- no Confusion/Tunnel
+  // C2a-only (deleted in C2c, B2.3): keeps today's exact behaviour -- no Confusion/Tunnel
   // Vision/Provoke for a bonus cast's target.
   return ctx.runAction(actor.id, intent, state, { legacyGrantedTargeting: true })
 }
@@ -513,7 +513,7 @@ export function resolveTurn(state: CombatState): {
   // Turn-end hooks (incl. DoT/HoT ticks) and the granted-actions step (bonus-cast) fire BEFORE
   // TurnEnded -- Phase 4.1-C, D6: TurnEnded is always the turn's last event (Phase 4 fired these
   // after it; fixed here). Gating stays exactly as it is today (alive-only) -- whether a skipped
-  // (Stunned) turn should also refuse the granted cast is B2's own fix (Phase 4.1-C2b), out of
+  // (Stunned) turn should also refuse the granted cast is B2's own fix (Phase 4.1-C2c), out of
   // this slice's scope; C1 only reorders WHEN this step runs relative to TurnEnded, not WHETHER.
   if (getCreature(working, actor.id).alive) {
     working = fireHook(
