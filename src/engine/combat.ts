@@ -1075,28 +1075,50 @@ export function resolveTurn(state: CombatState): {
     )
     working = startResult.state
     suppressed = startResult.suppressed
-  }
 
-  // Re-resolve after turn-start hooks (which may have changed HP/alive) before acting.
-  const actorAfterStart = getCreature(working, actor.id)
-  if (actorAfterStart.alive && !suppressed) {
-    const script = actor.scriptId ? (working.scripts.get(actor.scriptId) ?? null) : null
-    // decideAction sees the actor's defending/provoking status as it stood ENTERING this turn
-    // (Provoke's override is resolved inside decideAction; no post-hoc override step here).
-    const action = decideAction(actorAfterStart, script, working)
-
-    // "Until its next turn" expires here, before this turn's action executes -- a fresh
-    // Defend/Provoke below re-applies for the next cycle; anything else leaves it lapsed.
-    working = clearOwnTransientStatus(working, actor.id)
-    const freshActor = getCreature(working, actor.id)
-
-    if (action) {
-      // Fresh cascade per top-level action: depth resets to 0, guard set starts empty.
-      working = executeAction(freshActor, action, working, events, newCascade())
+    // Turn-start cleanup (Phase 4.1-C, D6): "until its next turn" expires HERE, right after
+    // turn-start hooks, UNCONDITIONALLY on suppression -- runs on a Stunned/skipped turn too
+    // (fixes B6: previously this lived inside the `!suppressed` decide+action gate below, so a
+    // Stunned or Sleeping creature kept Defend/Provoke through its own skipped turn). Gated only
+    // on the actor being alive AT THIS POINT (re-checked fresh -- a turn-start hook may have
+    // killed it), matching the existing "re-resolve after turn-start hooks" discipline already
+    // used for the decide+action gate below. Cleanup is bookkeeping only (CONVENTIONS' "Turn
+    // structure": it ends things, never deals damage/heals/fires triggers), so moving it earlier
+    // is safe with `is-provoking` deleted in this same PR -- decideAction no longer reads the
+    // acting creature's own `defending`/`provoking` for anything (Defend's math reads the
+    // TARGET's flag; Provoke's redirect reads the OPPOSING side's provoking members; neither is
+    // `actor`'s own flag).
+    const afterStartHooks = getCreature(working, actor.id)
+    if (afterStartHooks.alive) {
+      working = clearOwnTransientStatus(working, actor.id)
+      if (afterStartHooks.defending || afterStartHooks.provoking) {
+        events.push({
+          type: 'ActionStateEnded',
+          creatureId: actor.id,
+          defending: afterStartHooks.defending,
+          provoking: afterStartHooks.provoking,
+        })
+      }
     }
   }
 
-  events.push({ type: 'TurnEnded', creatureId: actor.id })
+  // Re-resolve after turn-start hooks/cleanup before acting.
+  const actorAfterStart = getCreature(working, actor.id)
+  if (actorAfterStart.alive && !suppressed) {
+    const script = actor.scriptId ? (working.scripts.get(actor.scriptId) ?? null) : null
+    const action = decideAction(actorAfterStart, script, working)
+
+    if (action) {
+      // Fresh cascade per top-level action: depth resets to 0, guard set starts empty.
+      working = executeAction(actorAfterStart, action, working, events, newCascade())
+    }
+  }
+
+  // Turn-end hooks (incl. DoT/HoT ticks) and the granted-actions step (bonus-cast) fire BEFORE
+  // TurnEnded -- Phase 4.1-C, D6: TurnEnded is always the turn's last event (Phase 4 fired these
+  // after it; fixed here). Gating stays exactly as it is today (alive-only) -- whether a skipped
+  // (Stunned) turn should also refuse the granted cast is B2's own fix (Phase 4.1-C2), out of
+  // this slice's scope; C1 only reorders WHEN this step runs relative to TurnEnded, not WHETHER.
   if (getCreature(working, actor.id).alive) {
     working = fireHook(
       'on-turn-end',
@@ -1110,6 +1132,8 @@ export function resolveTurn(state: CombatState): {
     // hook -- see maybeFireBonusCast's own doc comment for why this isn't a hook response.
     working = maybeFireBonusCast(actor.id, working, events)
   }
+
+  events.push({ type: 'TurnEnded', creatureId: actor.id })
 
   // Win/loss/draw is checked after EVERY action, not just round boundaries. This ordering
   // (the turn fully closes with TurnEnded before this check runs) is intentional: AOE's

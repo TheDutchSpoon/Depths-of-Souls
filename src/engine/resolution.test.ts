@@ -1240,7 +1240,9 @@ describe('chancePercent probabilistic gate (Phase 4 Slice E2)', () => {
       {
         category: 'triggered',
         hook: 'on-attack',
-        condition: { kind: 'is-provoking' }, // the attacker never provokes -- always false
+        // Always false: living enemy count can never be < 0. (is-provoking, the original
+        // always-false condition this test used, was deleted in Phase 4.1-C.)
+        condition: { kind: 'enemy-count', comparator: '<', count: 0 },
         chancePercent: 50,
         response: {
           kind: 'apply-stat-modifier',

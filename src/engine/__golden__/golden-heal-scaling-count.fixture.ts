@@ -96,7 +96,8 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: FOE },
   { type: 'TurnStarted', creatureId: NECROMOSS },
   { type: 'Waited', creatureId: NECROMOSS },
-  { type: 'TurnEnded', creatureId: NECROMOSS },
+  // Phase 4.1-C (D6): on-turn-end hooks fire BEFORE TurnEnded now (TurnEnded is always the
+  // turn's last event).
   {
     type: 'TriggerFired',
     sourceId: NECROMOSS,
@@ -110,4 +111,5 @@ export const expectedEvents: CombatEvent[] = [
     amount: 5,
     remainingHp: 75,
   },
+  { type: 'TurnEnded', creatureId: NECROMOSS },
 ]

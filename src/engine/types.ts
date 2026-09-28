@@ -282,6 +282,18 @@ export interface WaitedEvent {
   readonly creatureId: CreatureId
 }
 
+/** Phase 4.1-C (D6, fixes B6): turn-start cleanup emits this only when a Defend/Provoke flag
+ * was actually set and just expired ("until its next turn") -- never on a dead creature's empty
+ * bracket, never when neither flag was set. Runs unconditionally on a skipped (Stunned) turn
+ * too, which is the fix: previously cleanup only ran when the creature went on to act, so a
+ * Stunned or Sleeping creature kept Defend/Provoke through its own skipped turn. */
+export interface ActionStateEndedEvent {
+  readonly type: 'ActionStateEnded'
+  readonly creatureId: CreatureId
+  readonly defending: boolean
+  readonly provoking: boolean
+}
+
 /** Precedes a triggered effect's consequences (mirrors AttackDeclared->DamageDealt). Slice B.
  * `effectId` is the stable definition id (trait/status), not the opaque instance id. */
 export interface TriggerFiredEvent {
@@ -309,6 +321,7 @@ export type IntentEvent =
   | DefendedEvent
   | ProvokedEvent
   | WaitedEvent
+  | ActionStateEndedEvent
   | TriggerFiredEvent
   | EchoCastGrantedEvent
 

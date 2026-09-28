@@ -1104,7 +1104,7 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     return event.type === 'SpellCast'
   }
 
-  it('on a successful roll, casts the (only) equipped spell after the ordinary on-turn-end hook', () => {
+  it('on a successful roll, casts the (only) equipped spell before TurnEnded (Phase 4.1-C, D6)', () => {
     const player = makeParty('player', [
       {
         id: 'caster',
@@ -1126,9 +1126,11 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     state = { ...state, rng: { position: SUCCEEDS_POSITION } }
     const { events } = resolveTurn(state)
 
+    // Phase 4.1-C (D6): TurnEnded is always the turn's last event -- the granted-actions step
+    // (bonus-cast) now fires BEFORE it, not after (Phase 4 fired it after).
     const turnEndedIndex = events.findIndex((e) => e.type === 'TurnEnded')
     const spellCastIndex = events.findIndex(isSpellCast)
-    expect(spellCastIndex).toBeGreaterThan(turnEndedIndex)
+    expect(spellCastIndex).toBeLessThan(turnEndedIndex)
     expect(events[spellCastIndex]).toMatchObject({
       type: 'SpellCast',
       casterId: createCreatureId('caster'),

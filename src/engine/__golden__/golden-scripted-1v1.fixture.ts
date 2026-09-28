@@ -84,6 +84,9 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: HERO },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: SENTRY },
+  // Phase 4.1-C (D6, fixes B6): round 1's Defend expires at SENTRY's own turn-start cleanup,
+  // unconditionally, before it decides its round-2 action.
+  { type: 'ActionStateEnded', creatureId: SENTRY, defending: true, provoking: false },
   { type: 'AttackDeclared', attackerId: SENTRY, targetId: HERO },
   {
     type: 'DamageDealt',

@@ -248,16 +248,6 @@ describe('evaluateCondition -- enemy-weak-to-me-exists', () => {
   })
 })
 
-describe('evaluateCondition -- is-provoking', () => {
-  it("reflects the acting creature's own provoking flag directly", () => {
-    const provoking = makeCreature({ provoking: true })
-    const notProvoking = makeCreature({ provoking: false })
-    const state = makeState()
-    expect(evaluateCondition({ kind: 'is-provoking' }, provoking, state)).toBe(true)
-    expect(evaluateCondition({ kind: 'is-provoking' }, notProvoking, state)).toBe(false)
-  })
-})
-
 describe('evaluateCondition -- has-status', () => {
   const poisonEffect: ActiveEffect = {
     category: 'condition-status',

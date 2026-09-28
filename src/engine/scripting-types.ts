@@ -66,10 +66,6 @@ export interface EnemyWeakToMeExistsCondition {
   readonly kind: 'enemy-weak-to-me-exists'
 }
 
-export interface IsProvokingCondition {
-  readonly kind: 'is-provoking'
-}
-
 /** Matches a literal statusId (never a category) among the subject pool's status-carrying
  * effects (condition-status + timed damage-modifier -- never stat-modifiers). Existential over
  * the pool, same as hp-percent's `any` qualifier; no lowest/highest qualifier here. */
@@ -102,7 +98,6 @@ export type Condition =
   | AllyCountCondition
   | RoundNumberCondition
   | EnemyWeakToMeExistsCondition
-  | IsProvokingCondition
   | HasStatusCondition
   | ActedBeforeTargetCondition
 

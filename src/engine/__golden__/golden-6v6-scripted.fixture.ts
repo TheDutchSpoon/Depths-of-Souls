@@ -98,6 +98,14 @@ export const expectedEventTypeCounts: Partial<Record<CombatEvent['type'], number
   Defended: 41,
   Provoked: 4,
   Waited: 50,
+  // Phase 4.1-C (D6, fixes B6): turn-start cleanup now unconditionally emits ActionStateEnded
+  // whenever a Defend/Provoke flag actually expires -- one per Defended/Provoked action whose
+  // bearer survives to reach its own next turn (fewer than the 45 total Defended+Provoked here,
+  // since a creature that dies before its own next turn never gets another turn-start cleanup to
+  // close its flag out). Regenerated and re-checkpointed at the same seed/scripts -- every OTHER
+  // checkpoint below (result, round count, turn order, the other counts, spot-check damage,
+  // provoke redirects) is unchanged, confirmed by re-running this fixture.
+  ActionStateEnded: 41,
   DamageDealt: 102,
   CreatureDied: 11,
   FightEnded: 1,

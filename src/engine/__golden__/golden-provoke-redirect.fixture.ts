@@ -107,6 +107,9 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: WEAKLING },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: PROVOKER },
+  // Phase 4.1-C (D6, fixes B6): round 1's Provoke expires at PROVOKER's own turn-start
+  // cleanup, unconditionally, before it decides its round-2 action.
+  { type: 'ActionStateEnded', creatureId: PROVOKER, defending: false, provoking: true },
   { type: 'Provoked', creatureId: PROVOKER },
   { type: 'TurnEnded', creatureId: PROVOKER },
   { type: 'TurnStarted', creatureId: HERO },

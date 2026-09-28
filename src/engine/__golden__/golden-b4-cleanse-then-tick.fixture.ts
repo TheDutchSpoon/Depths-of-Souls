@@ -114,7 +114,8 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: BEARER },
   { type: 'Waited', creatureId: BEARER },
-  { type: 'TurnEnded', creatureId: BEARER },
+  // Phase 4.1-C (D6): on-turn-end hooks fire BEFORE TurnEnded now (TurnEnded is always the
+  // turn's last event).
   {
     type: 'TriggerFired',
     sourceId: BEARER,
@@ -125,4 +126,5 @@ export const expectedEvents: CombatEvent[] = [
   // No second TriggerFired, no DamageDealt: the tick's candidate was captured before the
   // cleanser ran, but its exact owning instance is gone by the time its own turn in the
   // candidate list comes -- B4's exact-instance check skips it silently.
+  { type: 'TurnEnded', creatureId: BEARER },
 ]

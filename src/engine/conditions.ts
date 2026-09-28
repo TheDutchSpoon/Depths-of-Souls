@@ -123,8 +123,6 @@ export function evaluateCondition(
       return livingEnemiesOf(creature, state).some(
         (enemy) => getAffinityMultiplier(creature.affinity, enemy.affinity) > 1,
       )
-    case 'is-provoking':
-      return creature.provoking
     case 'has-status':
       return subjectPool(condition.subject, creature, state, resolvingAgainst).some((c) =>
         hasStatus(c, condition.statusId),
