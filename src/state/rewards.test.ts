@@ -1,9 +1,12 @@
 // Phase 4 Slice G: unit coverage for the pure reward/lookup helpers, isolated from the store's
-// Zustand plumbing (store.test.ts covers those integration paths).
+// Zustand plumbing (store.test.ts covers those integration paths). Reworked Phase 4.1-A (A6, A7)
+// for the new Instance shape and the injected BalanceConfig.
 
 import { describe, expect, test } from 'vitest'
 import { createBiomeId } from '../engine/ids'
 import type { BiomeData, Species, SpeciesCreature } from '../engine/generation'
+import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
+import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { createInstanceId } from './ids'
 import {
   addCurrencies,
@@ -11,72 +14,116 @@ import {
   currencyDropForKill,
   findStaticCreature,
   perkPointsFor,
+  staticCreatureIdFor,
   ZERO_CURRENCIES,
   type Instance,
   type StaticCreatureRef,
 } from './rewards'
 
-describe('applyXpGain', () => {
-  // xpForNextLevel(level) = 100 * level (leveling.ts).
+describe('applyXpGain (Phase 4.1-A default config: xpForNextLevel = 20 * level^2)', () => {
   test('no level-up when the gain stays under the threshold', () => {
     const instance: Instance = {
       id: createInstanceId('i1'),
-      creatureId: 'c1',
+      source: { kind: 'creature', creatureId: 'c1' },
       level: 5,
       xp: 10,
+      scriptId: null,
     }
-    // xpForNextLevel(5) = 500; 10 + 50 = 60 < 500.
-    expect(applyXpGain(instance, 50)).toEqual({ ...instance, level: 5, xp: 60 })
+    // xpForNextLevel(5) = 20*25 = 500; 10 + 50 = 60 < 500.
+    expect(applyXpGain(instance, 50, DEFAULT_BALANCE_CONFIG)).toEqual({
+      ...instance,
+      level: 5,
+      xp: 60,
+    })
   })
 
   test('a single level-up consumes exactly the threshold, keeping the remainder', () => {
     const instance: Instance = {
       id: createInstanceId('i1'),
-      creatureId: 'c1',
+      source: { kind: 'creature', creatureId: 'c1' },
       level: 1,
       xp: 0,
+      scriptId: null,
     }
-    // xpForNextLevel(1) = 100; 0 + 250 = 250 -> level 2 (250-100=150) -> 150 < xpForNextLevel(2)=200, stop.
-    expect(applyXpGain(instance, 250)).toEqual({ ...instance, level: 2, xp: 150 })
+    // xpForNextLevel(1) = 20; 0 + 50 = 50 -> level 2 (50-20=30) -> xpForNextLevel(2)=80,
+    // 30 < 80, stop.
+    expect(applyXpGain(instance, 50, DEFAULT_BALANCE_CONFIG)).toEqual({
+      ...instance,
+      level: 2,
+      xp: 30,
+    })
   })
 
   test('a large gain cascades through multiple level-ups in one call', () => {
     const instance: Instance = {
       id: createInstanceId('i1'),
-      creatureId: 'c1',
+      source: { kind: 'creature', creatureId: 'c1' },
       level: 1,
       xp: 0,
+      scriptId: null,
     }
-    // 0 + 350: L1->L2 costs 100 (250 left), L2->L3 costs 200 (50 left), L3->L4 costs 300 (50 < 300, stop).
-    expect(applyXpGain(instance, 350)).toEqual({ ...instance, level: 3, xp: 50 })
+    // 0 + 150: L1->L2 costs 20 (130 left), L2->L3 costs 80 (50 left), L3->L4 costs 180
+    // (50 < 180, stop).
+    expect(applyXpGain(instance, 150, DEFAULT_BALANCE_CONFIG)).toEqual({
+      ...instance,
+      level: 3,
+      xp: 50,
+    })
   })
 
   test('zero gain is a no-op', () => {
     const instance: Instance = {
       id: createInstanceId('i1'),
-      creatureId: 'c1',
+      source: { kind: 'creature', creatureId: 'c1' },
       level: 3,
       xp: 40,
+      scriptId: null,
     }
-    expect(applyXpGain(instance, 0)).toEqual(instance)
+    expect(applyXpGain(instance, 0, DEFAULT_BALANCE_CONFIG)).toEqual(instance)
+  })
+})
+
+describe('staticCreatureIdFor', () => {
+  test("resolves a 'creature' source to its creatureId", () => {
+    const instance: Instance = {
+      id: createInstanceId('i1'),
+      source: { kind: 'creature', creatureId: 'spider-weaver' },
+      level: 1,
+      xp: 0,
+      scriptId: null,
+    }
+    expect(staticCreatureIdFor(instance)).toBe('spider-weaver')
+  })
+
+  test("throws on a 'fusion' source (Phase 8 not built yet, ASSUMPTION 27)", () => {
+    const instance: Instance = {
+      id: createInstanceId('i1'),
+      source: { kind: 'fusion', identityParent: 'a', affinityParent: 'b' },
+      level: 1,
+      xp: 0,
+      scriptId: null,
+    }
+    expect(() => staticCreatureIdFor(instance)).toThrow(
+      /not materializable before Phase 8/,
+    )
   })
 })
 
 describe('currencyDropForKill', () => {
   test('scales flat currencies 1:1 with floor; bricks is floor(floor/10), min 1', () => {
-    expect(currencyDropForKill(1)).toEqual({
+    expect(currencyDropForKill(1, CFG)).toEqual({
       essence: 1,
       ore: 1,
       bricks: 1,
       lifeforce: 1,
     })
-    expect(currencyDropForKill(25)).toEqual({
+    expect(currencyDropForKill(25, CFG)).toEqual({
       essence: 25,
       ore: 25,
       bricks: 2,
       lifeforce: 25,
     })
-    expect(currencyDropForKill(100)).toEqual({
+    expect(currencyDropForKill(100, CFG)).toEqual({
       essence: 100,
       ore: 100,
       bricks: 10,
@@ -110,6 +157,7 @@ describe('perkPointsFor', () => {
 describe('findStaticCreature', () => {
   const STARTER: SpeciesCreature = {
     id: 'starter-x',
+    name: 'Starter X',
     affinity: 'wit',
     baseStats: { health: 10, attack: 10, intelligence: 10, defence: 10, speed: 10 },
     defaultScriptId: 'always-attack',
@@ -122,6 +170,7 @@ describe('findStaticCreature', () => {
 
   const POOLED: SpeciesCreature = {
     id: 'pooled-y',
+    name: 'Pooled Y',
     affinity: 'instinct',
     baseStats: { health: 12, attack: 12, intelligence: 12, defence: 12, speed: 12 },
     defaultScriptId: 'always-attack',

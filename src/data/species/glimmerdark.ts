@@ -78,6 +78,7 @@ export const GLIMMERDARK_SPELLS = [
 
 export const GLOWFLY_CHARGER: SpeciesCreature = {
   id: 'glowfly-charger',
+  name: 'Glowfly Charger',
   affinity: 'wit',
   baseStats: { health: 14, attack: 14, intelligence: 20, defence: 10, speed: 22 },
   defaultScriptId: 'always-attack',
@@ -87,6 +88,7 @@ export const GLOWFLY_CHARGER: SpeciesCreature = {
 
 export const GLOWFLY_DETONATOR: SpeciesCreature = {
   id: 'glowfly-detonator',
+  name: 'Glowfly Detonator',
   affinity: 'instinct',
   baseStats: { health: 14, attack: 16, intelligence: 22, defence: 10, speed: 20 },
   defaultScriptId: 'always-attack',
@@ -97,6 +99,7 @@ export const GLOWFLY_DETONATOR: SpeciesCreature = {
 /** Coverage sprinkle (Vitality -- see file header). */
 export const GLOWFLY_RADIANT: SpeciesCreature = {
   id: 'glowfly-radiant',
+  name: 'Glowfly Radiant',
   affinity: 'vitality',
   baseStats: { health: 18, attack: 12, intelligence: 22, defence: 12, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -116,6 +119,7 @@ export const GLOWFLIES: Species = {
 
 export const BLINDCLAWS_SETTER: SpeciesCreature = {
   id: 'blindclaws-setter',
+  name: 'Blindclaws Setter',
   affinity: 'instinct',
   baseStats: { health: 16, attack: 18, intelligence: 10, defence: 12, speed: 24 },
   defaultScriptId: 'always-attack',
@@ -125,6 +129,7 @@ export const BLINDCLAWS_SETTER: SpeciesCreature = {
 
 export const BLINDCLAWS_STRIKER: SpeciesCreature = {
   id: 'blindclaws-striker',
+  name: 'Blindclaws Striker',
   affinity: 'instinct',
   baseStats: { health: 14, attack: 24, intelligence: 10, defence: 10, speed: 26 },
   defaultScriptId: 'always-attack',
@@ -134,6 +139,7 @@ export const BLINDCLAWS_STRIKER: SpeciesCreature = {
 
 export const BLINDCLAWS_VANGUARD: SpeciesCreature = {
   id: 'blindclaws-vanguard',
+  name: 'Blindclaws Vanguard',
   affinity: 'instinct',
   baseStats: { health: 16, attack: 22, intelligence: 10, defence: 14, speed: 24 },
   defaultScriptId: 'always-attack',
@@ -157,6 +163,7 @@ export const BLINDCLAWS: Species = {
  * engine/generation.ts's spellsUnlockedAt). */
 export const RESONANT_CHORUS: SpeciesCreature = {
   id: 'resonant-chorus',
+  name: 'Resonant Chorus',
   affinity: 'wit',
   baseStats: { health: 16, attack: 10, intelligence: 24, defence: 12, speed: 18 },
   defaultScriptId: 'always-cast',
@@ -166,6 +173,7 @@ export const RESONANT_CHORUS: SpeciesCreature = {
 
 export const RESONANT_ADEPT: SpeciesCreature = {
   id: 'resonant-adept',
+  name: 'Resonant Adept',
   affinity: 'wit',
   baseStats: { health: 16, attack: 10, intelligence: 26, defence: 12, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -175,6 +183,7 @@ export const RESONANT_ADEPT: SpeciesCreature = {
 
 export const RESONANT_OVERTONE: SpeciesCreature = {
   id: 'resonant-overtone',
+  name: 'Resonant Overtone',
   affinity: 'wit',
   baseStats: { health: 18, attack: 12, intelligence: 26, defence: 12, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -196,6 +205,7 @@ export const RESONANTS: Species = {
 
 export const SPARKEATER_LEECH: SpeciesCreature = {
   id: 'sparkeater-leech',
+  name: 'Sparkeater Leech',
   // PR #60 review (C2): affinity now matches the stat it steals (CLAUDE.md's affinity->stat
   // soft-mapping) -- Attack -> violence.
   affinity: 'violence',
@@ -207,6 +217,7 @@ export const SPARKEATER_LEECH: SpeciesCreature = {
 
 export const SPARKEATER_GORGER: SpeciesCreature = {
   id: 'sparkeater-gorger',
+  name: 'Sparkeater Gorger',
   // PR #60 review (C2): Defence -> endurance.
   affinity: 'endurance',
   baseStats: { health: 18, attack: 20, intelligence: 12, defence: 16, speed: 14 },
@@ -218,6 +229,7 @@ export const SPARKEATER_GORGER: SpeciesCreature = {
 /** Coverage sprinkle (Vitality -- see file header). */
 export const SPARKEATER_VOIDMAW: SpeciesCreature = {
   id: 'sparkeater-voidmaw',
+  name: 'Sparkeater Voidmaw',
   affinity: 'vitality',
   baseStats: { health: 20, attack: 20, intelligence: 14, defence: 16, speed: 16 },
   defaultScriptId: 'always-attack',
@@ -238,6 +250,7 @@ export const SPARKEATERS: Species = {
 
 export const GLOOMJAW_STALKER: SpeciesCreature = {
   id: 'gloomjaw-stalker',
+  name: 'Gloomjaw Stalker',
   affinity: 'violence',
   baseStats: { health: 16, attack: 22, intelligence: 10, defence: 14, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -247,6 +260,7 @@ export const GLOOMJAW_STALKER: SpeciesCreature = {
 
 export const GLOOMJAW_EXECUTIONER: SpeciesCreature = {
   id: 'gloomjaw-executioner',
+  name: 'Gloomjaw Executioner',
   affinity: 'violence',
   baseStats: { health: 16, attack: 24, intelligence: 10, defence: 14, speed: 20 },
   defaultScriptId: 'always-attack',
@@ -256,6 +270,7 @@ export const GLOOMJAW_EXECUTIONER: SpeciesCreature = {
 
 export const GLOOMJAW_RAVAGER: SpeciesCreature = {
   id: 'gloomjaw-ravager',
+  name: 'Gloomjaw Ravager',
   affinity: 'violence',
   baseStats: { health: 18, attack: 26, intelligence: 10, defence: 14, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -275,6 +290,7 @@ export const GLOOMJAWS: Species = {
 
 export const SHELLBACK_WARDEN: SpeciesCreature = {
   id: 'shellback-warden',
+  name: 'Shellback Warden',
   affinity: 'endurance',
   baseStats: { health: 22, attack: 12, intelligence: 12, defence: 24, speed: 10 },
   defaultScriptId: 'always-attack',
@@ -286,6 +302,7 @@ export const SHELLBACK_WARDEN: SpeciesCreature = {
  * via stat-remap; a high Attack base would double-count the identity. */
 export const SHELLBACK_BRAWLER: SpeciesCreature = {
   id: 'shellback-brawler',
+  name: 'Shellback Brawler',
   affinity: 'endurance',
   baseStats: { health: 20, attack: 10, intelligence: 10, defence: 28, speed: 12 },
   defaultScriptId: 'always-attack',
@@ -295,6 +312,7 @@ export const SHELLBACK_BRAWLER: SpeciesCreature = {
 
 export const SHELLBACK_BULWARK: SpeciesCreature = {
   id: 'shellback-bulwark',
+  name: 'Shellback Bulwark',
   affinity: 'endurance',
   baseStats: { health: 24, attack: 12, intelligence: 12, defence: 26, speed: 10 },
   defaultScriptId: 'always-defend',
@@ -335,6 +353,7 @@ export const GLIMMERDARK_SPECIES_POOL: readonly Species[] = [
 
 export const LEECH_SOVEREIGN: SpeciesCreature = {
   id: 'leech-sovereign',
+  name: 'Leech Sovereign',
   affinity: 'instinct',
   baseStats: { health: 30, attack: 26, intelligence: 20, defence: 20, speed: 22 },
   defaultScriptId: 'always-attack',

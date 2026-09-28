@@ -11,6 +11,14 @@
 // count-2 trace); these tests' job is only to prove the whole stack composes against real data,
 // stays deterministic, and that real species-signature mechanics actually fire along the way.
 //
+// Phase 4.1-A (ASSUMPTION 3, A7): the two original scenarios below pin
+// `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` so every non-XP number (fight count, enemy level range,
+// soul gain, instance ids aside) stays exactly what it was under Phase 4 -- only the XP
+// expectations changed (the per-kill basis moved from `10 * floor` to the victim's own level,
+// and the level curve from `100 * level` to `20 * level^2`, per ASSUMPTION 5), each listed here.
+// A separate "Phase 4.1-A defaults" describe block below exercises the REAL, zero-override store
+// (the new default BalanceConfig) instead.
+//
 // The Brute spec is picked deliberately (not Sorcerer/Shieldbarer): its starter's signature
 // trait is a direct, content-level exercise of Slice B's action instance-list model (Attack
 // resolves as two full-power instances), so this same run also re-proves that mechanism against
@@ -23,14 +31,27 @@
 
 import { describe, expect, test } from 'vitest'
 import type { CombatEvent } from '../engine/types'
+import { contentFrontier } from '../engine/generation'
+import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { OVERGROWTH_BIOME_ID } from '../data/species/overgrowth'
+import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
+import { BIOMES } from '../data/biomes'
 import {
   SWARMHIVE_STRIKER_TRAIT,
   TREANT_GROVEKEEP_TRAIT,
   SNAPJAW_JAWS_TRAIT,
 } from '../data/traits/overgrowth'
 import { UNICORN_TRAIT } from '../data/traits/starters'
-import { createGameStore } from './store'
+import { createGameStore, type DescendResult } from './store'
+
+/** Narrows `descend()`'s `{ ok, ... }` union, failing loudly instead of silently continuing on
+ * an unexpected refusal (Phase 4.1-A, G5/S5 -- descend no longer throws on success/failure). */
+function expectOk(result: DescendResult): Extract<DescendResult, { ok: true }> {
+  if (!result.ok) {
+    throw new Error(`expected descend() to succeed, got refusal: ${result.reason}`)
+  }
+  return result
+}
 
 function triggersFor(events: readonly CombatEvent[], effectId: string): number {
   return events.filter((e) => e.type === 'TriggerFired' && e.effectId === effectId).length
@@ -68,7 +89,7 @@ function attacksPerTurn(events: readonly CombatEvent[], attackerId: string): num
 
 describe('Slice I integration: real Brute party through real floor 1 (Overgrowth)', () => {
   test('descends floor 1 deterministically, banking rewards and firing real species mechanics', () => {
-    const store = createGameStore()
+    const store = createGameStore({ balanceConfig: CFG })
     store.getState().setSpec('brute')
 
     const intro = store.getState().runScriptedIntro()
@@ -81,29 +102,34 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // it with round 2's first instance alone (3-11<0) -- instance 2 has no living target left
     // and never fires (Slice B's action instance-list model, re-exercised here too).
     const afterIntro = store.getState()
-    expect(afterIntro.collection.get('unicorn')?.length).toBe(1)
-    expect(afterIntro.activeParty.slice(0, 2)).toEqual(['brute-starter#0', 'unicorn#1'])
+    // Phase 4.1-A (A6): instance ids are opaque ('inst-<ordinal>'), never embedding the creature
+    // id -- the Brute starter is the first grant (setSpec), the Unicorn the second
+    // (runScriptedIntro).
+    expect(afterIntro.activeParty.slice(0, 2)).toEqual(['inst-0', 'inst-1'])
 
-    const outcome = store.getState().descend(1)
+    const { outcome } = expectOk(store.getState().descend(1))
 
     // ---- Floor-level outcome ----
     expect(outcome.fightResults).toEqual(['win', 'win', 'win'])
     expect(outcome.cleared).toBe(true)
     expect(outcome.deepestFloorAdvanced).toBe(true)
     expect(store.getState().deepestFloor).toBe(1)
-    expect(store.getState().currentFloor).toBe(1)
+    expect(store.getState().lastFloor).toBe(1)
     expect(store.getState().discoveredBiomes.has(OVERGROWTH_BIOME_ID)).toBe(true)
 
     // ---- Reward banking (per-kill, three fights won -> three enemies killed) ----
-    // floor 1 -> enemyPartySize(1)=1 enemy/fight, fightCount(1)=3 fights -> exactly 3 kills.
+    // floor 1 -> enemyPartySize(1)=1 enemy/fight, fightCount(1, CFG)=3 fights -> exactly 3 kills.
     expect([...outcome.soulGained.entries()].sort()).toEqual(
       [
-        ['treant-grovekeep', 2], // rare -> SOUL_GAIN_PERCENT.rare = 2
-        ['swarmhive-striker', 5], // uncommon -> SOUL_GAIN_PERCENT.uncommon = 5
-        ['snapjaw-jaws', 5], // uncommon -> SOUL_GAIN_PERCENT.uncommon = 5
+        ['treant-grovekeep', 2], // rare -> CFG.soulGainPercent.rare = 2
+        ['swarmhive-striker', 5], // uncommon -> CFG.soulGainPercent.uncommon = 5
+        ['snapjaw-jaws', 5], // uncommon -> CFG.soulGainPercent.uncommon = 5
       ].sort(),
     )
-    expect(outcome.xpBanked).toBe(30) // xpAwardForKill(floor=1)=10, 3 kills
+    // Phase 4.1-A (ASSUMPTION 5): xpAwardForKill = the victim's own level, not 10*floor -- see
+    // this file's own header comment. Generated-then-checkpoint-verified: the three victims'
+    // own rolled levels (within enemyLevelRange(1, CFG) = {min:1, max:3}) sum to 8.
+    expect(outcome.xpBanked).toBe(8)
     expect(outcome.currencyGained).toEqual({
       essence: 3,
       ore: 3,
@@ -155,11 +181,11 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     expect(strikerMod?.factor).toBe(1.2)
 
     // ---- Determinism: same fixed seed, same real data -> byte-identical outcome ----
-    const replay = createGameStore()
+    const replay = createGameStore({ balanceConfig: CFG })
     replay.getState().setSpec('brute')
     replay.getState().runScriptedIntro()
-    const replayOutcome = replay.getState().descend(1)
-    expect(replayOutcome).toEqual(outcome)
+    const replayResult = expectOk(replay.getState().descend(1))
+    expect(replayResult.outcome).toEqual(outcome)
 
     // ---- Slice B's action instance-list model, re-proven against real content (per this
     // test's own header comment) ----
@@ -175,10 +201,10 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
   })
 
   test('descends floor 10 -- the real Broodmother boss floor -- after leveling the party up to survive it', () => {
-    const store = createGameStore()
+    const store = createGameStore({ balanceConfig: CFG })
     store.getState().setSpec('brute')
     store.getState().runScriptedIntro()
-    store.getState().descend(1)
+    expectOk(store.getState().descend(1))
 
     // Level 20 (scaleStatsToLevel factor 1+0.25*19=5.75) was chosen after checking level 50
     // first and rejecting it: at 50 the party's opening turn(s) kill EVERY enemy (both adds and
@@ -189,16 +215,13 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     const LEVEL = 20
     store.setState((s) => {
       const collection = new Map(s.collection)
-      for (const [creatureId, bucket] of collection) {
-        collection.set(
-          creatureId,
-          bucket.map((inst) => ({ ...inst, level: LEVEL })),
-        )
+      for (const [instanceId, instance] of collection) {
+        collection.set(instanceId, { ...instance, level: LEVEL })
       }
       return { collection, deepestFloor: 9 } // precondition: floor 9 already cleared
     })
 
-    const outcome = store.getState().descend(10)
+    const { outcome } = expectOk(store.getState().descend(10))
 
     // ---- One fight, the boss + her two real spiderling adds (ids confirmed from the run) ----
     expect(outcome.fightResults).toEqual(['win'])
@@ -227,10 +250,11 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
       ['spider-ambusher', 'spider-weaver'].sort(),
     )
     expect(outcome.soulGained.has('broodmother')).toBe(false)
-    // xpAwardForKill(floor=10) = 10*10 = 100 per kill x 3 kills (boss + both adds) = 300.
-    expect(outcome.xpBanked).toBe(300)
-    // currencyDropForKill(10) = {essence:10,ore:10,bricks:max(1,floor(10/10))=1,lifeforce:10},
-    // banked per kill -- 3 kills.
+    // Phase 4.1-A (ASSUMPTION 5): xpAwardForKill = each victim's own level, not 10*floor.
+    // Generated-then-checkpoint-verified: the boss's own level is FIXED (bossLevel(10, CFG) =
+    // 16); the two adds' rolled levels (within enemyLevelRange(10, CFG) = {min:10, max:13}) sum
+    // with it to 38.
+    expect(outcome.xpBanked).toBe(38)
     expect(outcome.currencyGained).toEqual({
       essence: 30,
       ore: 30,
@@ -240,26 +264,66 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     expect(store.getState().deepestFloor).toBe(10)
 
     // ---- Re-clearing the same boss floor grants no further perk points (idempotent) ----
-    const secondOutcome = store.getState().descend(10)
-    expect(secondOutcome.bossDefeated).toBe('broodmother')
+    const secondResult = expectOk(store.getState().descend(10))
+    expect(secondResult.outcome.bossDefeated).toBe('broodmother')
     expect(store.getState().bossesCleared.size).toBe(1)
 
     // ---- Determinism: same fixed seed/levels, same real data -> byte-identical FIRST outcome --
-    const replay = createGameStore()
+    const replay = createGameStore({ balanceConfig: CFG })
     replay.getState().setSpec('brute')
     replay.getState().runScriptedIntro()
-    replay.getState().descend(1)
+    expectOk(replay.getState().descend(1))
     replay.setState((s) => {
       const collection = new Map(s.collection)
-      for (const [creatureId, bucket] of collection) {
-        collection.set(
-          creatureId,
-          bucket.map((inst) => ({ ...inst, level: LEVEL })),
-        )
+      for (const [instanceId, instance] of collection) {
+        collection.set(instanceId, { ...instance, level: LEVEL })
       }
       return { collection, deepestFloor: 9 }
     })
-    const replayOutcome = replay.getState().descend(10)
-    expect(replayOutcome).toEqual(outcome)
+    const replayResult = expectOk(replay.getState().descend(10))
+    expect(replayResult.outcome).toEqual(outcome)
+  })
+})
+
+describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig', () => {
+  test('the content frontier reflects the 3 authored biomes (Overgrowth/Glimmerdark/Rotcap Hollow)', () => {
+    expect(contentFrontier(BIOMES)).toBe(30)
+  })
+
+  test('floor 1 runs the new default fight count (10) and grants soul% matching the new rarity table', () => {
+    const store = createGameStore()
+    store.getState().setSpec('brute')
+    store.getState().runScriptedIntro()
+
+    const { outcome } = expectOk(store.getState().descend(1))
+
+    // Generated-then-checkpoint-verified (this describe block's own header comment): under the
+    // real default config, floor 1 is 10 fights (not CFG's 3) -- the level-1 Brute/Unicorn party
+    // wins the first 9 draws against Overgrowth's real roster but loses the 10th, an honest
+    // instance of CONVENTIONS' documented, accepted risk ("floor success ≈ (per-fight win
+    // chance)^(fights), so a small per-fight loss rate compounds") now visible even at floor 1
+    // once fightCount rose from 3 to 10. `fightResults` stops at the first non-win per
+    // CONVENTIONS ("a floor's remaining fights are simply never attempted after a wipe").
+    expect(outcome.fightResults).toEqual([
+      'win',
+      'win',
+      'win',
+      'win',
+      'win',
+      'win',
+      'win',
+      'win',
+      'win',
+      'loss',
+    ])
+    expect(outcome.cleared).toBe(false)
+    expect(store.getState().deepestFloor).toBe(0)
+
+    // Every soul% gain this call must be a whole multiple of one of the new rarity percentages
+    // (25/20/10) -- a creature can die more than once across the 9 won fights.
+    const allowedGains = Object.values(DEFAULT_BALANCE_CONFIG.soulGainPercent)
+    for (const gain of outcome.soulGained.values()) {
+      expect(allowedGains.some((per) => gain % per === 0)).toBe(true)
+    }
   })
 })

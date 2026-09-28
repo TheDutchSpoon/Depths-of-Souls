@@ -46,6 +46,7 @@ const creature: Creature = {
   innateTraitIds: [],
   activeEffects: [],
   defendCount: 0,
+  origin: { templateId: 'test', level: 1 },
 }
 
 describe('getEffectiveStat', () => {

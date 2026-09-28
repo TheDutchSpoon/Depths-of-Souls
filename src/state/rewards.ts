@@ -1,23 +1,51 @@
 // Phase 4 Slice G: pure run-layer reward/lookup helpers, kept separate from store.ts's Zustand
 // shape/actions so the actual reward math is independently unit-testable and mirrors the
 // engine's own file-per-concern convention (curves.ts / leveling.ts alongside combat.ts).
+// Instance shape reworked Phase 4.1-A (A6) -- the save-v1 shape, decided before Phase 5.
 
+import type { BalanceConfig } from '../engine/balance-types'
 import type { BiomeData, SpeciesCreature } from '../engine/generation'
 import { xpForNextLevel } from '../engine/leveling'
 import type { InstanceId } from './ids'
 
 // ---- Owned instances ----
 
+/** Phase 4.1-A (A6): an Instance's recipe. Only `kind: 'creature'` is produced before Phase 8 --
+ * materializing from a `kind: 'fusion'` source throws (ASSUMPTION 27); the variant exists only so
+ * save v1 never needs reshaping once fusion lands. */
+export type InstanceSource =
+  | { readonly kind: 'creature'; readonly creatureId: string }
+  | {
+      readonly kind: 'fusion'
+      readonly identityParent: string
+      readonly affinityParent: string
+    }
+
 export interface Instance {
+  /** Opaque (`'inst-<n>'`, from the store's ordinal counter) -- NEVER embeds the creature id
+   * (Phase 4.1-A, A6/ASSUMPTION 25). */
   readonly id: InstanceId
-  /** References a SpeciesCreature.id (a starter, the Unicorn, or a biome-spawnable creature).
-   * A plain string -- ASSUMPTION 25 only pins branding for InstanceId itself; the brief's own
-   * `Map<CreatureId, Instance[]>` collection shorthand is read as using "CreatureId" loosely for
-   * this static id, NOT the engine's branded per-fight CreatureId (src/engine/ids.ts) -- see
-   * store.ts's GameState.collection doc comment for the full disambiguation. */
-  readonly creatureId: string
+  readonly source: InstanceSource
   readonly level: number
   readonly xp: number
+  /** `null` = "use the creature's default (role) script", resolved at materialization
+   * (ASSUMPTION 6). Nothing sets this non-null before a future script-assignment phase, but the
+   * plumbing through `materializeCreature` is real (Phase 4.1-A, A5/A6). */
+  readonly scriptId: string | null
+}
+
+/** Resolves an Instance's static creature id from its `source`. Throws on a `fusion` source
+ * (ASSUMPTION 27) -- deriving a fused creature is Phase 8; the variant exists only so this slice's
+ * save shape never needs reshaping once it lands. */
+export function staticCreatureIdFor(instance: Instance): string {
+  switch (instance.source.kind) {
+    case 'creature':
+      return instance.source.creatureId
+    case 'fusion':
+      throw new Error(
+        'staticCreatureIdFor: fused instances are not materializable before Phase 8',
+      )
+  }
 }
 
 /**
@@ -26,11 +54,15 @@ export interface Instance {
  * xpForNextLevel -- level-ups NEVER happen mid-fight (CONVENTIONS: "the engine never sees a
  * mid-fight level change"); this is the POST-fight application the run layer owns.
  */
-export function applyXpGain(instance: Instance, xpGain: number): Instance {
+export function applyXpGain(
+  instance: Instance,
+  xpGain: number,
+  config: BalanceConfig,
+): Instance {
   let level = instance.level
   let xp = instance.xp + xpGain
-  while (xp >= xpForNextLevel(level)) {
-    xp -= xpForNextLevel(level)
+  while (xp >= xpForNextLevel(level, config)) {
+    xp -= xpForNextLevel(level, config)
     level += 1
   }
   return { ...instance, level, xp }
@@ -66,14 +98,18 @@ export function addCurrencies(a: Currencies, b: Currencies): Currencies {
  * drop table... independent of which specific creature was defeated" -- that clause scopes to
  * recipe drops, but the creature-independence itself still applies here: a flat per-kill amount,
  * unlike soul%, doesn't skew by rarity). A flat, floor-scaled placeholder; exact drop rates are
- * parked balance (GAME_DESIGN §13).
+ * parked balance (GAME_DESIGN §13). Parameterized by BalanceConfig (Phase 4.1-A, A7) -- values
+ * unchanged from Phase 4.
  */
-export function currencyDropForKill(floor: number): Currencies {
+export function currencyDropForKill(floor: number, config: BalanceConfig): Currencies {
   return {
-    essence: floor,
-    ore: floor,
-    bricks: Math.max(1, Math.floor(floor / 10)), // "rarer" per GAME_DESIGN §4
-    lifeforce: floor,
+    essence: floor * config.currencyPerFloor,
+    ore: floor * config.currencyPerFloor,
+    bricks: Math.max(
+      config.bricksMinimum,
+      Math.floor(floor / 10) * config.bricksPerTenFloors,
+    ), // "rarer" per GAME_DESIGN §4
+    lifeforce: floor * config.currencyPerFloor,
   }
 }
 

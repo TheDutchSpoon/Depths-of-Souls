@@ -17,6 +17,7 @@ const BASE_STATS = { health: 20, attack: 20, intelligence: 20, defence: 20, spee
 // A plain attack-role creature: no spells rolled, ever.
 export const FIXTURE_BRUISER: SpeciesCreature = {
   id: 'fixture-bruiser',
+  name: 'Fixture Bruiser',
   affinity: 'violence',
   baseStats: BASE_STATS,
   defaultScriptId: 'always-attack',
@@ -27,6 +28,7 @@ export const FIXTURE_BRUISER: SpeciesCreature = {
 // A rare within its species -- exercises the rarity-weighted within-species draw.
 export const FIXTURE_BRUISER_RARE: SpeciesCreature = {
   id: 'fixture-bruiser-rare',
+  name: 'Fixture Bruiser (Rare)',
   affinity: 'violence',
   baseStats: { ...BASE_STATS, attack: 26 },
   defaultScriptId: 'always-attack',
@@ -37,6 +39,7 @@ export const FIXTURE_BRUISER_RARE: SpeciesCreature = {
 // A cast-role creature: MUST be rolled >=1 affinity-matched (wit) spell.
 export const FIXTURE_CASTER: SpeciesCreature = {
   id: 'fixture-caster',
+  name: 'Fixture Caster',
   affinity: 'wit',
   baseStats: { ...BASE_STATS, intelligence: 24 },
   defaultScriptId: 'always-cast',
@@ -124,6 +127,7 @@ export const FIXTURE_BIOME_SEQUENCE: readonly BiomeData[] = Array.from(
 
 export const FIXTURE_BOSS_CREATURE: SpeciesCreature = {
   id: 'fixture-boss',
+  name: 'Fixture Boss',
   affinity: 'wit',
   baseStats: { ...BASE_STATS, attack: 30 },
   defaultScriptId: 'always-attack',

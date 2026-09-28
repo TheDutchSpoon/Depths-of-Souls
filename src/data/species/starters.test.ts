@@ -69,13 +69,12 @@ describe('Sorcerer starter loadout', () => {
   })
 
   it('materializeCreature (the REAL path) carries the fixed loadout through, not just the raw data', () => {
-    const materialized = materializeCreature(
-      SORCERER_STARTER,
-      1,
-      'player',
-      0,
-      'sorcerer-starter-species',
-    )
+    const materialized = materializeCreature(SORCERER_STARTER, {
+      level: 1,
+      side: 'player',
+      slot: 0,
+      speciesId: 'sorcerer-starter-species',
+    })
     expect(materialized.equippedSpells).toHaveLength(4)
     expect(materialized.equippedSpells[0]).toBe(ARCANE_BOLT)
   })

@@ -11,13 +11,13 @@ import { createCreatureId, type BiomeId, type CreatureId } from './ids'
 import { createSeededRng, type SeededRng } from './rng'
 import { scaleStatsToLevel } from './leveling'
 import {
-  RARITY_DRAW_WEIGHT,
   bossLevel,
   enemyLevelRange,
   enemyPartySize,
   fightCount,
   type RarityTier,
 } from './curves'
+import type { BalanceConfig } from './balance-types'
 import { DEFAULT_GEM_SLOT_COUNT } from './config'
 import type { Affinity, Creature, CreatureStats, Side, Spell } from './types'
 
@@ -28,6 +28,11 @@ import type { Affinity, Creature, CreatureStats, Side, Spell } from './types'
 
 export interface SpeciesCreature {
   readonly id: string
+  /** Phase 4.1-A (G3): the full display name (e.g. "Treant Grovekeep", "Broodmother"), stored
+   * whole -- NEVER assembled from the species name + this creature's own role/label. Required;
+   * a data test (data/species/names.test.ts) asserts non-empty + unique across every real
+   * SpeciesCreature (starters, the Unicorn, every biome's spawn pool, every boss). */
+  readonly name: string
   readonly affinity: Affinity
   readonly baseStats: CreatureStats
   /** The creature's role/behavior when it spawns as an enemy (GAME_DESIGN §5). */
@@ -156,30 +161,49 @@ function hashFloorDraw(runSeed: number, floor: number): number {
 
 // ---- Materialization ----
 
+export interface MaterializeCreatureOptions {
+  readonly level: number
+  readonly side: Side
+  readonly slot: number
+  readonly speciesId: string
+  /** Phase 4.1-A (A5): named `gems` (not `equippedSpells`) to match its eventual Phase 4.1-G
+   * source, `Instance.gems: spellId[]` (resolved to Spell objects by the caller) -- avoids a
+   * second rename later. Same fallback semantics as Phase 4's positional `equippedSpells` param
+   * (see the fallback-order comment below); untouched otherwise. */
+  readonly gems?: readonly (Spell | null)[]
+  /** Phase 4.1-A (A5/A6, ASSUMPTION 6): overrides `speciesCreature.defaultScriptId` when given
+   * (including explicit `null`, which -- like `undefined` -- falls back to the default; both
+   * mean "use the creature's default script"). The run layer resolves `Instance.scriptId` into
+   * this option; nothing produces a non-null `Instance.scriptId` before a future
+   * script-assignment phase, but the plumbing is real end to end as of this slice. */
+  readonly scriptId?: string | null
+  /** Phase 4.1-A (A5): an opaque string the run layer may stash an InstanceId in -- see
+   * CreatureOrigin's own doc comment (engine/types.ts). Absent for generated enemies. */
+  readonly ref?: string
+}
+
 /**
  * Pure and RNG-free (generation already spent the randomness upstream, in generateFloor).
- * Bakes `scaleStatsToLevel` into baseStats; copies affinity/defaultScriptId->scriptId/
- * innateTraitIds. `currentHp` is a placeholder (baseStats.health) -- createCombat is what
- * actually initializes it, via the exact same fight-start path any other creature goes
- * through, so a materialized creature never bypasses that init. `speciesId` (Phase 4 Slice E2 --
- * wired here, was left unset since Slice D) is the owning `Species.id`, passed explicitly rather
+ * Bakes `scaleStatsToLevel` into baseStats; copies affinity/innateTraitIds; resolves scriptId
+ * (options.scriptId ?? the template's defaultScriptId) and fills `origin` (Phase 4.1-A, A5) from
+ * the template id, the level, and the optional instance ref. `currentHp` is a placeholder
+ * (baseStats.health) -- createCombat is what actually initializes it, via the exact same
+ * fight-start path any other creature goes through, so a materialized creature never bypasses
+ * that init. `speciesId` (Phase 4 Slice E2) is the owning `Species.id`, passed explicitly rather
  * than embedded on `SpeciesCreature` itself (mirrors `side`/`slot`/`level` already being
- * explicit params) -- `living-allies-of-species` (effects.ts) was inert (always 0) until now.
+ * explicit options) -- `living-allies-of-species` (effects.ts) was inert (always 0) until then.
  *
- * `equippedSpells` fallback order (Phase 4 Slice F, review amendment): the caller's own
- * argument wins when supplied (generateFloor's per-visit rolled loadout for a spawned enemy),
+ * `gems` fallback order (Phase 4 Slice F, review amendment; renamed Phase 4.1-A): the caller's
+ * own option wins when supplied (generateFloor's per-visit rolled loadout for a spawned enemy),
  * else `speciesCreature.equippedSpells` when the static data carries a FIXED loadout (a
  * starter's granted gem), else all-null slots (the pre-Slice-F default -- byte-identical for
  * every species/enemy that sets neither).
  */
 export function materializeCreature(
   speciesCreature: SpeciesCreature,
-  level: number,
-  side: Side,
-  slot: number,
-  speciesId: string,
-  equippedSpells?: readonly (Spell | null)[],
+  options: MaterializeCreatureOptions,
 ): Creature {
+  const { level, side, slot, speciesId, gems, scriptId, ref } = options
   const baseStats = scaleStatsToLevel(speciesCreature.baseStats, level)
   return {
     id: createCreatureId(`${speciesCreature.id}-${side}-${slot}`),
@@ -189,9 +213,9 @@ export function materializeCreature(
     affinity: speciesCreature.affinity,
     currentHp: baseStats.health,
     alive: true,
-    scriptId: speciesCreature.defaultScriptId,
+    scriptId: scriptId ?? speciesCreature.defaultScriptId,
     equippedSpells:
-      equippedSpells ??
+      gems ??
       speciesCreature.equippedSpells ??
       Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null),
     defending: false,
@@ -201,6 +225,7 @@ export function materializeCreature(
     // Phase 4 Slice D: cumulative-per-fight, always starts at 0.
     defendCount: 0,
     speciesId,
+    origin: { templateId: speciesCreature.id, level, ref },
   }
 }
 
@@ -301,9 +326,9 @@ function resolveAddSpeciesId(biome: BiomeData, add: SpeciesCreature): string {
 }
 
 /**
- * `(floor, biomeData, biomeIndex, allSpells, runRng) -> Fight[]`, one entry per
- * `fightCount(floor)`. Advances `runRng` (the caller's persistent run RNG stream, per
- * CONVENTIONS) -- re-descending the same floor with the stream at a different position
+ * `(floor, biomeData, biomeIndex, allSpells, runRng, balanceConfig) -> Fight[]`, one entry per
+ * `fightCount(floor, balanceConfig)`. Advances `runRng` (the caller's persistent run RNG stream,
+ * per CONVENTIONS) -- re-descending the same floor with the stream at a different position
  * re-rolls its creatures, while `biomeForFloor` keeps the biome itself fixed.
  *
  * `biomeIndex` is the current biome's 1-based number (the caller's own resolved position in its
@@ -311,18 +336,20 @@ function resolveAddSpeciesId(biome: BiomeData, add: SpeciesCreature): string {
  * generation.ts stays ignorant of array position itself, it just receives the number) and
  * `allSpells` is the GLOBAL spell registry (no longer a per-biome `spellPool`, Phase 4
  * interstitial slice) -- together they drive `rollLoadout`'s cumulative-unlock filter.
+ * `balanceConfig` (Phase 4.1-A, A7) drives every depth curve below -- fightCount/enemyPartySize/
+ * enemyLevelRange/bossLevel are now pure functions of `(floor, balanceConfig)`, never a literal.
  *
  * Phase 4 Slice I (PR #65 review, boss floors): when `isBossFloor(floor)` and the resolved
  * `biome` carries a `boss`, this returns exactly ONE Fight -- the boss at slot 0 (materialized at
- * `bossLevel(floor)`, no per-visit LEVEL roll of her own -- an authored, elevated Instance, not a
- * spawn-pool draw -- but still rolling a loadout via `rollLoadout` like any spawn, so a cast-role
- * boss never breaks the "casters always get a spell" coherence rule; a no-op RNG-wise for every
- * currently-shipped boss, all of which are `always-attack`) followed by her authored adds (each
- * rolling a level within `enemyLevelRange(floor)` and a loadout via `rollLoadout`, the SAME
- * per-slot RNG calls an ordinary spawn makes, minus the species/creature draws a fixed add
- * doesn't need). `fightCount`/`enemyPartySize` are NOT consulted -- only which creatures appear
- * is authored, per CONVENTIONS. A boss-less biome (the placeholder biomes, every fixture) falls
- * through to the ordinary path below unchanged.
+ * `bossLevel(floor, balanceConfig)`, no per-visit LEVEL roll of her own -- an authored, elevated
+ * Instance, not a spawn-pool draw -- but still rolling a loadout via `rollLoadout` like any
+ * spawn, so a cast-role boss never breaks the "casters always get a spell" coherence rule; a
+ * no-op RNG-wise for every currently-shipped boss, all of which are `always-attack`) followed by
+ * her authored adds (each rolling a level within `enemyLevelRange(floor, balanceConfig)` and a
+ * loadout via `rollLoadout`, the SAME per-slot RNG calls an ordinary spawn makes, minus the
+ * species/creature draws a fixed add doesn't need). `fightCount`/`enemyPartySize` are NOT
+ * consulted -- only which creatures appear is authored, per CONVENTIONS. A boss-less biome (the
+ * placeholder biomes, every fixture) falls through to the ordinary path below unchanged.
  */
 export function generateFloor(
   floor: number,
@@ -330,59 +357,78 @@ export function generateFloor(
   biomeIndex: number,
   allSpells: readonly Spell[],
   runRng: SeededRng,
+  balanceConfig: BalanceConfig,
 ): readonly Fight[] {
   if (isBossFloor(floor) && biome.boss) {
     const boss = biome.boss
     const bossLoadout = rollLoadout(boss.creature, biomeIndex, allSpells, runRng)
-    const bossCreature = materializeCreature(
-      boss.creature,
-      bossLevel(floor),
-      'enemy',
-      0,
-      boss.speciesId,
-      bossLoadout,
-    )
-    const { min, max } = enemyLevelRange(floor)
+    const bossCreature = materializeCreature(boss.creature, {
+      level: bossLevel(floor, balanceConfig),
+      side: 'enemy',
+      slot: 0,
+      speciesId: boss.speciesId,
+      gems: bossLoadout,
+    })
+    const { min, max } = enemyLevelRange(floor, balanceConfig)
     const enemyParty: Creature[] = [bossCreature]
     boss.adds.forEach((add, index) => {
       const addSpeciesId = resolveAddSpeciesId(biome, add)
       const level = min + Math.floor(runRng.next() * (max - min + 1))
       const equippedSpells = rollLoadout(add, biomeIndex, allSpells, runRng)
       enemyParty.push(
-        materializeCreature(add, level, 'enemy', index + 1, addSpeciesId, equippedSpells),
+        materializeCreature(add, {
+          level,
+          side: 'enemy',
+          slot: index + 1,
+          speciesId: addSpeciesId,
+          gems: equippedSpells,
+        }),
       )
     })
     return [{ enemyParty, boss: { bossId: boss.bossId, creatureId: bossCreature.id } }]
   }
 
   const fights: Fight[] = []
-  const { min, max } = enemyLevelRange(floor)
-  const partySize = enemyPartySize(floor)
+  const { min, max } = enemyLevelRange(floor, balanceConfig)
+  const partySize = enemyPartySize(floor, balanceConfig)
 
-  for (let fightIndex = 0; fightIndex < fightCount(floor); fightIndex++) {
+  for (let fightIndex = 0; fightIndex < fightCount(floor, balanceConfig); fightIndex++) {
     const enemyParty: Creature[] = []
     for (let slot = 0; slot < partySize; slot++) {
       const species = weightedPick(biome.speciesPool, (s) => s.weight, runRng)
       const speciesCreature = weightedPick(
         species.creatures,
-        (c) => RARITY_DRAW_WEIGHT[c.rarity],
+        (c) => balanceConfig.rarityDrawWeight[c.rarity],
         runRng,
       )
       const level = min + Math.floor(runRng.next() * (max - min + 1))
       const equippedSpells = rollLoadout(speciesCreature, biomeIndex, allSpells, runRng)
       enemyParty.push(
-        materializeCreature(
-          speciesCreature,
+        materializeCreature(speciesCreature, {
           level,
-          'enemy',
+          side: 'enemy',
           slot,
-          species.id,
-          equippedSpells,
-        ),
+          speciesId: species.id,
+          gems: equippedSpells,
+        }),
       )
     }
     fights.push({ enemyParty })
   }
 
   return fights
+}
+
+/**
+ * Phase 4.1-A (G5, S5): the last floor whose biome has a non-empty species pool, derived from
+ * the biome data itself -- never a constant, so authoring a new biome moves the frontier
+ * automatically. `0` if no biome in the list has any content. Pure; `biomes` is read in its own
+ * authored/positional order, matching `biomeForFloor`'s own fixed-sequence indexing.
+ */
+export function contentFrontier(biomes: readonly BiomeData[]): number {
+  let lastNonEmptyIndex = -1
+  biomes.forEach((biome, index) => {
+    if (biome.speciesPool.length > 0) lastNonEmptyIndex = index
+  })
+  return lastNonEmptyIndex === -1 ? 0 : (lastNonEmptyIndex + 1) * FLOORS_PER_BIOME
 }

@@ -1,82 +1,62 @@
-// Phase 4 Slice A: depth-scaling curves for the run layer. Every number here is explicitly
-// parked balance (GAME_DESIGN §13's "master difficulty lever" / "soul-per-kill % per rarity
-// tier") -- each curve lives behind its own small function/table so retuning in playtest never
-// touches generation.ts's call sites.
+// Phase 4 Slice A; reworked Phase 4.1-A (A7 + D1 defaults) -- depth-scaling curves for the run
+// layer, now PARAMETERIZED by an injected BalanceConfig instead of hardcoded literals. Every
+// number is still explicitly parked balance (GAME_DESIGN §13); retuning happens in
+// data/balance.ts, never here.
+
+import type { BalanceConfig } from './balance-types'
 
 export interface LevelRange {
   readonly min: number
   readonly max: number
 }
 
-/**
- * ASSUMPTION 2: exact curve shape / width-growth rate is parked balance (§13). A simple
- * explicit placeholder -- enemy level tracks floor 1:1 at the low end, and the range widens
- * (the intended variance axis) as depth increases.
- */
-export function enemyLevelRange(floor: number): LevelRange {
-  return { min: floor, max: floor + 2 + Math.floor(floor / 10) }
-}
-
-/**
- * ASSUMPTION 3: also parked balance. Flat placeholder, deterministic and NOT rolled -- the
- * fight *count* is stable across repeated visits to the same floor; only the creatures/levels
- * re-roll per visit (CONVENTIONS "Generation & the run layer").
- */
-export function fightCount(floor: number): number {
-  void floor // deliberately floor-independent for now -- see ASSUMPTION above.
-  return 3
-}
-
-/** The ceiling `enemyPartySize` ramps to and clamps at -- combat's max party size (6v6). */
-export const ENEMY_PARTY_SIZE = 6
-
-/**
- * Decided in review of Slice A, superseding the earlier flat-6 reading of the brief's "up to 6
- * enemy slots": enemy party size scales with depth, ramping 1 -> ENEMY_PARTY_SIZE and clamping
- * there -- the same treatment enemyLevelRange already gets, rather than every fight spawning
- * the full slate from floor 1. Exact ramp shape is parked balance (GAME_DESIGN §13); this is
- * the simplest monotonic 1->6 placeholder, tuned in playtest.
- */
-export function enemyPartySize(floor: number): number {
-  return Math.min(ENEMY_PARTY_SIZE, floor)
-}
-
 export type RarityTier = 'common' | 'uncommon' | 'rare'
 
 /**
- * ASSUMPTION (Slice A): GAME_DESIGN §13 parks "soul-per-kill % per rarity tier" as balance but
- * never pins the SPAWN-weight per tier used by the within-species rarity-weighted creature
- * draw (§4/§5: "rarer creatures appear less often"). A simple descending placeholder stands in
- * until playtest tunes it -- common creatures are 6x as likely to spawn as rare ones.
+ * ASSUMPTION 4 (phase-4.1-implementation-plan.md) + the 4.1-A plan review's own correction:
+ * min = round(floor * m(floor)), where m(floor) rises linearly from
+ * levelMultiplier.atFloor1Hundredths/100 at floor 1 to .../atFloor100Hundredths/100 at floor
+ * 100, then + perFloorAfter100Hundredths/100 per floor after. Computed with a SINGLE Math.round
+ * at the very end -- multiplying out before dividing keeps the whole computation exact integer
+ * arithmetic until that one rounding, so there is no compounding float drift across floors (the
+ * plan's own "no intermediate rounding of the multiplier" requirement).
  */
-export const RARITY_DRAW_WEIGHT: Record<RarityTier, number> = {
-  common: 6,
-  uncommon: 3,
-  rare: 1,
+function scaledMinLevel(floor: number, config: BalanceConfig): number {
+  const {
+    atFloor1Hundredths: a,
+    atFloor100Hundredths: b,
+    perFloorAfter100Hundredths: p,
+  } = config.levelMultiplier
+  if (floor <= 100) {
+    return Math.round((floor * (99 * a + (b - a) * (floor - 1))) / 9900)
+  }
+  return Math.round((floor * (b + p * (floor - 100))) / 100)
 }
 
-/**
- * Phase 4 Slice G (own ASSUMPTION, not pinned by the brief): GAME_DESIGN §13 parks
- * "soul-per-kill % per rarity tier" as balance but never pins actual numbers -- only the
- * spawn-weight side (RARITY_DRAW_WEIGHT, above) existed before this slice. A simple descending
- * placeholder -- rarer creatures grant LESS % per defeat (GAME_DESIGN §5: "slower to
- * complete") -- tuned in playtest. Consumed by the run-layer's per-kill reward banking
- * (src/state/store.ts's descend()), never by combat itself.
- */
-export const SOUL_GAIN_PERCENT: Record<RarityTier, number> = {
-  common: 10,
-  uncommon: 5,
-  rare: 2,
+export function enemyLevelRange(floor: number, config: BalanceConfig): LevelRange {
+  const min = scaledMinLevel(floor, config)
+  const max =
+    min +
+    config.levelRangeWidth.base +
+    Math.floor(floor / 10) * config.levelRangeWidth.perTenFloors
+  return { min, max }
 }
 
-/**
- * ASSUMPTION 32 (Slice I, PR #65 review): a boss floor's boss spawns a few levels above that
- * floor's own `enemyLevelRange(floor).max` -- species-locked.md's "a few levels above the
- * floor's range" stands in as a flat +3 offset, parked balance like #1-3 above (tuned in
- * playtest, never a literal scattered through generateFloor).
- */
-export const BOSS_LEVEL_OFFSET = 3
+/** Deterministic; NOT rolled -- CONVENTIONS "Generation & the run layer": the fight *count* is
+ * stable across visits, only the creatures/levels re-roll per visit. Default (data/balance.ts):
+ * 10 + (floor - 1), uncapped (floor 1 = 10 fights, +1/floor). */
+export function fightCount(floor: number, config: BalanceConfig): number {
+  return config.fightCountBase + config.fightCountPerFloor * (floor - 1)
+}
 
-export function bossLevel(floor: number): number {
-  return enemyLevelRange(floor).max + BOSS_LEVEL_OFFSET
+/** Ramps 1 -> enemyPartySizeCap and clamps there -- combat's max party size (6v6). Default cap
+ * 6, so fights are 6v6 from floor 6 (`min(6, floor)`, unchanged from Phase 4). */
+export function enemyPartySize(floor: number, config: BalanceConfig): number {
+  return Math.min(config.enemyPartySizeCap, floor)
+}
+
+/** A boss floor's boss spawns a few levels above that floor's own enemyLevelRange(floor).max.
+ * Default offset 3 (unchanged from Phase 4 Slice I). */
+export function bossLevel(floor: number, config: BalanceConfig): number {
+  return enemyLevelRange(floor, config).max + config.bossLevelOffset
 }

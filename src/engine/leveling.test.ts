@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { scaleStatsToLevel, xpForNextLevel } from './leveling'
+import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
+import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG } from './__fixtures__/balance'
+import { scaleStatsToLevel, xpAwardForKill, xpForNextLevel } from './leveling'
 
 describe('scaleStatsToLevel', () => {
   it('returns base stats unchanged at level 1 (factor === 1)', () => {
@@ -49,14 +51,31 @@ describe('scaleStatsToLevel', () => {
   })
 })
 
-describe('xpForNextLevel', () => {
+describe('xpForNextLevel (Phase 4.1-A, ASSUMPTION 5 -- quadratic default)', () => {
   it('is strictly monotonic in level', () => {
-    expect(xpForNextLevel(2)).toBeGreaterThan(xpForNextLevel(1))
-    expect(xpForNextLevel(10)).toBeGreaterThan(xpForNextLevel(9))
+    expect(xpForNextLevel(2, DEFAULT_BALANCE_CONFIG)).toBeGreaterThan(
+      xpForNextLevel(1, DEFAULT_BALANCE_CONFIG),
+    )
+    expect(xpForNextLevel(10, DEFAULT_BALANCE_CONFIG)).toBeGreaterThan(
+      xpForNextLevel(9, DEFAULT_BALANCE_CONFIG),
+    )
   })
 
-  it('matches the placeholder formula exactly (100 * level) -- isolated so retuning stays local', () => {
-    expect(xpForNextLevel(1)).toBe(100)
-    expect(xpForNextLevel(5)).toBe(500)
+  it('matches the default formula exactly (20 * level^2) -- isolated so retuning stays local', () => {
+    expect(xpForNextLevel(1, DEFAULT_BALANCE_CONFIG)).toBe(20)
+    expect(xpForNextLevel(5, DEFAULT_BALANCE_CONFIG)).toBe(500)
+  })
+
+  it('the Phase-4 placeholder config shares the SAME (new) XP parameters -- there is no old-compatible expression of the retired linear curve', () => {
+    expect(xpForNextLevel(5, PHASE_4_PLACEHOLDER_BALANCE_CONFIG)).toBe(
+      xpForNextLevel(5, DEFAULT_BALANCE_CONFIG),
+    )
+  })
+})
+
+describe('xpAwardForKill (Phase 4.1-A, ASSUMPTION 5 -- victim-level-scaled)', () => {
+  it("equals the victim's own level under the default multiplier (1)", () => {
+    expect(xpAwardForKill(7, DEFAULT_BALANCE_CONFIG)).toBe(7)
+    expect(xpAwardForKill(42, DEFAULT_BALANCE_CONFIG)).toBe(42)
   })
 })

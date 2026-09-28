@@ -72,6 +72,7 @@ export const demoPlayerParty: Creature[] = [
     innateTraitIds: [],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'aldric', level: 1 },
   },
   {
     id: createCreatureId('mira'),
@@ -89,6 +90,7 @@ export const demoPlayerParty: Creature[] = [
     innateTraitIds: [],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'mira', level: 1 },
   },
   {
     id: createCreatureId('tomas'),
@@ -108,6 +110,7 @@ export const demoPlayerParty: Creature[] = [
     innateTraitIds: [RETALIATE.id, DEMO_ONLY_REGEN_ON_HIT.id],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'tomas', level: 1 },
   },
   {
     id: createCreatureId('liora'),
@@ -126,6 +129,7 @@ export const demoPlayerParty: Creature[] = [
     innateTraitIds: [VENGEFUL.id],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'liora', level: 1 },
   },
   {
     id: createCreatureId('wendel'),
@@ -143,6 +147,7 @@ export const demoPlayerParty: Creature[] = [
     innateTraitIds: [REELING.id],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'wendel', level: 1 },
   },
 ]
 
@@ -162,6 +167,7 @@ export const demoEnemyParty: Creature[] = [
     innateTraitIds: [],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'cave-goblin', level: 1 },
   },
   {
     id: createCreatureId('bog-witch'),
@@ -178,6 +184,7 @@ export const demoEnemyParty: Creature[] = [
     innateTraitIds: [],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'bog-witch', level: 1 },
   },
   {
     id: createCreatureId('stone-troll'),
@@ -194,6 +201,7 @@ export const demoEnemyParty: Creature[] = [
     innateTraitIds: [],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'stone-troll', level: 1 },
   },
   {
     id: createCreatureId('alpha-wolf'),
@@ -211,6 +219,7 @@ export const demoEnemyParty: Creature[] = [
     innateTraitIds: [GRUDGE.id],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'alpha-wolf', level: 1 },
   },
   {
     id: createCreatureId('sleepy-slime'),
@@ -229,5 +238,6 @@ export const demoEnemyParty: Creature[] = [
     innateTraitIds: [CATASTROPHIC_COLLAPSE.id],
     activeEffects: [],
     defendCount: 0,
+    origin: { templateId: 'sleepy-slime', level: 1 },
   },
 ]

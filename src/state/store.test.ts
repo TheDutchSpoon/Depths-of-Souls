@@ -4,6 +4,12 @@
 // are engineered to be deterministic by construction (see the header comment on each fixture),
 // following Slice A's own precedent (generation.test.ts's constant-stub-RNG traces) rather than
 // a generated-then-pasted checkpoint.
+//
+// Reworked Phase 4.1-A (G5, S5, G6, A6, A7): descend()/pinBiome() return `{ ok, ... }` instead of
+// throwing/returning directly; `travelTo` is deleted (G6); the collection is a flat
+// `Map<InstanceId, Instance>` (A6); every fixture pins `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` so
+// every non-XP number below stays byte-identical to Phase 4 (ASSUMPTION 3) -- only the XP
+// expectations changed, each noted inline.
 
 import { describe, expect, test } from 'vitest'
 import { createBiomeId } from '../engine/ids'
@@ -14,10 +20,44 @@ import type {
   SpeciesCreature,
 } from '../engine/generation'
 import type { SeededRng } from '../engine/rng'
+import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { UNICORN, UNICORN_SPECIES_ID } from '../data/species/starters'
 import type { Specialization } from '../data/specializations'
 import { createGameStore, type GameStoreDeps } from './store'
-import type { StaticCreatureRef } from './rewards'
+import type { StaticCreatureRef, Instance } from './rewards'
+import type { InstanceId } from './ids'
+
+// ---- Test helpers ----
+
+/** Narrows a `{ ok: true, ... } | { ok: false, ... }` result, failing the test with the reason
+ * (or full payload) when it isn't the branch expected -- avoids a repeated manual `if (!r.ok)
+ * throw` at every call site. */
+function expectOk<T extends { ok: boolean }>(result: T): Extract<T, { ok: true }> {
+  if (!result.ok) {
+    throw new Error(`expected { ok: true }, got ${JSON.stringify(result)}`)
+  }
+  return result as Extract<T, { ok: true }>
+}
+
+function expectFailure<T extends { ok: boolean }>(result: T): Extract<T, { ok: false }> {
+  if (result.ok) {
+    throw new Error(`expected { ok: false }, got ${JSON.stringify(result)}`)
+  }
+  return result as Extract<T, { ok: false }>
+}
+
+/** The collection is now a flat `Map<InstanceId, Instance>` (Phase 4.1-A, A6) -- this scans it
+ * for the (at most one, per grantCreatureIfUnowned's own no-duplicate rule) Instance sourced from
+ * a given static creatureId, mirroring what the old `collection.get(creatureId)` bucket lookup
+ * used to answer directly. */
+function instanceFor(
+  collection: ReadonlyMap<InstanceId, Instance>,
+  creatureId: string,
+): Instance | undefined {
+  return [...collection.values()].find(
+    (inst) => inst.source.kind === 'creature' && inst.source.creatureId === creatureId,
+  )
+}
 
 // ---- Fixture creatures ----
 // A deliberately EXTREME stat gap (not a hand-tuned near-threshold value) so every outcome below
@@ -26,6 +66,7 @@ import type { StaticCreatureRef } from './rewards'
 
 const HERO: SpeciesCreature = {
   id: 'fixture-g-hero',
+  name: 'Fixture Hero',
   affinity: 'violence',
   baseStats: { health: 50, attack: 50, intelligence: 10, defence: 20, speed: 50 },
   defaultScriptId: 'always-attack',
@@ -38,6 +79,7 @@ const HERO: SpeciesCreature = {
 // unconditional MAX(1,...) floor still lets it chip 1 dmg/turn, HERO's 50 HP easily outlasts it).
 const FODDER: SpeciesCreature = {
   id: 'fixture-g-fodder',
+  name: 'Fixture Fodder',
   affinity: 'vitality',
   baseStats: { health: 5, attack: 5, intelligence: 5, defence: 5, speed: 5 },
   defaultScriptId: 'always-attack',
@@ -49,6 +91,7 @@ const FODDER: SpeciesCreature = {
 // before HERO can act at all (attack100 - HERO's defence20 >> HERO's 50 HP).
 const JUGGERNAUT: SpeciesCreature = {
   id: 'fixture-g-juggernaut',
+  name: 'Fixture Juggernaut',
   affinity: 'violence',
   baseStats: { health: 100, attack: 100, intelligence: 10, defence: 100, speed: 100 },
   defaultScriptId: 'always-attack',
@@ -95,7 +138,7 @@ const FIXTURE_SPEC: Specialization = {
 // pick, creature-within-species pick, level roll. FIXTURE_SPECIES is the pool's only species, so
 // its pick is invariant regardless of the value supplied (a single-item weightedPick always
 // returns that item -- see rewards.test.ts's sibling reasoning in generation.test.ts). The
-// creature-within-species pick uses RARITY_DRAW_WEIGHT (FODDER common=6, JUGGERNAUT rare=1,
+// creature-within-species pick uses CFG.rarityDrawWeight (FODDER common=6, JUGGERNAUT rare=1,
 // total=7): a value < 6/7 (~0.857) picks FODDER; >= 6/7 picks JUGGERNAUT. The level roll's value
 // is irrelevant given the extreme stat gap above, so it's pinned to 0.
 
@@ -112,7 +155,7 @@ function stubRngFactory(sequence: readonly number[]): (seed: number) => SeededRn
   }
 }
 
-// floor 1 -> enemyPartySize=1, fightCount=3 -> 3 fights x 1 slot x 3 calls = 9 values.
+// floor 1 -> enemyPartySize=1, fightCount(CFG)=3 -> 3 fights x 1 slot x 3 calls = 9 values.
 // Fight1 slot: [species(any), creature(<0.857 -> FODDER), level(any)]
 // Fight2 slot: [species(any), creature(>=0.857 -> JUGGERNAUT), level(any)]
 // Fight3 slot: unused (the loop stops after fight2's loss) -- filled with FODDER's values.
@@ -127,6 +170,7 @@ function makeDeps(overrides: Partial<GameStoreDeps>): Partial<GameStoreDeps> {
     specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
     standaloneCreatures: [HERO_STANDALONE],
     runSeed: 99,
+    balanceConfig: CFG,
     ...overrides,
   }
 }
@@ -137,6 +181,7 @@ function makeDeps(overrides: Partial<GameStoreDeps>): Partial<GameStoreDeps> {
 // ultimately lost.
 const SLOW_JUGGERNAUT: SpeciesCreature = {
   id: 'fixture-g-slow-juggernaut',
+  name: 'Fixture Slow Juggernaut',
   affinity: 'violence',
   baseStats: { health: 100, attack: 1000, intelligence: 10, defence: 100, speed: 1 },
   defaultScriptId: 'always-attack',
@@ -157,7 +202,7 @@ const FIXTURE_BIOME_MIXED: BiomeData = {
   speciesPool: [FIXTURE_SPECIES_MIXED],
 }
 
-// floor 2 -> enemyPartySize=2, fightCount=3 -> 3 fights x 2 slots x 3 calls = 18 values. Only
+// floor 2 -> enemyPartySize=2, fightCount(CFG)=3 -> 3 fights x 2 slots x 3 calls = 18 values. Only
 // fight 1 matters (the loop stops there); its two slots: [species,creature,level] x2, same
 // <0.857/>=0.857 FODDER/rare threshold as WIN_THEN_LOSS_SEQUENCE above.
 const MIXED_FIGHT_SEQUENCE = [
@@ -188,6 +233,7 @@ const MIXED_FIGHT_SEQUENCE = [
 // partyWidePlayerEffects, not just that the wiring compiles.
 const WEAK_HERO: SpeciesCreature = {
   id: 'fixture-g-weak-hero',
+  name: 'Fixture Weak Hero',
   affinity: 'violence',
   baseStats: { health: 10, attack: 1, intelligence: 10, defence: 1, speed: 50 },
   defaultScriptId: 'always-attack',
@@ -206,6 +252,7 @@ const WEAK_HERO_STANDALONE: StaticCreatureRef = {
 // attack is massively boosted (one-shots TOUGH_TARGET before it ever acts).
 const TOUGH_TARGET: SpeciesCreature = {
   id: 'fixture-g-tough-target',
+  name: 'Fixture Tough Target',
   affinity: 'violence',
   baseStats: { health: 50, attack: 1000, intelligence: 10, defence: 1000, speed: 1 },
   defaultScriptId: 'always-attack',
@@ -249,16 +296,17 @@ describe('descend()', () => {
     )
     store.getState().setSpec(FIXTURE_SPEC.id)
 
-    const outcome = store.getState().descend(1)
+    const { outcome } = expectOk(store.getState().descend(1))
 
     expect(outcome.fightResults).toEqual(['win', 'win', 'win'])
     expect(outcome.cleared).toBe(true)
     expect(outcome.deepestFloorAdvanced).toBe(true)
-    // FODDER is common -> SOUL_GAIN_PERCENT.common = 10, killed once per fight, 3 fights.
+    // FODDER is common -> CFG.soulGainPercent.common = 10, killed once per fight, 3 fights.
     expect(outcome.soulGained.get(FODDER.id)).toBe(30)
-    // xpAwardForKill(floor=1) = 10, 3 kills.
-    expect(outcome.xpBanked).toBe(30)
-    // currencyDropForKill(1) = {essence:1,ore:1,bricks:1,lifeforce:1}, banked per kill -- 3 kills.
+    // xpAwardForKill = the victim's own level (Phase 4.1-A, ASSUMPTION 5); CFG's flat x1.00
+    // multiplier makes FODDER's level == floor == 1 for all 3 kills.
+    expect(outcome.xpBanked).toBe(3)
+    // currencyDropForKill(1, CFG) = {essence:1,ore:1,bricks:1,lifeforce:1}, banked per kill -- 3 kills.
     expect(outcome.currencyGained).toEqual({
       essence: 3,
       ore: 3,
@@ -268,12 +316,12 @@ describe('descend()', () => {
 
     const state = store.getState()
     expect(state.deepestFloor).toBe(1)
-    expect(state.currentFloor).toBe(1)
+    expect(state.lastFloor).toBe(1)
     expect(state.soulProgress.get(FODDER.id)).toBe(30)
     expect(state.currencies).toEqual({ essence: 3, ore: 3, bricks: 3, lifeforce: 3 })
     expect(state.discoveredBiomes.has(FIXTURE_BIOME.id)).toBe(true)
     // The active party's HERO instance banked the XP and leveled accordingly.
-    const heroInstance = state.collection.get(HERO.id)?.[0]
+    const heroInstance = instanceFor(state.collection, HERO.id)
     expect(heroInstance?.xp).toBeGreaterThan(0)
   })
 
@@ -283,7 +331,7 @@ describe('descend()', () => {
     )
     store.getState().setSpec(FIXTURE_SPEC.id)
 
-    const outcome = store.getState().descend(1)
+    const { outcome } = expectOk(store.getState().descend(1))
 
     expect(outcome.fightResults).toEqual(['win', 'loss'])
     expect(outcome.cleared).toBe(false)
@@ -291,7 +339,7 @@ describe('descend()', () => {
     // Only fight 1's kill (FODDER) banked; fight 2's loss grants no kill, fight 3 never runs.
     expect(outcome.soulGained.get(FODDER.id)).toBe(10)
     expect(outcome.soulGained.has(JUGGERNAUT.id)).toBe(false)
-    expect(outcome.xpBanked).toBe(10)
+    expect(outcome.xpBanked).toBe(1) // FODDER's level (== floor 1 under CFG's flat multiplier)
     // Currency banks per KILL, same as soul%/XP -- fight 2's loss has no kill, so only fight 1's
     // single kill contributes.
     expect(outcome.currencyGained).toEqual({
@@ -303,6 +351,7 @@ describe('descend()', () => {
 
     const state = store.getState()
     expect(state.deepestFloor).toBe(0) // never advanced -- the floor wasn't cleared
+    expect(state.lastFloor).toBe(1) // still set -- the floor WAS attempted, just not cleared
     expect(state.soulProgress.get(FODDER.id)).toBe(10) // kept, not rolled back
   })
 
@@ -319,7 +368,7 @@ describe('descend()', () => {
     store.getState().setSpec(FIXTURE_SPEC.id)
     store.setState({ deepestFloor: 1 }) // precondition: floor 1 already cleared
 
-    const outcome = store.getState().descend(2)
+    const { outcome } = expectOk(store.getState().descend(2))
 
     // Slot0 (FODDER) dies to HERO's first attack; slot1 (SLOW_JUGGERNAUT) then one-shots HERO on
     // its own turn -- the fight is a loss with exactly one enemy dead.
@@ -328,8 +377,8 @@ describe('descend()', () => {
     expect(outcome.deepestFloorAdvanced).toBe(false)
     expect(outcome.soulGained.get(FODDER.id)).toBe(10) // FODDER is common
     expect(outcome.soulGained.has(SLOW_JUGGERNAUT.id)).toBe(false) // never died
-    expect(outcome.xpBanked).toBe(20) // xpAwardForKill(floor=2) = 20, one kill
-    // currencyDropForKill(2) = {essence:2,ore:2,bricks:max(1,floor(2/10))=1,lifeforce:2}.
+    expect(outcome.xpBanked).toBe(2) // FODDER's level (== floor 2 under CFG's flat multiplier)
+    // currencyDropForKill(2, CFG) = {essence:2,ore:2,bricks:max(1,floor(2/10))=1,lifeforce:2}.
     expect(outcome.currencyGained).toEqual({
       essence: 2,
       ore: 2,
@@ -339,36 +388,199 @@ describe('descend()', () => {
 
     const state = store.getState()
     expect(state.deepestFloor).toBe(1) // unchanged -- floor 2 wasn't cleared
+    expect(state.lastFloor).toBe(2) // still set -- floor 2 WAS attempted
     expect(state.soulProgress.get(FODDER.id)).toBe(10)
     expect(state.currencies).toEqual({ essence: 2, ore: 2, bricks: 1, lifeforce: 2 })
   })
 
-  test('throws when asked to skip past the frontier', () => {
+  test('rewards read origin.templateId, not a parsed id suffix (Phase 4.1-A, A5) -- a static id containing its own side/slot-shaped substring', () => {
+    // Materialized at side='enemy', slot=0 (floor 1's single-slot fights), this creature's own
+    // per-fight CreatureId is 'fixture-g-confusable-enemy-0-enemy-0' -- its static id ALREADY
+    // ends in the exact string a per-fight id's own trailing "-<side>-<slot>" suffix would look
+    // like. origin.templateId is the raw SpeciesCreature.id, passed straight through with no
+    // string surgery, so it can never mis-resolve regardless of what the id looks like.
+    const CONFUSABLE: SpeciesCreature = {
+      id: 'fixture-g-confusable-enemy-0',
+      name: 'Fixture Confusable',
+      affinity: 'vitality',
+      baseStats: { health: 5, attack: 5, intelligence: 5, defence: 5, speed: 5 },
+      defaultScriptId: 'always-attack',
+      innateTraitIds: [],
+      rarity: 'common',
+    }
+    const species: Species = {
+      id: 'fixture-confusable-species',
+      name: 'Fixture Confusable Species',
+      weight: 1,
+      creatures: [CONFUSABLE],
+    }
+    const biome: BiomeData = {
+      id: createBiomeId('fixture-confusable-biome'),
+      name: 'Fixture Confusable Biome',
+      speciesPool: [species],
+    }
+    const store = createGameStore(
+      makeDeps({ biomes: [biome], createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+
+    const { outcome } = expectOk(store.getState().descend(1))
+
+    expect(outcome.cleared).toBe(true)
+    expect(outcome.soulGained.get(CONFUSABLE.id)).toBe(30) // common, 3 kills, CFG's 10%/kill
+  })
+
+  test('an instance with a custom scriptId uses it instead of the creature default (Phase 4.1-A, A6/ASSUMPTION 6)', () => {
     const store = createGameStore(
       makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
     )
     store.getState().setSpec(FIXTURE_SPEC.id)
-    expect(() => store.getState().descend(2)).toThrow(RangeError) // deepestFloor is 0 -> max reachable is 1
+    const heroInstance = instanceFor(store.getState().collection, HERO.id)
+    expect(heroInstance).toBeDefined()
+    store.setState((s) => {
+      const collection = new Map(s.collection)
+      collection.set(heroInstance!.id, { ...heroInstance!, scriptId: 'always-defend' })
+      return { collection }
+    })
+
+    const { outcome } = expectOk(store.getState().descend(1))
+
+    // HERO's per-fight id is deterministic (materializeCreature's own `${id}-${side}-${slot}`);
+    // it always resolves to player slot 0 here (the only party member).
+    const defended = outcome.events.some(
+      (e) => e.type === 'Defended' && e.creatureId === `${HERO.id}-player-0`,
+    )
+    expect(defended).toBe(true)
   })
 
-  test('throws with no specialization chosen', () => {
+  test('reason: no-spec (no specialization chosen)', () => {
     const store = createGameStore(
       makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
     )
-    expect(() => store.getState().descend(1)).toThrow(/no specialization chosen/)
+    const failure = expectFailure(store.getState().descend(1))
+    expect(failure.reason).toBe('no-spec')
+  })
+
+  test('reason: empty-party (a spec is chosen but every party slot is empty)', () => {
+    const store = createGameStore(
+      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    store.setState((s) => ({ activeParty: s.activeParty.map(() => null) }))
+    const failure = expectFailure(store.getState().descend(1))
+    expect(failure.reason).toBe('empty-party')
+  })
+
+  test('reason: floor-out-of-reach (skips past deepestFloor + 1, within the frontier)', () => {
+    const store = createGameStore(
+      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    // deepestFloor is 0 -> max reachable is 1; FIXTURE_BIOME alone gives a frontier of 10, so
+    // floor 2 fails ONLY the reach check, not the frontier check.
+    const failure = expectFailure(store.getState().descend(2))
+    expect(failure.reason).toBe('floor-out-of-reach')
+  })
+
+  test('reason: floor-out-of-reach also covers floor 0 and negative floors', () => {
+    const store = createGameStore(
+      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    expect(expectFailure(store.getState().descend(0)).reason).toBe('floor-out-of-reach')
+    expect(expectFailure(store.getState().descend(-1)).reason).toBe('floor-out-of-reach')
+  })
+
+  test('reason: beyond-content-frontier wins over floor-out-of-reach when both would apply', () => {
+    const store = createGameStore(
+      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    // FIXTURE_BIOME alone gives a content frontier of 10; deepestFloor 15 would otherwise make
+    // floor 11 reachable, but 11 > the frontier (ASSUMPTION 23: frontier wins).
+    store.setState({ deepestFloor: 15 })
+    const failure = expectFailure(store.getState().descend(11))
+    expect(failure.reason).toBe('beyond-content-frontier')
+  })
+
+  test('state is left completely unchanged on every reason-refusal', () => {
+    const store = createGameStore(
+      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    const before = store.getState()
+    expectFailure(store.getState().descend(2)) // floor-out-of-reach
+    const after = store.getState()
+    expect(after.lastFloor).toBe(before.lastFloor)
+    expect(after.deepestFloor).toBe(before.deepestFloor)
+    expect(after.collection).toBe(before.collection)
   })
 })
 
-describe('travelTo()', () => {
-  test('bounds-checks against deepestFloor', () => {
+describe('canDescend()', () => {
+  test('agrees with descend() on every reason, without mutating state', () => {
+    const store = createGameStore(
+      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+    )
+    // no-spec, before setSpec.
+    expect(store.getState().canDescend(1)).toEqual({ ok: false, reason: 'no-spec' })
+
+    store.getState().setSpec(FIXTURE_SPEC.id)
+
+    // floor-out-of-reach.
+    expect(store.getState().canDescend(2)).toEqual({
+      ok: false,
+      reason: 'floor-out-of-reach',
+    })
+    // beyond-content-frontier.
+    store.setState({ deepestFloor: 15 })
+    expect(store.getState().canDescend(11)).toEqual({
+      ok: false,
+      reason: 'beyond-content-frontier',
+    })
+    store.setState({ deepestFloor: 0 })
+
+    // A valid floor: canDescend agrees, and calling it never changed anything descend() itself
+    // would have (same collection reference, same lastFloor).
+    const before = store.getState()
+    expect(store.getState().canDescend(1)).toEqual({ ok: true })
+    expect(store.getState().lastFloor).toBe(before.lastFloor)
+    expect(store.getState().collection).toBe(before.collection)
+
+    const { outcome } = expectOk(store.getState().descend(1))
+    expect(outcome.cleared).toBe(true)
+  })
+})
+
+describe('pinBiome() / canPinBiome()', () => {
+  test('sets an atlas pin for a known floor and biome', () => {
     const store = createGameStore(makeDeps({}))
-    expect(store.getState().travelTo(1)).toBe(false) // deepestFloor is still 0
-    store.setState({ deepestFloor: 3 })
-    expect(store.getState().travelTo(3)).toBe(true)
-    expect(store.getState().currentFloor).toBe(3)
-    expect(store.getState().travelTo(4)).toBe(false) // past the frontier
-    expect(store.getState().travelTo(0)).toBe(false) // below floor 1
-    expect(store.getState().currentFloor).toBe(3) // unchanged by the two rejected calls
+    expect(store.getState().canPinBiome(5, FIXTURE_BIOME.id)).toEqual({ ok: true })
+    const result = expectOk(store.getState().pinBiome(5, FIXTURE_BIOME.id))
+    expect(result).toEqual({ ok: true })
+    expect(store.getState().atlasPins.get(5)).toBe(FIXTURE_BIOME.id)
+  })
+
+  test('reason: unknown-biome', () => {
+    const store = createGameStore(makeDeps({}))
+    const unknown = createBiomeId('does-not-exist')
+    expect(store.getState().canPinBiome(5, unknown)).toEqual({
+      ok: false,
+      reason: 'unknown-biome',
+    })
+    const failure = expectFailure(store.getState().pinBiome(5, unknown))
+    expect(failure.reason).toBe('unknown-biome')
+    expect(store.getState().atlasPins.has(5)).toBe(false)
+  })
+
+  test('reason: floor-out-of-range', () => {
+    const store = createGameStore(makeDeps({}))
+    expect(store.getState().canPinBiome(0, FIXTURE_BIOME.id)).toEqual({
+      ok: false,
+      reason: 'floor-out-of-range',
+    })
+    const failure = expectFailure(store.getState().pinBiome(0, FIXTURE_BIOME.id))
+    expect(failure.reason).toBe('floor-out-of-range')
   })
 })
 
@@ -389,10 +601,10 @@ describe('runScriptedIntro()', () => {
     const outcome = store.getState().runScriptedIntro()
 
     expect(outcome.result).toBe('win')
-    expect(store.getState().collection.get(UNICORN.id)?.length).toBe(1)
-    expect(store.getState().activeParty).toContain(
-      store.getState().collection.get(UNICORN.id)?.[0]?.id,
-    )
+    const state = store.getState()
+    const unicornInstance = instanceFor(state.collection, UNICORN.id)
+    expect(unicornInstance).toBeDefined()
+    expect(state.activeParty).toContain(unicornInstance!.id)
   })
 
   test('adds the Unicorn on a loss too -- the outcome handler does not branch on result', () => {
@@ -414,7 +626,7 @@ describe('runScriptedIntro()', () => {
     const outcome = store.getState().runScriptedIntro()
 
     expect(outcome.result).toBe('loss')
-    expect(store.getState().collection.get(UNICORN.id)?.length).toBe(1)
+    expect(instanceFor(store.getState().collection, UNICORN.id)).toBeDefined()
   })
 
   test('throws with no active party', () => {
@@ -426,6 +638,7 @@ describe('runScriptedIntro()', () => {
 describe('setSpec()', () => {
   const SPEC_B_STARTER: SpeciesCreature = {
     id: 'fixture-g-hero-b',
+    name: 'Fixture Hero B',
     affinity: 'wit',
     baseStats: { health: 20, attack: 10, intelligence: 30, defence: 10, speed: 20 },
     defaultScriptId: 'always-cast',
@@ -460,19 +673,22 @@ describe('setSpec()', () => {
 
     store.getState().setSpec(FIXTURE_SPEC.id)
     store.setState({ perkSpend: new Map([['noop', 5]]) }) // simulate purchased perk points
-    expect(store.getState().collection.get(HERO.id)?.length).toBe(1)
+    expect(instanceFor(store.getState().collection, HERO.id)).toBeDefined()
 
     store.getState().setSpec(SPEC_B.id)
 
     const state = store.getState()
     expect(state.chosenSpec).toBe(SPEC_B.id)
     expect(state.perkSpend.size).toBe(0) // refunded
-    expect(state.collection.get(HERO.id)?.length).toBe(1) // still owned -- ASSUMPTION 28
-    expect(state.collection.get(SPEC_B_STARTER.id)?.length).toBe(1) // newly granted
+    expect(instanceFor(state.collection, HERO.id)).toBeDefined() // still owned -- ASSUMPTION 28
+    expect(instanceFor(state.collection, SPEC_B_STARTER.id)).toBeDefined() // newly granted
 
     // Swapping back doesn't grant a SECOND copy of an already-owned starter.
     store.getState().setSpec(FIXTURE_SPEC.id)
-    expect(store.getState().collection.get(HERO.id)?.length).toBe(1)
+    const heroInstances = [...store.getState().collection.values()].filter(
+      (inst) => inst.source.kind === 'creature' && inst.source.creatureId === HERO.id,
+    )
+    expect(heroInstances).toHaveLength(1)
   })
 
   test('throws for an unknown specialization id', () => {
@@ -494,14 +710,6 @@ describe('recordBossKill() / perk points', () => {
   })
 })
 
-describe('pinBiome()', () => {
-  test('sets an atlas pin for a floor', () => {
-    const store = createGameStore(makeDeps({}))
-    store.getState().pinBiome(5, FIXTURE_BIOME.id)
-    expect(store.getState().atlasPins.get(5)).toBe(FIXTURE_BIOME.id)
-  })
-})
-
 describe('perk effects reach combat', () => {
   function makePerkDeps(overrides: Partial<GameStoreDeps> = {}): Partial<GameStoreDeps> {
     return {
@@ -509,6 +717,7 @@ describe('perk effects reach combat', () => {
       specializations: new Map([[HUGE_ATTACK_PERK_SPEC.id, HUGE_ATTACK_PERK_SPEC]]),
       standaloneCreatures: [WEAK_HERO_STANDALONE],
       runSeed: 99,
+      balanceConfig: CFG,
       ...overrides,
     }
   }
@@ -519,13 +728,15 @@ describe('perk effects reach combat', () => {
     // roll (within enemyLevelRange(1)) doesn't matter either, given the extreme stat gap.
     const storeWithoutPerk = createGameStore(makePerkDeps())
     storeWithoutPerk.getState().setSpec(HUGE_ATTACK_PERK_SPEC.id)
-    const outcomeWithoutPerk = storeWithoutPerk.getState().descend(1)
+    const { outcome: outcomeWithoutPerk } = expectOk(
+      storeWithoutPerk.getState().descend(1),
+    )
     expect(outcomeWithoutPerk.fightResults[0]).toBe('loss')
 
     const storeWithPerk = createGameStore(makePerkDeps())
     storeWithPerk.getState().setSpec(HUGE_ATTACK_PERK_SPEC.id)
     storeWithPerk.setState({ perkSpend: new Map([['huge-attack', 1]]) })
-    const outcomeWithPerk = storeWithPerk.getState().descend(1)
+    const { outcome: outcomeWithPerk } = expectOk(storeWithPerk.getState().descend(1))
     expect(outcomeWithPerk.fightResults).toEqual(['win', 'win', 'win'])
     expect(outcomeWithPerk.cleared).toBe(true)
   })
@@ -534,22 +745,23 @@ describe('perk effects reach combat', () => {
 describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
   // Stat gaps here are EXTREME (matching the file's own established style, e.g. HERO vs FODDER
   // above) rather than hand-tuned near a threshold, for a reason specific to boss floors: the
-  // ADD's level is a real RNG draw within enemyLevelRange(10)={min:10,max:13} (never stubbed --
-  // its single-item species pool makes the species/creature picks invariant regardless of RNG,
-  // same reasoning as the perk-effects test above), so its SCALED stats aren't a fixed number.
-  // The boss's own level is NOT rolled (bossLevel(10) = enemyLevelRange(10).max + 3 = 16, fixed),
-  // so her scaled stats below (in comments) are exact. Gaps are wide enough that every outcome
-  // is robust to whichever level the add actually rolls.
+  // ADD's level is a real RNG draw within enemyLevelRange(10, CFG)={min:10,max:13} (never
+  // stubbed -- its single-item species pool makes the species/creature picks invariant
+  // regardless of RNG, same reasoning as the perk-effects test above), so its SCALED stats
+  // aren't a fixed number. The boss's own level is NOT rolled (bossLevel(10, CFG) =
+  // enemyLevelRange(10,CFG).max + 3 = 16, fixed), so her scaled stats below (in comments) are
+  // exact. Gaps are wide enough that every outcome is robust to whichever level the add rolls.
 
   const BOSS_ADD_WIN: SpeciesCreature = {
     id: 'fixture-boss-win-add',
+    name: 'Fixture Boss Win Add',
     affinity: 'violence',
     // Scaled at level 10-13 (factor 3.25-4.0): health 1 -> 3 or 4, speed 5 -> 16-20 (still <<
     // HERO's 50, and << the boss's own fixed scaled health of 48 -- see below).
     baseStats: { health: 1, attack: 1, intelligence: 1, defence: 0, speed: 5 },
     defaultScriptId: 'always-wait', // never acts before dying; keeps the log minimal
     innateTraitIds: [],
-    rarity: 'common', // SOUL_GAIN_PERCENT.common = 10
+    rarity: 'common', // CFG.soulGainPercent.common = 10
   }
   const BOSS_SPECIES_WIN: Species = {
     id: 'fixture-boss-win-species',
@@ -557,10 +769,11 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     weight: 1,
     creatures: [BOSS_ADD_WIN],
   }
-  // Scaled at the FIXED bossLevel(10)=16 (factor 4.75): health 10 -> round(47.5)=48, attack
+  // Scaled at the FIXED bossLevel(10,CFG)=16 (factor 4.75): health 10 -> round(47.5)=48, attack
   // 1 -> round(4.75)=5, speed 1 -> round(4.75)=5 (<< HERO's 50 -- HERO always acts first).
   const BOSS_CREATURE_WIN: SpeciesCreature = {
     id: 'fixture-boss-win-boss',
+    name: 'Fixture Boss Win Boss',
     affinity: 'violence',
     baseStats: { health: 10, attack: 1, intelligence: 1, defence: 0, speed: 1 },
     defaultScriptId: 'always-wait', // harmless even across the extra round it takes to kill her
@@ -586,6 +799,7 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
       specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
       standaloneCreatures: [HERO_STANDALONE],
       runSeed: 99,
+      balanceConfig: CFG,
     }
   }
 
@@ -594,7 +808,7 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     store.getState().setSpec(FIXTURE_SPEC.id)
     store.setState({ deepestFloor: 9 }) // precondition: floor 9 already cleared
 
-    const outcome = store.getState().descend(10)
+    const { outcome } = expectOk(store.getState().descend(10))
 
     // A boss floor is exactly ONE fight (fightCount is not consulted): HERO (speed 50, attack
     // 50) always acts first, kills the ADD (lowest scaled HP, round 1), then the boss (round 2,
@@ -604,9 +818,11 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId)
     expect(outcome.soulGained.get(BOSS_ADD_WIN.id)).toBe(10)
     expect(outcome.soulGained.has(BOSS_CREATURE_WIN.id)).toBe(false) // bosses grant no soul%
-    // xpAwardForKill(floor=10) = 10*10 = 100 per kill x 2 kills (add + boss) = 200.
-    expect(outcome.xpBanked).toBe(200)
-    // currencyDropForKill(10) = {essence:10,ore:10,bricks:max(1,floor(10/10))=1,lifeforce:10},
+    // xpAwardForKill = each victim's own level: the add's rolled level (10-13) + the boss's fixed
+    // level 16. Assert the boundable range rather than a single number (the add's level varies).
+    expect(outcome.xpBanked).toBeGreaterThanOrEqual(16 + 10)
+    expect(outcome.xpBanked).toBeLessThanOrEqual(16 + 13)
+    // currencyDropForKill(10, CFG) = {essence:10,ore:10,bricks:max(1,floor(10/10))=1,lifeforce:10},
     // banked per kill -- 2 kills.
     expect(outcome.currencyGained).toEqual({
       essence: 20,
@@ -627,7 +843,7 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     store.getState().descend(10)
     expect(store.getState().bossesCleared.size).toBe(1)
 
-    const outcome = store.getState().descend(10) // re-fight the now-cleared floor 10
+    const { outcome } = expectOk(store.getState().descend(10)) // re-fight the now-cleared floor 10
 
     expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId) // still reports the win...
     expect(store.getState().bossesCleared.size).toBe(1) // ...but grants no further perk points
@@ -635,6 +851,7 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
 
   const BOSS_ADD_LOSS: SpeciesCreature = {
     id: 'fixture-boss-loss-add',
+    name: 'Fixture Boss Loss Add',
     affinity: 'violence',
     // Same shape as BOSS_ADD_WIN above -- dies to HERO's first hit regardless of rolled level.
     baseStats: { health: 1, attack: 1, intelligence: 1, defence: 0, speed: 5 },
@@ -642,11 +859,12 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     innateTraitIds: [],
     rarity: 'common',
   }
-  // Overwhelming and fixed (bossLevel(10)=16, factor 4.75): attack 1000 -> round(4750)=4750, far
-  // beyond HERO's 50 HP -- one-shots her on the boss's own turn, AFTER HERO has already killed
-  // the (lower-HP) add earlier in the same round.
+  // Overwhelming and fixed (bossLevel(10,CFG)=16, factor 4.75): attack 1000 -> round(4750)=4750,
+  // far beyond HERO's 50 HP -- one-shots her on the boss's own turn, AFTER HERO has already
+  // killed the (lower-HP) add earlier in the same round.
   const BOSS_CREATURE_LOSS: SpeciesCreature = {
     id: 'fixture-boss-loss-boss',
+    name: 'Fixture Boss Loss Boss',
     affinity: 'violence',
     baseStats: { health: 1000, attack: 1000, intelligence: 1, defence: 0, speed: 1 },
     defaultScriptId: 'always-attack',
@@ -678,11 +896,12 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
       specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
       standaloneCreatures: [HERO_STANDALONE],
       runSeed: 99,
+      balanceConfig: CFG,
     })
     store.getState().setSpec(FIXTURE_SPEC.id)
     store.setState({ deepestFloor: 9 })
 
-    const outcome = store.getState().descend(10)
+    const { outcome } = expectOk(store.getState().descend(10))
 
     // HERO (speed 50) still acts first and kills the ADD (round 1) -- rewards bank per kill,
     // immediately, regardless of the fight's eventual outcome (CONVENTIONS). The boss then
@@ -692,7 +911,9 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.bossDefeated).toBeNull()
     expect(outcome.soulGained.get(BOSS_ADD_LOSS.id)).toBe(10)
     expect(outcome.soulGained.has(BOSS_CREATURE_LOSS.id)).toBe(false)
-    expect(outcome.xpBanked).toBe(100) // one kill (the add) x xpAwardForKill(10) = 100
+    // Only the add's own kill banks (its rolled level, within enemyLevelRange(10,CFG)=10..13).
+    expect(outcome.xpBanked).toBeGreaterThanOrEqual(10)
+    expect(outcome.xpBanked).toBeLessThanOrEqual(13)
     expect(outcome.currencyGained).toEqual({
       essence: 10,
       ore: 10,

@@ -8,6 +8,7 @@ import { bossLevel, enemyLevelRange, enemyPartySize, fightCount } from './curves
 import {
   biomeForFloor,
   canEquip,
+  contentFrontier,
   generateFloor,
   isBossFloor,
   materializeCreature,
@@ -15,6 +16,7 @@ import {
 } from './generation'
 import { resolveCount } from './effects'
 import { DEFAULT_GEM_SLOT_COUNT } from './config'
+import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from './__fixtures__/balance'
 import {
   FIXTURE_ALL_SPELLS,
   FIXTURE_BIOME,
@@ -51,105 +53,152 @@ describe('canEquip', () => {
 
 describe('materializeCreature', () => {
   it('is pure -- identical inputs produce a deep-equal result', () => {
-    const a = materializeCreature(FIXTURE_BRUISER, 5, 'enemy', 2, 'fixture-species')
-    const b = materializeCreature(FIXTURE_BRUISER, 5, 'enemy', 2, 'fixture-species')
+    const options = {
+      level: 5,
+      side: 'enemy' as const,
+      slot: 2,
+      speciesId: 'fixture-species',
+    }
+    const a = materializeCreature(FIXTURE_BRUISER, options)
+    const b = materializeCreature(FIXTURE_BRUISER, options)
     expect(a).toEqual(b)
   })
 
   it('bakes the level into baseStats via scaleStatsToLevel', () => {
-    const creature = materializeCreature(
-      FIXTURE_BRUISER,
-      5,
-      'enemy',
-      0,
-      'fixture-species',
-    )
+    const creature = materializeCreature(FIXTURE_BRUISER, {
+      level: 5,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'fixture-species',
+    })
     expect(creature.baseStats).toEqual(scaleStatsToLevel(FIXTURE_BRUISER.baseStats, 5))
   })
 
   it('derives a deterministic id from speciesCreature id + side + slot', () => {
-    const creature = materializeCreature(
-      FIXTURE_BRUISER,
-      1,
-      'enemy',
-      2,
-      'fixture-species',
-    )
+    const creature = materializeCreature(FIXTURE_BRUISER, {
+      level: 1,
+      side: 'enemy',
+      slot: 2,
+      speciesId: 'fixture-species',
+    })
     expect(creature.id).toBe('fixture-bruiser-enemy-2')
   })
 
-  it('copies affinity, defaultScriptId->scriptId, and innateTraitIds', () => {
-    const creature = materializeCreature(
-      FIXTURE_CASTER,
-      1,
-      'player',
-      0,
-      'fixture-species',
-    )
+  it('copies affinity, resolves scriptId from the template default, and copies innateTraitIds', () => {
+    const creature = materializeCreature(FIXTURE_CASTER, {
+      level: 1,
+      side: 'player',
+      slot: 0,
+      speciesId: 'fixture-species',
+    })
     expect(creature.affinity).toBe('wit')
     expect(creature.scriptId).toBe('always-cast')
     expect(creature.innateTraitIds).toEqual([])
   })
 
   it('leaves currentHp as a placeholder equal to baseStats.health -- createCombat owns real init', () => {
-    const creature = materializeCreature(
-      FIXTURE_BRUISER,
-      5,
-      'enemy',
-      0,
-      'fixture-species',
-    )
+    const creature = materializeCreature(FIXTURE_BRUISER, {
+      level: 5,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'fixture-species',
+    })
     expect(creature.currentHp).toBe(creature.baseStats.health)
   })
 
   it('starts defending/provoking false with no active effects', () => {
-    const creature = materializeCreature(
-      FIXTURE_BRUISER,
-      1,
-      'enemy',
-      0,
-      'fixture-species',
-    )
+    const creature = materializeCreature(FIXTURE_BRUISER, {
+      level: 1,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'fixture-species',
+    })
     expect(creature.defending).toBe(false)
     expect(creature.provoking).toBe(false)
     expect(creature.activeEffects).toEqual([])
   })
 
   it('defaults equippedSpells to all-null slots when omitted', () => {
-    const creature = materializeCreature(
-      FIXTURE_BRUISER,
-      1,
-      'enemy',
-      0,
-      'fixture-species',
-    )
+    const creature = materializeCreature(FIXTURE_BRUISER, {
+      level: 1,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'fixture-species',
+    })
     expect(creature.equippedSpells).toEqual(
       Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null),
     )
   })
 
-  it('passes through a supplied equippedSpells loadout unchanged', () => {
+  it('passes through a supplied gems loadout unchanged', () => {
     const loadout = [FIXTURE_WIT_BOLT, null, null]
-    const creature = materializeCreature(
-      FIXTURE_CASTER,
-      1,
-      'enemy',
-      0,
-      'fixture-species',
-      loadout,
-    )
+    const creature = materializeCreature(FIXTURE_CASTER, {
+      level: 1,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'fixture-species',
+      gems: loadout,
+    })
     expect(creature.equippedSpells).toBe(loadout)
   })
 
   it('copies speciesId onto the materialized creature', () => {
-    const creature = materializeCreature(
-      FIXTURE_BRUISER,
-      1,
-      'enemy',
-      0,
-      'brawlers-fixture',
-    )
+    const creature = materializeCreature(FIXTURE_BRUISER, {
+      level: 1,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'brawlers-fixture',
+    })
     expect(creature.speciesId).toBe('brawlers-fixture')
+  })
+
+  it('fills origin from the template id, the level and the optional ref (Phase 4.1-A, A5)', () => {
+    const withoutRef = materializeCreature(FIXTURE_BRUISER, {
+      level: 5,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'fixture-species',
+    })
+    expect(withoutRef.origin).toEqual({
+      templateId: 'fixture-bruiser',
+      level: 5,
+      ref: undefined,
+    })
+
+    const withRef = materializeCreature(FIXTURE_BRUISER, {
+      level: 3,
+      side: 'player',
+      slot: 0,
+      speciesId: 'fixture-species',
+      ref: 'inst-7',
+    })
+    expect(withRef.origin).toEqual({
+      templateId: 'fixture-bruiser',
+      level: 3,
+      ref: 'inst-7',
+    })
+  })
+
+  it('an explicit scriptId option overrides the template default (Phase 4.1-A, A6/ASSUMPTION 6)', () => {
+    const creature = materializeCreature(FIXTURE_BRUISER, {
+      level: 1,
+      side: 'player',
+      slot: 0,
+      speciesId: 'fixture-species',
+      scriptId: 'always-defend',
+    })
+    expect(creature.scriptId).toBe('always-defend')
+  })
+
+  it('a null scriptId option falls back to the template default, same as omitting it', () => {
+    const creature = materializeCreature(FIXTURE_BRUISER, {
+      level: 1,
+      side: 'player',
+      slot: 0,
+      speciesId: 'fixture-species',
+      scriptId: null,
+    })
+    expect(creature.scriptId).toBe(FIXTURE_BRUISER.defaultScriptId)
   })
 })
 
@@ -206,6 +255,28 @@ describe('biomeForFloor', () => {
   })
 })
 
+describe('contentFrontier (Phase 4.1-A, G5/S5)', () => {
+  it('is the last floor whose biome has a non-empty species pool, derived from the biome data', () => {
+    // A fixture list of exactly 2 authored (non-empty) biomes followed by empty placeholders --
+    // the brief's own acceptance example: frontier = 20.
+    const biomes: BiomeData[] = [
+      FIXTURE_BIOME,
+      FIXTURE_BIOME,
+      { id: createBiomeId('empty-3'), name: 'Empty 3', speciesPool: [] },
+      { id: createBiomeId('empty-4'), name: 'Empty 4', speciesPool: [] },
+    ]
+    expect(contentFrontier(biomes)).toBe(20)
+  })
+
+  it('is 0 when no biome in the list has any content', () => {
+    expect(contentFrontier(FIXTURE_BIOME_SEQUENCE)).toBe(0)
+  })
+
+  it('reflects a single authored biome as floor 10', () => {
+    expect(contentFrontier([FIXTURE_BIOME])).toBe(10)
+  })
+})
+
 describe('generateFloor', () => {
   it('produces fightCount(floor) fights, each with enemyPartySize(floor) enemies', () => {
     const fights = generateFloor(
@@ -214,21 +285,36 @@ describe('generateFloor', () => {
       1,
       FIXTURE_ALL_SPELLS,
       createSeededRng(1),
+      CFG,
     )
-    expect(fights).toHaveLength(fightCount(5))
+    expect(fights).toHaveLength(fightCount(5, CFG))
     for (const fight of fights) {
-      expect(fight.enemyParty).toHaveLength(enemyPartySize(5))
+      expect(fight.enemyParty).toHaveLength(enemyPartySize(5, CFG))
     }
   })
 
   it('is deterministic: the same seed produces a deep-equal floor', () => {
-    const a = generateFloor(7, FIXTURE_BIOME, 1, FIXTURE_ALL_SPELLS, createSeededRng(42))
-    const b = generateFloor(7, FIXTURE_BIOME, 1, FIXTURE_ALL_SPELLS, createSeededRng(42))
+    const a = generateFloor(
+      7,
+      FIXTURE_BIOME,
+      1,
+      FIXTURE_ALL_SPELLS,
+      createSeededRng(42),
+      CFG,
+    )
+    const b = generateFloor(
+      7,
+      FIXTURE_BIOME,
+      1,
+      FIXTURE_ALL_SPELLS,
+      createSeededRng(42),
+      CFG,
+    )
     expect(a).toEqual(b)
   })
 
   it('every enemy level falls within enemyLevelRange(floor)', () => {
-    const { min, max } = enemyLevelRange(3)
+    const { min, max } = enemyLevelRange(3, CFG)
     const minHealth = scaleStatsToLevel(FIXTURE_BRUISER.baseStats, min).health
     const maxHealth = scaleStatsToLevel(FIXTURE_BRUISER.baseStats, max).health
     const fights = generateFloor(
@@ -237,6 +323,7 @@ describe('generateFloor', () => {
       1,
       FIXTURE_ALL_SPELLS,
       createSeededRng(9),
+      CFG,
     )
     for (const fight of fights) {
       for (const enemy of fight.enemyParty) {
@@ -247,15 +334,16 @@ describe('generateFloor', () => {
     }
   })
 
-  // Hand-derived at floor=6 (enemyPartySize(6) === ENEMY_PARTY_SIZE, so every one of the 6
+  // Hand-derived at floor=6 (enemyPartySize(6) === CFG.enemyPartySizeCap, so every one of the 6
   // slots per fight is exercised, not just 1). FIXTURE_BIOME's speciesPool is
   // [BRAWLERS(weight 1), CASTERS(weight 1)], total weight 2. A constant rng.next() = 0.3 makes
   // weightedPick roll = 0.3*2 = 0.6; that's < BRAWLERS' weight (1), so BRAWLERS wins on every
   // draw. BRAWLERS' creatures are [BRUISER(common, weight 6), BRUISER_RARE(rare, weight 1)],
-  // total 7; roll = 0.3*7 = 2.1, < 6, so BRUISER (common) wins every time too. floor=6 ->
-  // enemyLevelRange = {min:6, max:8} (size 3); the level roll is 6 + floor(0.3*3) =
-  // 6 + floor(0.9) = 6 + 0 = 6 -> scaleStatsToLevel factor = 1 + 0.25*5 = 2.25, so base 20 ->
-  // 45 on every stat. BRUISER is not cast-role, so every equipped-spell slot stays null.
+  // total 7; roll = 0.3*7 = 2.1, < 6, so BRUISER (common) wins every time too. floor=6 (under the
+  // Phase-4 placeholder config) -> enemyLevelRange = {min:6, max:8} (size 3); the level roll is
+  // 6 + floor(0.3*3) = 6 + floor(0.9) = 6 + 0 = 6 -> scaleStatsToLevel factor = 1 + 0.25*5 =
+  // 2.25, so base 20 -> 45 on every stat. BRUISER is not cast-role, so every equipped-spell slot
+  // stays null.
   it('constant-rng trace: low roll picks the common non-caster at level 6 everywhere', () => {
     const fights = generateFloor(
       6,
@@ -263,6 +351,7 @@ describe('generateFloor', () => {
       1,
       FIXTURE_ALL_SPELLS,
       constantRng(0.3),
+      CFG,
     )
     const expectedStats = {
       health: 45,
@@ -272,7 +361,7 @@ describe('generateFloor', () => {
       speed: 45,
     }
     for (const fight of fights) {
-      expect(fight.enemyParty).toHaveLength(enemyPartySize(6))
+      expect(fight.enemyParty).toHaveLength(enemyPartySize(6, CFG))
       for (const enemy of fight.enemyParty) {
         expect(enemy.baseStats).toEqual(expectedStats)
         expect(enemy.scriptId).toBe('always-attack')
@@ -297,6 +386,7 @@ describe('generateFloor', () => {
       1,
       FIXTURE_ALL_SPELLS,
       constantRng(0.9),
+      CFG,
     )
     const expectedStats = {
       health: 55,
@@ -306,7 +396,7 @@ describe('generateFloor', () => {
       speed: 55,
     }
     for (const fight of fights) {
-      expect(fight.enemyParty).toHaveLength(enemyPartySize(6))
+      expect(fight.enemyParty).toHaveLength(enemyPartySize(6, CFG))
       for (const enemy of fight.enemyParty) {
         expect(enemy.baseStats).toEqual(expectedStats)
         expect(enemy.scriptId).toBe('always-cast')
@@ -328,6 +418,7 @@ describe('generateFloor', () => {
       1,
       FIXTURE_ALL_SPELLS,
       constantRng(0.3),
+      CFG,
     )
     const enemyParty = fights[0]!.enemyParty
     for (const enemy of enemyParty) {
@@ -368,6 +459,7 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
       1,
       FIXTURE_ALL_SPELLS,
       createSeededRng(5),
+      CFG,
     )
     expect(fights).toHaveLength(1)
     const fight = fights[0]!
@@ -377,7 +469,7 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
 
     const boss = fight.enemyParty[0]!
     expect(boss.baseStats).toEqual(
-      scaleStatsToLevel(FIXTURE_BOSS_CREATURE.baseStats, bossLevel(10)),
+      scaleStatsToLevel(FIXTURE_BOSS_CREATURE.baseStats, bossLevel(10, CFG)),
     )
     expect(boss.speciesId).toBe(FIXTURE_BOSS.speciesId)
     expect(fight.boss).toEqual({ bossId: FIXTURE_BOSS.bossId, creatureId: boss.id })
@@ -387,7 +479,7 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
     // speciesId is RESOLVED from FIXTURE_BIOME_WITH_BOSS's own pool, never carried as separate
     // boss data.
     expect(add.speciesId).toBe(FIXTURE_SPECIES_BRAWLERS.id)
-    const { min, max } = enemyLevelRange(10)
+    const { min, max } = enemyLevelRange(10, CFG)
     expect(add.baseStats.health).toBeGreaterThanOrEqual(
       scaleStatsToLevel(FIXTURE_BOSS_ADD.baseStats, min).health,
     )
@@ -404,11 +496,12 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
         1,
         FIXTURE_ALL_SPELLS,
         createSeededRng(3),
+        CFG,
       )
-      expect(fights).toHaveLength(fightCount(floor))
+      expect(fights).toHaveLength(fightCount(floor, CFG))
       for (const fight of fights) {
         expect(fight.boss).toBeUndefined()
-        expect(fight.enemyParty).toHaveLength(enemyPartySize(floor))
+        expect(fight.enemyParty).toHaveLength(enemyPartySize(floor, CFG))
       }
     }
   })
@@ -420,11 +513,12 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
       1,
       FIXTURE_ALL_SPELLS,
       createSeededRng(3),
+      CFG,
     )
-    expect(fights).toHaveLength(fightCount(10))
+    expect(fights).toHaveLength(fightCount(10, CFG))
     for (const fight of fights) {
       expect(fight.boss).toBeUndefined()
-      expect(fight.enemyParty).toHaveLength(enemyPartySize(10))
+      expect(fight.enemyParty).toHaveLength(enemyPartySize(10, CFG))
     }
   })
 
@@ -435,6 +529,7 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
       1,
       FIXTURE_ALL_SPELLS,
       createSeededRng(5),
+      CFG,
     )
     expect(fights).toHaveLength(1)
     expect(fights[0]!.boss?.bossId).toBe(FIXTURE_BOSS.bossId)
@@ -449,7 +544,7 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
       boss: { ...FIXTURE_BOSS, adds: [strayAdd] },
     }
     expect(() =>
-      generateFloor(10, badBiome, 1, FIXTURE_ALL_SPELLS, createSeededRng(1)),
+      generateFloor(10, badBiome, 1, FIXTURE_ALL_SPELLS, createSeededRng(1), CFG),
     ).toThrow(/generation invariant violated/)
   })
 })
@@ -480,6 +575,7 @@ describe('generateFloor: cumulative spell unlock', () => {
       1,
       FIXTURE_ALL_SPELLS,
       constantRng(0.9),
+      CFG,
     )
     for (const fight of fights) {
       for (const enemy of fight.enemyParty) {
@@ -501,6 +597,7 @@ describe('generateFloor: cumulative spell unlock', () => {
       2,
       FIXTURE_ALL_SPELLS,
       constantRng(0.9),
+      CFG,
     )
     const casters = fights
       .flatMap((f) => f.enemyParty)
@@ -528,6 +625,7 @@ describe('generateFloor: cumulative spell unlock', () => {
       2,
       FIXTURE_ALL_SPELLS,
       sequenceRng,
+      CFG,
     )
     const lowRollCasters = lowRollFights
       .flatMap((f) => f.enemyParty)

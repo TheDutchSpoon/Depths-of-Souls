@@ -99,6 +99,7 @@ export const OVERGROWTH_SPELLS = [
 
 export const SPIDER_WEAVER: SpeciesCreature = {
   id: 'spider-weaver',
+  name: 'Spider Weaver',
   affinity: 'wit',
   baseStats: { health: 14, attack: 18, intelligence: 20, defence: 12, speed: 20 },
   defaultScriptId: 'always-attack',
@@ -108,6 +109,7 @@ export const SPIDER_WEAVER: SpeciesCreature = {
 
 export const SPIDER_AMBUSHER: SpeciesCreature = {
   id: 'spider-ambusher',
+  name: 'Spider Ambusher',
   affinity: 'wit',
   baseStats: { health: 14, attack: 22, intelligence: 18, defence: 12, speed: 22 },
   defaultScriptId: 'always-attack',
@@ -118,6 +120,7 @@ export const SPIDER_AMBUSHER: SpeciesCreature = {
 /** Coverage sprinkle (Instinct -- see file header). */
 export const SPIDER_BROODWARDEN: SpeciesCreature = {
   id: 'spider-broodwarden',
+  name: 'Spider Broodwarden',
   affinity: 'instinct',
   baseStats: { health: 18, attack: 20, intelligence: 20, defence: 14, speed: 16 },
   defaultScriptId: 'always-attack',
@@ -137,6 +140,7 @@ export const SPIDERS: Species = {
 
 export const SWARMHIVE_DRONE: SpeciesCreature = {
   id: 'swarmhive-drone',
+  name: 'Swarmhive Drone',
   affinity: 'violence',
   baseStats: { health: 16, attack: 18, intelligence: 10, defence: 14, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -146,6 +150,7 @@ export const SWARMHIVE_DRONE: SpeciesCreature = {
 
 export const SWARMHIVE_STRIKER: SpeciesCreature = {
   id: 'swarmhive-striker',
+  name: 'Swarmhive Striker',
   affinity: 'violence',
   baseStats: { health: 16, attack: 22, intelligence: 10, defence: 14, speed: 20 },
   defaultScriptId: 'always-attack',
@@ -156,6 +161,7 @@ export const SWARMHIVE_STRIKER: SpeciesCreature = {
 /** Coverage sprinkle (Endurance -- the anchor's tankiness fits it thematically too). */
 export const SWARMHIVE_QUEEN: SpeciesCreature = {
   id: 'swarmhive-queen',
+  name: 'Swarmhive Queen',
   affinity: 'endurance',
   baseStats: { health: 22, attack: 18, intelligence: 12, defence: 22, speed: 12 },
   defaultScriptId: 'always-attack',
@@ -175,6 +181,7 @@ export const SWARMHIVE: Species = {
 
 export const TREANT_SAPLING: SpeciesCreature = {
   id: 'treant-sapling',
+  name: 'Treant Sapling',
   affinity: 'vitality',
   baseStats: { health: 26, attack: 12, intelligence: 14, defence: 16, speed: 10 },
   defaultScriptId: 'always-defend',
@@ -184,6 +191,7 @@ export const TREANT_SAPLING: SpeciesCreature = {
 
 export const TREANT_ELDER: SpeciesCreature = {
   id: 'treant-elder',
+  name: 'Treant Elder',
   affinity: 'endurance',
   baseStats: { health: 28, attack: 12, intelligence: 18, defence: 20, speed: 10 },
   defaultScriptId: 'always-defend',
@@ -193,6 +201,7 @@ export const TREANT_ELDER: SpeciesCreature = {
 
 export const TREANT_GROVEKEEP: SpeciesCreature = {
   id: 'treant-grovekeep',
+  name: 'Treant Grovekeep',
   affinity: 'vitality',
   baseStats: { health: 30, attack: 14, intelligence: 16, defence: 20, speed: 10 },
   defaultScriptId: 'always-defend',
@@ -212,6 +221,7 @@ export const TREANTS: Species = {
 
 export const POLLINATOR_DUSTER: SpeciesCreature = {
   id: 'pollinator-duster',
+  name: 'Pollinator Duster',
   affinity: 'vitality',
   baseStats: { health: 18, attack: 12, intelligence: 18, defence: 12, speed: 22 },
   defaultScriptId: 'always-attack',
@@ -221,6 +231,7 @@ export const POLLINATOR_DUSTER: SpeciesCreature = {
 
 export const POLLINATOR_BENEFICIARY: SpeciesCreature = {
   id: 'pollinator-beneficiary',
+  name: 'Pollinator Beneficiary',
   affinity: 'wit',
   baseStats: { health: 16, attack: 16, intelligence: 20, defence: 12, speed: 20 },
   defaultScriptId: 'always-attack',
@@ -232,6 +243,7 @@ export const POLLINATOR_BENEFICIARY: SpeciesCreature = {
  * generateFloor's real spell-loadout roll against OVERGROWTH_SPELLS' wit-affinity entries. */
 export const POLLINATOR_POLLENLORD: SpeciesCreature = {
   id: 'pollinator-pollenlord',
+  name: 'Pollinator Pollenlord',
   affinity: 'wit',
   baseStats: { health: 16, attack: 10, intelligence: 26, defence: 12, speed: 22 },
   defaultScriptId: 'always-cast',
@@ -251,6 +263,7 @@ export const POLLINATORS: Species = {
 
 export const SNAPJAW_LURE: SpeciesCreature = {
   id: 'snapjaw-lure',
+  name: 'Snapjaw Lure',
   affinity: 'endurance',
   baseStats: { health: 22, attack: 14, intelligence: 10, defence: 24, speed: 14 },
   defaultScriptId: 'always-provoke',
@@ -260,6 +273,7 @@ export const SNAPJAW_LURE: SpeciesCreature = {
 
 export const SNAPJAW_JAWS: SpeciesCreature = {
   id: 'snapjaw-jaws',
+  name: 'Snapjaw Jaws',
   affinity: 'violence',
   baseStats: { health: 18, attack: 24, intelligence: 10, defence: 18, speed: 14 },
   defaultScriptId: 'always-attack',
@@ -269,6 +283,7 @@ export const SNAPJAW_JAWS: SpeciesCreature = {
 
 export const SNAPJAW_IRONJAW: SpeciesCreature = {
   id: 'snapjaw-ironjaw',
+  name: 'Snapjaw Ironjaw',
   affinity: 'violence',
   baseStats: { health: 20, attack: 22, intelligence: 10, defence: 22, speed: 12 },
   // Its own trait fires on-turn-start regardless of chosen action (unlike the old provoke-gated
@@ -290,6 +305,7 @@ export const SNAPJAWS: Species = {
 
 export const LULLPOLLEN_SLEEPER: SpeciesCreature = {
   id: 'lullpollen-sleeper',
+  name: 'Lullpollen Sleeper',
   affinity: 'wit',
   baseStats: { health: 16, attack: 16, intelligence: 20, defence: 12, speed: 20 },
   defaultScriptId: 'always-attack',
@@ -299,6 +315,7 @@ export const LULLPOLLEN_SLEEPER: SpeciesCreature = {
 
 export const LULLPOLLEN_REAPER: SpeciesCreature = {
   id: 'lullpollen-reaper',
+  name: 'Lullpollen Reaper',
   affinity: 'instinct',
   baseStats: { health: 16, attack: 20, intelligence: 16, defence: 12, speed: 22 },
   defaultScriptId: 'always-attack',
@@ -308,6 +325,7 @@ export const LULLPOLLEN_REAPER: SpeciesCreature = {
 
 export const LULLPOLLEN_DOZER: SpeciesCreature = {
   id: 'lullpollen-dozer',
+  name: 'Lullpollen Dozer',
   affinity: 'instinct',
   baseStats: { health: 18, attack: 18, intelligence: 18, defence: 14, speed: 20 },
   defaultScriptId: 'always-attack',
@@ -351,6 +369,7 @@ export const OVERGROWTH_SPECIES_POOL: readonly Species[] = [
 
 export const BROODMOTHER: SpeciesCreature = {
   id: 'broodmother',
+  name: 'Broodmother',
   affinity: 'wit',
   baseStats: { health: 30, attack: 24, intelligence: 24, defence: 20, speed: 20 },
   defaultScriptId: 'always-attack',
