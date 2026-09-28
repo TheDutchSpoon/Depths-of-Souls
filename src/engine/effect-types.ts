@@ -345,6 +345,79 @@ export function validateStatModifierConditions(defs: readonly EffectDef[]): void
   }
 }
 
+/**
+ * Phase 4.1-C2a (PR #71 review, CONVENTIONS "One action pipeline"): `'random'` is an INTENT-only
+ * `TargetSelector` variant -- it needs the action's intended side, which only an intent (a rule,
+ * the fallback, a grant) carries; a response target (`{ kind: 'selector', selector }` on a trait,
+ * status, or perk effect) has no such side to resolve it against. `resolveTargetSelector` throws
+ * on it at RESOLUTION time (target-selectors.ts); this is the load-time counterpart, so a data
+ * mistake fails fast at import (mirrors `validateStatModifierCondition`'s own precedent) instead
+ * of throwing mid-fight the first time the response actually fires. Recurses into `consume-
+ * stacks`'s own wrapped `effect` (the only response that nests another). Every other response
+ * kind either carries a `target` field or none at all (`suppress-action`).
+ */
+function throwIfRandomSelectorTarget(target: ResponseTarget, context: string): void {
+  if (target.kind === 'selector' && target.selector.kind === 'random') {
+    throw new Error(
+      `effect invariant violated: ${context} targets the intent-only 'random' selector -- a response target has no intended side to resolve it against; use an explicit selector instead`,
+    )
+  }
+}
+
+function validateResponseTargetNoRandomSelector(
+  response: EffectResponse,
+  context: string,
+): void {
+  switch (response.kind) {
+    case 'deal-damage':
+    case 'heal':
+    case 'apply-status':
+    case 'apply-stat-modifier':
+    case 'revive':
+    case 'grant-action-state':
+    case 'remove-status':
+      throwIfRandomSelectorTarget(response.target, context)
+      return
+    case 'suppress-action':
+      return
+    case 'consume-stacks':
+      validateResponseTargetNoRandomSelector(response.effect, context)
+      return
+    default: {
+      const exhaustive: never = response
+      throw new Error(`Unhandled response kind: ${String(exhaustive)}`)
+    }
+  }
+}
+
+/** Runs the `'random'`-selector check over every `triggered` effect's response in `defs`. Shares
+ * `validateStatModifierConditions`'s own iteration/call-site convention (traits, perks). */
+export function validateNoRandomSelectorInResponseTargets(
+  defs: readonly EffectDef[],
+): void {
+  for (const def of defs) {
+    if (def.category === 'triggered') {
+      validateResponseTargetNoRandomSelector(
+        def.response,
+        `a "${def.hook}" trigger's response`,
+      )
+    }
+  }
+}
+
+/** The status-registry counterpart: a `ConditionStatusDef`'s own `triggers` carry responses too
+ * (the one status category that does -- `damage-modifier`/`turn-order-status`/`friendly-fire-
+ * status` are read passively, never fired, so they have none to check). */
+export function validateStatusNoRandomSelectorInResponseTargets(def: StatusDef): void {
+  if (def.category !== 'condition-status') return
+  for (const trigger of def.triggers) {
+    validateResponseTargetNoRandomSelector(
+      trigger.response,
+      `status "${def.statusId}"'s "${trigger.hook}" trigger's response`,
+    )
+  }
+}
+
 export type StatRemapDef = {
   readonly category: 'stat-remap'
   readonly slot: RemapSlot
@@ -439,19 +512,20 @@ export type TriggeredDef = {
   /** Phase 4 Slice H2 (PR #60 review, E2 -- Resonant Overtone's echo-cast). When true, firing
    * this effect does NOT call `executeResponse` on `response` at all -- `response` is a
    * structurally-required, functionally-inert placeholder (a `grant-action-state` with neither
-   * flag set is the convention; see RESONANT_OVERTONE_TRAIT). Instead, fireHook invokes its
-   * caller-supplied `onEchoCast` callback with the hook's own `source` (the OBSERVED actor, e.g.
-   * the ally who just cast -- NOT this effect's own bearer) as the one who casts again. This is
-   * deliberately NOT a 10th `EffectResponse` verb -- `executeResponse` (resolution.ts) cannot
-   * reach `executeCastSingle`/`executeCastAoe` (combat.ts) without a resolution.ts -> combat.ts
-   * import cycle, the same reason `bonus-cast` (a passive EffectDef, not a response) exists.
-   * `onEchoCast` is combat.ts's injected escape hatch for this one case; every fireHook call site
-   * except the two `on-action-observed` dispatches (combat.ts) omits it, so `echoCast` is inert
-   * (never fires) anywhere else. Also exempted from the self-re-entry guard (fireHook does not
-   * add this effect's `instanceId` to `cascade.activeInstances` around the callback) so a chain
-   * can revisit the SAME Overtone instance on a later hop -- termination relies on
-   * `cascade.depth`/`MAX_TRIGGER_CASCADE_DEPTH`, which the callback still increments, never on
-   * self-re-entry. Meaningful only when `hook` is `'on-action-observed'`. */
+   * flag set is the convention; see RESONANT_OVERTONE_TRAIT). Instead, fireHook (resolution.ts)
+   * calls `ctx.runAction` (Phase 4.1-C2a, `ResolutionContext`, `resolution-types.ts`) with the
+   * hook's own `source` (the OBSERVED actor, e.g. the ally who just cast -- NOT this effect's own
+   * bearer) as the one who casts again, resolving a real `gemSlot: 'random'` cast through the
+   * action pipeline (actions.ts). This is deliberately NOT a 10th `EffectResponse` verb --
+   * `executeResponse` (resolution.ts) cannot reach `executeCastSingle`/`executeCastAoe`
+   * (actions.ts) without a resolution.ts -> actions.ts import cycle, the same reason `bonus-cast`
+   * (a passive EffectDef, not a response) exists; `ctx.runAction` is exactly the seam that lets
+   * a response (from 4.1-E, `perform-action`) reach it without that cycle either. Also exempted
+   * from the self-re-entry guard (fireHook does not add this effect's `instanceId` to
+   * `cascade.activeInstances` around the call) so a chain can revisit the SAME Overtone instance
+   * on a later hop -- termination relies on `cascade.depth`/`MAX_TRIGGER_CASCADE_DEPTH`, which is
+   * still incremented around the call, never on self-re-entry. Meaningful only when `hook` is
+   * `'on-action-observed'`. */
   readonly echoCast?: boolean
   readonly response: EffectResponse
 }
@@ -557,16 +631,18 @@ export type CheatDeathDef = {
 /** Phase 4 Slice F (Sorcerer starter's "50% on-turn-end, cast a random equipped spell") --
  * NEW PRIMITIVE, surfaced by this starter's content, flagged for design-owner sign-off. NOT
  * modeled as a 10th `EffectResponse` verb: CONVENTIONS' "hold the line at nine" pins the
- * RESPONSE vocabulary specifically, and a real Cast needs combat.ts's own executor functions
+ * RESPONSE vocabulary specifically, and a real Cast needs actions.ts's own executor functions
  * (executeCastSingle/executeCastAoe) plus its target-resolution helpers -- resolution.ts's
  * generic executeResponse has no access to those (and gaining it would mean a resolution.ts ->
- * combat.ts import cycle). So this is a permanent-for-fight passive `EffectDef` category
+ * actions.ts import cycle). So this is a permanent-for-fight passive `EffectDef` category
  * instead, structurally in the same family as ArmorPenetrationDef/CrossStatDef/etc. (gathered
  * read-time, never a status) but consulted directly by combat.ts's resolveTurn -- immediately
  * after the actor's ordinary on-turn-end hook fires -- rather than through fireHook/
- * executeResponse. On a successful roll it reuses the EXACT Cast-execution path a chosen action
- * would (on-cast/on-action-observed still fire, payload/appliesStatus/instance-list all apply
- * unchanged), picking uniformly among the actor's non-null equipped slots. */
+ * executeResponse. Phase 4.1-C2a: routed through `actions.ts`'s `resolveIntent`/`executeAction`
+ * (via `ResolutionContext.runAction`) rather than calling the executors directly, but the
+ * semantics are unchanged -- on a successful roll it reuses the EXACT Cast-execution path a
+ * chosen action would (on-cast/on-action-observed still fire, payload/appliesStatus/instance-list
+ * all apply unchanged), picking uniformly among the actor's non-null equipped slots. */
 export type BonusCastDef = {
   readonly category: 'bonus-cast'
   readonly chancePercent: number

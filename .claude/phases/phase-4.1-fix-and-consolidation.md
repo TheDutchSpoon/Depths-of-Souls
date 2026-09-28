@@ -649,3 +649,326 @@ C2 -- the A1 action pipeline + `ResolutionContext` (fully threaded through the r
 (side-aware default targeting) + B2 (reroute bonus-cast/echo-cast through the pipeline) + B5
 (pre-hit fizzle). Every existing golden stays byte-identical; new goldens prove each behavior
 change.
+
+## 4.1-C2a -- Action pipeline plumbing (byte-identical in behaviour, not only on goldens)
+
+Split from the brief's single "C2" slice at kickoff, mirroring the C1/C2 split's own precedent:
+C2a is pure plumbing (every existing test and golden passes unchanged), C2b (not yet built --
+this PR stops here for review) is the behaviour changes (B1, B2, B5), each landing with its own
+new, discriminating golden.
+
+**PR #71 design review, two changes before merge (ASSUMPTIONS 31-32):**
+1. Byte-identical goldens were not enough -- C2a must be byte-identical in **behaviour**, checked
+   by a differential run against `main`. Wherever today's behaviour genuinely differs from the
+   final pipeline, C2a keeps today's behaviour behind a **named, C2a-only switch**, and C2b
+   deletes each one. Landed as `legacyGrantedTargeting` (below).
+2. The 200-case seed sweep (which only checked "same seed -> identical log," proving nothing
+   against `main`) is replaced by the **corpus digest**, a behaviour tripwire over a fixed
+   real-content corpus, hashed and compared against a generated, committed fixture.
+
+### What was built
+
+- **`actions.ts`** -- the one action pipeline the brief's A1 item describes, holding
+  `checkLegality`, `resolveIntent`, `executeAction` + the five executors (moved verbatim from
+  `combat.ts`: `executeAttack`/`executeCastSingle`/`executeCastAoe`/`executeDefend`/
+  `executeProvoke`/`executeWait`, plus their own helpers `buildInstanceList`,
+  `resolveInstanceTarget`, `splashTargetIds`, `adjacentLivingTargets`, `resolveSpellOffStat`,
+  `applyCastPayload`, `applyStatusIfAlive`), `castableGemSlots`, `defaultTargetingFor`, and
+  `createResolutionContext` (the `ResolutionContext` factory).
+  - **`Intent = { action: RuleAction, targeting?: TargetSelector }`** (`scripting-types.ts`),
+    `CastRuleAction.gemSlot: number | 'random'`, and `TargetSelector` gains **`'random'`**.
+    Every exhaustive consumer handles it: `targetSelectorHasCandidate` and `resolveTargetSelector`
+    both **throw** on it (same message style) -- it needs the action's INTENDED side, which
+    neither function has; `peekTargetSelector` returns `null` for it, same as
+    `random-enemy`/`random-ally`. `actions.ts`'s `hasValidTarget` intercepts `'random'` before
+    ever calling `targetSelectorHasCandidate`, checking the intended side's own living pool
+    directly; the actual draw (`resolveIntent`'s own `resolveRandomTarget`) resolves it over
+    `livingEnemiesOf`/`livingAlliesOf`, same pool/order as `random-enemy`/`random-ally`.
+  - **`'random'` is intent-only, rejected at load time in any response target** (PR #71 review):
+    a new `validateNoRandomSelectorInResponseTargets`/`validateStatusNoRandomSelectorInResponseTargets`
+    pair (`effect-types.ts`, beside `validateStatModifierCondition(s)`) throws if any trait/perk
+    trigger's response, or any condition-status's trigger response (including `consume-stacks`'s
+    own wrapped `effect`, recursed into), targets `{ kind: 'selector', selector: { kind: 'random'
+    } }`. Run at import time over every registry: `data/traits/index.ts` (`STOCK_TRAITS`),
+    `data/specializations.ts` (every perk's level-1 effects, alongside the existing
+    stat-modifier-condition check), `data/statuses.ts` (`STOCK_STATUSES`). All pass -- no shipped
+    content used it.
+  - **`checkLegality(actor, intent, state)`** -- pure, draws nothing. Locks (`isActionSuppressed`,
+    moved in from `interpreter.ts` unchanged), an empty gem slot, `castableGemSlots(actor,
+    state).length > 0` for `gemSlot: 'random'`, and `hasValidTarget` (existence over the intent's
+    explicit selector, or -- since `checkLegality` is the FINAL, general "can this actor act at
+    all" answer, not the interpreter's own C2a-interim rule-validity gate below -- over the
+    intended side's living pool when targeting is absent).
+  - **`resolveIntent(actor, intent, state, options?)`** -- the only place action-level draws
+    happen. Gem resolution (uniform over non-null equipped slots, innate included) draws BEFORE
+    target resolution, matching today's bonus-cast/echo order exactly (pinned by a new test, see
+    below). Target resolution: explicit selector (`'random'` included) -> **today's Phase-1
+    first-living-by-slot default** (`legacyDefaultTarget`, NOT the side-aware one -- see "The
+    three C2a-only switches" below) -> for an enemy-side single target, Confusion -> Tunnel Vision
+    -> Provoke (`resolveOffensiveTarget`, `targeting.ts`, untouched) -- **unless
+    `options.legacyGrantedTargeting` is set**, in which case that override pipeline is skipped
+    entirely and the target resolves via the explicit-selector-or-default path directly. An
+    ally-side single target skips the override pipeline regardless (as today).
+  - **`defaultTargetingFor(actor, action)`** -- the shared helper for the FINAL (C2b, B1)
+    side-aware default target selector (`lowest-hp-enemy`/`lowest-hp-ally`), `undefined` for an
+    AOE cast, a `gemSlot: 'random'` cast, or a self-only action. Built and unit-tested now; not
+    yet wired into `resolveIntent`'s own default resolution or the interpreter's lookahead.
+  - **`createResolutionContext(events, cascade)`** builds a `ResolutionContext` whose `runAction`
+    closure does exactly what the brief's `RunActionOptions.announce` seam describes: resolve the
+    intent (forwarding `options.legacyGrantedTargeting` into `resolveIntent`), push `announce` (if
+    given) once it resolves, then execute -- a no-op (no announce, no event) if the actor is
+    dead/unknown or the intent doesn't resolve to an action.
+- **`ResolutionContext { events, cascade, runAction }`** (`resolution-types.ts` -- a leaf types
+  module importing only `types.ts`/`ids.ts`/`effect-types.ts`/`scripting-types.ts`). Threaded
+  through the whole resolver: every `resolution.ts` function that used to take separate
+  `events`/`cascade` arguments now takes one `ctx: ResolutionContext` (`dealDamage`,
+  `dealDamageWithScalingStat`, `dealDamageWithOffStat`, `applyDamageAndEmit`, `fireHook`,
+  `executeResponse`, `applyFlatDamage`, `applyHeal`, `applyStatus`, `applyStatModifier`).
+  `resolution.ts` imports nothing from `actions.ts`/`combat.ts`, not even a type -- confirmed by
+  grep, and structurally guaranteed by `resolution-types.ts` sitting below both. `fireHook`'s old
+  `observed`/`onEchoCast`/`statusTriggerGate` positional parameters become one options object,
+  `{ observed?, statusTriggerGate? }` -- `onEchoCast` is gone outright: `fireHook`'s `echoCast`
+  branch now calls `ctx.runAction(source, ECHO_CAST_INTENT, working, { announce:
+  EchoCastGrantedEvent, legacyGrantedTargeting: true })` directly, where `ECHO_CAST_INTENT = {
+  action: { kind: 'cast', gemSlot: 'random' }, targeting: { kind: 'random' } }`. The depth
+  increment/decrement around the call, and the self-re-entry-guard exemption, are unchanged
+  (moved, not rewritten). `newCascade` stays in `resolution.ts` (a factory, not a type);
+  `CascadeState`/`ResolutionContext` are re-exported from there too, so no import site needed to
+  change which module it names.
+- **`combat.ts`** slimmed to the turn skeleton + fight setup: the five executors and their
+  helpers moved out to `actions.ts`; every `fireHook` call site (fight-start, turn-start,
+  turn-end, the round-end sweep) now builds a `ResolutionContext` via `createResolutionContext`
+  (fresh per call, matching today's fresh-`newCascade()`-per-call-site discipline exactly).
+  `resolveTurn`'s action step is now `ctx.runAction(actorAfterStart.id, decideAction(...),
+  working)` -- `decideAction` always returns a non-null `Intent` now (see below), so the old `if
+  (action) executeAction(...)` gate disappears; `runAction`'s own internal `resolveIntent`-returns-
+  `null` case reproduces the old "defensive/unreachable no-op" path exactly.
+  `maybeFireBonusCast` still lives here (it's the turn skeleton's own granted-actions step) but
+  now builds an intent (`{ action: { kind: 'cast', gemSlot: 'random' } }`) and calls
+  `ctx.runAction(..., { legacyGrantedTargeting: true })` instead of calling
+  `executeCastSingle`/`executeCastAoe` directly -- same chancePercent gate, same "equipped.length
+  === 0 -> silent no-op" fizzle (now `resolveIntent` returning `null`), no legality/lock check
+  (B2's own gating is a C2b item). `runEchoCast` is **deleted outright** -- its logic now lives in
+  `fireHook`'s `echoCast` branch (resolution.ts), reached via `ctx.runAction`, per the point above.
+- **`interpreter.ts`** -- `decideAction(creature, script, state)` now returns the winning rule's
+  **unresolved `Intent`**, or the fallback intent, never a resolved `Action`. The script-rule loop
+  keeps a C2a-**interim** gate, `ruleNeedsExplicitTargeting` (renamed from `actionNeedsTargeting`,
+  logic unchanged) -- a rule still needs an explicit `targeting` field to be valid for Attack/
+  single-Cast, exactly as today; `checkLegality` alone (the general, "missing targeting is fine"
+  answer) would already accept a targeting-less rule, which is precisely the B1 behaviour change
+  C2b lands deliberately, with its own discriminating golden -- landing it silently here would
+  pre-empt that. `isRuleValid` is `ruleNeedsExplicitTargeting(...) && !rule.targeting -> invalid`,
+  else `checkLegality(...)`. The implicit fallback (`decideImplicitFallback`) mirrors today's
+  `isActionSuppressed('attack')` + "does the enemy side have a target" check exactly, via
+  `checkLegality(creature, { action: { kind: 'attack' } }, state)` -- legal -> the bare Attack
+  intent (resolved later, at execution, through `legacyDefaultTarget`); illegal -> the Wait
+  intent. `isActionSuppressed` itself moved into `actions.ts` (used by `checkLegality`).
+
+### The three C2a-only switches (deleted in C2b -- this is what "byte-identical in behaviour" cost)
+
+Each keeps today's exact behaviour where it genuinely diverges from the final pipeline's shape.
+None is a golden risk on its own (no existing golden's own scenario reaches the divergence), but
+unlike a goldens-only byte-identity claim, each is now backed by the corpus digest's own
+mechanism proof (below) -- forcing it off measurably changes real-content fights, so the switch is
+doing real work, not standing in for a distinction nothing exercises.
+
+1. **`legacyGrantedTargeting`** (`RunActionOptions`, `resolution-types.ts`; doc comment: "C2a-only.
+   Deleted in C2b (B2.3), whose goldens prove the flip.") -- passed only by `maybeFireBonusCast`
+   and `fireHook`'s `echoCast` branch. Skips Confusion -> Tunnel Vision -> Provoke for a granted
+   cast's target, matching `main`'s bonus-cast/echo exactly (neither goes through that pipeline
+   today; an enemy Provoker costs bonus-cast/echo zero extra RNG on `main`, and would cost one
+   extra draw per grant without the switch). C2b (B2.3) deletes it: goldens are "a confused
+   creature's bonus cast can redirect" and "a Provoke redirects an echo."
+2. **The interpreter's "a rule needs explicit targeting" gate** (`ruleNeedsExplicitTargeting`) plus
+   **the first-by-slot default** (`legacyDefaultTarget`, used wherever `resolveIntent` sees no
+   explicit `targeting`). C2b (B1) replaces both with the side-aware default
+   (`defaultTargetingFor`, already built) and makes rule targeting genuinely optional. Golden: a
+   script-less attacker against two enemies where slot 0 has more HP than slot 1 must hit slot 1.
+3. **The unfiltered `gemSlot: 'random'` draw** -- `resolveIntent`'s own gem draw stays over every
+   non-null equipped slot, not `castableGemSlots`'s target-filtered set (`checkLegality` alone uses
+   the filtered set, for the interpreter's own lookahead). **This is NOT equivalent to the
+   filtered draw**, and the earlier claim that it was is wrong: win/loss is checked only after
+   `TurnEnded` (CONVENTIONS), so a granted cast fired after the killing blow runs against an
+   ALREADY-EMPTY enemy side. Today (and here) that draw can still pick an enemy-side spell, which
+   then fizzles for want of a target; `castableGemSlots`'s filtered draw would instead pick a
+   still-castable (e.g. ally-side) spell from the same pool. C2b lists this flip explicitly: a
+   bonus-caster with `[enemy spell, ally spell]` kills the last enemy, and the bonus cast lands the
+   ally spell instead of fizzling.
+
+### New tests
+
+- **`target-selectors.test.ts`**: `'random'`'s own `describe` block -- `targetSelectorHasCandidate`
+  now **throws** (PR #71 review; the earlier "always true" reading was wrong per the intent-only
+  decision above), `peekTargetSelector` returns `null` drawing zero RNG, `resolveTargetSelector`
+  throws. Net **+3** tests vs `main` (28 -> 31).
+- **`interpreter.test.ts`**: rewritten to compose `decideAction` + `resolveIntent` (a `decide()`
+  helper) so every existing assertion keeps its exact VALUE, only the call site changes, per the
+  brief's own C2a rule. The one deliberately-unchanged-in-C2a case ("skips a targeting-required
+  rule with no targeting field") still expects the skip. Added a `checkLegality` describe block
+  (+8 tests, 20 -> 28): Attack legality tracks living-enemy existence (retitled from a claim about
+  suppression it never actually checked -- suppression is covered separately, in the existing
+  scoped-suppression block), draws zero RNG even with `random-enemy` targeting, an empty Cast slot
+  is illegal, an AOE Cast is always legal, `gemSlot: 'random'` legality tracks `castableGemSlots`,
+  and Defend/Provoke/Wait are always legal.
+- **`actions.ts`** (new file, 13 tests): `defaultTargetingFor`'s cases (Attack, enemy-Cast,
+  ally-Cast, AOE, `gemSlot: 'random'`, an empty slot, and the three self-only actions) and
+  `castableGemSlots` (innate slots included, a target-less single-target spell excluded, AOE
+  always included); a discriminating draw-order test, looping seeds 0-19 (PR #71 review -- a
+  single seed let a gem draw that always picks the LAST slot pass unnoticed): the gem-first
+  prediction must hold at every seed, both equipped slots must actually get chosen across the
+  loop, and at least one seed's gem-first vs. target-first predictions must diverge (proving order
+  actually matters here, not just draw count -- `nextRandom`'s own state transition doesn't depend
+  on the pool size the caller multiplies it by, so two different orders can leave `state.rng` in
+  the same final position while resolving to different picks).
+- **Echo tests rewritten, not just call-site-adapted** (`resolution.test.ts`'s `'echo-cast'` block;
+  flagged per the review, since "tests may change only their call sites" does not hold here):
+  `onEchoCast` (an injectable stub callback) no longer exists -- `fireHook`'s `echoCast` branch now
+  runs a REAL granted cast via `ctx.runAction`, so isolating "did the echo mechanism fire" from
+  "did a real cast happen" is no longer possible the old way. The old block's 4 tests (call
+  recorded with the right ids; `stacks:false` dedup; exempt from the self-re-entry guard; a
+  chancePercent:100 chain hits the depth cap) become **2**:
+  - *"runs a real granted cast (never the placeholder response), and is exempt from the
+    self-re-entry guard, so a chancePercent:100 chain runs all the way to
+    MAX_TRIGGER_CASCADE_DEPTH via CascadeTruncated"* -- merges the old call-recorded/self-re-entry/
+    depth-cap cases into one white-boxed test (cascade started 2 hops from the cap, the same
+    technique the old depth-cap test used): asserts exactly 2 `TriggerFired`, 2 `EchoCastGranted`
+    (both with the correct `sourceId`/`casterId`), 2 real `SpellCast` events, zero
+    `StatModifierApplied` (proving the placeholder response never runs), exactly 1
+    `CascadeTruncated` at `MAX_TRIGGER_CASCADE_DEPTH + 1`, and the cascade's own depth fully
+    unwound afterward. A caster with exactly one equipped spell and the enemy side down to one
+    living member keeps every gem/target draw deterministic (pool size 1 either way) regardless of
+    seed, so the exact hop count is hand-derivable without an RNG dependency.
+  - *"stacks:false: two creatures carrying the SAME effect id -- only one TriggerFired (and one
+    ctx.runAction) per firing"* -- the caster has NO equipped spells, so `resolveIntent` can never
+    resolve an action; this isolates the dedup claim itself (only the first-dispatched observer's
+    trigger even rolls) from "did the granted cast happen," which the test above already covers:
+    asserts exactly 1 `TriggerFired` and zero `EchoCastGranted`.
+- **Corpus digest** (replaces the 200-case seed sweep -- see below).
+- Two stale doc comments (`effect-types.ts`'s `TriggeredDef.echoCast`/`BonusCastDef`,
+  `data/traits/glimmerdark.ts`'s Resonant Overtone) that named `combat.ts`'s old
+  `runEchoCast`/direct-executor-call mechanisms were corrected to describe the actual
+  `ctx.runAction` path -- comment-only, no behaviour change.
+- **R1 (final-review fix):** the `'random'` response-target validators had no coverage of their
+  own -- `resolution.test.ts` gains a 4-test block beside the existing `SelfCondition validator`
+  one: a trait's `triggered` response targeting `'random'` throws; the same target nested inside a
+  `consume-stacks` response's wrapped `effect` throws (recursion proof); a `condition-status`'s own
+  trigger response targeting it throws; an ordinary (non-random) selector target is accepted by
+  both validators. Each throw case was confirmed to fail with the underlying check disabled
+  (`validateResponseTargetNoRandomSelector` short-circuited to a no-op), then reverted.
+
+### R2 (final-review fix) -- the "no Node imports in `src/`" guard
+
+`src/engine/__corpus__/node-shims.d.ts` declares `node:fs`/`node:url`/`node:process` as ambient
+modules so `corpus-digest.test.ts` can write its own generated fixture. Ambient module
+declarations are program-wide by construction, though -- once the shim file is part of the
+compile (it is; `tsconfig.app.json` includes all of `src/`), `import ... from 'node:fs'`
+type-checks from ANY file under `src/`, not just `corpus-digest.test.ts`, silently reopening the
+"no Node built-ins in `src/`" hole `main`'s own `tsc -b` used to close by omission (no `@types/node`
+in `tsconfig.app.json`'s `types` array at all). Fixed with an ESLint rule, not a type-level one:
+`eslint.config.js` gains a `no-restricted-imports` rule banning the `node:*` pattern across
+`src/**`, with a single override turning it back off for `src/engine/corpus-digest.test.ts`. The
+shim's own header comment now says so explicitly (it used to claim -- wrongly -- that the
+declarations were "visible only where imported"). Verified directly: a throwaway
+`src/engine/zzthrowaway-node-import-check.ts` importing `node:fs` fails `npm run lint` with the
+new rule's message; removed before committing (never part of the diff).
+
+### R3 (final-review fix) -- explicit digest-test timeout
+
+The digest test measures ~3.0-4.4s against Vitest's 5s default test timeout -- close enough that a
+slower CI runner could flake it. `it(...)` now passes an explicit `60_000`ms timeout as its third
+argument.
+
+### Corpus digest (replaces the seed sweep)
+
+Per CONVENTIONS "Testing": one test (`corpus-digest.test.ts`) resolves every fight in a pinned,
+real-content corpus (`__corpus__/corpus.ts`, test-only -- engine source never imports it, and it
+sits outside `__golden__/` so the frozen-replay-sweep glob doesn't pick it up) and compares each
+fight's event-log hash/event-count/result against a **generated** fixture
+(`__corpus__/corpus-digest.fixture.ts`, header-labeled as such -- "not hand-derived, not a spec").
+Regeneration is `npm run corpus:update` (`UPDATE_CORPUS=1 vitest run
+src/engine/corpus-digest.test.ts`), which writes the fixture through the same Prettier config the
+rest of the repo uses. `hash` is FNV-1a 32-bit over `JSON.stringify(events)`, 8 lowercase hex
+chars.
+
+**Composition, exactly per the review's own spec:**
+- Registries for every fight: `STOCK_SCRIPTS_BY_ID`, `TRAIT_REGISTRY`, `STATUS_REGISTRY`; no
+  party-wide effects.
+- **Part A** (300 fights, `i = 0..299`): both sides generated via `generateFloor` --
+  enemy at `gen(1 + i % 30, 10000 + i)`, player at `gen(1 + (i*7+3) % 30, 20000 + i)` re-sided to
+  `'player'` with ids rewritten (`-enemy-` -> `-player-`) so they never collide with the real enemy
+  party's own ids. Combat seed `i`.
+- **Part B** (200 fights, `i = 0..199`): the shipped player creatures -- Sorcerer/Brute/Shieldbarer
+  starters and the Unicorn at level `L = 1 + i % 25`, slots 0-3; Resonant Overtone added at slot 4
+  on odd `i`. Enemy starts from `gen(1 + i % 30, 30000 + i)`; `lvl` = that party's own slot-0
+  `origin.level`; `i % 4` decides the enemy shape: `0` swaps in a Shieldbarer starter at slot 0 (an
+  enemy Provoker), `1` swaps/appends a Hollowkin Wretch at slot 1 (a Confusion source), `2` does
+  both (Shieldbarer at 0, Wretch at 1), `3` leaves the generated party as-is. Combat seed
+  `1000 + i`.
+- Every floor reference stays within floors 1-30 (biomes 1-3, the only ones with real content) --
+  `BIOMES[b]` is always defined for every `gen()` call the corpus makes.
+
+**Timing:** ~3.2-4.4s wall time for the whole 500-fight digest (measured; well inside the "about 5s
+or less" budget) -- Part A was not shrunk.
+
+**Mechanism proof, per the review's requirement** -- each mutation applied in isolation against the
+committed digest, fight count reported, then reverted (confirmed via `diff` against a pre-mutation
+backup of each touched file -- zero net diff after every revert):
+
+| Mutation | Fights changed (of 500) |
+|---|---|
+| Bonus-cast off (`activeBonusCast` returns `undefined`) | **132** |
+| Echo off (`fireHook`'s `echoCast` branch skips `ctx.runAction`) | **41** |
+| Provoke redirect off (`resolveOffensiveTarget` skips `resolveProvoke`) | **164** |
+| Confusion redirect off (`resolveConfusionRedirect` always returns not-redirected) | **84** |
+| `legacyGrantedTargeting` forced off (the option is read but never honored) | **86** |
+
+Every count is nonzero, so the digest genuinely covers all five mechanisms -- it would fail to
+catch a regression in any one of them if it didn't move at least this many real-content fights.
+
+### Verification
+
+All four gates green: `npx tsc -b` clean; `npx vitest run` -- **115 files / 754 tests passed**, up
+from **113 / 727 on `main`** (confirmed against `origin/main` @ `a2ef7b5`, per-file, not asserted
+from memory): `interpreter.test.ts` 20 -> 28 (+8, the `checkLegality` block),
+`target-selectors.test.ts` 28 -> 31 (+3, `'random'`), `resolution.test.ts` 79 -> 81 (net +2: the
+echo block's 4 tests becoming 2, plus the R1 response-target-validator block's own 4 new tests --
+see "New tests"), `actions.test.ts` +13 (new file), `corpus-digest.test.ts` +1 (new file) -- `8 +
+3 + 2 + 13 + 1 = 27`, `727 + 27 = 754`. `npm run lint` clean (now including the new
+`no-restricted-imports` guard -- see "R2" below); `npm run format:check` clean (after `npm run
+format`; whitespace/wrapping only, plus the generated corpus fixture, itself Prettier-formatted at
+generation time). `npm run build` succeeds.
+
+**Golden diff against `main`: no fixture under `__golden__/` changed.** (Not "the `*.fixture.ts`
+diff against `main` is empty" -- it isn't anymore, since this PR's own corpus fixture,
+`__corpus__/corpus-digest.fixture.ts`, is new. That fixture lives outside `__golden__/` on
+purpose, precisely so it's never confused with a golden.) Confirmed via `git status`/`git diff
+--stat -- 'src/engine/__golden__/*.fixture.ts'` against `main`: empty. What actually establishes
+"byte-identical in behaviour" is four separate things, not one circular "the suite passes" claim:
+(1) the empty golden-fixture diff itself; (2) every changed `*.test.ts` file was read at each call
+site changed, confirming the edit was mechanical (wrapping `events`/`cascade` into
+`createResolutionContext(...)`, composing `decideAction` with `resolveIntent`) and never touched
+an `expectedEvents`/expected-value literal, with the sole documented exception of the echo block
+(rewritten, not adapted -- see "New tests" above, and the one pre-existing "skips a
+targeting-required rule" case the brief itself calls out as deliberately unchanged-in-C2a); (3)
+the corpus digest, generated once against this PR's own (unmutated) behaviour and then shown, via
+the mechanism-proof table above, to move when any of the five mechanisms it covers is disabled --
+i.e. it is actually sensitive to the behaviour this PR claims is unchanged, not merely silent
+because it doesn't exercise that behaviour at all; (4) the committed digest also passes, unchanged,
+when the exact same corpus/digest files are run against `main`'s own (pre-C2a) engine -- verified
+directly (a throwaway checkout of `main` @ `a2ef7b5` with `__corpus__/` and
+`corpus-digest.test.ts` copied over, `npx vitest run` green with zero mismatches), in addition to
+the design review's own independent check. So it is a genuine `main` baseline, not only a snapshot
+of this PR's own output re-asserted against itself.
+
+### Next
+
+C2b -- the behaviour changes: B1 (optional targeting, the side-aware default, wiring
+`defaultTargetingFor` into `resolveIntent` and the `acted-before-target` peek, retiring
+`legacyDefaultTarget`/`getDefaultTarget`), B2 (every action source obeys the same rules: skipped
+turns take no action at all, Silenced blocks every cast chosen or granted, `legacyGrantedTargeting`
+deleted so Confusion/Provoke reach bonus-cast/echo, rule 4's re-target gains the side-aware default
++ Provoke and `getDefaultTarget` loses its last caller, the castable-filtered `gemSlot: 'random'`
+draw replaces the unfiltered one), B5 (the pre-hit fizzle). Each lands with its own new,
+discriminating golden, shown to fail with its mechanism removed; every existing golden (now
+including this PR's own) stays byte-identical. The corpus digest is expected to change in C2b --
+the PR reports how many fights changed and attributes each count to one of the listed flips.

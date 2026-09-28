@@ -291,3 +291,45 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
     expect(state.rng.position).toBe(sibling.position)
   })
 })
+
+// Phase 4.1-C2a (A1): the side-neutral 'random' selector. It can't be RESOLVED here (it needs
+// the action's intended side, which only actions.ts knows -- see resolveIntent's own
+// resolveRandomTarget) but every exhaustive consumer of TargetSelector still has to handle it.
+describe("the side-neutral 'random' selector", () => {
+  it("targetSelectorHasCandidate throws -- 'random' needs the intended side, checked only in actions.ts (PR #71 review)", () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+
+    expect(() =>
+      targetSelectorHasCandidate({ kind: 'random' }, player[0]!, state),
+    ).toThrow(/resolve the intended side in actions\.ts/)
+  })
+
+  it('peekTargetSelector never draws RNG for random, returning null (same as random-enemy/random-ally)', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const seed = 42
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      rng: createRngState(seed),
+    })
+    const sibling = createRngState(seed)
+
+    const result = peekTargetSelector({ kind: 'random' }, player[0]!, state)
+
+    expect(result).toBeNull()
+    expect(state.rng.position).toBe(sibling.position)
+  })
+
+  it("resolveTargetSelector throws -- 'random' needs the intended side, resolved only in actions.ts", () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+
+    expect(() => resolveTargetSelector({ kind: 'random' }, player[0]!, state)).toThrow(
+      /resolve it in actions\.ts/,
+    )
+  })
+})

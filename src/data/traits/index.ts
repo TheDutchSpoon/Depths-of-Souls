@@ -1,5 +1,8 @@
 import type { Trait } from '../../engine/effect-types'
-import { validateStatModifierConditions } from '../../engine/effect-types'
+import {
+  validateNoRandomSelectorInResponseTargets,
+  validateStatModifierConditions,
+} from '../../engine/effect-types'
 import {
   BRUTISH,
   BLOODLUST,
@@ -169,6 +172,9 @@ export const TRAIT_REGISTRY: ReadonlyMap<string, Trait> = new Map(
 
 // Phase 4.1-B (S2, B-9): load-time validator -- throws at import time (mirrors
 // validateSpecialization's own precedent) if any trait's stat-modifier reads the stat it gates.
+// Phase 4.1-C2a (PR #71 review): also rejects the intent-only 'random' selector in any trigger's
+// response target.
 for (const trait of STOCK_TRAITS) {
   validateStatModifierConditions(trait.effects)
+  validateNoRandomSelectorInResponseTargets(trait.effects)
 }

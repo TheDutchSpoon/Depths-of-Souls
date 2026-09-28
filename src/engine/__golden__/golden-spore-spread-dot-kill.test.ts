@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from '../combat'
 import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
 import { updateCreature } from '../creature-lookup'
 import {
   SEED,
@@ -28,7 +29,13 @@ describe('golden replay: PR #64 fix 1 -- Spore spreads when its OWN round-end Do
     // Pre-apply Spore to BEARER and wound it to 1 HP, both before any turn resolves -- into a
     // throwaway events array, mirroring the PR #64 repro's own setup idiom (see the fixture's
     // header comment).
-    let state = applyStatus(P, BEARER, { statusId: 'spore' }, created, [], newCascade())
+    let state = applyStatus(
+      P,
+      BEARER,
+      { statusId: 'spore' },
+      created,
+      createResolutionContext([], newCascade()),
+    )
     state = updateCreature(state, BEARER, { currentHp: BEARER_STARTING_HP })
     const events: CombatEvent[] = []
 

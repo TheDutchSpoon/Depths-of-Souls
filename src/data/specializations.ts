@@ -32,7 +32,10 @@
 // perk's own `effects: []`. See `TakenReductionDef`'s own doc comment (effect-types.ts).
 
 import type { EffectDef } from '../engine/effect-types'
-import { validateStatModifierConditions } from '../engine/effect-types'
+import {
+  validateNoRandomSelectorInResponseTargets,
+  validateStatModifierConditions,
+} from '../engine/effect-types'
 import { BRUTE_STARTER, SHIELDBARER_STARTER, SORCERER_STARTER } from './species/starters'
 
 export interface PerkDef {
@@ -67,9 +70,12 @@ export function validateSpecialization(spec: Specialization): void {
   // Intelligence per level") -- run the same load-time validator over every perk's resolved
   // effects. A level-function's SHAPE (which stat, which condition) is level-invariant by
   // construction (only the factor magnitude varies with `level`), so level 1 is representative.
+  // Phase 4.1-C2a (PR #71 review): also rejects the intent-only 'random' selector in any
+  // trigger's response target -- perks are triggered-response carriers too.
   for (const perk of spec.perks) {
     const effects = typeof perk.effects === 'function' ? perk.effects(1) : perk.effects
     validateStatModifierConditions(effects)
+    validateNoRandomSelectorInResponseTargets(effects)
   }
 }
 

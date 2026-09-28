@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { decideAction } from './interpreter'
+import { checkLegality, resolveIntent } from './actions'
 import { evaluateCondition } from './conditions'
 import { makeParty } from './__fixtures__/creatures'
 import { createRngState, nextRandom } from './rng'
 import { createEffectInstanceId } from './effect-types'
-import type { CombatState, Spell } from './types'
+import type { CombatState, Creature, Spell } from './types'
 import type { Script } from './scripting-types'
 import type { ActiveEffect } from './effect-types'
 
@@ -22,6 +23,14 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     effectInstanceCounter: 0,
     ...overrides,
   }
+}
+
+/** decideAction now returns an unresolved Intent (Phase 4.1-C2a, A1); resolve it the same way
+ * combat.ts's resolveTurn does, so every existing assertion's VALUE (the resolved Action) stays
+ * unchanged -- only the call site adapts to the new two-step API. */
+function decide(creature: Creature, script: Script | null, state: CombatState) {
+  const intent = decideAction(creature, script, state)
+  return resolveIntent(creature, intent, state)
 }
 
 const EMBER_LANCE: Spell = {
@@ -51,7 +60,7 @@ describe('decideAction -- rule precedence', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({ kind: 'defend' })
+    expect(decide(player[0]!, script, state)).toEqual({ kind: 'defend' })
   })
 })
 
@@ -67,7 +76,7 @@ describe('decideAction -- skip on invalid', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({ kind: 'defend' })
+    expect(decide(player[0]!, script, state)).toEqual({ kind: 'defend' })
   })
 
   it('skips a targeting-required rule with no targeting field and falls through', () => {
@@ -81,7 +90,7 @@ describe('decideAction -- skip on invalid', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({ kind: 'wait' })
+    expect(decide(player[0]!, script, state)).toEqual({ kind: 'wait' })
   })
 })
 
@@ -90,7 +99,7 @@ describe('decideAction -- implicit fallback', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, null, state)).toEqual({
+    expect(decide(player[0]!, null, state)).toEqual({
       kind: 'attack',
       targetId: enemy[0]!.id,
     })
@@ -109,7 +118,7 @@ describe('decideAction -- implicit fallback', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({
+    expect(decide(player[0]!, script, state)).toEqual({
       kind: 'attack',
       targetId: enemy[0]!.id,
     })
@@ -118,7 +127,7 @@ describe('decideAction -- implicit fallback', () => {
   it('falls back to Wait when the enemy side has no valid target', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const state = makeState({ playerParty: player, enemyParty: [] })
-    expect(decideAction(player[0]!, null, state)).toEqual({ kind: 'wait' })
+    expect(decide(player[0]!, null, state)).toEqual({ kind: 'wait' })
   })
 
   it('the implicit fallback redirects to a provoker when one exists, even with no script assigned', () => {
@@ -128,7 +137,7 @@ describe('decideAction -- implicit fallback', () => {
       { id: 'default-target' },
     ])
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, null, state)).toEqual({
+    expect(decide(player[0]!, null, state)).toEqual({
       kind: 'attack',
       targetId: enemy[0]!.id,
     })
@@ -150,7 +159,7 @@ describe('decideAction -- AOE cast', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({
+    expect(decide(player[0]!, script, state)).toEqual({
       kind: 'cast',
       targetShape: 'aoe',
       gemSlot: 0,
@@ -176,7 +185,7 @@ describe('decideAction -- single cast', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({
+    expect(decide(player[0]!, script, state)).toEqual({
       kind: 'cast',
       targetShape: 'single',
       gemSlot: 0,
@@ -197,7 +206,7 @@ describe('decideAction -- defend/provoke/wait always resolve', () => {
       rules: [{ condition: { kind: 'always' }, action: ruleAction }],
     }
     const state = makeState({ playerParty: player, enemyParty: [] })
-    expect(decideAction(player[0]!, script, state)).toEqual(expected)
+    expect(decide(player[0]!, script, state)).toEqual(expected)
   })
 })
 
@@ -234,8 +243,8 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
       rng: createRngState(seed),
     })
 
-    decideAction(player[0]!, scriptWithDummy, stateWith)
-    decideAction(player[0]!, scriptWithoutDummy, stateWithout)
+    decide(player[0]!, scriptWithDummy, stateWith)
+    decide(player[0]!, scriptWithoutDummy, stateWithout)
 
     expect(stateWith.rng.position).toBe(stateWithout.rng.position)
   })
@@ -263,7 +272,7 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
     const siblingNoProvoker = createRngState(seed)
 
     nextRandom(siblingNoProvoker) // the one draw the winning random-enemy rule should make
-    decideAction(player[0]!, script, stateNoProvoker)
+    decide(player[0]!, script, stateNoProvoker)
     expect(stateNoProvoker.rng.position).toBe(siblingNoProvoker.position)
 
     const enemyWithProvoker = makeParty('enemy', [
@@ -278,7 +287,7 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
     const siblingWithProvoker = createRngState(seed)
 
     nextRandom(siblingWithProvoker) // Provoke's own single index draw
-    const result = decideAction(player[0]!, script, stateWithProvoker)
+    const result = decide(player[0]!, script, stateWithProvoker)
     expect(result).toEqual({ kind: 'attack', targetId: enemyWithProvoker[0]!.id })
     expect(stateWithProvoker.rng.position).toBe(siblingWithProvoker.position)
   })
@@ -320,7 +329,7 @@ describe('decideAction -- scoped suppress-action (Phase 4 Slice B)', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({
+    expect(decide(player[0]!, script, state)).toEqual({
       kind: 'attack',
       targetId: enemy[0]!.id,
     })
@@ -351,7 +360,7 @@ describe('decideAction -- scoped suppress-action (Phase 4 Slice B)', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({
+    expect(decide(player[0]!, script, state)).toEqual({
       kind: 'cast',
       targetShape: 'single',
       gemSlot: 0,
@@ -365,7 +374,7 @@ describe('decideAction -- scoped suppress-action (Phase 4 Slice B)', () => {
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, null, state)).toEqual({ kind: 'wait' })
+    expect(decide(player[0]!, null, state)).toEqual({ kind: 'wait' })
   })
 })
 
@@ -411,7 +420,7 @@ describe('decideAction -- status-immunity vs scoped suppress-action (Phase 4 Sli
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({
+    expect(decide(player[0]!, script, state)).toEqual({
       kind: 'cast',
       targetShape: 'single',
       gemSlot: 0,
@@ -457,9 +466,90 @@ describe('decideAction -- status-immunity vs scoped suppress-action (Phase 4 Sli
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, script, state)).toEqual({
+    expect(decide(player[0]!, script, state)).toEqual({
       kind: 'attack',
       targetId: enemy[0]!.id,
     })
+  })
+})
+
+describe('checkLegality -- pure, draws nothing (Phase 4.1-C2a, A1)', () => {
+  it('an Attack intent is legal iff the enemy side has a living member (suppression is covered separately, above)', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(checkLegality(player[0]!, { action: { kind: 'attack' } }, state)).toBe(true)
+
+    const noEnemyState = makeState({ playerParty: player, enemyParty: [] })
+    expect(checkLegality(player[0]!, { action: { kind: 'attack' } }, noEnemyState)).toBe(
+      false,
+    )
+  })
+
+  it('draws no RNG even when the intent references random-enemy targeting', () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [{ id: 'a' }, { id: 'b' }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      rng: createRngState(999),
+    })
+    const before = state.rng.position
+    checkLegality(
+      player[0]!,
+      { action: { kind: 'attack' }, targeting: { kind: 'random-enemy' } },
+      state,
+    )
+    expect(state.rng.position).toBe(before)
+  })
+
+  it('a Cast referencing an empty gem slot is illegal', () => {
+    const player = makeParty('player', [{ id: 'me', equippedSpells: [null] }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(
+      checkLegality(
+        player[0]!,
+        { action: { kind: 'cast', gemSlot: 0 }, targeting: { kind: 'lowest-hp-enemy' } },
+        state,
+      ),
+    ).toBe(false)
+  })
+
+  it('an AOE Cast is legal regardless of targeting or living-enemy count', () => {
+    const player = makeParty('player', [{ id: 'me', equippedSpells: [CINDER_NOVA] }])
+    const state = makeState({ playerParty: player, enemyParty: [] })
+    expect(
+      checkLegality(player[0]!, { action: { kind: 'cast', gemSlot: 0 } }, state),
+    ).toBe(true)
+  })
+
+  it("gemSlot: 'random' is legal iff at least one equipped spell is castable", () => {
+    const player = makeParty('player', [{ id: 'me', equippedSpells: [EMBER_LANCE] }])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(
+      checkLegality(player[0]!, { action: { kind: 'cast', gemSlot: 'random' } }, state),
+    ).toBe(true)
+
+    const noSpells = makeParty('player', [{ id: 'me', equippedSpells: [null] }])
+    const noSpellsState = makeState({ playerParty: noSpells, enemyParty: enemy })
+    expect(
+      checkLegality(
+        noSpells[0]!,
+        { action: { kind: 'cast', gemSlot: 'random' } },
+        noSpellsState,
+      ),
+    ).toBe(false)
+  })
+
+  it.each([
+    [{ kind: 'defend' as const }],
+    [{ kind: 'provoke' as const }],
+    [{ kind: 'wait' as const }],
+  ])('%o is always legal', (action) => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const state = makeState({ playerParty: player, enemyParty: [] })
+    expect(checkLegality(player[0]!, { action }, state)).toBe(true)
   })
 })

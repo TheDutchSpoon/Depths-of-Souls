@@ -196,10 +196,11 @@ export const RESONANT_ADEPT_TRAIT: Trait = {
  * spec'd mechanic: `on-ally-action (cast) -> 10% the caster echo-casts a random one of its own
  * spells` (non-stacking; echoes are themselves observable -> chains). Built on the `echoCast`
  * primitive (effect-types.ts's `TriggeredDef.echoCast`, CONVENTIONS' H2 addenda) -- NOT a new
- * response verb, reusing the bonus-cast pattern via combat.ts's `runEchoCast`. `response` is a
- * structurally-required but functionally-inert placeholder (a `grant-action-state` with neither
- * flag set is a true no-op) -- never actually executed; firing this effect calls `runEchoCast`
- * instead (see fireHook's own echoCast branch, resolution.ts). `stacks: false` keeps the
+ * response verb, reusing the bonus-cast pattern. `response` is a structurally-required but
+ * functionally-inert placeholder (a `grant-action-state` with neither flag set is a true no-op)
+ * -- never actually executed; firing this effect runs a real granted cast through the action
+ * pipeline instead (Phase 4.1-C2a: `ctx.runAction`, see fireHook's own echoCast branch,
+ * resolution.ts). `stacks: false` keeps the
  * aggregate 10% chance from compounding when multiple Overtones are on the board. */
 export const RESONANT_OVERTONE_TRAIT: Trait = {
   id: 'resonant-overtone-crescendo',

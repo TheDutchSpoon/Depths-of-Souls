@@ -1,3 +1,4 @@
+import { validateStatusNoRandomSelectorInResponseTargets } from '../engine/effect-types'
 import type {
   ConditionStatusDef,
   DamageModifierDef,
@@ -283,3 +284,9 @@ export const STOCK_STATUSES: readonly StatusDef[] = [
 export const STATUS_REGISTRY: ReadonlyMap<string, StatusDef> = new Map(
   STOCK_STATUSES.map((s) => [s.statusId, s]),
 )
+
+// Phase 4.1-C2a (PR #71 review): load-time check -- throws at import time if any
+// condition-status's own trigger targets the intent-only 'random' selector.
+for (const status of STOCK_STATUSES) {
+  validateStatusNoRandomSelectorInResponseTargets(status)
+}

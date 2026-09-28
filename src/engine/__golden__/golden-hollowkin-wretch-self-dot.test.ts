@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from '../combat'
 import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
 import {
   SEED,
   WRETCH,
@@ -29,8 +30,7 @@ describe('golden replay: PR #64 fix 3 -- triggering-source never resolves to the
       WRETCH,
       { statusId: 'poison' },
       created,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     let working = state
     const events: CombatEvent[] = []

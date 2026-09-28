@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { materializeCreature } from '../../engine/generation'
 import { createCombat } from '../../engine/combat'
 import { decideAction } from '../../engine/interpreter'
+import { resolveIntent } from '../../engine/actions'
 import { ALWAYS_CAST_SCRIPT } from '../scripts'
 import {
   TRAIT_REGISTRY,
@@ -136,7 +137,8 @@ describe('Sorcerer starter loadout (Phase 4.1-B, A8)', () => {
 
     // Actually castable, not just present: always-cast (targets gemSlot 0) resolves to a real
     // cast action -- no affinity/equip check anywhere in the resolution path blocks it.
-    const action = decideAction(fused, ALWAYS_CAST_SCRIPT, state)
+    const intent = decideAction(fused, ALWAYS_CAST_SCRIPT, state)
+    const action = resolveIntent(fused, intent, state)
     expect(action).toMatchObject({ kind: 'cast', gemSlot: 0 })
   })
 })

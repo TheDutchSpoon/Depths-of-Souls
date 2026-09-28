@@ -33,6 +33,16 @@ export function targetSelectorHasCandidate(
     case 'highest-intelligence-enemy':
     case 'random-enemy':
       return livingEnemiesOf(creature, state).length > 0
+    case 'random':
+      // Phase 4.1-C2a (PR #71 review): 'random' needs the action's intended side to check
+      // existence against, which this module never has -- same reason resolveTargetSelector
+      // throws on it below. actions.ts's `hasValidTarget` intercepts 'random' before ever
+      // calling this function (checking the intended side's own living pool directly), so this
+      // is never actually reached from there; it's still here for exhaustiveness and to fail
+      // loudly rather than silently for any other caller.
+      throw new Error(
+        "targetSelectorHasCandidate cannot check the side-neutral 'random' selector -- resolve the intended side in actions.ts instead",
+      )
     default: {
       const exhaustive: never = selector
       throw new Error(`Unhandled target selector kind: ${String(exhaustive)}`)
@@ -119,6 +129,14 @@ export function resolveTargetSelector(
       const index = Math.floor(nextRandom(state.rng) * pool.length)
       return pool[index]?.id ?? null
     }
+    case 'random':
+      // Phase 4.1-C2a (A1): 'random' needs the action's intended side to resolve, which this
+      // module never has -- actions.ts's resolveIntent resolves it directly (over
+      // livingEnemiesOf/livingAlliesOf, matching random-enemy/random-ally's own draw), never
+      // through this function.
+      throw new Error(
+        "resolveTargetSelector cannot resolve the side-neutral 'random' selector -- resolve it in actions.ts, where the intended side is known",
+      )
     default: {
       const exhaustive: never = selector
       throw new Error(`Unhandled target selector kind: ${String(exhaustive)}`)
@@ -139,6 +157,12 @@ export function peekTargetSelector(
   creature: Creature,
   state: CombatState,
 ): CreatureId | null {
-  if (selector.kind === 'random-enemy' || selector.kind === 'random-ally') return null
+  if (
+    selector.kind === 'random-enemy' ||
+    selector.kind === 'random-ally' ||
+    selector.kind === 'random'
+  ) {
+    return null
+  }
   return resolveTargetSelector(selector, creature, state)
 }

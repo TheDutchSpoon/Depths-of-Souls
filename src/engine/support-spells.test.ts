@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { decideAction } from './interpreter'
+import { resolveIntent } from './actions'
 import { createCombat, resolveTurn } from './combat'
 import { makeParty } from './__fixtures__/creatures'
 import { createRngState } from './rng'
@@ -75,7 +76,8 @@ describe('interpreter -- ally-targeting single Cast (Phase 4 Slice E)', () => {
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
 
-    const action = decideAction(player[0]!, script, state)
+    const intent = decideAction(player[0]!, script, state)
+    const action = resolveIntent(player[0]!, intent, state)
 
     expect(action).toEqual({
       kind: 'cast',

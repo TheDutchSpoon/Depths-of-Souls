@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from '../combat'
 import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
 import { updateCreature } from '../creature-lookup'
 import {
   SEED,
@@ -34,16 +35,14 @@ describe('golden replay: Spore spread-on-death filters already-Spored allies bef
       BEARER,
       { statusId: 'spore' },
       created,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     state = applyStatus(
       BEARER,
       ALLY_SPORED,
       { statusId: 'spore' },
       state,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     state = updateCreature(state, BEARER, { currentHp: BEARER_STARTING_HP })
     const events: CombatEvent[] = []

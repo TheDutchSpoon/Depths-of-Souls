@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from '../combat'
 import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
 import { updateCreature } from '../creature-lookup'
 import {
   SEED,
@@ -31,8 +32,7 @@ describe('golden replay: PR #64 fix 2 -- a status born mid-sweep does not tick u
       ROTCORE,
       { statusId: 'poison' },
       created,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     state = updateCreature(state, ROTCORE, { currentHp: ROTCORE_STARTING_HP })
     const events: CombatEvent[] = []

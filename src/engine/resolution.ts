@@ -4,8 +4,15 @@
 //
 // CascadeState (depth + the self-re-entry guard) lives on the CALL STACK only — never in
 // CombatState, never serialized (same principle as effective stats: derived/momentary values do
-// not live in authoritative state). combat.ts creates a fresh CascadeState per top-level
-// action/hook point; depth resets to 0 there.
+// not live in authoritative state). combat.ts/actions.ts create a fresh CascadeState per
+// top-level action/hook point (via ResolutionContext); depth resets to 0 there.
+//
+// Phase 4.1-C2a (A1): every function below threads a `ResolutionContext` (`resolution-types.ts`)
+// instead of separate `events`/`cascade` arguments. This module imports NOTHING from
+// `actions.ts` or `combat.ts`, not even a type — it reaches action resolution (echo-cast today;
+// `perform-action` from 4.1-E) only through `ctx.runAction`, a closure `actions.ts` builds and
+// hands down. `newCascade` stays here (a plain factory, not a type) since `actions.ts` and
+// `combat.ts` both need to call it to build a fresh `ResolutionContext`.
 
 import { calculateDamage } from './damage'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
@@ -36,13 +43,14 @@ import {
 import { nextRandom } from './rng'
 import type { DamageResult } from './damage'
 import type { CreatureId } from './ids'
-import type { CombatEvent, CombatState, Creature, Stat } from './types'
+import type { Intent } from './scripting-types'
+import type { CascadeState, ResolutionContext } from './resolution-types'
+import type { CombatState, Creature, Stat } from './types'
 import type {
   ActiveEffect,
   ConditionalDamageBonusEffect,
   ConditionStatusEffect,
   DamageModifierEffect,
-  EffectInstanceId,
   EffectResponse,
   FriendlyFireStatusEffect,
   Hook,
@@ -52,13 +60,19 @@ import type {
   TurnOrderStatusEffect,
 } from './effect-types'
 
-export interface CascadeState {
-  depth: number
-  readonly activeInstances: Set<EffectInstanceId>
-}
+export type { CascadeState, ResolutionContext } from './resolution-types'
 
 export function newCascade(): CascadeState {
   return { depth: 0, activeInstances: new Set() }
+}
+
+/** Phase 4 Slice H2 (PR #60 review, E2): what an echo-cast actually runs -- gemSlot 'random'
+ * drawn before the target, target 'random' over the observed caster's own living side (matching
+ * random-enemy/random-ally's pool/order). Phase 4.1-C2a: routed through `ctx.runAction` instead
+ * of the old `onEchoCast` callback. */
+const ECHO_CAST_INTENT: Intent = {
+  action: { kind: 'cast', gemSlot: 'random' },
+  targeting: { kind: 'random' },
 }
 
 interface HookContext {
@@ -97,7 +111,7 @@ function resolveDefenceAndTakenFactors(target: Creature): {
 
 /**
  * Computes one hit via the real damage formula (Attack/Cast OffStat, affinity, pools, min-1) and
- * applies it. Shared by chosen actions (Attack/Cast, from combat.ts) and triggered deal-damage
+ * applies it. Shared by chosen actions (Attack/Cast, from actions.ts) and triggered deal-damage
  * responses — "attack"/"cast" in a trait mean the real actions, same formula.
  */
 export function dealDamage(
@@ -107,8 +121,7 @@ export function dealDamage(
   spellPower: number,
   damageSource: 'attack' | 'cast' | 'dot',
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
   statusId?: string,
 ): CombatState {
   const attacker = getCreature(state, attackerId)
@@ -120,8 +133,7 @@ export function dealDamage(
     offStatKind,
     damageSource,
     state,
-    events,
-    cascade,
+    ctx,
     statusId,
   )
 }
@@ -139,8 +151,7 @@ export function dealDamageWithScalingStat(
   spellPower: number,
   damageSource: 'attack' | 'cast' | 'dot',
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
   statusId?: string,
 ): CombatState {
   const attacker = getCreature(state, attackerId)
@@ -156,14 +167,13 @@ export function dealDamageWithScalingStat(
     damageSource === 'cast' ? 'cast' : 'attack',
     damageSource,
     state,
-    events,
-    cascade,
+    ctx,
     statusId,
   )
 }
 
 /**
- * Shared damage-formula core, ALSO exported directly for Spell.scalingStat (combat.ts): gathers
+ * Shared damage-formula core, ALSO exported directly for Spell.scalingStat (actions.ts): gathers
  * the attacker's armor-penetration + cross-stat (for `actionKind`) passives, runs
  * calculateDamage, applies + emits. `actionKind` also selects cross-stat's appliesTo bucket.
  * `offStat` is the caller's fully-resolved value (remap-aware for the default Cast path,
@@ -176,8 +186,7 @@ export function dealDamageWithOffStat(
   actionKind: 'attack' | 'cast',
   damageSource: 'attack' | 'cast' | 'dot',
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
   statusId?: string,
 ): CombatState {
   return dealDamageCore(
@@ -187,8 +196,7 @@ export function dealDamageWithOffStat(
     actionKind,
     damageSource,
     state,
-    events,
-    cascade,
+    ctx,
     statusId,
   )
 }
@@ -232,8 +240,7 @@ function dealDamageCore(
   actionKind: 'attack' | 'cast',
   damageSource: 'attack' | 'cast' | 'dot',
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
   statusId?: string,
 ): CombatState {
   const attacker = getCreature(state, attackerId)
@@ -258,8 +265,7 @@ function dealDamageCore(
     damage,
     damageSource,
     state,
-    events,
-    cascade,
+    ctx,
     statusId,
   )
 }
@@ -277,8 +283,7 @@ export function applyDamageAndEmit(
   damage: DamageResult,
   damageSource: 'attack' | 'cast' | 'dot',
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
   statusId?: string,
 ): CombatState {
   const rawNewHp = Math.max(target.currentHp - damage.finalDamage, 0)
@@ -303,7 +308,7 @@ export function applyDamageAndEmit(
 
   let working = updateCreature(state, target.id, { currentHp: newHp, alive: newHp > 0 })
 
-  events.push({
+  ctx.events.push({
     type: 'DamageDealt',
     sourceId,
     targetId: target.id,
@@ -316,39 +321,24 @@ export function applyDamageAndEmit(
     statusId,
   })
 
-  working = fireHook(
-    'on-damage-dealt',
-    [sourceId],
-    target.id,
-    working,
-    events,
-    cascade,
-  ).state
+  working = fireHook('on-damage-dealt', [sourceId], target.id, working, ctx).state
 
   if (!died) {
-    working = fireHook(
-      'on-damage-taken',
-      [target.id],
-      sourceId,
-      working,
-      events,
-      cascade,
-    ).state
+    working = fireHook('on-damage-taken', [target.id], sourceId, working, ctx).state
     return working
   }
 
-  events.push({ type: 'CreatureDied', creatureId: target.id })
-  working = fireHook('on-death', [target.id], sourceId, working, events, cascade).state
-  working = fireHook('on-kill', [sourceId], target.id, working, events, cascade).state
-  working = fireDeathObservers(target.id, working, events, cascade)
+  ctx.events.push({ type: 'CreatureDied', creatureId: target.id })
+  working = fireHook('on-death', [target.id], sourceId, working, ctx).state
+  working = fireHook('on-kill', [sourceId], target.id, working, ctx).state
+  working = fireDeathObservers(target.id, working, ctx)
   return working
 }
 
 function fireDeathObservers(
   deadId: CreatureId,
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
 ): CombatState {
   const dead = findCreature(state, deadId)
   if (!dead) return state
@@ -359,15 +349,36 @@ function fireDeathObservers(
 
   let working = state
   for (const id of allies) {
-    working = fireHook('on-ally-death', [id], deadId, working, events, cascade).state
+    working = fireHook('on-ally-death', [id], deadId, working, ctx).state
   }
   for (const id of enemies) {
-    working = fireHook('on-enemy-death', [id], deadId, working, events, cascade).state
+    working = fireHook('on-enemy-death', [id], deadId, working, ctx).state
   }
   return working
 }
 
 // ---- Hook firing ----
+
+/** Phase 4.1-C2a (A1): fireHook's per-call specifics, out of the positional parameter list. */
+export interface FireHookOptions {
+  /** Phase 4 Slice E2 (general action-observation system): supplied ONLY by the four action
+   * executors' own 'on-action-observed' call (actions.ts), alongside their existing actor-self
+   * hook call -- every other call site omits it. Consulted below to filter ObservationFilter-
+   * carrying candidates; meaningless (and unread) for any other hook. */
+  readonly observed?: {
+    readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
+    readonly instanceIndex: number
+  }
+  /** PR #64 review fix 2: supplied ONLY by combat.ts's resolveRoundEndSweep, alongside its own
+   * 'on-round-end' call -- every other call site omits it, so this gate is inert (always fires)
+   * everywhere else. Consulted for every STATUS-sourced candidate (effect.statusId !== undefined
+   * -- trait-sourced triggers have no statusId and are never gated): a condition-status's
+   * on-round-end trigger fires only if `(creatureId, statusId)` existed at the SWEEP'S OWN start
+   * (the snapshot) and has not been (re)applied EARLIER in this same sweep -- a status born or
+   * refreshed mid-sweep must not tick until next round's sweep. Skips silently, like a false
+   * `condition` -- no TriggerFired, no depth/truncation accounting. */
+  readonly statusTriggerGate?: (creatureId: CreatureId, statusId: string) => boolean
+}
 
 /**
  * Fires `hook` for each creature in `selfIds` (the caller supplies the order: a single creature,
@@ -383,49 +394,16 @@ function fireDeathObservers(
  * are skipped -- a creature killed mid-sweep fires only on-death, per GAME_DESIGN's round-end
  * interaction rule.
  */
-/** Phase 4 Slice H2 (PR #60 review, E2): combat.ts's injected escape hatch for `echoCast`-flagged
- * effects -- see `TriggeredDef.echoCast`'s own doc comment for why `executeResponse` can't reach
- * this itself. `observerId` is the effect's bearer (the Overtone-holder that granted the echo);
- * `casterId` is the hook's own `source` (the OBSERVED actor, who actually casts). The callback
- * threads the ambient `CascadeState` through (E2.2 -- never a fresh one, so depth keeps
- * accumulating across chained echoes). */
-export type EchoCastExecutor = (
-  observerId: CreatureId,
-  casterId: CreatureId,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-) => CombatState
-
 export function fireHook(
   hook: Hook,
   selfIds: readonly CreatureId[],
   source: CreatureId | undefined,
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-  // Phase 4 Slice E2 (general action-observation system): supplied ONLY by the four action
-  // executors' own 'on-action-observed' call (combat.ts), alongside their existing actor-self
-  // hook call -- every other call site omits it. Consulted below to filter ObservationFilter-
-  // carrying candidates; meaningless (and unread) for any other hook.
-  observed?: {
-    readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
-    readonly instanceIndex: number
-  },
-  // Phase 4 Slice H2 (PR #60 review, E2): supplied ONLY by combat.ts's two `on-action-observed`
-  // dispatch sites, alongside `observed` above -- every other call site omits it, so an
-  // `echoCast`-flagged effect is inert (never fires) anywhere else.
-  onEchoCast?: EchoCastExecutor,
-  // PR #64 review fix 2: supplied ONLY by combat.ts's resolveRoundEndSweep, alongside its own
-  // 'on-round-end' call -- every other call site omits it, so this gate is inert (always fires)
-  // everywhere else. Consulted for every STATUS-sourced candidate (effect.statusId !== undefined
-  // -- trait-sourced triggers have no statusId and are never gated): a condition-status's
-  // on-round-end trigger fires only if `(creatureId, statusId)` existed at the SWEEP'S OWN start
-  // (the snapshot) and has not been (re)applied EARLIER in this same sweep -- a status born or
-  // refreshed mid-sweep must not tick until next round's sweep. Skips silently, like a false
-  // `condition` -- no TriggerFired, no depth/truncation accounting.
-  statusTriggerGate?: (creatureId: CreatureId, statusId: string) => boolean,
+  ctx: ResolutionContext,
+  options?: FireHookOptions,
 ): { state: CombatState; suppressed: boolean } {
+  const { observed, statusTriggerGate } = options ?? {}
+  const { events, cascade } = ctx
   let working = state
   let suppressed = false
   const isDeathHook = hook === 'on-death'
@@ -567,11 +545,18 @@ export function fireHook(
       // TriggeredDef.echoCast's own doc comment) and is deliberately EXEMPTED from the
       // self-re-entry guard below (no `activeInstances.add`/`delete`) so a later chain hop can
       // revisit the SAME Overtone instance -- only `cascade.depth`/MAX_TRIGGER_CASCADE_DEPTH
-      // bounds it, never self-re-entry.
+      // bounds it, never self-re-entry. Phase 4.1-C2a: runs through `ctx.runAction` (replacing
+      // the old `onEchoCast` callback) -- `source` is the OBSERVED actor (who actually casts);
+      // `self.id` is the effect's bearer (who granted the echo, `EchoCastGranted.sourceId`).
       if (effect.echoCast) {
-        if (onEchoCast && source) {
+        if (source) {
           cascade.depth += 1
-          working = onEchoCast(self.id, source, working, events, cascade)
+          // C2a-only (deleted in C2b, B2.3): keeps today's exact behaviour -- no Confusion/
+          // Tunnel Vision/Provoke for an echo's target.
+          working = ctx.runAction(source, ECHO_CAST_INTENT, working, {
+            announce: { type: 'EchoCastGranted', sourceId: self.id, casterId: source },
+            legacyGrantedTargeting: true,
+          })
           cascade.depth -= 1
         }
         continue
@@ -584,8 +569,7 @@ export function fireHook(
         effect.sourceTraitId,
         { self: self.id, source, stacks, statusId },
         working,
-        events,
-        cascade,
+        ctx,
       )
       cascade.depth -= 1
       cascade.activeInstances.delete(effect.instanceId)
@@ -707,8 +691,7 @@ export function executeResponse(
   sourceTraitId: string,
   context: HookContext,
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
 ): { state: CombatState; suppressed: boolean } {
   switch (response.kind) {
     case 'deal-damage': {
@@ -769,8 +752,7 @@ export function executeResponse(
             resolveFlatTotal(bearer, response.flatAmount, flatCount),
             response.damageSource ?? 'dot',
             working,
-            events,
-            cascade,
+            ctx,
             context.statusId,
           )
         } else if (response.scalingStat !== undefined) {
@@ -782,8 +764,7 @@ export function executeResponse(
             spellPower,
             response.damageSource ?? 'attack',
             working,
-            events,
-            cascade,
+            ctx,
             context.statusId,
           )
         } else {
@@ -796,8 +777,7 @@ export function executeResponse(
             spellPower,
             response.damageSource ?? offStat,
             working,
-            events,
-            cascade,
+            ctx,
             context.statusId,
           )
         }
@@ -847,7 +827,7 @@ export function executeResponse(
               (response.spellPower ?? 1.0) *
               formulaMultiplier
             : resolveFlatTotal(bearer, response.amountPerStack ?? 0, flatCount)
-        working = applyHeal(context.self, targetId, amount, working, events)
+        working = applyHeal(context.self, targetId, amount, working, ctx)
       }
       return { state: working, suppressed: false }
     }
@@ -878,7 +858,7 @@ export function executeResponse(
           finalFactor,
           sourceTraitId,
           working,
-          events,
+          ctx,
         )
       }
       return { state: working, suppressed: false }
@@ -886,14 +866,7 @@ export function executeResponse(
     case 'apply-status': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
-        working = applyStatus(
-          context.self,
-          targetId,
-          response.status,
-          working,
-          events,
-          cascade,
-        )
+        working = applyStatus(context.self, targetId, response.status, working, ctx)
       }
       return { state: working, suppressed: false }
     }
@@ -939,7 +912,7 @@ export function executeResponse(
           // -- it's the thing MAX_REVIVES_PER_CREATURE bounds.
           revivesUsed: target.revivesUsed + 1,
         })
-        events.push({
+        ctx.events.push({
           type: 'Revived',
           sourceId: context.self,
           targetId,
@@ -989,7 +962,7 @@ export function executeResponse(
         ),
       })
       // ASSUMPTION 18: StatusExpired, not a mere decrement -- the status is genuinely gone.
-      events.push({
+      ctx.events.push({
         type: 'StatusExpired',
         creatureId: context.self,
         statusId: response.statusId,
@@ -1005,8 +978,7 @@ export function executeResponse(
         sourceTraitId,
         { ...context, consumedStacks },
         working,
-        events,
-        cascade,
+        ctx,
       )
     }
     case 'remove-status': {
@@ -1040,7 +1012,7 @@ export function executeResponse(
             (e) => e.instanceId !== existing.instanceId,
           ),
         })
-        events.push({
+        ctx.events.push({
           type: 'StatusExpired',
           creatureId: targetId,
           statusId: response.filter.statusId,
@@ -1064,8 +1036,7 @@ function applyFlatDamage(
   amount: number,
   damageSource: 'attack' | 'cast' | 'dot',
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
   statusId?: string,
 ): CombatState {
   const target = getCreature(state, targetId)
@@ -1076,33 +1047,24 @@ function applyFlatDamage(
     affinityMultiplier: 1,
     wasChipOnly: false,
   }
-  return applyDamageAndEmit(
-    sourceId,
-    target,
-    damage,
-    damageSource,
-    state,
-    events,
-    cascade,
-    statusId,
-  )
+  return applyDamageAndEmit(sourceId, target, damage, damageSource, state, ctx, statusId)
 }
 
 /** Regen: a flat, stack-scaled heal, clamped to effective max Health -- no auto-heal past it.
- * Exported as of Phase 4 Slice E: a heal-payload Cast (combat.ts) calls this directly, the same
+ * Exported as of Phase 4 Slice E: a heal-payload Cast (actions.ts) calls this directly, the same
  * "not through a trigger" precedent already applied to apply-stat-modifier below. */
 export function applyHeal(
   sourceId: CreatureId,
   targetId: CreatureId,
   amount: number,
   state: CombatState,
-  events: CombatEvent[],
+  ctx: ResolutionContext,
 ): CombatState {
   const target = getCreature(state, targetId)
   const maxHp = effectiveMaxHp(target)
   const newHp = Math.min(maxHp, target.currentHp + Math.max(0, Math.floor(amount)))
   const working = updateCreature(state, targetId, { currentHp: newHp })
-  events.push({
+  ctx.events.push({
     type: 'HealApplied',
     sourceId,
     targetId,
@@ -1128,8 +1090,7 @@ export function applyStatus(
   targetId: CreatureId,
   spec: StatusSpec,
   state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
+  ctx: ResolutionContext,
 ): CombatState {
   const def = state.statuses.get(spec.statusId)
   if (!def) {
@@ -1191,7 +1152,7 @@ export function applyStatus(
   let working = { ...state, effectInstanceCounter: counter }
   working = updateCreature(working, targetId, { activeEffects: nextEffects })
 
-  events.push({
+  ctx.events.push({
     type: 'StatusApplied',
     targetId,
     statusId: spec.statusId,
@@ -1200,18 +1161,11 @@ export function applyStatus(
     sourceId,
   })
 
-  working = fireHook(
-    'on-status-applied',
-    [targetId],
-    sourceId,
-    working,
-    events,
-    cascade,
-  ).state
+  working = fireHook('on-status-applied', [targetId], sourceId, working, ctx).state
   return working
 }
 
-/** Exported as of Phase 4 Slice E: a stat-modifier-payload Cast (combat.ts) calls this directly
+/** Exported as of Phase 4 Slice E: a stat-modifier-payload Cast (actions.ts) calls this directly
  * (sourceTraitId = the spell's own id, for effect-instance-id/debugging legibility) -- the same
  * "reuse the response's execution path, not through a trigger" precedent as heal above. */
 export function applyStatModifier(
@@ -1221,7 +1175,7 @@ export function applyStatModifier(
   factor: number,
   sourceTraitId: string,
   state: CombatState,
-  events: CombatEvent[],
+  ctx: ResolutionContext,
 ): CombatState {
   const target = getCreature(state, targetId)
   const effectiveBefore = getEffectiveStat(target, stat)
@@ -1244,7 +1198,7 @@ export function applyStatModifier(
   })
   const updated = getCreature(working, targetId)
   const effectiveAfter = getEffectiveStat(updated, stat)
-  events.push({
+  ctx.events.push({
     type: 'StatModifierApplied',
     sourceId,
     targetId,
@@ -1259,7 +1213,7 @@ export function applyStatModifier(
     const maxHp = effectiveMaxHp(updated)
     if (updated.currentHp > maxHp) {
       working = updateCreature(working, targetId, { currentHp: maxHp })
-      events.push({
+      ctx.events.push({
         type: 'HpClamped',
         creatureId: targetId,
         previousHp: updated.currentHp,

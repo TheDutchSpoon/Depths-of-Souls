@@ -787,6 +787,11 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     shape a script `Rule` carries, extended with **`gemSlot: 'random'`** (uniformly among the actor's
     castable gems) and a **`'random'` target** (uniformly among valid targets). Script rules pass
     straight in; manual mode builds the same shape.
+  - **`'random'` is an intent-only target.** It needs the action's intended side, which only an
+    intent has (a rule, the fallback, a grant). A response target (`{ kind: 'selector', selector }`
+    on a trait, status, perk or spell response) has no intended side, so `'random'` there is
+    **rejected at load time**. That validator lands in 4.1-C2a. `resolveTargetSelector` and
+    `targetSelectorHasCandidate` throw on it; only `actions.ts` resolves it.
   - **`checkLegality(actor, intent, state)`** — **pure, draws nothing.** Can the actor take this
     action at all (locks, an empty slot, no castable gem for `gemSlot: 'random'`, no valid target)?
     Used by the interpreter's lookahead and, later, by the UI to grey out illegal choices. "Can't
@@ -1484,6 +1489,20 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   a single assertion. **Keep fixtures small** (tiny parties, few rounds) so a diff is human-
   readable. The suite starts small (1v1, 6v6, affinity matchup, stomp) and **grows every phase** to
   exercise newly added mechanics.
+- **Corpus digest** (Phase 4.1-C2a, PR #71 review) — a **behaviour tripwire, not a spec**.
+  - **What it does:** one test resolves a fixed corpus of real-content fights and compares each
+    fight's event-log hash against a committed fixture. The fixture is **generated** and labeled
+    as such.
+  - **The corpus:** generated floors across every shipped biome, boss floors included, plus the
+    shipped starters and Unicorn. Bonus-cast, echo, Provoke and Confusion must all fire in it.
+  - **Why it exists:** it answers "did any behaviour move?", which scenario goldens can't. A
+    change that only shows up in combinations no golden pins passes them all.
+  - **Byte-identical PRs leave it unchanged.**
+  - **Deliberate-change PRs regenerate it**, only through its update command. They state how many
+    corpus fights changed and which listed change accounts for them.
+  - **Proof it covers a mechanism:** the PR that adds a mechanism to the corpus shows the digest
+    failing with that mechanism disabled. This is the same bar as a discriminating golden.
+  - Hand-derived goldens remain the definition of correct.
 - **E2E smoke test** (Playwright) — **planned, none exists yet**: does the app render and the
   loop run in a real browser. Slower; run it on `main` / pre-deploy, not on the inner loop.
 
@@ -1514,6 +1533,13 @@ demo slice (their goldens stay byte-identical).
   counts, key results) rather than fully hand-traced — but it must be **explicitly labeled in the
   fixture** as an integration/regression golden whose per-mechanism correctness rests on the focused
   goldens. Don't pass off a giant generated log as hand-verified.
+- **A focused golden must actually pin what it claims** (PR #71 review):
+  - **No clamp may hide the value it covers.** For example, a heal golden whose heal overflows
+    max HP pins the clamp, not the heal amount.
+  - **Every random draw or extremum it covers needs at least two distinct candidates** whose picks
+    lead to different logs. A one-spell caster pins nothing about the gem draw.
+
+  The "fails with its mechanism removed" check is how a golden proves both.
 - **Characterize the empty seams now.** Pin the current behavior of the "no-op today, real later"
   seams — `getEffectiveStat` returns base with no effects; the mod pools yield ×1.0 when empty; the
   remap-aware OffStat lookup returns effective Attack with no remap; `spellPower` is 1.0 for Attack.

@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "corpus:update": "UPDATE_CORPUS=1 vitest run src/engine/corpus-digest.test.ts"
   },
   "dependencies": {
     "react": "^19.3.0",

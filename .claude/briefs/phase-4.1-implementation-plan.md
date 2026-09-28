@@ -409,8 +409,45 @@ B2 (including rule 4) and B5 change no existing golden, so each needs a new disc
   `getDefaultTarget` is deleted. Draw order is pinned for byte-identity: `gemSlot: 'random'` draws
   before the target; the `'random'` target draws over today's `random-enemy`/`random-ally` pool
   and order. On a skipped turn, bonus-cast still rolls its chance (a passive turn-end effect) and
-  the granted cast is then refused. C2 adds the seed-sweep test from "Verification". If C2 is too
+  the granted cast is then refused. C2 adds the corpus digest from "Verification". If C2 is too
   large, it splits into a pure refactor and the behaviour changes, both byte-identical.
+- **C2 splits into C2a and C2b (decided at the PR #71 review).** Both keep every existing golden
+  byte-identical.
+  - **C2a — pure plumbing, no behaviour change.** It adds `actions.ts`, the full
+    `ResolutionContext` threading, `Intent`, `gemSlot: 'random'`, the `'random'` selector and
+    `decideAction → Intent`, and reroutes bonus-cast and echo through `runAction`. It reproduces
+    today's semantics exactly: a differential run against `main` must show identical event logs.
+    Wherever today's behaviour differs from the final pipeline, C2a keeps today's behaviour
+    behind a **named, C2a-only switch**, and C2b deletes each one:
+    - **`legacyGrantedTargeting`**, an option on `runAction` passed only by bonus-cast and echo.
+      It makes the granted cast's target skip Confusion → Tunnel Vision → Provoke, as today.
+    - **The interpreter's "a rule needs explicit targeting" gate** and the first-by-slot default
+      (`legacyDefaultTarget`).
+    - **The unfiltered `gemSlot: 'random'` draw.** It draws over every non-null slot, as today's
+      bonus-cast and echo do.
+
+    C2a also replaces the seed sweep with the **corpus digest** (see "Verification"). It adds a
+    load-time check that the `'random'` selector never appears in a response target (CONVENTIONS,
+    "One action pipeline").
+  - **C2b — the behaviour changes (B1, B2, B5).** Each flip deletes one C2a switch, or adds B5's
+    guard. Each lands with a discriminating golden, shown failing with the flip undone:
+    - **B1:** the default becomes side-aware (the fallback golden above), and targeting-less
+      rules become valid.
+    - **B2.1 / B2.2:** a skipped turn, or Silence, refuses a granted cast (goldens as listed
+      under B2).
+    - **B2.3:** delete `legacyGrantedTargeting`. Goldens: a confused creature's bonus cast can
+      redirect, and a Provoke redirects an echo.
+    - **B2.4:** the rule-4 re-target.
+    - **The castable-filtered gem draw** (`gemSlot: 'random'` over `castableGemSlots`,
+      ASSUMPTION 13). This is **not** equivalent to today's draw. Win/loss is checked only after
+      `TurnEnded`, so a granted cast after the killing blow runs against an empty enemy side.
+      Today it fizzles if it rolls an enemy-side spell; the filtered draw picks a castable spell
+      instead. Golden: a bonus-caster with [enemy spell, ally spell] kills the last enemy, and the
+      bonus cast lands the ally spell.
+    - **B5:** the pre-hit fizzle.
+
+    The corpus digest changes in C2b. The PR lists how many corpus fights changed and which of the
+    flips above accounts for them.
 
 ### A1 — `actions.ts`
 - **Intent** = `{ action: RuleAction, targeting?: TargetSelector }`; `RuleAction`'s cast gains
@@ -728,8 +765,16 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
 - **Byte-identical PRs** (B, D): an empty golden diff, shown.
 - **Deliberate-change PRs** (C, E, F): every changed golden listed with its reason; the diff of
   each old golden contains only the listed kind of change.
-- **Determinism:** the frozen double-resolve test (B) stays green through the phase; a seed-sweep
-  test (same seed → identical log) covers the new pipeline and turn skeleton.
+- **Determinism:** the frozen double-resolve test (B) stays green through the phase.
+- **Behaviour tripwire: the corpus digest, from C2a on** (PR #71 review; CONVENTIONS "Testing").
+  - **What it does:** one test hashes the event log of every fight in a fixed real-content corpus
+    and compares the hashes against a committed, generated fixture.
+  - **Byte-identical PRs** leave it unchanged. **Deliberate PRs** regenerate it and attribute the
+    changed fights.
+  - **Why it replaces the seed sweep:** the sweep only checked "same seed → identical log". Over a
+    pure engine that can fail only through hidden state or input mutation, and the frozen test
+    already covers mutation. The sweep also compared against nothing, so it could not catch
+    drift.
 - **Loop safety re-check** in E: `perform-action` chains are depth-bounded; the data test forbids
   unconditional grants.
 - **Purity:** engine tests run in Node (S4); no `src/engine` import of data/state/ui.
@@ -830,6 +875,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 29. **The `support` role's ally-side gem filter is an engine change** in G: the cast intent's
     `gemSlot: 'random'` gains an optional `side` filter (shape pinned by the G plan).
 30. **Silenced and Pacified have polarity `debuff`.**
+31. **Confirmed (design owner, PR #71 review).** C2a is byte-identical in behaviour, not just on
+    goldens. Granted casts keep today's targeting behind `legacyGrantedTargeting` until C2b
+    (B2.3) deletes it.
+32. **Confirmed (design owner, PR #71 review).** The corpus digest replaces the 200-case seed sweep.
 
 ## Sequencing summary
 

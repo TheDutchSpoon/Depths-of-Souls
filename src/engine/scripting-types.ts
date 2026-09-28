@@ -141,6 +141,15 @@ export interface HighestIntelligenceEnemySelector {
 export interface RandomEnemySelector {
   readonly kind: 'random-enemy'
 }
+/** Phase 4.1-C2a (A1): uniform among living creatures on the ACTION'S OWN intended side (not
+ * fixed to ally/enemy like the two selectors above) -- resolving it needs that side, which only
+ * the action layer knows, so `resolveTargetSelector` (target-selectors.ts) throws on it and
+ * `actions.ts`'s `resolveIntent` resolves it directly instead. `targetSelectorHasCandidate` and
+ * `peekTargetSelector` still handle it (existence check / no-RNG-peek, same discipline as
+ * `random-enemy`/`random-ally`). */
+export interface RandomSelector {
+  readonly kind: 'random'
+}
 
 export type TargetSelector =
   | SelfSelector
@@ -154,6 +163,7 @@ export type TargetSelector =
   | HighestAttackEnemySelector
   | HighestIntelligenceEnemySelector
   | RandomEnemySelector
+  | RandomSelector
 
 // ---- Rule / Script ----
 // RuleAction is distinct from Action (types.ts): a rule's authored action never carries a
@@ -164,7 +174,9 @@ export interface AttackRuleAction {
 }
 export interface CastRuleAction {
   readonly kind: 'cast'
-  readonly gemSlot: number
+  /** Phase 4.1-C2a (A1): 'random' picks uniformly among the actor's castable gems (innate slots
+   * included) at resolution time -- see actions.ts's `castableGemSlots`/`resolveIntent`. */
+  readonly gemSlot: number | 'random'
 }
 export interface DefendRuleAction {
   readonly kind: 'defend'
@@ -194,4 +206,15 @@ export interface Script {
   readonly rules: readonly Rule[]
   /** Reserved for Phase 6's authoring UI. Never read by the Phase 2 interpreter. */
   readonly defaultTarget?: TargetSelector
+}
+
+// ---- Intent (Phase 4.1-C2a, A1) ----
+// The rule-shaped, UNRESOLVED action every action source (a script rule, the implicit fallback,
+// a granted action) produces -- `actions.ts`'s `checkLegality`/`resolveIntent` are the one
+// pipeline that turns this into a resolved `Action` (types.ts). Structurally identical to `Rule`
+// minus its `condition` (an Intent has already been "decided"; it has nothing left to evaluate).
+
+export interface Intent {
+  readonly action: RuleAction
+  readonly targeting?: TargetSelector
 }

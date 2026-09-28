@@ -4,44 +4,19 @@ import { buildTurnQueue } from './turn-order'
 import { compareBySideSlotId } from './tie-break'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import {
-  activeBonusCast,
   resolveBaselineEffects,
   instantiateEffectDefs,
   effectiveMaxHp,
-  gatherExtraInstances,
-  hasAnnihilate,
-  hasSplashing,
+  activeBonusCast,
 } from './effects'
-import { getEffectiveStat, getOffensiveStat } from './effective-stats'
-import {
-  applyHeal,
-  applyStatModifier,
-  applyStatus,
-  dealDamage,
-  dealDamageWithOffStat,
-  fireHook,
-  newCascade,
-} from './resolution'
-import type { CascadeState, EchoCastExecutor } from './resolution'
+import { fireHook, newCascade } from './resolution'
+import { createResolutionContext } from './actions'
 import { decideAction } from './interpreter'
-import {
-  adjacentLivingTargets,
-  getDefaultTarget,
-  shouldRedirectAoeToAllies,
-} from './targeting'
-import { resolveTargetSelector } from './target-selectors'
 import type { CreatureId } from './ids'
 import type { EffectDef, EffectInstanceId, InnateSpellEffect } from './effect-types'
-import type {
-  Action,
-  CombatEvent,
-  CombatState,
-  Creature,
-  FightResult,
-  Spell,
-} from './types'
-import type { Script } from './scripting-types'
-import type { StatusDef, StatusSpec, Trait } from './effect-types'
+import type { CombatEvent, CombatState, Creature, FightResult } from './types'
+import type { Intent, Script } from './scripting-types'
+import type { StatusDef, Trait } from './effect-types'
 
 /** Phase 4.1-B (S1): one side's fight-setup input -- its party and its side-wide effects (perks
  * for the player today; biome/boss effects for either side later). */
@@ -331,11 +306,8 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
     livingIds(state),
     undefined,
     state,
-    events,
-    newCascade(),
-    undefined,
-    undefined,
-    statusTriggerGate,
+    createResolutionContext(events, newCascade()),
+    { statusTriggerGate },
   ).state
 
   const reappliedThisSweep = new Set<string>()
@@ -349,427 +321,21 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
   return decrementAndExpireSnapshot(fired, snapshot, events, reappliedThisSweep)
 }
 
-// The damage formula + application + damage-path hook firing all live in resolution.ts now
-// (dealDamage / applyDamageAndEmit). These executors just emit the intent event(s), fire the
-// matching on-[action] hook, then delegate: "attack"/"cast" go through the exact same damage
-// path a triggered deal-damage response does.
-
-/**
- * The action instance-list model (CONVENTIONS' "action instance-list", locked): an Attack or
- * Cast resolves as a list of powerPercent entries, assembled ONCE, up front, before any instance
- * resolves -- base [100], plus one entry per active action-instance passive matching
- * `actionKind` (or 'both'), in canonical active-effects order. Composition is LINEAR
- * ([100, 100, 30], never a re-multiplied entry). Nothing is spawned mid-resolution, so there is
- * no trigger/re-entrancy/loop-guard involvement here -- this is a pre-computed execution plan.
- */
-function buildInstanceList(
-  actor: Creature,
-  actionKind: 'attack' | 'cast',
-): readonly number[] {
-  return [100, ...gatherExtraInstances(actor, actionKind)]
-}
-
-/**
- * ASSUMPTION 31: every instance after the first targets the SAME resolved target as instance 1
- * (the selector is not re-run per instance) -- except when that target has since died, which
- * falls back to the normal default-target selection (matching the Brute starter's own wording).
- * Returns null once no living target remains (nothing further in the list can resolve).
- *
- * `targetSide` (Phase 4 Slice E, default 'enemy' -- Attack's own call site never passes it,
- * since v1 has no ally-targeting Attack) picks which party the post-death fallback default draws
- * from: the opposing side for an ordinary offensive instance, or the actor's OWN side for a
- * support-spell instance -- mirrors resolveOffensiveTarget's enemy-only contract not applying to
- * ally casts (GAME_DESIGN §7).
- */
-function resolveInstanceTarget(
-  actor: Creature,
-  previousTargetId: CreatureId | null,
-  state: CombatState,
-  targetSide: 'enemy' | 'ally' = 'enemy',
-): CreatureId | null {
-  if (previousTargetId) {
-    const current = findCreature(state, previousTargetId)
-    if (current?.alive) return previousTargetId
-  }
-  const fallbackSide =
-    targetSide === 'ally' ? actor.side : actor.side === 'player' ? 'enemy' : 'player'
-  const party = fallbackSide === 'player' ? state.playerParty : state.enemyParty
-  return getDefaultTarget(party)
-}
-
-/**
- * Phase 4 Slice C (Proficient Warrior / Annihilate): the living enemies a Splashing actor's
- * main ATTACK hit against `mainTargetId` should also strike -- computed from `state` as it
- * stood BEFORE the main hit lands (so `mainTargetId` is still among the alive-filtered list
- * adjacentLivingTargets indexes into; looking this up AFTER the main hit could drop the just-
- * killed main target out of that list and break the adjacency lookup). Empty when the actor
- * has no active Splashing. Annihilate upgrades the set to every OTHER living enemy. Attacks
- * only -- brute.md defines Splashing as "attacks deal 100% of their damage to enemies
- * adjacent to the target"; only executeAttack (below) calls this, never executeCastSingle.
- */
-function splashTargetIds(
-  actor: Creature,
-  mainTargetId: CreatureId,
-  state: CombatState,
-): CreatureId[] {
-  if (!hasSplashing(actor)) return []
-  const opposingParty = actor.side === 'player' ? state.enemyParty : state.playerParty
-  if (hasAnnihilate(actor)) {
-    return opposingParty.filter((c) => c.alive && c.id !== mainTargetId).map((c) => c.id)
-  }
-  const mainTarget = findCreature(state, mainTargetId)
-  if (!mainTarget) return []
-  return adjacentLivingTargets(mainTarget, opposingParty).map((c) => c.id)
-}
-
-function executeAttack(
-  actor: Creature,
-  targetId: CreatureId,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-): CombatState {
-  let working = state
-  let resolvedTargetId: CreatureId | null = targetId
-
-  for (const [instanceIndex, powerPercent] of buildInstanceList(
-    actor,
-    'attack',
-  ).entries()) {
-    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working)
-    if (!resolvedTargetId) break // no living target left for this or any further instance
-
-    const thisTargetId = resolvedTargetId
-    const splashIds = splashTargetIds(actor, thisTargetId, working)
-    events.push({ type: 'AttackDeclared', attackerId: actor.id, targetId: thisTargetId })
-    working = fireHook(
-      'on-attack',
-      [actor.id],
-      thisTargetId,
-      working,
-      events,
-      cascade,
-    ).state
-    // Phase 4 Slice E2 (general action-observation system): fires on ALL living creatures
-    // (cheap -- effectsForHook returns nothing for non-observers), per instance, alongside the
-    // actor's own on-attack hook above -- see CONVENTIONS' actor-vs-observer routing table.
-    working = fireHook(
-      'on-action-observed',
-      livingIds(working),
-      actor.id,
-      working,
-      events,
-      cascade,
-      { actionKind: 'attack', instanceIndex },
-    ).state
-    working = dealDamage(
-      actor.id,
-      thisTargetId,
-      'attack',
-      powerPercent / 100,
-      'attack',
-      working,
-      events,
-      cascade,
-    )
-    // Splashing: recompute the SAME formula (own offStat/spellPower, each splash target's own
-    // Defence/affinity/pools -- never a copy of the main hit's number, ASSUMPTION 15). No
-    // TriggerFired -- it's the same action, not a triggered response. Re-checks aliveness in
-    // case an earlier splash hit's own damage-path cascade (e.g. Retaliate) already killed a
-    // later one.
-    for (const splashId of splashIds) {
-      if (!findCreature(working, splashId)?.alive) continue
-      working = dealDamage(
-        actor.id,
-        splashId,
-        'attack',
-        powerPercent / 100,
-        'attack',
-        working,
-        events,
-        cascade,
-      )
-    }
-  }
-  return working
-}
-
-/**
- * Phase 4 Slice B: Spell.scalingStat resolution. Absent -> the pre-Slice-B remap-aware
- * Intelligence lookup (byte-identical to every existing spell, since getOffensiveStat's Cast
- * default IS Intelligence already). An explicit Stat reads it DIRECTLY via getEffectiveStat (no
- * stat-remap resolution), mirroring deal-damage's scalingStat. 'none' = flat/Int-independent:
- * offStat 0 (always chip-floor-only through the same formula -- not exercised by any v1
- * damage-dealing content).
- */
-function resolveSpellOffStat(
-  caster: Creature,
-  spell: Spell,
-  powerFraction: number,
-): number {
-  const spellPower = spell.spellPower * powerFraction
-  if (spell.scalingStat === undefined) return getOffensiveStat(caster, 'cast', spellPower)
-  if (spell.scalingStat === 'none') return 0
-  return getEffectiveStat(caster, spell.scalingStat) * spellPower
-}
-
-/**
- * Phase 4 Slice E: routes a landed Cast instance to its payload's own execution path.
- * 'damage' (default, byte-identical to pre-Slice-E) reuses dealDamageWithOffStat. 'heal' reuses
- * applyHeal directly -- magnitude is the SAME resolveSpellOffStat a damage spell would compute,
- * just applied as HP restored. 'stat-modifier' reuses applyStatModifier directly with the
- * spell's own authored `statModifier` (NOT scaled by powerPercent -- see Spell.statModifier's
- * doc comment). Neither heal nor stat-modifier emits TriggerFired (not a triggered response --
- * Cast itself is the chosen-action context).
- */
-function applyCastPayload(
-  actor: Creature,
-  spell: Spell,
-  targetId: CreatureId,
-  powerPercent: number,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-): CombatState {
-  const payload = spell.payload ?? 'damage'
-  switch (payload) {
-    case 'damage':
-      // Splashing is an attacks-only mechanic (brute.md: "attacks deal 100% of their damage to
-      // enemies adjacent to the target"; CONVENTIONS' "Splashing / Annihilate" bullet) -- Cast
-      // never splashes, so there is no splash loop here (contrast executeAttack above).
-      return dealDamageWithOffStat(
-        actor.id,
-        targetId,
-        resolveSpellOffStat(actor, spell, powerPercent / 100),
-        'cast',
-        'cast',
-        state,
-        events,
-        cascade,
-      )
-    case 'heal':
-      return applyHeal(
-        actor.id,
-        targetId,
-        resolveSpellOffStat(actor, spell, powerPercent / 100),
-        state,
-        events,
-      )
-    case 'stat-modifier': {
-      if (!spell.statModifier) {
-        throw new Error(
-          'resolver invariant violated: stat-modifier-payload spell missing statModifier',
-        )
-      }
-      return applyStatModifier(
-        actor.id,
-        targetId,
-        spell.statModifier.stat,
-        spell.statModifier.factor,
-        spell.id,
-        state,
-        events,
-      )
-    }
-    default: {
-      const exhaustive: never = payload
-      throw new Error(`Unhandled spell payload: ${String(exhaustive)}`)
-    }
-  }
-}
-
-function executeCastSingle(
-  actor: Creature,
-  gemSlot: number,
-  targetId: CreatureId,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-): CombatState {
-  const spell = actor.equippedSpells[gemSlot]
-  if (!spell)
-    throw new Error('resolver invariant violated: cast referencing an empty gem slot')
-
-  const targetSide = spell.targetSide ?? 'enemy'
-  let working = state
-  let resolvedTargetId: CreatureId | null = targetId
-
-  for (const [instanceIndex, powerPercent] of buildInstanceList(
-    actor,
-    'cast',
-  ).entries()) {
-    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working, targetSide)
-    if (!resolvedTargetId) break
-
-    const thisTargetId = resolvedTargetId
-    events.push({
-      type: 'SpellCast',
-      targetShape: 'single',
-      casterId: actor.id,
-      gemSlot,
-      targetId: thisTargetId,
-    })
-    working = fireHook(
-      'on-cast',
-      [actor.id],
-      thisTargetId,
-      working,
-      events,
-      cascade,
-    ).state
-    // Phase 4 Slice E2 (general action-observation system): Resonants' own consumer shape
-    // (relationship 'ally', actionKind 'cast') -- see CONVENTIONS' actor-vs-observer routing.
-    // Phase 4 Slice H2 (PR #60 review, E2): runEchoCast threaded in as the echoCast escape hatch
-    // (Resonant Overtone) -- inert everywhere no effect declares echoCast.
-    working = fireHook(
-      'on-action-observed',
-      livingIds(working),
-      actor.id,
-      working,
-      events,
-      cascade,
-      { actionKind: 'cast', instanceIndex },
-      runEchoCast,
-    ).state
-    working = applyCastPayload(
-      actor,
-      spell,
-      thisTargetId,
-      powerPercent,
-      working,
-      events,
-      cascade,
-    )
-    if (spell.appliesStatus) {
-      working = applyStatusIfAlive(
-        actor.id,
-        thisTargetId,
-        spell.appliesStatus,
-        working,
-        events,
-        cascade,
-      )
-    }
-  }
-  return working
-}
-
-/** Never applies a status to a corpse -- a cast's damage may have killed the target. */
-function applyStatusIfAlive(
-  sourceId: CreatureId,
-  targetId: CreatureId,
-  spec: StatusSpec,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-): CombatState {
-  const target = getCreature(state, targetId)
-  if (!target.alive) return state
-  return applyStatus(sourceId, targetId, spec, state, events, cascade)
-}
-
-function executeCastAoe(
-  actor: Creature,
-  gemSlot: number,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-): CombatState {
-  const spell = actor.equippedSpells[gemSlot]
-  if (!spell)
-    throw new Error('resolver invariant violated: cast referencing an empty gem slot')
-
-  const targetSide = spell.targetSide ?? 'enemy'
-  let working = state
-
-  for (const [instanceIndex, powerPercent] of buildInstanceList(
-    actor,
-    'cast',
-  ).entries()) {
-    // Phase 4 Slice E: an ally-targeting AOE spell always freezes the caster's OWN living side
-    // -- no Confusion roll at all (Confusion's redirect is scoped to a "harmful action" per
-    // CONVENTIONS; a support cast on your own side is never one, so it must never touch
-    // state.rng here, mirroring targeting.ts's "draws nothing when inactive" discipline).
-    // Provoke was already exempt for every AOE regardless of side (GAME_DESIGN §7).
-    let resolvedParty: 'player' | 'enemy'
-    if (targetSide === 'ally') {
-      resolvedParty = actor.side
-    } else {
-      // Confusion (ASSUMPTION 13): one roll, per instance, decides whether this WHOLE AOE
-      // instance retargets to the caster's own living side instead of the enemy side -- never
-      // a per-target coin flip.
-      const redirectToAllies = shouldRedirectAoeToAllies(actor, working)
-      const opposingSide = actor.side === 'player' ? 'enemy' : 'player'
-      resolvedParty = redirectToAllies ? actor.side : opposingSide
-    }
-    const targetParty =
-      resolvedParty === 'player' ? working.playerParty : working.enemyParty
-    // Frozen target list: all living members of the resolved side, slot order -- each AOE
-    // instance independently re-freezes its OWN set at that instance's cast-start (no single
-    // target to preserve across instances, unlike the single-target case above).
-    const targetIds = targetParty.filter((c) => c.alive).map((c) => c.id)
-    events.push({
-      type: 'SpellCast',
-      targetShape: 'aoe',
-      casterId: actor.id,
-      gemSlot,
-      targetIds,
-    })
-    // AOE has no single target to name as the hook's `source` -- self only.
-    working = fireHook('on-cast', [actor.id], undefined, working, events, cascade).state
-    // Phase 4 Slice E2 (general action-observation system): source here IS the actor (needed
-    // for relationship filtering), unlike on-cast's own source above. Phase 4 Slice H2 (PR #60
-    // review, E2): runEchoCast threaded in, same as executeCastSingle's own call above.
-    working = fireHook(
-      'on-action-observed',
-      livingIds(working),
-      actor.id,
-      working,
-      events,
-      cascade,
-      { actionKind: 'cast', instanceIndex },
-      runEchoCast,
-    ).state
-
-    for (const targetId of targetIds) {
-      // Skip a frozen-list target that's no longer alive by the time its hit lands (a prior
-      // hit's on-death/reflect cascade may have killed it). The frozen target *set* is
-      // unchanged; this only skips *hitting* an already-dead member.
-      const target = getCreature(working, targetId)
-      if (!target.alive) continue
-      working = applyCastPayload(
-        actor,
-        spell,
-        targetId,
-        powerPercent,
-        working,
-        events,
-        cascade,
-      )
-      if (spell.appliesStatus) {
-        working = applyStatusIfAlive(
-          actor.id,
-          targetId,
-          spell.appliesStatus,
-          working,
-          events,
-          cascade,
-        )
-      }
-    }
-  }
-
-  return working
-}
+// The action executors (attack/cast/defend/provoke/wait) all moved to actions.ts (Phase
+// 4.1-C2a, A1) -- combat.ts now only orchestrates the turn skeleton, dispatching every action
+// through actions.ts's `checkLegality`/`resolveIntent`/`executeAction` (or, for the main
+// scripted/fallback action and the granted bonus-cast below, `ResolutionContext.runAction`,
+// which wraps that same pipeline).
 
 /**
  * Phase 4 Slice F (Sorcerer starter's bonus-cast passive -- see BonusCastDef's own doc comment
  * for why this is a passively-consulted EffectDef rather than a 10th response verb). Rolled
  * ONLY when the actor carries the passive (chancePercent discipline: an ordinary creature never
- * touches state.rng here); on success, picks uniformly among the actor's non-null equipped
- * slots and runs a REAL Cast through the exact same executor a chosen action would
- * (executeCastSingle/executeCastAoe -- on-cast/on-action-observed, payload routing, the
- * instance-list model all apply unchanged). A no-op if the actor has no equipped spells at all.
+ * touches state.rng here); on success, runs a real granted Cast through the shared action
+ * pipeline (`gemSlot: 'random'`, no explicit targeting -- `ctx.runAction` reproduces today's
+ * exact gem/target draw order and "no castable gem -> no-op" fizzle, see actions.ts's own header
+ * comment on what's deliberately NOT yet wired here in C2a: no legality/lock check, matching
+ * today -- that gating is Phase 4.1-C2b, B2).
  */
 function maybeFireBonusCast(
   actorId: CreatureId,
@@ -782,180 +348,11 @@ function maybeFireBonusCast(
   if (!bonusCast) return state
   if (!(nextRandom(state.rng) < bonusCast.chancePercent / 100)) return state
 
-  const equipped = actor.equippedSpells
-    .map((spell, slot) => ({ spell, slot }))
-    .filter((entry): entry is { spell: Spell; slot: number } => entry.spell !== null)
-  if (equipped.length === 0) return state
-
-  const index = Math.floor(nextRandom(state.rng) * equipped.length)
-  const chosen = equipped[index]
-  if (!chosen) return state
-
-  const cascade = newCascade()
-  if (chosen.spell.targetShape === 'aoe') {
-    return executeCastAoe(actor, chosen.slot, state, events, cascade)
-  }
-  const targetSide = chosen.spell.targetSide ?? 'enemy'
-  const targetId = resolveInstanceTarget(actor, null, state, targetSide)
-  if (!targetId) return state
-  return executeCastSingle(actor, chosen.slot, targetId, state, events, cascade)
-}
-
-/**
- * Phase 4 Slice H2 (PR #60 review, E2 -- Resonant Overtone's echo-cast). A `maybeFireBonusCast`
- * SIBLING, per CONVENTIONS' own H2 addenda: the chancePercent gate/`stacks:false` dedup/
- * observationFilter match are already handled generically by fireHook before this is even
- * called (see `TriggeredDef.echoCast`'s doc comment); this function's only job is running the
- * actual cast, threading the AMBIENT `cascade` (never a fresh one -- E2.2, so depth keeps
- * accumulating across chained echoes instead of resetting). `casterId` is the OBSERVED actor
- * (fireHook's own `source`), never the effect's bearer -- "it makes the observed caster cast,
- * not the observer." E2.4's RNG order: the chancePercent gate already rolled (by fireHook,
- * before this call) -> random gem (may repeat the just-cast spell) -> random target.
- */
-const runEchoCast: EchoCastExecutor = (observerId, casterId, state, events, cascade) => {
-  const caster = findCreature(state, casterId)
-  // E2.5: caster dead by resolution (an earlier chain hop's own damage could have killed it) ->
-  // fizzle silently, same discipline as applyStatusIfAlive's corpse guard.
-  if (!caster || !caster.alive) return state
-
-  const equipped = caster.equippedSpells
-    .map((spell, slot) => ({ spell, slot }))
-    .filter((entry): entry is { spell: Spell; slot: number } => entry.spell !== null)
-  if (equipped.length === 0) return state // E2.5: 0 equipped -> no-op
-
-  const gemIndex = Math.floor(nextRandom(state.rng) * equipped.length)
-  const chosen = equipped[gemIndex]
-  if (!chosen) return state
-
-  if (chosen.spell.targetShape === 'aoe') {
-    // An AOE echo always "happens" (matches every other AOE cast site -- an empty living-enemy
-    // side just means zero targets, not a fizzle).
-    events.push({ type: 'EchoCastGranted', sourceId: observerId, casterId })
-    return executeCastAoe(caster, chosen.slot, state, events, cascade)
-  }
-  // E2/CONVENTIONS: "randomised -- the echoed spell hits a random valid target for its
-  // shape/side" -- random-ally for an ally-targeting spell, random-enemy otherwise, mirroring
-  // resolveInstanceTarget's own targetSide branch but drawing fresh instead of preserving a
-  // prior instance's target (there is no prior instance here to preserve). Draws NOTHING when
-  // the pool is empty (target-selectors.ts's own "draws nothing when inactive" discipline).
-  const targetSide = chosen.spell.targetSide ?? 'enemy'
-  const targetId = resolveTargetSelector(
-    { kind: targetSide === 'ally' ? 'random-ally' : 'random-enemy' },
-    caster,
-    state,
-  )
-  // E2.5: no valid target -> fizzle silently, no event at all (same discipline as Spore's own
-  // spread-on-death: "fizzles if none qualify").
-  if (!targetId) return state
-  events.push({ type: 'EchoCastGranted', sourceId: observerId, casterId })
-  return executeCastSingle(caster, chosen.slot, targetId, state, events, cascade)
-}
-
-function executeDefend(
-  actor: Creature,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-): CombatState {
-  events.push({ type: 'Defended', creatureId: actor.id })
-  let working = fireHook('on-defend', [actor.id], undefined, state, events, cascade).state
-  // Phase 4 Slice E2 (general action-observation system): Defend/Provoke are always
-  // single-instance in v1 -- instanceIndex is always 0.
-  working = fireHook(
-    'on-action-observed',
-    livingIds(working),
-    actor.id,
-    working,
-    events,
-    cascade,
-    { actionKind: 'defend', instanceIndex: 0 },
-  ).state
-  // Phase 4 Slice D / ASSUMPTION 17: cumulative for the whole fight, never reset -- read fresh
-  // from `working` (not the pre-hook `actor`) in case an on-defend response somehow touched it,
-  // matching the project's existing "re-fetch before mutating" discipline (e.g. combat.ts's own
-  // freshActor pattern).
-  const afterHook = getCreature(working, actor.id)
-  return updateCreature(working, actor.id, {
-    defending: true,
-    defendCount: afterHook.defendCount + 1,
-  })
-}
-
-function executeProvoke(
-  actor: Creature,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-): CombatState {
-  events.push({ type: 'Provoked', creatureId: actor.id })
-  let working = fireHook(
-    'on-provoke',
-    [actor.id],
-    undefined,
-    state,
-    events,
-    cascade,
-  ).state
-  working = fireHook(
-    'on-action-observed',
-    livingIds(working),
-    actor.id,
-    working,
-    events,
-    cascade,
-    { actionKind: 'provoke', instanceIndex: 0 },
-  ).state
-  return updateCreature(working, actor.id, { provoking: true })
-}
-
-function executeWait(
-  actor: Creature,
-  state: CombatState,
-  events: CombatEvent[],
-): CombatState {
-  events.push({ type: 'Waited', creatureId: actor.id })
-  return state
-}
-
-function executeAction(
-  actor: Creature,
-  action: Action,
-  state: CombatState,
-  events: CombatEvent[],
-  cascade: CascadeState,
-): CombatState {
-  switch (action.kind) {
-    case 'attack':
-      return executeAttack(actor, action.targetId, state, events, cascade)
-    case 'cast':
-      switch (action.targetShape) {
-        case 'single':
-          return executeCastSingle(
-            actor,
-            action.gemSlot,
-            action.targetId,
-            state,
-            events,
-            cascade,
-          )
-        case 'aoe':
-          return executeCastAoe(actor, action.gemSlot, state, events, cascade)
-        default: {
-          const exhaustive: never = action
-          throw new Error(`Unhandled cast shape: ${String(exhaustive)}`)
-        }
-      }
-    case 'defend':
-      return executeDefend(actor, state, events, cascade)
-    case 'provoke':
-      return executeProvoke(actor, state, events, cascade)
-    case 'wait':
-      return executeWait(actor, state, events)
-    default: {
-      const exhaustive: never = action
-      throw new Error(`Unhandled action kind: ${String(exhaustive)}`)
-    }
-  }
+  const ctx = createResolutionContext(events, newCascade())
+  const intent: Intent = { action: { kind: 'cast', gemSlot: 'random' } }
+  // C2a-only (deleted in C2b, B2.3): keeps today's exact behaviour -- no Confusion/Tunnel
+  // Vision/Provoke for a bonus cast's target.
+  return ctx.runAction(actor.id, intent, state, { legacyGrantedTargeting: true })
 }
 
 function checkWinLoss(state: CombatState): FightResult | null {
@@ -1002,8 +399,7 @@ export function resolveTurn(state: CombatState): {
       livingIds(working),
       undefined,
       working,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     ).state
   }
 
@@ -1070,8 +466,7 @@ export function resolveTurn(state: CombatState): {
       [actor.id],
       undefined,
       working,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     working = startResult.state
     suppressed = startResult.suppressed
@@ -1106,18 +501,19 @@ export function resolveTurn(state: CombatState): {
   const actorAfterStart = getCreature(working, actor.id)
   if (actorAfterStart.alive && !suppressed) {
     const script = actor.scriptId ? (working.scripts.get(actor.scriptId) ?? null) : null
-    const action = decideAction(actorAfterStart, script, working)
-
-    if (action) {
-      // Fresh cascade per top-level action: depth resets to 0, guard set starts empty.
-      working = executeAction(actorAfterStart, action, working, events, newCascade())
-    }
+    const intent: Intent = decideAction(actorAfterStart, script, working)
+    // Fresh cascade per top-level action: depth resets to 0, guard set starts empty.
+    // `runAction` itself resolves the intent (target/gem draws) then executes -- a no-op if it
+    // doesn't resolve to an action (defensive/unreachable once checkLegality has already
+    // confirmed the intent legal, which decideAction always does before returning it).
+    const ctx = createResolutionContext(events, newCascade())
+    working = ctx.runAction(actorAfterStart.id, intent, working)
   }
 
   // Turn-end hooks (incl. DoT/HoT ticks) and the granted-actions step (bonus-cast) fire BEFORE
   // TurnEnded -- Phase 4.1-C, D6: TurnEnded is always the turn's last event (Phase 4 fired these
   // after it; fixed here). Gating stays exactly as it is today (alive-only) -- whether a skipped
-  // (Stunned) turn should also refuse the granted cast is B2's own fix (Phase 4.1-C2), out of
+  // (Stunned) turn should also refuse the granted cast is B2's own fix (Phase 4.1-C2b), out of
   // this slice's scope; C1 only reorders WHEN this step runs relative to TurnEnded, not WHETHER.
   if (getCreature(working, actor.id).alive) {
     working = fireHook(
@@ -1125,8 +521,7 @@ export function resolveTurn(state: CombatState): {
       [actor.id],
       undefined,
       working,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     ).state
     // Phase 4 Slice F (Sorcerer starter): consulted directly, after the ordinary on-turn-end
     // hook -- see maybeFireBonusCast's own doc comment for why this isn't a hook response.
