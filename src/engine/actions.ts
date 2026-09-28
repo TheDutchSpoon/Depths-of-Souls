@@ -69,7 +69,9 @@ export function createResolutionContext(
   ): CombatState => {
     const actor = findCreature(state, actorId)
     if (!actor || !actor.alive) return state
-    const action = resolveIntent(actor, intent, state)
+    const action = resolveIntent(actor, intent, state, {
+      legacyGrantedTargeting: options?.legacyGrantedTargeting,
+    })
     if (!action) return state
     if (options?.announce) events.push(options.announce)
     return executeAction(actor, action, state, { events, cascade, runAction })
@@ -296,27 +298,51 @@ function resolveGemSlot(
   return equipped[index]?.slot ?? null
 }
 
+/** The options `resolveIntent` itself reads -- a narrower shape than the full `RunActionOptions`
+ * (which also carries `announce`, `runAction`'s own concern, never resolveIntent's). */
+export interface ResolveIntentOptions {
+  readonly legacyGrantedTargeting?: true
+}
+
+/** An enemy-side single target: the override pipeline (Confusion -> Tunnel Vision -> Provoke)
+ * unless `legacyGrantedTargeting` is set, in which case it resolves via the explicit-selector-or-
+ * default path directly -- C2a-only, matching today's exact bonus-cast/echo behaviour (deleted in
+ * C2b, B2.3). */
+function resolveEnemySingleTarget(
+  actor: Creature,
+  targeting: TargetSelector | undefined,
+  state: CombatState,
+  options: ResolveIntentOptions | undefined,
+): CreatureId | null {
+  if (options?.legacyGrantedTargeting) {
+    return resolveExplicitOrDefaultTarget(actor, targeting, 'enemy', state)
+  }
+  return resolveOffensiveTarget(actor, state, () =>
+    resolveExplicitOrDefaultTarget(actor, targeting, 'enemy', state),
+  )
+}
+
 /**
  * `resolveIntent(actor, intent, state)` -- the single place action-level random draws happen.
  * Gem resolution (for a Cast) draws before target resolution (matching today's bonus-cast/echo
  * order). Target resolution: explicit selector (including `'random'`) -> the legacy first-by-slot
  * default (see this module's header comment for why not yet the side-aware one) -> for an
  * enemy-side single target, Confusion -> Tunnel Vision -> Provoke (`resolveOffensiveTarget`,
- * targeting.ts, unchanged). An ally-side single target skips that override pipeline entirely
- * (GAME_DESIGN §7). Returns `null` when no legal action results (defensive/unreachable once
- * checkLegality has passed, except for the fallback/bonus-cast/echo call sites, which don't
+ * targeting.ts, unchanged) -- UNLESS `options.legacyGrantedTargeting` is set (C2a-only; see
+ * `resolveEnemySingleTarget`). An ally-side single target skips that override pipeline entirely
+ * regardless (GAME_DESIGN §7). Returns `null` when no legal action results (defensive/unreachable
+ * once checkLegality has passed, except for the fallback/bonus-cast/echo call sites, which don't
  * pre-check legality in C2a -- see combat.ts).
  */
 export function resolveIntent(
   actor: Creature,
   intent: Intent,
   state: CombatState,
+  options?: ResolveIntentOptions,
 ): Action | null {
   switch (intent.action.kind) {
     case 'attack': {
-      const targetId = resolveOffensiveTarget(actor, state, () =>
-        resolveExplicitOrDefaultTarget(actor, intent.targeting, 'enemy', state),
-      )
+      const targetId = resolveEnemySingleTarget(actor, intent.targeting, state, options)
       return targetId ? { kind: 'attack', targetId } : null
     }
     case 'cast': {
@@ -331,9 +357,7 @@ export function resolveIntent(
       const targetId =
         targetSide === 'ally'
           ? resolveExplicitOrDefaultTarget(actor, intent.targeting, 'ally', state)
-          : resolveOffensiveTarget(actor, state, () =>
-              resolveExplicitOrDefaultTarget(actor, intent.targeting, 'enemy', state),
-            )
+          : resolveEnemySingleTarget(actor, intent.targeting, state, options)
       return targetId ? { kind: 'cast', targetShape: 'single', gemSlot, targetId } : null
     }
     case 'defend':

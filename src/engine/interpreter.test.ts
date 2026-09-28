@@ -474,7 +474,7 @@ describe('decideAction -- status-immunity vs scoped suppress-action (Phase 4 Sli
 })
 
 describe('checkLegality -- pure, draws nothing (Phase 4.1-C2a, A1)', () => {
-  it('an Attack intent is legal iff the enemy side has a living member and Attack is not suppressed', () => {
+  it('an Attack intent is legal iff the enemy side has a living member (suppression is covered separately, above)', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })

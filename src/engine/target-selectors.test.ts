@@ -296,35 +296,14 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
 // the action's intended side, which only actions.ts knows -- see resolveIntent's own
 // resolveRandomTarget) but every exhaustive consumer of TargetSelector still has to handle it.
 describe("the side-neutral 'random' selector", () => {
-  it('has a candidate whenever the acting creature has a living ally or enemy (side-neutral existence)', () => {
+  it("targetSelectorHasCandidate throws -- 'random' needs the intended side, checked only in actions.ts (PR #71 review)", () => {
     const player = makeParty('player', [{ id: 'me' }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const soloState = makeState({ playerParty: player, enemyParty: [] })
-    const bothSidesState = makeState({ playerParty: player, enemyParty: enemy })
+    const state = makeState({ playerParty: player, enemyParty: enemy })
 
-    // "ally" always includes the acting creature itself, so this is true even solo.
-    expect(targetSelectorHasCandidate({ kind: 'random' }, player[0]!, soloState)).toBe(
-      true,
-    )
-    expect(
-      targetSelectorHasCandidate({ kind: 'random' }, player[0]!, bothSidesState),
-    ).toBe(true)
-  })
-
-  it('targetSelectorHasCandidate never advances state.rng for random', () => {
-    const player = makeParty('player', [{ id: 'me' }])
-    const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const seed = 99
-    const state = makeState({
-      playerParty: player,
-      enemyParty: enemy,
-      rng: createRngState(seed),
-    })
-    const sibling = createRngState(seed)
-
-    targetSelectorHasCandidate({ kind: 'random' }, player[0]!, state)
-
-    expect(state.rng.position).toBe(sibling.position)
+    expect(() =>
+      targetSelectorHasCandidate({ kind: 'random' }, player[0]!, state),
+    ).toThrow(/resolve the intended side in actions\.ts/)
   })
 
   it('peekTargetSelector never draws RNG for random, returning null (same as random-enemy/random-ally)', () => {

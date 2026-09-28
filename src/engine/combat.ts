@@ -350,7 +350,9 @@ function maybeFireBonusCast(
 
   const ctx = createResolutionContext(events, newCascade())
   const intent: Intent = { action: { kind: 'cast', gemSlot: 'random' } }
-  return ctx.runAction(actor.id, intent, state)
+  // C2a-only (deleted in C2b, B2.3): keeps today's exact behaviour -- no Confusion/Tunnel
+  // Vision/Provoke for a bonus cast's target.
+  return ctx.runAction(actor.id, intent, state, { legacyGrantedTargeting: true })
 }
 
 function checkWinLoss(state: CombatState): FightResult | null {

@@ -345,6 +345,79 @@ export function validateStatModifierConditions(defs: readonly EffectDef[]): void
   }
 }
 
+/**
+ * Phase 4.1-C2a (PR #71 review, CONVENTIONS "One action pipeline"): `'random'` is an INTENT-only
+ * `TargetSelector` variant -- it needs the action's intended side, which only an intent (a rule,
+ * the fallback, a grant) carries; a response target (`{ kind: 'selector', selector }` on a trait,
+ * status, or perk effect) has no such side to resolve it against. `resolveTargetSelector` throws
+ * on it at RESOLUTION time (target-selectors.ts); this is the load-time counterpart, so a data
+ * mistake fails fast at import (mirrors `validateStatModifierCondition`'s own precedent) instead
+ * of throwing mid-fight the first time the response actually fires. Recurses into `consume-
+ * stacks`'s own wrapped `effect` (the only response that nests another). Every other response
+ * kind either carries a `target` field or none at all (`suppress-action`).
+ */
+function throwIfRandomSelectorTarget(target: ResponseTarget, context: string): void {
+  if (target.kind === 'selector' && target.selector.kind === 'random') {
+    throw new Error(
+      `effect invariant violated: ${context} targets the intent-only 'random' selector -- a response target has no intended side to resolve it against; use an explicit selector instead`,
+    )
+  }
+}
+
+function validateResponseTargetNoRandomSelector(
+  response: EffectResponse,
+  context: string,
+): void {
+  switch (response.kind) {
+    case 'deal-damage':
+    case 'heal':
+    case 'apply-status':
+    case 'apply-stat-modifier':
+    case 'revive':
+    case 'grant-action-state':
+    case 'remove-status':
+      throwIfRandomSelectorTarget(response.target, context)
+      return
+    case 'suppress-action':
+      return
+    case 'consume-stacks':
+      validateResponseTargetNoRandomSelector(response.effect, context)
+      return
+    default: {
+      const exhaustive: never = response
+      throw new Error(`Unhandled response kind: ${String(exhaustive)}`)
+    }
+  }
+}
+
+/** Runs the `'random'`-selector check over every `triggered` effect's response in `defs`. Shares
+ * `validateStatModifierConditions`'s own iteration/call-site convention (traits, perks). */
+export function validateNoRandomSelectorInResponseTargets(
+  defs: readonly EffectDef[],
+): void {
+  for (const def of defs) {
+    if (def.category === 'triggered') {
+      validateResponseTargetNoRandomSelector(
+        def.response,
+        `a "${def.hook}" trigger's response`,
+      )
+    }
+  }
+}
+
+/** The status-registry counterpart: a `ConditionStatusDef`'s own `triggers` carry responses too
+ * (the one status category that does -- `damage-modifier`/`turn-order-status`/`friendly-fire-
+ * status` are read passively, never fired, so they have none to check). */
+export function validateStatusNoRandomSelectorInResponseTargets(def: StatusDef): void {
+  if (def.category !== 'condition-status') return
+  for (const trigger of def.triggers) {
+    validateResponseTargetNoRandomSelector(
+      trigger.response,
+      `status "${def.statusId}"'s "${trigger.hook}" trigger's response`,
+    )
+  }
+}
+
 export type StatRemapDef = {
   readonly category: 'stat-remap'
   readonly slot: RemapSlot

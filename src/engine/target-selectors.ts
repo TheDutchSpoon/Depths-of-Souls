@@ -34,13 +34,14 @@ export function targetSelectorHasCandidate(
     case 'random-enemy':
       return livingEnemiesOf(creature, state).length > 0
     case 'random':
-      // Phase 4.1-C2a: side-neutral -- existence over EITHER side, since this selector alone
-      // can't say which side is "intended" (that's the caller's job, resolved in actions.ts).
-      // A candidate exists as long as the creature has at least one living ally OR enemy, which
-      // is always true while the creature itself is alive (it's its own ally).
-      return (
-        livingAlliesOf(creature, state).length > 0 ||
-        livingEnemiesOf(creature, state).length > 0
+      // Phase 4.1-C2a (PR #71 review): 'random' needs the action's intended side to check
+      // existence against, which this module never has -- same reason resolveTargetSelector
+      // throws on it below. actions.ts's `hasValidTarget` intercepts 'random' before ever
+      // calling this function (checking the intended side's own living pool directly), so this
+      // is never actually reached from there; it's still here for exhaustiveness and to fail
+      // loudly rather than silently for any other caller.
+      throw new Error(
+        "targetSelectorHasCandidate cannot check the side-neutral 'random' selector -- resolve the intended side in actions.ts instead",
       )
     default: {
       const exhaustive: never = selector

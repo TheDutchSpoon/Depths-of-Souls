@@ -121,35 +121,60 @@ describe('castableGemSlots (Phase 4.1-C2a, A1)', () => {
 })
 
 describe("resolveIntent's gemSlot: 'random' draw order (Phase 4.1-C2a, A1)", () => {
-  it('draws the gem slot BEFORE the target -- pinned for byte-identity with bonus-cast/echo', () => {
+  it('draws the gem slot BEFORE the target across seeds 0-19 -- pinned for byte-identity with bonus-cast/echo', () => {
     // Two DISTINCT slots (0/1) and three enemies (unequal pool sizes) so the gem-first and
-    // target-first hypotheses generally resolve to DIFFERENT concrete picks -- a discriminating
-    // proof, not just a draw-count check (the rng's own position after N draws is the same
-    // regardless of what order those draws were spent in).
+    // target-first hypotheses can resolve to DIFFERENT concrete picks -- a discriminating proof,
+    // not just a draw-count check (the rng's own position after N draws is the same regardless
+    // of what order those draws were spent in). A single seed isn't enough either: at ONE seed
+    // the gem-first prediction can coincidentally match a gem draw that always picks the last
+    // slot, or happen to equal the target-first prediction -- looping and asserting BOTH slots
+    // get chosen and at least one seed's two hypotheses diverge closes both gaps.
     const player = makeParty('player', [
       { id: 'me', equippedSpells: [ENEMY_SPELL, ENEMY_SPELL] },
     ])
     const enemy = makeParty('enemy', [{ id: 'a' }, { id: 'b' }, { id: 'c' }])
-    const seed = 777
-    const state = makeState({
-      playerParty: player,
-      enemyParty: enemy,
-      rng: createRngState(seed),
-    })
 
-    const action = resolveIntent(
-      player[0]!,
-      { action: { kind: 'cast', gemSlot: 'random' }, targeting: { kind: 'random' } },
-      state,
-    )
-    if (action?.kind !== 'cast' || action.targetShape !== 'single') {
-      throw new Error('expected a resolved single-target cast')
+    const seenGemSlots = new Set<number>()
+    let sawDivergence = false
+
+    for (let seed = 0; seed < 20; seed++) {
+      const state = makeState({
+        playerParty: player,
+        enemyParty: enemy,
+        rng: createRngState(seed),
+      })
+
+      const action = resolveIntent(
+        player[0]!,
+        { action: { kind: 'cast', gemSlot: 'random' }, targeting: { kind: 'random' } },
+        state,
+      )
+      if (action?.kind !== 'cast' || action.targetShape !== 'single') {
+        throw new Error(`expected a resolved single-target cast at seed ${seed}`)
+      }
+
+      const gemFirst = createRngState(seed)
+      const gemFirstGemSlot = Math.floor(nextRandom(gemFirst) * 2)
+      const gemFirstTargetIndex = Math.floor(nextRandom(gemFirst) * 3)
+
+      const targetFirst = createRngState(seed)
+      const targetFirstTargetIndex = Math.floor(nextRandom(targetFirst) * 3)
+      const targetFirstGemSlot = Math.floor(nextRandom(targetFirst) * 2)
+
+      // The gem-first prediction must hold at EVERY seed.
+      expect(action.gemSlot).toBe(gemFirstGemSlot)
+      expect(action.targetId).toBe(enemy[gemFirstTargetIndex]!.id)
+
+      seenGemSlots.add(action.gemSlot)
+      if (
+        gemFirstGemSlot !== targetFirstGemSlot ||
+        gemFirstTargetIndex !== targetFirstTargetIndex
+      ) {
+        sawDivergence = true
+      }
     }
 
-    const sibling = createRngState(seed)
-    const expectedGemSlot = Math.floor(nextRandom(sibling) * 2) // gem drawn FIRST
-    const expectedTargetIndex = Math.floor(nextRandom(sibling) * 3) // target drawn SECOND
-    expect(action.gemSlot).toBe(expectedGemSlot)
-    expect(action.targetId).toBe(enemy[expectedTargetIndex]!.id)
+    expect(seenGemSlots).toEqual(new Set([0, 1]))
+    expect(sawDivergence).toBe(true)
   })
 })

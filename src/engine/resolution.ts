@@ -551,8 +551,11 @@ export function fireHook(
       if (effect.echoCast) {
         if (source) {
           cascade.depth += 1
+          // C2a-only (deleted in C2b, B2.3): keeps today's exact behaviour -- no Confusion/
+          // Tunnel Vision/Provoke for an echo's target.
           working = ctx.runAction(source, ECHO_CAST_INTENT, working, {
             announce: { type: 'EchoCastGranted', sourceId: self.id, casterId: source },
+            legacyGrantedTargeting: true,
           })
           cascade.depth -= 1
         }
