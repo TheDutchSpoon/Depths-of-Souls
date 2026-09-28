@@ -177,7 +177,7 @@ Cross-reference this table when implementing. "Deleted" rows are removed outrigh
 | Implicit fallback as an intent | Interpreter rule | C | The fallback attack uses the side-aware default (`lowest-hp-enemy`) like any rule; script-less goldens are rewritten |
 | Pre-hit fizzle | Resolver rule | C | Target dead after pre-hit hooks → that hit fizzles |
 | Turn skeleton, turn-start cleanup, `TurnEnded` last | Turn structure | C | See CONVENTIONS "Turn structure" |
-| `ActionStateEnded { creatureId, defending, provoking }` | Event | C | Emitted in turn-start cleanup only when a flag was set |
+| `ActionStateEnded { creatureId, defending, provoking }` | Event (consequence family) | C | Emitted in turn-start cleanup only when a flag was set |
 | `is-provoking` condition | Condition | C | **Deleted** |
 | `Spell = { id, name, affinity, unlockedAtBiome, targetShape, targetSide, effects }` | Data type | D | Payload = response list; `payload`/`spellPower`/`scalingStat`/`statModifier`/`appliesStatus` **deleted** from `Spell` |
 | `cast-target` | `ResponseTarget` | D | Current landed target, or nothing if dead |
@@ -801,6 +801,11 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 19. **Win/loss check points inside a turn** (after the action, after each turn-end hook firing that can
     kill, after each granted action) and whether `TurnEnded` is still emitted when the fight ends
     mid-turn: the F plan pins them, matching today's "the fight ends the instant a side is wiped".
+    PR #70 review data point: today `resolveTurn` checks only once, after `TurnEnded`. Adding the
+    in-turn checks is golden-neutral on the C1 suite (verified by mutation), but once DoTs tick on
+    `on-turn-end` the end-only check turns a win into a **draw** when the last living creature on
+    the winning side dies to its own tick after emptying the other side. F's win-check golden
+    covers exactly that case.
 20. **New spell placeholder numbers:** Pounce 100% Speed; Stifling Weight Weaken at its default
     duration; Life Siphon 70% Intelligence damage + heal self for 35% of Intelligence. Tuned in H.
 21. **Simulator policy and home:** `src/state/balance-sim.ts` (runs in Node) plus an `npm run sim`

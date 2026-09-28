@@ -924,7 +924,7 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   | `opener` | 1. Round = 1 → Cast random gem · 2. Attack lowest-HP enemy · 3. Cast random gem |
 
   `support`'s first rule draws only among ally-side gems (the intent carries a side filter, e.g.
-  `gem: { random, side: 'ally' }`; exact shape is the 4.1-G plan's); with none, the rule is illegal
+  `gemSlot: { random, side: 'ally' }`; exact shape is the 4.1-G plan's); with none, the rule is illegal
   and falls through. Per-creature roles are recorded in the content docs. Enemy AI (utility
   scoring) was considered and **rejected**: scripts keep symmetry, legibility and learnable enemy
   patterns to script against. Known limit: there is no "target lacks status X" condition yet, so
@@ -946,7 +946,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   (mandatory when the cascade cap truncates a chain). Phase 4.1 adds **`ActionStateEnded`**
   (turn-start cleanup ends defending/provoking, 4.1-C), **`TurnSkipped { creatureId, statusId }`**
   (an `'all'` action-lock skips the turn, 4.1-F) and **`ActionGranted { sourceId, actorId, effectId
-  }`** (a `perform-action` grant succeeded, 4.1-E, replacing `EchoCastGranted`). Plus lifecycle:
+  }`** (a `perform-action` grant succeeded, 4.1-E, replacing `EchoCastGranted`). Their families
+  (PR #70 review): `ActionStateEnded` is a **consequence** (a state ending, like `StatusExpired`);
+  `TurnSkipped` is an **intent** (it fills the turn's action slot, like `Waited`); `ActionGranted`
+  is an **intent** (it precedes the granted action, like `TriggerFired`). Plus lifecycle:
   `FightStarted`, `RoundStarted { round }`, `TurnStarted { creatureId }`, `TurnEnded { creatureId }`,
   `FightEnded { result }`. **`TurnStarted`/`TurnEnded` are real log events, not just internal hook
   checkpoints** — they give playback (§ROADMAP Phase 7) an explicit, unambiguous turn boundary to
