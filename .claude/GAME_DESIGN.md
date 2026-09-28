@@ -170,7 +170,8 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
     **assign (pin) a biome to a chosen cave floor** — shaping which biome occupies a floor to
     farm, rather than taking whatever the sequence (or, past floor 100, the random draw) gave
     them. Pinning can be applied at any time, including retroactively re-pinning a floor already
-    visited.
+    visited. Only a biome with authored content can be pinned (an unauthored biome has nothing to
+    fight, so the pin is refused rather than turning the floor into a dead end).
 - **Entrance hub**: a persistent base at the top of the cave where the player manages their
   collection and builds **facilities** (see below). The hub is always accessible; returning
   to it is how the player strengthens between descents.
