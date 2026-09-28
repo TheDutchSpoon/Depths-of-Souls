@@ -9,7 +9,10 @@ sections as they land). Brief: `.claude/briefs/phase-4.1-implementation-plan.md`
 Items built: **G3, G5 + S5, G6, A5, A6, A7 (with D1's defaults), S4.** No engine combat/
 resolution/interpreter logic changed — every engine golden stays byte-identical (only
 `generation.ts`/`curves.ts`/`leveling.ts`/`types.ts` changed, none of which the resolver's own
-goldens exercise beyond `materializeCreature`'s pure output shape).
+goldens exercise beyond `materializeCreature`'s pure output shape). Landed as PR #67 after a
+review pass found seven real bugs in the first submission (F1–F7 below) plus several places
+where a test had been loosened past the point of actually proving what it claimed; all are fixed
+on the same branch.
 
 ### What was built
 
@@ -31,10 +34,12 @@ goldens exercise beyond `materializeCreature`'s pure output shape).
   engine-inert. `materializeCreature` now takes a named options object
   (`{ level, side, slot, speciesId, gems?, scriptId?, ref? }` — `gems` renamed from the old
   positional `equippedSpells` param to match its eventual 4.1-G source, `Instance.gems`) and
-  fills `origin` from the template id / level / an optional opaque `ref` string. `makeCreature`
-  (the shared engine test helper) defaults `origin` so the ~140 existing golden/fixture files
-  didn't need touching; the one hand-rolled `Creature` literal outside that helper
-  (`effective-stats.test.ts`) and the ten in `src/app/demoFight.ts` got `origin` added by hand.
+  fills `origin` from the template id / level / an optional opaque `ref` string (spread only when
+  defined, so a generated enemy's `origin` carries no explicit `undefined` key — review nit).
+  `makeCreature` (the shared engine test helper) defaults `origin` so the ~140 existing
+  golden/fixture files didn't need touching; the one hand-rolled `Creature` literal outside that
+  helper (`effective-stats.test.ts`) and the ten in `src/app/demoFight.ts` got `origin` added by
+  hand.
 - **`materializeCreature`'s `scriptId` option is wired, not deferred** — this was originally
   flagged as an open question (defer vs. build); the review confirmed **wire it**: an explicit
   `scriptId` overrides the template's `defaultScriptId` (`null`/absent falls back to it,
@@ -45,8 +50,8 @@ goldens exercise beyond `materializeCreature`'s pure output shape).
 - **`Instance`** (`state/rewards.ts`) reshaped to the save-v1 shape: `{ id, source, level, xp,
   scriptId }`, `source: { kind: 'creature', creatureId } | { kind: 'fusion', identityParent,
   affinityParent }` (only `'creature'` is ever produced before Phase 8; `staticCreatureIdFor`
-  throws on `'fusion'`, ASSUMPTION 27). `id` is now opaque (`'inst-<ordinal>'`), never embedding
-  the creature id (ASSUMPTION 25) — previously `${creatureId}#${ordinal}`.
+  throws on `'fusion'`, ASSUMPTION 27). `id` is now opaque (`'inst-<ordinal>'`, A6), never
+  embedding the creature id — previously `${creatureId}#${ordinal}`.
   `GameState.collection` is now a flat `Map<InstanceId, Instance>` (was
   `Map<string, Instance[]>` bucketed by static creature id); every consumer
   (`resolvePlayerParty`, `applyXpToParty`, `grantCreatureIfUnowned`) rewritten around it.
@@ -54,14 +59,17 @@ goldens exercise beyond `materializeCreature`'s pure output shape).
   { ok: false, reason }` instead of throwing; each gets a pure `can…` query
   (`canDescend`/`canPinBiome`) sharing the same check function
   (`checkDescend`/`checkPinBiome`). `descend` reasons: `no-spec`, `empty-party`,
-  `floor-out-of-reach`, `beyond-content-frontier` (frontier wins when both would apply,
-  ASSUMPTION 23 — verified by a dedicated test). `setSpec`/`runScriptedIntro` still throw
-  (ASSUMPTION 9/10 — impossible states, never player-reachable without a UI that already
-  prevents them). A `{ ok: false }` result leaves state completely unchanged, including
-  `lastFloor` (verified by a reference-equality test on `collection`).
-- **`contentFrontier(biomes)`** (`engine/generation.ts`, NEW) — the last floor whose biome has a
-  non-empty `speciesPool`, `× FLOORS_PER_BIOME`; `0` if none. Against the real `BIOMES` array
-  (3 authored biomes) this is `30`.
+  `floor-out-of-reach`, `beyond-content-frontier` (frontier wins when both fail at once,
+  ASSUMPTION 23). `pinBiome` reasons: `floor-out-of-range`, `unknown-biome`,
+  `biome-has-no-content` (the last one added by review fix F1, below). `setSpec`/
+  `runScriptedIntro` still throw (ASSUMPTION 9 — impossible states, never player-reachable
+  without a UI that already prevents them). A `{ ok: false }` result leaves state completely
+  unchanged (both actions' own table-driven tests assert full reference equality on
+  `store.getState()` across every reason, not a field-by-field spot check).
+- **`contentFrontier(biomes)`** (`engine/generation.ts`, NEW) — the last floor of the
+  **contiguous prefix** of has-content biomes (tightened by review fix F1, below — see "Review
+  fixes"); `× FLOORS_PER_BIOME`. Against the real `BIOMES` array (3 authored biomes, no gaps)
+  this is `30`.
 - **`currentFloor` → `lastFloor`** (`GameState`); **`travelTo` deleted** — fast-travel is
   `descend(floor)`.
 - **G3 — creature names.** `SpeciesCreature.name: string` (required). Authored for all 61 real
@@ -72,46 +80,105 @@ goldens exercise beyond `materializeCreature`'s pure output shape).
   4 starters/Unicorn (Glyphmoth Seer, Cragfang Mauler, Stonehorn Warden, Unicorn Lightbearer —
   marked as placeholders in a code comment, per ASSUMPTION 25). A new
   `data/species/names.test.ts` asserts non-empty + unique across the real registries (test
-  fixtures are exempt).
-- **S4 — Vitest project split** (`vite.config.ts`): `test.projects`, one Node project
-  (`src/engine`, `src/data`, `src/state`), one jsdom project (`src/ui`, `src/app`). Measured
-  wall-time impact (same machine, same 637 tests, back-to-back runs): **12.94s → 3.39s** total
-  (`environment` time specifically: **181.33s → 0.62s** aggregate across projects — jsdom setup
-  was the dominant cost, matching CONVENTIONS' own note).
+  fixtures are exempt). The matching `species-locked.md` edit (ASSUMPTION 25 also asks for the
+  placeholder marking there) is **not** in this branch's diff — it lands in the review's own
+  doc-sync pass, not here.
+- **S4 — Vitest project split** (`vite.config.ts`): `test.projects`, one Node project, one jsdom
+  project. The Node project's `include` is a single catch-all (`src/**/*.test.{ts,tsx}`) minus
+  the jsdom project's own two folders (`src/ui/**`, `src/app/**`) — **not** an enumerated
+  `src/{engine,data,state}` list, which silently drops any test under a future new top-level
+  folder (review fix F2, below). A guard test (`engine/environment.test.ts`) asserts
+  `typeof window === 'undefined'` so a config regression that routed engine tests through jsdom
+  would fail loudly. Measured wall-time impact (same machine, same test count, back-to-back
+  runs): **12.94s → 3.39s** total (`environment` time specifically: **181.33s → 0.62s** aggregate
+  across projects — jsdom setup was the dominant cost, matching CONVENTIONS' own note).
 
-### Deviations from the reviewed plan
+### Review fixes (PR #67)
 
-Per the review's explicit corrections (all applied as directed, not re-litigated):
-
-1. **A-6 wired, not deferred** — see above.
-2. **`enemyLevelRange`'s rounding tightened to a single `Math.round`** — the plan's own draft
-   split the multiplier and the floor-multiply into two roundings; the shipped formula
-   (`Math.round(floor * (99a + (b−a)(floor−1)) / 9900)` for floor ≤ 100,
-   `Math.round(floor * (b + p(floor−100)) / 100)` after) rounds exactly once, at the end.
-3. **`integration.test.ts` not loosened** — both original scenarios (floor 1, floor 10 boss) now
-   inject `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` so every assertion survives unchanged except the
-   two `xpBanked` numbers (generated-then-checkpoint-verified against the new
-   victim-level-based formula: `8` and `38` respectively, replacing the old `30`/`300`). A
-   separate new describe block (`Phase 4.1-A defaults`) exercises the real, zero-override store
-   against the real `DEFAULT_BALANCE_CONFIG` instead — see "Surfaced during build" below.
-4. **`bricksPerFloor` → `bricksPerTenFloors`** (the review's nit).
-5. Acceptance tests from the brief's own list added explicitly (not left implicit): each
-   `descend` reason, `canDescend` agreeing with `descend`, the content frontier from a
-   2-authored-biome fixture (`= 20`, in `generation.test.ts`), `lastFloor` set on both a won and
-   a lost run, fight count at floors 1/10/30, the level multiplier at floors 1/100/101, and a
-   rewards test using a static creature id that contains its own side/slot-shaped substring
-   (proving `origin.templateId` resolution needs no string surgery, unlike the deleted
-   suffix-parsing it replaced).
+- **F1 — atlas pins could route `descend` into the generator's own throw.** `pinBiome`/
+  `canPinBiome` now refuse a biome with no content (`biome-has-no-content`): no species with a
+  positive weight AND at least one creature — exactly the condition `generateFloor`'s own
+  `weightedPick` needs to avoid throwing. The shared predicate,
+  `biomeHasContent(biome)` (`engine/generation.ts`, exported), backs both this guard and
+  `contentFrontier`, which is now the last floor of the **contiguous prefix** of has-content
+  biomes (stops at the FIRST gap, never resumes at a later authored biome past it) rather than
+  "the last non-empty biome in the list" — a biome-2 gap followed by an authored biome 3 used to
+  make floors 21–30 look reachable even though `biomeForFloor` would still resolve the empty
+  biome 2 for floors 11–20 and throw there. A regression test reproduces the exact bug report
+  (`setSpec` → `runScriptedIntro` → `pinBiome` into an empty biome → `descend` throwing) and
+  confirms the pin is now refused before it can happen.
+- **F2 — the Vitest split silently dropped tests in any new top-level folder.** The Node
+  project's `include` changed from an enumerated `src/{engine,data,state}` list to
+  `src/**/*.test.{ts,tsx}` minus the jsdom project's own folders — verified by temporarily adding
+  a throwaway `src/zzprobe/x.test.ts` (collected file count went 107 → 108, then back to 107
+  after removing it). A permanent guard test (`engine/environment.test.ts`) now also fails loudly
+  if `src/engine` were ever routed through jsdom.
+- **F3 — ASSUMPTION 23's frontier-wins-over-reach precedence wasn't actually pinned.** The
+  original test used `deepestFloor: 15, descend(11)`, where only the frontier check fails (reach
+  alone would have passed) — swapping `checkDescend`'s two checks left it green. A new case uses
+  `deepestFloor: 0, descend(11)`, where BOTH checks fail, and asserts `beyond-content-frontier`
+  wins; the original case is kept too, relabeled as what it actually tests (the frontier failing
+  alone).
+- **F4 — the "rewards read origin" regression test didn't discriminate the deleted suffix
+  parser.** The old parser sliced `-${side}-${slot}` off the per-fight `CreatureId` by exact
+  length, so it resolved the branch's own confusable-id fixture correctly too — the test passed
+  against the code it was meant to catch a regression in. The per-kill static lookup is now a
+  standalone pure helper, `resolveKillReward` (`state/rewards.ts`), unit-tested directly with a
+  `makeCreature` whose `id` and `origin` deliberately disagree (`id: 'aaa-enemy-0'`,
+  `origin: { templateId: 'bbb', level: 4 }`) — the old parser would have resolved `aaa`
+  (wrong); `resolveKillReward` resolves `bbb` (right) because it reads `origin.templateId`
+  directly, no string surgery. The store-level confusable-id test is kept as a smoke test
+  (descend() actually reaches the helper through a real generated fight) and relabeled as one,
+  not a regression test.
+- **F5 — the default-config soul-gain test couldn't catch a wrong tier.** `gain % per === 0`
+  over `{25, 20, 10}` accepts any multiple of 10, so a common kill misclassified as 20 (or a
+  common kill reported as 10) would both have passed. A new deterministic store test drives three
+  distinct rarity tiers through the stub RNG under `DEFAULT_BALANCE_CONFIG` and asserts the exact
+  per-kill amounts (common → 25, rare → 10), hand-derived in the test's own comment from
+  `rarityDrawWeight`'s threshold bands.
+- **F6 — the Phase-4 placeholder config's XP claim was half wrong.** The fixture set BOTH
+  `xpCurveCoefficient`/`xpCurveExponent` to the new defaults and a test asserted "there is no
+  old-compatible expression of the retired linear curve" — false for `xpForNextLevel`: Phase 4's
+  `100 * level` is exactly `{coefficient: 100, exponent: 1}`, the same two parameters as the new
+  default's `{20, 2}`. Only `xpAwardForKill` is truly inexpressible (floor-scaled → victim-level-
+  scaled is a signature change, not a parameter change). Fixed: the fixture now sets
+  `{100, 1}`; the false test is deleted; `applyXpGain`'s original four test cases (byte-identical
+  numbers to main, pre-4.1) are restored under the fixture in their own block, alongside (not
+  replacing) the new default-curve block. The integration tests' `xpBanked` values (`8`, `38`)
+  are unaffected — `xpAwardForKill` never reads the curve fields.
+- **F7 — several tests had been loosened past the point of proving their own claim.** Fixed:
+  - The two boss-floor `xpBanked` assertions were ranges (`26–29`, `10–13`) even though
+    `runSeed: 99` makes the add's rolled level fully deterministic (never stubbed in these two
+    tests) — pinned exact (`29`, `13`), generated-then-checkpoint-verified.
+  - The integration test's `['inst-0', 'inst-1']` check proved the ids were opaque but not which
+    creature was which — now also asserts `collection.get('inst-0').source` /
+    `collection.get('inst-1').source` resolve to `brute-starter` / `unicorn`.
+  - The single-reason, three-field "state is left unchanged on refusal" test is now table-driven
+    over all four `descend` reasons (and, mirroring it, all three `pinBiome` reasons), each case
+    asserting full reference equality on `store.getState()` (not a spot check) AND that
+    `canDescend`/`canPinBiome` agree with the action itself — closing out the brief's own
+    "`canDescend` agreeing with `descend`" acceptance item for every reason, not just one.
 
 ### Surfaced during build (not a doc conflict — a data point for 4.1-H)
 
-The new "real store, real defaults" integration test (floor 1, level-1 Brute+Unicorn party)
-wins 9 of the new default's 10 fights and loses the 10th. This is CONVENTIONS' own accepted risk
-("floor success ≈ (per-fight win chance)^(fights), so a small per-fight loss rate compounds")
-made concrete at floor 1 the moment `fightCount` rose from Phase 4's flat 3 to the new
-`10 + (floor−1)` — not something the plan needed to fix (4.1-A ships no balance pass; 4.1-H
-owns the first tuning), but worth recording now as an early empirical number for the simulator's
-T1 band (≥95% floor-1 clear) rather than rediscovering it cold in 4.1-H.
+Measured on this branch (fresh store per seed, `setSpec` + `runScriptedIntro` + `descend(1)`,
+the real `DEFAULT_BALANCE_CONFIG`, `runSeed` swept `0..199` per spec — method: a throwaway sweep
+script, run once, torn down after recording the numbers here):
+
+| Spec | Floor-1 clear rate | Pooled per-fight win rate |
+|---|---|---|
+| Brute | 104/200 (52%) | 0.936 (1404/1500) |
+| Sorcerer | 88/200 (44%) | 0.920 (1294/1406) |
+| Shieldbarer | 87/200 (44%) | 0.919 (1289/1402) |
+
+This is CONVENTIONS' own accepted risk ("floor success ≈ (per-fight win chance)^(fights), so a
+small per-fight loss rate compounds") made concrete the moment `fightCount` rose from Phase 4's
+flat 3 to the new `10 + (floor−1)`: a ~92–94% per-fight win rate compounds to `0.92¹⁰..0.94¹⁰`
+≈ **43–52%** over a full floor-1 clear, matching the measured clear rates closely. Not something
+this slice needed to fix (4.1-A ships no balance pass; 4.1-H owns the first tuning pass), but
+recorded now, with method, as the 4.1-H starting point: **well below** both T1 (≥95% floor-1
+clear) and ASSUMPTION 22's CI floor (80%), for all three specs — 4.1-H has real work to do here,
+not just a rounding pass.
 
 No other spec/doc conflicts surfaced; CONVENTIONS.md's Phase 4.1-A text matched the brief
 throughout and needed no correction.
@@ -120,9 +187,9 @@ throughout and needed no correction.
 
 All four gates green:
 - `npx tsc -b` — clean.
-- `npx vitest run` — **106 files / 637 tests passed** (0 failed).
+- `npx vitest run` — **107 files / 653 tests passed** (0 failed).
 - `npm run lint` — clean.
-- `npm run format:check` — clean (after one `npm run format` pass; whitespace/wrapping only, no
+- `npm run format:check` — clean (after `npm run format` passes; whitespace/wrapping only, no
   semantic changes).
 - `npm run build` (`tsc -b && vite build`) — succeeds.
 

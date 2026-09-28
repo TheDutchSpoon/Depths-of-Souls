@@ -7,6 +7,7 @@ import { scaleStatsToLevel } from './leveling'
 import { bossLevel, enemyLevelRange, enemyPartySize, fightCount } from './curves'
 import {
   biomeForFloor,
+  biomeHasContent,
   canEquip,
   contentFrontier,
   generateFloor,
@@ -28,6 +29,7 @@ import {
   FIXTURE_BRUISER,
   FIXTURE_CASTER,
   FIXTURE_SPECIES_BRAWLERS,
+  FIXTURE_SPECIES_CASTERS,
   FIXTURE_VIOLENCE_BOLT,
   FIXTURE_WIT_BOLT,
   FIXTURE_WIT_BOLT_TIER2,
@@ -159,11 +161,9 @@ describe('materializeCreature', () => {
       slot: 0,
       speciesId: 'fixture-species',
     })
-    expect(withoutRef.origin).toEqual({
-      templateId: 'fixture-bruiser',
-      level: 5,
-      ref: undefined,
-    })
+    expect(withoutRef.origin).toEqual({ templateId: 'fixture-bruiser', level: 5 })
+    // Nit (review): `ref` is spread only when defined -- no explicit `undefined` key.
+    expect('ref' in withoutRef.origin).toBe(false)
 
     const withRef = materializeCreature(FIXTURE_BRUISER, {
       level: 3,
@@ -255,8 +255,53 @@ describe('biomeForFloor', () => {
   })
 })
 
-describe('contentFrontier (Phase 4.1-A, G5/S5)', () => {
-  it('is the last floor whose biome has a non-empty species pool, derived from the biome data', () => {
+describe('biomeHasContent (Phase 4.1-A review fix F1)', () => {
+  it('is true for a biome with at least one positive-weight species that has at least one creature', () => {
+    expect(biomeHasContent(FIXTURE_BIOME)).toBe(true)
+  })
+
+  it('is false for an empty species pool', () => {
+    expect(
+      biomeHasContent({ id: createBiomeId('empty'), name: 'Empty', speciesPool: [] }),
+    ).toBe(false)
+  })
+
+  it('is false when every species has weight 0 (even with real creatures)', () => {
+    const zeroWeightSpecies = { ...FIXTURE_SPECIES_BRAWLERS, weight: 0 }
+    expect(
+      biomeHasContent({
+        id: createBiomeId('zero-weight'),
+        name: 'Zero Weight',
+        speciesPool: [zeroWeightSpecies],
+      }),
+    ).toBe(false)
+  })
+
+  it('is false when every species has no creatures (even with a positive weight)', () => {
+    const creatureless = { ...FIXTURE_SPECIES_BRAWLERS, creatures: [] }
+    expect(
+      biomeHasContent({
+        id: createBiomeId('creatureless'),
+        name: 'Creatureless',
+        speciesPool: [creatureless],
+      }),
+    ).toBe(false)
+  })
+
+  it('is true if at least ONE species in the pool has content, even if others do not', () => {
+    const zeroWeightSpecies = { ...FIXTURE_SPECIES_CASTERS, weight: 0 }
+    expect(
+      biomeHasContent({
+        id: createBiomeId('mixed'),
+        name: 'Mixed',
+        speciesPool: [zeroWeightSpecies, FIXTURE_SPECIES_BRAWLERS],
+      }),
+    ).toBe(true)
+  })
+})
+
+describe('contentFrontier (Phase 4.1-A, G5/S5; tightened by review fix F1)', () => {
+  it('is the last floor of the CONTIGUOUS prefix of has-content biomes, derived from the biome data', () => {
     // A fixture list of exactly 2 authored (non-empty) biomes followed by empty placeholders --
     // the brief's own acceptance example: frontier = 20.
     const biomes: BiomeData[] = [
@@ -268,7 +313,19 @@ describe('contentFrontier (Phase 4.1-A, G5/S5)', () => {
     expect(contentFrontier(biomes)).toBe(20)
   })
 
-  it('is 0 when no biome in the list has any content', () => {
+  it('stops at the FIRST has-content gap, never resuming at a later authored biome (F1)', () => {
+    // biome 1 authored, biome 2 empty, biome 3 authored again -- biomeForFloor would still
+    // resolve biome 2 (empty) for floors 11-20, so the frontier must stop at 10, not skip ahead
+    // to count biome 3's own floors 21-30 as reachable.
+    const biomes: BiomeData[] = [
+      FIXTURE_BIOME,
+      { id: createBiomeId('gap'), name: 'Gap', speciesPool: [] },
+      FIXTURE_BIOME,
+    ]
+    expect(contentFrontier(biomes)).toBe(10)
+  })
+
+  it('is 0 when the very first biome has no content', () => {
     expect(contentFrontier(FIXTURE_BIOME_SEQUENCE)).toBe(0)
   })
 

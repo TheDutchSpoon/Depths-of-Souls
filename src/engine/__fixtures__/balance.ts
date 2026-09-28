@@ -21,13 +21,20 @@ import type { BalanceConfig } from '../balance-types'
  *  - currency drop shape -- unchanged between Phase 4 and 4.1 (currencyPerFloor/bricksMinimum/
  *    bricksPerTenFloors are the same in both configs).
  *
- * XP is the one deliberate exception (ASSUMPTION 3/5): Phase 4's `xpAwardForKill` was
- * FLOOR-scaled (`10 * floor`) and `xpForNextLevel` was `100 * level`. Neither has an
- * old-compatible expression under 4.1's new, VICTIM-LEVEL-scaled `xpAwardForKill(victimLevel)`
- * signature -- there is no config value that recovers "floor-scaled" from a level-based formula.
- * So this fixture's XP fields are simply the SAME as the real default config (20/2/1): every
- * store/integration test's `xpBanked` expectation changes accordingly, and each change is listed
- * in the PR, per ASSUMPTION 3.
+ * XP splits into two independent fields, and only one of them is truly inexpressible
+ * (Phase 4.1-A review fix F6 -- an earlier draft of this fixture wrongly set BOTH xpCurve* fields
+ * to the new defaults, claiming neither had an old-compatible expression):
+ *  - `xpForNextLevel`'s curve IS expressible: Phase 4's `100 * level` is exactly
+ *    `xpCurveCoefficient: 100, xpCurveExponent: 1` (the new default is `20 * level^2` --
+ *    `coefficient: 20, exponent: 2` -- a different pair of the SAME two parameters, not a
+ *    different mechanism). Set to the old values here, so `applyXpGain` under this fixture
+ *    reproduces Phase 4's leveling exactly.
+ *  - `xpAwardForKill` truly has no old-compatible expression: Phase 4's was FLOOR-scaled
+ *    (`10 * floor`); 4.1's `xpAwardForKill(victimLevel)` signature is VICTIM-LEVEL-scaled and
+ *    has no floor argument at all -- there is no config value that recovers a floor-based amount
+ *    from a level-based formula. `xpPerKillMultiplier` is simply the new default (1): every
+ *    store/integration test's `xpBanked` expectation changes accordingly, and each change is
+ *    listed in the PR, per ASSUMPTION 3.
  */
 export const PHASE_4_PLACEHOLDER_BALANCE_CONFIG: BalanceConfig = {
   fightCountBase: 3,
@@ -42,8 +49,8 @@ export const PHASE_4_PLACEHOLDER_BALANCE_CONFIG: BalanceConfig = {
   bossLevelOffset: 3,
   rarityDrawWeight: { common: 6, uncommon: 3, rare: 1 },
   soulGainPercent: { common: 10, uncommon: 5, rare: 2 },
-  xpCurveCoefficient: 20,
-  xpCurveExponent: 2,
+  xpCurveCoefficient: 100,
+  xpCurveExponent: 1,
   xpPerKillMultiplier: 1,
   currencyPerFloor: 1,
   bricksMinimum: 1,

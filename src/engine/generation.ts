@@ -225,7 +225,13 @@ export function materializeCreature(
     // Phase 4 Slice D: cumulative-per-fight, always starts at 0.
     defendCount: 0,
     speciesId,
-    origin: { templateId: speciesCreature.id, level, ref },
+    // `ref` spread only when defined (nit, review) -- origin stays plain data with no explicit
+    // `undefined` keys for a generated enemy, which never gets one.
+    origin: {
+      templateId: speciesCreature.id,
+      level,
+      ...(ref !== undefined ? { ref } : {}),
+    },
   }
 }
 
@@ -420,15 +426,34 @@ export function generateFloor(
 }
 
 /**
- * Phase 4.1-A (G5, S5): the last floor whose biome has a non-empty species pool, derived from
- * the biome data itself -- never a constant, so authoring a new biome moves the frontier
- * automatically. `0` if no biome in the list has any content. Pure; `biomes` is read in its own
- * authored/positional order, matching `biomeForFloor`'s own fixed-sequence indexing.
+ * Phase 4.1-A review fix (F1): true iff `generateFloor`'s own `weightedPick` calls (species,
+ * then creature-within-species) could actually succeed against this biome -- at least one
+ * species with a positive weight that itself has at least one creature. This is exactly the
+ * condition whose absence makes `weightedPick` throw ("empty or zero-weight pool"), so it's the
+ * single shared predicate behind both `contentFrontier` (below) and the store's `pinBiome` guard
+ * -- the two must never disagree about what "no content" means.
+ */
+export function biomeHasContent(biome: BiomeData): boolean {
+  return biome.speciesPool.some(
+    (species) => species.weight > 0 && species.creatures.length > 0,
+  )
+}
+
+/**
+ * Phase 4.1-A (G5, S5); tightened by review fix F1: the last floor of the CONTIGUOUS prefix of
+ * authored (has-content) biomes, derived from the biome data itself -- never a constant, so
+ * authoring a new biome moves the frontier automatically. Stops at the FIRST biome without
+ * content (never "the last non-empty one") -- a gap (an empty biome 2 followed by an authored
+ * biome 3) must not make floors 21-30 "reachable": `biomeForFloor` would resolve biome 2 for
+ * floors 11-20 and `generateFloor` would throw there regardless of biome 3's own content. `0` if
+ * the very first biome has no content. Pure; `biomes` is read in its own authored/positional
+ * order, matching `biomeForFloor`'s own fixed-sequence indexing.
  */
 export function contentFrontier(biomes: readonly BiomeData[]): number {
-  let lastNonEmptyIndex = -1
-  biomes.forEach((biome, index) => {
-    if (biome.speciesPool.length > 0) lastNonEmptyIndex = index
-  })
-  return lastNonEmptyIndex === -1 ? 0 : (lastNonEmptyIndex + 1) * FLOORS_PER_BIOME
+  let count = 0
+  for (const biome of biomes) {
+    if (!biomeHasContent(biome)) break
+    count += 1
+  }
+  return count * FLOORS_PER_BIOME
 }

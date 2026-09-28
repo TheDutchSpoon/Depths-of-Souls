@@ -5,7 +5,8 @@
 
 import type { BalanceConfig } from '../engine/balance-types'
 import type { BiomeData, SpeciesCreature } from '../engine/generation'
-import { xpForNextLevel } from '../engine/leveling'
+import { xpAwardForKill, xpForNextLevel } from '../engine/leveling'
+import type { Creature } from '../engine/types'
 import type { InstanceId } from './ids'
 
 // ---- Owned instances ----
@@ -23,7 +24,7 @@ export type InstanceSource =
 
 export interface Instance {
   /** Opaque (`'inst-<n>'`, from the store's ordinal counter) -- NEVER embeds the creature id
-   * (Phase 4.1-A, A6/ASSUMPTION 25). */
+   * (Phase 4.1-A, A6). */
   readonly id: InstanceId
   readonly source: InstanceSource
   readonly level: number
@@ -145,4 +146,51 @@ export function findStaticCreature(
     }
   }
   return undefined
+}
+
+// ---- Per-kill reward resolution ----
+
+export interface KillReward {
+  /** `deadEnemy.origin.templateId` -- the key `descend()`'s own `soulGained` map banks under. */
+  readonly staticId: string
+  readonly staticRef: StaticCreatureRef
+  readonly soulGainPercent: number
+  readonly xpAwarded: number
+}
+
+/**
+ * Phase 4.1-A review fix F4: the ordinary (non-boss) per-kill reward lookup, extracted into its
+ * own pure, independently-testable function -- `descend()` (store.ts) used to inline this same
+ * `findStaticCreature` + throw sequence, which made the "reads origin, not a parsed id suffix"
+ * claim untestable without a full descend() run (and a store-level fixture whose id happened to
+ * be suffix-parseable too, which is why that particular regression test never actually
+ * discriminated the deleted parser from this one -- see the store-level smoke test's own updated
+ * comment). Resolves via `deadEnemy.origin.templateId` (raw data, Phase 4.1-A/A5) -- never the
+ * per-fight CreatureId. Boss handling stays in `descend()` (bosses aren't spawn-pool-drawn, so
+ * there's no static entry to find and no soul% to bank).
+ */
+export function resolveKillReward(
+  deadEnemy: Creature,
+  standalone: readonly StaticCreatureRef[],
+  biomes: readonly BiomeData[],
+  config: BalanceConfig,
+): KillReward {
+  const staticId = deadEnemy.origin.templateId
+  const staticRef = findStaticCreature(staticId, standalone, biomes)
+  if (!staticRef) {
+    // Every generated enemy is derived from static data by construction (generateFloor only
+    // ever materializes creatures out of the biomes' own species pools) -- a miss here means
+    // origin.templateId and the static registries have drifted apart. Not a normal skip: fail
+    // loud rather than silently dropping rewards.
+    throw new Error(
+      `resolveKillReward: ${deadEnemy.id} has no resolvable static creature ` +
+        `(origin.templateId: ${staticId})`,
+    )
+  }
+  return {
+    staticId,
+    staticRef,
+    soulGainPercent: config.soulGainPercent[staticRef.speciesCreature.rarity],
+    xpAwarded: xpAwardForKill(deadEnemy.origin.level, config),
+  }
 }

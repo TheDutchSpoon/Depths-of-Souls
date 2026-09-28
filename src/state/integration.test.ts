@@ -36,6 +36,7 @@ import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures_
 import { OVERGROWTH_BIOME_ID } from '../data/species/overgrowth'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { BIOMES } from '../data/biomes'
+import { createInstanceId } from './ids'
 import {
   SWARMHIVE_STRIKER_TRAIT,
   TREANT_GROVEKEEP_TRAIT,
@@ -104,8 +105,17 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     const afterIntro = store.getState()
     // Phase 4.1-A (A6): instance ids are opaque ('inst-<ordinal>'), never embedding the creature
     // id -- the Brute starter is the first grant (setSpec), the Unicorn the second
-    // (runScriptedIntro).
+    // (runScriptedIntro). Review fix F7: the opaque ids alone don't show WHICH creature is
+    // which, so assert each slot's own `source` too, not just the id strings.
     expect(afterIntro.activeParty.slice(0, 2)).toEqual(['inst-0', 'inst-1'])
+    expect(afterIntro.collection.get(createInstanceId('inst-0'))?.source).toEqual({
+      kind: 'creature',
+      creatureId: 'brute-starter',
+    })
+    expect(afterIntro.collection.get(createInstanceId('inst-1'))?.source).toEqual({
+      kind: 'creature',
+      creatureId: 'unicorn',
+    })
 
     const { outcome } = expectOk(store.getState().descend(1))
 

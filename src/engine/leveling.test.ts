@@ -66,10 +66,12 @@ describe('xpForNextLevel (Phase 4.1-A, ASSUMPTION 5 -- quadratic default)', () =
     expect(xpForNextLevel(5, DEFAULT_BALANCE_CONFIG)).toBe(500)
   })
 
-  it('the Phase-4 placeholder config shares the SAME (new) XP parameters -- there is no old-compatible expression of the retired linear curve', () => {
-    expect(xpForNextLevel(5, PHASE_4_PLACEHOLDER_BALANCE_CONFIG)).toBe(
-      xpForNextLevel(5, DEFAULT_BALANCE_CONFIG),
-    )
+  // Review fix F6: `xpForNextLevel`'s curve IS expressible under the Phase-4 placeholder config
+  // (unlike xpAwardForKill's floor->level basis change, below) -- 100 * level is just
+  // {coefficient: 100, exponent: 1}, the same two parameters as the new default's {20, 2}.
+  it('the Phase-4 placeholder config reproduces the OLD linear curve (100 * level) exactly', () => {
+    expect(xpForNextLevel(1, PHASE_4_PLACEHOLDER_BALANCE_CONFIG)).toBe(100)
+    expect(xpForNextLevel(5, PHASE_4_PLACEHOLDER_BALANCE_CONFIG)).toBe(500)
   })
 })
 

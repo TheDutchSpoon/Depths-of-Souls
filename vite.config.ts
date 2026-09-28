@@ -11,17 +11,21 @@ export default defineConfig(({ mode }) => ({
     // engine purity (DOM globals are undefined there, so a stray `window`/`document` reference
     // fails loudly instead of silently working under jsdom). src/ui and src/app render React, so
     // they keep jsdom.
+    //
+    // Review fix F2: the Node project's `include` is now a single catch-all
+    // (`src/**/*.test.{ts,tsx}`) minus the jsdom project's own two folders, NOT an enumerated
+    // `src/{engine,data,state}` list -- an enumerated list silently drops any test under a NEW
+    // top-level folder (verified: a throwaway `src/zzprobe/x.test.ts` was collected by NEITHER
+    // project and never ran). ASSUMPTION 24 ("any new top-level test folder defaults to Node
+    // unless it renders React") is now actually true of the config, not just documented.
     projects: [
       {
         extends: true,
         test: {
           name: 'engine-data-state',
           environment: 'node',
-          include: [
-            'src/engine/**/*.test.ts',
-            'src/data/**/*.test.ts',
-            'src/state/**/*.test.ts',
-          ],
+          include: ['src/**/*.test.{ts,tsx}'],
+          exclude: ['src/ui/**', 'src/app/**'],
         },
       },
       {
@@ -29,12 +33,7 @@ export default defineConfig(({ mode }) => ({
         test: {
           name: 'ui-app',
           environment: 'jsdom',
-          include: [
-            'src/ui/**/*.test.ts',
-            'src/ui/**/*.test.tsx',
-            'src/app/**/*.test.ts',
-            'src/app/**/*.test.tsx',
-          ],
+          include: ['src/ui/**/*.test.{ts,tsx}', 'src/app/**/*.test.{ts,tsx}'],
         },
       },
     ],

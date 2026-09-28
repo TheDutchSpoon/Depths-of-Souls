@@ -23,6 +23,7 @@ import { createCombat, resolveFight } from '../engine/combat'
 import type { Trait, StatusDef } from '../engine/effect-types'
 import {
   biomeForFloor,
+  biomeHasContent,
   contentFrontier,
   generateFloor,
   materializeCreature,
@@ -61,6 +62,7 @@ import {
   applyXpGain,
   currencyDropForKill,
   findStaticCreature,
+  resolveKillReward,
   staticCreatureIdFor,
   ZERO_CURRENCIES,
   type Currencies,
@@ -185,7 +187,8 @@ export type DescendResult =
 export type CanDescendResult =
   { readonly ok: true } | { readonly ok: false; readonly reason: DescendFailureReason }
 
-export type PinBiomeFailureReason = 'unknown-biome' | 'floor-out-of-range'
+export type PinBiomeFailureReason =
+  'unknown-biome' | 'floor-out-of-range' | 'biome-has-no-content'
 
 export type PinBiomeResult =
   { readonly ok: true } | { readonly ok: false; readonly reason: PinBiomeFailureReason }
@@ -204,7 +207,9 @@ export interface GameActions {
   recordBossKill(bossId: string): void
   /** Own addition (not named by the brief, but directly described by CONVENTIONS' Biome Atlas
    * facility). No facility-unlock gating here (Phase 8/facilities scope). Player-reachable
-   * failure per G5/S5: returns `{ ok: false, reason }` instead of throwing. */
+   * failure per G5/S5: returns `{ ok: false, reason }` instead of throwing. Reasons:
+   * `floor-out-of-range` (floor < 1), `unknown-biome`, `biome-has-no-content` (review fix F1 --
+   * refuses a pin that would otherwise route `descend` into the generator's own throw). */
   pinBiome(floor: number, biomeId: BiomeId): PinBiomeResult
   /** Pure query sharing `pinBiome`'s own check -- lets the UI grey out an invalid pin without
    * performing it. */
@@ -364,7 +369,14 @@ function checkDescend(
 
 /** Phase 4.1-A (G5, S5): the shared check behind both `pinBiome` and `canPinBiome`. Kept
  * minimal/conservative (ASSUMPTION): only `floor >= 1` is required (no upper bound), preserving
- * today's implicit "pin any floor, including 101+" behaviour. */
+ * today's implicit "pin any floor, including 101+" behaviour.
+ *
+ * Review fix F1: a pin into a biome with no content (`biomeHasContent`, generation.ts) is
+ * refused with `biome-has-no-content` -- without this, `pinBiome` could route `descend` straight
+ * into `generateFloor`'s own `weightedPick` throw (a player-reachable crash through a second
+ * route beyond `contentFrontier`'s own gate, since a pin can target a biome the fixed 1-100
+ * sequence would never have picked for that floor). Checked last (after floor-out-of-range and
+ * unknown-biome) since it needs a resolved biome to test. */
 function checkPinBiome(
   deps: GameStoreDeps,
   floor: number,
@@ -373,8 +385,12 @@ function checkPinBiome(
   if (!Number.isInteger(floor) || floor < 1) {
     return { ok: false, reason: 'floor-out-of-range' }
   }
-  if (!deps.biomes.some((b) => b.id === biomeId)) {
+  const biome = deps.biomes.find((b) => b.id === biomeId)
+  if (!biome) {
     return { ok: false, reason: 'unknown-biome' }
+  }
+  if (!biomeHasContent(biome)) {
+    return { ok: false, reason: 'biome-has-no-content' }
   }
   return { ok: true }
 }
@@ -513,28 +529,20 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
             continue
           }
 
-          // Phase 4.1-A (A5): reads origin.templateId -- parsing the CreatureId's `-side-slot`
-          // suffix is deleted.
-          const staticId = deadEnemy.origin.templateId
-          const staticRef = findStaticCreature(
-            staticId,
+          // Phase 4.1-A review fix F4: the ordinary (non-boss) lookup is a pure, independently-
+          // tested helper (rewards.ts's resolveKillReward) -- reads deadEnemy.origin.templateId,
+          // never a parsed CreatureId suffix.
+          const reward = resolveKillReward(
+            deadEnemy,
             deps.standaloneCreatures,
             deps.biomes,
+            deps.balanceConfig,
           )
-          if (!staticRef) {
-            // Every generated enemy is derived from static data by construction (generateFloor
-            // only ever materializes creatures out of deps.biomes' own species pools) -- a miss
-            // here means origin.templateId and the static registries have drifted apart. Not a
-            // normal skip: fail loud rather than silently dropping rewards.
-            throw new Error(
-              `descend: generated enemy ${deadEnemy.id} has no resolvable static creature ` +
-                `(origin.templateId: ${staticId})`,
-            )
-          }
-          const gain =
-            deps.balanceConfig.soulGainPercent[staticRef.speciesCreature.rarity]
-          soulGainedThisCall.set(staticId, (soulGainedThisCall.get(staticId) ?? 0) + gain)
-          xpBanked += xpAwardForKill(deadEnemy.origin.level, deps.balanceConfig)
+          soulGainedThisCall.set(
+            reward.staticId,
+            (soulGainedThisCall.get(reward.staticId) ?? 0) + reward.soulGainPercent,
+          )
+          xpBanked += reward.xpAwarded
           currencyGained = addCurrencies(
             currencyGained,
             currencyDropForKill(floor, deps.balanceConfig),

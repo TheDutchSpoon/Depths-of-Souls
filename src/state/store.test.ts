@@ -12,7 +12,7 @@
 // expectations changed, each noted inline.
 
 import { describe, expect, test } from 'vitest'
-import { createBiomeId } from '../engine/ids'
+import { createBiomeId, type BiomeId } from '../engine/ids'
 import type {
   BiomeData,
   BossEncounter,
@@ -21,9 +21,15 @@ import type {
 } from '../engine/generation'
 import type { SeededRng } from '../engine/rng'
 import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
+import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { UNICORN, UNICORN_SPECIES_ID } from '../data/species/starters'
 import type { Specialization } from '../data/specializations'
-import { createGameStore, type GameStoreDeps } from './store'
+import {
+  createGameStore,
+  type DescendFailureReason,
+  type GameStoreDeps,
+  type PinBiomeFailureReason,
+} from './store'
 import type { StaticCreatureRef, Instance } from './rewards'
 import type { InstanceId } from './ids'
 
@@ -325,6 +331,83 @@ describe('descend()', () => {
     expect(heroInstance?.xp).toBeGreaterThan(0)
   })
 
+  test('review fix F5: soul-gain under the DEFAULT config is exact per tier (common=25, rare=10), not just "a multiple of 10"', () => {
+    // Three distinct rarity tiers in one species pool, deterministically routed by the stub RNG
+    // via DEFAULT_BALANCE_CONFIG.rarityDrawWeight {common:6, uncommon:3, rare:1} (total 10,
+    // authored in that order): roll = rngValue*10; common wins roll<6 (rngValue<0.6), uncommon
+    // wins 6<=roll<9 (0.6<=rngValue<0.9), rare wins roll>=9 (rngValue>=0.9).
+    const TIER_COMMON: SpeciesCreature = {
+      id: 'fixture-tier-common',
+      name: 'Fixture Tier Common',
+      affinity: 'vitality',
+      baseStats: { health: 5, attack: 5, intelligence: 5, defence: 5, speed: 5 },
+      defaultScriptId: 'always-attack',
+      innateTraitIds: [],
+      rarity: 'common',
+    }
+    const TIER_RARE: SpeciesCreature = {
+      id: 'fixture-tier-rare',
+      name: 'Fixture Tier Rare',
+      affinity: 'vitality',
+      baseStats: { health: 5, attack: 5, intelligence: 5, defence: 5, speed: 5 },
+      defaultScriptId: 'always-attack',
+      innateTraitIds: [],
+      rarity: 'rare',
+    }
+    // Overwhelming (one-shots HERO) so the descent stops after exactly 3 fights instead of
+    // needing to hand-derive all 10 of the default config's fights.
+    const TIER_UNCOMMON_OVERWHELMING: SpeciesCreature = {
+      id: 'fixture-tier-uncommon-overwhelming',
+      name: 'Fixture Tier Uncommon Overwhelming',
+      affinity: 'violence',
+      baseStats: {
+        health: 100,
+        attack: 1000,
+        intelligence: 10,
+        defence: 100,
+        speed: 100,
+      },
+      defaultScriptId: 'always-attack',
+      innateTraitIds: [],
+      rarity: 'uncommon',
+    }
+    const species: Species = {
+      id: 'fixture-tiers-species',
+      name: 'Fixture Tiers Species',
+      weight: 1,
+      creatures: [TIER_COMMON, TIER_UNCOMMON_OVERWHELMING, TIER_RARE],
+    }
+    const biome: BiomeData = {
+      id: createBiomeId('fixture-tiers-biome'),
+      name: 'Fixture Tiers Biome',
+      speciesPool: [species],
+    }
+    // fight1 creature-roll 0.1 -> common; fight2 creature-roll 0.95 -> rare; fight3 creature-roll
+    // 0.7 -> the overwhelming uncommon, which one-shots HERO and stops the loop.
+    const sequence = [0, 0.1, 0, 0, 0.95, 0, 0, 0.7, 0]
+    const store = createGameStore(
+      makeDeps({
+        biomes: [biome],
+        createRng: stubRngFactory(sequence),
+        balanceConfig: DEFAULT_BALANCE_CONFIG,
+      }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+
+    const { outcome } = expectOk(store.getState().descend(1))
+
+    expect(outcome.fightResults).toEqual(['win', 'win', 'loss'])
+    expect(outcome.soulGained.get(TIER_COMMON.id)).toBe(
+      DEFAULT_BALANCE_CONFIG.soulGainPercent.common,
+    )
+    expect(outcome.soulGained.get(TIER_COMMON.id)).toBe(25)
+    expect(outcome.soulGained.get(TIER_RARE.id)).toBe(
+      DEFAULT_BALANCE_CONFIG.soulGainPercent.rare,
+    )
+    expect(outcome.soulGained.get(TIER_RARE.id)).toBe(10)
+    expect(outcome.soulGained.has(TIER_UNCOMMON_OVERWHELMING.id)).toBe(false) // never died
+  })
+
   test('a loss stops the descent but keeps prior fights rewards', () => {
     const store = createGameStore(
       makeDeps({ createRng: stubRngFactory(WIN_THEN_LOSS_SEQUENCE) }),
@@ -393,12 +476,14 @@ describe('descend()', () => {
     expect(state.currencies).toEqual({ essence: 2, ore: 2, bricks: 1, lifeforce: 2 })
   })
 
-  test('rewards read origin.templateId, not a parsed id suffix (Phase 4.1-A, A5) -- a static id containing its own side/slot-shaped substring', () => {
-    // Materialized at side='enemy', slot=0 (floor 1's single-slot fights), this creature's own
-    // per-fight CreatureId is 'fixture-g-confusable-enemy-0-enemy-0' -- its static id ALREADY
-    // ends in the exact string a per-fight id's own trailing "-<side>-<slot>" suffix would look
-    // like. origin.templateId is the raw SpeciesCreature.id, passed straight through with no
-    // string surgery, so it can never mis-resolve regardless of what the id looks like.
+  test('smoke test: descend() reaches rewards through a real fight, not just resolveKillReward in isolation', () => {
+    // Review fix F4: this fixture's static id doesn't actually discriminate the deleted
+    // suffix-parser from the current origin.templateId lookup -- the old parser sliced exactly
+    // `-${side}-${slot}` off the CreatureId BY LENGTH, so it resolved this id correctly too. The
+    // real discriminating case (an id/origin pair the old parser would get WRONG) is
+    // rewards.test.ts's own resolveKillReward unit test. This test's only job is to prove the
+    // real descend() loop actually reaches that helper end-to-end, through a real generated
+    // fight -- kept as a smoke test, not a regression test for the old bug.
     const CONFUSABLE: SpeciesCreature = {
       id: 'fixture-g-confusable-enemy-0',
       name: 'Fixture Confusable',
@@ -452,35 +537,72 @@ describe('descend()', () => {
     )
     expect(defended).toBe(true)
   })
+})
 
-  test('reason: no-spec (no specialization chosen)', () => {
-    const store = createGameStore(
-      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
-    )
-    const failure = expectFailure(store.getState().descend(1))
-    expect(failure.reason).toBe('no-spec')
-  })
+// Phase 4.1-A review fix F3/F7: table-driven over every descend() reason -- each scenario
+// asserts canDescend() AGREES with descend(), and that BOTH leave the store's state object
+// completely unchanged (reference equality on the whole state, not a field-by-field spot check --
+// no `set()` call may run on any refusal path).
+interface DescendReasonScenario {
+  readonly reason: DescendFailureReason
+  readonly floor: number
+  readonly setup: (store: ReturnType<typeof createGameStore>) => void
+}
 
-  test('reason: empty-party (a spec is chosen but every party slot is empty)', () => {
-    const store = createGameStore(
-      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
-    )
-    store.getState().setSpec(FIXTURE_SPEC.id)
-    store.setState((s) => ({ activeParty: s.activeParty.map(() => null) }))
-    const failure = expectFailure(store.getState().descend(1))
-    expect(failure.reason).toBe('empty-party')
-  })
-
-  test('reason: floor-out-of-reach (skips past deepestFloor + 1, within the frontier)', () => {
-    const store = createGameStore(
-      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
-    )
-    store.getState().setSpec(FIXTURE_SPEC.id)
+const DESCEND_REASON_SCENARIOS: readonly DescendReasonScenario[] = [
+  {
+    reason: 'no-spec',
+    floor: 1,
+    setup: () => {}, // a fresh store, setSpec never called
+  },
+  {
+    reason: 'empty-party',
+    floor: 1,
+    setup: (store) => {
+      store.getState().setSpec(FIXTURE_SPEC.id)
+      store.setState((s) => ({ activeParty: s.activeParty.map(() => null) }))
+    },
+  },
+  {
     // deepestFloor is 0 -> max reachable is 1; FIXTURE_BIOME alone gives a frontier of 10, so
     // floor 2 fails ONLY the reach check, not the frontier check.
-    const failure = expectFailure(store.getState().descend(2))
-    expect(failure.reason).toBe('floor-out-of-reach')
-  })
+    reason: 'floor-out-of-reach',
+    floor: 2,
+    setup: (store) => {
+      store.getState().setSpec(FIXTURE_SPEC.id)
+    },
+  },
+  {
+    // FIXTURE_BIOME alone gives a content frontier of 10; deepestFloor 15 would otherwise make
+    // floor 11 reachable (reach itself passes), but 11 > the frontier (ASSUMPTION 23: frontier
+    // wins even when reach alone would have been fine).
+    reason: 'beyond-content-frontier',
+    floor: 11,
+    setup: (store) => {
+      store.getState().setSpec(FIXTURE_SPEC.id)
+      store.setState({ deepestFloor: 15 })
+    },
+  },
+]
+
+describe('descend() / canDescend(): every refusal reason', () => {
+  test.each(DESCEND_REASON_SCENARIOS)(
+    '$reason: canDescend agrees with descend, and both leave state untouched',
+    ({ reason, floor, setup }) => {
+      const store = createGameStore(
+        makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+      )
+      setup(store)
+      const before = store.getState()
+
+      expect(store.getState().canDescend(floor)).toEqual({ ok: false, reason })
+      const failure = expectFailure(store.getState().descend(floor))
+      expect(failure.reason).toBe(reason)
+
+      // Reference equality on the WHOLE state object: no `set()` ran on either call.
+      expect(store.getState()).toBe(before)
+    },
+  )
 
   test('reason: floor-out-of-reach also covers floor 0 and negative floors', () => {
     const store = createGameStore(
@@ -491,96 +613,102 @@ describe('descend()', () => {
     expect(expectFailure(store.getState().descend(-1)).reason).toBe('floor-out-of-reach')
   })
 
-  test('reason: beyond-content-frontier wins over floor-out-of-reach when both would apply', () => {
+  test('reason: beyond-content-frontier wins even when floor-out-of-reach ALSO fails (F3)', () => {
     const store = createGameStore(
       makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
     )
     store.getState().setSpec(FIXTURE_SPEC.id)
-    // FIXTURE_BIOME alone gives a content frontier of 10; deepestFloor 15 would otherwise make
-    // floor 11 reachable, but 11 > the frontier (ASSUMPTION 23: frontier wins).
-    store.setState({ deepestFloor: 15 })
-    const failure = expectFailure(store.getState().descend(11))
-    expect(failure.reason).toBe('beyond-content-frontier')
-  })
-
-  test('state is left completely unchanged on every reason-refusal', () => {
-    const store = createGameStore(
-      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
-    )
-    store.getState().setSpec(FIXTURE_SPEC.id)
-    const before = store.getState()
-    expectFailure(store.getState().descend(2)) // floor-out-of-reach
-    const after = store.getState()
-    expect(after.lastFloor).toBe(before.lastFloor)
-    expect(after.deepestFloor).toBe(before.deepestFloor)
-    expect(after.collection).toBe(before.collection)
-  })
-})
-
-describe('canDescend()', () => {
-  test('agrees with descend() on every reason, without mutating state', () => {
-    const store = createGameStore(
-      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
-    )
-    // no-spec, before setSpec.
-    expect(store.getState().canDescend(1)).toEqual({ ok: false, reason: 'no-spec' })
-
-    store.getState().setSpec(FIXTURE_SPEC.id)
-
-    // floor-out-of-reach.
-    expect(store.getState().canDescend(2)).toEqual({
-      ok: false,
-      reason: 'floor-out-of-reach',
-    })
-    // beyond-content-frontier.
-    store.setState({ deepestFloor: 15 })
+    // deepestFloor stays 0 (max reachable 1) AND floor 11 is past FIXTURE_BIOME's frontier of 10
+    // -- BOTH checks fail here, unlike the table's own 'beyond-content-frontier' scenario above
+    // (deepestFloor 15), which only exercises the frontier check failing ALONE. Swapping
+    // checkDescend's two checks would still pass that scenario; this one is what actually pins
+    // the precedence (ASSUMPTION 23).
     expect(store.getState().canDescend(11)).toEqual({
       ok: false,
       reason: 'beyond-content-frontier',
     })
-    store.setState({ deepestFloor: 0 })
+    expect(expectFailure(store.getState().descend(11)).reason).toBe(
+      'beyond-content-frontier',
+    )
+  })
 
-    // A valid floor: canDescend agrees, and calling it never changed anything descend() itself
-    // would have (same collection reference, same lastFloor).
+  test('a valid floor: canDescend agrees, and calling it changes nothing', () => {
+    const store = createGameStore(
+      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
     const before = store.getState()
     expect(store.getState().canDescend(1)).toEqual({ ok: true })
-    expect(store.getState().lastFloor).toBe(before.lastFloor)
-    expect(store.getState().collection).toBe(before.collection)
+    expect(store.getState()).toBe(before)
 
     const { outcome } = expectOk(store.getState().descend(1))
     expect(outcome.cleared).toBe(true)
   })
 })
 
+// Phase 4.1-A review fix F1/F7: a content-less biome pin must never reach descend()'s own
+// generator throw -- table-driven over every pinBiome() reason, mirroring the descend() table
+// above.
+const EMPTY_CONTENT_BIOME: BiomeData = {
+  id: createBiomeId('fixture-empty-pin-target'),
+  name: 'Fixture Empty Pin Target',
+  speciesPool: [],
+}
+
+interface PinBiomeReasonScenario {
+  readonly reason: PinBiomeFailureReason
+  readonly floor: number
+  readonly biomeId: BiomeId
+}
+
+const PIN_BIOME_REASON_SCENARIOS: readonly PinBiomeReasonScenario[] = [
+  { reason: 'floor-out-of-range', floor: 0, biomeId: FIXTURE_BIOME.id },
+  { reason: 'unknown-biome', floor: 5, biomeId: createBiomeId('does-not-exist') },
+  { reason: 'biome-has-no-content', floor: 5, biomeId: EMPTY_CONTENT_BIOME.id },
+]
+
 describe('pinBiome() / canPinBiome()', () => {
-  test('sets an atlas pin for a known floor and biome', () => {
-    const store = createGameStore(makeDeps({}))
+  function makePinDeps(): Partial<GameStoreDeps> {
+    return makeDeps({ biomes: [FIXTURE_BIOME, EMPTY_CONTENT_BIOME] })
+  }
+
+  test('sets an atlas pin for a known, has-content floor and biome', () => {
+    const store = createGameStore(makePinDeps())
     expect(store.getState().canPinBiome(5, FIXTURE_BIOME.id)).toEqual({ ok: true })
     const result = expectOk(store.getState().pinBiome(5, FIXTURE_BIOME.id))
     expect(result).toEqual({ ok: true })
     expect(store.getState().atlasPins.get(5)).toBe(FIXTURE_BIOME.id)
   })
 
-  test('reason: unknown-biome', () => {
-    const store = createGameStore(makeDeps({}))
-    const unknown = createBiomeId('does-not-exist')
-    expect(store.getState().canPinBiome(5, unknown)).toEqual({
-      ok: false,
-      reason: 'unknown-biome',
-    })
-    const failure = expectFailure(store.getState().pinBiome(5, unknown))
-    expect(failure.reason).toBe('unknown-biome')
-    expect(store.getState().atlasPins.has(5)).toBe(false)
-  })
+  test.each(PIN_BIOME_REASON_SCENARIOS)(
+    '$reason: canPinBiome agrees with pinBiome, and both leave state untouched',
+    ({ reason, floor, biomeId }) => {
+      const store = createGameStore(makePinDeps())
+      const before = store.getState()
 
-  test('reason: floor-out-of-range', () => {
-    const store = createGameStore(makeDeps({}))
-    expect(store.getState().canPinBiome(0, FIXTURE_BIOME.id)).toEqual({
-      ok: false,
-      reason: 'floor-out-of-range',
-    })
-    const failure = expectFailure(store.getState().pinBiome(0, FIXTURE_BIOME.id))
-    expect(failure.reason).toBe('floor-out-of-range')
+      expect(store.getState().canPinBiome(floor, biomeId)).toEqual({ ok: false, reason })
+      const failure = expectFailure(store.getState().pinBiome(floor, biomeId))
+      expect(failure.reason).toBe(reason)
+
+      expect(store.getState()).toBe(before)
+      expect(store.getState().atlasPins.has(floor)).toBe(false)
+    },
+  )
+
+  test('review fix F1: refusing the pin closes the descend()-throws route (reproduces the review-found bug)', () => {
+    // Before F1, pinBiome accepted this pin, canDescend(1) agreed it was fine, and descend(1)
+    // then threw the generator's own "empty or zero-weight pool" error -- a player-reachable
+    // crash through a second route beyond contentFrontier's own gate.
+    const store = createGameStore(makePinDeps())
+    store.getState().setSpec(FIXTURE_SPEC.id)
+
+    const failure = expectFailure(store.getState().pinBiome(1, EMPTY_CONTENT_BIOME.id))
+    expect(failure.reason).toBe('biome-has-no-content')
+    expect(store.getState().atlasPins.has(1)).toBe(false)
+
+    // Without the pin ever landing, descend(1) resolves the fixed sequence's real biome
+    // (FIXTURE_BIOME, at decade index 0) instead of the empty target, and succeeds.
+    expect(() => store.getState().descend(1)).not.toThrow()
   })
 })
 
@@ -818,10 +946,11 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId)
     expect(outcome.soulGained.get(BOSS_ADD_WIN.id)).toBe(10)
     expect(outcome.soulGained.has(BOSS_CREATURE_WIN.id)).toBe(false) // bosses grant no soul%
-    // xpAwardForKill = each victim's own level: the add's rolled level (10-13) + the boss's fixed
-    // level 16. Assert the boundable range rather than a single number (the add's level varies).
-    expect(outcome.xpBanked).toBeGreaterThanOrEqual(16 + 10)
-    expect(outcome.xpBanked).toBeLessThanOrEqual(16 + 13)
+    // Review fix F7: pinned exact, not a range -- runSeed:99 is the real seeded RNG (never
+    // stubbed here), so the add's rolled level is deterministic. Generated-then-checkpoint-
+    // verified: the add rolls level 13 (enemyLevelRange(10,CFG)'s own max), so
+    // xpAwardForKill(13,CFG) + xpAwardForKill(16,CFG) [the boss's fixed level] = 13 + 16 = 29.
+    expect(outcome.xpBanked).toBe(29)
     // currencyDropForKill(10, CFG) = {essence:10,ore:10,bricks:max(1,floor(10/10))=1,lifeforce:10},
     // banked per kill -- 2 kills.
     expect(outcome.currencyGained).toEqual({
@@ -911,9 +1040,10 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.bossDefeated).toBeNull()
     expect(outcome.soulGained.get(BOSS_ADD_LOSS.id)).toBe(10)
     expect(outcome.soulGained.has(BOSS_CREATURE_LOSS.id)).toBe(false)
-    // Only the add's own kill banks (its rolled level, within enemyLevelRange(10,CFG)=10..13).
-    expect(outcome.xpBanked).toBeGreaterThanOrEqual(10)
-    expect(outcome.xpBanked).toBeLessThanOrEqual(13)
+    // Review fix F7: pinned exact -- runSeed:99 is the real seeded RNG (never stubbed here), so
+    // the add's rolled level is deterministic. Generated-then-checkpoint-verified: the add rolls
+    // level 13 (enemyLevelRange(10,CFG)'s own max), so xpAwardForKill(13,CFG) = 13.
+    expect(outcome.xpBanked).toBe(13)
     expect(outcome.currencyGained).toEqual({
       essence: 10,
       ore: 10,
