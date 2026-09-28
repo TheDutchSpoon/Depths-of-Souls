@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from '../combat'
 import { updateCreature } from '../creature-lookup'
+import { countDraws } from '../test-utils/rng-draw-count'
 import {
   SEED,
   CAPPED,
@@ -13,8 +14,8 @@ import {
 } from './golden-d3-revive-cap-exclusion.fixture'
 import { MAX_REVIVES_PER_CREATURE } from '../config'
 
-describe('golden replay: D3 revive cap -- mixed-pool exclusion (Phase 4.1-B, PR #69 R5)', () => {
-  it('excludes the capped dead ally from the pool, always reviving the eligible one', () => {
+describe('golden replay: D3 revive cap -- mixed-pool exclusion (Phase 4.1-B, PR #69 R5, R5-2)', () => {
+  it('excludes the capped dead ally from the pool, always reviving the eligible one, off exactly one draw', () => {
     const created = createCombat({
       seed: SEED,
       player: { party: playerParty },
@@ -31,8 +32,12 @@ describe('golden replay: D3 revive cap -- mixed-pool exclusion (Phase 4.1-B, PR 
     })
     const initial = updateCreature(withCapped, ELIGIBLE, { alive: false, currentHp: 0 })
 
-    const { events } = resolveTurn(initial)
+    const { events, state } = resolveTurn(initial)
 
     expect(events).toEqual(expectedEvents)
+    // Exactly one draw (the pool-index pick) -- proves this golden's seed choice (SEED = 7, not
+    // the previous coincidence-prone SEED = 1) is actually exercising the cap filter, not just
+    // happening to match its outcome. See this fixture's own header comment for the derivation.
+    expect(countDraws(initial.rng, state.rng)).toBe(1)
   })
 })

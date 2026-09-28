@@ -326,10 +326,12 @@ before any code was written; this section records what was actually built agains
   slots) — no affinity/`canEquip` gate. `SpeciesCreature.equippedSpells` (the old fixed-starter-
   loadout field) and `materializeCreature`'s fallback to it are deleted; `SORCERER_STARTER`'s
   hardcoded `equippedSpells: [ARCANE_BOLT, null, null, null]` is gone too. **Correction (PR #69
-  review, D2):** the byte-identical `[Arcane Bolt, null, null, null]` array is the Seer's
-  **fight-setup** spell array (what `createCombat` produces), not its **materialized** one —
-  `materializeCreature` output for the Seer carries regular gem slots only (`[null, null, null,
-  null]`); innate spells are prepended at fight setup, never at materialization. New tests: a
+  review, D2; typo fixed at the PR #69 review's follow-up pass):** the byte-identical `[Arcane
+  Bolt, null, null, null]` array is the Seer's **fight-setup** spell array (what `createCombat`
+  produces), not its **materialized** one — `materializeCreature` output for the Seer carries
+  regular gem slots only (`[null, null, null]`, `DEFAULT_GEM_SLOT_COUNT`'s 3 slots — matching what
+  `data/species/starters.test.ts` itself asserts); innate spells are prepended at fight setup,
+  never at materialization. New tests: a
   fixture non-Wit "fused" creature carrying Arcane Surge still
   gets the innate Arcane Bolt AND can actually cast it (`decideAction` with `always-cast` resolves
   a real cast action, not a fallback) — proving no equip gate anywhere in the resolution path.
