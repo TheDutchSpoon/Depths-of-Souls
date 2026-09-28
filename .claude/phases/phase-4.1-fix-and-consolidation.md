@@ -653,9 +653,9 @@ change.
 ## 4.1-C2a -- Action pipeline plumbing (byte-identical in behaviour, not only on goldens)
 
 Split from the brief's single "C2" slice at kickoff, mirroring the C1/C2 split's own precedent:
-C2a is pure plumbing (every existing test and golden passes unchanged; tests may change only
-their call sites, never an expected value), C2b (not yet built -- this PR stops here for review)
-is the behaviour changes (B1, B2, B5), each landing with its own new, discriminating golden.
+C2a is pure plumbing (every existing test and golden passes unchanged), C2b (not yet built --
+this PR stops here for review) is the behaviour changes (B1, B2, B5), each landing with its own
+new, discriminating golden.
 
 **PR #71 design review, two changes before merge (ASSUMPTIONS 31-32):**
 1. Byte-identical goldens were not enough -- C2a must be byte-identical in **behaviour**, checked
@@ -848,6 +848,35 @@ doing real work, not standing in for a distinction nothing exercises.
   `data/traits/glimmerdark.ts`'s Resonant Overtone) that named `combat.ts`'s old
   `runEchoCast`/direct-executor-call mechanisms were corrected to describe the actual
   `ctx.runAction` path -- comment-only, no behaviour change.
+- **R1 (final-review fix):** the `'random'` response-target validators had no coverage of their
+  own -- `resolution.test.ts` gains a 4-test block beside the existing `SelfCondition validator`
+  one: a trait's `triggered` response targeting `'random'` throws; the same target nested inside a
+  `consume-stacks` response's wrapped `effect` throws (recursion proof); a `condition-status`'s own
+  trigger response targeting it throws; an ordinary (non-random) selector target is accepted by
+  both validators. Each throw case was confirmed to fail with the underlying check disabled
+  (`validateResponseTargetNoRandomSelector` short-circuited to a no-op), then reverted.
+
+### R2 (final-review fix) -- the "no Node imports in `src/`" guard
+
+`src/engine/__corpus__/node-shims.d.ts` declares `node:fs`/`node:url`/`node:process` as ambient
+modules so `corpus-digest.test.ts` can write its own generated fixture. Ambient module
+declarations are program-wide by construction, though -- once the shim file is part of the
+compile (it is; `tsconfig.app.json` includes all of `src/`), `import ... from 'node:fs'`
+type-checks from ANY file under `src/`, not just `corpus-digest.test.ts`, silently reopening the
+"no Node built-ins in `src/`" hole `main`'s own `tsc -b` used to close by omission (no `@types/node`
+in `tsconfig.app.json`'s `types` array at all). Fixed with an ESLint rule, not a type-level one:
+`eslint.config.js` gains a `no-restricted-imports` rule banning the `node:*` pattern across
+`src/**`, with a single override turning it back off for `src/engine/corpus-digest.test.ts`. The
+shim's own header comment now says so explicitly (it used to claim -- wrongly -- that the
+declarations were "visible only where imported"). Verified directly: a throwaway
+`src/engine/zzthrowaway-node-import-check.ts` importing `node:fs` fails `npm run lint` with the
+new rule's message; removed before committing (never part of the diff).
+
+### R3 (final-review fix) -- explicit digest-test timeout
+
+The digest test measures ~3.0-4.4s against Vitest's 5s default test timeout -- close enough that a
+slower CI runner could flake it. `it(...)` now passes an explicit `60_000`ms timeout as its third
+argument.
 
 ### Corpus digest (replaces the seed sweep)
 
@@ -898,28 +927,38 @@ catch a regression in any one of them if it didn't move at least this many real-
 
 ### Verification
 
-All four gates green: `npx tsc -b` clean; `npx vitest run` -- **115 files / 750 tests passed**, up
+All four gates green: `npx tsc -b` clean; `npx vitest run` -- **115 files / 754 tests passed**, up
 from **113 / 727 on `main`** (confirmed against `origin/main` @ `a2ef7b5`, per-file, not asserted
 from memory): `interpreter.test.ts` 20 -> 28 (+8, the `checkLegality` block),
-`target-selectors.test.ts` 28 -> 31 (+3, `'random'`), `resolution.test.ts` 79 -> 77 (-2, the echo
-block's 4 tests becoming 2), `actions.test.ts` +13 (new file), `corpus-digest.test.ts` +1 (new
-file) -- `8 + 3 - 2 + 13 + 1 = 23`, `727 + 23 = 750`. `npm run lint` clean; `npm run format:check`
-clean (after `npm run format`; whitespace/wrapping only, plus the generated corpus fixture, itself
-Prettier-formatted at generation time). `npm run build` succeeds.
+`target-selectors.test.ts` 28 -> 31 (+3, `'random'`), `resolution.test.ts` 79 -> 81 (net +2: the
+echo block's 4 tests becoming 2, plus the R1 response-target-validator block's own 4 new tests --
+see "New tests"), `actions.test.ts` +13 (new file), `corpus-digest.test.ts` +1 (new file) -- `8 +
+3 + 2 + 13 + 1 = 27`, `727 + 27 = 754`. `npm run lint` clean (now including the new
+`no-restricted-imports` guard -- see "R2" below); `npm run format:check` clean (after `npm run
+format`; whitespace/wrapping only, plus the generated corpus fixture, itself Prettier-formatted at
+generation time). `npm run build` succeeds.
 
-**Golden diff against `main`: empty.** Confirmed via `git status`/`git diff --stat`: no
-`*.fixture.ts` file under `__golden__/` appears anywhere in the diff. What actually establishes
-this is three separate things, not one circular "the suite passes" claim: (1) the empty fixture
-diff itself (`git diff --stat -- '*.fixture.ts'` against `main` is empty); (2) every changed
-`*.test.ts` file was read at each call site changed, confirming the edit was mechanical (wrapping
-`events`/`cascade` into `createResolutionContext(...)`, composing `decideAction` with
-`resolveIntent`) and never touched an `expectedEvents`/expected-value literal, with the sole
-documented exception of the echo block (rewritten, not adapted -- see "New tests" above, and the
-one pre-existing "skips a targeting-required rule" case the brief itself calls out as deliberately
-unchanged-in-C2a); (3) the corpus digest, generated once against this PR's own (unmutated)
-behaviour and then shown, via the mechanism-proof table above, to move when any of the five
-mechanisms it covers is disabled -- i.e. it is actually sensitive to the behaviour this PR claims
-is unchanged, not merely silent because it doesn't exercise that behaviour at all.
+**Golden diff against `main`: no fixture under `__golden__/` changed.** (Not "the `*.fixture.ts`
+diff against `main` is empty" -- it isn't anymore, since this PR's own corpus fixture,
+`__corpus__/corpus-digest.fixture.ts`, is new. That fixture lives outside `__golden__/` on
+purpose, precisely so it's never confused with a golden.) Confirmed via `git status`/`git diff
+--stat -- 'src/engine/__golden__/*.fixture.ts'` against `main`: empty. What actually establishes
+"byte-identical in behaviour" is four separate things, not one circular "the suite passes" claim:
+(1) the empty golden-fixture diff itself; (2) every changed `*.test.ts` file was read at each call
+site changed, confirming the edit was mechanical (wrapping `events`/`cascade` into
+`createResolutionContext(...)`, composing `decideAction` with `resolveIntent`) and never touched
+an `expectedEvents`/expected-value literal, with the sole documented exception of the echo block
+(rewritten, not adapted -- see "New tests" above, and the one pre-existing "skips a
+targeting-required rule" case the brief itself calls out as deliberately unchanged-in-C2a); (3)
+the corpus digest, generated once against this PR's own (unmutated) behaviour and then shown, via
+the mechanism-proof table above, to move when any of the five mechanisms it covers is disabled --
+i.e. it is actually sensitive to the behaviour this PR claims is unchanged, not merely silent
+because it doesn't exercise that behaviour at all; (4) the committed digest also passes, unchanged,
+when the exact same corpus/digest files are run against `main`'s own (pre-C2a) engine -- verified
+directly (a throwaway checkout of `main` @ `a2ef7b5` with `__corpus__/` and
+`corpus-digest.test.ts` copied over, `npx vitest run` green with zero mismatches), in addition to
+the design review's own independent check. So it is a genuine `main` baseline, not only a snapshot
+of this PR's own output re-asserted against itself.
 
 ### Next
 

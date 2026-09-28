@@ -17,9 +17,15 @@ import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
 import { countDraws } from './test-utils/rng-draw-count'
 import type { CombatEvent, CombatState, Spell } from './types'
-import { createEffectInstanceId, validateStatModifierCondition } from './effect-types'
+import {
+  createEffectInstanceId,
+  validateNoRandomSelectorInResponseTargets,
+  validateStatModifierCondition,
+  validateStatusNoRandomSelectorInResponseTargets,
+} from './effect-types'
 import type {
   ConditionStatusEffect,
+  EffectDef,
   ObservationFilter,
   StatusDef,
   Trait,
@@ -2767,5 +2773,94 @@ describe('SelfCondition validator (Phase 4.1-B, S2)', () => {
         condition: { kind: 'has-status', statusId: 'fixture' },
       }),
     ).not.toThrow()
+  })
+})
+
+describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", () => {
+  it("throws when a trait/perk triggered response targets the intent-only 'random' selector", () => {
+    const effects: EffectDef[] = [
+      {
+        category: 'triggered',
+        hook: 'on-turn-start',
+        response: {
+          kind: 'grant-action-state',
+          target: { kind: 'selector', selector: { kind: 'random' } },
+        },
+      },
+    ]
+    expect(() => validateNoRandomSelectorInResponseTargets(effects)).toThrow(
+      /intent-only 'random' selector/,
+    )
+  })
+
+  it("throws when the same target is nested inside a consume-stacks response's wrapped effect", () => {
+    const effects: EffectDef[] = [
+      {
+        category: 'triggered',
+        hook: 'on-turn-start',
+        response: {
+          kind: 'consume-stacks',
+          statusId: 'fixture-status',
+          effect: {
+            kind: 'grant-action-state',
+            target: { kind: 'selector', selector: { kind: 'random' } },
+          },
+        },
+      },
+    ]
+    expect(() => validateNoRandomSelectorInResponseTargets(effects)).toThrow(
+      /intent-only 'random' selector/,
+    )
+  })
+
+  it("throws when a condition-status's own trigger response targets it", () => {
+    const status: StatusDef = {
+      category: 'condition-status',
+      statusId: 'fixture-status',
+      cap: 1,
+      polarity: 'debuff',
+      defaultDuration: 1,
+      triggers: [
+        {
+          hook: 'on-turn-end',
+          response: {
+            kind: 'grant-action-state',
+            target: { kind: 'selector', selector: { kind: 'random' } },
+          },
+        },
+      ],
+    }
+    expect(() => validateStatusNoRandomSelectorInResponseTargets(status)).toThrow(
+      /intent-only 'random' selector/,
+    )
+  })
+
+  it('accepts an ordinary (non-random) selector target, for both the trait/perk and status validators', () => {
+    const effects: EffectDef[] = [
+      {
+        category: 'triggered',
+        hook: 'on-turn-start',
+        response: {
+          kind: 'grant-action-state',
+          target: { kind: 'selector', selector: { kind: 'lowest-hp-enemy' } },
+        },
+      },
+    ]
+    expect(() => validateNoRandomSelectorInResponseTargets(effects)).not.toThrow()
+
+    const status: StatusDef = {
+      category: 'condition-status',
+      statusId: 'fixture-status',
+      cap: 1,
+      polarity: 'debuff',
+      defaultDuration: 1,
+      triggers: [
+        {
+          hook: 'on-turn-end',
+          response: { kind: 'grant-action-state', target: { kind: 'self' } },
+        },
+      ],
+    }
+    expect(() => validateStatusNoRandomSelectorInResponseTargets(status)).not.toThrow()
   })
 })

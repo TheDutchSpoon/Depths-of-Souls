@@ -125,5 +125,5 @@ describe('corpus digest (Phase 4.1-C2a, behaviour tripwire)', () => {
     }
 
     expect(actual.length).toBe(CORPUS_DIGEST.length)
-  })
+  }, 60_000) // ~4.1s measured vs. Vitest's 5s default -- explicit headroom, not a tuned budget.
 })
