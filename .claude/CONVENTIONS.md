@@ -227,13 +227,13 @@ attack executor is correct.
 
 - **`perform-action`** (Phase 4.1-E, A2) — `{ kind: 'perform-action', actor: 'self' |
   'triggering-source', intent }`, where `intent` is the same rule-shaped intent the action pipeline
-  takes (`{ action: RuleAction, targeting?: TargetSelector }`, with `gem: 'random'` and a `'random'`
+  takes (`{ action: RuleAction, targeting?: TargetSelector }`, with `gemSlot: 'random'` and a `'random'`
   target available). It makes the named actor take a **real action** through A1's pipeline (via
   `ctx.runAction`), so every action rule applies (can't-act, Silenced, Confusion → Tunnel Vision →
   Provoke; see "One action pipeline"). Content: **Arcane Surge** = `on-turn-end`, `chancePercent:
-  50` → `perform-action(self, { action: cast, gem: 'random' })`; **Resonant Overtone** =
+  50` → `perform-action(self, { action: cast, gemSlot: 'random' })`; **Resonant Overtone** =
   `on-action-observed` (ally cast), `chancePercent: 10`, `stacks: false` →
-  `perform-action(triggering-source, { action: cast, gem: 'random', targeting: 'random' })`.
+  `perform-action(triggering-source, { action: cast, gemSlot: 'random', targeting: 'random' })`.
   - **Actions are atomic:** no action starts while another is resolving. A granted action is
     queued on the `ResolutionContext` and runs **after the granting action (all its instances)
     completes**; responses stay nested and immediate. Turn-end grants run in the turn skeleton's
@@ -737,7 +737,7 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 - The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
   (Cast) have **no cost, freely castable**; a rule picks the **gem slot index** (not a spell ID),
   and the fired spell is whatever occupies that slot on that creature (template-reusable across
-  loadouts), or **`gem: 'random'`** (uniformly among castable gems, 4.1-C). This requires
+  loadouts), or **`gemSlot: 'random'`** (uniformly among castable gems, 4.1-C). This requires
   **extending the Phase 1 `Creature` type** with an equipped-spells field —
   `equippedSpells: readonly (Spell | null)[]` (bare `Spell | null` slots, **not** the full
   `{ spell, level, augments }` Gem wrapper — that wrapper is Phase 8 economy; hardcode ~3 slots as a
@@ -784,11 +784,11 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   the implicit fallback, a `perform-action` grant, and later Phase 9's manual input), goes through
   `src/engine/actions.ts`:
   - **The intent is rule-shaped:** `{ action: RuleAction, targeting?: TargetSelector }`, the same
-    shape a script `Rule` carries, extended with **`gem: 'random'`** (uniformly among the actor's
+    shape a script `Rule` carries, extended with **`gemSlot: 'random'`** (uniformly among the actor's
     castable gems) and a **`'random'` target** (uniformly among valid targets). Script rules pass
     straight in; manual mode builds the same shape.
   - **`checkLegality(actor, intent, state)`** — **pure, draws nothing.** Can the actor take this
-    action at all (locks, an empty slot, no castable gem for `gem: 'random'`, no valid target)?
+    action at all (locks, an empty slot, no castable gem for `gemSlot: 'random'`, no valid target)?
     Used by the interpreter's lookahead and, later, by the UI to grey out illegal choices. "Can't
     act" is read from locks (exact once A3 makes locks passive).
   - **`resolveIntent(actor, intent, state)`** — **the single place action-level random draws
@@ -816,6 +816,8 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   a **warning** (not a block) on cross-side targeting. `always-cast` drops its explicit selector,
   which fixes enemy support casters healing and buffing the *player* (review finding B1). The side
   default is the engine's built-in fallback only; a script-level override is a Phase 6 decision.
+  A rule without targeting uses this default target everywhere a rule's target is read, including
+  the `acted-before-target` condition's lookahead peek (pure, no RNG; 4.1-C plan review).
 - **Every action source obeys the same rules** (Phase 4.1-C, B2):
   1. A creature whose turn is skipped (an `'all'` lock: Stun, Sleep) takes **no action of any
      kind** that turn, granted ones included. Passive turn-end effects still fire.
@@ -829,8 +831,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   real traits deal damage there. After an instance's pre-hit hooks, the target is re-checked: if it
   died, **that hit fizzles** (no damage, no status, no payload, no second `on-damage-dealt`). Later
   instances fall back per rule 4 above. AOE already skips dead members.
-- **Interpreter** = pure engine code: `decideAction(creature, script, state) -> Action` (the Phase 1
-  seam, now consulting the script; RNG only via `CombatState`'s seeded RNG). **Side-effect-free
+- **Interpreter** = pure engine code: `decideAction(creature, script, state) -> Intent` (the Phase 1
+  seam, now consulting the script; from 4.1-C it returns the winning rule's **unresolved** intent,
+  or the fallback intent, and `resolveIntent` + `executeAction` turn it into the action; RNG
+  only via `CombatState`'s seeded RNG). **Side-effect-free
   lookahead**: walk the ordered rules top-down; a rule matches only if its **condition is true AND
   its action is valid** (invalid → **skip to next rule**, never match-and-fizzle); first match wins;
   only then execute. **Validity-checking is an *existence* check, never a resolution** — e.g. a
@@ -905,7 +909,7 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   `always-defend`, `always-provoke`, `always-wait`. They stay (tests use them).
 - **Role scripts** (Phase 4.1-G, D4) — six stock scripts that give enemies readable behaviour and
   give summoned creatures a sensible default. A creature's **`defaultScriptId` is its role**.
-  "Random gem" = uniformly among the creature's castable gems (`gem: 'random'`); each gem's target
+  "Random gem" = uniformly among the creature's castable gems (`gemSlot: 'random'`); each gem's target
   comes from the side-aware default. A "cast random gem" rule **below** an Attack rule only fires
   when Attack is illegal, which in practice means **Pacified** (Pacify turns attackers into erratic
   casters instead of idling):

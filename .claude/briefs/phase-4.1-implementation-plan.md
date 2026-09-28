@@ -58,7 +58,7 @@ that each has a single golden policy (confirmed with the design owner):
 |---|---|---|
 | **4.1-A** | Data, store & generation | Engine goldens untouched; store/generation tests pin the Phase-4 placeholder config |
 | **4.1-B** | Engine foundations: plain-data state, instance ids, fight setup, conditions, innate spells, revive cap | **Byte-identical, all goldens** |
-| **4.1-C** | One action pipeline + turn skeleton | Deliberate changes, listed |
+| **4.1-C** | One action pipeline + turn skeleton, shipped as **C1** (turn skeleton) then **C2** (pipeline) | C1: deliberate, listed; C2: **byte-identical, all existing goldens** |
 | **4.1-D** | Spells carry responses | **Byte-identical, all goldens (hard requirement)** |
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify | Deliberate changes, listed |
@@ -107,11 +107,13 @@ src/engine/
                          action-lock / turn-order / friendly-fire / status damage-modifier passives
   effects.ts        CHANGE (B) unique instance ids from the per-fight counter, baselineEffects;
                          (F) iterator flattens status effects, immunity checked here once
-  interpreter.ts    SLIM (C) lookahead uses checkLegality; isActionSuppressed removed
+  interpreter.ts    SLIM (C) lookahead uses checkLegality; isActionSuppressed removed;
+                         decideAction returns an unresolved Intent
   targeting.ts      CHANGE (C) override pipeline called from resolveIntent for every source
   types.ts          CHANGE (A) Creature.origin; (B) CombatState.rng bookmark, instance counter,
                          Creature.baselineEffects, Creature.revivesUsed, traits/playerWideEffects
-                         removed; (D) Spell = { …, targetSide (required), effects }
+                         removed; (C) ActionStateEnded event; (D) Spell = { …, targetSide
+                         (required), effects }
   generation.ts     CHANGE (A) materializeCreature options object, BalanceConfig argument;
                          (G) full distinct gem sets + safety net, role-aware cast check
   curves.ts         CHANGE (A) reads BalanceConfig parameters (no literals left)
@@ -169,7 +171,7 @@ Cross-reference this table when implementing. "Deleted" rows are removed outrigh
 | `SpeciesCreature.equippedSpells` | Data field | B | **Deleted** |
 | `MAX_REVIVES_PER_CREATURE = 10`, `Creature.revivesUsed` | Config + engine field | B | Ineligible dead allies excluded; empty pool fizzles, no draw |
 | `actions.ts`: `checkLegality`, `resolveIntent`, `executeAction` | Module | C | One pipeline for every action source |
-| Intent `{ action: RuleAction, targeting? }` + `gem: 'random'` + `'random'` target | Type | C | Rule-shaped intent |
+| Intent `{ action: RuleAction, targeting? }` + `gemSlot: 'random'` + `'random'` target | Type | C | Rule-shaped intent |
 | `ResolutionContext { events, cascade, runAction }` | Transient resolver object | C | Replaces `onEchoCast` and loose `events`/`cascade` args |
 | Optional rule targeting, side-aware default | Interpreter rule | C | `lowest-hp-enemy` / `lowest-hp-ally` by intended side |
 | Implicit fallback as an intent | Interpreter rule | C | The fallback attack uses the side-aware default (`lowest-hp-enemy`) like any rule; script-less goldens are rewritten |
@@ -386,9 +388,33 @@ and listed.
 Items: **A1, B1, B2, B5, D6 skeleton** (+ deleting `is-provoking`). This PR carries deliberate
 golden changes, listed below; everything else stays byte-identical.
 
+**Split into two PRs (decided at the 4.1-C plan review), one golden policy each.** Applying each
+C change alone to `main` @ `c9ba34b` showed that **all existing-golden churn comes from D6**; B1,
+B2 (including rule 4) and B5 change no existing golden, so each needs a new discriminating golden.
+- **C1 — D6 skeleton + delete `is-provoking`.** Deliberate; exactly 11 goldens change. `TurnEnded`
+  reorders in `golden-b4-cleanse-then-tick`, `golden-b4-remove-then-reapply`,
+  `golden-heal-scaling-count`, `golden-heal-scaling-stat` (the "three `on-turn-end` goldens" below
+  predate the two B4 goldens) and `golden-sorcerer-starter`. `ActionStateEnded` is added in
+  `golden-defend-count-additive-cap`, `golden-defend-count`, `golden-on-action-hooks`,
+  `golden-provoke-redirect`, `golden-scripted-1v1` and the integration golden `golden-6v6-scripted`
+  (regenerated, checkpoint-verified). `golden-shieldbarer-starter` asserts first-turn events only
+  and does not change. The bonus cast sits in the granted-actions step but is still today's
+  executor. New: the B6 golden.
+- **C2 — A1 pipeline + `ResolutionContext` (full threading, as CONVENTIONS specifies) + B1 + B2
+  + B5.** **Every existing golden stays byte-identical**; the only deliberately changed existing
+  test is the interpreter unit test that pinned "a targeting-less rule is skipped". The
+  "script-less fallback retargets" category below turns out to be **empty** (every existing
+  fallback golden has coinciding targets), so C2 adds a discriminating fallback golden. Rule 4 is
+  a real change (today's instance fallback is first-by-slot with no Provoke) and
+  `getDefaultTarget` is deleted. Draw order is pinned for byte-identity: `gemSlot: 'random'` draws
+  before the target; the `'random'` target draws over today's `random-enemy`/`random-ally` pool
+  and order. On a skipped turn, bonus-cast still rolls its chance (a passive turn-end effect) and
+  the granted cast is then refused. C2 adds the seed-sweep test from "Verification". If C2 is too
+  large, it splits into a pure refactor and the behaviour changes, both byte-identical.
+
 ### A1 — `actions.ts`
 - **Intent** = `{ action: RuleAction, targeting?: TargetSelector }`; `RuleAction`'s cast gains
-  **`gem: number | 'random'`** (random = uniformly among castable gems, ASSUMPTION 13), and
+  **`gemSlot: number | 'random'`** (random = uniformly among castable gems, ASSUMPTION 13), and
   `TargetSelector` gains a **`'random'`** variant (uniform over living creatures on the action's
   intended side, ASSUMPTION 14).
 - **`checkLegality(actor, intent, state)`** — pure, draws nothing: locks (today's scoped suppression;
@@ -517,9 +543,9 @@ Item: **A2.** Bonus-cast and echo-cast become data.
   `EchoCastGranted` is deleted.
 - **Content:**
   - Arcane Surge: `on-turn-end`, `chancePercent: 50` → `perform-action(self, { action: { kind:
-    'cast', gem: 'random' } })`.
+    'cast', gemSlot: 'random' } })`.
   - Resonant Overtone: `on-action-observed` (ally cast), `chancePercent: 10`, `stacks: false` →
-    `perform-action(triggering-source, { action: { kind: 'cast', gem: 'random' }, targeting:
+    `perform-action(triggering-source, { action: { kind: 'cast', gemSlot: 'random' }, targeting:
     'random' })`.
 - **Delete** the `bonus-cast` category (`BonusCastDef`, `activeBonusCast`, `maybeFireBonusCast`),
   `TriggeredDef.echoCast` and `runEchoCast`.
@@ -761,7 +787,7 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 12. **`newGame({ seed })` resets everything** (spec, collection, souls, perks, bosses, depth,
     `lastFloor`, currencies, counters) and leaves the scripted intro to be run separately; `src/app`
     generates the seed with `crypto.getRandomValues`.
-13. **`gem: 'random'`** picks uniformly among the actor's **castable** spells, innate included:
+13. **`gemSlot: 'random'`** picks uniformly among the actor's **castable** spells, innate included:
     non-empty, not locked, with at least one valid target on its intended side.
 14. **`'random'` target** = uniform over living creatures on the action's intended side (today's
     echo draw), then the override pipeline for enemy-side single targets.
@@ -797,7 +823,7 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     exists only so save v1 never needs reshaping).
 28. **`TurnSkipped` names the first `'all'` lock in canonical effect order** when two are active.
 29. **The `support` role's ally-side gem filter is an engine change** in G: the cast intent's
-    `gem: 'random'` gains an optional `side` filter (shape pinned by the G plan).
+    `gemSlot: 'random'` gains an optional `side` filter (shape pinned by the G plan).
 30. **Silenced and Pacified have polarity `debuff`.**
 
 ## Sequencing summary
