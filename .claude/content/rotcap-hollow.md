@@ -1,6 +1,7 @@
 # Rotcap Hollow (Biome 3, floors 21–30) — content reference
 
-Status: shipped — Phase 4 Slice H3, revised per content review and PR #64 review. Source:
+Status: shipped — Phase 4 Slice H3, revised per content review and PR #64 review; Phase 4.1
+changes decided (see the last section). Source:
 creature/species composition in `src/data/species/rotcap-hollow.ts`; trait definitions in
 `src/data/traits/rotcap-hollow.ts`; spell definitions in `src/data/spells/rotcap-hollow.ts`;
 Spore/Confusion in `src/data/statuses.ts`. Design source: `.claude/species/species-locked.md`'s
@@ -22,7 +23,9 @@ creatures share the *same* mechanic instead, just at a bigger scope or a bigger 
 rises (the Resonants/Gloomjaws pattern from Glimmerdark).
 
 Every status below counts its duration down in **rounds** (once at the end of each round), the
-same as every other status in the game — never per individual turn.
+same as every other status in the game — never per individual turn. **This changes in Phase
+4.1-F:** every status will count down in its **bearer's own turns**, and damage-over-time ticks at
+the end of each of the bearer's turns (see the last section).
 
 ## Statuses
 
@@ -120,3 +123,37 @@ rule Puppet String follows. The nearest comparison point in the existing pool is
 (Instinct), the game's other damage-plus-DoT spell, at 40% Intelligence.
 
 Charnel Feast can be cast on the caster's own side and hits every living ally at once.
+
+## Phase 4.1 — decided changes (pending build)
+
+Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
+lands.
+
+**Roles** (4.1-G; each creature's `defaultScriptId` becomes its role script, see CONVENTIONS
+"Role scripts"):
+
+| Creature | Role | Creature | Role |
+|---|---|---|---|
+| Sporecloud Seeder | striker | Necromoss Wisp | caster |
+| Sporecloud Reaper | striker | Necromoss Thicket | warden |
+| Sporecloud Bloomer | caster | Necromoss Hollowroot | support (casts its heals only when an ally is below 50%) |
+| Rotfeeder Scavenger | striker | Hollowkin Wretch | warden (provokes, then confuses whoever hits it) |
+| Rotfeeder Ripper | striker | Hollowkin Marionette | striker |
+| Rotfeeder Gorgemaw | striker | Hollowkin Puppeteer | striker |
+| Myconet Warder | warden | Sporch Igniter | striker |
+| Myconet Rotcore | warden (it wants to be hit) | Sporch Ashborn | caster |
+| Myconet Gravedigger | guardian (self-sustain that pays off by surviving) | Sporch Cinderlord | opener |
+| **Rot Sovereign** (boss) | warden | | |
+
+**Status timing (4.1-F):** Spore, Confusion and every other status count down in the **bearer's own
+turns**. Spore (and every DoT) ticks **at the end of each of its bearer's turns** instead of at round
+end, before that turn's countdown. A status applied during its bearer's own turn starts counting the
+next turn. Spore's spread on death is unchanged.
+
+**Casting roles (4.1-G):** Necromoss Hollowroot is no longer the biome's only spellcaster:
+Sporecloud Bloomer, Necromoss Wisp and Sporch Ashborn are casters and Sporch Cinderlord an opener.
+Update the creature descriptions when the roles land.
+
+**Enemy support casters (4.1-C):** Necromoss Hollowroot's ally spells (Regrowth, Afterglow, Wild
+Vigor, …) now land on **its own side** by default. In Phase 4 an enemy support caster targeted the
+player's lowest-HP creature, healing and buffing the player.

@@ -4,7 +4,7 @@
 force. (Contrast: Sorcerer = affinity-flexible caster, Shieldbarer = Defence/provoke.) All content
 stays reachable by every spec.
 
-**Starter:** high Attack. Trait: **Attack resolves one additional instance** — Attack executes
+**Starter:** *Cragfang Mauler* (placeholder name), Violence affinity, high Attack. Trait: **Attack resolves one additional instance** — Attack executes
 twice at 100%, each a *real attack* firing `on-attack` (same target as the first, default-target
 fallback if it died). An **instance-list** modifier (not an on-attack trigger), consistent with
 Flurry.
@@ -35,10 +35,17 @@ system is P8). **Aggressive Caster** is functional whenever a creature casts —
 seed to the same degree casting is thin for everyone. Splashing (half of Proficient Warrior) works in
 the seed once adjacency is built.
 
+*The Phase column is a design-record annotation. The code carries no phase tag (Phase 4.1-G
+removes `PerkDef.phase`): inert perks get a code comment, a data test lists them, and the Phase 4.5
+demo labels them "inactive until Phase 8". Inert perks are still buyable.*
+
+
 ## New mechanics this spec introduces (for the Phase-4 manifest)
-- **Pacified** — condition-status that **suppresses the Attack action only** (scoped suppress-action;
-  the mirror of Silenced). Applied by a **Wit spell** in the seed pool. Intrinsic effect = the
-  attack-lock. *(Silenced ⇄ Pacified: each affinity's anti-tool against the other's core action.)*
+- **Pacified** — a status whose effect is **`action-lock { scope: 'attack' }`** (the mirror of
+  Silenced). Applied by the **Wit spell Pacify**, a pure status spell (`effects:
+  [apply-status(pacified)]`, no damage, cap 1, default duration 3, unlocked at biome 1). *Missed in
+  Phase 4 (Aggressive was buyable and inert); authored in Phase 4.1-F.* A Pacified creature running
+  a role script falls through to "cast a random gem". Intrinsic effect = the attack-lock. *(Silenced ⇄ Pacified: each affinity's anti-tool against the other's core action.)*
 - **Adjacency targeting** — slot-adjacency, **built now** (un-defers the biome-4+ adjacency
   deferral; Splashing is its first consumer). Edge-case for coding agent: adjacent *slots* vs
   adjacent *living creatures*.

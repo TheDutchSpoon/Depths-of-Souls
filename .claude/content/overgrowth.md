@@ -1,8 +1,9 @@
 # The Overgrowth (Biome 1, floors 1–10) — content reference
 
-Status: shipped — Phase 4 Slice H1. Source: creature/species composition in
-`src/data/species/overgrowth.ts`; trait definitions in `src/data/traits.ts`; spell definitions in
-`src/data/spells.ts`; Web/Sleep in `src/data/statuses.ts`. Design source:
+Status: shipped — Phase 4 Slice H1; Phase 4.1 changes decided (see the last section). Source:
+creature/species composition in `src/data/species/overgrowth.ts`; trait definitions in
+`src/data/traits/overgrowth.ts`; spell definitions in `src/data/spells/overgrowth.ts` (shared core
+spells in `src/data/spells/core.ts`); Web/Sleep in `src/data/statuses.ts`. Design source:
 `.claude/species/species-locked.md`'s Biome 1 table.
 
 This doc is the **player-facing reference** — every trait and spell below is written as a single,
@@ -25,8 +26,10 @@ common/uncommon species-mates. Rarity only changes how often it spawns.
 
 ## Statuses
 
-**Web** — A Webbed creature acts last in the round. Each turn, it has a **10% chance** to break
-free early. Web never lasts more than **3 turns**, regardless of whether it breaks free.
+**Web** — A Webbed creature acts last in the round. **Every time any creature takes a turn** (not
+only the Webbed one), the Web has a **10% chance** to break — so in a full 6v6 fight a Web usually
+breaks within one round (about 72% of the time). Web never lasts more than **3 turns**, regardless
+of whether it breaks free.
 
 **Sleep** — A Sleeping creature's turn is skipped entirely. The instant it takes any damage, it
 wakes up — the hit that wakes it still lands its own bonus (see Reaper below) before Sleep is
@@ -150,3 +153,55 @@ tagged `unlockedAtBiome: 1`, meaning it stays rollable by any affinity-matched c
 biome from here on — Glimmerdark and Rotcap Hollow inherit this entire list rather than
 re-authoring their own version of it. See `.claude/content/glimmerdark.md` for what biome 2 adds
 on top.
+
+## Phase 4.1 — decided changes (pending build)
+
+Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
+lands, the same way numbers are kept in sync.
+
+**Roles** (4.1-G; each creature's `defaultScriptId` becomes its role script, see CONVENTIONS
+"Role scripts"):
+
+| Creature | Role | Creature | Role |
+|---|---|---|---|
+| Spider Weaver | caster | Pollinator Duster | support |
+| Spider Ambusher | striker | Pollinator Beneficiary | caster |
+| Spider Broodwarden | striker | Pollinator Pollenlord | caster |
+| Swarmhive Drone | opener | Snapjaw Lure | `always-provoke` (its trait fires on Provoke) |
+| Swarmhive Striker | striker | Snapjaw Jaws | striker |
+| Swarmhive Queen | warden | Snapjaw Ironjaw | striker |
+| Treant Sapling | guardian (self-ramping: wants to survive, not draw fire) | Lullpollen Sleeper | striker |
+| Treant Elder | warden | Lullpollen Reaper | striker |
+| Treant Grovekeep | warden | Lullpollen Dozer | striker |
+| **Broodmother** (boss) | striker | | |
+
+**New biome-1 spells:**
+
+| Spell | Affinity | Slice | Description (numbers set in the 4.1-H tuning pass) |
+|---|---|---|---|
+| Silence | Violence | 4.1-F | Silences a single enemy (it can't cast) for 3 turns. No damage. |
+| Pacify | Wit | 4.1-F | Pacifies a single enemy (it can't attack) for 3 turns. No damage. |
+| Pounce | Instinct | 4.1-G | A single-target hit whose damage scales off the caster's **Speed**. |
+| Stifling Weight | Endurance | 4.1-G | Weakens a single enemy. No damage. |
+| Life Siphon | Vitality | 4.1-G | A single-target hit that also heals the caster. |
+
+With these, every affinity has at least three biome-1 spells, so every enemy can roll a full set of
+three distinct gems (a data test guards it).
+
+**Phase 4.5 clean-up (decided):** Ember Lance and Venom Bolt are deleted (no niche: Venom Bolt
+overlaps Stinger Swarm). **Cinder Nova is kept and promoted** to real Overgrowth content, as the
+pool's only plain AOE damage spell, with a reviewed name and numbers.
+
+**Status timing (4.1-F):** Web, Sleep and every other status count down in the **bearer's own
+turns**, at the end of each of its turns; damage-over-time (e.g. Venom Bolt's Poison, while it
+exists) ticks at the end of each of its bearer's turns instead of at round end. A status applied
+during its bearer's own turn starts counting the next turn. Web's break roll moves to the end of each
+creature's turn (still 10%, still at every creature's turn).
+
+**Casting roles change the "only spellcaster" notes:** once roles land (4.1-G), Pollenlord is no
+longer the biome's only caster: Spider Weaver and Pollinator Beneficiary become casters, Pollinator
+Duster a support and Swarmhive Drone an opener, and every enemy carries a full gem set. Update the
+creature descriptions when the roles land.
+
+**Stun has no real source** in the seed content for now (no trait or spell applies it); it stays in
+the status vocabulary.

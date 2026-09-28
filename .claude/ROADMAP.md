@@ -37,7 +37,8 @@ path, CI build, Pages serving, asset loading) is proven end-to-end.
 - From here, every phase is continuously deployed: merging to `main` re-runs tests and republishes,
   so "does it work hosted" is answered on every push, not deferred to Phase 10.
 - **Environments** (see CONVENTIONS → Deployment): `main` → production URL; each PR → an ephemeral
-  **preview** deploy, torn down on close. Drive per-environment differences (base path, IndexedDB
+  **preview** deploy, torn down on close (**planned, never built** — only the production deploy
+  exists). Drive per-environment differences (base path, IndexedDB
   name, debug flags) off a single **Vite mode**. **Namespace IndexedDB per environment**
   (`depths-of-souls` prod / `depths-of-souls-dev`) from the start — prod and dev share an origin, so a shared DB name would
   let a dev build corrupt a real save. (No save code exists until Phase 5, but fix the DB-naming
@@ -79,6 +80,9 @@ against scope creep into Phase 7's real combat UI, and against leaking any React
 into `src/engine/`. Full brief: `.claude/briefs/phase-1.5-tooling-and-demo.md`.
 
 ## Phase 2 — Actions, spells & scripting interpreter
+*(As built. Phase 4.1 deletes `is-provoking`, makes rule targeting optional with a side-aware
+default, moves the implicit fallback's target from first-by-slot to the lowest-HP enemy, and adds
+six role scripts; see Phase 4.1.)*
 - Flesh out the action set: **Attack, Cast, Defend, Provoke, Wait**. Spells (Cast) are data
   with **no cost and freely castable**, carry a **target shape** (single / all-enemies) and a
   **spellPower** coefficient (scales OffStat pre-Defence; Attack = 1.0). A rule's Cast references a
@@ -121,6 +125,8 @@ guardrails: consumes the engine, engine stays pure, real content not fixtures, e
 by Phase 7. Separate PR after Phase 2.
 
 ## Phase 3 — Traits, statuses & the effect framework (activate the dormant seams)
+*(As built. Phase 4.1 re-times statuses to the bearer's turns, replaces `suppress-action` with
+passive action locks and the conditional-passive predicate with a data condition; see Phase 4.1.)*
 - **Hook execution model**: scoped iteration (per-creature at per-creature points; all creatures in
   tie-break order at global points) behind an **`effectsForHook`** lookup (index deferred). Hooks
   reuse action machinery + shared consequence events; a **`TriggerFired`** intent event precedes
@@ -197,6 +203,57 @@ grill); the **coding agent's implementation plan owns the slice breakdown** —
 - Data-driven enemy generation and a **floor→enemy-level-range curve** (config, not literals) —
   enemies are ordinary creature instances at that level, not a separately-scaled stat block.
 
+## Phase 4.1 — Fix & consolidation pass
+*Brief: `.claude/briefs/phase-4.1-implementation-plan.md`. Source: the Phase 4 close-out review,
+every point decided with the design owner and synced into GAME_DESIGN / CONVENTIONS and the brief.*
+Phase 4 shipped green, but the review found that it wasn't done (Silenced/Pacified never authored,
+no creature names, the game crashing at the content frontier), several real bugs (enemy support
+casters healing the player, extra actions ignoring every action rule, a shared RNG closure inside
+"immutable" snapshots, hooks firing effects that were already removed, hits landing on corpses,
+Stunned creatures keeping Defend/Provoke), and save-v1 shapes that needed deciding before Phase 5.
+It also found side-channels ("not a 10th verb", "not a new category") where most of the bugs came
+from. Phase 4.1 fixes and consolidates all of it now, while the engine goes quiet through Phases
+5–7. **Eight slices, strictly A → H**, each branched from `main` after the previous merge, each
+under one golden policy (fully byte-identical, or only listed deliberate changes); a slice whose PR
+still gets too big is split further. (Slice letters are written `4.1-A` … `4.1-H`; the review's
+finding labels B1, A4, … are a separate scheme.)
+- **4.1-A — data, store & generation:** creature `name` + placeholder starter names; the store
+  action rule (`{ ok: false, reason }`, `can…` queries), `descend` returning a result, the content
+  frontier; `lastFloor` (hub + atomic floor runs, `travelTo` deleted); `Creature.origin` and
+  `materializeCreature` named options; the save-v1 `Instance` shape and `Map<InstanceId, Instance>`;
+  `BalanceConfig` with the decided defaults; the Vitest Node/jsdom split.
+- **4.1-B — engine foundations (byte-identical):** plain-data RNG; unique effect instance ids; named
+  `createCombat` inputs + `baselineEffects`; `SelfCondition`; innate spells; the revive cap.
+- **4.1-C — action pipeline & turn skeleton:** one action pipeline (`actions.ts`,
+  `ResolutionContext`); side-aware default targeting (the implicit fallback included); one rule set
+  for every action source; pre-hit fizzle; the turn skeleton (turn-start cleanup, `ActionStateEnded`,
+  `TurnEnded` last); `is-provoking` deleted.
+- **4.1-D — spells carry responses (byte-identical):** `Spell.effects`, `cast-target`.
+- **4.1-E — `perform-action`:** actions atomic, `ActionGranted`, "no side doors"; bonus-cast and
+  echo-cast become data.
+- **4.1-F — statuses & status timing:** statuses as effect containers (`action-lock`, `TurnSkipped`,
+  the no-temporary-stat-modifier validator); status timing in bearer turns; Web's roll in turn-end
+  cleanup; Silence and Pacify authored.
+- **4.1-G — hub actions & enemy behaviour:** `summon`, `setPartySlot`; `setPerkLevel` /
+  `refundAllPerks` and no `PerkDef.phase`; `newGame({ seed })`; role scripts, full enemy gem sets,
+  three new biome-1 spells, stored player gem sets.
+- **4.1-H — balance:** the deterministic balance simulator and a first tuning pass.
+- **No demo of its own** (a fix phase): the Phase 4.5 demo covers Phase 4 and 4.1 together
+  (CONVENTIONS "Every feature phase ships a demo").
+
+## Phase 4.5 — Run-loop demo (interlude)
+*Brief: to be written after 4.1-H merges.* The throwaway visual demo for Phase 4 **and** 4.1,
+replacing the 3.5 demo on the live site. It comes **after the fixes and before Phase 5**
+deliberately: if the run loop were first exercised in a browser after persistence lands, run-loop
+bugs and save bugs couldn't be told apart. Rough intent (the brief pins scope): spec pick →
+scripted intro → floor-by-floor descent with the paced log viewer, plus a side panel (floor, biome,
+soul %, XP/level, currencies), party arrangement and summoning, fast-travel, boss floors, and perks
+(inert perks labelled "inactive until Phase 8"). The baseline demo-UX carries forward. Includes the
+**content clean-up** decided at the review: the nine Phase-3 placeholder traits move out of game data
+into test-only fixtures (goldens byte-identical), Ember Lance and Venom Bolt are deleted, Cinder
+Nova is promoted to real biome-1 content (the pool's only plain AOE damage spell, with reviewed name
+and numbers). Same guardrails as every demo; own brief + phase record.
+
 ## Phase 5 — Persistence (large saves)
 - Versioned save/load with **IndexedDB as the primary store** (saves are large);
   `localStorage` only for settings. One migration scaffold even if trivial. One global version
@@ -206,11 +263,23 @@ grill); the **coding agent's implementation plan owns the slice breakdown** —
 - Export/import to file, **compressed at the export/import boundary only** (e.g. native
   `CompressionStream`); IndexedDB records stay uncompressed. Autosave on debounce, never
   blocking the game loop.
+- **Inputs already decided (Phase 4 close review):** the store's `snapshot()` / `hydrate()`
+  boundary (specified in this phase's brief; `newGame({ seed })` lands in 4.1-G); the state uses
+  `Map`/`Set`, so the codec needs a round-trip test; a Vite-mode env module for the IndexedDB name
+  (`depths-of-souls` vs `-dev`); partitions: `meta` = depth, `lastFloor`, spec, perks, bosses,
+  biomes, pins, party, seed and counter; `collection` = instances (incl. their `gems`) and souls;
+  `inventory` = currencies; `facilities` and `scripts` start empty. `runSeed` + `runCounter` are
+  already save-ready.
 
 ## Phase 6 — Scripting UI
 - The block/dropdown rule editor (no free text). Author **script templates** and assign a
   template to each creature (one template can be shared by many).
 - Reorder rules (drag), live-preview validity.
+- **Inputs recorded at the Phase 4 close review:** a **warning, not a block**, on cross-side
+  targeting (the engine resolves explicit selectors literally); grey out illegal choices with the
+  store's `can…` queries and the engine's `checkLegality`; candidate conditions "target lacks status X" (casters currently refresh statuses they
+  already applied) and a `last-action` condition (script memory); whether a script-level default
+  target overrides the engine's side-aware default.
 
 ## Phase 7 — Combat UI & feedback
 - Render combat from the event log: turn-by-turn playback, fast-forward, speed control.
@@ -222,9 +291,12 @@ grill); the **coding agent's implementation plan owns the slice breakdown** —
   Altar, Storage/Vault, Biome Atlas) as data; all actions resolve instantly (no timers). Only
   Gem Forge/Equipment Forge/Fusion Chamber have upgrade tiers (v1: cap-raising only); the rest
   are one-time builds. Includes the Biome Atlas, unlocked once all biomes are discovered.
-- **Fusion**: once per creature (track `hasFused`); result takes identity from parent-1 creature,
-  affinity from parent 2, averaged base stats, both innate traits; species-agnostic (but not
-  self-fusable); player picks fusion order.
+- **Fusion**: once per creature (`hasFused` is derived from the instance's recipe source);
+  result takes identity from parent-1 creature, affinity from parent 2, averaged base stats, both
+  innate traits (innate spells travel with their trait); species-agnostic (but not self-fusable);
+  player picks fusion order.
+- **Gems become inventory**: a save migration turns each instance's stored random `gems` set into
+  real level-1 gems. Summoning gains the Soul Altar gate.
 - Further unlocks and equipment variety. **No prestige, no resets** — progression is
   forward-only. (Masteries were considered and dropped from scope.)
 - This is where the long-term game lives; only meaningful once 1–7 are solid.

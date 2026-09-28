@@ -4,7 +4,7 @@
 Defence into offence. (Contrast: Sorcerer = affinity-flexible caster, Brute = raw Attack.) All
 content stays reachable by every spec.
 
-**Starter:** high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide).
+**Starter:** *Stonehorn Warden* (placeholder name), Endurance affinity, high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide).
 *(Permanent-for-fight, so repeated provokes stack — a ramping team-Defence engine. Balance parked.)*
 
 **Perk rules:** effect-framework effect-carriers, combat-only; flat pool; spec valid iff
@@ -29,6 +29,11 @@ content stays reachable by every spec.
 ## Phase notes
 Almost entirely **Phase-4-functional** (a rich seed spec). Only **Shield Specialist** waits for P8
 (equipment system). Everything else is live combat.
+
+*The Phase column is a design-record annotation. The code carries no phase tag (Phase 4.1-G
+removes `PerkDef.phase`): inert perks get a code comment, a data test lists them, and the Phase 4.5
+demo labels them "inactive until Phase 8". Inert perks are still buyable.*
+
 
 ## New mechanics this spec introduces (for the Phase-4 manifest)
 - **Trait/response `scalingStat`** — deal-damage responses gain a scaling-stat (default **Attack**,

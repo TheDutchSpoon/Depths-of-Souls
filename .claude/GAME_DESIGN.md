@@ -78,7 +78,11 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   depth = harder creatures (scaling curve is config; see §13). Depth is **persistent** — the
   player keeps their deepest-reached floor; there is no per-run reset. From the entrance the
   player can **fast-travel to any floor up to their deepest-reached** (floor selection is a
-  UI feature; no need to re-walk cleared floors).
+  UI feature; no need to re-walk cleared floors). A descent is **atomic**: choosing a floor
+  resolves the whole floor at once (every fight, HP reset between them, no choices mid-floor) and
+  returns to the hub; the game remembers the **last floor** fought to pre-select it next time.
+  Descending past the last floor that has authored content is refused (the **content frontier**,
+  derived from the biome data: floor 30 while three biomes exist).
 - **Biomes**: the biome changes **every 10 floors** to the next in sequence. v1 ships
   **10 biomes** (so floors 1–10 are biome 1, 11–20 biome 2, … 91–100 biome 10; past floor 100,
   each floor's biome is chosen by **seeded-RNG draw from all 10 biomes** unless the player has
@@ -92,7 +96,8 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   largest content-authoring task in the project, and why creatures/traits must be data-driven).
 - **Fights & HP**: a floor contains a **depth-determined number of fights** (`fightCount(floor)`, a
   deterministic config function — **not** rolled; the fight *count* is stable across visits, only
-  the *creatures* re-roll) drawn from its
+  the *creatures* re-roll; default from Phase 4.1-A: **10 + (floor − 1)**, i.e. 10 fights on floor
+  1, one more per floor, uncapped) drawn from its
   biome pool. **Health resets to full between every fight** (including fights within the same
   floor) — there is no cross-fight attrition. A creature reduced to 0 HP is flagged as no longer
   alive and skipped in the turn order (its slot is retained, not deleted — see CONVENTIONS); death
@@ -113,6 +118,12 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   harder purely because enemy level outpaces the party's own leveling pace. Walls happen when
   that gap outpaces level + build. This makes the **floor→level-range curve the single most
   important balance lever** in the game (the curve's exact shape is config; see §13).
+  **Curve targets (decided at the Phase 4 close review):** the party's level should track roughly
+  **the floor number**; enemies sit at about **1.25× the floor at the start**, rising linearly to
+  **2× by floor 100**, then a further **+1 percentage point per floor** past 100 (for now). Enemy
+  count ramps **+1 per floor over floors 1–6**, so fights are full **6v6 from floor 6**. The player
+  wins the gap by **tactics and trait synergies**, not by out-levelling. These are targets a
+  deterministic balance simulator reports as bands, not hard rules.
 - **Generation is deterministic-per-seed, fresh-per-visit**: which **biome** sits on a floor is
   fixed (the 1–100 sequence, a seeded draw for 101+, or an Atlas pin), but the **specific creatures
   a floor spawns re-roll on every descent** — re-running a floor yields different draws. This is the
@@ -135,8 +146,9 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
     escalation; only interaction *scope* widens with later biomes.
   - **Spells unlock cumulatively (Phase 4 interstitial slice, pinned here):** unlike species/
     creatures, which are **biome-exclusive** (see below), the **shared spell pool is additive** —
-    every `Spell` carries an `unlockedAtBiome` (1-based biome number); a cast-role enemy's
-    loadout, and the player's own equip options once Phase 8 lands, are rolled/offered from
+    every `Spell` carries an `unlockedAtBiome` (1-based biome number); an enemy's loadout (every
+    enemy rolls a full set from Phase 4.1-G), and the player's own equip options once Phase 8
+    lands, are rolled/offered from
     **every spell whose `unlockedAtBiome` is `≤` the current biome**, filtered by affinity. A
     biome-1 spell stays available at every deeper biome; nothing is re-authored per biome once
     it exists. This is **the opposite rule from species/creature biome-exclusivity** below —
@@ -181,8 +193,11 @@ have no throughput axis to upgrade. v1 facility list:
   level equipment, using **Ore**.
 - **Fusion Chamber** — perform fusions **and** catch-up-level creatures up to the player's
   current highest-level creature, both fuelled by **Lifeforce**.
-- **Soul Altar / Summoning Circle** — summon instances of any species at 100% soul.
+- **Soul Altar / Summoning Circle** — summon instances of any creature at 100% soul. *(Until
+  Phase 8 builds facilities, summoning is available without the Altar; the gate is added with it.)*
 - **Storage / Vault** — manage the unlimited collection; organize the 6-slot active party.
+  *(Until Phase 8 builds facilities, party arrangement works without it; whether it stays ungated
+  is a Phase 8 call.)*
 - **Biome Atlas** — unlocked once **all 10 biomes are discovered**; assigns a biome to a chosen
   floor.
 
@@ -210,15 +225,19 @@ The game uses a **three-tier model**:
   design principle — see example below). Species has mechanical weight: **biomes spawn species**
   (the specific creature is chosen within the species; see §4).
 - **Creature** (the unit, a data template) = a specific creature within a species (e.g. "Black
-  Spider"). A creature carries its **affinity**, **base stats**, **innate trait**, a **default
-  script** (`defaultScriptId` — its role/behavior: attack / cast / provoke / defend, used when it
-  spawns as an enemy and as the player's starting script, overridable later), sprite, rarity, and
-  its parent species. This is the collectible thing (its own soul bar). *(Spells aren't
-  caster-gated — any creature has gem slots; a **cast-role** creature is generated with ≥1 castable
-  spell so it has something to cast.)*
-- **Instance** (owned, in save) = a copy of a creature the player owns: references a creature +
-  current **level/XP**, current **affinity** (may differ after fusion), **trait slots** (1
-  innate, or 2 after fusion), **equipped gems** (≤3), **equipped equipment** (1), `hasFused`.
+  Spider"). A creature carries its **name**, **affinity**, **base stats**, **innate trait**, a
+  **role** (its default script, `defaultScriptId`: one of the six role scripts in §8 — striker,
+  guardian, warden, caster, support, opener — used when it spawns as an enemy and as a summoned
+  creature's starting script, overridable later), rarity, and its parent species. This is the
+  collectible thing (its own soul bar). *(Spells aren't caster-gated — any creature has gem slots.
+  Every enemy rolls a full set of distinct gems from its affinity's unlocked spells; a creature
+  whose role casts always has something to cast.)*
+- **Instance** (owned, in save) = a copy of a creature the player owns. It **stores** only what
+  can't be derived: its **source** (a creature, or a fusion recipe of two creatures), current
+  **level/XP**, its assigned **script**, and (until Phase 8) a **gem set rolled when it is created**.
+  Its **affinity** (which may differ after fusion), **trait slots** (1 innate, or 2 after fusion),
+  base stats and fused-ness are **derived** from the source. Equipped gems as inventory items (≤3)
+  and equipment (1) arrive with Phase 8.
 
 > **Species-synergy example** — the Spider species:
 > - *Black Spider* — affinity **Instinct**; innate trait: deals **+30% damage to webbed enemies**.
@@ -228,7 +247,10 @@ The game uses a **three-tier model**:
 Each creature (the unit) has:
 
 - **Identity**: parent species, name, sprite/emoji placeholder, rarity (v1 ships **3 rarity
-  tiers — Common, Uncommon, Rare** — designed to expand with more tiers later).
+  tiers — Common, Uncommon, Rare** — designed to expand with more tiers later). The **name** is the
+  full display name (e.g. "Treant Grovekeep", "Broodmother"), stored whole, never assembled from
+  the species name. **Sprite/emoji is deferred to Phase 7**, which owns the asset format (no empty
+  field is added before then).
 - **Affinity**: one of **Vitality, Violence, Wit, Endurance, Instinct** — the *behavioral drive*
   the creature embodies (Vitality = teeming life/resilience, Violence = raw aggression, Wit = sharp
   cunning/mind, Endurance = stubborn toughness, Instinct = feral quickness). Affinity lives **on the
@@ -250,7 +272,11 @@ Each creature (the unit) has:
   slots** by default (modifiable by traits/effects). Scripts choose which equipped gem to Cast.
   See Spell gems below.
 - **Equipment**: **1 equipment slot** per creature (see §6 / Equipment).
-- **Level & XP**: creatures level **only via combat XP**. Stat growth is **linear and derived
+- **Level & XP**: creatures level **only via combat XP**. **Each kill grants XP equal to the
+  defeated creature's level** (to every party member); the XP needed per level grows with the
+  square of the level (default `20 × level²`, config), because the XP a floor yields grows with the
+  floor's square (more fights × higher-level enemies), so party level can track the floor at every
+  depth. Stat growth is **linear and derived
   purely from base stats** — there is *no separate growth-rate field*. Level-N stat =
   `round(base × (1 + 0.25 × (level − 1)))` — **rounded to the nearest integer**, recomputed from
   base each level (never accumulated, so no rounding drift); inputs are exact quarters, so the
@@ -272,34 +298,49 @@ Creatures are obtained via **souls**, not direct capture:
   the instant the creature dies**, regardless of how the fight as a whole ends (see §7
   Encounters).
 - **Rarer creatures grant less %** per defeat (slower to complete): soul-gain is a **flat
-  percentage, fixed per rarity tier** (no variance, no diminishing returns). Rarity is the knob;
-  depth does not affect soul gain in v1.
+  percentage, fixed per rarity tier** (no variance, no diminishing returns; config default from
+  Phase 4.1-A: **25% common / 20% uncommon / 10% rare**). Rarity is the knob; depth does not affect soul gain in v1.
 - There is **no way to target/bias which specific creature spawns** beyond choosing a biome (via
   discovery or the Biome Atlas); within a biome, the species → creature draw is pure
   rarity-weighted seeded RNG, by design (soul-hunting is an intentional grind/RNG loop).
 - At **100%** soul, the creature is **permanently unlocked** — the player can **summon** new
-  instances of it freely thereafter (at the Soul Altar). Soul% **caps at 100%** (no overkill).
+  instances of it freely thereafter (at the Soul Altar once Phase 8 builds it; before that,
+  directly from the hub). Summoning is free, duplicates are unlimited, and a new summon drops into
+  a free party slot if there is one. Soul% **caps at 100%** (no overkill).
 - **Bosses cannot be soul-collected** (they grant no soul%); they are unique challenges.
 - **Cold start**: the player begins with **exactly one creature**, determined by their starting
-  **specialization** (the starter fits the spec's playstyle). Building out a full party via
-  soul collection is an explicit early-game goal. **Floor 1 is solo-clearable** with the
-  starter, and the first soul completion comes fast — the opening is designed for quick
-  momentum (1 → 2 → 3 creatures in the first session), not a grind wall.
-- **Roster**: collection is **unlimited**; the active **party is 6**, swappable at the hub.
+  **specialization** (the starter fits the spec's playstyle), joined by the **Unicorn** in the
+  scripted intro. Building out a full party via soul collection is an explicit early-game goal.
+  **Floor 1 is solo-clearable** with the starter, and the first soul completion comes fast — the
+  opening is designed for quick momentum: **a full party of 6 within the first session** (taken as
+  the first 10 floor runs), not a grind wall. More creatures means more options, and early floors
+  ramp enemy count toward 6v6 alongside it (§4).
+- **Roster**: collection is **unlimited**; the active **party is 6**, freely arranged at the hub
+  (any instance into any slot; moving one onto an occupied slot swaps the two). The Unicorn is
+  **permanently owned** but can be benched like any creature.
   **Duplicate creatures are allowed** across party slots (two instances of the same creature can
   both be active at once) — instances are independent (level, gems, equipment, fusion state).
 
 ### Spell gems
-- A **gem** carries one spell (Intelligence-scaled via the damage formula, optional status,
-  target shape) and is modeled as `{ spell, level, augments: Augment[] }`.
+- A **gem** carries one spell and is modeled as `{ spell, level, augments: Augment[] }`. A
+  **spell** is a target shape (single / all), an intended **target side** (enemy / ally) and a list
+  of **effects**: the same responses traits use (deal damage, heal, apply a status, apply a
+  stat-modifier, remove a status, …), run once per target it lands on. So a status-only spell, a
+  cleanse or a drain is just data, and an augment simply **adds effects** to the list.
+- **Innate spells**: a trait may grant a creature a spell of its own (the Sorcerer starter's Arcane
+  Bolt). An innate spell is **not a gem**: it can't be levelled or augmented, it needs no matching
+  affinity (it isn't equipped), it sits in an extra slot **before** the regular gem slots, and it
+  **travels with its trait through fusion**. The same spell can also exist as an ordinary gem.
 - **Spell affinity & equip-gating**: every spell carries an **affinity** (one of the five — Vitality,
   Violence, Wit, Endurance, Instinct) and is **equippable only on a creature of matching affinity**, tying
   loadouts to a creature's domain instead of letting anything cast anything. The gate governs
   **equipping only** — it does **not** feed the damage affinity cycle, which stays keyed on the
   **caster's** affinity (§7). **Enemy** loadouts are **rolled at generation** from the
-  affinity-matched pool (fresh per visit, reproducible from seed); **player** loadouts are
-  player-chosen and persistent (gem-equipped from Phase 8). *(An off-affinity exception via a
-  trait/perk is parked post-beta — §13; until then the gate is universal.)*
+  affinity-matched pool (fresh per visit, reproducible from seed): **every enemy rolls a full set
+  of distinct gems**. **Player** loadouts are player-chosen and persistent from Phase 8; until then
+  each owned instance **rolls a random gem set when it is created** and keeps it (Phase 8 converts
+  it into real level-1 gems). *(An off-affinity exception via a trait/perk is parked post-beta —
+  §13; until then the gate is universal. Innate spells are outside the gate.)*
 - **Seed spell set (Phase 4 content).** ~10 spells per affinity (~50 total), authored as **data
   against a shared template** (not designed one-by-one). Every affinity gets the full kit —
   **damage** (single + AOE), **stat-buff** (self/ally) and **stat-debuff** (enemy) — both permanent
@@ -313,8 +354,10 @@ Creatures are obtained via **souls**, not direct capture:
     built Spell (see Phase-4 systems addenda in CONVENTIONS).
   - **Scaling:** off **Intelligence by default**; a minority off their **affinity's mapped stat**
     (flavored exception); other-stat rare; **flat** (Int-independent) allowed for pure utility.
-    Carried by a per-spell `scalingStat` field (`Intelligence | Health | Attack | Defence | Speed |
-    none`).
+    Carried by a `scalingStat` (`Intelligence | Health | Attack | Defence | Speed | none`) on the
+    spell's damage/heal effect.
+  - **Every affinity has at least 3 biome-1 spells**, so every enemy's full distinct gem set can
+    be filled from biome 1 on (a data test guards it).
   - Spell **flavor and affinity are independent layers** — an elementally-named spell can carry any
     behavioral affinity; no renaming needed.
 - **Gem level governs how many augment slots** the gem has (not its damage — damage is purely
@@ -365,7 +408,8 @@ Two creatures fuse into a single resulting creature, at the **Fusion Chamber**, 
 > Terminology note for implementation: **species** = the grouping (data: a set of creatures +
 > thematic identity, used by biome spawn tables); **creature** = the specific unit (data:
 > affinity, base stats, innate trait, sprite, rarity, parent species); **instance** = an owned
-> copy (level/XP, current affinity, trait slots, equipped gems/equipment, `hasFused`). **Affinity**
+> copy (stored: source or fusion recipe, level/XP, script; derived: affinity, trait slots,
+> stats, fused-ness; gems/equipment from Phase 8). **Affinity**
 > lives on the creature/instance, separate from identity, so fusion is a clean field-level
 > recombination: identity from parent-1 creature, affinity from parent-2, averaged base stats,
 > both innate traits. **There is no growth-rate field** — level-N stat = `round(base × (1 + 0.25 ×
@@ -381,13 +425,21 @@ use — not in their underlying machinery. This is a hard invariant (see CONVENT
 model underpins all of them, so new content is data and genuinely novel behavior is at most one
 reusable hook primitive.
 
-An effect declares: a **kind/category** (see taxonomy below), a **magnitude**, a **duration**
-(where applicable), a **stacking rule**, one or more **hooks** (when it acts — on-apply,
-start-of-turn, end-of-turn, on-the-creature's-turn, on-damage-taken, on-damage-dealt, on-expiry,
-…), and its payload.
+An **effect** is the mechanical unit: either a **passive** (always on while attached, e.g. "+25%
+Attack", "ignores 30% of Defence", "acts last") or a **trigger** (a hook, an optional condition or
+chance, and a response). A **carrier** attaches a list of effects to a creature:
+- a **trait** carries effects permanently for the fight;
+- a **status** is a **timed, stacking container of the same kinds of effects** (it owns duration,
+  stacking and "has status X"; its effects own what it does). Poison is a status carrying a
+  damage trigger; Weaken carries a damage-dealt reduction; Web carries "act last"; Stun carries
+  "can't act";
+- gem augments and equipment infusions (Phase 8) are carriers of the same effects.
+This is what "one framework" means in practice: any timed version of a trait's effect is data, not
+new engine work (restructured this way in Phase 4.1). One deliberate limit is enforced by a
+validator: **a status may not carry a stat-modifier** (below).
 
-**Effect categories (taxonomy)** — four kinds, all riding this one framework. **Category determines
-player-facing treatment** (a bright line, locked Phase 3):
+**Player-facing treatment (taxonomy)** — **category determines player-facing treatment** (a
+bright line, locked Phase 3):
 1. **`stat-modifier`** — scales a stat's *value* (`stat`, `factor`). Folds into **effective stats**
    (below) **multiplicatively** (`base × Π(factors)`). **Always permanent-for-the-fight, uncapped,
    never surfaced as a status** — the player sees only the resulting **effective stat** (and net
@@ -395,14 +447,15 @@ player-facing treatment** (a bright line, locked Phase 3):
    but never reach zero** (five ×0.8 = ×0.328, not zero) and **stacking is uncapped** — grinding a
    stat up or down is a supported, cap-free build path (the incremental-scaling lane). Buffs compound
    the same way (five ×1.3 = ×3.7). **There is no temporary stat-modifier** — all timed/capped
-   debuffing is done via `damage-modifier` or `condition-status` instead. Stat buffs/debuffs are data
+   debuffing is done via statuses (damage-modifiers, locks, DoTs) instead; a validator rejects a
+   stat-modifier inside a status. Stat buffs/debuffs are data
    instances of this one primitive (parameters: stat, factor), no per-stat special-casing;
    spells/effects may apply custom factors.
 2. **`stat-remap`** — redirects *which stat a formula slot reads* (e.g. "use Speed as Attack for
    the Attack action"). Reads the **source stat's effective value**; Attack-slot stat-modifiers do
    **not** transfer to the substituted stat (a Speed-attacker wants +Speed, not +Attack — a legible
    consequence). Multiple remaps on one slot resolve by **fixed effect order (innate-1 → innate-2 →
-   equipment infusions), last-writer-wins**. The damage formula reads its OffStat through a
+   perks → equipment infusions), last-writer-wins**. The damage formula reads its OffStat through a
    remap-aware lookup so this needs no formula changes.
 3. **`damage-modifier`** — folds into the damage formula's mod pools: the attacker's **additive
    dealt pool** (`1 + Σ`) or the defender's **multiplicative taken pool** (`Π`). **These ARE surfaced
@@ -411,15 +464,17 @@ player-facing treatment** (a bright line, locked Phase 3):
    Pools stay additive-dealt / multiplicative-taken (unchanged — these are capped/timed, so no
    runaway-to-zero concern). Distinct from `stat-modifier` — a "−Attack" stat change and a "−damage
    dealt" Weaken are different categories with different treatment and never double-count.
-4. **`condition-status`** — tagged conditions like Poison (DoT), Regen, Stun (skip turn). Timed,
-   surfaced as status icons. This is what scripting's `has-status` condition scopes to (not the
-   invisible stat-modifiers).
+4. **Statuses** — tagged timed conditions like Poison (DoT), Regen, Stun (skip turn), Web (act
+   last), Confusion. Timed, surfaced as status icons. This is what scripting's `has-status`
+   condition scopes to (not the invisible stat-modifiers).
+Permanent trait passives that fold into the damage formula (armor penetration, conditional damage
+bonuses, damage-taken reductions, …) are shown on the creature, not as status icons.
 
 **Effective stats (engine invariant):** base stats are **immutable** (except by permanent effects
 like level-up). A creature's current stat is **computed on demand** — `getEffectiveStat(creature,
 stat)` folds all active `stat-modifier` effects over the base **multiplicatively** (`base ×
 Π(factors)`) in a fixed deterministic order (a conditional passive's factor is included only when
-its read-time predicate holds). Never write a derived value back to the creature. Expiry = removing
+its read-time condition holds). Never write a derived value back to the creature. Expiry = removing
 the effect from the list; the next `getEffectiveStat` reflects it automatically (no
 reverse-bookkeeping, no order ambiguity). All combat math reads stats through this accessor (a
 passthrough to base until effects exist). **This base+fold-on-read model — not a mutable per-creature
@@ -448,7 +503,7 @@ self-perpetuating chains are truncated. Truncation is deterministic. Concretely 
   self-loops (a retaliation triggering its own retaliation) but leaves legitimate cross-creature
   cascades alone (A hits B, B's trait fires — not re-entry of A's). **Each trigger of a status is
   its own instance for this guard** (a status with several triggers is several instances), so one
-  trigger can cause another trigger of the same status: Spore's round-end tick killing its host
+  trigger can cause another trigger of the same status: Spore's DoT tick killing its host
   still fires Spore's own on-death spread.
 - **Depth = chain nesting**, not breadth. N effects firing on one hook point is breadth N at the
   current depth; each trigger that *causes a new hook to fire* increments depth for that sub-chain.
@@ -473,9 +528,13 @@ The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
   vocabulary.
 - **`TriggerFired` intent event** precedes the consequences a trigger produces (mirroring
   `AttackDeclared`→`DamageDealt`), so the log explains *why* triggered damage/effects happened.
-- **One shared per-creature effect ordering** — innate-1 → innate-2 → equipment infusions → applied
-  statuses — is reused *everywhere* effects are iterated: stat folding, hook firing, remap
-  resolution. One "effect order" concept, not several.
+- **One shared per-creature effect ordering** — innate-1 → innate-2 → perks → equipment
+  infusions → applied statuses — is reused *everywhere* effects are iterated: stat folding, hook
+  firing, remap resolution. One "effect order" concept, not several.
+- **An effect reacts only while it exists.** An effect fires on an event only if that exact effect
+  instance existed when the event started and still exists when its turn to react comes: a status
+  cleansed earlier in the same chain doesn't tick, and a revived creature doesn't fire effects from
+  before its death.
 
 **Hook interaction edges (locked Phase 3):**
 - **Dead creatures fire only `on-death`.** `effectsForHook` considers only effects on `alive`
@@ -506,9 +565,10 @@ The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
   This is the golden assertion surface for stat changes (stat-modifiers are "not surfaced *as a
   status icon*" — a UI statement, not a log one; the log still records the change, and Phase 7 can
   use it for floating combat text like "Attack −49"). Order: `TriggerFired` → `StatModifierApplied`.
-- **Conditional-passive predicates read effective stats but must not create a read-cycle**: a
-  predicate gating a modifier of stat X may reference *other* effective stats, but must not depend on
-  X's own effective value (read base X if truly needed). Prevents `getEffectiveStat` recursion.
+- **Conditional-passive conditions read effective stats but must not create a read-cycle**: a
+  condition gating a modifier of stat X may reference *other* effective stats, but must not depend on
+  X's own effective value (read base X if truly needed). Prevents `getEffectiveStat` recursion; a
+  load-time validator enforces it.
 
 **v1 hook vocabulary (16, as of Phase 4):** `on-fight-start`, `on-turn-start`, `on-turn-end`,
 `on-round-end`, `on-damage-dealt`, `on-damage-taken`, `on-kill` (dealt a killing blow), `on-death`
@@ -523,10 +583,13 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
 
 ### Traits
 - **v1 categories**: **passive/stat** (always-on or conditionally-on modifiers, e.g. "+25% Attack
-  at full HP") and **triggered** (fire on a hook, produce an effect). **Behavioral** traits
-  (changing scripting options, granting extra actions, altering the creature's own decision-making
-  or the turn economy) are **deferred past v1**. *Reacting to an event by dealing damage / applying
-  a status / changing a stat is **triggered**, not behavioral — in scope.*
+  at full HP") and **triggered** (fire on a hook, produce an effect). **Granting an extra action**
+  is in scope as a triggered response ("perform an action": the Sorcerer starter's turn-end cast,
+  Resonant Overtone's echo); a granted action always runs **after** the action that caused it,
+  inside the same turn, and obeys every action rule (a Stunned creature can't take one, a Silenced
+  one can't cast). Still **deferred past v1**: traits that insert extra *turns*, change scripting
+  options, or alter the creature's own decision-making. *Reacting to an event by dealing damage /
+  applying a status / changing a stat is **triggered**, not behavioral — in scope.*
 - A base creature has **1 innate trait**; a fused creature has **2** (both parents'). Each
   **creature has a fixed innate trait** defined in its data (collecting a creature = knowing its
   trait). Equipment can add further trait(s) via infusion (equipment *mechanism* deferred to Phase 8;
@@ -534,17 +597,18 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
 - **`Trait { id, name, effects: readonly Effect[] }`** — a thin named wrapper (identity/flavor for
   UI) over one-or-more effects (the mechanical units); a trait may bundle multiple effects.
 - **Passive/stat traits** are `stat-modifier` effects. A **conditional** passive carries a
-  **read-time activation predicate** evaluated during `getEffectiveStat` folding (e.g. "+25% Attack
-  at full HP" = a modifier whose predicate is `currentHp == effMaxHp`) — never cached, always
-  correct on read.
-- **Triggered traits** = `{ hook, condition?, response }`. The **v1 response vocabulary** (each
-  fully parameterized by **target** and **magnitude**): **(a) deal damage, (b) apply a status,
-  (c) apply a stat-modifier, (d) suppress-action** (skip a turn — what Stun uses) — Phase 3's
-  four — plus Phase 4's **(e) heal, (f) revive, (g) grant-action-state, (h) consume-stacks,
-  (i) remove-status**: nine, and the line is held there (CONVENTIONS "Response vocabulary — now
-  NINE"). Design-space breadth comes from the **hook × condition × parameter cross-product**, not
-  from more response types (16 hooks × conditions × targets/magnitudes is ample for the v1 trait
-  roster).
+  **read-time activation condition** (data, like every other condition) evaluated during
+  `getEffectiveStat` folding (e.g. "+25% Attack at full HP" = a modifier whose condition is self
+  HP% = 100) — never cached, always correct on read.
+- **Triggered traits** = `{ hook, condition?, chance?, response }`. The **v1 response vocabulary**
+  (each fully parameterized by **target** and **magnitude**) after Phase 4.1: **deal damage, apply
+  a status, apply a stat-modifier, heal, revive, grant an action state (defending/provoking),
+  consume stacks, remove a status, perform an action** — nine. (*perform an action* — "that creature
+  casts a random spell" — joined in Phase 4.1 and replaced two special mechanisms; *suppress-action*
+  left, because skipping a turn is now a status effect.) The governing rule is **no side doors**:
+  every triggered behaviour goes through this one response vocabulary, never a special-case
+  mechanism (CONVENTIONS). Design-space breadth comes from the **hook × condition × parameter
+  cross-product**, not from more response types.
 - **No keywords, no implicit targets.** There is no "Retaliate" (or similar) concept — every trait
   is expressed as an explicit event→condition→response→target→magnitude sentence in data, e.g.
   *"when this creature is dealt damage by another creature, attack that creature for 30% Attack."*
@@ -563,8 +627,8 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   effects instantiated onto the active-effects list at fight start.
 
 ### Status effects
-- Statuses are **applied effects** (from spells, augments, traits) with a **fixed turn
-  duration**, counted down each round.
+- Statuses are **applied effects** (from spells, augments, traits) with a **fixed duration in
+  the bearer's own turns**.
 - **Stacking**: re-applying refreshes duration **and** stacks intensity, up to a per-status
   cap — **each status declares its own cap explicitly; there is no shared global default.**
 - **v1 content**: a flexible, easily-addable **DoT category** (parameterized: damage value,
@@ -592,18 +656,20 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   is a percentage of the bearer's own effective max HP per stack (Poison, Burn), so a DoT is the
   same fraction of max HP at every level, still bypassing Defence/affinity/pools entirely. Regen
   (heal-over-time) uses the same stat-derived per-stack rule.
-- **Stun** is **just a `condition-status`**, not a special mechanic — it registers an
-  `on-turn-start` hook whose response is **suppress-action**, so the affected creature's turn is
-  skipped **via the Phase 1 empty-bracket mechanism** (its `TurnStarted`/`TurnEnded` still emit,
-  with no action between). A stun applied earlier in the round lands because the check happens when
-  the creature's turn comes up. No special resolver branch — the resolver just fires the hook.
+- **Stun** is **just a status**, not a special mechanic — it carries a passive **"can't act"
+  lock**, so when the creature's turn comes up it is skipped: `TurnStarted`, a `TurnSkipped` event
+  naming the status, `TurnEnded`. Sleep carries the same lock; **Silenced** locks only casting and
+  **Pacified** only attacking. A lock stops **every** action, chosen or granted by a trait. A stun
+  applied earlier in the round lands because the check happens when the creature's turn comes up.
+  No special resolver branch.
 - **Status polarity & cleanse/dispel** (Phase 4 Slice E2 systems, spells authored later): every
   status is classified **buff** or **debuff**. This opens a planned spell archetype — **cleanse**
   (remove debuffs from an ally) and **dispel** (remove buffs from an enemy) — via a general
   status-removal effect. (Removing raw `stat-modifier` buffs/debuffs is a *later* extension; the
   first removal spells target statuses.) A few statuses also **self-clear**: **Sleep** ends the
   instant its bearer takes any damage (the waking hit still lands in full, incl. any "vs Sleeping"
-  bonus), and **Web** self-breaks on a ~10%/turn roll — fragility as design, not a bug.
+  bonus), and **Web** breaks on a **10% roll at every creature's turn** (not just the bearer's; in
+  a 6v6 fight a Web breaks within a round about 72% of the time) — fragility as design, not a bug.
 - **Three trait design levers surfaced by the Biome 1–3 roster** (Slice E2 systems): **(1)
   conditional-damage-vs-a-condition** — "+% damage to targets that are [Weakened / Webbed / Sleeping
   / low-HP]", applied as extra damage on the one hit (the trap-then-exploit and execute archetypes:
@@ -614,38 +680,34 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   creature reacting to its **own** action (which stays on its own `on-attack`/`on-cast`/etc.). These
   are general primitives, deliberately built ahead of the simple seed content that first uses them.
 - The system is built to **scale to many future statuses** (e.g. end-of-turn auto-Provoke,
-  exotic conditional effects) via new data using existing hooks. New statuses are pure data
-  instances of the built primitives (DoT / stat-modifier / heal-over-time / suppress-action) — the
-  v1 set is not a ceiling.
+  exotic conditional effects) via new data using existing hooks. New statuses are pure data: a
+  status can carry any passive or trigger a trait can (except a stat-modifier) — the v1 set is not a
+  ceiling.
 
-**Status lifecycle (locked Phase 3):**
-- **Duration counts down in ROUNDS**, decremented at **round-end** (a global phase point), not
-  per-turn — order-independent and easy to hand-derive in goldens. A "3-round" status lasts three
-  round-ends regardless of whose it is.
-- **A DoT ticks at round-end, *before* the decrement** — so a freshly-applied 1-round DoT ticks
-  exactly once, then decrements to 0 and expires ("a 1-round poison poisons once").
+**Status lifecycle (locked Phase 3, re-timed in Phase 4.1):**
+- **A creature's turn has a fixed shape**: turn start → start-of-turn triggers → *start cleanup*
+  (its "until your next turn" states, defending and provoking, end here, even if the turn is about
+  to be skipped) → its action (or a skip, if it can't act) → end-of-turn triggers (**DoT and
+  heal-over-time ticks happen here**) → any actions granted to it during the turn → *end cleanup*
+  (**its status timers count down and expire**; the Web break-free roll) → turn end. Cleanup only
+  ends things; anything that deals damage, heals or triggers is a trigger.
+- **Duration counts the bearer's own turns**, not rounds. A "3-turn" Weaken covers the bearer's
+  next three turns whatever the turn order; **Stun 1 skips exactly one turn**. (Phase 3 counted
+  rounds at round end, which made a status's real length depend on whether it landed before or
+  after its bearer acted.)
+- **A DoT ticks at the end of its bearer's turn, *before* the countdown** — so a 1-turn DoT ticks
+  exactly once, then expires ("a 1-turn poison poisons once").
+- **A status applied or refreshed during its bearer's own turn starts counting next turn**: it
+  doesn't tick or count down in the turn that applied it (so a fresh application never silently
+  loses a turn). The same goes for the Web roll.
 - **Stacking = a single status instance per (status-type, creature)** carrying a **stack count** +
   **remaining duration**; re-applying refreshes duration and increments intensity toward the
-  status's declared cap. DoT intensity = per-stack tick damage; stat-status intensity = magnitude
-  scaling. (Not N separate instances.)
-- **Round-end resolves as global sweeps over a start-of-sweep snapshot.** Snapshot the set of
-  statuses present when the sweep begins, then: **(1)** fire all `on-round-end` hooks across all
-  creatures in **tie-break order** — including DoT ticks (a DoT tick *is* an `on-round-end` hook on
-  the DoT effect, same machinery as any trigger; **no separate status-tick pass**). Cascades resolve
-  fully here: if a tick kills a creature, that creature's **`on-death` hook fires immediately** (the
-  death exception — see hook model), which may itself apply new statuses/effects. **(2)** Decrement
-  durations — **only for statuses in the start-of-sweep snapshot**. **(3)** Expire snapshot statuses
-  now at 0 duration (emit `StatusExpired`).
-- **Statuses born *or refreshed* during the sweep** are treated as fresh: a status newly applied by
-  an `on-death`/`on-round-end` effect, **or a re-application that refreshes one already present**,
-  keeps its full/refreshed duration and begins normal countdown at the *next* round-end — it does
-  not tick, decrement, or expire in the sweep that (re)applied it. (Without this, a mid-sweep
-  (re)application would silently lose a round to the same sweep's decrement, and born-vs-refreshed
-  would diverge for no design reason.)
-- **A creature killed mid-sweep fires only `on-death`**; its own not-yet-reached `on-round-end`
-  hooks (e.g. a DoT it was carrying that would tick *others*) are **skipped** — so round-end is
-  deterministically order-sensitive to death (fixed by tie-break order). **Win/loss is checked once,
-  after the entire sweep completes** (consistent with "resolve the whole boundary, then check").
+  status's declared cap. DoT intensity = per-stack tick damage; a damage-modifier's intensity =
+  magnitude per stack. (Not N separate instances.)
+- **Round end does no status work** — it only fires round-level triggers (e.g. a Treant's
+  end-of-round growth) and checks for a winner.
+- **A creature that dies fires only its death reactions**; its own pending triggers are skipped. If
+  a DoT tick kills its bearer, the status's own on-death effect still fires (Spore's spread).
 
 ### Equipment
 **Note:** the equipment *mechanism* (slot, infusions, Equipment Forge, Ore, leveling, infusion-recipe
@@ -673,13 +735,19 @@ target.
 - **Turn-based under the hood**, resolved automatically. **One round = every living creature
   acts once**, in **Speed order (descending)**, recomputed each round (so Speed buffs/debuffs
   change ordering next round). Ties broken deterministically: **side (player side wins ties) →
-  slot → creature id**. No creature gets multiple actions in v1 (a trait could grant extra
-  actions later). As a determinism/safety backstop, every fight has a **hard round cap**
+  slot → creature id**. A creature gets **one turn per round**; a trait may grant it an extra
+  *action*, which runs inside that same turn after its own action completes (§6). As a
+  determinism/safety backstop, every fight has a **hard round cap**
   (config); a fight that somehow reaches it (e.g. a pathological all-Defend/all-Wait script on
   both sides) ends immediately as a timeout/draw rather than running unbounded.
 - Each turn, a creature consults its **behavior script** to choose an action. If the script
   yields no valid action, fall back to the implicit default (basic Attack on a default target,
-  else Wait). The player never has to author the empty case.
+  else Wait; the default target is the lowest-HP enemy). The player never has to author the empty
+  case. **Every action, whatever produced it
+  (the script, the fallback, or a trait granting one), follows the same rules**: whether it's
+  allowed (locks), how its target is chosen, and the Confusion and Provoke overrides.
+- **Revives are bounded**: a creature can be revived at most **10 times per fight**, so revive
+  builds stay strong without looping forever.
 - **Actions** (the starting set — more may be added later):
   - **Attack** — physical strike scaled by Attack vs. target Defence (see damage formula).
   - **Cast** — cast an equipped spell (gem), scaled by Intelligence. No resource cost, freely
@@ -695,13 +763,14 @@ target.
     targeting rule below. Re-provoking each turn is a recurring tactical cost (the creature
     isn't attacking), making dedicated tanking a real choice.
   - **Wait** — take no action this turn.
-  - Plus any trait-granted actions (post-v1).
+  - Trait-granted actions reuse these same actions (e.g. "cast a random equipped spell").
 - **Provoke / targeting resolution**: when a creature uses an offensive action (Attack or
   Cast) against the enemy side, target selection works as follows:
   - If one or more enemy creatures are currently **provoking**, the action targets a
     **random** one of the provoking creatures.
-  - If none are provoking, the action targets per the script's normal targeting selector
-    (or the default selector if none applies).
+  - If none are provoking, the action targets per the script's normal targeting selector, or,
+    if the rule names none, the **default for the action's intended side**: the lowest-HP enemy
+    for attacks and enemy spells, the **lowest-HP ally** for support spells.
   - "Random" here means a draw from the **seeded combat RNG**, never `Math.random()`, so the
     outcome stays deterministic and replayable (see CONVENTIONS). Provoke is an **override
     layer** applied *after* the script chooses an action — it constrains the target set, it
@@ -830,9 +899,11 @@ template count overall are both **unbounded**.
 **v1 conditions** (a starter set — expandable, and the highest-leverage place to add power
 later): self HP%, ally HP% (any / lowest), enemy HP% (any / lowest / highest), enemy count,
 ally count, turn/round number, "has status X" (self / ally / enemy — matches a **literal status
-ID**, e.g. exactly "Weaken", not a category like "any Attack-debuff"), affinity advantage vs a
-target, and "is provoking". (Fight-*context* conditions like "is this a boss fight" or "current
-floor/depth" are deliberately deferred past v1.)
+ID**, e.g. exactly "Weaken", not a category like "any Attack-debuff"), and affinity advantage vs a
+target. ("Is provoking" was removed in Phase 4.1: provoking always ends at the start of the
+creature's own turn, so it could never be true when that creature's script runs. A "what did I do
+last turn" condition is a Phase 6 candidate if scripts need memory.) (Fight-*context* conditions
+like "is this a boss fight" or "current floor/depth" are deliberately deferred past v1.)
 
 **v1 targeting selectors** (orthogonal to conditions — any condition pairs with any target):
 lowest-HP enemy, highest-HP enemy, highest-Attack enemy, highest-Intelligence enemy, random enemy,
@@ -851,10 +922,13 @@ and an unresolvable rule when none does — i.e. it can never produce an observa
 only if a future mechanic makes it meaningful, e.g. targeting provokers for non-offensive actions.)*
 
 **Actions**: the action set from §7. For **Cast**, the rule specifies **which equipped gem/slot**
-to fire (choosing the right spell for the situation is the tactical depth). The **TARGETING**
-clause only appears for actions that need to choose among multiple valid targets (Attack,
-single-target Cast); it's automatically omitted for self-only actions (Defend, Provoke, Wait)
-and for AOE Cast (which always hits its full target set per §7).
+to fire (choosing the right spell for the situation is the tactical depth), or **a random castable
+gem**. The **TARGETING** clause only matters for actions that choose among multiple valid targets
+(Attack, single-target Cast) and is **optional**: a rule without one targets the default for the
+action's intended side (lowest-HP enemy for attacks and enemy spells, lowest-HP ally for support
+spells). It's omitted for self-only actions (Defend, Provoke, Wait) and for AOE Cast (which always
+hits its full target set per §7). An explicit selector always wins, even one pointing at the other
+side (healing an enemy can become a real tactic if a status ever makes healing hurt).
 
 **Fallback**: if no rule matches, the engine applies the implicit default automatically (Attack
 a default target if any valid, else Wait) — the player never authors the empty case.
@@ -870,8 +944,9 @@ Design constraints:
 **Interpreter semantics (locked — Phase 2):**
 - **Rule validity**: a rule matches only if its condition is true **AND** its chosen action is
   currently valid. An invalid action → **skip to the next rule** (not "match and fizzle"). In v1 the
-  one reachable cause of invalidity is an **empty referenced gem slot** (Cast with nothing in that
-  slot → skip). A separate "**unresolvable selector → skip**" branch also exists, but with the v1
+  reachable causes of invalidity are an **empty referenced gem slot** (Cast with nothing in that
+  slot → skip), **no castable gem** for a random-gem Cast, and a **lock** on that action (Silenced
+  blocks Cast, Pacified blocks Attack, Stun/Sleep block everything). A separate "**unresolvable selector → skip**" branch also exists, but with the v1
   selector set it has **no reachable trigger** (self always exists; ally-selectors include the
   acting creature so they always resolve; enemy-selectors always have a target because `decideAction`
   never runs against an already-wiped enemy side — win/loss is checked after every action). It is
@@ -883,8 +958,9 @@ Design constraints:
   single action executed. No try/rollback.
 - **`always` condition**: unconditionally true — also the idiomatic explicit catch-all bottom rule.
 - **Ordering is array position**, not a stored priority number; drag-to-reorder reorders the array.
-- **Cast references a gem *slot index*** (not a spell ID), so a template is reusable across
-  loadouts; the spell fired is whatever occupies that slot on that creature. The **target shape**
+- **Cast references a gem *slot index*** (not a spell ID), or asks for a **random castable gem**,
+  so a template is reusable across loadouts; the spell fired is whatever occupies that slot on that
+  creature. The **target shape**
   (single / all-enemies) is a property of the *equipped spell*, resolved at evaluation time; AOE
   omits the selector and hits all living enemies (frozen at cast-start, slot order); single-target
   uses the selector and is subject to provoke.
@@ -893,8 +969,18 @@ Design constraints:
   TARGETING; data field reserved now, surfaced in the Phase 6 authoring UI.
 - **Assignment**: a creature references a script by `scriptId`; null/absent → the implicit fallback
   runs every turn (Attack a valid target, else Wait). The interpreter is **symmetric** — player and
-  enemy creatures use the same system. Phase 2 gives enemies trivial **stock scripts** (one per
-  action type); richer enemy scripts drop in later with no new machinery.
+  enemy creatures use the same system. Enemies run **role scripts** (Phase 4.1): six stock
+  templates, and each creature's role is its default script:
+  - **striker** — finish off hurt enemies (any below 80% → attack the lowest), else attack a random
+    enemy;
+  - **guardian** — defend when below 50% HP, else attack the lowest-HP enemy;
+  - **warden** — provoke when an ally drops below 50%, else attack the lowest-HP enemy;
+  - **caster** — cast a random gem, else attack;
+  - **support** — when an ally drops below 50%, cast a random support gem, else attack;
+  - **opener** — cast a random gem in round 1, then attack.
+  Every attacking role falls back to casting a random gem when it can't attack (Pacified). A
+  summoned creature starts with its role's script. Scripted enemies (rather than an enemy AI) keep
+  the game symmetric and give the player readable enemy patterns to script against.
 - **HP% conditions** use **effective Health** as the denominator (`getEffectiveStat(_, 'health')`),
   compared via integer cross-multiplication (no float) — see CONVENTIONS.
 
@@ -906,20 +992,20 @@ Design constraints:
   must handle both — warn / adapt / type slots by shape and side (TBD):
   - **Shape mismatch** (single-target selector on an AOE slot): runtime tolerates it — AOE ignores
     the stray selector and hits its full frozen set.
-  - **Side mismatch** (an enemy-side selector on an **ally-targeting** spell, or vice versa —
-    ally-targeting spells exist as of the Phase 4 Slice E support-spell model): runtime resolves the
-    selector **literally**, so a support spell under an enemy selector will land on an enemy (and
-    vice versa) — the same already-tolerated behavior the enemy side has always had (e.g. a `self`
-    selector on an offensive spell hits self). No engine special-case corrects it; the UI is the
-    single fence, at author time. (Now that the ally selector set is complete — §8 above — a
-    correctly-authored support spell always has an on-side selector to use, so this is purely an
-    authoring-error guard, not a missing capability.)
+  - **Side mismatch** (an enemy-side selector on an **ally-targeting** spell, or vice versa):
+    runtime resolves an explicit selector **literally**, so a support spell under an enemy selector
+    lands on an enemy (and vice versa). This is **deliberate** (Phase 4.1): the engine never
+    forbids a side, because a future status could make cross-side casting a real tactic. The editor
+    shows a **warning, not a block**. A rule with **no** selector already gets the right side by
+    default, so the common case needs no selector at all.
 
 ## 9. Player specializations
 
 > **The three v1 perk trees are catalogued in `.claude/specializations/`** — `sorcerer.md`,
 > `brute.md`, `shieldbarer.md`. Each is a flat pool of effect-carrier perks summing to exactly
-> **1000**, with per-perk phase tags (P4 vs P8). The starters live there too.
+> **1000**. The spec docs' P4/P8 column is a **design-record annotation** of which perks work before
+> the Phase 8 gem/equipment systems; the code carries **no phase tag** (inert perks get a code
+> comment and a data-test list). The starters live there too.
 
 The player picks a **specialization** that shapes their own bonuses and playstyle (distinct
 from creature affinities). The game ships with **three** at launch; future specializations
@@ -938,15 +1024,24 @@ player's single cold-start creature, see §5):
 **All content is accessible to every specialization** (same creatures, gems, equipment,
 biomes, facilities) — a spec changes *how you play*, never *what you can reach*.
 
-The three starter creatures (locked): the **Sorcerer**'s is **Wit**-affinity, high Intelligence,
-with a trait granting one spell as a permanent extra gem plus a 50% chance on-turn-end to cast a
-random equipped spell; the **Brute**'s is high Attack, `on-attack → strike the same target again for
-100% Attack` (falls back to default target if it died); the **Shieldbarer**'s is high Defence,
-`on-provoke → grant self *defending*`. Each starter belongs to a **species found only in a deep
-biome**, authored later — so in the seed content only the starter exists, and its species sits
-**below the ≥3-creature minimum on purpose** (a forward-reference, not a gap). The Sorcerer's is
-Wit; the other two affinities settle when their species are authored (ideally the three land
-distinct).
+The three starter creatures (locked; names are **placeholders** in the "Species + Role" pattern,
+and both words may change once the deep biome is designed):
+- **Glyphmoth Seer** (Sorcerer) — **Wit**, high Intelligence. Trait *Arcane Surge*: an **innate
+  spell** (Arcane Bolt, in an extra slot before its gem slots — not a gem, un-upgradeable, keeps
+  working after fusion; §5) plus a **50% chance at the end of its turn to cast a random equipped
+  spell** (a granted action, §6).
+- **Cragfang Mauler** (Brute) — **Violence**, high Attack. Its **Attack resolves one additional
+  instance**: it attacks twice at 100%, each a real attack (same target as the first; if that target
+  died, the second hit picks a new default target).
+- **Stonehorn Warden** (Shieldbarer) — **Endurance**, high Defence. **Whenever it provokes, your
+  whole team gains +35% Defence** for the fight (repeated provokes stack). *(The earlier
+  "on-provoke → grant self defending" became the Shieldbarer's **Shield up** perk.)*
+
+The **Unicorn Lightbearer** (**Vitality**, the intro helper) joins in the scripted intro and is
+**permanently owned**, though it can be benched like any creature. Each starter belongs to a
+**species found only in a deep biome**, authored later — so in the seed content only the starter
+exists, and its species sits **below the ≥3-creature minimum on purpose** (a forward-reference, not
+a gap). The four affinities are ratified and distinct.
 
 **Perks & perk points:**
 - A specialization is a **named collection of perks** (data; perks plug into the existing
@@ -965,7 +1060,10 @@ distinct).
   specialization at floor 100** — character progression and cave depth finish together. Bosses
   are the **sole** perk-point source (no other trickle); points come from **first clear only**,
   not repeatable farming.
-- Points are spent **freely** on whichever perks the player wants as they're earned.
+- Points are spent **freely** on whichever perks the player wants as they're earned: the player
+  sets any perk to any level from 0 to its max, as long as total spend stays within the earned
+  budget, and can refund everything at once. Perks that only work once Phase 8 systems exist are
+  buyable too (labelled inactive until then).
 - Perk points are effectively a **third, non-droppable progression currency** (alongside the
   combat-dropped currencies).
 
@@ -1013,16 +1111,22 @@ progression state). Design for that from the start.
 things (settings, a last-save pointer) — never the main save.
 
 **What the save contains** (instances + references only — never copies of static game data):
-- **Player meta**: chosen specialization; perk points (earned total + spent allocation);
-  deepest-reached floor; current floor; bosses defeated (first-clear tracking); biome discovery
-  state; Biome Atlas assignments.
-- **Collection**: owned creature **instances**, each: a reference to its source + level/XP,
-  current affinity, trait slots, equipped gem refs, equipped equipment ref, `hasFused`; plus
-  **per-creature soul%**.
+- **Player meta**: chosen specialization; perk spend (the earned total is derived from bosses
+  defeated, never stored); deepest-reached floor; **last floor**; bosses defeated (first-clear
+  tracking); biome discovery state; Biome Atlas assignments; the run seed and counter; the active
+  party's slots.
+- **Collection**: owned creature **instances**, each storing only its **source** (a creature id, or
+  a fusion recipe), level/XP, its assigned script, and (until Phase 8) its rolled gem set; affinity,
+  traits, stats and fused-ness are derived on load. Equipped gem and equipment references join with
+  Phase 8. Plus **per-creature soul%**.
 - **Inventory**: gem instances (level + augments), equipment instances (level + infusions),
   unlocked recipes, currency balances (Essence / Ore / Bricks / Lifeforce).
 - **Facilities**: which are built + their upgrade tiers.
-- **Scripts**: all script templates + each creature's assigned template.
+- **Scripts**: all script templates (each instance's assignment lives on the instance).
+
+**The store's boundary**: a new game starts from `newGame({ seed })` (the seed comes from the app
+layer, never the engine); `snapshot()` / `hydrate()` convert the live game state to and from plain
+data (specified with Phase 5).
 
 **References, not copies** (the key rule): instances reference static creatures/species **by
 ID** (e.g. `creatureId: "black_spider"`) and read base stats/affinity/trait from shipped data.
@@ -1076,12 +1180,20 @@ the hot autosave path.
 
 **Balance numbers (all parked — live in config, tune in playtest):**
 - Floor→enemy-level-range curve (the master difficulty lever: level-vs-floor ratio, range
-  width-growth rate) and XP/level growth pacing.
+  width-growth rate) and XP/level growth pacing. *Targets are set (§4: party ≈ floor, enemy
+  multiplier 1.25 → 2.0 by floor 100, +1pp per floor after); the exact parameters are tuned with
+  the balance simulator.* Watch points: floors 20–30 before Phase 8 (about +40% enemy stats,
+  answered only by perks and traits) and the steep climb past floor 100.
+- **Fight count** (default 10 + (floor − 1), uncapped): floor success compounds per-fight win
+  chance over many fights; revisit with a cap or per-biome ramp if the simulator shows it
+  dominating.
+- **The Unicorn's revive strength** (up to 10 revives per ally per fight under the revive cap);
+  the lever, if needed, is a chance on its trait.
 - Drop weights/rates for Essence, Ore, Bricks, Lifeforce, and recipes.
 - Costs: gem craft/augment/level (Essence), equipment craft/infuse/level (Ore), facility
   build/upgrade (Bricks), fusion + catch-up leveling (Lifeforce).
-- Soul-per-kill % per rarity tier; status magnitudes/durations/per-status stack caps; affinity
-  already fixed (±25%).
+- Soul-per-kill % per rarity tier (default 25 / 20 / 10 from Phase 4.1-A); status magnitudes/durations/
+  per-status stack caps; affinity already fixed (±25%).
 - Facility upgrade-tier counts and exact cap values (Gem Forge, Equipment Forge, Fusion Chamber
   only — structure is decided in §4, numbers are not).
 - Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
@@ -1103,10 +1215,6 @@ the hot autosave path.
   **unbuilt** for now (no prelude seam until authored).
 - **Off-affinity spell equipping** via a trait/perk exception (§5) — deferred post-beta with the
   gem/perk economy; the equip-gate is universal until then.
-- **Turn-order status** (candidate, not locked): a timed status forcing the target to act **first or
-  last** for N turns — an Instinct-flavored control toy, distinct from a permanent +Speed
-  stat-modifier. Needs the turn-order step to read it (a position override; precedent: Stun already
-  suppresses a turn). Decide when authoring Instinct content.
 
 **Genuinely open (need a decision before the relevant content):**
 1. The **biome roster**: the 10 biome names/themes and which creature types populate each

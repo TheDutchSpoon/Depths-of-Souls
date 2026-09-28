@@ -4,8 +4,10 @@
 and is rewarded for gem *diversity*, not raw power. (Contrast: Brute = raw Attack, Shieldbarer =
 Defence/provoke.) All content stays reachable by every spec; a spec changes *how* you play.
 
-**Starter:** Wit affinity, high Intelligence. Trait: grants one spell as a permanent extra gem +
-50% chance on-turn-end to cast a random equipped spell.
+**Starter:** *Glyphmoth Seer* (placeholder name), Wit affinity, high Intelligence. Trait (*Arcane
+Surge*): an **innate spell**, Arcane Bolt (not a gem: un-upgradeable, no affinity gate, an extra slot
+before the gem slots, kept through fusion) + 50% chance on-turn-end to cast a random equipped spell
+(a `perform-action` grant from Phase 4.1-E).
 
 **Perk rules (locked, Grill 1):** perks are effect-framework effect-carriers, **combat-only**; flat
 pool (no prerequisites); pour points freely; spec valid iff Σ(maxLevel × costPerLevel) === **1000**;
@@ -38,9 +40,17 @@ Clear Mind — ~400 pts) is what the seed Sorcerer's earned points (≤300 from 
 Accepted trade-off: the Sorcerer **blooms at Phase 8**; in the seed it's a one-caster-plus-boosts
 spec, thinner than Brute/Shieldbarer by nature. No Phase-8 scope pulled forward.
 
+*The Phase column is a design-record annotation. The code carries no phase tag (Phase 4.1-G
+removes `PerkDef.phase`): inert perks get a code comment, a data test lists them, and the Phase 4.5
+demo labels them "inactive until Phase 8". Inert perks are still buyable.*
+
+
 ## New mechanics this spec introduces (for the Phase-4 manifest)
-- **Silenced** — condition-status that **suppresses the Cast action only** (scoped suppress-action,
-  vs Stun's suppress-all). Applied by a **Violence spell** in the seed pool. Intrinsic effect = the
+- **Silenced** — a status whose effect is **`action-lock { scope: 'cast' }`**: casting is illegal
+  for every action source, chosen or granted (vs Stun's lock on everything). Applied by the
+  **Violence spell Silence**, a pure status spell (`effects: [apply-status(silenced)]`, no damage,
+  cap 1, default duration 3, unlocked at biome 1). *Missed in Phase 4 (Clear Mind was buyable and
+  inert); authored in Phase 4.1-F, once spells carry response lists (4.1-D) and statuses carry action locks.* Intrinsic effect = the
   cast-lock.
 - **Status-effect immunity (Clear Mind)** — immunity **suppresses the status's *effect*, not its
   application**: the status still lands and still counts for any "target is X" payoffs; the immune

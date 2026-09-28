@@ -1,7 +1,8 @@
 # Glimmerdark (Biome 2, floors 11–20) — content reference
 
 Status: shipped — Phase 4 Slice H2, revised per PR #60 design review; spell list revised again by
-the Phase 4 interstitial slice (cumulative spell unlock, between H2 and H3). Source: creature/
+the Phase 4 interstitial slice (cumulative spell unlock, between H2 and H3); Phase 4.1 changes
+decided (see the last section). Source: creature/
 species composition in `src/data/species/glimmerdark.ts`; trait definitions in
 `src/data/traits/glimmerdark.ts`; spell definitions in `src/data/spells/glimmerdark.ts`;
 Glow/grant-act-first in `src/data/statuses.ts`. Design source:
@@ -128,3 +129,40 @@ once.
 Overgrowth spell (same affinity/shape/numbers, different name) and Glowspark Bolt was a near-dup
 of Arcane Bolt. All 9 are inherited from Overgrowth (or, for the near-dup, functionally replaced
 by it) now that unlock is cumulative — re-authoring them here was always redundant.
+
+## Phase 4.1 — decided changes (pending build)
+
+Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
+lands.
+
+**Roles** (4.1-G; each creature's `defaultScriptId` becomes its role script, see CONVENTIONS
+"Role scripts"):
+
+| Creature | Role | Creature | Role |
+|---|---|---|---|
+| Glowfly Charger | caster | Sparkeater Leech | striker |
+| Glowfly Detonator | striker | Sparkeater Gorger | striker |
+| Glowfly Radiant | support | Sparkeater Voidmaw | striker |
+| Blindclaws Setter | opener | Gloomjaw Stalker | opener |
+| Blindclaws Striker | striker | Gloomjaw Executioner | striker |
+| Blindclaws Vanguard | striker | Gloomjaw Ravager | striker |
+| Resonant Chorus | caster | Shellback Warden | warden |
+| Resonant Adept | caster | Shellback Brawler | striker |
+| Resonant Overtone | caster | Shellback Bulwark | warden (provoking draws more hits to retaliate against) |
+| **Leech Sovereign** (boss) | striker | | |
+
+**Casting roles (4.1-G):** Resonant Chorus is no longer the biome's only spellcaster: the three
+Resonants and Glowfly Charger are casters, Glowfly Radiant a support, and Blindclaws Setter and
+Gloomjaw Stalker openers. Update the creature descriptions when the roles land.
+
+**Resonant Overtone's echo timing (4.1-E):** the echo becomes an ordinary "perform an action"
+response. The chance, the random gem and the random target are unchanged, but the echoed cast now
+happens **after the original cast has fully resolved** (all its hits and effects), instead of in the
+middle of it, and it obeys every action rule (a Silenced caster can't echo). The log shows
+`ActionGranted` instead of `EchoCastGranted`.
+
+**Status timing (4.1-F):** every status's duration (Glow, Grant Act First, the Regen from
+Afterglow, the Web from Disorient, the Vulnerability from Blinding Flare) counts the **bearer's own
+turns**, counted down at the end of each of its turns. Regen heals **at the end of each of its
+bearer's turns** instead of at round end. A status applied during its bearer's own turn starts
+counting the next turn.

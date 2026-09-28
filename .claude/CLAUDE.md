@@ -25,31 +25,46 @@ stat not as a status); no Additional channel,
 **no variance, no baseline crits**, fully deterministic. One round = each living creature acts
 once in Speed order (frozen round-start queue; ties: player→slot→id). Actions:
 **Attack, Cast, Defend, Provoke, Wait** (Defend = Defence×1.5 + ×0.65 in taken pool; Provoke until
-next turn; Cast picks a gem *slot index*, no cost, spell carries target-shape + spellPower).
+next turn; Cast picks a gem *slot index* or a random castable gem, no cost; a spell carries
+target shape + intended side + a list of ordinary responses (4.1)). **Every action, from any
+source (script, fallback, trait grant, later manual mode), goes through one pipeline**
+(`checkLegality` pure / `resolveIntent` draws; locks, side-aware default target, Confusion → Tunnel
+Vision → Provoke) (4.1).
 **Scripting** (the game's heart): pure interpreter `decideAction(creature, script, state)` walks a
 creature's ordered rules, first valid match wins (invalid action → skip); `Condition`/`TargetSelector`
-are discriminated unions; HP% via integer cross-multiplication; enemies run the same system (stock
-scripts). Affinities (behavioral drive, soft-mapped to HP/Atk/Int/Def/Spd resp.): **Vitality, Violence, Wit,
+are discriminated unions; rule targeting is optional (default = lowest-HP creature on the action's
+intended side; explicit always wins, cross-side allowed); HP% via integer cross-multiplication;
+enemies run the same system (six **role scripts**: striker/guardian/warden/caster/support/opener,
+4.1). Affinities (behavioral drive, soft-mapped to HP/Atk/Int/Def/Spd resp.): **Vitality, Violence, Wit,
 Endurance, Instinct**, cycle **Vitality > Violence > Wit > Endurance > Instinct > Vitality**. Incremental power lives
 in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
-statuses, gem augments, equipment infusions are ONE data-driven hook-based model (4 categories:
-stat-modifier, stat-remap, damage-modifier, condition-status). Hooks: 16-hook
+statuses, gem augments, equipment infusions are ONE data-driven hook-based model: carriers holding
+the same `EffectDef[]` (a status = a timed, stacking container of effects, 4.1; no stat-modifier
+inside a status, validator-enforced). Hooks: 16-hook
 v1 vocab as of Phase 4 (Phase 3's 13 + the `on-[action]` family on-attack/cast/defend/provoke;
 `on-action-observed` replaced the never-wired on-ally-/on-enemy-action pair), fired via `effectsForHook` (scoped iteration, shared per-creature effect order), reusing
-action machinery; a **`TriggerFired`** event precedes triggered consequences. **Traits** =
-`{id,name,effects[]}` — passive (incl. conditional via read-time predicate) + triggered
-(`{hook,condition?,response}`; nine responses: deal-damage/apply-status/apply-stat-modifier/
-suppress-action/heal/revive/grant-action-state/consume-stacks/remove-status — hold the line at
-nine; explicit targets, no keywords). **"attack"/"cast" in a trait/spell mean the real
-actions** (full formula; DoT the lone Defence-bypass). **Statuses**: round-based countdown at
-round-end, DoT-tick-is-a-round-end-hook, **Stun = a condition-status** (turn-start suppress-action),
-single-instance stacking to a declared cap. **Loop safety**: instance-level stack-scoped
+action machinery; a **`TriggerFired`** event precedes triggered consequences; an effect fires only
+if its exact instance still exists (unique per-fight instance ids, 4.1). **Traits** =
+`{id,name,effects[]}` — passive (incl. conditional via a data `SelfCondition`, 4.1) + triggered
+(`{hook,condition?,chancePercent?,response}`; nine responses after 4.1: deal-damage/apply-status/
+apply-stat-modifier/heal/revive/grant-action-state/consume-stacks/remove-status/perform-action —
+the rule is **"no side doors"**: every triggered behaviour is a response; explicit targets, no
+keywords). A granted action (`perform-action`) runs after the granting action completes (actions
+are atomic). **"attack"/"cast" in a trait/spell mean the real actions** (full formula; DoT the lone
+Defence-bypass). **Turn** (4.1): TurnStarted → turn-start hooks → start cleanup (defend/provoke
+end) → action (or `TurnSkipped`) → turn-end hooks (DoT ticks) → granted actions → end cleanup
+(bearer's status timers count down; Web roll) → TurnEnded. **Statuses**: durations count the
+**bearer's own turns** (4.1), born-this-turn rule (4.1), **Stun = a status with an
+`action-lock`** (4.1), single-instance stacking to a declared cap. **Loop safety**: instance-level stack-scoped
 self-re-entry guard + `MAX_TRIGGER_CASCADE_DEPTH=500` (chain depth) + mandatory `CascadeTruncated`;
-depth transient. **Three-tier creatures**: **species**
+depth transient; revives capped at 10 per creature per fight (4.1). **`CombatState` is plain data**
+(RNG = a stream-position bookmark; snapshots never mutated, 4.1). **Three-tier creatures**: **species**
 (a group of creatures; biomes spawn species; intra-species traits synergize) → **creature** (the
-unit: affinity + base stats + 1 innate trait) → **instance** (owned copy). No "class" concept —
+unit: name + affinity + base stats + 1 innate trait + role, 4.1) → **instance** (owned copy: stores
+source/recipe, level, XP, script, rolled gem set; everything else derived, 4.1). No "class" concept —
 affinity is the only such axis. Obtained via **souls** (tracked **per creature**, 100% =
-permanent summon); 1 starter from your spec; unlimited roster, 6-slot party. **Gems** (spells [each has
+permanent summon; free, ungated until Phase 8, 4.1); 1 starter from your spec + the Unicorn;
+unlimited roster, 6-slot party; target: a full party within the first session (4.1). **Gems** (spells [each has
 an **affinity**; equippable only on a matching-affinity creature], leveled via Essence, augment
 slots) and **equipment** (stat-focused, leveled via Ore, infusion
 slots) share the effect framework. **Fusion** (Fusion Chamber, Lifeforce, species-agnostic):
@@ -66,6 +81,9 @@ hub, fast-travel to any floor up to deepest). **Biome changes every 10 floors** 
 ≥6 species/biome, ≥3 creatures/species ≈180+ total; specific creature = rarity-weighted RNG;
 boss every 10th floor, non-collectable). **No prestige, no resets**
 — forward-only.
+
+Items marked **(4.1)** are decided and land during Phase 4.1 (see ROADMAP); until the matching
+slice merges, the code still has the Phase 4 shape.
 
 Full design: `.claude/GAME_DESIGN.md`. Read it before designing features.
 
