@@ -1,6 +1,6 @@
 import { pickExtremum } from './tie-break'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
-import { getEffectiveStat, hasStatus, hpPercentSatisfied } from './effective-stats'
+import { hasStatus, hpPercentSatisfied } from './effective-stats'
 import { getAffinityMultiplier } from './affinity'
 import { peekTargetSelector } from './target-selectors'
 import { findCreature } from './creature-lookup'
@@ -32,22 +32,6 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
       throw new Error(`Unhandled comparator: ${String(exhaustive)}`)
     }
   }
-}
-
-/** Integer cross-multiplication, no float: currentHp/effMaxHp <cmp> thresholdPercent/100.
- * Phase 4.1-B (B-7): delegates to effective-stats.ts's shared `hpPercentSatisfied` -- one
- * implementation of the comparison, reused by S2's `SelfCondition` too. */
-function creatureHpPercentSatisfied(
-  creature: Creature,
-  comparator: ComparatorOp,
-  thresholdPercent: number,
-): boolean {
-  return hpPercentSatisfied(
-    creature.currentHp,
-    comparator,
-    thresholdPercent,
-    getEffectiveStat(creature, 'health'),
-  )
 }
 
 /**
@@ -109,7 +93,7 @@ export function evaluateCondition(
       if (pool.length === 0) return false
       if (condition.qualifier === 'any') {
         return pool.some((c) =>
-          creatureHpPercentSatisfied(c, condition.comparator, condition.thresholdPercent),
+          hpPercentSatisfied(c, condition.comparator, condition.thresholdPercent),
         )
       }
       const target = pickExtremum(
@@ -118,11 +102,7 @@ export function evaluateCondition(
         condition.qualifier === 'lowest' ? 'asc' : 'desc',
       )
       return target
-        ? creatureHpPercentSatisfied(
-            target,
-            condition.comparator,
-            condition.thresholdPercent,
-          )
+        ? hpPercentSatisfied(target, condition.comparator, condition.thresholdPercent)
         : false
     }
     case 'enemy-count':

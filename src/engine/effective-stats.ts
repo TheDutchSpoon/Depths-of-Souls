@@ -48,20 +48,24 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
 }
 
 /**
- * Integer cross-multiplication, no float: `currentHp/effMaxHp <cmp> thresholdPercent/100`, i.e.
- * `currentHp * 100 <cmp> thresholdPercent * effMaxHp`. Shared by conditions.ts's scripting
+ * Integer cross-multiplication, no float: `currentHp/maxHp <cmp> thresholdPercent/100`, i.e.
+ * `currentHp * 100 <cmp> thresholdPercent * maxHp`. Shared by conditions.ts's scripting
  * `hp-percent` Condition and this module's own `SelfCondition` (S2) -- one implementation, per
- * design-review B-7. `effMaxHp` is the CALLER's effective Health reading (not recomputed here),
- * since the two callers source it slightly differently (a subject pool's own creature here;
- * `getEffectiveStat(creature, 'health')` there -- identical value either way).
+ * design-review B-7. `maxHp` is `floor(getEffectiveStat(creature, 'health'))` -- the SAME integer
+ * `currentHp` is initialised and clamped to (effects.ts's `effectiveMaxHp`), computed HERE from
+ * `creature` directly (not passed in) so there is exactly one place either caller's "what does
+ * HP% divide by" reading can come from (Phase 4.1-B review, PR #69: the previous unfloored
+ * `getEffectiveStat` reading made "at full HP" untrue whenever a Health modifier left effective
+ * Health fractional -- a creature at its own max is trivially 100% only against the floored value
+ * currentHp actually gets clamped to).
  */
 export function hpPercentSatisfied(
-  currentHp: number,
+  creature: Creature,
   comparator: ComparatorOp,
   thresholdPercent: number,
-  effMaxHp: number,
 ): boolean {
-  return compare(currentHp * 100, comparator, thresholdPercent * effMaxHp)
+  const maxHp = Math.floor(getEffectiveStat(creature, 'health'))
+  return compare(creature.currentHp * 100, comparator, thresholdPercent * maxHp)
 }
 
 /**
@@ -79,10 +83,9 @@ function evaluateSelfCondition(condition: SelfCondition, creature: Creature): bo
       return true
     case 'hp-percent':
       return hpPercentSatisfied(
-        creature.currentHp,
+        creature,
         condition.comparator,
         condition.thresholdPercent,
-        getEffectiveStat(creature, 'health'),
       )
     case 'has-status':
       return hasStatus(creature, condition.statusId)

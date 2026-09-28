@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveFight, resolveTurn } from './combat'
 import { hasStatus } from './effects'
+import { getEffectiveStat } from './effective-stats'
 import { makeParty } from './__fixtures__/creatures'
 import { createRngState } from './rng'
 import { countDraws } from './test-utils/rng-draw-count'
@@ -8,9 +9,10 @@ import { deepFreeze } from './test-utils/deep-freeze'
 import { createCreatureId } from './ids'
 import { ROUND_CAP } from './config'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { TRAIT_REGISTRY, SORCERER_STARTER_TRAIT } from '../data/traits'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
-import type { StatusDef, Trait, TurnOrderStatusDef } from './effect-types'
+import type { EffectDef, StatusDef, Trait, TurnOrderStatusDef } from './effect-types'
 
 const EMBER_LANCE: Spell = {
   id: 'ember-lance',
@@ -44,6 +46,69 @@ describe('createCombat', () => {
     expect(() =>
       createCombat({ seed: 1, player: { party: player }, enemy: { party: [] } }),
     ).toThrow()
+  })
+
+  // Phase 4.1-B review (PR #69, R1): `enemy.effects` used to be silently dropped -- `createCombat`
+  // called `instantiate(c, [])` for the whole enemy party regardless of what `enemy.effects` held.
+  it("applies enemy.effects to the enemy party only, never the player's", () => {
+    const player = makeParty('player', [{ id: 'hero', attack: 10 }])
+    const enemy = makeParty('enemy', [{ id: 'goblin', attack: 10 }])
+    const DOUBLE_ATTACK: EffectDef = {
+      category: 'stat-modifier',
+      stat: 'attack',
+      factor: 2,
+    }
+
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy, effects: [DOUBLE_ATTACK] },
+    })
+
+    const goblin = state.enemyParty.find((c) => c.id === createCreatureId('goblin'))!
+    expect(getEffectiveStat(goblin, 'attack')).toBe(20)
+    expect(goblin.baselineEffects.map((e) => e.sourceTraitId)).toEqual(['enemy-effect-0'])
+
+    const hero = state.playerParty.find((c) => c.id === createCreatureId('hero'))!
+    expect(getEffectiveStat(hero, 'attack')).toBe(10)
+    expect(hero.baselineEffects).toEqual([])
+  })
+
+  it("throws when a creature's side doesn't match the list it was passed in", () => {
+    const player = makeParty('player', [{ id: 'hero' }])
+    const wrongSideEnemy = makeParty('player', [{ id: 'oops' }]) // side: 'player', fed as enemy.party
+    expect(() =>
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: wrongSideEnemy },
+      }),
+    ).toThrow(/side/)
+  })
+
+  // Phase 4.1-B review (PR #69, R3): re-feeding a post-setup creature used to be "safe but
+  // pointless" (silently recomputed from scratch) -- for a trait carrying an innate-spell effect
+  // (A8), it would silently DOUBLE the innate slots instead. Now a thrown error.
+  it('throws when re-fed a creature that already carries fight-setup output (double-prepend guard)', () => {
+    const player = makeParty('player', [
+      { id: 'seer', intelligence: 20, innateTraitIds: [SORCERER_STARTER_TRAIT.id] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const first = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { traits: TRAIT_REGISTRY },
+    })
+
+    expect(() =>
+      createCombat({
+        seed: 1,
+        player: { party: first.playerParty },
+        enemy: { party: enemy },
+        registries: { traits: TRAIT_REGISTRY },
+      }),
+    ).toThrow(/fight-setup output/)
   })
 })
 
@@ -94,6 +159,23 @@ describe('determinism', () => {
     // twice. Before B3, CombatState.rng was a closure shared by reference across every `{
     // ...state }` copy, so a second resolveTurn(state) call would continue from wherever the
     // FIRST call's draws left the closure's internal position, breaking this exact guarantee.
+    //
+    // Phase 4.1-B review (PR #69, R4): a 1v1 always-attack turn draws ZERO RNG, so the equality
+    // this test asserts would hold trivially even with the resolveTurn clone removed (nothing
+    // ever touches state.rng to diverge). `random-enemy` targeting against TWO living enemies
+    // forces this turn to actually draw, so the countDraws assertion below proves the test can't
+    // go vacuous again.
+    const randomTargetScript: Script = {
+      id: 'random-target-b3-fixture',
+      rules: [
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'attack' },
+          targeting: { kind: 'random-enemy' },
+        },
+      ],
+    }
+    const scripts = new Map([[randomTargetScript.id, randomTargetScript]])
     const player = makeParty('player', [
       {
         id: 'hero',
@@ -101,33 +183,66 @@ describe('determinism', () => {
         attack: 12,
         defence: 8,
         health: 40,
-        scriptId: 'always-attack',
+        scriptId: randomTargetScript.id,
       },
     ])
     const enemy = makeParty('enemy', [
-      {
-        id: 'goblin',
-        speed: 10,
-        attack: 9,
-        defence: 6,
-        health: 35,
-        scriptId: 'always-attack',
-      },
+      { id: 'goblinA', speed: 10, attack: 9, defence: 6, health: 35 },
+      { id: 'goblinB', speed: 5, attack: 9, defence: 6, health: 35 },
     ])
     const frozen = deepFreeze(
       createCombat({
         seed: 777,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: STOCK_SCRIPTS_BY_ID },
+        registries: { scripts: scripts },
       }),
     )
 
     const first = resolveTurn(frozen)
     const second = resolveTurn(frozen)
 
+    expect(countDraws(frozen.rng, first.state.rng)).toBeGreaterThan(0)
     expect(first.events).toEqual(second.events)
     expect(first.state).toEqual(second.state)
+  })
+
+  // Phase 4.1-B review (PR #69, scope/labeling): the brief's own B3 acceptance criterion is a
+  // STRUCTURAL guarantee -- "CombatState holds no closure, function, or class instance" -- which
+  // deep-freezing doesn't actually prove (a frozen closure is still a closure). `structuredClone`
+  // throws on any function/closure/class instance it encounters, so a real mid-fight state (real
+  // trait content, several turns in) surviving a clone-and-resolve round-trip is a direct proof
+  // of plain-data-ness, not just "nothing mutated its input."
+  it('a real mid-fight CombatState survives structuredClone and resolves identically after (plain-data proof)', () => {
+    const player = makeParty('player', [
+      {
+        id: 'seer',
+        intelligence: 20,
+        scriptId: 'always-cast',
+        innateTraitIds: [SORCERER_STARTER_TRAIT.id],
+        equippedSpells: [null, null, null],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'foe', health: 1000, defence: 0, speed: 1, scriptId: 'always-attack' },
+    ])
+    let state = createCombat({
+      seed: 42,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+    })
+    for (let i = 0; i < 6 && state.result === null; i++) {
+      state = resolveTurn(state).state
+    }
+
+    const cloned = structuredClone(state)
+    expect(cloned).toEqual(state)
+
+    const fromOriginal = resolveTurn(state)
+    const fromClone = resolveTurn(cloned)
+    expect(fromClone.events).toEqual(fromOriginal.events)
+    expect(fromClone.state).toEqual(fromOriginal.state)
   })
 })
 

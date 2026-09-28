@@ -122,6 +122,26 @@ describe('getEffectiveStat — stat-modifier folding', () => {
     expect(getEffectiveStat(hurt, 'attack')).toBe(20)
   })
 
+  it('at fractional effective Health, hp-percent divides by FLOOR(effective Health) -- the same max HP currentHp is clamped to, not the raw fractional reading (Phase 4.1-B review, PR #69, D1/R2)', () => {
+    const atFullHp: SelfCondition = {
+      kind: 'hp-percent',
+      comparator: '>=',
+      thresholdPercent: 100,
+    }
+    // base Health 30, x1.15 -> effective Health 34.5 (fractional). floor(34.5) = 34 is the max
+    // HP a creature's currentHp actually gets clamped to (effects.ts's effectiveMaxHp) -- a
+    // creature AT that floored max must read as exactly 100%, even though currentHp*100 (3400)
+    // is LESS than the unfloored 34.5*100 (3450): the old (pre-fix) reading would have judged
+    // this creature as permanently below 100%, so ">= 100%" could never fire no matter its HP.
+    const atMax = makeCreature({
+      health: 30,
+      currentHp: 34,
+      activeEffects: [statMod('health', 1.15), statMod('attack', 1.25, atFullHp)],
+    })
+    expect(getEffectiveStat(atMax, 'health')).toBe(34.5)
+    expect(getEffectiveStat(atMax, 'attack')).toBe(25) // 20 * 1.25 -- gate reads "at full HP" true
+  })
+
   it('includes a conditional modifier gated on has-status', () => {
     const hasFixtureStatus: SelfCondition = { kind: 'has-status', statusId: 'fixture' }
     const status: ActiveEffect = {

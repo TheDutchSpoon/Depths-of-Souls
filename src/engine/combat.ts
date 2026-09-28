@@ -70,36 +70,56 @@ export interface CreateCombatInput {
  * to an empty Map (matching the pre-S1 positional defaults).
  *
  * `createCombat` ALWAYS RECOMPUTES `baselineEffects` from each input creature's own
- * `innateTraitIds` (+ side effects) and RESETS `revivesUsed` to `0` -- it never trusts those
- * fields on an input `Creature` (design-review B-5), so feeding it creatures pulled from a
- * PREVIOUS `CombatState` (rather than fresh `materializeCreature` output) is safe but pointless:
- * any baseline/revive bookkeeping those creatures already carried is discarded and recomputed
- * from scratch. Input creatures are expected to carry only REGULAR gem slots (A8, B-10): this
- * function itself prepends every `innate-spell` effect's spell onto `equippedSpells` -- feeding
- * it an already-prepended creature would double the innate slots.
+ * `innateTraitIds` (+ that creature's own side's effects) and RESETS `revivesUsed` to `0` -- it
+ * never trusts those fields on an input `Creature` (design-review B-5). Fight setup takes FRESH
+ * creatures only (PR #69 review, R3): an input creature that already carries setup output
+ * (non-empty `baselineEffects` or `activeEffects` -- i.e. pulled from a PREVIOUS `CombatState`
+ * rather than fresh `materializeCreature` output) is a thrown error, not silently discarded-and-
+ * recomputed -- re-feeding one would double its innate spell slots (A8), since this function
+ * itself prepends every `innate-spell` effect's spell onto `equippedSpells`. A creature whose own
+ * `side` doesn't match the list it was passed in (`player.party` vs `enemy.party`) is likewise a
+ * thrown error (R1) -- each side's `effects` apply to exactly that side's creatures.
  */
 export function createCombat(input: CreateCombatInput): CombatState {
   const { seed, player, enemy, registries = {} } = input
   const { scripts = new Map(), traits = new Map(), statuses = new Map() } = registries
   const playerEffects = player.effects ?? []
+  const enemyEffects = enemy.effects ?? []
 
   if (player.party.length === 0 || enemy.party.length === 0) {
     throw new Error('createCombat: both parties must have at least one creature')
   }
 
-  // Fight-start: resolve + instantiate each creature's innate-trait (+ player-side perk) effects
-  // onto activeEffects (B4: fresh ids from the shared per-fight counter, threaded across BOTH
-  // parties, player then enemy, slot order), prepend any innate spells onto equippedSpells (A8),
-  // reset revivesUsed (D3), then set currentHp to effective max Health (so a +Health trait/perk
-  // actually grants the HP). For a trait-less, perk-less creature this is a no-op: activeEffects
-  // is [] and effective max == base Health, so currentHp is unchanged -- Phase 1/2 fixtures stay
-  // byte-identical.
+  // Fight-start: resolve + instantiate each creature's innate-trait (+ this side's own effects)
+  // effects onto activeEffects (B4: fresh ids from the shared per-fight counter, threaded across
+  // BOTH parties, player then enemy, slot order), prepend any innate spells onto equippedSpells
+  // (A8), reset revivesUsed (D3), then set currentHp to effective max Health (so a +Health
+  // trait/perk actually grants the HP). For a trait-less, effect-less creature this is a no-op:
+  // activeEffects is [] and effective max == base Health, so currentHp is unchanged -- Phase 1/2
+  // fixtures stay byte-identical.
   let counter = 0
   const instantiate = (
     creature: Creature,
+    side: 'player' | 'enemy',
     sideEffects: readonly EffectDef[],
+    sideLabel: string,
   ): Creature => {
-    const baselineEffects = resolveBaselineEffects(creature, traits, sideEffects)
+    if (creature.side !== side) {
+      throw new Error(
+        `createCombat: creature "${creature.id}" has side "${creature.side}" but was passed in ${side}.party`,
+      )
+    }
+    if (creature.baselineEffects.length > 0 || creature.activeEffects.length > 0) {
+      throw new Error(
+        `createCombat: creature "${creature.id}" already carries fight-setup output (baselineEffects/activeEffects) -- fight setup takes fresh creatures only, or innate spells would double`,
+      )
+    }
+    const baselineEffects = resolveBaselineEffects(
+      creature,
+      traits,
+      sideEffects,
+      sideLabel,
+    )
     const { effects: activeEffects, nextCounter } = instantiateEffectDefs(
       baselineEffects,
       counter,
@@ -120,8 +140,10 @@ export function createCombat(input: CreateCombatInput): CombatState {
 
   return {
     rng: createRngState(seed),
-    playerParty: player.party.map((c) => instantiate(c, playerEffects)),
-    enemyParty: enemy.party.map((c) => instantiate(c, [])),
+    playerParty: player.party.map((c) => instantiate(c, 'player', playerEffects, 'perk')),
+    enemyParty: enemy.party.map((c) =>
+      instantiate(c, 'enemy', enemyEffects, 'enemy-effect'),
+    ),
     turnQueue: [],
     turnCursor: 0,
     round: 0,

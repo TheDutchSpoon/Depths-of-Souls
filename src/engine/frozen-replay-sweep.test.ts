@@ -9,7 +9,7 @@
 // summary stats, etc.); those are listed explicitly below rather than silently skipped.
 
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveFight, resolveTurn } from './combat'
+import { createCombat, resolveTurn } from './combat'
 import { deepFreeze } from './test-utils/deep-freeze'
 import type { CombatEvent, CombatState, Creature, FightResult } from './types'
 import type { Script } from './scripting-types'
@@ -53,6 +53,10 @@ const KNOWN_NON_UNIFORM = [
 // do with B3.
 const KNOWN_BESPOKE_DRIVER = [
   './__golden__/golden-action-observed.fixture.ts',
+  './__golden__/golden-b4-cleanse-then-tick.fixture.ts', // single bare resolveTurn call
+  './__golden__/golden-b4-remove-then-reapply.fixture.ts', // single bare resolveTurn call
+  './__golden__/golden-d3-revive-cap-exclusion.fixture.ts', // post-createCombat updateCreature setup
+  './__golden__/golden-d3-revive-cap-fizzle.fixture.ts', // post-createCombat updateCreature setup
   './__golden__/golden-dot.fixture.ts',
   './__golden__/golden-gloomjaw-ravager.fixture.ts',
   './__golden__/golden-heal-scaling-count.fixture.ts',
@@ -104,19 +108,23 @@ function replay(mod: FixtureModule): CombatEvent[] {
     registries: { scripts: mod.scripts, traits: mod.traits, statuses: mod.statuses },
   })
 
+  // Re-freeze before EVERY turn, not just the first (Phase 4.1-B review, PR #69, R4): each
+  // turn's own input must be provably untouched, not merely the fight's original starting
+  // snapshot. `resolveFight(deepFreeze(created))` would only freeze turn 1 -- resolveFight's own
+  // internal loop re-assigns `working` to resolveTurn's plain (unfrozen) return each iteration,
+  // so a hypothetical turn-2+ mutation bug would go undetected. Both branches below therefore
+  // drive the SAME way: freeze, resolveTurn, repeat -- `TURN_STEPS` bounds the loop when the
+  // fixture names an explicit turn count; otherwise it runs until the fight has a result.
   const events: CombatEvent[] = []
-  if (mod.TURN_STEPS !== undefined) {
-    let state: CombatState = created
-    for (let i = 0; i < mod.TURN_STEPS; i++) {
-      // Re-freeze before EVERY turn, not just the first: each turn's own input must be
-      // provably untouched, not merely the fight's original starting snapshot.
-      const step = resolveTurn(deepFreeze(state))
-      events.push(...step.events)
-      state = step.state
-    }
-  } else {
-    const result = resolveFight(deepFreeze(created))
-    events.push(...result.events)
+  let state: CombatState = created
+  let turns = 0
+  const done = () =>
+    mod.TURN_STEPS !== undefined ? turns >= mod.TURN_STEPS : state.result !== null
+  while (!done()) {
+    const step = resolveTurn(deepFreeze(state))
+    events.push(...step.events)
+    state = step.state
+    turns += 1
   }
   return events
 }

@@ -31,34 +31,45 @@ import type { CombatState, Creature } from './types'
 
 /**
  * Phase 4.1-B (S1): resolves a creature's baseline effect list -- innate traits' effects, in
- * trait-then-declaration order, then (player-side only) perk effects -- WITHOUT instantiating
+ * trait-then-declaration order, then this side's own `sideEffects` -- WITHOUT instantiating
  * instance ids yet (that's `instantiateEffectDefs` below). `sourceTraitId` is paired with each
- * def here (a trait-sourced def's owning trait id; a perk-sourced def's `perk-<ordinal>` label)
- * since a bare `EffectDef[]` would lose it. `createCombat` stores the result as
+ * def here (a trait-sourced def's owning trait id; a side-effect def's `<sideLabel>-<ordinal>`
+ * label) since a bare `EffectDef[]` would lose it. `createCombat` stores the result as
  * `Creature.baselineEffects`; `revive`'s death-reset re-instantiates the SAME stored list
- * directly, needing no registry lookup. Unknown trait ids are skipped defensively.
+ * directly, needing no registry lookup.
+ *
+ * Phase 4.1-B review (PR #69, R1/D3): `sideEffects` applies UNCONDITIONALLY to every creature
+ * passed in here -- the caller (`createCombat`) already knows which side's list it's threading
+ * through which party, so there is no `creature.side` re-check to get wrong; `sideLabel` picks
+ * the sourceTraitId prefix (`'perk'` for the player side, `'enemy-effect'` for the enemy side --
+ * distinct so a TriggerFired.effectId can't collide across sides). An unknown trait id THROWS
+ * (never silently skipped, matching S1's own "no silent drop" rationale) -- a caller that forgot
+ * to pass `registries.traits` used to strip every innate trait with no signal at all.
  */
 export function resolveBaselineEffects(
-  creature: Pick<Creature, 'innateTraitIds' | 'side'>,
+  creature: Pick<Creature, 'innateTraitIds'>,
   traits: ReadonlyMap<string, Trait>,
-  playerWideEffects: readonly EffectDef[] = [],
+  sideEffects: readonly EffectDef[] = [],
+  sideLabel: string = 'perk',
 ): BaselineEffectEntry[] {
   const entries: BaselineEffectEntry[] = []
   for (const traitId of creature.innateTraitIds) {
     const trait = traits.get(traitId)
-    if (!trait) continue
+    if (!trait) {
+      throw new Error(
+        `resolveBaselineEffects: unknown trait id "${traitId}" -- not in the trait registry`,
+      )
+    }
     for (const def of trait.effects) {
       entries.push({ def, sourceTraitId: traitId })
     }
   }
-  // Phase 4 Slice F / ASSUMPTION 21: perks are PLAYER-LEVEL effects (never enemy), appended
-  // AFTER a creature's own innate-trait effects -- the canonical per-creature effect order:
-  // innate-1 -> innate-2 -> perks -> infusions (Phase 8, none yet) -> statuses.
-  if (creature.side === 'player') {
-    playerWideEffects.forEach((def, ordinal) => {
-      entries.push({ def, sourceTraitId: `perk-${ordinal}` })
-    })
-  }
+  // Phase 4 Slice F / ASSUMPTION 21: side effects (perks today; biome/boss effects later)
+  // appended AFTER a creature's own innate-trait effects -- the canonical per-creature effect
+  // order: innate-1 -> innate-2 -> side effects -> infusions (Phase 8, none yet) -> statuses.
+  sideEffects.forEach((def, ordinal) => {
+    entries.push({ def, sourceTraitId: `${sideLabel}-${ordinal}` })
+  })
   return entries
 }
 

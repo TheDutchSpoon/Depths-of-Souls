@@ -850,10 +850,12 @@ export interface Trait {
 
 /** Phase 4.1-B (S1): one entry of a creature's resolved `baselineEffects` -- an `EffectDef` paired
  * with the `sourceTraitId` label it must carry once instantiated (a bare `EffectDef[]` would lose
- * this: a trait-sourced def's label is its owning trait's id, e.g. `'brutish'`; a perk-sourced
- * def's label is `'perk-<ordinal>'` -- see effects.ts's `resolveBaselineEffects`). Plain data (no
- * functions -- `SelfCondition` replacing `ActivationPredicate`, S2, is what makes this possible),
- * so `Creature.baselineEffects: readonly BaselineEffectEntry[]` can live inside `CombatState`. */
+ * this: a trait-sourced def's label is its owning trait's id, e.g. `'brutish'`; a side-effect
+ * def's label is `'<sideLabel>-<ordinal>'` -- `'perk-<ordinal>'` for the player side,
+ * `'enemy-effect-<ordinal>'` for the enemy side (PR #69 review, R1) -- see effects.ts's
+ * `resolveBaselineEffects`). Plain data (no functions -- `SelfCondition` replacing
+ * `ActivationPredicate`, S2, is what makes this possible), so `Creature.baselineEffects: readonly
+ * BaselineEffectEntry[]` can live inside `CombatState`. */
 export type BaselineEffectEntry = {
   readonly def: EffectDef
   readonly sourceTraitId: string

@@ -107,9 +107,9 @@ describe('resolveBaselineEffects / instantiateEffectDefs (Phase 4.1-B, S1/B4)', 
     expect(entries.map((e) => e.sourceTraitId)).toEqual(['plus-attack', 'big-health'])
   })
 
-  it('skips unknown trait ids defensively', () => {
+  it('throws on an unknown trait id (Phase 4.1-B review, PR #69, D3) -- never silently skips', () => {
     const c = makeCreature({ id: 'hero', innateTraitIds: ['nope', 'plus-attack'] })
-    expect(resolveBaselineEffects(c, REGISTRY)).toHaveLength(1)
+    expect(() => resolveBaselineEffects(c, REGISTRY)).toThrow(/unknown trait id "nope"/)
   })
 
   it('returns an empty list for a trait-less creature', () => {
@@ -117,42 +117,39 @@ describe('resolveBaselineEffects / instantiateEffectDefs (Phase 4.1-B, S1/B4)', 
   })
 })
 
-describe('resolveBaselineEffects with perks (Phase 4 Slice F / ASSUMPTION 21)', () => {
+// Phase 4.1-B review (PR #69, R1): `resolveBaselineEffects` no longer reads `creature.side` at
+// all -- it applies whatever `sideEffects` list it's given UNCONDITIONALLY, since the CALLER
+// (`createCombat`) is the one that knows which side's list belongs to which party. "a player-side
+// creature gets perks, an enemy-side creature never does" is now proven at that call site --
+// combat.test.ts's own R1 coverage -- not here.
+describe('resolveBaselineEffects with side effects (Phase 4 Slice F / ASSUMPTION 21, Phase 4.1-B R1)', () => {
   const PLAYER_WIDE = [
     { category: 'stat-modifier', stat: 'attack', factor: 1.5 } as const,
   ]
 
-  it('appends perk effects AFTER innate-trait effects, for a player-side creature', () => {
-    const c = makeCreature({
-      id: 'hero',
-      side: 'player',
-      innateTraitIds: ['plus-attack'],
-    })
+  it('appends side effects AFTER innate-trait effects, labeled perk-<n> by default', () => {
+    const c = makeCreature({ id: 'hero', innateTraitIds: ['plus-attack'] })
     const entries = resolveBaselineEffects(c, REGISTRY, PLAYER_WIDE)
     expect(entries.map((e) => e.def.category)).toEqual(['stat-modifier', 'stat-modifier'])
     expect(entries.map((e) => e.sourceTraitId)).toEqual(['plus-attack', 'perk-0'])
   })
 
-  it('never applies perk effects to an enemy-side creature', () => {
-    const c = makeCreature({ id: 'foe', side: 'enemy', innateTraitIds: ['plus-attack'] })
-    const entries = resolveBaselineEffects(c, REGISTRY, PLAYER_WIDE)
+  it('labels side effects with the caller-supplied sideLabel (e.g. enemy-effect-<n>)', () => {
+    const c = makeCreature({ id: 'foe', innateTraitIds: [] })
+    const entries = resolveBaselineEffects(c, REGISTRY, PLAYER_WIDE, 'enemy-effect')
     expect(entries).toHaveLength(1)
-    expect(entries[0]?.sourceTraitId).toBe('plus-attack')
+    expect(entries[0]?.sourceTraitId).toBe('enemy-effect-0')
   })
 
-  it('is byte-identical whether perks are omitted or an empty list', () => {
-    const c = makeCreature({
-      id: 'hero',
-      side: 'player',
-      innateTraitIds: ['plus-attack'],
-    })
+  it('is byte-identical whether side effects are omitted or an empty list', () => {
+    const c = makeCreature({ id: 'hero', innateTraitIds: ['plus-attack'] })
     expect(resolveBaselineEffects(c, REGISTRY)).toEqual(
       resolveBaselineEffects(c, REGISTRY, []),
     )
   })
 
-  it('assigns deterministic, never-RNG perk instance ids via the shared counter', () => {
-    const c = makeCreature({ id: 'hero', side: 'player', innateTraitIds: [] })
+  it('assigns deterministic, never-RNG side-effect instance ids via the shared counter', () => {
+    const c = makeCreature({ id: 'hero', innateTraitIds: [] })
     const { effects } = instantiateEffectDefs(
       resolveBaselineEffects(c, REGISTRY, PLAYER_WIDE),
       0,

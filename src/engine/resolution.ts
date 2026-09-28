@@ -438,8 +438,12 @@ export function fireHook(
   for (const selfId of selfIds) {
     const initial = findCreature(working, selfId)
     if (!initial) continue
-    // Effects are looked up once per creature (the active-effects LIST itself doesn't change
-    // mid-pass in v1 content); aliveness is re-checked fresh below, per effect.
+    // Candidates are looked up ONCE per creature, from `initial` -- a snapshot at this creature's
+    // pass start. The list CAN change mid-pass (an earlier candidate's own response may cleanse
+    // or replace a status this creature also carries -- that's exactly what B4's exact-instance
+    // check below exists to catch), so aliveness AND each candidate's real owning instance are
+    // both re-checked fresh, per effect, against the LIVE creature below -- never trusted off
+    // this snapshot.
     const candidates = effectsForHook(initial, hook)
 
     for (const effect of candidates) {
