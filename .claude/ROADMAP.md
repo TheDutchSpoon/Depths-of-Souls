@@ -99,7 +99,7 @@ six role scripts; see Phase 4.1.)*
   `{ condition, action, targeting? }`; `Script` = `{ id, rules[], defaultTarget? }` (ordering =
   array position, no priority int; `defaultTarget?` reserved for Phase 6). Creature refs a script by
   **`scriptId`**. Add an **`always`** condition. HP% compared via **integer cross-multiplication**
-  (denominator = effective Health), no float. **Condition scope this phase: the testable subset only**
+  (denominator = max HP = effective Health rounded down, per the Phase 4.1-B review), no float. **Condition scope this phase: the testable subset only**
   (`always`, HP%, enemy/ally counts, turn/round, affinity-advantage, is-provoking); **`has-status`
   is deferred to Phase 3** (no status producer exists yet — the union grows then).
 - Interpreter (**pure engine**, fills the `decideAction` seam): side-effect-free lookahead, first
