@@ -554,7 +554,7 @@ existing fixtures change + 1 new.
   ```
   `TurnEnded` is now always the turn's last event -- Phase 4 fired turn-end hooks and the bonus
   cast after it; fixed here.
-- **The cleanup gate, precisely** (PR #70 review, item 8): turn-start cleanup runs **whether or
+- **The cleanup gate, precisely** (4.1-C plan review, fix 8): turn-start cleanup runs **whether or
   not the turn is suppressed** (Stun) -- this is B6's fix. Previously cleanup lived inside the same
   `!suppressed` gate as decide+action, so a Stunned or Sleeping creature kept Defend/Provoke
   through its own skipped turn. The one gate left is that the actor must still be **alive**,
@@ -604,11 +604,14 @@ existing fixtures change + 1 new.
 ### Verification
 
 All four gates green: `npx tsc -b` clean; `npx vitest run` -- 113 files / 727 tests passed (up
-from 112/723 on `main`: the new B6 golden pair plus the two F2 unit tests below); `npm run lint`
+from 112 / 724 on `main`: −1 for the deleted `is-provoking` test, +2 for the B6 golden and its
+frozen-sweep replay, +2 for the two F2 unit tests below); `npm run lint`
 clean; `npm run format:check` clean (after `npm run format`, whitespace only); `npm run build`
 succeeds. Golden diff against `main`: exactly the 11 + 1 above, confirmed via `git status` both
 after the initial C1 submission and again after this round's review fixes (none of which touch a
-golden fixture).
+golden fixture). Design review (PR #70) additionally compared the full `golden-6v6-scripted`
+event log against `main`: with the 41 `ActionStateEnded` events stripped it is identical
+(668 events), and the 41 were predicted independently from `main`'s log, event for event.
 
 ### Review fixes (PR #70)
 
@@ -632,10 +635,13 @@ golden fixture).
   granted-actions step and `TurnEnded`, states plainly that C1's turn-end cleanup is a no-op seam
   (ASSUMPTION 15/16) and names what 4.1-F puts there (the bearer's own status-timer countdown, the
   Web roll). No code change.
-- **Design-owner doc-sync** (committed on the branch ahead of this round's code, per the review's
-  own instruction -- L1 above implements what it pins): `CONVENTIONS.md` and the brief now say
-  `gemSlot` (not `gem`) throughout, name `ActionStateEnded`'s consequence family explicitly, and
-  record the C1/C2 split plus its exact golden-impact data in the brief's own C section.
+- **Design-owner doc-syncs** (committed on the branch; L1 above implements what the second one
+  pins). The 4.1-C plan-review doc-sync: `gem` → `gemSlot`, `decideAction -> Intent`, the
+  `acted-before-target` default-target peek, and the C1/C2 split with its golden-impact data. The
+  PR #70 doc-sync: the last `gem: { random, side }` example → `gemSlot`, the event families
+  pinned (`ActionStateEnded` consequence; `TurnSkipped` and `ActionGranted` intents), and a data
+  point on ASSUMPTION 19 (end-of-turn-only win check turns a win into a draw once DoTs tick on
+  `on-turn-end`; F's win-check golden covers it).
 
 ### Next
 
