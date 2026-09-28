@@ -402,6 +402,20 @@ export interface CascadeTruncatedEvent {
   readonly depth: number
 }
 
+/** Phase 4.1-C (D6, fixes B6): turn-start cleanup emits this only when a Defend/Provoke flag
+ * was actually set and just expired ("until its next turn") -- never on a dead creature's empty
+ * bracket, never when neither flag was set. Runs unconditionally on a skipped (Stunned) turn
+ * too, which is the fix: previously cleanup only ran when the creature went on to act, so a
+ * Stunned or Sleeping creature kept Defend/Provoke through its own skipped turn. A consequence
+ * event (PR #70 review), not an intent -- it reports a state ending, like `StatusExpired`, not an
+ * action taken. */
+export interface ActionStateEndedEvent {
+  readonly type: 'ActionStateEnded'
+  readonly creatureId: CreatureId
+  readonly defending: boolean
+  readonly provoking: boolean
+}
+
 export type ConsequenceEvent =
   | DamageDealtEvent
   | CreatureDiedEvent
@@ -412,6 +426,7 @@ export type ConsequenceEvent =
   | HealAppliedEvent
   | CascadeTruncatedEvent
   | RevivedEvent
+  | ActionStateEndedEvent
 
 // Lifecycle events. TurnStarted/TurnEnded are real events (not just internal hook
 // checkpoints) so playback has an explicit boundary even for no-op/skipped turns.

@@ -123,7 +123,8 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: BEARER },
   { type: 'Waited', creatureId: BEARER },
-  { type: 'TurnEnded', creatureId: BEARER },
+  // Phase 4.1-C (D6): on-turn-end hooks fire BEFORE TurnEnded now (TurnEnded is always the
+  // turn's last event).
   // Candidate 1 (effect 2, remove): fires -- the OLD instance is gone.
   {
     type: 'TriggerFired',
@@ -150,4 +151,5 @@ export const expectedEvents: CombatEvent[] = [
   // Candidate 3 (the OLD status's own tick, captured before either of the above ran): skipped
   // silently -- its exact owning instance no longer exists. No third TriggerFired, no
   // DamageDealt.
+  { type: 'TurnEnded', creatureId: BEARER },
 ]

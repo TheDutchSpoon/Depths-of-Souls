@@ -182,6 +182,15 @@ function describeEvent(event: CombatEvent): string {
       return `  ${event.creatureId} provokes`
     case 'Waited':
       return `  ${event.creatureId} waits`
+    case 'ActionStateEnded': {
+      const flags = [
+        event.defending ? 'defending' : null,
+        event.provoking ? 'provoking' : null,
+      ]
+        .filter((f): f is string => f !== null)
+        .join(', ')
+      return `  ${event.creatureId}'s ${flags} ends`
+    }
     case 'DamageDealt':
       if (event.damageSource === 'dot' && event.statusId) {
         return (

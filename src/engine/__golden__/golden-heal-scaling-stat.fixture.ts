@@ -90,7 +90,8 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: FOE },
   { type: 'TurnStarted', creatureId: ELDER },
   { type: 'Waited', creatureId: ELDER },
-  { type: 'TurnEnded', creatureId: ELDER },
+  // Phase 4.1-C (D6): on-turn-end hooks fire BEFORE TurnEnded now (TurnEnded is always the
+  // turn's last event).
   {
     type: 'TriggerFired',
     sourceId: ELDER,
@@ -104,4 +105,5 @@ export const expectedEvents: CombatEvent[] = [
     amount: 40,
     remainingHp: 100,
   },
+  { type: 'TurnEnded', creatureId: ELDER },
 ]

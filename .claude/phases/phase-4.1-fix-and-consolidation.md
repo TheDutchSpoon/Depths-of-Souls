@@ -524,5 +524,128 @@ additions, confirmed via direct diff.
 
 ### Next
 
-4.1-C — one action pipeline + the turn skeleton. Deliberate golden changes, listed per the brief's
-own acceptance criteria; everything else stays byte-identical.
+4.1-C, split at the plan review into **C1** (the turn skeleton, below) and **C2** (the action
+pipeline) once applying each change to `main` in isolation showed every existing-golden change
+traces to the skeleton alone.
+
+## 4.1-C1 — Turn skeleton
+
+Items built: **D6 skeleton** (turn-start cleanup made unconditional + `ActionStateEnded`,
+`TurnEnded` moved to after turn-end hooks and the granted-actions step) + **deleting
+`is-provoking`**. Split from the brief's single "4.1-C" slice at the plan review: applying each C
+change alone to `main` @ `c9ba34b` showed every existing-golden change traces to D6 alone -- B1,
+B2 (incl. rule 4) and B5 change no existing golden and land in **C2**, which the brief's own
+doc-sync (landed ahead of this section) now records. Golden policy: deliberate; exactly 11
+existing fixtures change + 1 new.
+
+### What was built
+
+- **D6 turn skeleton** (`combat.ts`'s `resolveTurn`). The sequence, as implemented:
+  ```
+  TurnStarted
+  → (if actor entered alive) turn-start hooks
+    → (if actor is STILL alive after those hooks) turn-start cleanup
+  → (if actor is still alive AND the turn isn't suppressed) decide + action
+  → (if actor is still alive) turn-end hooks
+    → (same alive gate) granted-actions step (bonus-cast -- today's implementation, unmoved)
+  → [turn-end cleanup: a no-op seam here, ASSUMPTION 15/16 -- statuses still count down at
+     round-end, the Web roll stays at turn-start, until Phase 4.1-F]
+  → TurnEnded
+  ```
+  `TurnEnded` is now always the turn's last event -- Phase 4 fired turn-end hooks and the bonus
+  cast after it; fixed here.
+- **The cleanup gate, precisely** (4.1-C plan review, fix 8): turn-start cleanup runs **whether or
+  not the turn is suppressed** (Stun) -- this is B6's fix. Previously cleanup lived inside the same
+  `!suppressed` gate as decide+action, so a Stunned or Sleeping creature kept Defend/Provoke
+  through its own skipped turn. The one gate left is that the actor must still be **alive**,
+  re-checked fresh AFTER turn-start hooks fire (never the pre-hook snapshot) -- a creature that
+  dies to its own on-turn-start hook gets no cleanup at all that turn, its flags left exactly as
+  they stood (a later revive's death-reset clears them unconditionally regardless, so leaving them
+  set on a corpse has no downstream effect). `ActionStateEnded { creatureId, defending, provoking }`
+  is emitted only when at least one flag was actually set -- both flags ending together (e.g.
+  Snapjaw's Lure's on-provoke-grants-Defending) emit exactly **one** event, never two.
+- Moving cleanup earlier (before decide+action, not after, as it ran pre-4.1-C) is safe only
+  because `is-provoking` is deleted in this same PR: it was the only thing reading the acting
+  creature's own `defending`/`provoking` during script lookahead (Defend's math reads the
+  **target's** flag; Provoke's redirect reads the **opposing side's** provoking members -- neither
+  is the actor's own).
+- **`is-provoking` deleted**: removed from the `Condition` union (`scripting-types.ts`), its
+  `evaluateCondition` case (`conditions.ts`), and its dedicated test (`conditions.test.ts`). One
+  incidental use as a throwaway "always false" `TriggeredDef.condition` in `resolution.test.ts` was
+  swapped for `{ kind: 'enemy-count', comparator: '<', count: 0 }` (an unrelated, robustly-false
+  condition -- the test only needed *some* false condition, not this specific one).
+- Bonus-cast's own suppression semantics are **untouched** here -- still no Silenced/Stunned gate.
+  C1 only moved *when* it runs relative to `TurnEnded`, never *whether* it runs; that fix is B2,
+  landing in C2.
+
+### Golden impact -- exactly 11 existing fixtures + 1 new
+
+- **`TurnEnded` reorder** (5): `golden-b4-cleanse-then-tick`, `golden-b4-remove-then-reapply`,
+  `golden-heal-scaling-count`, `golden-heal-scaling-stat`, `golden-sorcerer-starter` -- each has
+  real on-turn-end content (a status tick/cleanse, a heal, a bonus cast) whose events used to land
+  after `TurnEnded`; now before it, matching the fixed ordering.
+- **`ActionStateEnded` insertion** (5): `golden-defend-count-additive-cap`, `golden-defend-count`,
+  `golden-on-action-hooks`, `golden-provoke-redirect`, `golden-scripted-1v1` -- each hand-derived,
+  one `ActionStateEnded` inserted at the exact turn-start where a prior Defend/Provoke expires.
+- **Integration, regenerated + checkpoint-verified** (1): `golden-6v6-scripted` -- gained
+  `ActionStateEnded: 41` in its per-event-type-count checkpoint (result `loss`, round `28`
+  unchanged). Every other checkpoint -- round-1 turn order, the other event-type counts,
+  spot-check damage, provoke redirects -- reconfirmed unchanged by re-running the fixture.
+- **Confirmed unchanged**: `golden-shieldbarer-starter` (asserts first-turn events only, so it
+  never reaches a second turn-start where a flag could expire).
+- **New**: `golden-b6-provoke-stun-cleanup` -- PROVOKER provokes, HERO's attack (redirected to it
+  by Provoke, since WEAKLING is the actual lowest-HP enemy) triggers a fixture
+  on-damage-taken → self-apply-status(stun) trait; at PROVOKER's own next turn-start the stun
+  suppresses it, but cleanup still clears `provoking` and emits `ActionStateEnded`, so HERO's
+  following attack resolves to the real lowest-HP enemy (WEAKLING) instead of redirecting again.
+  Verified to fail when the B6 fix is reverted (checked directly: the redirect and the stun both
+  re-fire a second time in round 2; reverted after confirming).
+
+### Verification
+
+All four gates green: `npx tsc -b` clean; `npx vitest run` -- 113 files / 727 tests passed (up
+from 112 / 724 on `main`: −1 for the deleted `is-provoking` test, +2 for the B6 golden and its
+frozen-sweep replay, +2 for the two F2 unit tests below); `npm run lint`
+clean; `npm run format:check` clean (after `npm run format`, whitespace only); `npm run build`
+succeeds. Golden diff against `main`: exactly the 11 + 1 above, confirmed via `git status` both
+after the initial C1 submission and again after this round's review fixes (none of which touch a
+golden fixture). Design review (PR #70) additionally compared the full `golden-6v6-scripted`
+event log against `main`: with the 41 `ActionStateEnded` events stripped it is identical
+(668 events), and the 41 were predicted independently from `main`'s log, event for event.
+
+### Review fixes (PR #70)
+
+- **F2 -- the two untested branches of turn-start cleanup.** Two unit tests added to
+  `combat.test.ts` (`describe('turn-start cleanup (Phase 4.1-C, D6)')`), neither exercised end-to-
+  end by a golden: (1) **both flags ending together as one event** -- built from real content
+  (`SNAPJAW_LURE_TRAIT`, Snapjaws' Lure: on-provoke grants self Defending), asserting the single
+  `ActionStateEnded { defending: true, provoking: true }` lands directly after `TurnStarted`; (2)
+  **the actor dies to its own turn-start hook** -- a fixture lethal self-`deal-damage` trait on
+  `on-turn-start`, the creature `provoking: true` at fight-start (not `defending`, so Defend's own
+  damage reduction can't interfere with the lethality), asserting no `ActionStateEnded` fires and
+  `provoking` is left `true` on the corpse afterward. Both verified to fail under their named
+  mutation (test 1: emitting one event per flag instead of one combined; test 2: dropping the
+  post-hook `.alive` gate) -- checked directly against the code, then reverted; neither mutation
+  changed any golden.
+- **L1 -- `ActionStateEnded` moved to the consequence family.** It reports a state ending (like
+  `StatusExpired`), not an action taken -- moved from `IntentEvent` to `ConsequenceEvent` in
+  `types.ts`, its interface relocated beside the other consequence events. Type-level only; no
+  event object or golden changed.
+- **L2 -- the turn-end cleanup seam marked explicitly.** A comment in `resolveTurn`, between the
+  granted-actions step and `TurnEnded`, states plainly that C1's turn-end cleanup is a no-op seam
+  (ASSUMPTION 15/16) and names what 4.1-F puts there (the bearer's own status-timer countdown, the
+  Web roll). No code change.
+- **Design-owner doc-syncs** (committed on the branch; L1 above implements what the second one
+  pins). The 4.1-C plan-review doc-sync: `gem` → `gemSlot`, `decideAction -> Intent`, the
+  `acted-before-target` default-target peek, and the C1/C2 split with its golden-impact data. The
+  PR #70 doc-sync: the last `gem: { random, side }` example → `gemSlot`, the event families
+  pinned (`ActionStateEnded` consequence; `TurnSkipped` and `ActionGranted` intents), and a data
+  point on ASSUMPTION 19 (end-of-turn-only win check turns a win into a draw once DoTs tick on
+  `on-turn-end`; F's win-check golden covers it).
+
+### Next
+
+C2 -- the A1 action pipeline + `ResolutionContext` (fully threaded through the resolver) + B1
+(side-aware default targeting) + B2 (reroute bonus-cast/echo-cast through the pipeline) + B5
+(pre-hit fizzle). Every existing golden stays byte-identical; new goldens prove each behavior
+change.

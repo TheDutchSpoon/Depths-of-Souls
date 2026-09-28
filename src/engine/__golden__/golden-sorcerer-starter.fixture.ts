@@ -18,7 +18,8 @@
 // this fight before the bonus-cast check, so this IS the roll it consumes).
 //
 // Hand-derived (independent `node -e` calculator). CASTER acts (Waits, per its own script) then,
-// at turn-end, the bonus-cast passive fires -- AFTER TurnEnded, per combat.ts's own ordering.
+// at turn-end, the bonus-cast passive fires -- BEFORE TurnEnded (Phase 4.1-C, D6: TurnEnded is
+// always the turn's last event; Phase 4 fired the bonus cast after it).
 //
 //   ARCANE_BOLT: spellPower 0.5, scalingStat unset -> default remap-aware Intelligence lookup.
 //   effInt 20 (no modifiers) x spellPower 0.5 x instance-list powerFraction 1.0 (no extra
@@ -68,7 +69,6 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
   { type: 'Waited', creatureId: CASTER },
-  { type: 'TurnEnded', creatureId: CASTER },
   {
     type: 'SpellCast',
     targetShape: 'single',
@@ -88,6 +88,7 @@ export const expectedEvents: CombatEvent[] = [
     damageSource: 'cast',
   },
   { type: 'CreatureDied', creatureId: FOE },
+  { type: 'TurnEnded', creatureId: CASTER },
   { type: 'FightEnded', result: 'win' },
 ]
 

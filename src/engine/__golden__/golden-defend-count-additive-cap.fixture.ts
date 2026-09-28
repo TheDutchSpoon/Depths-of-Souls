@@ -138,6 +138,9 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: STRIKER },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: BEARER },
+  // Phase 4.1-C (D6, fixes B6): round 1's Defend expires at BEARER's own turn-start cleanup,
+  // unconditionally, before it decides its round-2 action.
+  { type: 'ActionStateEnded', creatureId: BEARER, defending: true, provoking: false },
   { type: 'Defended', creatureId: BEARER },
   { type: 'TurnEnded', creatureId: BEARER },
   { type: 'TurnStarted', creatureId: STRIKER },
