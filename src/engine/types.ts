@@ -83,6 +83,20 @@ export interface Spell {
 
 // ---- Creature ----
 
+/**
+ * Phase 4.1-A (A5): run-layer identity on every combat creature -- REQUIRED, but
+ * ENGINE-INERT (no engine code reads it; only the run layer/UI do, via origin.templateId).
+ * `templateId` is the static SpeciesCreature.id this creature was materialized from; `level` is
+ * the level it was materialized at (baked into baseStats by scaleStatsToLevel); `ref` is an
+ * OPAQUE string the run layer may stash an InstanceId in (a plain string to the engine, never the
+ * state-layer's branded type).
+ */
+export interface CreatureOrigin {
+  readonly templateId: string
+  readonly level: number
+  readonly ref?: string
+}
+
 export interface CreatureStats {
   readonly health: number
   readonly attack: number
@@ -136,6 +150,10 @@ export interface Creature {
    * -- out of this slice's own required scope (no Slice D golden exercises real species data);
    * flagged for whichever slice first authors real species content. */
   readonly speciesId?: string
+  /** Phase 4.1-A (A5): required, engine-inert run-layer identity -- see CreatureOrigin's own doc
+   * comment. Rewards read this (soul bar keyed by origin.templateId; XP per kill = the victim's
+   * origin.level) instead of parsing the per-fight CreatureId's `-side-slot` suffix. */
+  readonly origin: CreatureOrigin
 }
 
 // ---- Actions ----

@@ -45,6 +45,9 @@ import {
 
 export const SORCERER_STARTER: SpeciesCreature = {
   id: 'sorcerer-starter',
+  // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- the Sorcerer starter's real species
+  // (species-locked.md) is authored in a later biome; this stands in until then.
+  name: 'Glyphmoth Seer',
   affinity: 'wit',
   baseStats: { health: 20, attack: 10, intelligence: 30, defence: 10, speed: 20 },
   defaultScriptId: 'always-cast',
@@ -69,6 +72,8 @@ export const SORCERER_STARTER_SPECIES_ID = 'sorcerer-starter-species'
 
 export const BRUTE_STARTER: SpeciesCreature = {
   id: 'brute-starter',
+  // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
+  name: 'Cragfang Mauler',
   affinity: 'violence',
   baseStats: { health: 20, attack: 30, intelligence: 10, defence: 15, speed: 15 },
   defaultScriptId: 'always-attack',
@@ -84,6 +89,8 @@ export const BRUTE_STARTER_SPECIES_ID = 'brute-starter-species'
 
 export const SHIELDBARER_STARTER: SpeciesCreature = {
   id: 'shieldbarer-starter',
+  // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
+  name: 'Stonehorn Warden',
   affinity: 'endurance',
   baseStats: { health: 25, attack: 10, intelligence: 10, defence: 30, speed: 10 },
   defaultScriptId: 'always-provoke',
@@ -102,6 +109,8 @@ export const SHIELDBARER_STARTER_SPECIES_ID = 'shieldbarer-starter-species'
 
 export const UNICORN: SpeciesCreature = {
   id: 'unicorn',
+  // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
+  name: 'Unicorn Lightbearer',
   affinity: 'vitality',
   baseStats: { health: 25, attack: 15, intelligence: 15, defence: 15, speed: 20 },
   defaultScriptId: 'always-attack',

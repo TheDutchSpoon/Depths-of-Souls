@@ -82,6 +82,7 @@ export const ROTCAP_HOLLOW_SPELLS = [
 
 export const SPORECLOUD_SEEDER: SpeciesCreature = {
   id: 'sporecloud-seeder',
+  name: 'Sporecloud Seeder',
   affinity: 'wit',
   baseStats: { health: 14, attack: 16, intelligence: 20, defence: 10, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -91,6 +92,7 @@ export const SPORECLOUD_SEEDER: SpeciesCreature = {
 
 export const SPORECLOUD_REAPER: SpeciesCreature = {
   id: 'sporecloud-reaper',
+  name: 'Sporecloud Reaper',
   affinity: 'wit',
   baseStats: { health: 14, attack: 14, intelligence: 22, defence: 10, speed: 20 },
   defaultScriptId: 'always-attack',
@@ -100,6 +102,7 @@ export const SPORECLOUD_REAPER: SpeciesCreature = {
 
 export const SPORECLOUD_BLOOMER: SpeciesCreature = {
   id: 'sporecloud-bloomer',
+  name: 'Sporecloud Bloomer',
   affinity: 'wit',
   baseStats: { health: 16, attack: 14, intelligence: 24, defence: 12, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -119,6 +122,7 @@ export const SPORECLOUD: Species = {
 
 export const ROTFEEDER_SCAVENGER: SpeciesCreature = {
   id: 'rotfeeder-scavenger',
+  name: 'Rotfeeder Scavenger',
   affinity: 'violence',
   baseStats: { health: 16, attack: 20, intelligence: 10, defence: 14, speed: 16 },
   defaultScriptId: 'always-attack',
@@ -128,6 +132,7 @@ export const ROTFEEDER_SCAVENGER: SpeciesCreature = {
 
 export const ROTFEEDER_RIPPER: SpeciesCreature = {
   id: 'rotfeeder-ripper',
+  name: 'Rotfeeder Ripper',
   affinity: 'violence',
   baseStats: { health: 18, attack: 22, intelligence: 10, defence: 14, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -140,6 +145,7 @@ export const ROTFEEDER_RIPPER: SpeciesCreature = {
  * soft-mapping) more than the family's default Violence lean. */
 export const ROTFEEDER_GORGEMAW: SpeciesCreature = {
   id: 'rotfeeder-gorgemaw',
+  name: 'Rotfeeder Gorgemaw',
   affinity: 'vitality',
   baseStats: { health: 22, attack: 20, intelligence: 10, defence: 16, speed: 14 },
   defaultScriptId: 'always-attack',
@@ -159,6 +165,7 @@ export const ROTFEEDERS: Species = {
 
 export const MYCONET_WARDER: SpeciesCreature = {
   id: 'myconet-warder',
+  name: 'Myconet Warder',
   affinity: 'endurance',
   baseStats: { health: 20, attack: 12, intelligence: 12, defence: 22, speed: 12 },
   defaultScriptId: 'always-attack',
@@ -171,6 +178,7 @@ export const MYCONET_WARDER: SpeciesCreature = {
  * affinity->stat soft-mapping) more than the family's default Endurance lean. */
 export const MYCONET_ROTCORE: SpeciesCreature = {
   id: 'myconet-rotcore',
+  name: 'Myconet Rotcore',
   affinity: 'wit',
   baseStats: { health: 22, attack: 14, intelligence: 12, defence: 22, speed: 10 },
   defaultScriptId: 'always-attack',
@@ -180,6 +188,7 @@ export const MYCONET_ROTCORE: SpeciesCreature = {
 
 export const MYCONET_GRAVEDIGGER: SpeciesCreature = {
   id: 'myconet-gravedigger',
+  name: 'Myconet Gravedigger',
   affinity: 'endurance',
   baseStats: { health: 24, attack: 12, intelligence: 14, defence: 24, speed: 10 },
   defaultScriptId: 'always-attack',
@@ -199,6 +208,7 @@ export const MYCONET: Species = {
 
 export const NECROMOSS_WISP: SpeciesCreature = {
   id: 'necromoss-wisp',
+  name: 'Necromoss Wisp',
   affinity: 'wit',
   baseStats: { health: 18, attack: 10, intelligence: 20, defence: 12, speed: 16 },
   defaultScriptId: 'always-attack',
@@ -208,6 +218,7 @@ export const NECROMOSS_WISP: SpeciesCreature = {
 
 export const NECROMOSS_THICKET: SpeciesCreature = {
   id: 'necromoss-thicket',
+  name: 'Necromoss Thicket',
   affinity: 'vitality',
   baseStats: { health: 24, attack: 10, intelligence: 16, defence: 18, speed: 10 },
   defaultScriptId: 'always-attack',
@@ -223,6 +234,7 @@ export const NECROMOSS_THICKET: SpeciesCreature = {
  * Regrowth/Wild Vigor/Afterglow/Charnel Feast instead of Wit damage spells. */
 export const NECROMOSS_HOLLOWROOT: SpeciesCreature = {
   id: 'necromoss-hollowroot',
+  name: 'Necromoss Hollowroot',
   affinity: 'vitality',
   baseStats: { health: 20, attack: 10, intelligence: 22, defence: 14, speed: 14 },
   defaultScriptId: 'always-cast',
@@ -242,6 +254,7 @@ export const NECROMOSS: Species = {
 
 export const HOLLOWKIN_WRETCH: SpeciesCreature = {
   id: 'hollowkin-wretch',
+  name: 'Hollowkin Wretch',
   affinity: 'endurance',
   baseStats: { health: 20, attack: 14, intelligence: 12, defence: 20, speed: 14 },
   defaultScriptId: 'always-attack',
@@ -251,6 +264,7 @@ export const HOLLOWKIN_WRETCH: SpeciesCreature = {
 
 export const HOLLOWKIN_MARIONETTE: SpeciesCreature = {
   id: 'hollowkin-marionette',
+  name: 'Hollowkin Marionette',
   affinity: 'instinct',
   baseStats: { health: 16, attack: 18, intelligence: 14, defence: 12, speed: 22 },
   defaultScriptId: 'always-attack',
@@ -262,6 +276,7 @@ export const HOLLOWKIN_MARIONETTE: SpeciesCreature = {
  * Endurance/Instinct lean (Wretch stays Endurance, Marionette stays Instinct). */
 export const HOLLOWKIN_PUPPETEER: SpeciesCreature = {
   id: 'hollowkin-puppeteer',
+  name: 'Hollowkin Puppeteer',
   affinity: 'instinct',
   baseStats: { health: 20, attack: 16, intelligence: 12, defence: 20, speed: 16 },
   defaultScriptId: 'always-attack',
@@ -281,6 +296,7 @@ export const HOLLOWKIN: Species = {
 
 export const SPORCH_IGNITER: SpeciesCreature = {
   id: 'sporch-igniter',
+  name: 'Sporch Igniter',
   affinity: 'violence',
   baseStats: { health: 16, attack: 20, intelligence: 12, defence: 14, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -290,6 +306,7 @@ export const SPORCH_IGNITER: SpeciesCreature = {
 
 export const SPORCH_ASHBORN: SpeciesCreature = {
   id: 'sporch-ashborn',
+  name: 'Sporch Ashborn',
   affinity: 'wit',
   baseStats: { health: 16, attack: 14, intelligence: 20, defence: 12, speed: 18 },
   defaultScriptId: 'always-attack',
@@ -299,6 +316,7 @@ export const SPORCH_ASHBORN: SpeciesCreature = {
 
 export const SPORCH_CINDERLORD: SpeciesCreature = {
   id: 'sporch-cinderlord',
+  name: 'Sporch Cinderlord',
   affinity: 'violence',
   baseStats: { health: 18, attack: 22, intelligence: 12, defence: 16, speed: 16 },
   defaultScriptId: 'always-attack',
@@ -342,6 +360,7 @@ export const ROTCAP_HOLLOW_SPECIES_POOL: readonly Species[] = [
 
 export const ROT_SOVEREIGN: SpeciesCreature = {
   id: 'rot-sovereign',
+  name: 'Rot Sovereign',
   affinity: 'endurance',
   baseStats: { health: 30, attack: 22, intelligence: 20, defence: 26, speed: 16 },
   defaultScriptId: 'always-attack',

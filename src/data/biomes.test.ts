@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createSeededRng } from '../engine/rng'
 import { generateFloor } from '../engine/generation'
+import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { BIOMES, BIOMES_BY_ID } from './biomes'
 import { ALL_SPELLS } from './spells'
 import {
@@ -86,7 +87,14 @@ describe('Boss floors (Phase 4 Slice I, PR #65 review)', () => {
   })
 
   it('generateFloor(10, OVERGROWTH_BIOME, ...) roster carries SPIDERS_SPECIES_ID on all three creatures (boss + both spiderling adds)', () => {
-    const fights = generateFloor(10, OVERGROWTH_BIOME, 1, ALL_SPELLS, createSeededRng(42))
+    const fights = generateFloor(
+      10,
+      OVERGROWTH_BIOME,
+      1,
+      ALL_SPELLS,
+      createSeededRng(42),
+      CFG,
+    )
     expect(fights).toHaveLength(1) // a boss floor is exactly one fight
     const enemyParty = fights[0]!.enemyParty
     expect(enemyParty).toHaveLength(3) // the Broodmother + her two spiderling adds

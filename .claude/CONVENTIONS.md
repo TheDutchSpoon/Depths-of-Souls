@@ -54,12 +54,19 @@ floor's contents.
   **Fast-travel is just `descend(floor)`** for any floor up to `deepestFloor + 1` (a separate
   `travelTo` action does not exist). Lands in 4.1-A (`currentFloor` → `lastFloor`, `travelTo`
   deleted).
-- **Content frontier** (Phase 4.1-A, fixes G5): the last floor whose biome has a **non-empty
-  species pool**, **derived from the biome data** (authoring biome 4 moves it automatically, no
-  constant to bump). `descend` past it returns `{ ok: false, reason: 'beyond-content-frontier' }`
-  (see "State & persistence" for the store action rule). The generator's own throw on an empty or
-  zero-weight pool stays: reaching generation with one is still a real bug. *(Note, not code: floor
-  101+ could draw a placeholder biome, which can't happen while the frontier sits at 30.)*
+- **Content frontier** (Phase 4.1-A, fixes G5): the last floor of the **unbroken run of
+  authored biomes** from biome 1, **derived from the biome data** (authoring biome 4 moves it
+  automatically, no constant to bump). Walk the biome list in order and stop at the first biome
+  with **no content**: no species with a positive weight and at least one creature (exactly the
+  case where the generator's weighted pick throws). A gap in authoring therefore ends the frontier
+  instead of exposing floors that would crash. `descend` past it returns `{ ok: false, reason:
+  'beyond-content-frontier' }` (see "State & persistence" for the store action rule). **Pins
+  can't route around it** (PR #67 review): `pinBiome` refuses a biome with no content (reason
+  `biome-has-no-content`), so every floor inside the frontier resolves to an authored biome
+  whatever the pins; one shared "has content" check serves both. The generator's own throw on an
+  empty or zero-weight pool stays: reaching generation with one is still a real bug. *(Note, not
+  code: floor 101+ could draw a placeholder biome, which can't happen while the frontier sits at
+  30.)*
 
 - **`biomeForFloor(floor, pins, runSeed)`** — pure: fixed sequence 1–100, derived-seed draw 101+,
   pins override either. The 1–100 order is an authored onboarding ramp (GAME_DESIGN §4).
@@ -1394,8 +1401,10 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   Each action has a pure **`can…` query** sharing its check (e.g. `canDescend(floor)`), so the UI
   greys out an option for the same reason the action would refuse it. `descend` returns `{ ok:
   true, outcome } | { ok: false, reason }` with reasons `no-spec`, `empty-party`,
-  `floor-out-of-reach`, `beyond-content-frontier`. The same rule covers `setPerkLevel`, `summon` and
-  `setPartySlot` (4.1-G).
+  `floor-out-of-reach`, `beyond-content-frontier`. `pinBiome` returns `{ ok: true } | { ok: false,
+  reason }` with reasons `floor-out-of-range`, `unknown-biome` and `biome-has-no-content` (4.1-A;
+  a pin to a biome with no content is refused, so a pin never makes a floor inside the content
+  frontier unplayable). The same rule covers `setPerkLevel`, `summon` and `setPartySlot` (4.1-G).
 - **Store actions after Phase 4.1:** `newGame({ seed })` (4.1-G; the seed is generated in `src/app`,
   never in the store or engine), `setSpec`, `descend`, `runScriptedIntro`, `recordBossKill`,
   `pinBiome`, `setPerkLevel`, `refundAllPerks`, `summon(creatureId)` and `setPartySlot(slot,
