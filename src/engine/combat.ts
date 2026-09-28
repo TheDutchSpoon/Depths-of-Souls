@@ -1133,6 +1133,11 @@ export function resolveTurn(state: CombatState): {
     working = maybeFireBonusCast(actor.id, working, events)
   }
 
+  // TURN-END CLEANUP (CONVENTIONS' "Turn structure"): a seam, here, with no status work (D6
+  // skeleton, ASSUMPTION 15/16) -- statuses still count down in the round-end sweep and the Web
+  // roll stays at turn-start until Phase 4.1-F, which moves the bearer's own status-timer
+  // countdown and the Web roll to this exact point.
+
   events.push({ type: 'TurnEnded', creatureId: actor.id })
 
   // Win/loss/draw is checked after EVERY action, not just round boundaries. This ordering

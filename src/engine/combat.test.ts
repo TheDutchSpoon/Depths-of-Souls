@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createCombat, resolveFight, resolveTurn } from './combat'
 import { hasStatus } from './effects'
 import { getEffectiveStat } from './effective-stats'
+import { getCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
 import { createRngState } from './rng'
 import { countDraws } from './test-utils/rng-draw-count'
@@ -9,7 +10,11 @@ import { deepFreeze } from './test-utils/deep-freeze'
 import { createCreatureId } from './ids'
 import { ROUND_CAP } from './config'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
-import { TRAIT_REGISTRY, SORCERER_STARTER_TRAIT } from '../data/traits'
+import {
+  TRAIT_REGISTRY,
+  SORCERER_STARTER_TRAIT,
+  SNAPJAW_LURE_TRAIT,
+} from '../data/traits'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
 import type { EffectDef, StatusDef, Trait, TurnOrderStatusDef } from './effect-types'
@@ -1206,6 +1211,104 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     const cast = events.find(isSpellCast)
     expect(cast).toMatchObject({ type: 'SpellCast', targetShape: 'aoe', gemSlot: 0 })
     expect(events.filter((e) => e.type === 'DamageDealt')).toHaveLength(2)
+  })
+})
+
+describe('turn-start cleanup (Phase 4.1-C, D6)', () => {
+  // Phase 4.1-C1 review (PR #70, F2): the two branches the goldens don't individually exercise --
+  // both flags ending as ONE event, and the whole cleanup step being skipped for a creature that
+  // doesn't survive its own turn-start hooks.
+
+  it('emits exactly one ActionStateEnded when both flags end together, directly after TurnStarted', () => {
+    // Real content: Snapjaw's Lure grants itself Defending on-provoke (SNAPJAW_LURE_TRAIT), so an
+    // always-provoking creature carrying it ends its OWN next turn with both flags set at once.
+    const lureId = createCreatureId('lure')
+    const player = makeParty('player', [
+      {
+        id: 'lure',
+        speed: 20,
+        scriptId: 'always-provoke',
+        innateTraitIds: [SNAPJAW_LURE_TRAIT.id],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', speed: 10, scriptId: 'always-wait' }])
+    const traits = new Map([[SNAPJAW_LURE_TRAIT.id, SNAPJAW_LURE_TRAIT]])
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+    })
+
+    // Round 1: LURE provokes; on-provoke grants itself Defending too. LURE now carries both
+    // flags entering round 2.
+    state = resolveTurn(state).state // LURE, round 1
+    state = resolveTurn(state).state // FOE, round 1
+    const lure = getCreature(state, lureId)
+    expect(lure.provoking).toBe(true)
+    expect(lure.defending).toBe(true)
+
+    // Round 2: LURE's own turn-start cleanup ends both flags together, as ONE event.
+    const { events } = resolveTurn(state) // LURE, round 2
+    const turnStartedIndex = events.findIndex(
+      (e) => e.type === 'TurnStarted' && e.creatureId === lureId,
+    )
+    expect(events[turnStartedIndex + 1]).toEqual({
+      type: 'ActionStateEnded',
+      creatureId: lureId,
+      defending: true,
+      provoking: true,
+    })
+    expect(events.filter((e) => e.type === 'ActionStateEnded')).toHaveLength(1)
+  })
+
+  it('skips cleanup entirely for a creature that dies to its own turn-start hook, leaving its flags as-is', () => {
+    const LETHAL_ON_TURN_START_FIXTURE: Trait = {
+      id: 'lethal-on-turn-start-fixture',
+      name: 'Lethal On Turn Start (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-turn-start',
+          response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 999 },
+        },
+      ],
+    }
+    const doomedId = createCreatureId('doomed')
+    // provoking (not defending) at fight-start, per the review: Defend's own damage reduction
+    // must not be able to interfere with this trait's own lethality.
+    const player = makeParty('player', [
+      {
+        id: 'doomed',
+        health: 10,
+        speed: 20,
+        provoking: true,
+        scriptId: 'always-wait',
+        innateTraitIds: [LETHAL_ON_TURN_START_FIXTURE.id],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', speed: 10 }])
+    const traits = new Map([
+      [LETHAL_ON_TURN_START_FIXTURE.id, LETHAL_ON_TURN_START_FIXTURE],
+    ])
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+    })
+
+    const { state: after, events } = resolveTurn(state) // DOOMED, round 1
+
+    expect(
+      events.some((e) => e.type === 'CreatureDied' && e.creatureId === doomedId),
+    ).toBe(true)
+    expect(events.some((e) => e.type === 'ActionStateEnded')).toBe(false)
+    const doomed = getCreature(after, doomedId)
+    expect(doomed.alive).toBe(false)
+    // Left set, not cleared -- cleanup never ran for this turn. Revive resets the flag on any
+    // later death-reset, so leaving it set on a corpse has no downstream effect.
+    expect(doomed.provoking).toBe(true)
   })
 })
 
