@@ -1,21 +1,113 @@
+import type { ComparatorOp } from './scripting-types'
+import type { SelfCondition } from './effect-types'
 import type { Creature, Stat } from './types'
+
+/**
+ * True iff `creature` carries the literal statusId among its status-carrying effects
+ * (condition-status, damage-modifier, turn-order-status, friendly-fire-status) -- what
+ * scripting's has-status condition scopes to. Never matches a stat-modifier/stat-remap/plain-
+ * triggered effect, nor the permanent perk-granted passives (status-immunity/provoke-immunity/
+ * splashing/annihilate/innate-spell/etc.), which carry no statusId and are never themselves a
+ * status.
+ *
+ * Phase 4.1-B (S2/B-8): lives HERE, not effects.ts, so `evaluateSelfCondition`'s `has-status`
+ * branch (below) can read it without effects.ts -> effective-stats.ts becoming a cycle --
+ * effects.ts re-exports this for its existing importers (conditions.ts, interpreter.ts,
+ * resolution.ts, combat.ts, effects.ts itself), so nothing else about the public API changes.
+ */
+export function hasStatus(creature: Creature, statusId: string): boolean {
+  return creature.activeEffects.some(
+    (e) =>
+      (e.category === 'condition-status' ||
+        e.category === 'damage-modifier' ||
+        e.category === 'turn-order-status' ||
+        e.category === 'friendly-fire-status') &&
+      e.statusId === statusId,
+  )
+}
+
+function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
+  switch (cmp) {
+    case '<':
+      return lhs < rhs
+    case '<=':
+      return lhs <= rhs
+    case '>':
+      return lhs > rhs
+    case '>=':
+      return lhs >= rhs
+    case '==':
+      return lhs === rhs
+    case '!=':
+      return lhs !== rhs
+    default: {
+      const exhaustive: never = cmp
+      throw new Error(`Unhandled comparator: ${String(exhaustive)}`)
+    }
+  }
+}
+
+/**
+ * Integer cross-multiplication, no float: `currentHp/effMaxHp <cmp> thresholdPercent/100`, i.e.
+ * `currentHp * 100 <cmp> thresholdPercent * effMaxHp`. Shared by conditions.ts's scripting
+ * `hp-percent` Condition and this module's own `SelfCondition` (S2) -- one implementation, per
+ * design-review B-7. `effMaxHp` is the CALLER's effective Health reading (not recomputed here),
+ * since the two callers source it slightly differently (a subject pool's own creature here;
+ * `getEffectiveStat(creature, 'health')` there -- identical value either way).
+ */
+export function hpPercentSatisfied(
+  currentHp: number,
+  comparator: ComparatorOp,
+  thresholdPercent: number,
+  effMaxHp: number,
+): boolean {
+  return compare(currentHp * 100, comparator, thresholdPercent * effMaxHp)
+}
+
+/**
+ * Phase 4.1-B (S2): evaluates a conditional passive's read-time gate -- DATA, not a function
+ * (replaces `predicate: ActivationPredicate`). Self-only, mirroring the old predicate's contract:
+ * may read OTHER effective stats but must never read the stat it gates (no read-cycle). This is
+ * enforced by a load-time validator (data/traits/index.ts, data/specializations.ts), not here --
+ * `hp-percent` reads effective Health via `getEffectiveStat`, which only terminates without
+ * infinite recursion because the validator guarantees a Health-stat modifier can never carry an
+ * `hp-percent` condition (the one shape that would read the very stat being folded).
+ */
+function evaluateSelfCondition(condition: SelfCondition, creature: Creature): boolean {
+  switch (condition.kind) {
+    case 'always':
+      return true
+    case 'hp-percent':
+      return hpPercentSatisfied(
+        creature.currentHp,
+        condition.comparator,
+        condition.thresholdPercent,
+        getEffectiveStat(creature, 'health'),
+      )
+    case 'has-status':
+      return hasStatus(creature, condition.statusId)
+    default: {
+      const exhaustive: never = condition
+      throw new Error(`Unhandled self-condition kind: ${String(exhaustive)}`)
+    }
+  }
+}
 
 /**
  * A creature's current value for `stat`: base folded with active `stat-modifier` effects,
  * **multiplicatively** (`base × Π(factors)`), in canonical active-effects order. A conditional
- * passive's factor is included only when its read-time predicate holds. Base stats are
- * immutable; this is computed on demand and never written back.
+ * passive's factor is included only when its read-time `condition` (SelfCondition, S2) holds.
+ * Base stats are immutable; this is computed on demand and never written back.
  *
  * Multiplication is commutative, so numeric order is irrelevant here — but effects are still
- * iterated in canonical order (shared with hook firing / remap resolution). A predicate may read
- * OTHER effective stats but must not read `stat` itself (no read-cycle — see CONVENTIONS §6).
+ * iterated in canonical order (shared with hook firing / remap resolution).
  */
 export function getEffectiveStat(creature: Creature, stat: Stat): number {
   let value = creature.baseStats[stat]
   for (const effect of creature.activeEffects) {
     if (effect.category !== 'stat-modifier') continue
     if (effect.stat !== stat) continue
-    if (effect.predicate && !effect.predicate(creature)) continue
+    if (effect.condition && !evaluateSelfCondition(effect.condition, creature)) continue
     value *= effect.factor
   }
   return value

@@ -1028,9 +1028,10 @@ the same interpreter, differing only in how they attach and which hooks they use
   effects need recomputation a blob can't give cleanly; keeps representation singular +
   deterministic). Expiry = drop the effect from the list. **A conditional passive's gate is data**
   (Phase 4.1-B, S2): `StatModifierDef.condition?: SelfCondition` (self `hp-percent`, self
-  `has-status`, `always`) replaces the `predicate` function, which only the placeholder `BRUTISH`
-  used and which made combat state non-plain-data. A load-time validator rejects a condition that
-  reads the stat it modifies (e.g. a Health modifier gated on HP%). **All combat math reads stats
+  `has-status`, `always`) replaces the `predicate` function, which only the placeholder
+  `BLOODLUST` (+25% Attack at full HP) used and which made combat state non-plain-data. A
+  load-time validator rejects a condition that reads the stat it modifies (e.g. a Health modifier
+  gated on HP%). **All combat math reads stats
   through this accessor** — a
   passthrough to base in Phase 1 (no effects yet), so the folding slots in later with no rewrite.
 - New content = a data entry. Genuinely novel behavior = at most one new reusable hook primitive,

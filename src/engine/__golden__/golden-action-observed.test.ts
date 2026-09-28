@@ -11,7 +11,12 @@ import {
 
 describe('golden replay: on-action-observed (Phase 4 Slice E2, Resonants-shaped)', () => {
   it('matches the committed event log exactly -- fires once per cast instance, ally only', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { events } = resolveTurn(initial)
 
     expect(events).toEqual(expectedEvents)

@@ -14,7 +14,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Glimmerdark Blindclaws Setter -> Striker (Phase 4 Slice H2, real content)', () => {
   it('matches the committed event log exactly (Defends without the initiative, Attacks with it)', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

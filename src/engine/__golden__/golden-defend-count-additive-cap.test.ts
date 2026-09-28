@@ -13,7 +13,12 @@ import {
 
 describe('golden replay: defend-count additive-cap accumulation (Phase 4 Slice D, PR #47 review amendment, real Bulwark-shaped)', () => {
   it('matches the committed event log exactly, reaching AND holding the hard cap', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

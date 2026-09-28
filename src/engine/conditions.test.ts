@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateCondition } from './conditions'
 import { makeCreature, makeParty } from './__fixtures__/creatures'
-import { createSeededRng } from './rng'
+import { createRngState } from './rng'
 import { createCreatureId } from './ids'
 import { createEffectInstanceId } from './effect-types'
 import type { CombatState } from './types'
@@ -9,7 +9,7 @@ import type { ActiveEffect } from './effect-types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
-    rng: createSeededRng(1),
+    rng: createRngState(1),
     playerParty: [],
     enemyParty: [],
     turnQueue: [],
@@ -18,8 +18,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
-    traits: new Map(),
-    playerWideEffects: [],
+    effectInstanceCounter: 0,
     ...overrides,
   }
 }
@@ -413,15 +412,14 @@ describe('evaluateCondition -- acted-before-target (Phase 4 Slice C, Blindclaws)
       playerParty: player,
       enemyParty: enemy,
       turnQueue: [player[0]!.id, enemy[0]!.id],
-      rng: createSeededRng(1),
+      rng: createRngState(1),
     })
-    const sibling = createSeededRng(1)
     expect(
       evaluateCondition({ kind: 'acted-before-target' }, player[0]!, state, {
         kind: 'random-enemy',
       }),
     ).toBe(false)
-    expect(state.rng.next()).toBe(sibling.next())
+    expect(state.rng.position).toBe(1) // never drew RNG during lookahead
   })
 
   it('is false when the rule selector has no valid target', () => {

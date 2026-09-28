@@ -15,14 +15,12 @@ import {
 
 describe('golden replay: DoT lifecycle (spell-applied Poison, ticks, expiry, round-end win-check)', () => {
   it('applies Poison via a Cast, ticks it flat at round-end, and expires it on the killing tick', () => {
-    const created = createCombat(
-      playerParty,
-      enemyParty,
-      SEED,
-      scripts,
-      new Map(),
-      statuses,
-    )
+    const created = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: new Map(), statuses: statuses },
+    })
     // createCombat resets currentHp to effective max at fight-start (GAME_DESIGN), so TARGET's
     // wounded starting HP has to be applied here, after creation -- see golden-dot.fixture.ts's
     // header comment.

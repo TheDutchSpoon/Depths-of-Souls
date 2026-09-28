@@ -1,6 +1,7 @@
 import { pickExtremum } from './tie-break'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
 import { getEffectiveStat } from './effective-stats'
+import { nextRandom } from './rng'
 import type { CombatState, Creature } from './types'
 import type { CreatureId } from './ids'
 import type { TargetSelector } from './scripting-types'
@@ -83,7 +84,7 @@ export function resolveTargetSelector(
     case 'random-ally': {
       const pool = livingAlliesOf(creature, state)
       if (pool.length === 0) return null
-      const index = Math.floor(state.rng.next() * pool.length)
+      const index = Math.floor(nextRandom(state.rng) * pool.length)
       return pool[index]?.id ?? null
     }
     case 'lowest-hp-enemy':
@@ -115,7 +116,7 @@ export function resolveTargetSelector(
     case 'random-enemy': {
       const pool = livingEnemiesOf(creature, state)
       if (pool.length === 0) return null
-      const index = Math.floor(state.rng.next() * pool.length)
+      const index = Math.floor(nextRandom(state.rng) * pool.length)
       return pool[index]?.id ?? null
     }
     default: {

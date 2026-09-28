@@ -10,12 +10,12 @@ import {
 import { EMBER_LANCE } from './spells'
 import { decideAction } from '../engine/interpreter'
 import { makeParty } from '../engine/__fixtures__/creatures'
-import { createSeededRng } from '../engine/rng'
+import { createRngState } from '../engine/rng'
 import type { CombatState } from '../engine/types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
-    rng: createSeededRng(1),
+    rng: createRngState(1),
     playerParty: [],
     enemyParty: [],
     turnQueue: [],
@@ -24,8 +24,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
-    traits: new Map(),
-    playerWideEffects: [],
+    effectInstanceCounter: 0,
     ...overrides,
   }
 }

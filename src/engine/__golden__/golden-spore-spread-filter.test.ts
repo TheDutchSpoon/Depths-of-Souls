@@ -19,7 +19,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Spore spread-on-death filters already-Spored allies before drawing (real content)', () => {
   it('matches the committed event log exactly (a genuine 2-candidate draw, not a degenerate pick)', () => {
-    const created = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const created = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     // Pre-apply Spore to BEARER itself (its own on-death spread trigger only exists while it
     // carries the status) and to ALLY_SPORED (the one candidate the filter must exclude), then
     // wound BEARER -- all before any turn resolves, into a throwaway events array, mirroring the

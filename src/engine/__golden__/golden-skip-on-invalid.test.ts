@@ -11,7 +11,12 @@ import {
 
 describe('golden replay: skip on invalid (empty gem slot)', () => {
   it('matches the committed event log exactly, with zero SpellCast events', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

@@ -14,7 +14,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Glimmerdark Gloomjaws Predatory Instinct (Phase 4 Slice H2, real content)', () => {
   it('matches the committed event log exactly (no bonus at full HP, +30% once below 30%)', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

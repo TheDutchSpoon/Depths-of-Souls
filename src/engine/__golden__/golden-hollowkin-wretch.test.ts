@@ -14,7 +14,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Rotcap Hollow Hollowkin Wretch retaliatory Confusion (Phase 4 Slice H3, real content)', () => {
   it('matches the committed event log exactly (a chip-only hit provokes a Confusion retaliation)', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

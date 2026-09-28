@@ -12,7 +12,12 @@ import {
 
 describe('golden replay: conditional trigger (retaliate gated on self HP% < 50)', () => {
   it('stays silent while healthy, then fires once a hit crosses the threshold, not on death', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

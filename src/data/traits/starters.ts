@@ -1,4 +1,5 @@
 import type { Trait } from '../../engine/effect-types'
+import { ARCANE_BOLT } from '../spells'
 
 // Phase 4 Slice F: the three spec starter creatures' + the Unicorn's signature traits. Real,
 // shipped content -- see `data/species/starters.ts` for the SpeciesCreature defs that reference
@@ -10,11 +11,19 @@ import type { Trait } from '../../engine/effect-types'
 
 /** NEW PRIMITIVE (Slice F) -- see effect-types.ts's `BonusCastDef` doc comment for the full
  * reasoning (not a 10th response verb; a passively-consulted EffectDef, read by combat.ts's
- * resolveTurn directly). "50% chance on-turn-end to cast a random equipped spell." */
+ * resolveTurn directly). "50% chance on-turn-end to cast a random equipped spell." Phase 4.1-B
+ * (A8): the "grants one spell as a permanent extra gem" half is now `innate-spell { spell:
+ * ARCANE_BOLT }` instead of a fixed `SpeciesCreature.equippedSpells` loadout baked into the
+ * species template -- it lives on the trait so it travels through fusion, whichever parent the
+ * Seer is. Not a gem: no level, no augments, no equip gate. `createCombat`'s fight-setup prepends
+ * every `innate-spell` effect's spell onto the creature's `equippedSpells`, innate slots first. */
 export const SORCERER_STARTER_TRAIT: Trait = {
   id: 'sorcerer-starter-arcane-surge',
   name: 'Arcane Surge',
-  effects: [{ category: 'bonus-cast', chancePercent: 50 }],
+  effects: [
+    { category: 'bonus-cast', chancePercent: 50 },
+    { category: 'innate-spell', spell: ARCANE_BOLT },
+  ],
 }
 
 // ---- Brute starter ----

@@ -8,17 +8,16 @@ import { describe, expect, it } from 'vitest'
 import { decideAction } from './interpreter'
 import { createCombat, resolveTurn } from './combat'
 import { makeParty } from './__fixtures__/creatures'
-import { createSeededRng } from './rng'
+import { createRngState } from './rng'
 import { createEffectInstanceId } from './effect-types'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import type { CombatState, Spell } from './types'
-import type { SeededRng } from './rng'
 import type { Script } from './scripting-types'
 import type { ActiveEffect } from './effect-types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
-    rng: createSeededRng(1),
+    rng: createRngState(1),
     playerParty: [],
     enemyParty: [],
     turnQueue: [],
@@ -27,8 +26,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
-    traits: new Map(),
-    playerWideEffects: [],
+    effectInstanceCounter: 0,
     ...overrides,
   }
 }
@@ -103,19 +101,6 @@ function confusionFixture(chancePercent: number): ActiveEffect {
   }
 }
 
-/** Wraps a real SeededRng to count draws, so a test can prove a code path drew ZERO RNG values
- * (rather than merely asserting on an outcome that could coincidentally match either way). */
-function countingRng(inner: SeededRng): SeededRng & { calls: number } {
-  const wrapper = {
-    calls: 0,
-    next(): number {
-      wrapper.calls += 1
-      return inner.next()
-    },
-  }
-  return wrapper
-}
-
 describe('executeCastAoe -- ally-targeting AOE Cast (Phase 4 Slice E)', () => {
   it("freezes the caster's own living side and draws ZERO RNG, even at 100% Confusion", () => {
     const player = makeParty('player', [
@@ -129,15 +114,18 @@ describe('executeCastAoe -- ally-targeting AOE Cast (Phase 4 Slice E)', () => {
       { id: 'ally', defence: 5, speed: 5, scriptId: 'always-wait' },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', speed: 1, scriptId: 'always-wait' }])
-    const created = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
-    const rng = countingRng(created.rng)
+    const created = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     // A 100%-chance Confusion status would, for an ENEMY-targeting AOE, ALWAYS redirect (and
     // always draw the roll -- see confusion.test.ts). Here the spell is already ally-targeting,
     // so this proves the redirect roll is never even consulted for that case: an ally-targeting
     // AOE always resolves to its own side, unconditionally, drawing nothing.
     const confused: CombatState = {
       ...created,
-      rng,
       playerParty: created.playerParty.map((c) =>
         c.id === player[0]!.id
           ? { ...c, activeEffects: [...c.activeEffects, confusionFixture(100)] }
@@ -145,14 +133,16 @@ describe('executeCastAoe -- ally-targeting AOE Cast (Phase 4 Slice E)', () => {
       ),
     }
 
-    const { events } = resolveTurn(confused)
+    const { events, state: finalState } = resolveTurn(confused)
 
     const spellCast = events.find((e) => e.type === 'SpellCast')
     expect(spellCast).toMatchObject({
       targetShape: 'aoe',
       targetIds: [player[0]!.id, player[1]!.id],
     })
-    expect(rng.calls).toBe(0)
+    // Zero draws -- proves a code path drew ZERO RNG values, rather than merely asserting on an
+    // outcome that could coincidentally match either way.
+    expect(finalState.rng.position).toBe(created.rng.position)
   })
 })
 
@@ -197,7 +187,12 @@ describe('ally-targeting Cast end-to-end -- highest-attack-ally (Phase 4 Slice E
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', speed: 1, scriptId: 'always-wait' }])
     const scripts = new Map([...STOCK_SCRIPTS_BY_ID, [script.id, script] as const])
-    const state = createCombat(player, enemy, 1, scripts)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: scripts },
+    })
 
     const { events } = resolveTurn(state)
 

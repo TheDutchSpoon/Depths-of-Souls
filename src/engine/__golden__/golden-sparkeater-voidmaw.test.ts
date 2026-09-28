@@ -11,7 +11,12 @@ import {
 
 describe('golden replay: Glimmerdark Sparkeater Voidmaw (Phase 4 Slice H2, real content)', () => {
   it('matches the committed event log exactly (target max-HP down + clamp, team max-HP up, no auto-heal)', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveTurn(initial)
 
     expect(events).toEqual(expectedEvents)

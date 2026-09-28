@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { decideAction } from './interpreter'
 import { evaluateCondition } from './conditions'
 import { makeParty } from './__fixtures__/creatures'
-import { createSeededRng } from './rng'
+import { createRngState, nextRandom } from './rng'
 import { createEffectInstanceId } from './effect-types'
 import type { CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
@@ -10,7 +10,7 @@ import type { ActiveEffect } from './effect-types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
-    rng: createSeededRng(1),
+    rng: createRngState(1),
     playerParty: [],
     enemyParty: [],
     turnQueue: [],
@@ -19,8 +19,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
-    traits: new Map(),
-    playerWideEffects: [],
+    effectInstanceCounter: 0,
     ...overrides,
   }
 }
@@ -227,18 +226,18 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
     const stateWith = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(seed),
+      rng: createRngState(seed),
     })
     const stateWithout = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(seed),
+      rng: createRngState(seed),
     })
 
     decideAction(player[0]!, scriptWithDummy, stateWith)
     decideAction(player[0]!, scriptWithoutDummy, stateWithout)
 
-    expect(stateWith.rng.next()).toBe(stateWithout.rng.next())
+    expect(stateWith.rng.position).toBe(stateWithout.rng.position)
   })
 
   it('a winning random-enemy rule draws exactly once whether or not a provoker overrides it', () => {
@@ -259,13 +258,13 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
     const stateNoProvoker = makeState({
       playerParty: player,
       enemyParty: enemyNoProvoker,
-      rng: createSeededRng(seed),
+      rng: createRngState(seed),
     })
-    const siblingNoProvoker = createSeededRng(seed)
+    const siblingNoProvoker = createRngState(seed)
 
+    nextRandom(siblingNoProvoker) // the one draw the winning random-enemy rule should make
     decideAction(player[0]!, script, stateNoProvoker)
-    siblingNoProvoker.next()
-    expect(stateNoProvoker.rng.next()).toBe(siblingNoProvoker.next())
+    expect(stateNoProvoker.rng.position).toBe(siblingNoProvoker.position)
 
     const enemyWithProvoker = makeParty('enemy', [
       { id: 'a', provoking: true },
@@ -274,14 +273,14 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
     const stateWithProvoker = makeState({
       playerParty: player,
       enemyParty: enemyWithProvoker,
-      rng: createSeededRng(seed),
+      rng: createRngState(seed),
     })
-    const siblingWithProvoker = createSeededRng(seed)
+    const siblingWithProvoker = createRngState(seed)
 
+    nextRandom(siblingWithProvoker) // Provoke's own single index draw
     const result = decideAction(player[0]!, script, stateWithProvoker)
     expect(result).toEqual({ kind: 'attack', targetId: enemyWithProvoker[0]!.id })
-    siblingWithProvoker.next()
-    expect(stateWithProvoker.rng.next()).toBe(siblingWithProvoker.next())
+    expect(stateWithProvoker.rng.position).toBe(siblingWithProvoker.position)
   })
 })
 

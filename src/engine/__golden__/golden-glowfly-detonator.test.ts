@@ -14,7 +14,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Glimmerdark Glowflies Charger -> Detonator (Phase 4 Slice H2, real content)', () => {
   it('matches the committed event log exactly (Glow charged by an ally, then consumed for a burst)', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

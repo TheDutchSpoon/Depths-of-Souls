@@ -68,7 +68,12 @@ describe('executeCastAoe -- Confusion redirect (Phase 4 Slice C)', () => {
       { id: 'foe2', health: 40, speed: 1, scriptId: 'always-wait' },
     ])
     const state = withConfused(
-      createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID),
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      }),
       'caster',
       100,
     )
@@ -98,7 +103,12 @@ describe('executeCastAoe -- Confusion redirect (Phase 4 Slice C)', () => {
       { id: 'foe1', health: 40, speed: 1, scriptId: 'always-wait' },
       { id: 'foe2', health: 40, speed: 1, scriptId: 'always-wait' },
     ])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const { events } = resolveTurn(state)
 
     const spellCast = events.find((e) => e.type === 'SpellCast')

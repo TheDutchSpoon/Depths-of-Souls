@@ -12,7 +12,12 @@ import {
 
 describe('golden replay: conditional passive folded at read time', () => {
   it('re-evaluates +25%-Attack-at-full-HP on each read, weakening the hit after damage', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

@@ -10,7 +10,12 @@ import {
 
 function runWith(seed: number) {
   const { events, state } = resolveFight(
-    createCombat(playerParty, enemyParty, seed, scripts),
+    createCombat({
+      seed: seed,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts },
+    }),
   )
   return { events, result: state.result }
 }

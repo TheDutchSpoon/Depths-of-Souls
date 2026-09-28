@@ -1,8 +1,7 @@
 import { pickExtremum } from './tie-break'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
-import { getEffectiveStat } from './effective-stats'
+import { getEffectiveStat, hasStatus, hpPercentSatisfied } from './effective-stats'
 import { getAffinityMultiplier } from './affinity'
-import { hasStatus } from './effects'
 import { peekTargetSelector } from './target-selectors'
 import { findCreature } from './creature-lookup'
 import type { CombatState, Creature } from './types'
@@ -35,14 +34,20 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
   }
 }
 
-/** Integer cross-multiplication, no float: currentHp/effMaxHp <cmp> thresholdPercent/100. */
-function hpPercentSatisfied(
+/** Integer cross-multiplication, no float: currentHp/effMaxHp <cmp> thresholdPercent/100.
+ * Phase 4.1-B (B-7): delegates to effective-stats.ts's shared `hpPercentSatisfied` -- one
+ * implementation of the comparison, reused by S2's `SelfCondition` too. */
+function creatureHpPercentSatisfied(
   creature: Creature,
   comparator: ComparatorOp,
   thresholdPercent: number,
 ): boolean {
-  const effMaxHp = getEffectiveStat(creature, 'health')
-  return compare(creature.currentHp * 100, comparator, thresholdPercent * effMaxHp)
+  return hpPercentSatisfied(
+    creature.currentHp,
+    comparator,
+    thresholdPercent,
+    getEffectiveStat(creature, 'health'),
+  )
 }
 
 /**
@@ -104,7 +109,7 @@ export function evaluateCondition(
       if (pool.length === 0) return false
       if (condition.qualifier === 'any') {
         return pool.some((c) =>
-          hpPercentSatisfied(c, condition.comparator, condition.thresholdPercent),
+          creatureHpPercentSatisfied(c, condition.comparator, condition.thresholdPercent),
         )
       }
       const target = pickExtremum(
@@ -113,7 +118,11 @@ export function evaluateCondition(
         condition.qualifier === 'lowest' ? 'asc' : 'desc',
       )
       return target
-        ? hpPercentSatisfied(target, condition.comparator, condition.thresholdPercent)
+        ? creatureHpPercentSatisfied(
+            target,
+            condition.comparator,
+            condition.thresholdPercent,
+          )
         : false
     }
     case 'enemy-count':

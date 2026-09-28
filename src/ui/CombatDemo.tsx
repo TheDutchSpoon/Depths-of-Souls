@@ -92,7 +92,12 @@ export function CombatDemo({
 
   function runFight(seed: number) {
     clearTimer()
-    const initial = createCombat(playerParty, enemyParty, seed, scripts, traits, statuses)
+    const initial = createCombat({
+      seed,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts, traits, statuses },
+    })
     const { events, state } = resolveFight(initial)
     const beats = groupIntoBeats(events)
     setOutcome({ seed, beats, result: state.result })

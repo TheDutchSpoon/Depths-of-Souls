@@ -348,8 +348,8 @@ and listed.
   **`predicate` is deleted.**
 - A **load-time validator** rejects a condition that reads the stat it modifies (e.g. a Health
   modifier gated on HP%).
-- Re-author the placeholder `BRUTISH` with a condition; the conditional-passive golden stays
-  byte-identical.
+- Re-author the placeholder `BLOODLUST` (+25% Attack at full HP) with a condition; the
+  conditional-passive golden stays byte-identical.
 
 ### A8 — innate spells
 - A passive **`innate-spell { spell }`** effect category. Arcane Surge (the Seer's trait) gains

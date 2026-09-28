@@ -39,12 +39,6 @@ export interface SpeciesCreature {
   readonly defaultScriptId: string
   readonly innateTraitIds: readonly string[]
   readonly rarity: RarityTier
-  /** Phase 4 Slice F (review amendment): a FIXED starter loadout (e.g. the Sorcerer starter's
-   * granted extra gem) -- absent for every enemy-spawnable species, whose loadout is instead
-   * rolled per-visit from the biome's spell pool (generateFloor's own `equippedSpells` argument
-   * to materializeCreature always wins when supplied; see materializeCreature's own doc comment
-   * for the exact fallback order). */
-  readonly equippedSpells?: readonly (Spell | null)[]
 }
 
 export interface Species {
@@ -193,11 +187,16 @@ export interface MaterializeCreatureOptions {
  * than embedded on `SpeciesCreature` itself (mirrors `side`/`slot`/`level` already being
  * explicit options) -- `living-allies-of-species` (effects.ts) was inert (always 0) until then.
  *
- * `gems` fallback order (Phase 4 Slice F, review amendment; renamed Phase 4.1-A): the caller's
- * own option wins when supplied (generateFloor's per-visit rolled loadout for a spawned enemy),
- * else `speciesCreature.equippedSpells` when the static data carries a FIXED loadout (a
- * starter's granted gem), else all-null slots (the pre-Slice-F default -- byte-identical for
- * every species/enemy that sets neither).
+ * `gems` fallback (Phase 4.1-B, A8: the FIXED-starter-loadout branch of this fallback is
+ * deleted -- `SpeciesCreature.equippedSpells` no longer exists; a starter's granted spell is now
+ * an `innate-spell` passive on its trait, prepended by `createCombat`'s fight-setup, never by
+ * materializeCreature): the caller's own option wins when supplied (generateFloor's per-visit
+ * rolled loadout for a spawned enemy), else all-null slots.
+ *
+ * `baselineEffects`/`revivesUsed` (Phase 4.1-B, S1/D3) are placeholders here -- `createCombat`
+ * ALWAYS recomputes `baselineEffects` from the creature's `innateTraitIds` (never trusts an input
+ * creature's own field) and resets `revivesUsed` to `0`; materializeCreature only needs to
+ * satisfy `Creature`'s shape before fight-setup runs.
  */
 export function materializeCreature(
   speciesCreature: SpeciesCreature,
@@ -214,14 +213,13 @@ export function materializeCreature(
     currentHp: baseStats.health,
     alive: true,
     scriptId: scriptId ?? speciesCreature.defaultScriptId,
-    equippedSpells:
-      gems ??
-      speciesCreature.equippedSpells ??
-      Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null),
+    equippedSpells: gems ?? Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null),
     defending: false,
     provoking: false,
     innateTraitIds: speciesCreature.innateTraitIds,
     activeEffects: [],
+    baselineEffects: [],
+    revivesUsed: 0,
     // Phase 4 Slice D: cumulative-per-fight, always starts at 0.
     defendCount: 0,
     speciesId,

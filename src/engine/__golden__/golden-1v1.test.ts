@@ -10,7 +10,11 @@ import {
 
 describe('golden replay: 1v1', () => {
   it('matches the committed event log exactly', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

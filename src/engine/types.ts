@@ -1,13 +1,12 @@
 import type { CreatureId } from './ids'
-import type { SeededRng } from './rng'
+import type { RngState } from './rng'
 import type { Script } from './scripting-types'
 import type {
   ActiveEffect,
-  EffectDef,
+  BaselineEffectEntry,
   Hook,
   StatusDef,
   StatusSpec,
-  Trait,
 } from './effect-types'
 
 // ---- Stats & affinity ----
@@ -136,6 +135,17 @@ export interface Creature {
    * infusions (none in v1) -> applied statuses.
    */
   readonly activeEffects: readonly ActiveEffect[]
+  /** Phase 4.1-B (S1): this creature's resolved starting effect list -- innate traits' effects,
+   * then (player-side only) perk effects, in canonical order -- computed ONCE at fight-setup by
+   * `createCombat` and never re-derived from a registry mid-fight. `revive`'s death-reset
+   * re-instantiates exactly this list (fresh instance ids from `CombatState.effectInstanceCounter`),
+   * which is what lets `CombatState.traits`/`playerWideEffects` be deleted: nothing mid-fight needs
+   * the trait/perk registries again. Plain data (EffectDef contains no functions after S2). */
+  readonly baselineEffects: readonly BaselineEffectEntry[]
+  /** Phase 4.1-B (D3): how many times `revive` has restored this creature THIS FIGHT -- never
+   * reset by death or by a successful revive itself (it's the thing `MAX_REVIVES_PER_CREATURE`
+   * bounds). Dead allies at the cap are excluded from revive targeting. */
+  readonly revivesUsed: number
   /** Phase 4 Slice D / ASSUMPTION 17: "times Defended this battle" -- cumulative for the whole
    * fight, incremented in executeDefend, NEVER reset (Bulwark's "each time the creature has
    * Defended this battle"). Not derivable from activeEffects (Defend's own action-state flag
@@ -201,7 +211,12 @@ export type FightResult = 'win' | 'loss' | 'draw'
 // ---- Combat state ----
 
 export interface CombatState {
-  readonly rng: SeededRng
+  /** Phase 4.1-B (B3): a plain-data bookmark (the mulberry32 stream position), never a closure.
+   * Every roll goes through `nextRandom(rng)` (rng.ts), which advances `rng.position` IN PLACE --
+   * safe because `resolveTurn` clones this into a fresh object at the top of every call (its own
+   * "per-turn working copy"), so the snapshot passed IN to `resolveTurn` is never touched and the
+   * same frozen snapshot resolved twice gives identical results. See rng.ts's own doc comment. */
+  readonly rng: RngState
   readonly playerParty: readonly Creature[]
   readonly enemyParty: readonly Creature[]
   /** Frozen for the current round; rebuilt only at round-start. Empty before round 1. */
@@ -215,17 +230,11 @@ export interface CombatState {
   readonly scripts: ReadonlyMap<string, Script>
   /** Status definition registry for this fight, keyed by StatusDef.statusId. */
   readonly statuses: ReadonlyMap<string, StatusDef>
-  /** Trait registry for this fight, keyed by Trait.id. Phase 4 Slice B: `revive`'s death-reset
-   * needs to re-instantiate a target's innateTraitIds mid-fight (createCombat previously only
-   * consulted this at fight-start, never storing it). */
-  readonly traits: ReadonlyMap<string, Trait>
-  /** Phase 4 Slice F / ASSUMPTION 21: the flattened, already-resolved perk effects active for
-   * the WHOLE player party this fight (createCombat's `partyWidePlayerEffects` parameter,
-   * stored here so `revive`'s death-reset -- which re-instantiates a target's baseline effects
-   * mid-fight -- can restore a revived PLAYER creature's perks too, via the same
-   * instantiateCreatureEffects call fight-assembly itself uses). Empty when no spec chosen /
-   * nothing purchased -- byte-identical to every pre-Slice-F fight. */
-  readonly playerWideEffects: readonly EffectDef[]
+  /** Phase 4.1-B (B4): issues every effect instance id this fight (trait/perk instantiation,
+   * status apply/refresh-to-a-new-instance, revive's re-instantiation, stat-modifier application)
+   * -- the ONLY production issuer. Ids are opaque (`eff-<n>`; never appear in events, so goldens
+   * stay byte-identical regardless of the exact format). Starts at 0 in `createCombat`. */
+  readonly effectInstanceCounter: number
 }
 
 // ---- Events ----

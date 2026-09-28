@@ -495,15 +495,16 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       for (let i = 0; i < fights.length; i++) {
         const fight = fights[i]!
         const combatSeed = hashRunDraw(state.runSeed, state.runCounter + i + 1)
-        const combat = createCombat(
-          playerCreatures,
-          fight.enemyParty,
-          combatSeed,
-          deps.scripts,
-          deps.traits,
-          deps.statuses,
-          partyWideEffects,
-        )
+        const combat = createCombat({
+          seed: combatSeed,
+          player: { party: playerCreatures, effects: partyWideEffects },
+          enemy: { party: fight.enemyParty },
+          registries: {
+            scripts: deps.scripts,
+            traits: deps.traits,
+            statuses: deps.statuses,
+          },
+        })
         const { state: finalState, events } = resolveFight(combat)
         allEvents.push(...events)
         fightResults.push(finalState.result as FightResult)
@@ -620,15 +621,16 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         speciesId: unicornRef.speciesId,
       })
       const combatSeed = hashRunDraw(state.runSeed, state.runCounter)
-      const combat = createCombat(
-        playerCreatures,
-        [enemyCreature],
-        combatSeed,
-        deps.scripts,
-        deps.traits,
-        deps.statuses,
-        [],
-      )
+      const combat = createCombat({
+        seed: combatSeed,
+        player: { party: playerCreatures },
+        enemy: { party: [enemyCreature] },
+        registries: {
+          scripts: deps.scripts,
+          traits: deps.traits,
+          statuses: deps.statuses,
+        },
+      })
       const { state: finalState, events } = resolveFight(combat)
 
       set((s) => ({

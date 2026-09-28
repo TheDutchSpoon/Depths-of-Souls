@@ -13,7 +13,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Pollinators Pollenlord (Phase 4 Slice H1, real content)', () => {
   it('matches the committed event log exactly across 2 rounds', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

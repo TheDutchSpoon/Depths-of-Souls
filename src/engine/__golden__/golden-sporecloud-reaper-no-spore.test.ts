@@ -14,7 +14,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: PR #64 fix 4 -- a zero-count magnitudeSource is a full no-op (real content)', () => {
   it('matches the committed event log exactly (Reaper lands exactly one DamageDealt with no Spored enemies)', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

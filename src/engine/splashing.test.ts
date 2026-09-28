@@ -61,13 +61,12 @@ describe('Splashing (Phase 4 Slice C)', () => {
       { id: 'middle', health: 10, defence: 8, speed: 3, scriptId: 'always-wait' },
       { id: 'right', health: 40, defence: 2, speed: 1, scriptId: 'always-wait' },
     ])
-    const state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(SPLASHING_TRAIT),
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
+    })
     const { events } = resolveTurn(state)
 
     // Attacker's effOffStat = effective Attack(20) x spellPower(1.0) = 20; affinity neutral
@@ -104,13 +103,12 @@ describe('Splashing (Phase 4 Slice C)', () => {
     const enemy = makeParty('enemy', [
       { id: 'solo', health: 40, speed: 1, scriptId: 'always-wait' },
     ])
-    const state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(SPLASHING_TRAIT),
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
+    })
     const { events } = resolveTurn(state)
 
     expect(damageDealtEvents(events)).toHaveLength(1)
@@ -135,13 +133,15 @@ describe('Splashing (Phase 4 Slice C)', () => {
       { id: 'c', health: 40, defence: 0, speed: 1, scriptId: 'always-wait' },
       { id: 'd', health: 40, defence: 0, speed: 1, scriptId: 'always-wait' },
     ])
-    const state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(SPLASHING_TRAIT, ANNIHILATE_TRAIT),
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: registry(SPLASHING_TRAIT, ANNIHILATE_TRAIT),
+      },
+    })
     const { events } = resolveTurn(state)
 
     const dealt = damageDealtEvents(events)
@@ -164,13 +164,12 @@ describe('Splashing (Phase 4 Slice C)', () => {
       { id: 'middle', health: 10, defence: 0, speed: 3, scriptId: 'always-wait' },
       { id: 'right', health: 40, defence: 0, speed: 1, scriptId: 'always-wait' },
     ])
-    const state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(SPLASHING_TRAIT),
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
+    })
     const { events } = resolveTurn(state)
 
     const dealt = damageDealtEvents(events)

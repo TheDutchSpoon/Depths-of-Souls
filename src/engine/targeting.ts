@@ -1,4 +1,5 @@
 import { activeFriendlyFireStatus, hasProvokeImmunity } from './effects'
+import { nextRandom } from './rng'
 import type { CombatState, Creature } from './types'
 import type { CreatureId } from './ids'
 
@@ -81,7 +82,7 @@ function resolveProvoke(
   const opposingParty = actor.side === 'player' ? state.enemyParty : state.playerParty
   const provokers = getProvokingMembers(opposingParty)
   if (provokers.length > 0) {
-    const index = Math.floor(state.rng.next() * provokers.length)
+    const index = Math.floor(nextRandom(state.rng) * provokers.length)
     return provokers[index]?.id ?? null
   }
   return resolveNormally()
@@ -105,12 +106,12 @@ function resolveConfusionRedirect(actor: Creature, state: CombatState): Confusio
   const status = activeFriendlyFireStatus(actor)
   if (!status) return { redirected: false }
 
-  const roll = state.rng.next()
+  const roll = nextRandom(state.rng)
   if (roll >= status.chancePercent / 100) return { redirected: false }
 
   const allies = livingAlliesOf(actor, state)
   if (allies.length === 0) return { redirected: true, targetId: null }
-  const index = Math.floor(state.rng.next() * allies.length)
+  const index = Math.floor(nextRandom(state.rng) * allies.length)
   return { redirected: true, targetId: allies[index]?.id ?? null }
 }
 
@@ -126,7 +127,7 @@ function resolveConfusionRedirect(actor: Creature, state: CombatState): Confusio
 export function shouldRedirectAoeToAllies(actor: Creature, state: CombatState): boolean {
   const status = activeFriendlyFireStatus(actor)
   if (!status) return false
-  return state.rng.next() < status.chancePercent / 100
+  return nextRandom(state.rng) < status.chancePercent / 100
 }
 
 /**
