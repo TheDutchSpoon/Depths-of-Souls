@@ -206,3 +206,323 @@ and no combat/resolution/interpreter/effects source file changed).
 4.1-B — engine foundations (plain-data `CombatState`/RNG, unique effect instance ids, named
 `createCombat` inputs + `baselineEffects`, `SelfCondition`, innate spells, the revive cap). Whole
 golden suite must stay byte-identical.
+
+## 4.1-B — Engine foundations (byte-identical)
+
+Items built: **B3, B4, S1, S2, A8, D3.** The whole golden suite stays byte-identical (verified:
+every changed golden file's diff touches only `createCombat` call shape, plus the one deliberate
+content change on `golden-sorcerer-starter.fixture.ts` the plan review called out in advance —
+see "Review amendments" below). Plan reviewed and approved with amendments (B-1 through B-12)
+before any code was written; this section records what was actually built against that plan.
+
+### What was built
+
+- **B3 — plain-data `CombatState` and RNG** (`engine/rng.ts`, `engine/types.ts`,
+  `engine/combat.ts`). `RngState = { position: number }` replaces the closure-based `SeededRng`
+  on `CombatState.rng`; `nextRandom(rng)` draws a value and advances `rng.position` **in place**
+  (a deliberate, narrow mutability exception, precedented by `CascadeState`'s own call-stack-
+  scoped mutability) using the exact same mulberry32 stepping math as before, now storing
+  `position` as an unsigned 32-bit integer (`>>> 0` after every step, per review B-1) so a
+  bookmark has exactly one representation. `resolveTurn` makes its "per-turn working copy" by
+  cloning `rng` into a fresh object at entry (`{ ...state, rng: { position: state.rng.position } }`)
+  — every downstream draw (target selectors, targeting, the interpreter, the resolver) mutates
+  *that* clone, never the caller's own object, which is what actually fixes the B3 bug: the input
+  snapshot passed to `resolveTurn` is never touched, so the same frozen snapshot resolved twice
+  gives identical results. `generation.ts`'s own separate run-layer RNG stream is untouched
+  (out of scope); per review B-2, `createSeededRng`/`SeededRng` stay exported from `rng.ts` but
+  are now a closure implemented *on top of* `RngState`/`nextRandom`, so there is exactly one copy
+  of the mulberry32 math (proven by a parity test asserting identical sequences from both APIs).
+- **Draw-counting without `vi.spyOn`** (`engine/test-utils/rng-draw-count.ts`, NEW, per review):
+  `countDraws(before, after)` steps a scratch bookmark forward from `before` until its position
+  matches `after`, returning the exact draw count — replaces every `countingRng` closure-wrapper
+  test helper (which can't wrap a method-less plain object).
+- **B3 proof, beyond the one fixture** (`engine/combat.test.ts`, `engine/frozen-replay-sweep.test.ts`
+  NEW): a dedicated frozen double-resolve test (`deepFreeze` one `CombatState`, call `resolveTurn`
+  on it twice, assert identical `{state, events}`), plus a sweep across every golden fixture that
+  exports the uniform `SEED`/`playerParty`/`enemyParty`/`expectedEvents` shape (44 of 72): each
+  one's constructed state is deep-frozen (re-frozen before *every* turn for `TURN_STEPS`-shaped
+  fixtures, not just the first) and replayed, asserting the committed event log exactly. The
+  remaining 28 fixtures are explicitly listed and categorized (5 non-uniform export shape; 23
+  whose own `.test.ts` drives them with bespoke logic — a single bare `resolveTurn` call, a
+  hardcoded loop count, or a post-`createCombat` setup step like wounding a creature — that a
+  generic driver can't safely reproduce without silently replaying the wrong scenario); a
+  standing test asserts the sweep's coverage + exclusion lists together account for every fixture
+  file on disk, so a new fixture can't silently fall through either category.
+- **B4 — unique effect instance ids + the exact-instance rule** (`engine/effects.ts`,
+  `engine/effect-types.ts`, `engine/resolution.ts`). `CombatState.effectInstanceCounter: number`
+  is the **only** production issuer of effect instance ids (`eff-<n>`, opaque — never appears in
+  events) — every prior `createEffectInstanceId` call site that minted a NEW instance (trait/perk
+  instantiation, a fresh status application, `apply-stat-modifier`'s own id) now draws from it;
+  the one exception, per design, is the per-trigger guard id derived from an *existing* instance's
+  id (`${instanceId}#trigger#${index}`), which is a derived guard key, not a new instance.
+  Refreshing a status still keeps its existing instance and id (no counter draw). `ResolvedHookEffect`
+  gains `sourceInstanceId` — the effect's REAL owning instance id (distinct from the derived
+  per-trigger guard `instanceId` for a status-sourced candidate) — and `fireHook` checks it
+  against the creature's *live* `activeEffects` immediately before firing each candidate: an
+  effect fires only if its exact owning instance still exists at that moment. Two new hand-derived
+  tests in `resolution.test.ts` prove it: cleanse-then-tick (an earlier trait effect in the same
+  `on-turn-end` pass removes a status whose own tick was captured, unfired, in the same pass — the
+  tick never fires, not even `TriggerFired`) and remove-then-reapply (a status removed then
+  reapplied within the same pass gets a genuinely new instance id; the old instance's pending
+  tick candidate is skipped, the new instance follows normal rules from its next natural firing).
+  Per the review's stop condition, the whole golden suite was re-verified byte-identical after
+  this change landed — no existing golden relied on a removed-then-reapplied or revived instance
+  firing under a reused id.
+- **S1 — named `createCombat` inputs + `baselineEffects`** (`engine/combat.ts`, `engine/effects.ts`,
+  `engine/effect-types.ts`). `createCombat({ seed, player: { party, effects? }, enemy: { party,
+  effects? }, registries?: { scripts?, traits?, statuses? } })` — two same-typed positional lists
+  (player/enemy effects) could be silently swapped; the named shape can't be. Per review B-5,
+  `registries` and its three fields are all optional (each defaulting to an empty `Map`), matching
+  the pre-S1 positional defaults exactly — CONVENTIONS' own signature (no `?`) describes the
+  steady-state contract, not this slice's own backward-compatible defaulting. `createCombat`
+  **always recomputes** `baselineEffects` from each input creature's own `innateTraitIds` (+ side
+  effects) and **resets** `revivesUsed` to `0` — it never trusts those fields on an input
+  `Creature`; `materializeCreature`/`makeCreature` both supply `[]`/`0` placeholders satisfying
+  the type, since `createCombat` overwrites them unconditionally. `Creature.baselineEffects:
+  readonly BaselineEffectEntry[]` (a new small `{ def, sourceTraitId }` pair type — a bare
+  `EffectDef[]` would lose the label a trait-sourced vs. perk-sourced def needs at instantiation)
+  is computed once at fight-setup (`resolveBaselineEffects`) and instantiated into `activeEffects`
+  (`instantiateEffectDefs`, counter-based ids); `revive`'s death-reset re-instantiates the SAME
+  stored `baselineEffects` directly, needing no registry lookup — which is what lets
+  `CombatState.traits` and `CombatState.playerWideEffects` be deleted outright (grepped: `revive`
+  was their only in-fight consumer). All ~81 `createCombat` call sites (store.ts, CombatDemo.tsx,
+  every golden/unit test) were mechanically rewritten to the named shape; no expected event log
+  changed anywhere except the one deliberate content fix below.
+- **S2 — `SelfCondition` replaces the `predicate` function** (`engine/effect-types.ts`,
+  `engine/effective-stats.ts`). `StatModifierDef.condition?: SelfCondition` (`{kind:'always'}` |
+  `{kind:'hp-percent', comparator, thresholdPercent}` | `{kind:'has-status', statusId}`) — plain
+  data, evaluated during `getEffectiveStat`'s own folding loop. Per review B-7, `hp-percent`
+  shares ONE integer-cross-multiplication implementation (`hpPercentSatisfied`, moved down into
+  `effective-stats.ts`) with `conditions.ts`'s own scripting `hp-percent` Condition, which now
+  calls it too. `hasStatus`'s canonical implementation also moved to `effective-stats.ts` (with a
+  re-export from `effects.ts` for every existing importer) so `SelfCondition`'s `has-status`
+  branch can read it without `effects.ts -> effective-stats.ts` becoming a cycle. The **real
+  predicate-bearer trait was `BLOODLUST`, not `BRUTISH`** (the brief/CONVENTIONS naming error the
+  plan flagged; confirmed correct by the review and fixed in the same doc-sync as this slice) —
+  re-authored as `condition: { kind: 'hp-percent', comparator: '>=', thresholdPercent: 100 }`.
+  **Correction (PR #69 review, D1):** as first landed, this was NOT byte-identical to the old
+  `(c) => c.currentHp >= effectiveMaxHp(c)` predicate — `hpPercentSatisfied` divided by the raw
+  (unfloored) `getEffectiveStat(_, 'health')` reading, so a creature at its own floored max HP
+  read as fractionally below 100% whenever a Health modifier left effective Health non-integer
+  (real content has five: ×1.1/×1.15/×1.05/×0.9/etc.) — "at full HP" could go permanently
+  unsatisfiable. Fixed: `hpPercentSatisfied` now takes the `Creature` directly and computes
+  `floor(getEffectiveStat(creature, 'health'))` itself — the SAME integer `currentHp` is clamped
+  to (`effectiveMaxHp`) — so it genuinely is byte-identical to the old predicate now. One shared
+  helper, used by both `SelfCondition` and conditions.ts's scripting `hp-percent` Condition (see
+  "Review fixes (PR #69)" below). A new
+  `validateStatModifierCondition`/`validateStatModifierConditions` pair (`effect-types.ts`) throws
+  at **import time** (mirroring `validateSpecialization`'s own precedent, not a data test) if a
+  `stat-modifier` carries an `hp-percent` condition gating the same stat it reads (the one
+  read-cycle shape); per review B-9, it's run over both `data/traits/index.ts`'s `STOCK_TRAITS`
+  AND `data/specializations.ts`'s perk effects (perks are stat-modifier carriers too — e.g.
+  Arcane Might's "+1% Intelligence per level"), with three new unit tests (rejects Health +
+  hp-percent; accepts Attack + hp-percent; accepts Health + has-status).
+- **A8 — innate spells** (`engine/effect-types.ts`, `engine/effects.ts`, `engine/combat.ts`,
+  `data/traits/starters.ts`, `data/species/starters.ts`, `engine/generation.ts`). New passive
+  `{ category: 'innate-spell', spell: Spell }` — Arcane Surge (`SORCERER_STARTER_TRAIT`) gains one
+  alongside its existing `bonus-cast` effect. `createCombat`'s fight-setup reads every
+  `innate-spell` effect off a creature's just-instantiated `activeEffects`, in canonical order,
+  and **prepends** their spells onto `equippedSpells` (innate slots first, then the regular gem
+  slots) — no affinity/`canEquip` gate. `SpeciesCreature.equippedSpells` (the old fixed-starter-
+  loadout field) and `materializeCreature`'s fallback to it are deleted; `SORCERER_STARTER`'s
+  hardcoded `equippedSpells: [ARCANE_BOLT, null, null, null]` is gone too. **Correction (PR #69
+  review, D2; typo fixed at the PR #69 review's follow-up pass):** the byte-identical `[Arcane
+  Bolt, null, null, null]` array is the Seer's **fight-setup** spell array (what `createCombat`
+  produces), not its **materialized** one — `materializeCreature` output for the Seer carries
+  regular gem slots only (`[null, null, null]`, `DEFAULT_GEM_SLOT_COUNT`'s 3 slots — matching what
+  `data/species/starters.test.ts` itself asserts); innate spells are prepended at fight setup,
+  never at materialization. New tests: a
+  fixture non-Wit "fused" creature carrying Arcane Surge still
+  gets the innate Arcane Bolt AND can actually cast it (`decideAction` with `always-cast` resolves
+  a real cast action, not a fallback) — proving no equip gate anywhere in the resolution path.
+- **D3 — the revive cap** (`engine/config.ts`, `engine/types.ts`, `engine/creature-lookup.ts`,
+  `engine/resolution.ts`). `MAX_REVIVES_PER_CREATURE = 10`; `Creature.revivesUsed: number` (never
+  reset by death or by a successful revive itself — it's the thing being bounded).
+  `resolveResponseTargets`'s `random-dead-ally` branch filters the pool to
+  `!c.alive && c.revivesUsed < MAX_REVIVES_PER_CREATURE` **before** the empty-pool early-out, so
+  an exhausted pool draws no RNG; the `'revive'` executeResponse case defensively re-checks the
+  same condition per-target for robustness against any future non-`random-dead-ally` revive
+  targeting. A new hand-derived test drives the SAME dead ally through exactly 10 successful
+  revives (re-killing it after each) then asserts the 11th attempt fizzles (no `Revived` event,
+  no RNG drawn, `revivesUsed` unchanged at 10).
+
+### Review amendments (plan review, before code)
+
+The plan was posted and reviewed in full before any implementation; the review approved it with
+twelve amendments (B-1 through B-12), all folded in as described above and in "What was built."
+The one item worth calling out here: **B-10's two pins**, both verified as real, not theoretical.
+Pin 1 — `golden-sorcerer-starter.fixture.ts` hand-authored `equippedSpells: [ARCANE_BOLT]`
+alongside `innateTraitIds: [SORCERER_STARTER_TRAIT.id]`; after A8, leaving that in place would
+have silently doubled the loadout to `[Bolt, Bolt]` (pool size 2). Confirmed by hand (a throwaway
+`node -e` mulberry32 calculation against the fixture's real seed, 7): the bonus-cast's own random
+slot-pick roll at that exact seed happens to land on index 0 either way, so the test would have
+kept passing with the bug latent — exactly the kind of coincidence the review flagged. Fixed by
+dropping the explicit `equippedSpells` line (the one deliberate content change beyond the
+`createCombat` rename, shown in the PR with its expected log unchanged); `effects.test.ts` and
+every other `SORCERER_STARTER_TRAIT` consumer were checked and don't share the pattern. Pin 2 —
+grepped for any `createCombat` call fed from a previous `CombatState`'s own creatures (which would
+double-prepend innate spells); none exist — `store.ts`'s two call sites both materialize fresh
+creatures per call (`resolvePlayerParty`/`generateFloor`, never reused post-fight-setup output),
+and the new frozen-replay sweep reads fixtures' own raw `playerParty`/`enemyParty` exports, never
+a prior `CombatState`'s.
+
+### Verification
+
+All four gates green (as first submitted, before the PR #69 review round below):
+- `npx tsc -b` — clean.
+- `npx vitest run` — **108 files / 715 tests passed** (0 failed) — up from 107/653 on `main`, the
+  delta being this slice's new tests (rng parity, the frozen double-resolve test, the frozen
+  replay sweep — **44 fixtures actually replayed, plus 2 accounting tests proving the sweep's own
+  coverage + exclusion lists account for every fixture on disk; "46-case" undercounts what's being
+  claimed** — correction, PR #69 review), the two B4 mechanism tests, the D3 revive-cap test, the
+  three S2 validator tests, the A8 off-affinity cast test) plus a handful of rewritten assertions
+  in existing test
+  files (listed below).
+- `npm run lint` — clean.
+- `npm run format:check` — clean (after `npm run format`; whitespace/wrapping only).
+- `npm run build` — succeeds.
+
+Still green after the PR #69 review round: **112 files / 724 tests passed** (0 failed) — the
+9-test delta covering R1/R3's new `createCombat` tests, the D1 focused float-denominator test, the
+structuredClone purity test, and 4 new golden fixture pairs (8 files) for B4/D3 (see "Review fixes
+(PR #69)" below).
+
+**Golden diff against `main`**: exactly two `*.fixture.ts` files changed
+(`golden-sorcerer-starter.fixture.ts`, the one deliberate content fix above;
+`golden-spore-spread-fizzle.fixture.ts`, a test-mechanism-only comment/export change — see
+below), and every `*.test.ts` file under `__golden__/` changed **only** in its `createCombat` call
+shape (mechanically rewritten to the named-input signature) plus that same one mechanism change.
+No `expectedEvents`/`expectedResult` array changed anywhere. (The PR #69 review round below adds 4
+new fixture/test pairs — B4 and D3 goldens that didn't exist before — which is an addition, not a
+change to any existing golden's content.)
+
+**Test files with rewritten assertions (not golden content), each for a mechanical reason tied to
+B3's rng type change:**
+- `interpreter.test.ts`, `targeting.test.ts`, `target-selectors.test.ts`, `conditions.test.ts`,
+  `combat.test.ts`, `resolution.test.ts`, `support-spells.test.ts`,
+  `golden-spore-spread-fizzle.test.ts`: `expect(x.rng.next()).toBe(y.rng.next())`-style proofs (a
+  method call the plain-data `RngState` no longer has) rewritten to direct `.position` equality,
+  or (for "exactly one/N draws" proofs) to the new `countDraws` helper; `combat.test.ts`'s
+  `stubRng`/`countingRng` closures and `resolution.test.ts`'s `countingRng` are deleted outright.
+- `effects.test.ts`, `data/traits/core.test.ts`: `instantiateTraitEffects`/
+  `instantiateCreatureEffects` calls rewritten against the new `resolveBaselineEffects` +
+  `instantiateEffectDefs` two-step API (instance ids are now `eff-<n>`, not the old deterministic
+  `creatureId#traitId#ordinal` strings).
+- `effective-stats.test.ts`: the `predicate`-based conditional-modifier test rewritten to build a
+  `SelfCondition` instead; one new test for the `has-status` branch.
+- `data/species/starters.test.ts`: the "Sorcerer starter loadout" tests rewritten for A8 (no more
+  `SpeciesCreature.equippedSpells` to assert on directly; the byte-identical `[Bolt, null, null,
+  null]` claim is now proven by materializing + running through `createCombat`, not read off raw
+  species data).
+- `__fixtures__/creatures.ts`, `src/app/demoFight.ts`: `makeCreature`/hand-rolled `Creature`
+  literals gained `baselineEffects: []` / `revivesUsed: 0` defaults (always overwritten by
+  `createCombat`, but required by the type).
+
+No spec/doc conflicts surfaced beyond the BRUTISH/BLOODLUST naming error already fixed in this
+branch's doc-sync (CONVENTIONS.md's "Unified effect framework" section and the brief's S2 section).
+
+### Review fixes (PR #69)
+
+A review pass against the `.claude/` docs on `main` (not against the PR's own description) found
+three real bugs (R1–R3), two acceptance gaps (R4–R5), and three decisions (D1–D3) it recommended
+resolving in this same PR. All fixed on this branch; the doc-sync (CONVENTIONS.md, GAME_DESIGN.md,
+ROADMAP.md, the brief) landed as a separate commit ahead of the code fixes below.
+
+- **D1/R2 — HP% divided by the wrong denominator.** `hpPercentSatisfied` used to take a raw
+  `getEffectiveStat(creature, 'health')` reading as its `effMaxHp` argument — unfloored, so a
+  creature with a fractional effective Health (real content has five such modifiers) could never
+  read as "at full HP," making the re-authored `BLOODLUST`'s S2 condition NOT actually
+  byte-identical to the predicate it replaced. Fixed: `hpPercentSatisfied` (`effective-stats.ts`)
+  now takes the `Creature` directly and computes `floor(getEffectiveStat(creature, 'health'))`
+  itself — the same integer `currentHp` is clamped to (`effectiveMaxHp`) — so both `SelfCondition`
+  and conditions.ts's scripting `hp-percent` Condition read the SAME basis from ONE helper (the
+  `creatureHpPercentSatisfied` wrapper in `conditions.ts` is gone; both callers now call
+  `hpPercentSatisfied` directly). New focused test (`effective-stats.test.ts`): effective Health
+  34.5 (base 30 × 1.15), `currentHp: 34` (the floored max) — reads as exactly 100%.
+- **D3 — an unknown trait id was silently skipped.** `resolveBaselineEffects` now throws
+  (`effects.ts`) instead of `continue`-ing past a trait id missing from the registry — a caller
+  that forgot to pass `registries.traits` used to silently strip every innate trait with no
+  signal. The test that pinned the skip now asserts the throw instead.
+  `resolveBaselineEffects`'s `creature` parameter also dropped `side` from its `Pick<>` — it no
+  longer reads `side` at all (see R1).
+- **R1 — `enemy.effects` was silently dropped.** `createCombat` called `instantiate(c, [])` for
+  the whole enemy party regardless of what `enemy.effects` held, and `resolveBaselineEffects` only
+  applied its `sideEffects` argument when `creature.side === 'player'` — so an enemy-side effect
+  passed to `createCombat` was discarded twice over. Fixed: `resolveBaselineEffects` no longer
+  reads `side` at all — it applies whatever `sideEffects` list it's given unconditionally, since
+  the CALLER now owns that decision. `createCombat`'s `instantiate` threads each side's own
+  `party`/`effects` pair through with its own `sideLabel` (`'perk'` for the player side,
+  `'enemy-effect'` for the enemy side — distinct labels so a `TriggerFired.effectId` can't collide
+  across sides), and throws if a creature's own `side` doesn't match the list it was passed in
+  (`player.party` vs `enemy.party`). `BaselineEffectEntry.sourceTraitId`'s side-effect label
+  changed from always `perk-<n>` to `<sideLabel>-<n>`. New tests in `combat.test.ts`: an
+  enemy-side ×2 Attack effect actually applies to the enemy and never the player; a
+  side-mismatched creature throws.
+- **R3 — double-prepending innate spells was guarded only by a one-time grep.** `createCombat`'s
+  own doc comment called re-feeding a post-setup creature "safe but pointless," but for a creature
+  carrying an `innate-spell` effect (A8) it would silently DOUBLE the innate slots — and the
+  `golden-sorcerer-starter` fixture (the one place this could have been caught) can't detect it
+  (confirmed: manually restoring the old `equippedSpells: [ARCANE_BOLT]` line still passes the
+  golden). Fixed: `instantiate` now throws when an input creature already carries fight-setup
+  output (non-empty `baselineEffects` or `activeEffects`). New test: re-feeding a post-setup Seer
+  (`SORCERER_STARTER_TRAIT`, real content) throws.
+- **R4 — the named B3 double-resolve test was vacuous, and the sweep's full-fight path only froze
+  turn 1.** `combat.test.ts`'s "resolving the SAME frozen snapshot twice" test used a 1v1
+  always-attack turn that draws zero RNG — it would still pass with `resolveTurn`'s per-turn
+  `rng` clone removed, since nothing ever touches `state.rng` to diverge. Fixed: the fixture now
+  uses `random-enemy` targeting against two living enemies, and the test asserts
+  `countDraws(frozen.rng, first.state.rng) > 0` so it can't go vacuous again. Separately,
+  `frozen-replay-sweep.test.ts`'s non-`TURN_STEPS` branch called
+  `resolveFight(deepFreeze(created))`, which only freezes the FIGHT's original starting snapshot —
+  `resolveFight`'s own internal loop reassigns its working state to each `resolveTurn`'s plain
+  (unfrozen) return, so a hypothetical turn-2+-only mutation bug would go undetected. Fixed: both
+  the `TURN_STEPS` and full-fight branches now share one loop that re-freezes before EVERY turn.
+  All 46 sweep tests still pass unchanged.
+- **R5 — B4/D3 had unit-test coverage but no goldens.** The original acceptance line asked for "the
+  B4 and D3 goldens," but the PR shipped count-of-events unit tests instead of full hand-derived
+  event logs; the D3 unit test also called `executeResponse` directly, never exercising the
+  "TriggerFired only" fizzle shape through the real hook pipeline. Fixed: 4 new golden fixture/test
+  pairs under `__golden__/` (hand-derived arithmetic in each fixture's own header comment; added to
+  `frozen-replay-sweep.test.ts`'s `KNOWN_BESPOKE_DRIVER` list, since none of them drive via the
+  generic full-fight/`TURN_STEPS` shape):
+  - `golden-b4-cleanse-then-tick` — an on-fight-start-applied status removed by an on-turn-end
+    trigger earlier in the same hook pass; the status's own tick candidate (captured before the
+    removal) never fires.
+  - `golden-b4-remove-then-reapply` — same status removed AND reapplied within one hook pass; the
+    OLD instance's pending tick candidate is skipped, the fresh instance is unaffected.
+  - `golden-d3-revive-cap-exclusion` — a mixed dead-ally pool (one at the cap, one eligible): the
+    capped ally is excluded before the draw, so the eligible one is revived unconditionally.
+  - `golden-d3-revive-cap-fizzle` — the sole dead ally already at the cap: the pool is empty
+    before any draw, so the trigger still fires (`TriggerFired`) but nothing else does — zero RNG
+    consumed.
+  All four start from a state the golden itself can't naturally reach through a handful of turns
+  (an existing status, or a creature already at the revive cap) via a post-`createCombat`
+  `updateCreature` setup step in the `.test.ts` driver — the SAME precedented pattern
+  `golden-dot.fixture.ts` already uses for a pre-wounded creature (`createCombat` always resets
+  `currentHp`/`revivesUsed` at fight-setup, so that starting state has to be applied AFTER
+  creation). The 10-revive climb to the cap itself stays covered by the existing
+  `resolution.test.ts` unit test, which can assert on `revivesUsed` directly; hand-deriving 10
+  real revive-and-rekill combat rounds as a golden's own event log was judged not worth the
+  fixture's weight for what it would additionally prove.
+- **Scope/labeling** (no behavior change): three false claims in this record's own text above are
+  now corrected inline (BLOODLUST's byte-identical claim, the materialized-vs-fight-setup spell
+  array, the "46-case sweep" undercount). A stale comment in `resolution.ts`'s `fireHook` (claiming
+  the active-effects candidate list "doesn't change mid-pass in v1 content") is rewritten — B4
+  exists specifically because it does. A new `combat.test.ts` test (`structuredClone` on a real
+  mid-fight state, built from real trait content, several turns in) proves the brief's own
+  structural B3 acceptance criterion directly — deep-freezing (the existing proof) shows nothing
+  *mutated*, but doesn't show `CombatState` is actually plain data; `structuredClone` throws on any
+  function/closure/class instance, so surviving it is a direct proof.
+
+### Verification (after the PR #69 review round)
+
+All four gates still green: `npx tsc -b` clean; `npx vitest run` — 112 files / 724 tests passed;
+`npm run lint` clean; `npm run format:check` clean (after `npm run format`; whitespace/wrapping
+only); `npm run build` succeeds. No existing `__golden__` file's content changed — `git status`
+against the pre-review commit shows only the 8 new golden files (4 fixture/test pairs) as
+additions, confirmed via direct diff.
+
+### Next
+
+4.1-C — one action pipeline + the turn skeleton. Deliberate golden changes, listed per the brief's
+own acceptance criteria; everything else stays byte-identical.

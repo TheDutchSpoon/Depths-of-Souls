@@ -4,7 +4,6 @@ import { applyStatus, newCascade } from '../resolution'
 import { updateCreature } from '../creature-lookup'
 import {
   SEED,
-  SEED_1_FIRST_DRAW,
   ALLY,
   BEARER,
   BEARER_STARTING_HP,
@@ -20,7 +19,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Spore spread-on-death fizzles when every living ally is already Spored (real content)', () => {
   it('matches the committed event log exactly (TriggerFired still fires; nothing follows it)', () => {
-    const created = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const created = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     // Pre-apply Spore to BOTH BEARER (its own on-death spread trigger only exists while it
     // carries the status) and ALLY (so the filtered pool is empty), then wound BEARER -- all
     // before any turn resolves, into a throwaway events array.
@@ -45,8 +49,8 @@ describe('golden replay: Spore spread-on-death fizzles when every living ally is
     expect(events).toEqual(expectedEvents)
     expect(state.result).toBeNull()
     // Proves the "no RNG draw at all" claim, not just asserts it: if anything in the run above
-    // had consumed a draw, the PRNG's internal state would have advanced and this call would
-    // return a different value than a fresh seed-1 stream's own untouched first draw.
-    expect(state.rng.next()).toBe(SEED_1_FIRST_DRAW)
+    // had consumed a draw, the plain-data bookmark's position would have advanced away from its
+    // starting seed value.
+    expect(state.rng.position).toBe(SEED)
   })
 })

@@ -13,7 +13,12 @@ import {
 
 describe('golden replay: defend-count magnitudeSource (Phase 4 Slice D, Bulwark-shaped)', () => {
   it('matches the committed event log exactly', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

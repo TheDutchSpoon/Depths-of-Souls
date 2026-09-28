@@ -13,7 +13,12 @@ import {
 
 describe('golden replay: Stun (condition-status suppress-action via a trait apply-status)', () => {
   it('skips the stunned creature’s very next turn via the empty bracket, then expires', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

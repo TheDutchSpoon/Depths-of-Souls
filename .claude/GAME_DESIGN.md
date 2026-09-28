@@ -982,8 +982,10 @@ Design constraints:
   Every attacking role falls back to casting a random gem when it can't attack (Pacified). A
   summoned creature starts with its role's script. Scripted enemies (rather than an enemy AI) keep
   the game symmetric and give the player readable enemy patterns to script against.
-- **HP% conditions** use **effective Health** as the denominator (`getEffectiveStat(_, 'health')`),
-  compared via integer cross-multiplication (no float) — see CONVENTIONS.
+- **HP% conditions** use **max HP** as the denominator: effective Health rounded down
+  (`floor(getEffectiveStat(_, 'health'))`), the same value current HP is capped at, so a creature
+  at full HP is exactly 100%. Compared via integer cross-multiplication (no float) — see
+  CONVENTIONS. Conditional passives ("+25% Attack at full HP") use the same basis.
 
 **Deferred to Phase 6 (authoring UI):**
 - The UI must surface **equipped-slot contents** when authoring a Cast rule — a slot-referencing

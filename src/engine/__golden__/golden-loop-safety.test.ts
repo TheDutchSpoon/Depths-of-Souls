@@ -12,7 +12,12 @@ import {
 
 describe('golden replay: loop safety (self-re-entry guard)', () => {
   it('fires a self-targeting retaliate once per hit — the guard blocks the re-entry loop', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

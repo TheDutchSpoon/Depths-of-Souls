@@ -14,7 +14,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Overgrowth Broodmother Swarm Call count-scaling (Phase 4 Slice I, PR #65 review, real content)', () => {
   it('matches the committed event log exactly (count 3 while both spiderlings live, count 2 the moment one has died)', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

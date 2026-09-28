@@ -32,6 +32,7 @@
 // perk's own `effects: []`. See `TakenReductionDef`'s own doc comment (effect-types.ts).
 
 import type { EffectDef } from '../engine/effect-types'
+import { validateStatModifierConditions } from '../engine/effect-types'
 import { BRUTE_STARTER, SHIELDBARER_STARTER, SORCERER_STARTER } from './species/starters'
 
 export interface PerkDef {
@@ -61,6 +62,14 @@ export function validateSpecialization(spec: Specialization): void {
     throw new Error(
       `specialization invariant violated: ${spec.id}'s perks sum to ${total} points, expected exactly 1000`,
     )
+  }
+  // Phase 4.1-B (S2, B-9): perks are stat-modifier carriers too (e.g. Arcane Might's "+1%
+  // Intelligence per level") -- run the same load-time validator over every perk's resolved
+  // effects. A level-function's SHAPE (which stat, which condition) is level-invariant by
+  // construction (only the factor magnitude varies with `level`), so level 1 is representative.
+  for (const perk of spec.perks) {
+    const effects = typeof perk.effects === 'function' ? perk.effects(1) : perk.effects
+    validateStatModifierConditions(effects)
   }
 }
 

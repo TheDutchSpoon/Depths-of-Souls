@@ -12,7 +12,12 @@ import {
 
 describe('golden replay: scoped suppress-action (Phase 4 Slice B)', () => {
   it('matches the committed event log exactly -- Cast skipped, Attack still fires, no SpellCast ever emitted', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

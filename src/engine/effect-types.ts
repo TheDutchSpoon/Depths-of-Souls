@@ -9,8 +9,8 @@
 // (statuses + round-end sweep). The `ActiveEffect` union itself grows across slices — that is
 // engine-internal and golden-invisible, so it need not be complete now.
 
-import type { Creature, Stat } from './types'
-import type { Condition, TargetSelector } from './scripting-types'
+import type { Spell, Stat } from './types'
+import type { ComparatorOp, Condition, TargetSelector } from './scripting-types'
 
 // Stable per-fight identity for an effect instance. Deterministic (never RNG) so goldens
 // reproduce; the stack-scoped self-re-entry guard (Slice B) keys on this.
@@ -285,12 +285,23 @@ export type EffectResponse =
 
 // ---- Effect definitions (as authored in a Trait; no instance identity yet) ----
 
-// Read-time activation predicate for a conditional passive. Self-only; may read OTHER
-// effective stats via getEffectiveStat but MUST NOT read the stat it gates (no read-cycle).
-// This is the one deliberately non-serializable spot — acceptable because traits are compiled
-// src/data/ TS content, not saved per-instance state. If traits ever become runtime/moddable
-// data, convert this to a declarative Condition-like structure.
-export type ActivationPredicate = (creature: Creature) => boolean
+// Phase 4.1-B (S2): read-time activation condition for a conditional passive -- DATA, not a
+// function (replaces the `predicate: ActivationPredicate` function, the one thing that made
+// combat state non-plain-data). Self-only: evaluated against the single creature bearing the
+// effect, never CombatState. `hp-percent` mirrors the scripting Condition's own integer
+// cross-multiplication (see effective-stats.ts's hpPercentSatisfied, shared with conditions.ts).
+// A load-time validator (data/traits/index.ts, data/specializations.ts) rejects a `hp-percent`
+// condition on a `stat: 'health'` StatModifierDef -- the one shape that would read the stat it
+// gates (a read-cycle in getEffectiveStat's own folding loop). `has-status`/`always` never read
+// a stat, so they're unconditionally safe regardless of which stat they gate.
+export type SelfCondition =
+  | { readonly kind: 'always' }
+  | {
+      readonly kind: 'hp-percent'
+      readonly comparator: ComparatorOp
+      readonly thresholdPercent: number
+    }
+  | { readonly kind: 'has-status'; readonly statusId: string }
 
 // NOTE (Phase 4 Slice D, resolved in Slice E2): CONVENTIONS' count-scaling primitive names
 // stat-modifier as an eligible magnitudeSource host too ("a stat/damage-modifier whose factor
@@ -308,7 +319,30 @@ export type StatModifierDef = {
   readonly category: 'stat-modifier'
   readonly stat: Stat
   readonly factor: number
-  readonly predicate?: ActivationPredicate
+  readonly condition?: SelfCondition
+}
+
+/** Phase 4.1-B (S2, B-9): the load-time validator -- throws (mirrors `validateSpecialization`'s
+ * own "throws at import time, not a data test" precedent) if `def` carries a read-cycle: an
+ * `hp-percent` condition gating the very stat (`health`) it reads. `has-status`/`always` never
+ * read a stat, so every other combination is safe. Called eagerly wherever `StatModifierDef`s are
+ * assembled into a registry -- `data/traits/index.ts` (over every trait's effects) AND
+ * `data/specializations.ts` (over every perk's effects, B-9 -- perks are stat-modifier carriers
+ * too). */
+export function validateStatModifierCondition(def: StatModifierDef): void {
+  if (def.condition?.kind === 'hp-percent' && def.stat === 'health') {
+    throw new Error(
+      'effect invariant violated: a stat-modifier cannot gate on hp-percent while modifying health (read-cycle)',
+    )
+  }
+}
+
+/** Runs `validateStatModifierCondition` over every `stat-modifier` effect in `defs`. A small
+ * shared iteration helper so both call sites (traits, perks) scan the same way. */
+export function validateStatModifierConditions(defs: readonly EffectDef[]): void {
+  for (const def of defs) {
+    if (def.category === 'stat-modifier') validateStatModifierCondition(def)
+  }
 }
 
 export type StatRemapDef = {
@@ -538,6 +572,19 @@ export type BonusCastDef = {
   readonly chancePercent: number
 }
 
+/** Phase 4.1-B (A8): the Sorcerer starter's granted spell (Arcane Bolt), re-authored off
+ * `SpeciesCreature.equippedSpells` (a fixed starter loadout baked into species data, lost/broken
+ * by Phase 8 fusion) onto Arcane Surge as a passive, permanent-for-fight `EffectDef` -- so it
+ * travels with the trait through fusion instead of the template. NOT a gem: no level, no
+ * augments, un-upgradeable by construction, and NO equip gate (canEquip/affinity) applies, since
+ * it's never equipped. `createCombat`'s fight-setup reads every `innate-spell` effect off a
+ * creature's just-instantiated `activeEffects`, in canonical order, and PREPENDS their spells
+ * onto `equippedSpells` (innate slots first, then the regular gem slots) -- see combat.ts. */
+export type InnateSpellDef = {
+  readonly category: 'innate-spell'
+  readonly spell: Spell
+}
+
 // EffectDef is what a TRAIT authors (permanent-for-fight passives/triggers -- timed statuses are
 // a separate, parallel concept below, never authored directly on a Trait).
 export type EffectDef =
@@ -555,6 +602,7 @@ export type EffectDef =
   | ConditionalDamageBonusDef
   | TakenReductionDef
   | BonusCastDef
+  | InnateSpellDef
 
 // ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
 // a spell's appliesStatus, never innate. Declared in a separate status registry (data/statuses.ts),
@@ -725,6 +773,7 @@ export type CheatDeathEffect = CheatDeathDef & InstanceIdentity
 export type ConditionalDamageBonusEffect = ConditionalDamageBonusDef & InstanceIdentity
 export type TakenReductionEffect = TakenReductionDef & InstanceIdentity
 export type BonusCastEffect = BonusCastDef & InstanceIdentity
+export type InnateSpellEffect = InnateSpellDef & InstanceIdentity
 export type TurnOrderStatusEffect = TurnOrderStatusDef &
   InstanceIdentity &
   StatusInstanceState
@@ -758,6 +807,16 @@ export type ResolvedHookEffect = {
   /** Phase 4 Slice H2 (PR #60 review, E2): mirrors a `TriggeredDef`'s own `echoCast`. Always
    * undefined for a status-sourced entry. */
   readonly echoCast?: boolean
+  /** Phase 4.1-B (B4): the REAL owning instance's id -- for a TriggeredDef-sourced entry this
+   * equals `instanceId` above (same value used for the cascade self-re-entry guard); for a
+   * status-trigger-sourced entry this is the status's own SHARED instance id (`e.instanceId`),
+   * distinct from `instanceId` above (which is the derived per-trigger guard id,
+   * `${e.instanceId}#trigger#${index}`, scoped to cascade dedup only). `fireHook` re-checks this
+   * against the creature's LIVE `activeEffects` immediately before firing each candidate -- an
+   * effect reacts only if its exact owning instance still exists at that moment (the exact-
+   * instance rule: a candidate list built once at the top of a hook pass can otherwise fire a
+   * status instance an EARLIER candidate in the same pass already removed or replaced). */
+  readonly sourceInstanceId: EffectInstanceId
 }
 
 export type ActiveEffect =
@@ -779,6 +838,7 @@ export type ActiveEffect =
   | ConditionalDamageBonusEffect
   | TakenReductionEffect
   | BonusCastEffect
+  | InnateSpellEffect
 
 // ---- Trait ----
 
@@ -786,4 +846,17 @@ export interface Trait {
   readonly id: string
   readonly name: string
   readonly effects: readonly EffectDef[]
+}
+
+/** Phase 4.1-B (S1): one entry of a creature's resolved `baselineEffects` -- an `EffectDef` paired
+ * with the `sourceTraitId` label it must carry once instantiated (a bare `EffectDef[]` would lose
+ * this: a trait-sourced def's label is its owning trait's id, e.g. `'brutish'`; a side-effect
+ * def's label is `'<sideLabel>-<ordinal>'` -- `'perk-<ordinal>'` for the player side,
+ * `'enemy-effect-<ordinal>'` for the enemy side (PR #69 review, R1) -- see effects.ts's
+ * `resolveBaselineEffects`). Plain data (no functions -- `SelfCondition` replacing
+ * `ActivationPredicate`, S2, is what makes this possible), so `Creature.baselineEffects: readonly
+ * BaselineEffectEntry[]` can live inside `CombatState`. */
+export type BaselineEffectEntry = {
+  readonly def: EffectDef
+  readonly sourceTraitId: string
 }

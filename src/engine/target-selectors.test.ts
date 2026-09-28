@@ -5,7 +5,7 @@ import {
   targetSelectorHasCandidate,
 } from './target-selectors'
 import { makeParty } from './__fixtures__/creatures'
-import { createSeededRng } from './rng'
+import { createRngState, nextRandom } from './rng'
 import { createEffectInstanceId } from './effect-types'
 import type { CombatState } from './types'
 import type { TargetSelector } from './scripting-types'
@@ -13,7 +13,7 @@ import type { ActiveEffect } from './effect-types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
-    rng: createSeededRng(1),
+    rng: createRngState(1),
     playerParty: [],
     enemyParty: [],
     turnQueue: [],
@@ -22,8 +22,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
-    traits: new Map(),
-    playerWideEffects: [],
+    effectInstanceCounter: 0,
     ...overrides,
   }
 }
@@ -128,9 +127,9 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
     const state = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(7),
+      rng: createRngState(7),
     })
-    const before = createSeededRng(7).next()
+    const before = nextRandom(createRngState(7))
 
     const result = resolveTargetSelector({ kind: 'random-enemy' }, player[0]!, state)
 
@@ -147,13 +146,13 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
     const state = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(seed),
+      rng: createRngState(seed),
     })
-    const sibling = createSeededRng(seed)
+    const sibling = createRngState(seed)
 
     targetSelectorHasCandidate({ kind: 'random-enemy' }, player[0]!, state)
 
-    expect(state.rng.next()).toBe(sibling.next())
+    expect(state.rng.position).toBe(sibling.position)
   })
 
   it('has no candidate when the required pool is empty', () => {
@@ -239,9 +238,9 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
     const state = makeState({
       playerParty: player,
       enemyParty: [],
-      rng: createSeededRng(7),
+      rng: createRngState(7),
     })
-    const before = createSeededRng(7).next()
+    const before = nextRandom(createRngState(7))
 
     const result = resolveTargetSelector({ kind: 'random-ally' }, player[0]!, state)
 
@@ -256,13 +255,13 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
     const state = makeState({
       playerParty: player,
       enemyParty: [],
-      rng: createSeededRng(seed),
+      rng: createRngState(seed),
     })
-    const sibling = createSeededRng(seed)
+    const sibling = createRngState(seed)
 
     targetSelectorHasCandidate({ kind: 'random-ally' }, player[0]!, state)
 
-    expect(state.rng.next()).toBe(sibling.next())
+    expect(state.rng.position).toBe(sibling.position)
   })
 
   it('peekTargetSelector resolves the three extremum ally selectors normally', () => {
@@ -282,13 +281,13 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
     const state = makeState({
       playerParty: player,
       enemyParty: [],
-      rng: createSeededRng(seed),
+      rng: createRngState(seed),
     })
-    const sibling = createSeededRng(seed)
+    const sibling = createRngState(seed)
 
     const result = peekTargetSelector({ kind: 'random-ally' }, player[0]!, state)
 
     expect(result).toBeNull()
-    expect(state.rng.next()).toBe(sibling.next())
+    expect(state.rng.position).toBe(sibling.position)
   })
 })

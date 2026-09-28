@@ -21,7 +21,7 @@ import {
   gatherDealtMods,
   gatherTakenFactors,
   hasStatus,
-  instantiateCreatureEffects,
+  instantiateEffectDefs,
   instantiateStatus,
   resolveMagnitudeCount,
 } from './effects'
@@ -29,9 +29,11 @@ import { evaluateCondition } from './conditions'
 import { createEffectInstanceId } from './effect-types'
 import {
   MAX_TRIGGER_CASCADE_DEPTH,
+  MAX_REVIVES_PER_CREATURE,
   DEFEND_DEFENCE_MULTIPLIER,
   DEFEND_TAKEN_FACTOR,
 } from './config'
+import { nextRandom } from './rng'
 import type { DamageResult } from './damage'
 import type { CreatureId } from './ids'
 import type { CombatEvent, CombatState, Creature, Stat } from './types'
@@ -293,7 +295,7 @@ export function applyDamageAndEmit(
   let died = wouldDie
   if (wouldDie) {
     const chancePercent = gatherCheatDeathChance(target)
-    if (chancePercent > 0 && state.rng.next() < chancePercent / 100) {
+    if (chancePercent > 0 && nextRandom(state.rng) < chancePercent / 100) {
       newHp = 1
       died = false
     }
@@ -436,8 +438,12 @@ export function fireHook(
   for (const selfId of selfIds) {
     const initial = findCreature(working, selfId)
     if (!initial) continue
-    // Effects are looked up once per creature (the active-effects LIST itself doesn't change
-    // mid-pass in v1 content); aliveness is re-checked fresh below, per effect.
+    // Candidates are looked up ONCE per creature, from `initial` -- a snapshot at this creature's
+    // pass start. The list CAN change mid-pass (an earlier candidate's own response may cleanse
+    // or replace a status this creature also carries -- that's exactly what B4's exact-instance
+    // check below exists to catch), so aliveness AND each candidate's real owning instance are
+    // both re-checked fresh, per effect, against the LIVE creature below -- never trusted off
+    // this snapshot.
     const candidates = effectsForHook(initial, hook)
 
     for (const effect of candidates) {
@@ -445,6 +451,15 @@ export function fireHook(
       if (!self) continue
       // Dead creatures fire only on-death; everything else requires a living self.
       if (isDeathHook ? self.alive : !self.alive) continue
+
+      // Phase 4.1-B (B4): the exact-instance rule -- `candidates` was built ONCE, from `initial`,
+      // at the top of this creature's pass; an EARLIER candidate in this SAME pass may since have
+      // removed or replaced (cleanse, then reapply) the status this candidate came from. Re-check
+      // against the LIVE `self` (not `initial`) that the effect's REAL owning instance
+      // (`sourceInstanceId` -- for a status trigger this is the status's shared id, not the
+      // derived per-trigger guard id used for the cascade check below) is still present.
+      if (!self.activeEffects.some((a) => a.instanceId === effect.sourceInstanceId))
+        continue
 
       if (cascade.activeInstances.has(effect.instanceId)) continue // self-re-entry guard
 
@@ -522,7 +537,7 @@ export function fireHook(
       // condition (no TriggerFired, no depth/truncation accounting).
       if (
         effect.chancePercent !== undefined &&
-        !(working.rng.next() < effect.chancePercent / 100)
+        !(nextRandom(working.rng) < effect.chancePercent / 100)
       ) {
         continue
       }
@@ -628,9 +643,13 @@ function resolveResponseTargets(
     case 'random-dead-ally': {
       const self = getCreature(state, context.self)
       const party = self.side === 'player' ? state.playerParty : state.enemyParty
-      const deadAllies = party.filter((c) => !c.alive)
+      // Phase 4.1-B (D3): dead allies at the revive cap are excluded from the pool -- an empty
+      // pool draws no random number (the check below runs BEFORE the draw).
+      const deadAllies = party.filter(
+        (c) => !c.alive && c.revivesUsed < MAX_REVIVES_PER_CREATURE,
+      )
       if (deadAllies.length === 0) return []
-      const index = Math.floor(state.rng.next() * deadAllies.length)
+      const index = Math.floor(nextRandom(state.rng) * deadAllies.length)
       const chosen = deadAllies[index]
       return chosen ? [chosen.id] : []
     }
@@ -643,7 +662,7 @@ function resolveResponseTargets(
         (c) => !hasStatus(c, target.statusId),
       )
       if (pool.length === 0) return []
-      const index = Math.floor(state.rng.next() * pool.length)
+      const index = Math.floor(nextRandom(state.rng) * pool.length)
       const chosen = pool[index]
       return chosen ? [chosen.id] : []
     }
@@ -888,22 +907,23 @@ export function executeResponse(
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
-        if (!target || target.alive) continue // target must be dead
-        // Death-reset: a fresh instantiation of innateTraitIds + (for a player-side target) its
-        // perks (no ramp preserved) -- ASSUMPTION 21: perks are as battle-start-permanent as
-        // innate traits, so a revived player creature keeps them, unlike in-fight-ACCUMULATED
-        // buffs/statuses. Then currentHp = round(baselineMaxHp * pct) computed from THAT fresh
-        // baseline.
-        const reset: Creature = {
-          ...target,
-          activeEffects: instantiateCreatureEffects(
-            target,
-            state.traits,
-            state.playerWideEffects,
-          ),
-        }
+        // Phase 4.1-B (D3): target must be dead AND under the revive cap -- the RNG-avoidance
+        // half of the cap lives in resolveResponseTargets' random-dead-ally branch above; this is
+        // the defensive re-check for any OTHER ResponseTarget a future revive might use.
+        if (!target || target.alive || target.revivesUsed >= MAX_REVIVES_PER_CREATURE)
+          continue
+        // Death-reset: re-instantiate the target's OWN already-resolved `baselineEffects` (S1) --
+        // fresh instance ids from the shared per-fight counter, no registry lookup needed (no
+        // ramp preserved: innate traits + perks come back exactly as they were at fight-start).
+        // Then currentHp = round(baselineMaxHp * pct) computed from THAT fresh baseline.
+        const { effects: activeEffects, nextCounter } = instantiateEffectDefs(
+          target.baselineEffects,
+          working.effectInstanceCounter,
+        )
+        const reset: Creature = { ...target, activeEffects }
         const baselineMaxHp = effectiveMaxHp(reset)
         const currentHp = Math.round(baselineMaxHp * response.pct)
+        working = { ...working, effectInstanceCounter: nextCounter }
         working = updateCreature(working, targetId, {
           alive: true,
           currentHp,
@@ -915,6 +935,9 @@ export function executeResponse(
           // just stat-modifiers/statuses.
           defending: false,
           provoking: false,
+          // Phase 4.1-B (D3): counts up, NEVER reset by death or by this very revive's own reset
+          // -- it's the thing MAX_REVIVES_PER_CREATURE bounds.
+          revivesUsed: target.revivesUsed + 1,
         })
         events.push({
           type: 'Revived',
@@ -1136,6 +1159,11 @@ export function applyStatus(
   const addedStacks = spec.stacks ?? 1
   const newStacks = Math.min(def.cap, (existing?.stacks ?? 0) + addedStacks)
 
+  // Phase 4.1-B (B4): refreshing keeps the existing instance and its id (no new counter draw);
+  // only a genuinely FRESH application issues a new id, from the shared per-fight counter (the
+  // ONLY production issuer -- never a derived/deterministic string, so a removed-then-reapplied
+  // status always gets a truly new id, never the old one back).
+  let counter = state.effectInstanceCounter
   const nextEffects: ActiveEffect[] = existing
     ? target.activeEffects.map((e) =>
         e.instanceId === existing.instanceId
@@ -1154,13 +1182,14 @@ export function applyStatus(
         ...target.activeEffects,
         instantiateStatus(
           def,
-          createEffectInstanceId(`${targetId}#status#${spec.statusId}`),
+          createEffectInstanceId(`eff-${counter++}`),
           duration,
           newStacks,
         ),
       ]
 
-  let working = updateCreature(state, targetId, { activeEffects: nextEffects })
+  let working = { ...state, effectInstanceCounter: counter }
+  working = updateCreature(working, targetId, { activeEffects: nextEffects })
 
   events.push({
     type: 'StatusApplied',
@@ -1196,21 +1225,21 @@ export function applyStatModifier(
 ): CombatState {
   const target = getCreature(state, targetId)
   const effectiveBefore = getEffectiveStat(target, stat)
-  // Fold a per-target application ordinal into the id so re-stacking the SAME modifier (e.g. Grudge
-  // firing on each ally death) yields distinct, deterministic (never-RNG) EffectInstanceIds --
-  // effect identity is meant to be unique, and Slice C's statuses lean on it.
-  const idPrefix = `${targetId}#applied#${sourceTraitId}#${stat}#`
-  const ordinal = target.activeEffects.filter((e) =>
-    e.instanceId.startsWith(idPrefix),
-  ).length
+  // Phase 4.1-B (B4): a fresh id from the shared per-fight counter -- the counter alone already
+  // guarantees distinct ids across re-applications (e.g. Grudge firing on each ally death), so
+  // the old ordinal-scan-over-a-deterministic-prefix trick is no longer needed.
   const modifier: ActiveEffect = {
     category: 'stat-modifier',
     stat,
     factor,
-    instanceId: createEffectInstanceId(`${idPrefix}${ordinal}`),
+    instanceId: createEffectInstanceId(`eff-${state.effectInstanceCounter}`),
     sourceTraitId,
   }
-  let working = updateCreature(state, targetId, {
+  let working: CombatState = {
+    ...state,
+    effectInstanceCounter: state.effectInstanceCounter + 1,
+  }
+  working = updateCreature(working, targetId, {
     activeEffects: [...target.activeEffects, modifier],
   })
   const updated = getCreature(working, targetId)

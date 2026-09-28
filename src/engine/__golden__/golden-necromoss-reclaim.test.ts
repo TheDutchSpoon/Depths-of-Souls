@@ -17,7 +17,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Rotcap Hollow Necromoss Wisp heal-off-dead-allies (Phase 4 Slice H3, real content)', () => {
   it('matches the committed event log exactly (heal magnitude scales with the live dead-ally count)', () => {
-    const created = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const created = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     // createCombat resets currentHp to effective max at fight-start, so WISP's wounded starting
     // HP has to be applied here, after creation -- see the fixture's header comment.
     let state = updateCreature(created, WISP, { currentHp: WISP_STARTING_HP })

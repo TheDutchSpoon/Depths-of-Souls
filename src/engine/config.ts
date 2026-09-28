@@ -20,3 +20,8 @@ export const DEFAULT_GEM_SLOT_COUNT = 3
 // does not execute; a mandatory CascadeTruncated event is emitted and resolution unwinds. Depth
 // is transient (call-stack only), never stored in CombatState. Wired in Slice B.
 export const MAX_TRIGGER_CASCADE_DEPTH = 500
+
+// Phase 4.1-B (D3): a creature can be revived at most this many times per fight -- Creature.
+// revivesUsed counts. Dead allies at the cap are excluded from revive targeting; an empty
+// eligible pool fizzles (TriggerFired only) and draws no random number.
+export const MAX_REVIVES_PER_CREATURE = 10

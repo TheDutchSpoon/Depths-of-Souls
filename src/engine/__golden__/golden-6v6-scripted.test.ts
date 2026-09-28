@@ -16,7 +16,12 @@ import {
 
 describe('golden replay: 6v6 scripted integration (generated, checkpoint-verified)', () => {
   it('matches the checkpointed structural properties of the real run', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(state.result).toBe(expectedResult)

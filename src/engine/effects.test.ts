@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  instantiateTraitEffects,
-  instantiateCreatureEffects,
+  resolveBaselineEffects,
+  instantiateEffectDefs,
   effectiveMaxHp,
   clampedHp,
   gatherDealtMods,
@@ -21,14 +21,14 @@ import {
   gatherCheatDeathChance,
 } from './effects'
 import { createEffectInstanceId } from './effect-types'
-import { createSeededRng } from './rng'
+import { createRngState } from './rng'
 import { makeCreature, makeParty } from './__fixtures__/creatures'
 import type { ActiveEffect, Trait } from './effect-types'
 import type { CombatState } from './types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
-    rng: createSeededRng(1),
+    rng: createRngState(1),
     playerParty: [],
     enemyParty: [],
     turnQueue: [],
@@ -37,8 +37,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
-    traits: new Map(),
-    playerWideEffects: [],
+    effectInstanceCounter: 0,
     ...overrides,
   }
 }
@@ -73,74 +72,90 @@ const REGISTRY: ReadonlyMap<string, Trait> = new Map([
   ],
 ] as [string, Trait][])
 
-describe('instantiateTraitEffects', () => {
-  it('assigns deterministic instance ids and preserves declaration order within a trait', () => {
+describe('resolveBaselineEffects / instantiateEffectDefs (Phase 4.1-B, S1/B4)', () => {
+  it('preserves declaration order within a trait, pairing each def with its sourceTraitId', () => {
     const c = makeCreature({ id: 'hero', innateTraitIds: ['two-effects'] })
-    const effects = instantiateTraitEffects(c, REGISTRY)
-    expect(effects.map((e) => e.instanceId)).toEqual([
-      'hero#two-effects#0',
-      'hero#two-effects#1',
-    ])
+    const entries = resolveBaselineEffects(c, REGISTRY)
+    expect(entries.map((e) => e.sourceTraitId)).toEqual(['two-effects', 'two-effects'])
+    expect(entries.map((e) => e.def.category)).toEqual(['stat-modifier', 'stat-remap'])
+  })
+
+  it('instantiateEffectDefs assigns ids from the shared counter, in order', () => {
+    const c = makeCreature({ id: 'hero', innateTraitIds: ['two-effects'] })
+    const { effects, nextCounter } = instantiateEffectDefs(
+      resolveBaselineEffects(c, REGISTRY),
+      0,
+    )
+    expect(effects.map((e) => e.instanceId)).toEqual(['eff-0', 'eff-1'])
     expect(effects.map((e) => e.category)).toEqual(['stat-modifier', 'stat-remap'])
+    expect(nextCounter).toBe(2)
+  })
+
+  it('instantiateEffectDefs continues from whatever counter value it is given', () => {
+    const c = makeCreature({ id: 'hero', innateTraitIds: ['plus-attack'] })
+    const { effects, nextCounter } = instantiateEffectDefs(
+      resolveBaselineEffects(c, REGISTRY),
+      5,
+    )
+    expect(effects.map((e) => e.instanceId)).toEqual(['eff-5'])
+    expect(nextCounter).toBe(6)
   })
 
   it('orders innate-1 effects before innate-2 (canonical order)', () => {
     const c = makeCreature({ id: 'hero', innateTraitIds: ['plus-attack', 'big-health'] })
-    const effects = instantiateTraitEffects(c, REGISTRY)
-    expect(effects.map((e) => e.sourceTraitId)).toEqual(['plus-attack', 'big-health'])
+    const entries = resolveBaselineEffects(c, REGISTRY)
+    expect(entries.map((e) => e.sourceTraitId)).toEqual(['plus-attack', 'big-health'])
   })
 
-  it('skips unknown trait ids defensively', () => {
+  it('throws on an unknown trait id (Phase 4.1-B review, PR #69, D3) -- never silently skips', () => {
     const c = makeCreature({ id: 'hero', innateTraitIds: ['nope', 'plus-attack'] })
-    expect(instantiateTraitEffects(c, REGISTRY)).toHaveLength(1)
+    expect(() => resolveBaselineEffects(c, REGISTRY)).toThrow(/unknown trait id "nope"/)
   })
 
   it('returns an empty list for a trait-less creature', () => {
-    expect(instantiateTraitEffects(makeCreature({}), REGISTRY)).toEqual([])
+    expect(resolveBaselineEffects(makeCreature({}), REGISTRY)).toEqual([])
   })
 })
 
-describe('instantiateCreatureEffects (Phase 4 Slice F / ASSUMPTION 21)', () => {
+// Phase 4.1-B review (PR #69, R1): `resolveBaselineEffects` no longer reads `creature.side` at
+// all -- it applies whatever `sideEffects` list it's given UNCONDITIONALLY, since the CALLER
+// (`createCombat`) is the one that knows which side's list belongs to which party. "a player-side
+// creature gets perks, an enemy-side creature never does" is now proven at that call site --
+// combat.test.ts's own R1 coverage -- not here.
+describe('resolveBaselineEffects with side effects (Phase 4 Slice F / ASSUMPTION 21, Phase 4.1-B R1)', () => {
   const PLAYER_WIDE = [
     { category: 'stat-modifier', stat: 'attack', factor: 1.5 } as const,
   ]
 
-  it('appends perk effects AFTER innate-trait effects, for a player-side creature', () => {
-    const c = makeCreature({
-      id: 'hero',
-      side: 'player',
-      innateTraitIds: ['plus-attack'],
-    })
-    const effects = instantiateCreatureEffects(c, REGISTRY, PLAYER_WIDE)
-    expect(effects.map((e) => e.category)).toEqual(['stat-modifier', 'stat-modifier'])
-    expect(effects.map((e) => e.sourceTraitId)).toEqual(['plus-attack', 'perk-0'])
+  it('appends side effects AFTER innate-trait effects, labeled perk-<n> by default', () => {
+    const c = makeCreature({ id: 'hero', innateTraitIds: ['plus-attack'] })
+    const entries = resolveBaselineEffects(c, REGISTRY, PLAYER_WIDE)
+    expect(entries.map((e) => e.def.category)).toEqual(['stat-modifier', 'stat-modifier'])
+    expect(entries.map((e) => e.sourceTraitId)).toEqual(['plus-attack', 'perk-0'])
   })
 
-  it('never applies perk effects to an enemy-side creature', () => {
-    const c = makeCreature({ id: 'foe', side: 'enemy', innateTraitIds: ['plus-attack'] })
-    const effects = instantiateCreatureEffects(c, REGISTRY, PLAYER_WIDE)
-    expect(effects).toHaveLength(1)
-    expect(effects[0]?.sourceTraitId).toBe('plus-attack')
+  it('labels side effects with the caller-supplied sideLabel (e.g. enemy-effect-<n>)', () => {
+    const c = makeCreature({ id: 'foe', innateTraitIds: [] })
+    const entries = resolveBaselineEffects(c, REGISTRY, PLAYER_WIDE, 'enemy-effect')
+    expect(entries).toHaveLength(1)
+    expect(entries[0]?.sourceTraitId).toBe('enemy-effect-0')
   })
 
-  it('is byte-identical to instantiateTraitEffects alone when no perks are supplied', () => {
-    const c = makeCreature({
-      id: 'hero',
-      side: 'player',
-      innateTraitIds: ['plus-attack'],
-    })
-    expect(instantiateCreatureEffects(c, REGISTRY)).toEqual(
-      instantiateTraitEffects(c, REGISTRY),
-    )
-    expect(instantiateCreatureEffects(c, REGISTRY, [])).toEqual(
-      instantiateTraitEffects(c, REGISTRY),
+  it('is byte-identical whether side effects are omitted or an empty list', () => {
+    const c = makeCreature({ id: 'hero', innateTraitIds: ['plus-attack'] })
+    expect(resolveBaselineEffects(c, REGISTRY)).toEqual(
+      resolveBaselineEffects(c, REGISTRY, []),
     )
   })
 
-  it('assigns deterministic, never-RNG perk instance ids', () => {
-    const c = makeCreature({ id: 'hero', side: 'player', innateTraitIds: [] })
-    const effects = instantiateCreatureEffects(c, REGISTRY, PLAYER_WIDE)
-    expect(effects.map((e) => e.instanceId)).toEqual(['hero#perk#0'])
+  it('assigns deterministic, never-RNG side-effect instance ids via the shared counter', () => {
+    const c = makeCreature({ id: 'hero', innateTraitIds: [] })
+    const { effects } = instantiateEffectDefs(
+      resolveBaselineEffects(c, REGISTRY, PLAYER_WIDE),
+      0,
+    )
+    expect(effects.map((e) => e.instanceId)).toEqual(['eff-0'])
+    expect(effects.map((e) => e.sourceTraitId)).toEqual(['perk-0'])
   })
 })
 

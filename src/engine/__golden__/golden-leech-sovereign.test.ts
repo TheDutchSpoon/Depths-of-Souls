@@ -13,7 +13,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: the Leech Sovereign, Glimmerdark boss (Phase 4 Slice H2, real content)', () => {
   it('matches the committed event log exactly (Attack steal compounds across two hits)', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

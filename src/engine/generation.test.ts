@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createSeededRng, type SeededRng } from './rng'
+import { createRngState, createSeededRng, type SeededRng } from './rng'
 import { createBiomeId, type BiomeId } from './ids'
 import type { BiomeData, SpeciesCreature } from './generation'
 import type { CombatState } from './types'
@@ -482,7 +482,7 @@ describe('generateFloor', () => {
       expect(enemy.speciesId).toBe('fixture-species-brawlers')
     }
     const state: CombatState = {
-      rng: createSeededRng(1),
+      rng: createRngState(1),
       playerParty: [],
       enemyParty,
       turnQueue: [],
@@ -491,8 +491,7 @@ describe('generateFloor', () => {
       result: null,
       scripts: new Map(),
       statuses: new Map(),
-      traits: new Map(),
-      playerWideEffects: [],
+      effectInstanceCounter: 0,
     }
     expect(resolveCount(enemyParty[0]!, 'living-allies-of-species', state)).toBe(
       enemyParty.length,

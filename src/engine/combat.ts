@@ -1,11 +1,12 @@
-import { createSeededRng } from './rng'
+import { createRngState, nextRandom } from './rng'
 import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
 import { compareBySideSlotId } from './tie-break'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import {
   activeBonusCast,
-  instantiateCreatureEffects,
+  resolveBaselineEffects,
+  instantiateEffectDefs,
   effectiveMaxHp,
   gatherExtraInstances,
   hasAnnihilate,
@@ -30,7 +31,7 @@ import {
 } from './targeting'
 import { resolveTargetSelector } from './target-selectors'
 import type { CreatureId } from './ids'
-import type { EffectDef, EffectInstanceId } from './effect-types'
+import type { EffectDef, EffectInstanceId, InnateSpellEffect } from './effect-types'
 import type {
   Action,
   CombatEvent,
@@ -42,48 +43,114 @@ import type {
 import type { Script } from './scripting-types'
 import type { StatusDef, StatusSpec, Trait } from './effect-types'
 
-export function createCombat(
-  playerParty: readonly Creature[],
-  enemyParty: readonly Creature[],
-  seed: number,
-  scripts: ReadonlyMap<string, Script> = new Map(),
-  traits: ReadonlyMap<string, Trait> = new Map(),
-  statuses: ReadonlyMap<string, StatusDef> = new Map(),
-  // Phase 4 Slice F / ASSUMPTION 21: the flattened, already-resolved perk effects for the
-  // chosen spec (computed by the caller -- eventually the Slice G store, from
-  // `{chosenSpec, perkSpend}` -- createCombat itself stays pure/engine-only, a plain array in,
-  // same as traits/statuses already are). Applied to every PLAYER-side creature only.
-  partyWidePlayerEffects: readonly EffectDef[] = [],
-): CombatState {
-  if (playerParty.length === 0 || enemyParty.length === 0) {
+/** Phase 4.1-B (S1): one side's fight-setup input -- its party and its side-wide effects (perks
+ * for the player today; biome/boss effects for either side later). */
+export interface CreateCombatSideInput {
+  readonly party: readonly Creature[]
+  readonly effects?: readonly EffectDef[]
+}
+
+export interface CreateCombatRegistries {
+  readonly scripts?: ReadonlyMap<string, Script>
+  readonly traits?: ReadonlyMap<string, Trait>
+  readonly statuses?: ReadonlyMap<string, StatusDef>
+}
+
+export interface CreateCombatInput {
+  readonly seed: number
+  readonly player: CreateCombatSideInput
+  readonly enemy: CreateCombatSideInput
+  readonly registries?: CreateCombatRegistries
+}
+
+/**
+ * Phase 4.1-B (S1): named per-side inputs -- two same-typed positional lists (player effects,
+ * enemy effects) could be silently swapped; `{ player: { party, effects }, enemy: { party,
+ * effects }, registries }` can't. `registries` bundles scripts/traits/statuses, each defaulting
+ * to an empty Map (matching the pre-S1 positional defaults).
+ *
+ * `createCombat` ALWAYS RECOMPUTES `baselineEffects` from each input creature's own
+ * `innateTraitIds` (+ that creature's own side's effects) and RESETS `revivesUsed` to `0` -- it
+ * never trusts those fields on an input `Creature` (design-review B-5). Fight setup takes FRESH
+ * creatures only (PR #69 review, R3): an input creature that already carries setup output
+ * (non-empty `baselineEffects` or `activeEffects` -- i.e. pulled from a PREVIOUS `CombatState`
+ * rather than fresh `materializeCreature` output) is a thrown error, not silently discarded-and-
+ * recomputed -- re-feeding one would double its innate spell slots (A8), since this function
+ * itself prepends every `innate-spell` effect's spell onto `equippedSpells`. A creature whose own
+ * `side` doesn't match the list it was passed in (`player.party` vs `enemy.party`) is likewise a
+ * thrown error (R1) -- each side's `effects` apply to exactly that side's creatures.
+ */
+export function createCombat(input: CreateCombatInput): CombatState {
+  const { seed, player, enemy, registries = {} } = input
+  const { scripts = new Map(), traits = new Map(), statuses = new Map() } = registries
+  const playerEffects = player.effects ?? []
+  const enemyEffects = enemy.effects ?? []
+
+  if (player.party.length === 0 || enemy.party.length === 0) {
     throw new Error('createCombat: both parties must have at least one creature')
   }
 
-  // Fight-start: instantiate each creature's innate-trait (+ player-side perk) effects onto
-  // activeEffects, then set currentHp to effective max Health (so a +Health trait/perk actually
-  // grants the HP). For a trait-less, perk-less creature this is a no-op: activeEffects is [] and
-  // effective max == base Health, so currentHp is unchanged -- Phase 1/2 fixtures stay
-  // byte-identical.
-  const instantiate = (creature: Creature): Creature => {
+  // Fight-start: resolve + instantiate each creature's innate-trait (+ this side's own effects)
+  // effects onto activeEffects (B4: fresh ids from the shared per-fight counter, threaded across
+  // BOTH parties, player then enemy, slot order), prepend any innate spells onto equippedSpells
+  // (A8), reset revivesUsed (D3), then set currentHp to effective max Health (so a +Health
+  // trait/perk actually grants the HP). For a trait-less, effect-less creature this is a no-op:
+  // activeEffects is [] and effective max == base Health, so currentHp is unchanged -- Phase 1/2
+  // fixtures stay byte-identical.
+  let counter = 0
+  const instantiate = (
+    creature: Creature,
+    side: 'player' | 'enemy',
+    sideEffects: readonly EffectDef[],
+    sideLabel: string,
+  ): Creature => {
+    if (creature.side !== side) {
+      throw new Error(
+        `createCombat: creature "${creature.id}" has side "${creature.side}" but was passed in ${side}.party`,
+      )
+    }
+    if (creature.baselineEffects.length > 0 || creature.activeEffects.length > 0) {
+      throw new Error(
+        `createCombat: creature "${creature.id}" already carries fight-setup output (baselineEffects/activeEffects) -- fight setup takes fresh creatures only, or innate spells would double`,
+      )
+    }
+    const baselineEffects = resolveBaselineEffects(
+      creature,
+      traits,
+      sideEffects,
+      sideLabel,
+    )
+    const { effects: activeEffects, nextCounter } = instantiateEffectDefs(
+      baselineEffects,
+      counter,
+    )
+    counter = nextCounter
+    const innateSpells = activeEffects
+      .filter((e): e is InnateSpellEffect => e.category === 'innate-spell')
+      .map((e) => e.spell)
     const withEffects: Creature = {
       ...creature,
-      activeEffects: instantiateCreatureEffects(creature, traits, partyWidePlayerEffects),
+      baselineEffects,
+      activeEffects,
+      equippedSpells: [...innateSpells, ...creature.equippedSpells],
+      revivesUsed: 0,
     }
     return { ...withEffects, currentHp: effectiveMaxHp(withEffects) }
   }
 
   return {
-    rng: createSeededRng(seed),
-    playerParty: playerParty.map(instantiate),
-    enemyParty: enemyParty.map(instantiate),
+    rng: createRngState(seed),
+    playerParty: player.party.map((c) => instantiate(c, 'player', playerEffects, 'perk')),
+    enemyParty: enemy.party.map((c) =>
+      instantiate(c, 'enemy', enemyEffects, 'enemy-effect'),
+    ),
     turnQueue: [],
     turnCursor: 0,
     round: 0,
     result: null,
     scripts,
     statuses,
-    traits,
-    playerWideEffects: partyWidePlayerEffects,
+    effectInstanceCounter: counter,
   }
 }
 
@@ -122,7 +189,7 @@ function rollWebBreakFree(state: CombatState, events: CombatEvent[]): CombatStat
     for (const effect of current.activeEffects) {
       if (effect.category !== 'turn-order-status') continue
       if (effect.breakChancePercent === undefined) continue
-      if (working.rng.next() < effect.breakChancePercent / 100) {
+      if (nextRandom(working.rng) < effect.breakChancePercent / 100) {
         working = updateCreature(working, bearer.id, {
           activeEffects: current.activeEffects.filter(
             (e) => e.instanceId !== effect.instanceId,
@@ -713,14 +780,14 @@ function maybeFireBonusCast(
   if (!actor.alive) return state
   const bonusCast = activeBonusCast(actor)
   if (!bonusCast) return state
-  if (!(state.rng.next() < bonusCast.chancePercent / 100)) return state
+  if (!(nextRandom(state.rng) < bonusCast.chancePercent / 100)) return state
 
   const equipped = actor.equippedSpells
     .map((spell, slot) => ({ spell, slot }))
     .filter((entry): entry is { spell: Spell; slot: number } => entry.spell !== null)
   if (equipped.length === 0) return state
 
-  const index = Math.floor(state.rng.next() * equipped.length)
+  const index = Math.floor(nextRandom(state.rng) * equipped.length)
   const chosen = equipped[index]
   if (!chosen) return state
 
@@ -756,7 +823,7 @@ const runEchoCast: EchoCastExecutor = (observerId, casterId, state, events, casc
     .filter((entry): entry is { spell: Spell; slot: number } => entry.spell !== null)
   if (equipped.length === 0) return state // E2.5: 0 equipped -> no-op
 
-  const gemIndex = Math.floor(state.rng.next() * equipped.length)
+  const gemIndex = Math.floor(nextRandom(state.rng) * equipped.length)
   const chosen = equipped[gemIndex]
   if (!chosen) return state
 
@@ -917,7 +984,15 @@ export function resolveTurn(state: CombatState): {
   events: CombatEvent[]
 } {
   const events: CombatEvent[] = []
-  let working = state
+  // Phase 4.1-B (B3, B-1): "the per-turn working copy resolveTurn makes when it starts" --
+  // clones `rng` into a FRESH object so every draw this turn (directly here, or by any pure
+  // helper this call tree hands `working`/its descendants to -- target selectors, targeting, the
+  // interpreter, the resolver) advances THIS copy's bookmark in place (nextRandom mutates its
+  // argument -- see rng.ts) without ever touching `state.rng`, the caller's own object. This is
+  // what fixes B3: resolving the same frozen `state` twice always starts both calls' bookmarks
+  // from the same `.position` and advances them identically, since neither call can see or
+  // affect the other's clone.
+  let working: CombatState = { ...state, rng: { position: state.rng.position } }
 
   // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start.
   if (working.round === 0) {

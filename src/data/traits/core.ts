@@ -1,5 +1,4 @@
 import type { Trait } from '../../engine/effect-types'
-import { effectiveMaxHp } from '../../engine/effects'
 
 // Representative & temporary Phase 3 trait content — real data (with tests), exercising each
 // Slice-A passive shape, until the actual creature roster is designed (Phase 4+) and replaces
@@ -13,9 +12,12 @@ export const BRUTISH: Trait = {
 }
 
 /**
- * Conditional passive: +25% Attack while at full HP. The predicate is evaluated at read-time
- * during stat folding; it reads currentHp + effective max Health (never Attack — no read-cycle).
- * currentHp is clamped to effective max, so `>=` means exactly "at full HP".
+ * Conditional passive: +25% Attack while at full HP. Phase 4.1-B (S2): the condition is DATA
+ * (`SelfCondition`, evaluated at read-time during stat folding), not a `predicate` function --
+ * `{ kind: 'hp-percent', comparator: '>=', thresholdPercent: 100 }` reads effective Health (never
+ * Attack — no read-cycle) via the same integer cross-multiplication as scripting's own
+ * `hp-percent` Condition. currentHp is clamped to effective max, so `>= 100%` means exactly "at
+ * full HP" -- byte-identical to the old predicate `(c) => c.currentHp >= effectiveMaxHp(c)`.
  */
 export const BLOODLUST: Trait = {
   id: 'bloodlust',
@@ -25,7 +27,7 @@ export const BLOODLUST: Trait = {
       category: 'stat-modifier',
       stat: 'attack',
       factor: 1.25,
-      predicate: (c) => c.currentHp >= effectiveMaxHp(c),
+      condition: { kind: 'hp-percent', comparator: '>=', thresholdPercent: 100 },
     },
   ],
 }

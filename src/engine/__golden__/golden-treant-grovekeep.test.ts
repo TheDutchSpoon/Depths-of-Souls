@@ -11,7 +11,12 @@ import {
 
 describe('golden replay: Treants Grovekeep (Phase 4 Slice H1, real content)', () => {
   it('matches the committed event log exactly (one-time team-wide Health raise)', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { events } = resolveTurn(initial)
 
     expect(events).toEqual(expectedEvents)

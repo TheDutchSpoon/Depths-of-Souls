@@ -19,7 +19,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: PR #64 fix 1 -- Spore spreads when its OWN round-end DoT tick kills the host', () => {
   it('matches the committed event log exactly (per-trigger guard identity, not the shared status instanceId)', () => {
-    const created = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const created = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     // Pre-apply Spore to BEARER and wound it to 1 HP, both before any turn resolves -- into a
     // throwaway events array, mirroring the PR #64 repro's own setup idiom (see the fixture's
     // header comment).

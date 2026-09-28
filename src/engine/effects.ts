@@ -2,15 +2,16 @@
 // creature's active-effects list, and the HP-vs-effective-max-Health helpers. Grows in
 // Slices B/C (status apply/stack/decrement/expire, gatherDealtMods/gatherTakenFactors).
 //
-// Dependency direction is one-way: effects.ts -> effective-stats.ts (for getEffectiveStat).
-// effective-stats.ts never imports this module, so there is no cycle.
+// Dependency direction is one-way: effects.ts -> effective-stats.ts (for getEffectiveStat,
+// hasStatus). effective-stats.ts never imports this module, so there is no cycle.
 
-import { getEffectiveStat } from './effective-stats'
+import { getEffectiveStat, hasStatus as hasStatusImpl } from './effective-stats'
 import { createEffectInstanceId } from './effect-types'
 import type {
   ActionInstanceEffect,
   ActiveEffect,
   ArmorPenetrationEffect,
+  BaselineEffectEntry,
   BonusCastEffect,
   CheatDeathEffect,
   CountOf,
@@ -29,58 +30,69 @@ import type {
 import type { CombatState, Creature } from './types'
 
 /**
- * Resolves a creature's innateTraitIds against the registry and instantiates each trait's
- * effects onto a fresh active-effects list, in canonical order (innate-1's effects, then
- * innate-2's, in trait then declaration order). Unknown trait ids are skipped defensively.
- * Instance ids are deterministic (`creatureId#traitId#ordinal`) — never RNG — so goldens
- * reproduce.
+ * Phase 4.1-B (S1): resolves a creature's baseline effect list -- innate traits' effects, in
+ * trait-then-declaration order, then this side's own `sideEffects` -- WITHOUT instantiating
+ * instance ids yet (that's `instantiateEffectDefs` below). `sourceTraitId` is paired with each
+ * def here (a trait-sourced def's owning trait id; a side-effect def's `<sideLabel>-<ordinal>`
+ * label) since a bare `EffectDef[]` would lose it. `createCombat` stores the result as
+ * `Creature.baselineEffects`; `revive`'s death-reset re-instantiates the SAME stored list
+ * directly, needing no registry lookup.
+ *
+ * Phase 4.1-B review (PR #69, R1/D3): `sideEffects` applies UNCONDITIONALLY to every creature
+ * passed in here -- the caller (`createCombat`) already knows which side's list it's threading
+ * through which party, so there is no `creature.side` re-check to get wrong; `sideLabel` picks
+ * the sourceTraitId prefix (`'perk'` for the player side, `'enemy-effect'` for the enemy side --
+ * distinct so a TriggerFired.effectId can't collide across sides). An unknown trait id THROWS
+ * (never silently skipped, matching S1's own "no silent drop" rationale) -- a caller that forgot
+ * to pass `registries.traits` used to strip every innate trait with no signal at all.
  */
-export function instantiateTraitEffects(
-  creature: Creature,
+export function resolveBaselineEffects(
+  creature: Pick<Creature, 'innateTraitIds'>,
   traits: ReadonlyMap<string, Trait>,
-): ActiveEffect[] {
-  const effects: ActiveEffect[] = []
+  sideEffects: readonly EffectDef[] = [],
+  sideLabel: string = 'perk',
+): BaselineEffectEntry[] {
+  const entries: BaselineEffectEntry[] = []
   for (const traitId of creature.innateTraitIds) {
     const trait = traits.get(traitId)
-    if (!trait) continue
-    trait.effects.forEach((def, ordinal) => {
-      const instanceId = createEffectInstanceId(`${creature.id}#${traitId}#${ordinal}`)
-      effects.push(withInstance(def, instanceId, traitId))
-    })
+    if (!trait) {
+      throw new Error(
+        `resolveBaselineEffects: unknown trait id "${traitId}" -- not in the trait registry`,
+      )
+    }
+    for (const def of trait.effects) {
+      entries.push({ def, sourceTraitId: traitId })
+    }
   }
-  return effects
+  // Phase 4 Slice F / ASSUMPTION 21: side effects (perks today; biome/boss effects later)
+  // appended AFTER a creature's own innate-trait effects -- the canonical per-creature effect
+  // order: innate-1 -> innate-2 -> side effects -> infusions (Phase 8, none yet) -> statuses.
+  sideEffects.forEach((def, ordinal) => {
+    entries.push({ def, sourceTraitId: `${sideLabel}-${ordinal}` })
+  })
+  return entries
 }
 
 /**
- * Phase 4 Slice F / ASSUMPTION 21: perks are PLAYER-LEVEL effects, instantiated onto every
- * PLAYER-side creature (never enemy) at fight-assembly, appended AFTER a creature's own innate-
- * trait effects -- the canonical per-creature effect order gains a slot: innate-1 -> innate-2 ->
- * perks -> infusions (Phase 8, none yet) -> statuses. This is the ONE function both createCombat
- * (fight-assembly) and `revive`'s death-reset (resolution.ts) call, so a revived player creature
- * comes back with its perks intact too (they are as permanent/battle-start as innate traits,
- * unlike in-fight-acquired ramp -- death-reset wipes ACCUMULATED buffs/statuses, not a creature's
- * own starting kit). Instance ids follow `${creatureId}#perk#${ordinal}` (deterministic, never
- * RNG); `sourceTraitId` is `perk-${ordinal}` for TriggerFired/debug legibility, since a flattened
- * EffectDef[] carries no perk-id metadata at this layer (the caller -- eventually the Slice G
- * store -- already resolved `{chosenSpec, perkSpend}` down to this flat list before passing it
- * to createCombat, mirroring how `traits`/`statuses` are already plain registries here). A no-op
- * for an enemy creature or an empty list -- byte-identical to instantiateTraitEffects alone.
+ * Phase 4.1-B (B3/B4): instantiates a resolved baseline effect list onto fresh `ActiveEffect`s,
+ * issuing each one a unique id from the per-fight counter (`eff-<n>`, `CombatState.
+ * effectInstanceCounter` -- the ONLY production issuer of effect instance ids; never
+ * deterministic/derived-from-content, so a removed-then-reapplied or revived instance always gets
+ * a genuinely fresh id, never a reused one). Called by `createCombat`'s fight-assembly (from
+ * `resolveBaselineEffects`'s output) and directly by `revive`'s death-reset (from the target's
+ * already-stored `baselineEffects` -- no registry lookup needed there).
  */
-export function instantiateCreatureEffects(
-  creature: Creature,
-  traits: ReadonlyMap<string, Trait>,
-  playerWideEffects: readonly EffectDef[] = [],
-): ActiveEffect[] {
-  const traitEffects = instantiateTraitEffects(creature, traits)
-  if (creature.side !== 'player' || playerWideEffects.length === 0) return traitEffects
-  const perkEffects = playerWideEffects.map((def, ordinal) =>
-    withInstance(
-      def,
-      createEffectInstanceId(`${creature.id}#perk#${ordinal}`),
-      `perk-${ordinal}`,
-    ),
-  )
-  return [...traitEffects, ...perkEffects]
+export function instantiateEffectDefs(
+  entries: readonly BaselineEffectEntry[],
+  counter: number,
+): { effects: ActiveEffect[]; nextCounter: number } {
+  let next = counter
+  const effects = entries.map(({ def, sourceTraitId }) => {
+    const instanceId = createEffectInstanceId(`eff-${next}`)
+    next += 1
+    return withInstance(def, instanceId, sourceTraitId)
+  })
+  return { effects, nextCounter: next }
 }
 
 function withInstance(
@@ -117,6 +129,8 @@ function withInstance(
       return { ...def, instanceId, sourceTraitId }
     case 'bonus-cast':
       return { ...def, instanceId, sourceTraitId }
+    case 'innate-spell':
+      return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
       throw new Error(`Unknown effect def category: ${String(exhaustive)}`)
@@ -151,6 +165,9 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
         // status content uses them), so both stay undefined via the condition-status branch below.
         nonStacking: e.stacks === false ? true : undefined,
         echoCast: e.echoCast,
+        // Phase 4.1-B (B4): a plain triggered trait/perk's own instanceId IS its real owning
+        // instance (same value used for the cascade guard above).
+        sourceInstanceId: e.instanceId,
       })
     } else if (e.category === 'condition-status') {
       e.triggers.forEach((trigger, index) => {
@@ -173,6 +190,12 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
           response: trigger.response,
           stacks: e.stacks,
           statusId: e.statusId,
+          // Phase 4.1-B (B4): the status's own REAL shared instance id -- distinct from the
+          // derived per-trigger guard id above (`instanceId`). fireHook checks this against the
+          // creature's LIVE activeEffects before firing: a status removed (cleansed) or replaced
+          // by a fresh instance (removed then reapplied) earlier in the SAME hook pass must not
+          // let a stale candidate captured at list-build time still fire.
+          sourceInstanceId: e.instanceId,
         })
       })
     }
@@ -283,22 +306,11 @@ export function gatherTakenFactors(creature: Creature, state: CombatState): numb
   )
 }
 
-/** True iff `creature` carries the literal statusId among its status-carrying effects
- * (condition-status, damage-modifier, and -- Phase 4 Slice C -- turn-order-status /
- * friendly-fire-status, the two new StatusDef categories this slice adds) -- what scripting's
- * has-status condition scopes to. Never matches a stat-modifier/stat-remap/plain-triggered
- * effect, nor the permanent perk-granted passives (status-immunity/provoke-immunity/splashing/
- * annihilate), which carry no statusId and are never themselves a status. */
-export function hasStatus(creature: Creature, statusId: string): boolean {
-  return creature.activeEffects.some(
-    (e) =>
-      (e.category === 'condition-status' ||
-        e.category === 'damage-modifier' ||
-        e.category === 'turn-order-status' ||
-        e.category === 'friendly-fire-status') &&
-      e.statusId === statusId,
-  )
-}
+/** Phase 4.1-B (B-8): re-exported from effective-stats.ts, which now owns the canonical
+ * implementation (so `SelfCondition`'s `has-status` branch can read it without effects.ts ->
+ * effective-stats.ts becoming a cycle -- see its own doc comment there). Every existing importer
+ * of `hasStatus` from THIS module keeps working unchanged. */
+export const hasStatus = hasStatusImpl
 
 /** Attacker's summed armor-penetration passives (additive across sources, clamped [0,1]) --
  * read passively by dealDamage/dealDamageWithScalingStat, never fired via a hook. */

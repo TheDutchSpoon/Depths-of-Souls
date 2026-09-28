@@ -13,8 +13,16 @@ import { STARTER_TRAITS } from './starters'
 import { BROODMOTHER_TRAIT } from './overgrowth'
 import { STOCK_TRAITS, TRAIT_REGISTRY } from './index'
 import { getEffectiveStat, getOffensiveStat } from '../../engine/effective-stats'
-import { instantiateTraitEffects } from '../../engine/effects'
+import { resolveBaselineEffects, instantiateEffectDefs } from '../../engine/effects'
 import { makeCreature } from '../../engine/__fixtures__/creatures'
+import type { Creature } from '../../engine/types'
+
+function instantiateTraitEffects(
+  c: Pick<Creature, 'innateTraitIds' | 'side'>,
+  registry: typeof TRAIT_REGISTRY,
+) {
+  return instantiateEffectDefs(resolveBaselineEffects(c, registry), 0).effects
+}
 
 describe('stock traits (representative Phase 3 content)', () => {
   it('registers every stock trait by id', () => {

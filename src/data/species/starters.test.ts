@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { materializeCreature } from '../../engine/generation'
+import { createCombat } from '../../engine/combat'
+import { decideAction } from '../../engine/interpreter'
+import { ALWAYS_CAST_SCRIPT } from '../scripts'
 import {
   TRAIT_REGISTRY,
   BRUTE_STARTER_TRAIT,
@@ -15,6 +18,7 @@ import {
   STARTERS,
   UNICORN,
 } from './starters'
+import type { SpeciesCreature } from '../../engine/generation'
 
 describe('starter + Unicorn shape', () => {
   it('every starter/Unicorn references a trait id that actually exists in TRAIT_REGISTRY', () => {
@@ -57,33 +61,91 @@ describe('starter + Unicorn shape', () => {
   })
 })
 
-describe('Sorcerer starter loadout', () => {
-  it('is granted exactly one extra gem slot (4, not the default 3), gem in slot 0', () => {
-    expect(SORCERER_STARTER.equippedSpells).toHaveLength(4)
-    expect(SORCERER_STARTER.equippedSpells?.[0]).toBe(ARCANE_BOLT)
-    expect(SORCERER_STARTER.equippedSpells?.slice(1)).toEqual([null, null, null])
-  })
-
+describe('Sorcerer starter loadout (Phase 4.1-B, A8)', () => {
   it("the granted spell is Wit-affinity, matching the starter's own affinity", () => {
     expect(ARCANE_BOLT.affinity).toBe('wit')
   })
 
-  it('materializeCreature (the REAL path) carries the fixed loadout through, not just the raw data', () => {
+  it('SpeciesCreature carries no equippedSpells field -- the fixed loadout is deleted', () => {
+    expect('equippedSpells' in SORCERER_STARTER).toBe(false)
+  })
+
+  it('materializeCreature ALONE carries only the regular (default, all-null) gem slots -- the innate spell is granted by the trait, not the species', () => {
     const materialized = materializeCreature(SORCERER_STARTER, {
       level: 1,
       side: 'player',
       slot: 0,
       speciesId: 'sorcerer-starter-species',
     })
-    expect(materialized.equippedSpells).toHaveLength(4)
-    expect(materialized.equippedSpells[0]).toBe(ARCANE_BOLT)
+    expect(materialized.equippedSpells).toEqual([null, null, null])
+  })
+
+  it("createCombat prepends Arcane Surge's innate spell, giving the Seer [Bolt, null, null, null] -- byte-identical to the old fixed loadout", () => {
+    const materialized = materializeCreature(SORCERER_STARTER, {
+      level: 1,
+      side: 'player',
+      slot: 0,
+      speciesId: 'sorcerer-starter-species',
+    })
+    const enemyStand = materializeCreature(BRUTE_STARTER, {
+      level: 1,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'brute-starter-species',
+    })
+    const state = createCombat({
+      seed: 1,
+      player: { party: [materialized] },
+      enemy: { party: [enemyStand] },
+      registries: { traits: TRAIT_REGISTRY },
+    })
+    expect(state.playerParty[0]!.equippedSpells).toEqual([ARCANE_BOLT, null, null, null])
+  })
+
+  it('a non-Wit "fused" creature carrying Arcane Surge still gets the innate Arcane Bolt and can cast it -- no equip gate applies', () => {
+    const fusedFixture: SpeciesCreature = {
+      id: 'fused-fixture',
+      name: 'Fused Fixture',
+      affinity: 'violence', // NOT Wit -- Arcane Bolt is a Wit-affinity spell
+      baseStats: { health: 20, attack: 20, intelligence: 20, defence: 20, speed: 20 },
+      defaultScriptId: 'always-cast',
+      innateTraitIds: [SORCERER_STARTER_TRAIT.id],
+      rarity: 'rare',
+    }
+    const materialized = materializeCreature(fusedFixture, {
+      level: 1,
+      side: 'player',
+      slot: 0,
+      speciesId: 'fused-fixture-species',
+    })
+    const enemyStand = materializeCreature(BRUTE_STARTER, {
+      level: 1,
+      side: 'enemy',
+      slot: 0,
+      speciesId: 'brute-starter-species',
+    })
+    const state = createCombat({
+      seed: 1,
+      player: { party: [materialized] },
+      enemy: { party: [enemyStand] },
+      registries: { traits: TRAIT_REGISTRY },
+    })
+    const fused = state.playerParty[0]!
+    expect(fused.affinity).toBe('violence')
+    expect(fused.equippedSpells[0]).toBe(ARCANE_BOLT)
+
+    // Actually castable, not just present: always-cast (targets gemSlot 0) resolves to a real
+    // cast action -- no affinity/equip check anywhere in the resolution path blocks it.
+    const action = decideAction(fused, ALWAYS_CAST_SCRIPT, state)
+    expect(action).toMatchObject({ kind: 'cast', gemSlot: 0 })
   })
 })
 
 describe('signature traits', () => {
-  it('Sorcerer starter: bonus-cast at 50%', () => {
+  it('Sorcerer starter: bonus-cast at 50% + an innate Arcane Bolt (Phase 4.1-B, A8)', () => {
     expect(SORCERER_STARTER_TRAIT.effects).toEqual([
       { category: 'bonus-cast', chancePercent: 50 },
+      { category: 'innate-spell', spell: ARCANE_BOLT },
     ])
   })
 

@@ -9,14 +9,14 @@ import {
   shouldRedirectAoeToAllies,
 } from './targeting'
 import { makeParty } from './__fixtures__/creatures'
-import { createSeededRng } from './rng'
+import { createRngState, nextRandom } from './rng'
 import { createEffectInstanceId } from './effect-types'
 import type { CombatState } from './types'
 import type { ActiveEffect } from './effect-types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
-    rng: createSeededRng(1),
+    rng: createRngState(1),
     playerParty: [],
     enemyParty: [],
     turnQueue: [],
@@ -25,8 +25,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     result: null,
     scripts: new Map(),
     statuses: new Map(),
-    traits: new Map(),
-    playerWideEffects: [],
+    effectInstanceCounter: 0,
     ...overrides,
   }
 }
@@ -145,15 +144,15 @@ describe('resolveOffensiveTarget', () => {
     const state = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(42),
+      rng: createRngState(42),
     })
-    const sibling = createSeededRng(42)
+    const sibling = createRngState(42)
+    nextRandom(sibling) // the one draw resolveOffensiveTarget's redirect should make
 
     resolveOffensiveTarget(player[0]!, state, () => null)
 
     // The state's rng should have advanced by exactly one draw relative to a fresh sibling.
-    sibling.next()
-    expect(state.rng.next()).toBe(sibling.next())
+    expect(state.rng.position).toBe(sibling.position)
   })
 })
 
@@ -218,7 +217,7 @@ describe('resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C
     const state = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(1),
+      rng: createRngState(1),
     })
 
     let called = false
@@ -242,7 +241,7 @@ describe('resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C
     const state = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(1),
+      rng: createRngState(1),
     })
 
     let called = false
@@ -274,7 +273,7 @@ describe('resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C
     const state = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(7),
+      rng: createRngState(7),
     })
 
     // Only living ally is the actor itself -- the redirect must land on 'confused', never on
@@ -297,28 +296,28 @@ describe('resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C
     const state = makeState({
       playerParty: player,
       enemyParty: enemy,
-      rng: createSeededRng(1),
+      rng: createRngState(1),
     })
-    const sibling = createSeededRng(1)
+    const sibling = createRngState(1)
+    // Confusion drew zero RNG (fully suppressed); exactly Provoke's own single index draw
+    // should have happened.
+    nextRandom(sibling)
 
     const result = resolveOffensiveTarget(player[0]!, state, () => enemy[0]!.id)
     expect(result).toBe(enemy[0]!.id) // redirected to the provoker via the normal Provoke path
 
-    // Confusion drew zero RNG (fully suppressed); exactly Provoke's own single index draw
-    // should have happened.
-    sibling.next()
-    expect(state.rng.next()).toBe(sibling.next())
+    expect(state.rng.position).toBe(sibling.position)
   })
 })
 
 describe('shouldRedirectAoeToAllies (Phase 4 Slice C, ASSUMPTION 13)', () => {
   it('draws no RNG and returns false for an unconfused actor', () => {
     const actor = makeParty('player', [{ id: 'caster' }])[0]!
-    const state = makeState({ rng: createSeededRng(1) })
-    const sibling = createSeededRng(1)
+    const state = makeState({ rng: createRngState(1) })
+    const sibling = createRngState(1)
 
     expect(shouldRedirectAoeToAllies(actor, state)).toBe(false)
-    expect(state.rng.next()).toBe(sibling.next())
+    expect(state.rng.position).toBe(sibling.position)
   })
 
   it('returns true at 100% chance for a confused actor', () => {

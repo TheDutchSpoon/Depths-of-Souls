@@ -17,7 +17,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Rotcap Hollow Spore contagion, infect -> kill -> spread (Phase 4 Slice H3, real content)', () => {
   it('matches the committed event log exactly (Seeder infects and kills, Spore spreads on death)', () => {
-    const created = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const created = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     // createCombat resets currentHp to effective max at fight-start, so BEARER's wounded
     // starting HP has to be applied here, after creation -- see the fixture's header comment.
     let state = updateCreature(created, BEARER, { currentHp: BEARER_STARTING_HP })

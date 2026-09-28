@@ -12,7 +12,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: heal magnitudeSource mode (Phase 4 Slice E2, Necromoss-shaped)', () => {
   it('matches the committed event log exactly across round 1’s two turns', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
 
     const events: CombatEvent[] = []
     let state = initial

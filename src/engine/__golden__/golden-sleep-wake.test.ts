@@ -13,7 +13,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Sleep two-trigger composition (Phase 4 Slice E2)', () => {
   it('matches the committed event log exactly across round 1’s two turns', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
 
     const events: CombatEvent[] = []
     let state = initial

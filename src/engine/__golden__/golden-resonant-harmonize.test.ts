@@ -11,7 +11,12 @@ import {
 
 describe('golden replay: Glimmerdark Resonants Harmonize/Resonate (Phase 4 Slice H2, real content)', () => {
   it('matches the committed event log exactly (a cast is observed by the caster itself and an ally)', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveTurn(initial)
 
     expect(events).toEqual(expectedEvents)

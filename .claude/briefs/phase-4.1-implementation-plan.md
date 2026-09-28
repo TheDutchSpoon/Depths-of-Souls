@@ -336,7 +336,9 @@ and listed.
 
 ### S1 — named `createCombat` inputs and `baselineEffects`
 - `createCombat({ seed, player: { party, effects }, enemy: { party, effects }, registries })`.
-  `registries` bundles scripts, traits and statuses.
+  `registries` bundles scripts, traits and statuses. Each side's `effects` apply to that side's
+  creatures; a side mismatch, an unknown trait id, or an already-set-up input creature throws
+  (added at the PR #69 review).
 - Each creature stores **`baselineEffects`** (innate → side effects → [Phase 8 infusions]) at fight
   setup; **`revive` restores exactly that list** with fresh instance ids (B4).
   `CombatState.traits` and `CombatState.playerWideEffects` are **deleted**.
@@ -348,14 +350,18 @@ and listed.
   **`predicate` is deleted.**
 - A **load-time validator** rejects a condition that reads the stat it modifies (e.g. a Health
   modifier gated on HP%).
-- Re-author the placeholder `BRUTISH` with a condition; the conditional-passive golden stays
-  byte-identical.
+- `hp-percent` divides by **max HP** (`floor` of effective Health), shared with scripting's
+  `hp-percent` Condition (decided at the PR #69 review; golden-neutral).
+- Re-author the placeholder `BLOODLUST` (+25% Attack at full HP) with a condition; the
+  conditional-passive golden stays byte-identical.
 
 ### A8 — innate spells
 - A passive **`innate-spell { spell }`** effect category. Arcane Surge (the Seer's trait) gains
   `innate-spell { spell: ARCANE_BOLT }`.
 - A creature's spell array = **innate spells first** (in trait order), then its regular gem slots.
-  The Seer's materialized array stays byte-identical (Arcane Bolt at index 0, three empty slots).
+  Innate spells are prepended at **fight setup** (`createCombat`), not at materialization; the
+  Seer's fight-setup array stays byte-identical (Arcane Bolt at index 0, three empty slots).
+  (Placement confirmed at the PR #69 review.)
 - **No equip gate** applies to innate spells.
 - **`SpeciesCreature.equippedSpells` is deleted.**
 - Tests: a fixture "fused" creature carrying Arcane Surge on a non-Wit affinity still has Arcane Bolt

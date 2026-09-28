@@ -4,7 +4,7 @@
 import { createCreatureId } from '../ids'
 import { DEFAULT_GEM_SLOT_COUNT } from '../config'
 import type { Affinity, Creature, CreatureOrigin, Side, Spell } from '../types'
-import type { ActiveEffect } from '../effect-types'
+import type { ActiveEffect, BaselineEffectEntry } from '../effect-types'
 
 export interface CreatureOverrides {
   id?: string
@@ -30,6 +30,12 @@ export interface CreatureOverrides {
    * existing golden/fixture files that build creatures through this helper don't need to churn
    * now that Creature.origin is required. */
   origin?: CreatureOrigin
+  /** Phase 4.1-B (S1): defaults to `[]` -- most fixtures pass creatures through `createCombat`,
+   * which ALWAYS recomputes this from `innateTraitIds` (never trusts the input), so an explicit
+   * override is only useful for a test constructing a post-fight-setup `Creature` directly. */
+  baselineEffects?: readonly BaselineEffectEntry[]
+  /** Phase 4.1-B (D3): defaults to `0`, matching `createCombat`'s own always-reset-to-0 rule. */
+  revivesUsed?: number
 }
 
 /** A flat, unremarkable baseline creature (all stats 20) for tests that don't care about specifics. */
@@ -61,6 +67,8 @@ export function makeCreature(overrides: CreatureOverrides = {}): Creature {
     defendCount: overrides.defendCount ?? 0,
     speciesId: overrides.speciesId,
     origin: overrides.origin ?? { templateId: id, level: 1 },
+    baselineEffects: overrides.baselineEffects ?? [],
+    revivesUsed: overrides.revivesUsed ?? 0,
   }
 }
 

@@ -3,19 +3,15 @@ import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import { createCreatureId } from './ids'
 import { createEffectInstanceId } from './effect-types'
 import { makeCreature } from './__fixtures__/creatures'
-import type { ActiveEffect, ActivationPredicate, RemapSlot } from './effect-types'
+import type { ActiveEffect, RemapSlot, SelfCondition } from './effect-types'
 import type { Creature, Stat } from './types'
 
-function statMod(
-  stat: Stat,
-  factor: number,
-  predicate?: ActivationPredicate,
-): ActiveEffect {
+function statMod(stat: Stat, factor: number, condition?: SelfCondition): ActiveEffect {
   return {
     category: 'stat-modifier',
     stat,
     factor,
-    ...(predicate ? { predicate } : {}),
+    ...(condition ? { condition } : {}),
     instanceId: createEffectInstanceId(`sm-${stat}-${factor}`),
     sourceTraitId: 'test-trait',
   }
@@ -47,6 +43,8 @@ const creature: Creature = {
   activeEffects: [],
   defendCount: 0,
   origin: { templateId: 'test', level: 1 },
+  baselineEffects: [],
+  revivesUsed: 0,
 }
 
 describe('getEffectiveStat', () => {
@@ -102,8 +100,12 @@ describe('getEffectiveStat — stat-modifier folding', () => {
     expect(getEffectiveStat(c, 'defence')).toBe(10)
   })
 
-  it('includes a conditional modifier only when its read-time predicate holds', () => {
-    const atFullHp: ActivationPredicate = (cr) => cr.currentHp >= cr.baseStats.health
+  it('includes a conditional modifier only when its read-time condition holds (Phase 4.1-B, S2)', () => {
+    const atFullHp: SelfCondition = {
+      kind: 'hp-percent',
+      comparator: '>=',
+      thresholdPercent: 100,
+    }
     const full = makeCreature({
       attack: 20,
       health: 30,
@@ -118,6 +120,52 @@ describe('getEffectiveStat — stat-modifier folding', () => {
     })
     expect(getEffectiveStat(full, 'attack')).toBe(25)
     expect(getEffectiveStat(hurt, 'attack')).toBe(20)
+  })
+
+  it('at fractional effective Health, hp-percent divides by FLOOR(effective Health) -- the same max HP currentHp is clamped to, not the raw fractional reading (Phase 4.1-B review, PR #69, D1/R2)', () => {
+    const atFullHp: SelfCondition = {
+      kind: 'hp-percent',
+      comparator: '>=',
+      thresholdPercent: 100,
+    }
+    // base Health 30, x1.15 -> effective Health 34.5 (fractional). floor(34.5) = 34 is the max
+    // HP a creature's currentHp actually gets clamped to (effects.ts's effectiveMaxHp) -- a
+    // creature AT that floored max must read as exactly 100%, even though currentHp*100 (3400)
+    // is LESS than the unfloored 34.5*100 (3450): the old (pre-fix) reading would have judged
+    // this creature as permanently below 100%, so ">= 100%" could never fire no matter its HP.
+    const atMax = makeCreature({
+      health: 30,
+      currentHp: 34,
+      activeEffects: [statMod('health', 1.15), statMod('attack', 1.25, atFullHp)],
+    })
+    expect(getEffectiveStat(atMax, 'health')).toBe(34.5)
+    expect(getEffectiveStat(atMax, 'attack')).toBe(25) // 20 * 1.25 -- gate reads "at full HP" true
+  })
+
+  it('includes a conditional modifier gated on has-status', () => {
+    const hasFixtureStatus: SelfCondition = { kind: 'has-status', statusId: 'fixture' }
+    const status: ActiveEffect = {
+      category: 'condition-status',
+      statusId: 'fixture',
+      cap: 1,
+      triggers: [],
+      polarity: 'buff',
+      defaultDuration: 3,
+      instanceId: createEffectInstanceId('fixture-status'),
+      sourceTraitId: 'fixture',
+      remainingDuration: 3,
+      stacks: 1,
+    }
+    const withStatus = makeCreature({
+      attack: 20,
+      activeEffects: [statMod('attack', 1.25, hasFixtureStatus), status],
+    })
+    const without = makeCreature({
+      attack: 20,
+      activeEffects: [statMod('attack', 1.25, hasFixtureStatus)],
+    })
+    expect(getEffectiveStat(withStatus, 'attack')).toBe(25)
+    expect(getEffectiveStat(without, 'attack')).toBe(20)
   })
 })
 

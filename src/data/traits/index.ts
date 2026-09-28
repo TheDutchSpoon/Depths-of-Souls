@@ -1,4 +1,5 @@
 import type { Trait } from '../../engine/effect-types'
+import { validateStatModifierConditions } from '../../engine/effect-types'
 import {
   BRUTISH,
   BLOODLUST,
@@ -165,3 +166,9 @@ export const STOCK_TRAITS: readonly Trait[] = [
 export const TRAIT_REGISTRY: ReadonlyMap<string, Trait> = new Map(
   STOCK_TRAITS.map((t) => [t.id, t]),
 )
+
+// Phase 4.1-B (S2, B-9): load-time validator -- throws at import time (mirrors
+// validateSpecialization's own precedent) if any trait's stat-modifier reads the stat it gates.
+for (const trait of STOCK_TRAITS) {
+  validateStatModifierConditions(trait.effects)
+}

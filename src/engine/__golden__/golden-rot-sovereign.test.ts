@@ -19,7 +19,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: Rotcap Hollow Rot Sovereign attrition (Phase 4 Slice H3, real content)', () => {
   it('matches the committed event log exactly (an add death and a player death both grow her Attack at the same flat rate, compounding)', () => {
-    const created = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const created = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     // createCombat resets currentHp to effective max at fight-start, so ADD's and WEAK's wounded
     // starting HP have to be applied here, after creation -- see the fixture's header comment.
     let state = updateCreature(created, ADD, { currentHp: ADD_STARTING_HP })

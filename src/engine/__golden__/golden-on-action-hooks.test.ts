@@ -13,7 +13,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: on-[action] hooks (Phase 4 Slice B)', () => {
   it('matches the committed event log exactly across 4 rounds (on-defend/on-provoke/on-cast/on-attack)', () => {
-    let state = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    let state = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const events: CombatEvent[] = []
 
     for (let i = 0; i < TURN_STEPS; i++) {

@@ -12,7 +12,12 @@ import {
 
 describe('golden replay: revive (Phase 4 Slice B)', () => {
   it('matches the committed event log exactly', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts, traits)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

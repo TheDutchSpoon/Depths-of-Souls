@@ -574,9 +574,14 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   **`innate-spell { spell }`** effect on the Arcane Surge trait:
   - It is **not a gem**: no level, no augments, un-upgradeable by construction. It **travels with
     the trait through fusion**, whichever parent the Seer is.
-  - **Innate spells occupy extra slots placed first**, then the regular gem slots (so the Seer's
-    materialized spell array stays byte-identical: innate Arcane Bolt at index 0, three regular
-    slots after it).
+  - **Innate spells occupy extra slots placed first**, then the regular gem slots. They are added
+    at **fight setup**: `createCombat` reads the creature's `innate-spell` effects (canonical order)
+    and prepends their spells onto `equippedSpells`. A materialized creature carries **regular gem
+    slots only**; the Seer's **fight-setup** spell array stays byte-identical (innate Arcane Bolt at
+    index 0, three regular slots after it). Fight setup refuses already-set-up creatures, so the
+    innate slots can't be doubled (see "Fight setup"). *Phase 8 note:* when gems become objects
+    (`{ spell, level, augments }`), an innate spell no longer fits the same array; expect innate
+    slots to become a separate list that the cast pipeline reads ahead of the gem slots.
   - **No equip gate applies**, because the spell is not equipped: a fused non-Wit creature keeps
     casting it. This is distinct from the post-beta "off-affinity equipping" exception, which stays
     deferred.
@@ -845,8 +850,13 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   legality is `checkLegality` (A1). A `"has status X"` condition matches a **literal status ID**,
   not a category (built in Phase 3).
   - **Condition** = discriminated union on kind; comparator is **data** (`< <= > >= ==`, `!=`
-    optional). **HP% via integer cross-multiplication** — `currentHp * 100 <cmp> threshold * effMaxHp`
-    where `effMaxHp = getEffectiveStat(_, 'health')` — integer thresholds, **no float**. Subject
+    optional). **HP% via integer cross-multiplication** — `currentHp * 100 <cmp> threshold * maxHp`
+    where `maxHp = floor(getEffectiveStat(_, 'health'))` — the **max HP** that `currentHp` is
+    initialised and clamped to (`effectiveMaxHp`), never the unfloored effective Health, so full HP
+    is exactly 100% and every term is an integer (Phase 4.1-B review, PR #69: the unfloored
+    denominator made "HP < 100%" true at full HP whenever a Health modifier left effective Health
+    fractional). One shared helper computes it for scripting conditions and `SelfCondition`
+    alike. Integer thresholds, **no float**. Subject
     qualifier `any` (existential) / `lowest` / `highest` (pick-and-test-the-extremum). `always` = an
     unconditionally-true kind. **Phase 2 shipped the testable subset** (`always`, HP%, enemy/ally
     counts, turn/round number, affinity-advantage, is-provoking); **`has-status` joined in Phase
@@ -948,7 +958,15 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 - **`createCombat({ seed, player: { party, effects }, enemy: { party, effects }, registries })`.**
   Named inputs, because two same-typed positional lists (player effects, enemy effects) can be
   swapped silently. The per-side `effects` are the side-wide effects: **perks** for the player now;
-  biome or boss effects for either side later. `registries` bundles scripts, traits and statuses.
+  biome or boss effects for either side later. **Each side's `effects` apply to exactly that side's
+  creatures** (the input list decides the side), and a creature whose own `side` doesn't match the
+  list it was passed in is a thrown error. `registries` bundles scripts, traits and statuses; its
+  fields may be omitted (empty registries), but **a creature's trait id missing from the trait
+  registry throws** — fight setup never silently skips a trait (Phase 4.1-B review, PR #69).
+- **Fight setup takes fresh creatures only.** An input creature that already carries setup output
+  (non-empty `baselineEffects` or `activeEffects`, i.e. one taken from a previous `CombatState`)
+  is a thrown error: setup derives everything from `innateTraitIds` + side effects, and re-feeding
+  a set-up creature would double its innate spell slots.
 - **Each creature stores its resolved starting effect list, `baselineEffects`**, at fight setup:
   innate traits → side effects → (Phase 8) equipment infusions, in the canonical effect order.
   **`revive` restores exactly that list** (death-reset). `CombatState.traits` and
@@ -1028,9 +1046,12 @@ the same interpreter, differing only in how they attach and which hooks they use
   effects need recomputation a blob can't give cleanly; keeps representation singular +
   deterministic). Expiry = drop the effect from the list. **A conditional passive's gate is data**
   (Phase 4.1-B, S2): `StatModifierDef.condition?: SelfCondition` (self `hp-percent`, self
-  `has-status`, `always`) replaces the `predicate` function, which only the placeholder `BRUTISH`
-  used and which made combat state non-plain-data. A load-time validator rejects a condition that
-  reads the stat it modifies (e.g. a Health modifier gated on HP%). **All combat math reads stats
+  `has-status`, `always`) replaces the `predicate` function, which only the placeholder
+  `BLOODLUST` (+25% Attack at full HP) used and which made combat state non-plain-data. A
+  load-time validator rejects a condition that reads the stat it modifies (e.g. a Health modifier
+  gated on HP%). A `SelfCondition` `hp-percent` uses the same max-HP basis as scripting's
+  `hp-percent` Condition (`floor` of effective Health; see Combat & scripting), so "at full HP" is
+  exactly `>= 100`. **All combat math reads stats
   through this accessor** — a
   passthrough to base in Phase 1 (no effects yet), so the folding slots in later with no rewrite.
 - New content = a data entry. Genuinely novel behavior = at most one new reusable hook primitive,

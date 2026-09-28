@@ -11,7 +11,12 @@ import {
 
 describe('golden replay: stat-modifier-payload AOE Cast (Phase 4 Slice E)', () => {
   it('matches the committed event log exactly', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED, scripts)
+    const initial = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEvents)

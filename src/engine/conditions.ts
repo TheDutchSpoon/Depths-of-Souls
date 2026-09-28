@@ -1,8 +1,7 @@
 import { pickExtremum } from './tie-break'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
-import { getEffectiveStat } from './effective-stats'
+import { hasStatus, hpPercentSatisfied } from './effective-stats'
 import { getAffinityMultiplier } from './affinity'
-import { hasStatus } from './effects'
 import { peekTargetSelector } from './target-selectors'
 import { findCreature } from './creature-lookup'
 import type { CombatState, Creature } from './types'
@@ -33,16 +32,6 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
       throw new Error(`Unhandled comparator: ${String(exhaustive)}`)
     }
   }
-}
-
-/** Integer cross-multiplication, no float: currentHp/effMaxHp <cmp> thresholdPercent/100. */
-function hpPercentSatisfied(
-  creature: Creature,
-  comparator: ComparatorOp,
-  thresholdPercent: number,
-): boolean {
-  const effMaxHp = getEffectiveStat(creature, 'health')
-  return compare(creature.currentHp * 100, comparator, thresholdPercent * effMaxHp)
 }
 
 /**

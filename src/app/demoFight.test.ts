@@ -15,14 +15,12 @@ import {
 // a full log.
 describe('demo fight (Phase 3.5 presence smoke test)', () => {
   it('fires at least one triggered effect and applies at least one status at DEMO_SEED', () => {
-    const initial = createCombat(
-      demoPlayerParty,
-      demoEnemyParty,
-      DEMO_SEED,
-      demoScripts,
-      demoTraits,
-      demoStatuses,
-    )
+    const initial = createCombat({
+      seed: DEMO_SEED,
+      player: { party: demoPlayerParty },
+      enemy: { party: demoEnemyParty },
+      registries: { scripts: demoScripts, traits: demoTraits, statuses: demoStatuses },
+    })
     const { events } = resolveFight(initial)
 
     expect(events.filter((e) => e.type === 'TriggerFired').length).toBeGreaterThanOrEqual(

@@ -29,7 +29,6 @@
 // matches golden-revive.fixture.ts's own Unicorn-shaped fixture for continuity).
 
 import type { SpeciesCreature } from '../../engine/generation'
-import { ARCANE_BOLT } from '../spells'
 import {
   SORCERER_STARTER_TRAIT,
   BRUTE_STARTER_TRAIT,
@@ -53,12 +52,12 @@ export const SORCERER_STARTER: SpeciesCreature = {
   defaultScriptId: 'always-cast',
   innateTraitIds: [SORCERER_STARTER_TRAIT.id],
   rarity: 'rare',
-  // Phase 4 Slice F (review amendment): SpeciesCreature's own FIXED loadout -- placed in slot 0
-  // (immediately castable by the stock `always-cast` script, which targets gemSlot 0) rather
-  // than a bonus 4th slot -- a fresh Sorcerer starter otherwise has nothing to cast at all until
-  // the Phase 8 gem economy exists. 4 slots total (one more than DEFAULT_GEM_SLOT_COUNT's 3) is
-  // the "extra gem slot" itself; slots 1-3 stay empty, player-equippable once Phase 8 lands.
-  equippedSpells: [ARCANE_BOLT, null, null, null],
+  // Phase 4.1-B (A8): the FIXED `equippedSpells: [ARCANE_BOLT, null, null, null]` loadout is
+  // deleted (`SpeciesCreature.equippedSpells` no longer exists) -- Arcane Bolt is now granted by
+  // SORCERER_STARTER_TRAIT's own `innate-spell` effect, prepended by `createCombat`'s fight-setup
+  // ahead of this creature's regular (default, all-null) gem slots. Materialized result is
+  // byte-identical: `[Arcane Bolt, null, null, null]` -- immediately castable by the stock
+  // `always-cast` script, which targets gemSlot 0.
 }
 
 export const SORCERER_STARTER_SPECIES_ID = 'sorcerer-starter-species'

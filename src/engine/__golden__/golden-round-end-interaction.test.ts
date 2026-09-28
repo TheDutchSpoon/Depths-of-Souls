@@ -16,14 +16,12 @@ describe('golden replay: round-end sweep interaction rules', () => {
     'on-death fires for a mid-sweep kill, the dying creature’s own remaining tick is skipped, ' +
       'a status born mid-sweep keeps full duration, and win/loss is checked after the full sweep',
     () => {
-      const initial = createCombat(
-        playerParty,
-        enemyParty,
-        SEED,
-        scripts,
-        traits,
-        statuses,
-      )
+      const initial = createCombat({
+        seed: SEED,
+        player: { party: playerParty },
+        enemy: { party: enemyParty },
+        registries: { scripts: scripts, traits: traits, statuses: statuses },
+      })
       const { state, events } = resolveFight(initial)
 
       expect(events).toEqual(expectedEvents)

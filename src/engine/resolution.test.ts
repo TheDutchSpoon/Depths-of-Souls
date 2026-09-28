@@ -14,16 +14,16 @@ import { createCreatureId } from './ids'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
+import { countDraws } from './test-utils/rng-draw-count'
 import type { CreatureId } from './ids'
 import type { CombatEvent, CombatState } from './types'
-import { createEffectInstanceId } from './effect-types'
+import { createEffectInstanceId, validateStatModifierCondition } from './effect-types'
 import type {
   ConditionStatusEffect,
   ObservationFilter,
   StatusDef,
   Trait,
 } from './effect-types'
-import type { SeededRng } from './rng'
 
 function registry(...traits: Trait[]): ReadonlyMap<string, Trait> {
   return new Map(traits.map((t) => [t.id, t]))
@@ -58,7 +58,12 @@ function firstTurnEventsHitting(
       ...targetOverrides,
     },
   ])
-  const initial = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+  const initial = createCombat({
+    seed: 1,
+    player: { party: player },
+    enemy: { party: enemy },
+    registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+  })
   return resolveTurn(initial).events
 }
 
@@ -89,7 +94,12 @@ describe('suppress-action (on-turn-start)', () => {
       { id: 'dummy', health: 30, speed: 1, scriptId: 'always-wait' },
     ])
     const { state, events } = resolveFight(
-      createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(STUN_SELF)),
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(STUN_SELF) },
+      }),
     )
 
     // Hero is stunned every turn and never attacks; dummy only waits -> nobody can win -> draw.
@@ -207,7 +217,12 @@ describe('loop safety', () => {
       },
     ])
     const { events } = resolveTurn(
-      createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, TRAIT_REGISTRY),
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+      }),
     )
 
     // A's attack, then B's retaliate, then A's retaliate, then B is guard-blocked: 2 retaliations.
@@ -223,7 +238,12 @@ describe('loop safety', () => {
       { id: 'x', attack: 20, scriptId: 'always-wait', innateTraitIds: ['retaliate'] },
     ])
     const enemy = makeParty('enemy', [{ id: 'y', health: 30 }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, TRAIT_REGISTRY)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+    })
 
     const events: CombatEvent[] = []
     const atCap = newCascade()
@@ -304,7 +324,12 @@ describe('triggered condition (self-scoped)', () => {
       },
     ])
     return resolveTurn(
-      createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(COND_RETALIATE)),
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(COND_RETALIATE) },
+      }),
     ).events
   }
 
@@ -345,7 +370,12 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
       { id: 'bearer', attack: 20, scriptId: 'always-wait', innateTraitIds: ['grudge'] },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', health: 30 }])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, TRAIT_REGISTRY)
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+    })
     const events: CombatEvent[] = []
     const bearerId = createCreatureId('bearer')
     const allyId = createCreatureId('ally')
@@ -404,7 +434,16 @@ describe('applyStatus + condition-status content (Slice C)', () => {
     const player = makeParty('player', [{ id: 'p', health: 40 }])
     const enemy = makeParty('enemy', [{ id: 'e' }])
     const statuses = new Map([[TEST_DOT.statusId, TEST_DOT]])
-    return createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, TRAIT_REGISTRY, statuses)
+    return createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: TRAIT_REGISTRY,
+        statuses: statuses,
+      },
+    })
   }
 
   it('emits StatusApplied then fires on-status-applied', () => {
@@ -521,7 +560,14 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       { id: 'atk', attack: 10, defence: 0, scriptId: 'always-attack' },
     ])
     const enemy = makeParty('enemy', [{ id: 'tgt', health: 40, defence: 0 }])
-    const { events } = resolveTurn(createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID))
+    const { events } = resolveTurn(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      }),
+    )
     const attackHit = events.find(
       (e): e is Extract<CombatEvent, { type: 'DamageDealt' }> => e.type === 'DamageDealt',
     )
@@ -554,14 +600,16 @@ describe('heal response (Regen)', () => {
     const player = makeParty('player', [{ id: 'p', health: 40 }])
     const enemy = makeParty('enemy', [{ id: 'e' }])
     const statuses = new Map([[TEST_REGEN.statusId, TEST_REGEN]])
-    let state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      TRAIT_REGISTRY,
-      statuses,
-    )
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: TRAIT_REGISTRY,
+        statuses: statuses,
+      },
+    })
     state = updateCreature(state, createCreatureId('p'), { currentHp: 35 }) // simulate prior damage
 
     const events: CombatEvent[] = []
@@ -589,11 +637,11 @@ describe('heal response (Regen)', () => {
 
 describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', () => {
   it('throws a resolver-invariant error when both amountPerStack and scalingStat are set', () => {
-    const state = createCombat(
-      makeParty('player', [{ id: 'a' }]),
-      makeParty('enemy', [{ id: 'b' }]),
-      1,
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: makeParty('player', [{ id: 'a' }]) },
+      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
+    })
     expect(() =>
       executeResponse(
         {
@@ -622,7 +670,12 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     // createCombat always inits currentHp to full effective max regardless of any raw
     // `currentHp` override, so "ally is wounded" has to be patched in AFTER creation.
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     state = updateCreature(state, createCreatureId('ally'), { currentHp: 10 })
     const events: CombatEvent[] = []
     executeResponse(
@@ -650,7 +703,12 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
       { id: 'dead2', alive: false },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     state = updateCreature(state, createCreatureId('necromoss'), { currentHp: 50 })
     const events: CombatEvent[] = []
     executeResponse(
@@ -707,11 +765,11 @@ describe('deal-damage scalingStat (Phase 4 Slice B)', () => {
 
 describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
   it('throws a resolver-invariant error when more than one of offStat/scalingStat/flatAmount is set', () => {
-    const state = createCombat(
-      makeParty('player', [{ id: 'a' }]),
-      makeParty('enemy', [{ id: 'b' }]),
-      1,
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: makeParty('player', [{ id: 'a' }]) },
+      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
+    })
     expect(() =>
       executeResponse(
         {
@@ -736,7 +794,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // floor(5) = 5. 90 + 5 = 95, well under the 100 cap.
     const player = makeParty('player', [{ id: 'p', health: 100 }])
     const enemy = makeParty('enemy', [{ id: 'e' }])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     state = updateCreature(state, createCreatureId('p'), { currentHp: 90 })
     const events: CombatEvent[] = []
     executeResponse(
@@ -761,7 +824,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // requested 15.
     const player = makeParty('player', [{ id: 'p', health: 100 }])
     const enemy = makeParty('enemy', [{ id: 'e' }])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     state = updateCreature(state, createCreatureId('p'), { currentHp: 97 })
     const events: CombatEvent[] = []
     executeResponse(
@@ -785,7 +853,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // Defence 999 would zero out any formula-based hit; flat mode never reads it.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100, defence: 999 }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     executeResponse(
       {
@@ -808,7 +881,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // Bearer max HP 100, percent 3, 5 stacks: floor(floor(100) * 3 * 5 / 100) = floor(15) = 15.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     executeResponse(
       {
@@ -835,7 +913,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // if resolveFlatTotal's inner Math.floor over getEffectiveStat is removed).
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 49 }])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     state = updateCreature(state, createCreatureId('victim'), {
       activeEffects: [
         {
@@ -871,7 +954,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // min-1'd by applyFlatDamage's existing Math.max(1, ...) to 1.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 10 }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     executeResponse(
       {
@@ -903,14 +991,16 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
     const statuses = new Map([[DEALT_BUFF_FIXTURE.statusId, DEALT_BUFF_FIXTURE]])
-    let state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      TRAIT_REGISTRY,
-      statuses,
-    )
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: TRAIT_REGISTRY,
+        statuses: statuses,
+      },
+    })
     const setupEvents: CombatEvent[] = []
     state = applyStatus(
       createCreatureId('victim'),
@@ -953,14 +1043,16 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
     const statuses = new Map([[VULNERABLE_FIXTURE.statusId, VULNERABLE_FIXTURE]])
-    let state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      TRAIT_REGISTRY,
-      statuses,
-    )
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: TRAIT_REGISTRY,
+        statuses: statuses,
+      },
+    })
     const setupEvents: CombatEvent[] = []
     state = applyStatus(
       createCreatureId('victim'),
@@ -995,7 +1087,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // (wrong) per-stack floor would compute floor(30 * 5 / 100) = 1 per stack x 3 stacks = 3.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 30 }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     executeResponse(
       {
@@ -1022,7 +1119,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     expect(180 * 0.03 * 5).toBeLessThan(27) // the float trap this brief exists to avoid
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 180 }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     executeResponse(
       {
@@ -1042,11 +1144,11 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
   })
 
   it('throws a resolver-invariant error when percent is not a positive integer', () => {
-    const state = createCombat(
-      makeParty('player', [{ id: 'a' }]),
-      makeParty('enemy', [{ id: 'b' }]),
-      1,
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: makeParty('player', [{ id: 'a' }]) },
+      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
+    })
     for (const percent of [2.5, 0, -3]) {
       expect(() =>
         executeResponse(
@@ -1070,7 +1172,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // StatPercent union is purely additive.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     executeResponse(
       {
@@ -1089,19 +1196,6 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     expect(tick).toMatchObject({ finalDamage: 14 })
   })
 })
-
-/** Wraps a real SeededRng to count draws -- proves a code path drew ZERO/exactly-ONE RNG value
- * rather than merely asserting on an outcome that could coincidentally match either way. */
-function countingRng(inner: SeededRng): SeededRng & { calls: number } {
-  const wrapper = {
-    calls: 0,
-    next(): number {
-      wrapper.calls += 1
-      return inner.next()
-    },
-  }
-  return wrapper
-}
 
 describe('chancePercent probabilistic gate (Phase 4 Slice E2)', () => {
   const WITH_CHANCE: Trait = {
@@ -1180,10 +1274,14 @@ describe('chancePercent probabilistic gate (Phase 4 Slice E2)', () => {
         scriptId: 'always-wait',
       },
     ])
-    const created = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
-    const rng = countingRng(created.rng)
-    resolveTurn({ ...created, rng })
-    return rng.calls
+    const created = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+    })
+    const { state: finalState } = resolveTurn(created)
+    return countDraws(created.rng, finalState.rng)
   }
 
   it('draws exactly one RNG value when a firing effect carries chancePercent', () => {
@@ -1242,13 +1340,15 @@ describe('conditional-damage-bonus (Phase 4 Slice E2, Cull the Weak / Ambusher-s
         scriptId: 'always-wait',
       },
     ])
-    const created = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(CULL_THE_WEAK_FIXTURE),
-    )
+    const created = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: registry(CULL_THE_WEAK_FIXTURE),
+      },
+    })
     const patched = updateCreature(created, createCreatureId('target'), {
       currentHp: targetCurrentHp,
     })
@@ -1309,7 +1409,12 @@ describe('conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review a
     const enemy = makeParty('enemy', [
       { id: 'target', health: 1000, defence: 0, affinity: 'vitality' },
     ])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+    })
     const events: CombatEvent[] = []
     dealDamage(
       createCreatureId('attacker'),
@@ -1346,11 +1451,11 @@ describe('conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review a
 
 describe('grant-action-state response (Phase 4 Slice B)', () => {
   it('sets only the requested flag(s) true, leaving the other untouched', () => {
-    const state = createCombat(
-      makeParty('player', [{ id: 'a' }]),
-      makeParty('enemy', [{ id: 'b' }]),
-      1,
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: makeParty('player', [{ id: 'a' }]) },
+      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
+    })
     const result = executeResponse(
       { kind: 'grant-action-state', target: { kind: 'self' }, defending: true },
       'fixture',
@@ -1387,13 +1492,12 @@ describe('revive response (Phase 4 Slice B)', () => {
       { id: 'fallen', health: 40, alive: false },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(REVIVE_FIXTURE),
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
+    })
     const events: CombatEvent[] = []
     const result = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
@@ -1432,13 +1536,12 @@ describe('revive response (Phase 4 Slice B)', () => {
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', attack: 40 }])
-    const state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(REVIVE_FIXTURE),
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
+    })
     const events: CombatEvent[] = []
     const revived = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
@@ -1477,7 +1580,12 @@ describe('revive response (Phase 4 Slice B)', () => {
   it('is a no-op when there are no dead allies to revive', () => {
     const player = makeParty('player', [{ id: 'reviver' }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     const result = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
@@ -1498,15 +1606,16 @@ describe('revive response (Phase 4 Slice B)', () => {
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const perks = [{ category: 'stat-modifier', stat: 'attack', factor: 2 } as const]
-    const state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(REVIVE_FIXTURE),
-      new Map(),
-      perks,
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: player, effects: perks },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: registry(REVIVE_FIXTURE),
+        statuses: new Map(),
+      },
+    })
     const events: CombatEvent[] = []
     const result = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
@@ -1544,14 +1653,16 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', health: 100, defence: 0 }])
     const statuses = new Map([[GLOW.statusId, GLOW]])
-    let state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      TRAIT_REGISTRY,
-      statuses,
-    )
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: TRAIT_REGISTRY,
+        statuses: statuses,
+      },
+    })
     const events: CombatEvent[] = []
     state = applyStatus(
       createCreatureId('detonator'),
@@ -1601,7 +1712,12 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
     // "0 stacks" are the same state.
     const player = makeParty('player', [{ id: 'detonator' }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const bareState = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const bareState = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     const result = executeResponse(
       {
@@ -1649,14 +1765,16 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const statuses = new Map([[TEST_DEBUFF.statusId, TEST_DEBUFF]])
-    let state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      TRAIT_REGISTRY,
-      statuses,
-    )
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: TRAIT_REGISTRY,
+        statuses: statuses,
+      },
+    })
     const events: CombatEvent[] = []
     state = applyStatus(
       createCreatureId('healer'),
@@ -1721,14 +1839,16 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
     const player = makeParty('player', [{ id: 'healer' }])
     const enemy = makeParty('enemy', [{ id: 'e1' }, { id: 'e2' }])
     const statuses = new Map([[TEST_DEBUFF.statusId, TEST_DEBUFF]])
-    let state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      TRAIT_REGISTRY,
-      statuses,
-    )
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: TRAIT_REGISTRY,
+        statuses: statuses,
+      },
+    })
     const applyEvents: CombatEvent[] = []
     for (const id of ['e1', 'e2']) {
       state = applyStatus(
@@ -1769,7 +1889,12 @@ describe('all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbare
       { id: 'dead-ally', defence: 10, alive: false },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     const result = executeResponse(
       {
@@ -1808,7 +1933,12 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
       { id: 'dead-hive-mate', defence: 10, speciesId: 'swarmhive', alive: false },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', speciesId: 'swarmhive' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     const result = executeResponse(
       {
@@ -1847,7 +1977,12 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
       { id: 'ally', defence: 10, speciesId: 'swarmhive' },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     const result = executeResponse(
       {
@@ -1881,11 +2016,25 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
     const enemy = makeParty('enemy', [
       { id: 'bearer', health: 20, defence: 0, innateTraitIds: [...traits.keys()] },
     ])
-    return createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    return createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+    })
   }
 
-  function hit(state: ReturnType<typeof stateWithBearer>, rngNext: () => number) {
-    const rigged = { ...state, rng: { next: rngNext } }
+  // Phase 4.1-B (B-1): CombatState.rng is plain data, computed from `position` via real
+  // mulberry32 math -- an arbitrary-value rngNext stub is no longer possible. Instead `hit` sets
+  // `rng.position` directly to a hand-picked value whose real first draw satisfies the needed
+  // threshold (< or >= chancePercent/100 = 0.5). Verified via a throwaway node script against the
+  // real nextRandom: position 7's first draw is ~0.0117 (< 0.5, succeeds); position 1's is
+  // ~0.6271 (>= 0.5, fails).
+  const SUCCEEDS_POSITION = 7
+  const FAILS_POSITION = 1
+
+  function hit(state: ReturnType<typeof stateWithBearer>, position: number) {
+    const rigged: CombatState = { ...state, rng: { position } }
     const events: CombatEvent[] = []
     const result = dealDamage(
       createCreatureId('atk'),
@@ -1900,13 +2049,13 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
     const bearer = [...result.playerParty, ...result.enemyParty].find(
       (c) => c.id === createCreatureId('bearer'),
     )!
-    return { bearer, events }
+    return { bearer, events, finalPosition: result.rng.position }
   }
 
   it('a successful roll survives at exactly 1 HP -- no CreatureDied/on-death, DamageDealt.remainingHp reflects 1', () => {
     // off 20, def 0: core 20, chip 0.2 -> raw 20.2 -> final 20 -- exactly lethal for health 20.
     const state = stateWithBearer(registry(LAST_STAND))
-    const { bearer, events } = hit(state, () => 0.1) // 0.1 < 0.5 chance -> succeeds
+    const { bearer, events } = hit(state, SUCCEEDS_POSITION)
 
     expect(bearer.alive).toBe(true)
     expect(bearer.currentHp).toBe(1)
@@ -1919,7 +2068,7 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
 
   it('a failed roll dies normally, unaffected', () => {
     const state = stateWithBearer(registry(LAST_STAND))
-    const { bearer, events } = hit(state, () => 0.9) // 0.9 >= 0.5 chance -> fails
+    const { bearer, events } = hit(state, FAILS_POSITION)
 
     expect(bearer.alive).toBe(false)
     expect(bearer.currentHp).toBe(0)
@@ -1928,22 +2077,18 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
 
   it('never draws RNG for a creature with no cheat-death effect', () => {
     const state = stateWithBearer(new Map<string, Trait>()) // no traits -- chancePercent sums to 0
-    let draws = 0
-    hit(state, () => {
-      draws += 1
-      return 0
-    })
-    expect(draws).toBe(0)
+    const { finalPosition } = hit(state, SUCCEEDS_POSITION)
+    expect(finalPosition).toBe(SUCCEEDS_POSITION)
   })
 })
 
 describe('suppress-action scope (Phase 4 Slice B)', () => {
   it('undeclared/"all" scope still sets suppressed:true -- byte-identical to pre-Slice-B (Stun)', () => {
-    const state = createCombat(
-      makeParty('player', [{ id: 'a' }]),
-      makeParty('enemy', [{ id: 'b' }]),
-      1,
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: makeParty('player', [{ id: 'a' }]) },
+      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
+    })
     const result = executeResponse(
       { kind: 'suppress-action' },
       'fixture',
@@ -1956,11 +2101,11 @@ describe('suppress-action scope (Phase 4 Slice B)', () => {
   })
 
   it('a scoped ("attack" | "cast") suppress-action does NOT set the whole-turn suppressed flag', () => {
-    const state = createCombat(
-      makeParty('player', [{ id: 'a' }]),
-      makeParty('enemy', [{ id: 'b' }]),
-      1,
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: makeParty('player', [{ id: 'a' }]) },
+      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
+    })
     const result = executeResponse(
       { kind: 'suppress-action', scope: 'cast' },
       'fixture',
@@ -2005,7 +2150,12 @@ describe('on-action-observed filter (Phase 4 Slice E2, general action-observatio
       { id: 'ally-actor' },
     ])
     const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
-    return createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    return createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+    })
   }
 
   function fires(
@@ -2108,7 +2258,15 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
       { id: 'target', health: 100, speed: 1, scriptId: 'always-wait' },
     ])
     const { events } = resolveTurn(
-      createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(ACTOR_SELF_ON_ATTACK)),
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: {
+          scripts: STOCK_SCRIPTS_BY_ID,
+          traits: registry(ACTOR_SELF_ON_ATTACK),
+        },
+      }),
     )
     // Exactly ONE TriggerFired -- from on-attack. No observationFilter means this trait is
     // never a candidate for on-action-observed's own hook lookup at all (different hook
@@ -2152,13 +2310,12 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
       { id: 'observer', innateTraitIds: [OBSERVER_AT_CAP.id] },
     ])
     const enemy = makeParty('enemy', [{ id: 'actor' }])
-    const state = createCombat(
-      player,
-      enemy,
-      1,
-      STOCK_SCRIPTS_BY_ID,
-      registry(OBSERVER_AT_CAP),
-    )
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(OBSERVER_AT_CAP) },
+    })
 
     const events: CombatEvent[] = []
     const atCap = newCascade()
@@ -2219,7 +2376,12 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       { id: 'caster' },
     ])
     const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+    })
 
     const calls: Array<{ observerId: string; casterId: string }> = []
     const events: CombatEvent[] = []
@@ -2252,7 +2414,12 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       { id: 'caster' },
     ])
     const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+    })
 
     let callCount = 0
     const events: CombatEvent[] = []
@@ -2292,7 +2459,12 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       { id: 'caster' },
     ])
     const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+    })
     const selfIds = [createCreatureId('observer'), createCreatureId('caster')]
 
     let callCount = 0
@@ -2348,7 +2520,12 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       { id: 'caster' },
     ])
     const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, registry(trait))
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+    })
     const selfIds = [createCreatureId('observer'), createCreatureId('caster')]
 
     let callCount = 0
@@ -2409,7 +2586,12 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
       { id: 'mate2', speciesId: 'hive' },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const events: CombatEvent[] = []
     const result = executeResponse(
       {
@@ -2455,7 +2637,12 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
   it('is byte-identical to the plain factor when magnitudeSource is absent', () => {
     const player = makeParty('player', [{ id: 'a', attack: 100 }])
     const enemy = makeParty('enemy', [{ id: 'b' }])
-    const state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
     const result = executeResponse(
       {
         kind: 'apply-stat-modifier',
@@ -2471,5 +2658,260 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
     )
     const a = [...result.state.playerParty].find((c) => c.id === createCreatureId('a'))!
     expect(getEffectiveStat(a, 'attack')).toBe(150)
+  })
+})
+
+describe('exact-instance rule (Phase 4.1-B, B4)', () => {
+  const TICK_STATUS: StatusDef = {
+    category: 'condition-status',
+    statusId: 'b4-tick-fixture',
+    cap: 1,
+    triggers: [
+      {
+        hook: 'on-turn-end',
+        response: {
+          kind: 'deal-damage',
+          target: { kind: 'self' },
+          flatAmount: 5,
+          damageSource: 'dot',
+        },
+      },
+    ],
+    polarity: 'debuff',
+    defaultDuration: 3,
+  }
+
+  it('cleanse-then-tick: an earlier candidate in the SAME hook pass removes a status whose trigger would fire later in that pass -- the later trigger does not fire at all (not even TriggerFired)', () => {
+    const CLEANSER_TRAIT: Trait = {
+      id: 'b4-cleanser-fixture',
+      name: 'Cleanser (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-turn-end',
+          response: {
+            kind: 'remove-status',
+            target: { kind: 'self' },
+            filter: { statusId: 'b4-tick-fixture' },
+          },
+        },
+      ],
+    }
+    const player = makeParty('player', [
+      {
+        id: 'bearer',
+        health: 40,
+        innateTraitIds: [CLEANSER_TRAIT.id],
+        scriptId: 'always-wait',
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', scriptId: 'always-wait' }])
+    const statuses = new Map([[TICK_STATUS.statusId, TICK_STATUS]])
+    const created = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: registry(CLEANSER_TRAIT),
+        statuses,
+      },
+    })
+    // Apply the status BEFORE the turn resolves: its instance is APPENDED after the trait's own
+    // (fight-setup) effect in activeEffects, so within bearer's on-turn-end hook pass the
+    // cleanser is candidate 1 and the tick (this status's own trigger) is candidate 2 -- both
+    // captured together, ONCE, at the top of that pass (effectsForHook), before either fires.
+    const withStatus = applyStatus(
+      createCreatureId('bearer'),
+      createCreatureId('bearer'),
+      { statusId: 'b4-tick-fixture', duration: 3 },
+      created,
+      [],
+      newCascade(),
+    )
+
+    // Player side wins ties (default equal speed), so bearer's turn is the one this call
+    // resolves; bearer's own always-wait script needs no targeting/RNG.
+    const { events } = resolveTurn(withStatus)
+
+    // Only the cleanser fires: TriggerFired + StatusExpired. The tick's candidate -- captured
+    // before the cleanse ran -- fails the exact-instance check (its owning instance is gone by
+    // the time its turn in the candidate list comes) and is skipped BEFORE TriggerFired would
+    // even be emitted for it.
+    expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(1)
+    expect(events.filter((e) => e.type === 'StatusExpired')).toHaveLength(1)
+    expect(events.some((e) => e.type === 'DamageDealt')).toBe(false)
+  })
+
+  it("remove-then-reapply: a status removed and reapplied inside one cascade -- the old instance's pending trigger does not fire; the new instance follows normal rules", () => {
+    const REAPPLY_TRAIT: Trait = {
+      id: 'b4-reapply-fixture',
+      name: 'Reapply (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-turn-end',
+          response: {
+            kind: 'remove-status',
+            target: { kind: 'self' },
+            filter: { statusId: 'b4-tick-fixture' },
+          },
+        },
+        {
+          category: 'triggered',
+          hook: 'on-turn-end',
+          response: {
+            kind: 'apply-status',
+            target: { kind: 'self' },
+            status: { statusId: 'b4-tick-fixture', duration: 3 },
+          },
+        },
+      ],
+    }
+    const player = makeParty('player', [
+      {
+        id: 'bearer',
+        health: 40,
+        innateTraitIds: [REAPPLY_TRAIT.id],
+        scriptId: 'always-wait',
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', scriptId: 'always-wait' }])
+    const statuses = new Map([[TICK_STATUS.statusId, TICK_STATUS]])
+    const created = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: registry(REAPPLY_TRAIT),
+        statuses,
+      },
+    })
+    const withStatus = applyStatus(
+      createCreatureId('bearer'),
+      createCreatureId('bearer'),
+      { statusId: 'b4-tick-fixture', duration: 3 },
+      created,
+      [],
+      newCascade(),
+    )
+    const oldInstanceId = withStatus.playerParty[0]!.activeEffects.find(
+      (e) => e.category === 'condition-status',
+    )!.instanceId
+
+    const { events, state } = resolveTurn(withStatus)
+
+    // Candidate order for bearer's on-turn-end pass: [remove (trait effect 1), apply (trait
+    // effect 2), tick (the OLD status instance -- captured before either trait effect ran)].
+    // remove fires (TriggerFired + StatusExpired); apply fires (TriggerFired + StatusApplied, a
+    // FRESH instance with a new id, B4); by the time the candidate list reaches the old tick
+    // candidate, its exact instance is gone -- a genuinely different instance now occupies the
+    // same statusId slot -- so it never fires.
+    expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(2)
+    expect(events.filter((e) => e.type === 'StatusExpired')).toHaveLength(1)
+    expect(events.filter((e) => e.type === 'StatusApplied')).toHaveLength(1)
+    expect(events.some((e) => e.type === 'DamageDealt')).toBe(false)
+
+    const newInstance = state.playerParty[0]!.activeEffects.find(
+      (e) => e.category === 'condition-status',
+    )!
+    expect(newInstance.instanceId).not.toBe(oldInstanceId)
+  })
+})
+
+describe('revive cap (Phase 4.1-B, D3)', () => {
+  it('excludes a dead ally at the cap from revive targeting -- the 11th attempt fizzles and draws no RNG', () => {
+    const player = makeParty('player', [
+      { id: 'reviver' },
+      { id: 'fallen', alive: false, currentHp: 0 },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+    })
+
+    const REVIVE_RESPONSE = {
+      kind: 'revive' as const,
+      target: { kind: 'random-dead-ally' as const },
+      pct: 0.2,
+    }
+
+    const attemptRevive = () => {
+      const events: CombatEvent[] = []
+      const result = executeResponse(
+        REVIVE_RESPONSE,
+        'fixture',
+        { self: createCreatureId('reviver') },
+        state,
+        events,
+        newCascade(),
+      )
+      state = result.state
+      return events
+    }
+
+    // 10 successful revives: each one brings 'fallen' back, then it's killed again so the next
+    // attempt still has exactly one (the same) eligible dead ally.
+    for (let i = 0; i < 10; i++) {
+      const events = attemptRevive()
+      expect(events.some((e) => e.type === 'Revived')).toBe(true)
+      state = updateCreature(state, createCreatureId('fallen'), {
+        alive: false,
+        currentHp: 0,
+      })
+    }
+    const fallenAt10 = [...state.playerParty, ...state.enemyParty].find(
+      (c) => c.id === createCreatureId('fallen'),
+    )!
+    expect(fallenAt10.revivesUsed).toBe(10)
+
+    // 11th attempt: 'fallen' is now at MAX_REVIVES_PER_CREATURE -- excluded from the
+    // random-dead-ally pool, which is then empty, so no RNG is drawn and no Revived event fires.
+    const positionBefore = state.rng.position
+    const events = attemptRevive()
+    expect(events.some((e) => e.type === 'Revived')).toBe(false)
+    expect(state.rng.position).toBe(positionBefore)
+    const fallenAt11 = [...state.playerParty, ...state.enemyParty].find(
+      (c) => c.id === createCreatureId('fallen'),
+    )!
+    expect(fallenAt11.revivesUsed).toBe(10) // unchanged -- the fizzle never incremented it
+  })
+})
+
+describe('SelfCondition validator (Phase 4.1-B, S2)', () => {
+  it('rejects an hp-percent condition gating the health stat it would read (read-cycle)', () => {
+    expect(() =>
+      validateStatModifierCondition({
+        category: 'stat-modifier',
+        stat: 'health',
+        factor: 1.25,
+        condition: { kind: 'hp-percent', comparator: '>=', thresholdPercent: 100 },
+      }),
+    ).toThrow(/read-cycle/)
+  })
+
+  it('accepts an hp-percent condition gating a DIFFERENT stat (no read-cycle)', () => {
+    expect(() =>
+      validateStatModifierCondition({
+        category: 'stat-modifier',
+        stat: 'attack',
+        factor: 1.25,
+        condition: { kind: 'hp-percent', comparator: '>=', thresholdPercent: 100 },
+      }),
+    ).not.toThrow()
+  })
+
+  it('accepts a has-status condition gating health (has-status never reads a stat)', () => {
+    expect(() =>
+      validateStatModifierCondition({
+        category: 'stat-modifier',
+        stat: 'health',
+        factor: 1.25,
+        condition: { kind: 'has-status', statusId: 'fixture' },
+      }),
+    ).not.toThrow()
   })
 })

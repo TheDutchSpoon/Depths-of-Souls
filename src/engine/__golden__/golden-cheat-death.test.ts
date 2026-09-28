@@ -15,7 +15,12 @@ import {
 
 describe('golden replay: cheat-death (Phase 4 Slice D, Last Stand-shaped)', () => {
   it('a successful roll (SEED 7) survives at 1 HP -- no CreatureDied for the bearer', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED_SUCCESS, scripts, traits)
+    const initial = createCombat({
+      seed: SEED_SUCCESS,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEventsSuccess)
@@ -23,7 +28,12 @@ describe('golden replay: cheat-death (Phase 4 Slice D, Last Stand-shaped)', () =
   })
 
   it('a failed roll (SEED 1) dies normally, unaffected', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED_FAIL, scripts, traits)
+    const initial = createCombat({
+      seed: SEED_FAIL,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEventsFail)

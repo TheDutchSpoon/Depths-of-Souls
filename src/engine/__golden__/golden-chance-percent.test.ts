@@ -15,7 +15,12 @@ import {
 
 describe('golden replay: chancePercent probabilistic trigger (Phase 4 Slice E2)', () => {
   it('rolls succeed at the rigged seed: TriggerFired + response fire before the lethal hit', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED_SUCCESS, scripts, traits)
+    const initial = createCombat({
+      seed: SEED_SUCCESS,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEventsSuccess)
@@ -23,7 +28,12 @@ describe('golden replay: chancePercent probabilistic trigger (Phase 4 Slice E2)'
   })
 
   it('rolls fail at the rigged seed: skipped silently, straight to the identical lethal hit', () => {
-    const initial = createCombat(playerParty, enemyParty, SEED_FAIL, scripts, traits)
+    const initial = createCombat({
+      seed: SEED_FAIL,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     expect(events).toEqual(expectedEventsFail)

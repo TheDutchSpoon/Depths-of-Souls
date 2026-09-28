@@ -18,7 +18,12 @@ import type { CombatEvent } from '../types'
 
 describe('golden replay: PR #64 fix 2 -- a status born mid-sweep does not tick until the next round', () => {
   it("matches the committed event log exactly (Rotcore's death-Poison does not tick until round 2)", () => {
-    const created = createCombat(playerParty, enemyParty, SEED, scripts, traits, statuses)
+    const created = createCombat({
+      seed: SEED,
+      player: { party: playerParty },
+      enemy: { party: enemyParty },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     // Pre-apply Poison to ROTCORE and wound it to 1 HP, both before any turn resolves -- into a
     // throwaway events array, mirroring the PR #64 repro's own setup idiom.
     let state = applyStatus(

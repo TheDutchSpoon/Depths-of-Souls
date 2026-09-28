@@ -20,7 +20,13 @@ export function updateCreature(
   patch: Partial<
     Pick<
       Creature,
-      'currentHp' | 'alive' | 'defending' | 'provoking' | 'activeEffects' | 'defendCount'
+      | 'currentHp'
+      | 'alive'
+      | 'defending'
+      | 'provoking'
+      | 'activeEffects'
+      | 'defendCount'
+      | 'revivesUsed'
     >
   >,
 ): CombatState {

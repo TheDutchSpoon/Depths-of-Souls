@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveFight, resolveTurn } from './combat'
 import { hasStatus } from './effects'
+import { getEffectiveStat } from './effective-stats'
 import { makeParty } from './__fixtures__/creatures'
-import { createSeededRng } from './rng'
+import { createRngState } from './rng'
+import { countDraws } from './test-utils/rng-draw-count'
+import { deepFreeze } from './test-utils/deep-freeze'
 import { createCreatureId } from './ids'
 import { ROUND_CAP } from './config'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { TRAIT_REGISTRY, SORCERER_STARTER_TRAIT } from '../data/traits'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
-import type { StatusDef, Trait, TurnOrderStatusDef } from './effect-types'
-import type { SeededRng } from './rng'
+import type { EffectDef, StatusDef, Trait, TurnOrderStatusDef } from './effect-types'
 
 const EMBER_LANCE: Spell = {
   id: 'ember-lance',
@@ -33,12 +36,79 @@ function isAttackDeclared(event: { type: string }): event is AttackDeclaredEvent
 describe('createCombat', () => {
   it('throws when the player party is empty', () => {
     const enemy = makeParty('enemy', [{ id: 'goblin' }])
-    expect(() => createCombat([], enemy, 1)).toThrow()
+    expect(() =>
+      createCombat({ seed: 1, player: { party: [] }, enemy: { party: enemy } }),
+    ).toThrow()
   })
 
   it('throws when the enemy party is empty', () => {
     const player = makeParty('player', [{ id: 'hero' }])
-    expect(() => createCombat(player, [], 1)).toThrow()
+    expect(() =>
+      createCombat({ seed: 1, player: { party: player }, enemy: { party: [] } }),
+    ).toThrow()
+  })
+
+  // Phase 4.1-B review (PR #69, R1): `enemy.effects` used to be silently dropped -- `createCombat`
+  // called `instantiate(c, [])` for the whole enemy party regardless of what `enemy.effects` held.
+  it("applies enemy.effects to the enemy party only, never the player's", () => {
+    const player = makeParty('player', [{ id: 'hero', attack: 10 }])
+    const enemy = makeParty('enemy', [{ id: 'goblin', attack: 10 }])
+    const DOUBLE_ATTACK: EffectDef = {
+      category: 'stat-modifier',
+      stat: 'attack',
+      factor: 2,
+    }
+
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy, effects: [DOUBLE_ATTACK] },
+    })
+
+    const goblin = state.enemyParty.find((c) => c.id === createCreatureId('goblin'))!
+    expect(getEffectiveStat(goblin, 'attack')).toBe(20)
+    expect(goblin.baselineEffects.map((e) => e.sourceTraitId)).toEqual(['enemy-effect-0'])
+
+    const hero = state.playerParty.find((c) => c.id === createCreatureId('hero'))!
+    expect(getEffectiveStat(hero, 'attack')).toBe(10)
+    expect(hero.baselineEffects).toEqual([])
+  })
+
+  it("throws when a creature's side doesn't match the list it was passed in", () => {
+    const player = makeParty('player', [{ id: 'hero' }])
+    const wrongSideEnemy = makeParty('player', [{ id: 'oops' }]) // side: 'player', fed as enemy.party
+    expect(() =>
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: wrongSideEnemy },
+      }),
+    ).toThrow(/side/)
+  })
+
+  // Phase 4.1-B review (PR #69, R3): re-feeding a post-setup creature used to be "safe but
+  // pointless" (silently recomputed from scratch) -- for a trait carrying an innate-spell effect
+  // (A8), it would silently DOUBLE the innate slots instead. Now a thrown error.
+  it('throws when re-fed a creature that already carries fight-setup output (double-prepend guard)', () => {
+    const player = makeParty('player', [
+      { id: 'seer', intelligence: 20, innateTraitIds: [SORCERER_STARTER_TRAIT.id] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const first = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { traits: TRAIT_REGISTRY },
+    })
+
+    expect(() =>
+      createCombat({
+        seed: 1,
+        player: { party: first.playerParty },
+        enemy: { party: enemy },
+        registries: { traits: TRAIT_REGISTRY },
+      }),
+    ).toThrow(/fight-setup output/)
   })
 })
 
@@ -51,7 +121,9 @@ describe('resolveTurn / resolveFight — sanity trace', () => {
       { id: 'goblin', speed: 10, attack: 5, defence: 5, health: 30 },
     ])
 
-    const { events, state } = resolveFight(createCombat(player, enemy, 1))
+    const { events, state } = resolveFight(
+      createCombat({ seed: 1, player: { party: player }, enemy: { party: enemy } }),
+    )
 
     expect(events[0]).toEqual({ type: 'FightStarted' })
     expect(events[1]).toEqual({ type: 'RoundStarted', round: 1 })
@@ -70,11 +142,107 @@ describe('determinism', () => {
       { id: 'goblin', speed: 10, attack: 9, defence: 6, health: 35 },
     ])
 
-    const run1 = resolveFight(createCombat(player, enemy, 777))
-    const run2 = resolveFight(createCombat(player, enemy, 777))
+    const run1 = resolveFight(
+      createCombat({ seed: 777, player: { party: player }, enemy: { party: enemy } }),
+    )
+    const run2 = resolveFight(
+      createCombat({ seed: 777, player: { party: player }, enemy: { party: enemy } }),
+    )
 
     expect(run1.events).toEqual(run2.events)
     expect(run1.state.result).toBe(run2.state.result)
+  })
+
+  it('resolving the SAME frozen snapshot twice gives identical {state, events} (Phase 4.1-B, B3)', () => {
+    // The actual B3 regression probe: unlike the test above (which builds two SEPARATE
+    // CombatStates from the same seed), this resolves ONE already-built, deep-frozen snapshot
+    // twice. Before B3, CombatState.rng was a closure shared by reference across every `{
+    // ...state }` copy, so a second resolveTurn(state) call would continue from wherever the
+    // FIRST call's draws left the closure's internal position, breaking this exact guarantee.
+    //
+    // Phase 4.1-B review (PR #69, R4): a 1v1 always-attack turn draws ZERO RNG, so the equality
+    // this test asserts would hold trivially even with the resolveTurn clone removed (nothing
+    // ever touches state.rng to diverge). `random-enemy` targeting against TWO living enemies
+    // forces this turn to actually draw, so the countDraws assertion below proves the test can't
+    // go vacuous again.
+    const randomTargetScript: Script = {
+      id: 'random-target-b3-fixture',
+      rules: [
+        {
+          condition: { kind: 'always' },
+          action: { kind: 'attack' },
+          targeting: { kind: 'random-enemy' },
+        },
+      ],
+    }
+    const scripts = new Map([[randomTargetScript.id, randomTargetScript]])
+    const player = makeParty('player', [
+      {
+        id: 'hero',
+        speed: 20,
+        attack: 12,
+        defence: 8,
+        health: 40,
+        scriptId: randomTargetScript.id,
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'goblinA', speed: 10, attack: 9, defence: 6, health: 35 },
+      { id: 'goblinB', speed: 5, attack: 9, defence: 6, health: 35 },
+    ])
+    const frozen = deepFreeze(
+      createCombat({
+        seed: 777,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: scripts },
+      }),
+    )
+
+    const first = resolveTurn(frozen)
+    const second = resolveTurn(frozen)
+
+    expect(countDraws(frozen.rng, first.state.rng)).toBeGreaterThan(0)
+    expect(first.events).toEqual(second.events)
+    expect(first.state).toEqual(second.state)
+  })
+
+  // Phase 4.1-B review (PR #69, scope/labeling): the brief's own B3 acceptance criterion is a
+  // STRUCTURAL guarantee -- "CombatState holds no closure, function, or class instance" -- which
+  // deep-freezing doesn't actually prove (a frozen closure is still a closure). `structuredClone`
+  // throws on any function/closure/class instance it encounters, so a real mid-fight state (real
+  // trait content, several turns in) surviving a clone-and-resolve round-trip is a direct proof
+  // of plain-data-ness, not just "nothing mutated its input."
+  it('a real mid-fight CombatState survives structuredClone and resolves identically after (plain-data proof)', () => {
+    const player = makeParty('player', [
+      {
+        id: 'seer',
+        intelligence: 20,
+        scriptId: 'always-cast',
+        innateTraitIds: [SORCERER_STARTER_TRAIT.id],
+        equippedSpells: [null, null, null],
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'foe', health: 1000, defence: 0, speed: 1, scriptId: 'always-attack' },
+    ])
+    let state = createCombat({
+      seed: 42,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+    })
+    for (let i = 0; i < 6 && state.result === null; i++) {
+      state = resolveTurn(state).state
+    }
+
+    const cloned = structuredClone(state)
+    expect(cloned).toEqual(state)
+
+    const fromOriginal = resolveTurn(state)
+    const fromClone = resolveTurn(cloned)
+    expect(fromClone.events).toEqual(fromOriginal.events)
+    expect(fromClone.state).toEqual(fromOriginal.state)
   })
 })
 
@@ -88,7 +256,9 @@ describe('death-mid-round skip', () => {
       { id: 'goblinB', speed: 10, attack: 5, defence: 0, health: 30 },
     ])
 
-    const { events } = resolveFight(createCombat(player, enemy, 1))
+    const { events } = resolveFight(
+      createCombat({ seed: 1, player: { party: player }, enemy: { party: enemy } }),
+    )
 
     const diedIndex = events.findIndex(
       (e) => e.type === 'CreatureDied' && e.creatureId === 'goblinA',
@@ -116,7 +286,7 @@ describe('round cap', () => {
     ])
 
     const atCap: CombatState = {
-      rng: createSeededRng(1),
+      rng: createRngState(1),
       playerParty: player,
       enemyParty: enemy,
       turnQueue: [],
@@ -125,8 +295,7 @@ describe('round cap', () => {
       result: null,
       scripts: new Map(),
       statuses: new Map(),
-      traits: new Map(),
-      playerWideEffects: [],
+      effectInstanceCounter: 0,
     }
 
     const { state, events } = resolveTurn(atCap)
@@ -147,7 +316,9 @@ describe('win/loss', () => {
       { id: 'ogre', speed: 20, attack: 50, defence: 0, health: 100 },
     ])
 
-    const { state } = resolveFight(createCombat(player, enemy, 1))
+    const { state } = resolveFight(
+      createCombat({ seed: 1, player: { party: player }, enemy: { party: enemy } }),
+    )
     expect(state.result).toBe('loss')
   })
 })
@@ -161,7 +332,9 @@ describe('event ordering around a kill', () => {
       { id: 'goblin', speed: 10, attack: 1, defence: 0, health: 5 },
     ])
 
-    const { events } = resolveTurn(createCombat(player, enemy, 1))
+    const { events } = resolveTurn(
+      createCombat({ seed: 1, player: { party: player }, enemy: { party: enemy } }),
+    )
 
     const damageIndex = events.findIndex((e) => e.type === 'DamageDealt')
     expect(events[damageIndex + 1]).toEqual({
@@ -187,7 +360,9 @@ describe('default targeting', () => {
       { id: 'goblinB', speed: 4, attack: 1, defence: 0, health: 40 },
     ])
 
-    const { events } = resolveFight(createCombat(player, enemy, 1))
+    const { events } = resolveFight(
+      createCombat({ seed: 1, player: { party: player }, enemy: { party: enemy } }),
+    )
 
     const heroAttacks = events
       .filter(isAttackDeclared)
@@ -233,7 +408,14 @@ describe('Defend', () => {
       },
     ])
 
-    const { events } = resolveFight(createCombat(player, enemy, 1, scripts))
+    const { events } = resolveFight(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: scripts },
+      }),
+    )
 
     const heroHits = events.filter(
       (e): e is Extract<typeof e, { type: 'DamageDealt' }> =>
@@ -287,7 +469,14 @@ describe('Provoke', () => {
       { id: 'weakling', speed: 1, defence: 0, health: 5, currentHp: 5 },
     ])
 
-    const { events } = resolveTurn(createCombat(player, enemy, 1, scripts))
+    const { events } = resolveTurn(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: scripts },
+      }),
+    )
 
     const attack = events.find(isAttackDeclared)
     expect(attack?.targetId).toBe('provoker')
@@ -320,7 +509,14 @@ describe('Cast', () => {
     ])
     const enemy = makeParty('enemy', [{ id: 'target', defence: 10, health: 30 }])
 
-    const { events } = resolveTurn(createCombat(player, enemy, 1, scripts))
+    const { events } = resolveTurn(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: scripts },
+      }),
+    )
 
     const cast = events.find((e) => e.type === 'SpellCast')
     expect(cast).toEqual({
@@ -366,7 +562,14 @@ describe('Cast', () => {
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
 
-    const { events } = resolveTurn(createCombat(player, enemy, 1, scripts))
+    const { events } = resolveTurn(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: scripts },
+      }),
+    )
 
     expect(events.find((e) => e.type === 'SpellCast')).toBeUndefined()
     expect(events.find(isAttackDeclared)?.targetId).toBe('foe')
@@ -394,7 +597,14 @@ describe('Cast', () => {
       { id: 'e2', speed: 1, defence: 0, health: 1, currentHp: 1 },
     ])
 
-    const { events } = resolveTurn(createCombat(player, enemy, 1, scripts))
+    const { events } = resolveTurn(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: scripts },
+      }),
+    )
 
     const spellCastIndex = events.findIndex((e) => e.type === 'SpellCast')
     expect(events[spellCastIndex]).toEqual({
@@ -447,7 +657,14 @@ describe('Wait', () => {
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', speed: 1 }])
 
-    const { events } = resolveTurn(createCombat(player, enemy, 1, scripts))
+    const { events } = resolveTurn(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: scripts },
+      }),
+    )
 
     expect(events).toContainEqual({ type: 'Waited', creatureId: 'waiter' })
     expect(
@@ -536,7 +753,12 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
     ])
     const scripts = new Map([[alwaysWaitScript.id, alwaysWaitScript]])
 
-    let state = createCombat(player, enemy, 1, scripts, traits, statuses)
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: scripts, traits: traits, statuses: statuses },
+    })
     // Drive exactly through round 1's two turns and into round 2's boundary (round 1's sweep).
     while (state.round < 2) {
       state = resolveTurn(state).state
@@ -588,7 +810,12 @@ describe('action instance-list composition (Phase 4 Slice B)', () => {
       [BRUTE_PARTIAL.id, BRUTE_PARTIAL],
     ])
     const { events } = resolveTurn(
-      createCombat(player, enemy, 1, new Map(), traits, new Map()),
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: new Map(), traits: traits, statuses: new Map() },
+      }),
     )
     return events
       .filter(
@@ -648,7 +875,12 @@ describe('action instance-list composition (Phase 4 Slice B)', () => {
       [ON_ATTACK_PING.id, ON_ATTACK_PING],
     ])
     const { events } = resolveTurn(
-      createCombat(player, enemy, 1, new Map(), traits, new Map()),
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: new Map(), traits: traits, statuses: new Map() },
+      }),
     )
 
     expect(events.filter((e) => e.type === 'AttackDeclared')).toHaveLength(2)
@@ -672,7 +904,14 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
     const enemy = makeParty('enemy', [
       { id: 'target', health: 1000, defence: 0, speed: 1, scriptId: 'always-wait' },
     ])
-    const { events } = resolveTurn(createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID))
+    const { events } = resolveTurn(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      }),
+    )
     return events.find((e) => e.type === 'DamageDealt')
   }
 
@@ -747,20 +986,6 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
     ],
   }
 
-  /** Wraps a real SeededRng to count draws -- proves a code path drew ZERO/exactly-N RNG
-   * values, rather than merely asserting on an outcome that could coincidentally match either
-   * way. */
-  function countingRng(inner: SeededRng): SeededRng & { calls: number } {
-    const wrapper = {
-      calls: 0,
-      next(): number {
-        wrapper.calls += 1
-        return inner.next()
-      },
-    }
-    return wrapper
-  }
-
   it('a board with no Web draws zero RNG across several turns', () => {
     const player = makeParty('player', [
       { id: 'a', attack: 5, speed: 20, scriptId: 'always-attack' },
@@ -768,13 +993,19 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
     const enemy = makeParty('enemy', [
       { id: 'b', health: 1000, speed: 10, scriptId: 'always-wait' },
     ])
-    const created = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID)
-    const rng = countingRng(created.rng)
-    let state: CombatState = { ...created, rng }
+    const created = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+    })
+    let state: CombatState = created
     for (let i = 0; i < 6; i++) {
       state = resolveTurn(state).state
     }
-    expect(rng.calls).toBe(0)
+    // Zero draws -- proves a code path drew ZERO RNG values, rather than merely asserting on
+    // an outcome that could coincidentally match either way.
+    expect(state.rng.position).toBe(created.rng.position)
   })
 
   it('a Web-bearer draws exactly one roll per turn-start (count == number of TurnStarted events)', () => {
@@ -800,9 +1031,13 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
     ])
     const statuses = new Map([[NEVER_BREAKS_STATUS.statusId, NEVER_BREAKS_STATUS]])
     const traits = new Map([[WEB_SELF_FIXTURE.id, WEB_SELF_FIXTURE]])
-    const created = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits, statuses)
-    const rng = countingRng(created.rng)
-    let state: CombatState = { ...created, rng }
+    const created = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits, statuses: statuses },
+    })
+    let state: CombatState = created
     let turnStartedCount = 0
     for (let i = 0; i < 4; i++) {
       const step = resolveTurn(state)
@@ -810,7 +1045,7 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
       turnStartedCount += step.events.filter((e) => e.type === 'TurnStarted').length
     }
     expect(turnStartedCount).toBeGreaterThan(0)
-    expect(rng.calls).toBe(turnStartedCount)
+    expect(countDraws(created.rng, state.rng)).toBe(turnStartedCount)
   })
 
   it('same seed -> same break-free turn (determinism)', () => {
@@ -829,7 +1064,12 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
       ])
       const statuses = new Map([[WEB_TEST_STATUS.statusId, WEB_TEST_STATUS]])
       const traits = new Map([[WEB_SELF_FIXTURE.id, WEB_SELF_FIXTURE]])
-      let state = createCombat(player, enemy, seed, STOCK_SCRIPTS_BY_ID, traits, statuses)
+      let state = createCombat({
+        seed: seed,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits, statuses: statuses },
+      })
       const allEvents = []
       for (let i = 0; i < 4; i++) {
         const step = resolveTurn(state)
@@ -849,17 +1089,16 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     effects: [{ category: 'bonus-cast', chancePercent: 50 }],
   }
 
-  function stubRng(values: number[]): SeededRng {
-    let i = 0
-    return {
-      next(): number {
-        const v = values[i]
-        i += 1
-        if (v === undefined) throw new Error('stubRng exhausted')
-        return v
-      },
-    }
-  }
+  // Phase 4.1-B (B-1): CombatState.rng is plain data, computed from `position` via real
+  // mulberry32 math -- an arbitrary-value stub is no longer possible. Instead these tests set
+  // `rng.position` directly to a hand-picked value whose real first draw satisfies the needed
+  // threshold (< or >= chancePercent/100 = 0.5); every fixture here has at most one non-null
+  // equipped slot, so the SECOND draw (the gem-slot pick, `floor(roll * 1) === 0`) is always 0
+  // regardless of its value and needs no control. Verified via a throwaway node script against
+  // the real nextRandom: position 7's first draw is ~0.0117 (< 0.5, succeeds); position 1's is
+  // ~0.6271 (>= 0.5, fails).
+  const SUCCEEDS_POSITION = 7
+  const FAILS_POSITION = 1
 
   function isSpellCast(event: { type: string }): boolean {
     return event.type === 'SpellCast'
@@ -876,9 +1115,15 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', health: 100, speed: 1 }])
     const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
-    // roll 1 (0.1 < 0.5): bonus-cast fires. roll 2 (0 -> floor(0*1)=0): picks equipped slot 0.
-    state = { ...state, rng: stubRng([0.1, 0]) }
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+    })
+    // Bonus-cast rolls succeed (first draw < 0.5); the second draw picks equipped slot 0
+    // regardless of its value (only one equipped slot).
+    state = { ...state, rng: { position: SUCCEEDS_POSITION } }
     const { events } = resolveTurn(state)
 
     const turnEndedIndex = events.findIndex((e) => e.type === 'TurnEnded')
@@ -904,8 +1149,13 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
-    state = { ...state, rng: stubRng([0.9]) } // 0.9 >= 0.5 -- fails, draws nothing further
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+    })
+    state = { ...state, rng: { position: FAILS_POSITION } } // fails, draws nothing further
     const { events } = resolveTurn(state)
     expect(events.some(isSpellCast)).toBe(false)
   })
@@ -921,8 +1171,13 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
-    state = { ...state, rng: stubRng([0.1]) } // succeeds, but there's nothing to cast
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+    })
+    state = { ...state, rng: { position: SUCCEEDS_POSITION } } // succeeds, but there's nothing to cast
     const { events } = resolveTurn(state)
     expect(events.some(isSpellCast)).toBe(false)
   })
@@ -938,8 +1193,13 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     ])
     const enemy = makeParty('enemy', [{ id: 'foe1' }, { id: 'foe2' }])
     const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
-    let state = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
-    state = { ...state, rng: stubRng([0.1, 0]) }
+    let state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+    })
+    state = { ...state, rng: { position: SUCCEEDS_POSITION } }
     const { events } = resolveTurn(state)
     const cast = events.find(isSpellCast)
     expect(cast).toMatchObject({ type: 'SpellCast', targetShape: 'aoe', gemSlot: 0 })
@@ -982,7 +1242,12 @@ describe('taken-reduction passive (Phase 4 Slice F, review amendment -- real Bul
       { id: 'striker', attack: 40, defence: 0, speed: 10 },
     ])
     const traits = new Map([[TAKEN_REDUCTION_FIXTURE.id, TAKEN_REDUCTION_FIXTURE]])
-    const initial = createCombat(player, enemy, 1, STOCK_SCRIPTS_BY_ID, traits)
+    const initial = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+    })
     const { state, events } = resolveFight(initial)
 
     // Round 1: defendCount 15 -> 16 (exactly the count that reaches the 80% cap). Round 2:
