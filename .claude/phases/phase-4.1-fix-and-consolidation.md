@@ -989,6 +989,11 @@ existing golden byte-identical; each flip lands with a new, hand-derived golden.
   The implicit fallback is unchanged in shape (`{ action: attack }`), so it now gets the
   lowest-HP-enemy default. `resolveExplicitOrDefaultTarget` became `resolveSelectorTarget`
   (resolves an already-defaulted selector).
+- **Bonus-cast's default changed -- the largest behaviour change in this PR.** A bonus cast is a
+  `gemSlot: 'random'` intent with no targeting, so an enemy-side single-target spell now defaults
+  to the LOWEST-HP enemy (`legacyGrantedTargeting` only skips Confusion -> Tunnel Vision -> Provoke,
+  which is C2c; it no longer keeps first-by-slot). Before, it hit the first living enemy by slot.
+  `golden-b1-bonus-cast-default` pins it (the corpus digest was the only prior tripwire).
 - **Targeting-less rules are valid.** `interpreter.isRuleValid` is `checkLegality` alone;
   `ruleNeedsExplicitTargeting` is **deleted**. `always-cast` drops its `targeting`
   (`data/scripts.ts`); both changes had to land together (dropping the selector while the gate
@@ -1026,10 +1031,17 @@ compared with the previous step:
 
 | Step | Fights changed vs previous step | Cumulative vs committed digest |
 |---|---|---|
-| 1. B1 | **134** | 134 |
+| 1a. B1: the fallback default (script-less attack -> lowest-HP enemy) | **0** | 0 |
+| 1b. B1: `always-cast` drops its selector | **47** | 47 |
+| 1c. B1: bonus-cast's side-aware default (lowest-HP enemy, was first-by-slot) | **100** (98 if applied alone to `main`) | 134 |
+| 1. B1, union of 1a-1c | **134** (the parts overlap: 47 + 100 - 134 = 13 fights change at both 1b and 1c; 11 when each is applied alone to `main`, 47 + 98 - 134) | 134 |
 | 2. Castable-filtered draw | **0** -- proven by its golden only (no corpus fight ends with a granted cast against an empty enemy side, and none has an uncastable equipped spell at a random gem draw) | 134 |
 
-The committed fixture diff is 134 changed rows.
+The committed fixture diff is 134 changed rows. Restoring `always-cast`'s selector together with
+first-by-slot for bonus-cast (the `legacyGrantedTargeting` + enemy-side + no-targeting case)
+reproduces `main`'s committed digest exactly (0 fights differ), so 1b and 1c account for all 134;
+1a moves nothing on its own (the corpus's script-less attackers never have two living enemies whose
+first-by-slot and lowest-HP picks differ), so it is proven by its golden only.
 
 ### New goldens (all hand-derived, arithmetic in the fixture header comments)
 
@@ -1040,9 +1052,10 @@ Each was shown failing with its flip undone, then reverted:
 | `golden-b1-fallback-lowest-hp` (script-less attacker; enemies slot 0 HP 25, slot 1 HP 15; hits slot 1) | Default -> first-by-slot (the retired Phase-1 default) | fails (hits slot 0) |
 | `golden-b1-support-heals-own-side` (enemy support, stock `always-cast`, ally heal; the healed ally is wounded in-fight, heal 10 < missing 15, no clamp) | Default -> first-by-slot; and separately, `always-cast` regains `targeting: lowest-hp-enemy` | both fail (heal lands on the wrong creature) |
 | `golden-castable-draw` (bonus-caster, post-`createCombat` slots [enemy-side innate, ally heal]; seed 8002: chance roll 0.8341, gem draw 0.2492 -> unfiltered picks slot 0 = the enemy spell, which fizzles; filtered pool is [slot 1]) | Unfiltered draw | fails (no `SpellCast`/`HealApplied`); the same golden also fails under the first-by-slot default undo (the heal would land on the caster) |
+| `golden-b1-bonus-cast-default` (bonus-caster, `chancePercent` 100, exactly one enemy-side single-target spell, post-`createCombat` slots [bolt] asserted; enemies slot 0 HP 50, slot 1 HP 30; always-wait so the cast is the only hit; 30 - 10 = 20, no kill, no clamp; no Provoker/Confusion/Tunnel Vision) | Restore first-by-slot for the bonus-cast path only (`legacyGrantedTargeting` + enemy-side + no targeting) | fails (hits slot 0: `targetId` a, `remainingHp` 40); it is the only golden that fails under this mutation |
 
 The castable-draw test also asserts the post-`createCombat` `equippedSpells` order, since fight
-setup prepends innate spells. The two 1-fight goldens are frozen-sweep-covered too (+3 replay
+setup prepends innate spells. The new goldens are frozen-sweep-covered too (+4 replay
 tests). The other new goldens for the split (Stun/Silence/Confusion/Provoke echo, B5 + rule 4)
 belong to C2c.
 
@@ -1062,16 +1075,25 @@ belong to C2c.
 ### Verification
 
 `npx tsc -b`, `npm run lint`, `npm run format:check`, `npm run build` clean;
-`npx vitest run`: **118 files / 766 tests** (from 115 / 754: +3 golden tests, +3 sweep replays, +4
+`npx vitest run`: **119 files / 768 tests** (from 115 / 754: +4 golden tests, +4 sweep replays, +4
 interpreter, +2 actions). Frozen double-resolve and replay sweep green.
 
 ### Spec notes
 
 None new: the plan-review doc-sync already answered every question this slice raised (peek in the
 interpreter; `acted-before-target` false with no single default; default from the resolved
-action). One fixture comment in `golden-heal-cast.fixture.ts` still says the stock `always-cast`
-targets `lowest-hp-enemy`; it's stale since B1 but left untouched, because the `__golden__/`
-diff must stay empty for existing fixtures.
+action).
+
+### Review changes (PR #72)
+
+- **F1:** `golden-b1-bonus-cast-default` (above), with its discrimination proof.
+- **L1:** the B1 attribution row is split into its parts (above).
+- **L2 -- comment-only edits to two existing golden fixtures** (existing fixtures may be edited in
+  comments only; verified by stripping comments from the old and new file and comparing the
+  remaining code: identical): `golden-heal-cast.fixture.ts` (the `HEAL_LOWEST_ALLY_SCRIPT` doc
+  comment no longer claims `always-cast` targets `lowest-hp-enemy`) and
+  `golden-buff-cast.fixture.ts` (the trailing comment on `scriptId: 'always-cast'`; the code on
+  that line is unchanged).
 
 ### Next
 

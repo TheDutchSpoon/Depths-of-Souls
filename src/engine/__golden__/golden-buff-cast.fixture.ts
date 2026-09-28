@@ -45,7 +45,7 @@ export const playerParty = makeParty('player', [
     defence: 20,
     speed: 20,
     affinity: 'vitality',
-    scriptId: 'always-cast', // AOE ignores this script's (enemy-flavored) targeting field.
+    scriptId: 'always-cast', // `always-cast` has no targeting field; an AOE spell needs none.
     equippedSpells: [BUFF_SPELL],
   },
   {
