@@ -81,8 +81,8 @@ on the same branch.
   marked as placeholders in a code comment, per ASSUMPTION 25). A new
   `data/species/names.test.ts` asserts non-empty + unique across the real registries (test
   fixtures are exempt). The matching `species-locked.md` edit (ASSUMPTION 25 also asks for the
-  placeholder marking there) is **not** in this branch's diff — it lands in the review's own
-  doc-sync pass, not here.
+  placeholder marking there) came from the review's doc-sync and is committed on this branch
+  (`feedback docs`), not authored by the build.
 - **S4 — Vitest project split** (`vite.config.ts`): `test.projects`, one Node project, one jsdom
   project. The Node project's `include` is a single catch-all (`src/**/*.test.{ts,tsx}`) minus
   the jsdom project's own two folders (`src/ui/**`, `src/app/**`) — **not** an enumerated
@@ -180,8 +180,13 @@ recorded now, with method, as the 4.1-H starting point: **well below** both T1 (
 clear) and ASSUMPTION 22's CI floor (80%), for all three specs — 4.1-H has real work to do here,
 not just a rounding pass.
 
-No other spec/doc conflicts surfaced; CONVENTIONS.md's Phase 4.1-A text matched the brief
-throughout and needed no correction.
+One new decision surfaced in review (PR #67): Atlas pins could route `descend` into the
+generator's throw, and a gap in authored biomes would have exposed crashing floors. Decided:
+`pinBiome` refuses a biome with no content (`biome-has-no-content`), and the content frontier is
+the unbroken run of authored biomes from biome 1. The review's doc-sync synced this into
+`CONVENTIONS.md` (content frontier; State & persistence) and `GAME_DESIGN.md` (Biome Atlas), on
+this branch. The brief's ASSUMPTION 9 lists only the two original `pinBiome` reasons;
+CONVENTIONS is the spec. No other spec/doc conflicts surfaced.
 
 ### Verification
 
