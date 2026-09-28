@@ -9,9 +9,17 @@ import {
 } from './scripts'
 import { EMBER_LANCE } from './spells'
 import { decideAction } from '../engine/interpreter'
+import { resolveIntent } from '../engine/actions'
 import { makeParty } from '../engine/__fixtures__/creatures'
 import { createRngState } from '../engine/rng'
-import type { CombatState } from '../engine/types'
+import type { CombatState, Creature } from '../engine/types'
+import type { Script } from '../engine/scripting-types'
+
+/** decideAction returns an unresolved Intent (Phase 4.1-C2a, A1); resolve it the same way
+ * combat.ts's resolveTurn does. */
+function decide(creature: Creature, script: Script | null, state: CombatState) {
+  return resolveIntent(creature, decideAction(creature, script, state), state)
+}
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
@@ -37,7 +45,7 @@ describe('stock scripts', () => {
       { id: 'low', currentHp: 5 },
     ])
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, ALWAYS_ATTACK_SCRIPT, state)).toEqual({
+    expect(decide(player[0]!, ALWAYS_ATTACK_SCRIPT, state)).toEqual({
       kind: 'attack',
       targetId: enemy[1]!.id,
     })
@@ -47,7 +55,7 @@ describe('stock scripts', () => {
     const player = makeParty('player', [{ id: 'me', equippedSpells: [EMBER_LANCE] }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, ALWAYS_CAST_SCRIPT, state)).toEqual({
+    expect(decide(player[0]!, ALWAYS_CAST_SCRIPT, state)).toEqual({
       kind: 'cast',
       targetShape: 'single',
       gemSlot: 0,
@@ -59,7 +67,7 @@ describe('stock scripts', () => {
     const player = makeParty('player', [{ id: 'me', equippedSpells: [null] }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decideAction(player[0]!, ALWAYS_CAST_SCRIPT, state)).toEqual({
+    expect(decide(player[0]!, ALWAYS_CAST_SCRIPT, state)).toEqual({
       kind: 'attack',
       targetId: enemy[0]!.id,
     })
@@ -68,7 +76,7 @@ describe('stock scripts', () => {
   it('always-defend defends', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const state = makeState({ playerParty: player, enemyParty: [] })
-    expect(decideAction(player[0]!, ALWAYS_DEFEND_SCRIPT, state)).toEqual({
+    expect(decide(player[0]!, ALWAYS_DEFEND_SCRIPT, state)).toEqual({
       kind: 'defend',
     })
   })
@@ -76,7 +84,7 @@ describe('stock scripts', () => {
   it('always-provoke provokes', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const state = makeState({ playerParty: player, enemyParty: [] })
-    expect(decideAction(player[0]!, ALWAYS_PROVOKE_SCRIPT, state)).toEqual({
+    expect(decide(player[0]!, ALWAYS_PROVOKE_SCRIPT, state)).toEqual({
       kind: 'provoke',
     })
   })
@@ -84,7 +92,7 @@ describe('stock scripts', () => {
   it('always-wait waits', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const state = makeState({ playerParty: player, enemyParty: [] })
-    expect(decideAction(player[0]!, ALWAYS_WAIT_SCRIPT, state)).toEqual({ kind: 'wait' })
+    expect(decide(player[0]!, ALWAYS_WAIT_SCRIPT, state)).toEqual({ kind: 'wait' })
   })
 
   it('STOCK_SCRIPTS_BY_ID contains exactly the 5 stock scripts, keyed by id', () => {

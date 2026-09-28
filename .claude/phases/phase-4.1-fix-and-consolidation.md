@@ -649,3 +649,197 @@ C2 -- the A1 action pipeline + `ResolutionContext` (fully threaded through the r
 (side-aware default targeting) + B2 (reroute bonus-cast/echo-cast through the pipeline) + B5
 (pre-hit fizzle). Every existing golden stays byte-identical; new goldens prove each behavior
 change.
+
+## 4.1-C2a -- Action pipeline plumbing (byte-identical)
+
+Split from the brief's single "C2" slice at kickoff, mirroring the C1/C2 split's own precedent:
+C2a is pure plumbing (every existing test and golden passes unchanged; tests may change only
+their call sites, never an expected value), C2b (not yet built -- this PR stops here for review)
+is the behaviour changes (B1, B2, B5), each landing with its own new, discriminating golden.
+
+### What was built
+
+- **`actions.ts`** (NEW) -- the one action pipeline the brief's A1 item describes, holding
+  `checkLegality`, `resolveIntent`, `executeAction` + the five executors (moved verbatim from
+  `combat.ts`: `executeAttack`/`executeCastSingle`/`executeCastAoe`/`executeDefend`/
+  `executeProvoke`/`executeWait`, plus their own helpers `buildInstanceList`,
+  `resolveInstanceTarget`, `splashTargetIds`, `adjacentLivingTargets`, `resolveSpellOffStat`,
+  `applyCastPayload`, `applyStatusIfAlive`), `castableGemSlots`, `defaultTargetingFor`, and
+  `createResolutionContext` (the `ResolutionContext` factory).
+  - **`Intent = { action: RuleAction, targeting?: TargetSelector }`** (`scripting-types.ts`),
+    `CastRuleAction.gemSlot: number | 'random'`, and `TargetSelector` gains **`'random'`**
+    (`scripting-types.ts`). The `'random'` selector's three exhaustive consumers all handle it as
+    the brief specifies: `targetSelectorHasCandidate` (existence, side-neutral: true whenever the
+    creature has a living ally or enemy -- "ally" always includes the actor itself, so this is
+    unconditionally true; `checkLegality` never actually reaches this branch for `'random'`, since
+    it intercepts the kind first to check the INTENDED side specifically -- see below);
+    `peekTargetSelector` returns `null` for it, same as `random-enemy`/`random-ally`;
+    `resolveTargetSelector` throws (it needs the action's intended side, which this module never
+    has) -- resolved instead by `actions.ts`'s own `resolveRandomTarget`, over
+    `livingEnemiesOf`/`livingAlliesOf`, same pool/order as `random-enemy`/`random-ally`.
+  - **`checkLegality(actor, intent, state)`** -- pure, draws nothing. Locks (`isActionSuppressed`,
+    moved in from `interpreter.ts` unchanged), an empty gem slot, `castableGemSlots(actor,
+    state).length > 0` for `gemSlot: 'random'`, and `hasValidTarget` (existence over the intent's
+    explicit selector, or -- since `checkLegality` is the FINAL, general "can this actor act at
+    all" answer, not the interpreter's own C2a-interim rule-validity gate below -- over the
+    intended side's living pool when targeting is absent).
+  - **`resolveIntent(actor, intent, state)`** -- the only place action-level draws happen. Gem
+    resolution (uniform over non-null equipped slots, innate included) draws BEFORE target
+    resolution, matching today's bonus-cast/echo order exactly (pinned by a new test, see below).
+    Target resolution: explicit selector (`'random'` included) -> **today's Phase-1 first-living-
+    by-slot default** (`legacyDefaultTarget`, NOT the side-aware one -- see the ASSUMPTION below)
+    -> for an enemy-side single target, Confusion -> Tunnel Vision -> Provoke
+    (`resolveOffensiveTarget`, `targeting.ts`, untouched). An ally-side single target skips that
+    override pipeline entirely, as today.
+  - **`defaultTargetingFor(actor, action)`** -- the shared helper for the FINAL (C2b, B1)
+    side-aware default target selector (`lowest-hp-enemy`/`lowest-hp-ally`), `undefined` for an
+    AOE cast, a `gemSlot: 'random'` cast, or a self-only action. Built and unit-tested now;
+    **not yet wired into `resolveIntent` or the interpreter's lookahead** -- see the ASSUMPTION.
+  - **`castableGemSlots(actor, state)`** -- every non-empty equipped slot (innate included) whose
+    spell has a valid target on its own intended side (AOE is always castable). Used by
+    `checkLegality`'s `gemSlot: 'random'` case only; `resolveIntent`'s own gem draw stays
+    unfiltered (see the ASSUMPTION -- the two are provably equivalent in any reachable in-fight
+    state, since a spell's own intended side can only be empty if the fight has already ended).
+  - **`createResolutionContext(events, cascade)`** builds a `ResolutionContext` whose `runAction`
+    closure does exactly what the brief's `RunActionOptions.announce` seam describes: resolve the
+    intent, push `announce` (if given) once it resolves, then execute -- a no-op (no announce, no
+    event) if the actor is dead/unknown or the intent doesn't resolve to an action.
+- **`ResolutionContext { events, cascade, runAction }`** (NEW, `resolution-types.ts` -- a leaf
+  types module importing only `types.ts`/`ids.ts`/`effect-types.ts`/`scripting-types.ts`).
+  Threaded through the whole resolver: every `resolution.ts` function that used to take separate
+  `events`/`cascade` arguments now takes one `ctx: ResolutionContext` (`dealDamage`,
+  `dealDamageWithScalingStat`, `dealDamageWithOffStat`, `applyDamageAndEmit`, `fireHook`,
+  `executeResponse`, `applyFlatDamage`, `applyHeal`, `applyStatus`, `applyStatModifier`).
+  `resolution.ts` imports nothing from `actions.ts`/`combat.ts`, not even a type -- confirmed by
+  grep, and structurally guaranteed by `resolution-types.ts` sitting below both. `fireHook`'s old
+  `observed`/`onEchoCast`/`statusTriggerGate` positional parameters become one options object,
+  `{ observed?, statusTriggerGate? }` -- `onEchoCast` is gone outright: fireHook's `echoCast`
+  branch now calls `ctx.runAction(source, ECHO_CAST_INTENT, working, { announce:
+  EchoCastGrantedEvent })` directly, where `ECHO_CAST_INTENT = { action: { kind: 'cast', gemSlot:
+  'random' }, targeting: { kind: 'random' } }` -- the exact shape B2's own bullet describes for
+  echo. The depth increment/decrement around the call, and the self-re-entry-guard exemption, are
+  unchanged (moved, not rewritten). `newCascade` stays in `resolution.ts` (a factory, not a type);
+  `CascadeState`/`ResolutionContext` are re-exported from there too, so no import site needed to
+  change which module it names.
+- **`combat.ts`** slimmed to the turn skeleton + fight setup: the five executors and their
+  helpers moved out to `actions.ts`; every `fireHook` call site (fight-start, turn-start,
+  turn-end, the round-end sweep) now builds a `ResolutionContext` via `createResolutionContext`
+  (fresh per call, matching today's fresh-`newCascade()`-per-call-site discipline exactly).
+  `resolveTurn`'s action step is now `ctx.runAction(actorAfterStart.id, decideAction(...),
+  working)` -- `decideAction` always returns a non-null `Intent` now (see below), so the old `if
+  (action) executeAction(...)` gate disappears; `runAction`'s own internal `resolveIntent`-returns-
+  `null` case reproduces the old "defensive/unreachable no-op" path exactly.
+  `maybeFireBonusCast` still lives here (it's the turn skeleton's own granted-actions step) but
+  now builds an intent (`{ action: { kind: 'cast', gemSlot: 'random' } }`) and calls
+  `ctx.runAction` instead of calling `executeCastSingle`/`executeCastAoe` directly -- same
+  chancePercent gate, same "equipped.length === 0 -> silent no-op" fizzle (now `resolveIntent`
+  returning `null`), no legality/lock check (B2's own gating is a C2b item). `runEchoCast` is
+  **deleted outright** -- its logic now lives in `fireHook`'s `echoCast` branch (resolution.ts),
+  reached via `ctx.runAction`, per the point above.
+- **`interpreter.ts`** -- `decideAction(creature, script, state)` now returns the winning rule's
+  **unresolved `Intent`**, or the fallback intent, never a resolved `Action`. The script-rule loop
+  keeps a C2a-**interim** gate, `ruleNeedsExplicitTargeting` (renamed from `actionNeedsTargeting`,
+  logic unchanged) -- a rule still needs an explicit `targeting` field to be valid for Attack/
+  single-Cast, exactly as today; `checkLegality` alone (the general, "missing targeting is fine"
+  answer) would already accept a targeting-less rule, which is precisely the B1 behaviour change
+  C2b lands deliberately, with its own discriminating golden -- landing it silently here would
+  pre-empt that. `isRuleValid` is `ruleNeedsExplicitTargeting(...) && !rule.targeting -> invalid`,
+  else `checkLegality(...)`. The implicit fallback (`decideImplicitFallback`) mirrors today's
+  `isActionSuppressed('attack')` + "does the enemy side have a target" check exactly, via
+  `checkLegality(creature, { action: { kind: 'attack' } }, state)` -- legal -> the bare Attack
+  intent (resolved later, at execution, through `legacyDefaultTarget`); illegal -> the Wait
+  intent. `isActionSuppressed` itself moved into `actions.ts` (used by `checkLegality`).
+
+### The one ASSUMPTION this slice needed (flagged, not yet an existing-golden risk)
+
+**`resolveIntent`'s own default-target resolution, and `checkLegality`'s use of `castableGemSlots`
+for the actual gem draw, are deliberately NOT yet wired to their final (C2b) shape**, even though
+both final-shape helpers (`defaultTargetingFor`, `castableGemSlots`) are built and unit-tested
+now:
+
+- Wiring `defaultTargetingFor` into `resolveIntent` today would make the implicit fallback (and
+  bonus-cast, which shares the same "no explicit targeting" resolution path) target `lowest-hp-
+  enemy` instead of first-by-slot -- exactly B1's own behaviour change. No EXISTING golden would
+  notice (verified: every existing fallback golden's two candidate targets coincide, per the
+  brief's own note), but landing it here would pre-empt B1's dedicated C2b discriminating golden
+  ("a script-less attacker against two enemies where slot 0 has more HP than slot 1 must hit slot
+  1") -- that golden would pass without any C2b code change, and "fails when its mechanism is
+  removed" would have nothing in C2b to remove. Deferred to C2b on purpose.
+- `resolveIntent`'s `gemSlot: 'random'` draw stays unfiltered (today's exact pool: every non-null
+  equipped slot, no target-existence check), rather than routing through `castableGemSlots`.
+  These are provably equivalent for every reachable resolution (a spell's own intended side can
+  only be empty if that whole side has been wiped, which ends the fight before another action
+  resolves), so this is not a live behavioural difference -- it's a conservative choice to touch
+  the smallest surface possible in a byte-identical PR.
+- A related, structural consequence: `resolveIntent` applies the same Confusion -> Tunnel Vision
+  -> Provoke wrapping to EVERY enemy-side single target, including bonus-cast's and echo's --
+  which today's bonus-cast/echo do NOT get (B2 item 3's own fix). Verified empirically: no
+  existing golden combines bonus-cast (Arcane Surge) or echo (Resonant Overtone) with an active
+  Confusion or Provoke effect, and the override pipeline draws zero extra RNG when neither is
+  active on the actor (Confusion) or the opposing side (Provoke) -- so this costs nothing against
+  any existing golden. Keeping the pipeline uniform (one `resolveIntent`, not a per-caller flag)
+  was judged the more honest plumbing than threading a "skip the override pipeline" toggle through
+  for a distinction the brief itself retires in C2b anyway. New unit/sweep coverage (the seed
+  sweep, below) exercises exactly this combination for the first time.
+
+### New tests
+
+- **`target-selectors.test.ts`**: a new `describe` block for `'random'` -- existence (side-neutral,
+  true whenever the actor has a living ally or enemy), `targetSelectorHasCandidate`/
+  `peekTargetSelector` draw zero RNG, `resolveTargetSelector` throws.
+- **`interpreter.test.ts`**: rewritten to compose `decideAction` + `resolveIntent` (a `decide()`
+  helper) so every existing assertion keeps its exact VALUE, only the call site changes, per the
+  brief's own C2a rule. The one deliberately-unchanged-in-C2a case ("skips a targeting-required
+  rule with no targeting field") still expects the skip. Added a `checkLegality` describe block:
+  Attack legality tracks enemy-side existence, draws zero RNG even with `random-enemy` targeting,
+  an empty Cast slot is illegal, an AOE Cast is always legal, `gemSlot: 'random'` legality tracks
+  `castableGemSlots`, and Defend/Provoke/Wait are always legal.
+- **`actions.test.ts`** (NEW): `defaultTargetingFor`'s five cases (Attack, enemy-Cast, ally-Cast,
+  AOE, `gemSlot: 'random'`, an empty slot, and the three self-only actions) and `castableGemSlots`
+  (innate slots included, a target-less single-target spell excluded, AOE always included); a
+  discriminating draw-order test proving `gemSlot: 'random'` draws strictly before the target (two
+  unequal-size pools, so the gem-first and target-first hypotheses resolve to different concrete
+  picks -- not just a draw-COUNT check, which can't tell the two orders apart since `nextRandom`'s
+  own state transition doesn't depend on the pool size the caller multiplies it by).
+- **`seed-sweep.test.ts`** (NEW, the brief's own required proof): a 2v2 real-content party mix
+  (Sorcerer starter's Arcane Surge for bonus-cast, Resonant Overtone for echo, `always-provoke`
+  for Provoke, the real `confusion` status pre-applied for Confusion) run across seeds 0-199. For
+  each seed, two independent `resolveFight` runs from a freshly built `CombatState`, and a third
+  from a `deepFreeze`d snapshot of it, all produce the identical event log -- 200 cases, all
+  green. A companion sanity test confirms the fixture actually exercises all four mechanisms
+  somewhere across the sweep (bonus-cast via a second same-turn SpellCast, echo via
+  `EchoCastGranted`, Provoke via a cast landing on the high-HP provoker, Confusion via a cast
+  redirected onto the caster's own ally) -- separate from `frozen-replay-sweep.test.ts`, which
+  only replays fixed-seed fixtures already committed to disk.
+- Two stale doc comments (`effect-types.ts`'s `TriggeredDef.echoCast`/`BonusCastDef`,
+  `data/traits/glimmerdark.ts`'s Resonant Overtone) that named `combat.ts`'s old
+  `runEchoCast`/direct-executor-call mechanisms were corrected to describe the actual
+  `ctx.runAction` path -- comment-only, no behaviour change.
+
+### Verification
+
+All four gates green: `npx tsc -b` clean; `npx vitest run` -- **115 files / 951 tests passed** (up
+from 113 / 733 on `main`: the seed sweep's 201 cases, `actions.test.ts`'s 14, 4 new `'random'`-
+selector cases, and interpreter.test.ts's new `checkLegality` block, on top of the mechanical
+call-site rewrites everywhere else -- see "New tests" above for why this slice adds more than
+just the sweep); `npm run lint` clean; `npm run format:check` clean (after `npm run format`;
+whitespace/wrapping only); `npm run build` succeeds.
+
+**Golden diff against `main`: empty.** Confirmed via `git status`/`git diff --stat`: no
+`*.fixture.ts` file appears anywhere in the diff. Every changed `*.test.ts` file (interpreter,
+resolution, support-spells, `data/scripts`, `data/species/starters`, and 6 golden `.test.ts`
+driver files: `golden-hollowkin-wretch-self-dot`, `golden-round-end-mid-sweep-poison(-refresh)`,
+`golden-sporch-cinderlord-burn-stacks`, `golden-spore-spread-dot-kill`/`-filter`/`-fizzle`)
+changed **only** in call-site shape (wrapping `events`/`cascade` into `createResolutionContext(...)`,
+composing `decideAction` with `resolveIntent`) -- no `expectedEvents`/expected-value literal
+changed anywhere, confirmed by the full suite passing unchanged.
+
+### Next
+
+C2b -- the behaviour changes: B1 (optional targeting, the side-aware default, wiring
+`defaultTargetingFor` into `resolveIntent` and the `acted-before-target` peek, retiring
+`legacyDefaultTarget`/`getDefaultTarget`), B2 (every action source obeys the same rules: skipped
+turns take no action at all, Silenced blocks every cast chosen or granted, rule 4's re-target
+gains the side-aware default + Provoke and `getDefaultTarget` loses its last caller), B5 (the
+pre-hit fizzle). Each lands with its own new, discriminating golden, shown to fail with its
+mechanism removed; every existing golden (now including this PR's own) stays byte-identical.

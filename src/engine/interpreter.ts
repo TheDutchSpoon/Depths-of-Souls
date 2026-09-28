@@ -1,156 +1,71 @@
 import { evaluateCondition } from './conditions'
-import { targetSelectorHasCandidate, resolveTargetSelector } from './target-selectors'
-import { getDefaultTarget, resolveOffensiveTarget } from './targeting'
-import { hasStatusImmunity } from './effects'
-import type { Action, CombatState, Creature } from './types'
-import type { Rule, RuleAction, Script } from './scripting-types'
+import { checkLegality } from './actions'
+import type { CombatState, Creature } from './types'
+import type { Intent, Rule, RuleAction, Script } from './scripting-types'
 
-function actionNeedsTargeting(action: RuleAction, creature: Creature): boolean {
+/**
+ * Phase 4.1-C2a: whether `action` needs an EXPLICIT `targeting` field to be a valid rule -- this
+ * gate is C2a-INTERIM (mirrors today's Phase-1-through-4.1-C1 behaviour exactly: a rule without
+ * targeting is invalid, full stop). `checkLegality` (actions.ts) itself is already the general,
+ * final-shape answer (missing targeting is fine -- some default target exists), since it also
+ * has to answer the implicit fallback's own legality question (which never had a `targeting`
+ * field to omit). C2b (B1) deletes this function outright and lets `checkLegality` alone decide
+ * rule validity, once the engine's own default-target resolution actually uses the side-aware
+ * default instead of today's first-by-slot one (see actions.ts's own header comment).
+ */
+function ruleNeedsExplicitTargeting(action: RuleAction, creature: Creature): boolean {
   if (action.kind === 'attack') return true
   if (action.kind === 'cast') {
+    if (action.gemSlot === 'random') return true // no resolved spell yet to know AOE vs single
     const spell = creature.equippedSpells[action.gemSlot]
     // Shape is resolved from the equipped spell at evaluation time, not authored on the
-    // rule; a not-yet-equipped/empty slot still "needs" targeting so isRuleValid's
-    // targeting check can gate it (isRuleActionValid already independently rejects it).
+    // rule; a not-yet-equipped/empty slot still "needs" targeting so isRuleValid can gate on
+    // it (checkLegality already independently rejects an empty slot regardless).
     return spell ? spell.targetShape === 'single' : true
   }
   return false // defend / provoke / wait: self-only, never need targeting
 }
 
-/**
- * Phase 4 Slice B: scoped suppress-action (Silenced=Cast, Pacified=Attack) gates rule validity
- * HERE, not via resolution.ts's hook-fired `suppressed` flag (that flag stays reserved for
- * unscoped/'all' suppression -- Stun's existing whole-turn-skip mechanism, byte-identical). A
- * pure scan of the acting creature's active effects for a present suppress-action response
- * whose scope covers `kind` -- ASSUMPTION 8: only ever gates Attack/Cast; Defend/Provoke/Wait
- * are never suppressible in v1, so this is never consulted for those kinds.
- *
- * Phase 4 Slice C (Clear Mind / Aggressive): a status-carrying (condition-status) suppression
- * is skipped entirely when the creature carries a matching status-immunity -- per CONVENTIONS'
- * "immunity suppresses the effect, not the application", the status still applies/stacks/
- * counts for has-status; only its suppress-action effect is ignored here. A plain permanent
- * `triggered` suppression (no statusId to key immunity off) is never immune-gated.
- */
-function isActionSuppressed(creature: Creature, kind: 'attack' | 'cast'): boolean {
-  const matchesScope = (response: {
-    kind: string
-    scope?: 'all' | 'attack' | 'cast'
-  }) => {
-    if (response.kind !== 'suppress-action') return false
-    const scope = response.scope ?? 'all'
-    return scope === 'all' || scope === kind
-  }
-  return creature.activeEffects.some((e) => {
-    if (e.category === 'triggered') return matchesScope(e.response)
-    // Phase 4 Slice E2: a condition-status may carry MORE THAN ONE trigger (e.g. Sleep's
-    // on-turn-start suppress + on-damage-taken wake-up) -- check every trigger's response, not
-    // just one, regardless of which hook it's declared on (this scan doesn't care about hook,
-    // matching its pre-Slice-E2 behavior for the single-trigger case).
-    if (e.category !== 'condition-status') return false
-    if (hasStatusImmunity(creature, e.statusId)) return false
-    return e.triggers.some((t) => matchesScope(t.response))
-  })
-}
-
-/** The one reachable v1 invalidity beyond scoped suppression: Cast referencing an empty gem slot. */
-function isRuleActionValid(action: RuleAction, creature: Creature): boolean {
-  if (action.kind === 'cast') {
-    if (creature.equippedSpells[action.gemSlot] == null) return false
-    return !isActionSuppressed(creature, 'cast')
-  }
-  if (action.kind === 'attack') return !isActionSuppressed(creature, 'attack')
-  return true
-}
-
 function isRuleValid(rule: Rule, creature: Creature, state: CombatState): boolean {
-  if (!isRuleActionValid(rule.action, creature)) return false
-  if (!actionNeedsTargeting(rule.action, creature)) return true
-  if (!rule.targeting) return false
-  return targetSelectorHasCandidate(rule.targeting, creature, state) // existence check, no RNG
-}
-
-function resolveRuleAction(
-  rule: Rule,
-  creature: Creature,
-  state: CombatState,
-): Action | null {
-  switch (rule.action.kind) {
-    case 'attack': {
-      const targeting = rule.targeting
-      if (!targeting) return null // defensive/unreachable -- validity already checked
-      const targetId = resolveOffensiveTarget(creature, state, () =>
-        resolveTargetSelector(targeting, creature, state),
-      )
-      return targetId ? { kind: 'attack', targetId } : null
-    }
-    case 'cast': {
-      const spell = creature.equippedSpells[rule.action.gemSlot]
-      if (!spell) return null // defensive/unreachable
-      if (spell.targetShape === 'aoe') {
-        return { kind: 'cast', targetShape: 'aoe', gemSlot: rule.action.gemSlot }
-      }
-      const targeting = rule.targeting
-      if (!targeting) return null
-      // Phase 4 Slice E: an ally-targeting spell (Spell.targetSide === 'ally') skips the
-      // Provoke/Confusion targeting-override pipeline entirely -- resolveOffensiveTarget's whole
-      // contract is "enemy-targeting offensive action" (GAME_DESIGN §7: "Provoke applies only
-      // to enemy-targeting offensive actions; ally-targeting actions... are unaffected";
-      // ASSUMPTION: bundling Confusion into the same exemption here, since its roll is likewise
-      // scoped to a "harmful action" per CONVENTIONS, which a support cast on an ally isn't).
-      const targetId =
-        spell.targetSide === 'ally'
-          ? resolveTargetSelector(targeting, creature, state)
-          : resolveOffensiveTarget(creature, state, () =>
-              resolveTargetSelector(targeting, creature, state),
-            )
-      return targetId
-        ? { kind: 'cast', targetShape: 'single', gemSlot: rule.action.gemSlot, targetId }
-        : null
-    }
-    case 'defend':
-      return { kind: 'defend' }
-    case 'provoke':
-      return { kind: 'provoke' }
-    case 'wait':
-      return { kind: 'wait' }
-    default: {
-      const exhaustive: never = rule.action
-      throw new Error(`Unhandled rule action kind: ${String(exhaustive)}`)
-    }
-  }
-}
-
-function decideImplicitFallback(creature: Creature, state: CombatState): Action {
-  // ASSUMPTION (Slice B, not spelled out by the brief): the implicit fallback must also honor
-  // scoped Attack suppression (Pacified) -- otherwise an empty/no-matching script would
-  // trivially bypass it via the fallback's unconditional Attack. Falls back to Wait, mirroring
-  // how a script rule proposing a suppressed Attack is simply invalid.
-  if (isActionSuppressed(creature, 'attack')) return { kind: 'wait' }
-  const enemyParty = creature.side === 'player' ? state.enemyParty : state.playerParty
-  const targetId = resolveOffensiveTarget(creature, state, () =>
-    getDefaultTarget(enemyParty),
+  if (ruleNeedsExplicitTargeting(rule.action, creature) && !rule.targeting) return false
+  return checkLegality(
+    creature,
+    { action: rule.action, targeting: rule.targeting },
+    state,
   )
-  return targetId ? { kind: 'attack', targetId } : { kind: 'wait' }
+}
+
+/**
+ * Phase 4.1-C2a: mirrors today's `decideImplicitFallback` exactly, just expressed as an intent
+ * instead of a pre-resolved Action -- `checkLegality` already replicates the old
+ * `isActionSuppressed(creature, 'attack')` + "does the enemy side have a valid target" check
+ * (see actions.ts's `hasValidTarget`), pure and RNG-free either way.
+ */
+function decideImplicitFallback(creature: Creature, state: CombatState): Intent {
+  const attack: Intent = { action: { kind: 'attack' } }
+  return checkLegality(creature, attack, state) ? attack : { action: { kind: 'wait' } }
 }
 
 /**
  * The Phase 1 seam, now consulting the script. Side-effect-free lookahead: walk the
  * ordered rules top-down, evaluating condition + validity as pure predicates over current
- * state; the first rule that passes wins, and only then is its single action resolved
- * (the one point where a target selector's RNG draw, if any, can occur). Non-winning
- * rules never consume RNG state, so `same seed -> identical outcome` holds regardless of
- * incidental script structure.
+ * state; the first rule that passes wins. Non-winning rules never consume RNG state, so
+ * `same seed -> identical outcome` holds regardless of incidental script structure.
+ *
+ * Phase 4.1-C2a (A1): returns the winning rule's UNRESOLVED `Intent` (or the fallback intent),
+ * never a resolved `Action` -- resolution (target/gem draws) happens exactly once, in
+ * `actions.ts`'s `resolveIntent`, for whichever intent this function returns.
  */
 export function decideAction(
   creature: Creature,
   script: Script | null,
   state: CombatState,
-): Action | null {
+): Intent {
   if (script) {
     for (const rule of script.rules) {
       if (!evaluateCondition(rule.condition, creature, state, rule.targeting)) continue
       if (!isRuleValid(rule, creature, state)) continue
-      return resolveRuleAction(rule, creature, state)
+      return { action: rule.action, targeting: rule.targeting }
     }
   }
   return decideImplicitFallback(creature, state)

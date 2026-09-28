@@ -7,6 +7,7 @@ import {
   fireHook,
   newCascade,
 } from './resolution'
+import { createResolutionContext } from './actions'
 import { getEffectiveStat } from './effective-stats'
 import { updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
@@ -15,8 +16,7 @@ import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
 import { countDraws } from './test-utils/rng-draw-count'
-import type { CreatureId } from './ids'
-import type { CombatEvent, CombatState } from './types'
+import type { CombatEvent, CombatState, Spell } from './types'
 import { createEffectInstanceId, validateStatModifierCondition } from './effect-types'
 import type {
   ConditionStatusEffect,
@@ -253,8 +253,7 @@ describe('loop safety', () => {
       [createCreatureId('x')],
       createCreatureId('y'),
       state,
-      events,
-      atCap,
+      createResolutionContext(events, atCap),
     )
 
     const truncations = events.filter(
@@ -385,16 +384,14 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
       [bearerId],
       allyId,
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     ).state
     state = fireHook(
       'on-ally-death',
       [bearerId],
       allyId,
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     ).state
 
     const bearer = [...state.playerParty, ...state.enemyParty].find(
@@ -454,8 +451,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       createCreatureId('p'),
       { statusId: 'test-dot', duration: 2 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     expect(events[0]).toMatchObject({
       type: 'StatusApplied',
@@ -475,8 +471,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       createCreatureId('p'),
       { statusId: 'test-dot' }, // no duration -- inherits TEST_DOT.defaultDuration (3)
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     expect(events[0]).toMatchObject({ type: 'StatusApplied', duration: 3 })
     const p = result.playerParty.find((c) => c.id === createCreatureId('p'))!
@@ -492,8 +487,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       createCreatureId('p'),
       { statusId: 'test-dot', duration: 9 }, // explicit -- overrides the default (3)
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     expect(events[0]).toMatchObject({ type: 'StatusApplied', duration: 9 })
   })
@@ -507,8 +501,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
         createCreatureId('p'),
         { statusId: 'test-dot', duration },
         state,
-        events,
-        newCascade(),
+        createResolutionContext(events, newCascade()),
       )
     }
     apply(2)
@@ -534,8 +527,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       createCreatureId('p'),
       { statusId: 'test-dot', duration: 2, stacks: 2 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const before = events.length
     fireHook(
@@ -543,8 +535,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
       [createCreatureId('p')],
       undefined,
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const tick = events.slice(before).find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({
@@ -618,16 +609,14 @@ describe('heal response (Regen)', () => {
       createCreatureId('p'),
       { statusId: 'test-regen', duration: 2 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     fireHook(
       'on-round-end',
       [createCreatureId('p')],
       undefined,
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
 
     const heal = events.find((e) => e.type === 'HealApplied')
@@ -653,8 +642,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
         'fixture',
         { self: createCreatureId('a') },
         state,
-        [],
-        newCascade(),
+        createResolutionContext([], newCascade()),
       ),
     ).toThrow(/more than one of amountPerStack\/scalingStat/)
   })
@@ -688,8 +676,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
       'elder-fixture',
       { self: createCreatureId('elder') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const heal = events.find((e) => e.type === 'HealApplied')
     // amount = getEffectiveStat(elder,'health') x 1.0 = 200; ally 10 + 200 = 210, clamped to 30.
@@ -721,8 +708,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
       'necromoss-fixture',
       { self: createCreatureId('necromoss') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const heal = events.find((e) => e.type === 'HealApplied')
     // 2 dead allies x 5 = 10 healed; 50 + 10 = 60, well under the 100 cap.
@@ -781,8 +767,7 @@ describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
         'fixture',
         { self: createCreatureId('a') },
         state,
-        [],
-        newCascade(),
+        createResolutionContext([], newCascade()),
       ),
     ).toThrow(/more than one of offStat\/scalingStat\/flatAmount/)
   })
@@ -811,8 +796,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('p') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const heal = events.find((e) => e.type === 'HealApplied')
     expect(heal).toMatchObject({ amount: 5, remainingHp: 95 })
@@ -841,8 +825,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('p'), stacks: 3 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const heal = events.find((e) => e.type === 'HealApplied')
     expect(heal).toMatchObject({ amount: 3, remainingHp: 100 })
@@ -870,8 +853,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 3, remainingHp: 97 })
@@ -898,8 +880,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim'), stacks: 5 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 15, remainingHp: 85 })
@@ -942,8 +923,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim'), stacks: 5 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 10 })
@@ -971,8 +951,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ rawDamage: 0.3, finalDamage: 1, remainingHp: 9 })
@@ -1007,8 +986,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       createCreatureId('victim'),
       { statusId: 'dealt-buff-fixture', duration: 3 },
       state,
-      setupEvents,
-      newCascade(),
+      createResolutionContext(setupEvents, newCascade()),
     )
     const events: CombatEvent[] = []
     executeResponse(
@@ -1021,8 +999,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     // Still floor(100 * 3 * 1 / 100) = 3, not 4 (3 x 1.5 floored) -- the +50% dealt buff never
     // applies to a flat-mode tick.
@@ -1059,8 +1036,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       createCreatureId('victim'),
       { statusId: 'vulnerable-fixture', duration: 3 },
       state,
-      setupEvents,
-      newCascade(),
+      createResolutionContext(setupEvents, newCascade()),
     )
     const events: CombatEvent[] = []
     executeResponse(
@@ -1073,8 +1049,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     // Still 3, not 4 (3 x 1.5 floored) -- Vulnerable's taken multiplier never applies to a flat
     // DoT tick.
@@ -1104,8 +1079,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim'), stacks: 3 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 4 })
@@ -1136,8 +1110,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim'), stacks: 5 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 27 })
@@ -1160,8 +1133,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
           'fixture',
           { self: createCreatureId('a') },
           state,
-          [],
-          newCascade(),
+          createResolutionContext([], newCascade()),
         ),
       ).toThrow(/stat-derived flat amount needs a positive integer percent/)
     }
@@ -1189,8 +1161,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       'fixture',
       { self: createCreatureId('victim'), stacks: 2 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 14 })
@@ -1425,8 +1396,7 @@ describe('conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review a
       1.0,
       hitAs,
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const dealt = events.find((e) => e.type === 'DamageDealt') as Extract<
       CombatEvent,
@@ -1463,8 +1433,7 @@ describe('grant-action-state response (Phase 4 Slice B)', () => {
       'fixture',
       { self: createCreatureId('a') },
       state,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     const a = [...result.state.playerParty, ...result.state.enemyParty].find(
       (c) => c.id === createCreatureId('a'),
@@ -1506,8 +1475,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       'revive-fixture',
       { self: createCreatureId('reviver') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const fallen = [...result.state.playerParty, ...result.state.enemyParty].find(
       (c) => c.id === createCreatureId('fallen'),
@@ -1550,8 +1518,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       'revive-fixture',
       { self: createCreatureId('reviver') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     ).state
 
     const fallen = [...revived.playerParty, ...revived.enemyParty].find(
@@ -1570,8 +1537,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       1.0,
       'attack',
       revived,
-      hitEvents,
-      newCascade(),
+      createResolutionContext(hitEvents, newCascade()),
     )
     // off 40, def 10 (undefended): core 30, chip 0.4 -> raw 30.4 -> final 30. A stale
     // defending:true would instead give effDef 15, core 25, chip 0.4, raw 25.4 x taken 0.65 =
@@ -1594,8 +1560,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       'revive-fixture',
       { self: createCreatureId('reviver') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     expect(result.state).toEqual(state)
     expect(events).toEqual([])
@@ -1624,8 +1589,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       'revive-fixture',
       { self: createCreatureId('reviver') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const fallen = result.state.playerParty.find(
       (c) => c.id === createCreatureId('fallen'),
@@ -1671,8 +1635,7 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
       createCreatureId('detonator'),
       { statusId: 'glow-fixture', duration: 5, stacks },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     return state
   }
@@ -1694,8 +1657,7 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
       'detonator-fixture',
       { self: createCreatureId('detonator'), source: createCreatureId('foe') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
 
     expect(events[0]).toMatchObject({ type: 'StatusExpired', statusId: 'glow-fixture' })
@@ -1734,8 +1696,7 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
       'detonator-fixture',
       { self: createCreatureId('detonator'), source: createCreatureId('foe') },
       bareState,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     expect(events).toEqual([])
     expect(result.state).toEqual(bareState)
@@ -1783,8 +1744,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
       createCreatureId(targetId),
       { statusId: 'test-debuff', duration: 5 },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     return state
   }
@@ -1801,8 +1761,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
       'cleanse-fixture',
       { self: createCreatureId('healer') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
 
     expect(events).toEqual([
@@ -1830,8 +1789,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
       'cleanse-fixture',
       { self: createCreatureId('healer') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     expect(events).toEqual([])
     expect(result.state).toEqual(state)
@@ -1858,8 +1816,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
         createCreatureId(id),
         { statusId: 'test-debuff', duration: 5 },
         state,
-        applyEvents,
-        newCascade(),
+        createResolutionContext(applyEvents, newCascade()),
       )
     }
     const events: CombatEvent[] = []
@@ -1872,8 +1829,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
       'dispel-fixture',
       { self: createCreatureId('healer') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     expect(events.filter((e) => e.type === 'StatusExpired')).toHaveLength(2)
     for (const id of ['e1', 'e2']) {
@@ -1908,8 +1864,7 @@ describe('all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbare
       'shieldbarer-starter-rally',
       { self: createCreatureId('provoker') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     for (const id of ['provoker', 'ally']) {
       const c = result.state.playerParty.find((x) => x.id === createCreatureId(id))!
@@ -1952,8 +1907,7 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
       'swarmhive-queen-fixture',
       { self: createCreatureId('queen') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     for (const id of ['queen', 'hive-mate']) {
       const c = result.state.playerParty.find((x) => x.id === createCreatureId(id))!
@@ -1996,8 +1950,7 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
       'swarmhive-queen-fixture',
       { self: createCreatureId('bearer') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     expect(events.filter((e) => e.type === 'StatModifierApplied')).toHaveLength(0)
     for (const c of result.state.playerParty) {
@@ -2045,8 +1998,7 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
       1.0,
       'attack',
       rigged,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
     const bearer = [...result.playerParty, ...result.enemyParty].find(
       (c) => c.id === createCreatureId('bearer'),
@@ -2096,8 +2048,7 @@ describe('suppress-action scope (Phase 4 Slice B)', () => {
       'fixture',
       { self: createCreatureId('a') },
       state,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     expect(result.suppressed).toBe(true)
   })
@@ -2113,8 +2064,7 @@ describe('suppress-action scope (Phase 4 Slice B)', () => {
       'fixture',
       { self: createCreatureId('a') },
       state,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     expect(result.suppressed).toBe(false)
   })
@@ -2175,9 +2125,8 @@ describe('on-action-observed filter (Phase 4 Slice E2, general action-observatio
       livingIds,
       createCreatureId(actorId),
       state,
-      events,
-      newCascade(),
-      { actionKind, instanceIndex: 0 },
+      createResolutionContext(events, newCascade()),
+      { observed: { actionKind, instanceIndex: 0 } },
     )
     return events.some((e) => e.type === 'TriggerFired')
   }
@@ -2327,9 +2276,8 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
       [createCreatureId('observer'), createCreatureId('actor')],
       createCreatureId('actor'),
       state,
-      events,
-      atCap,
-      { actionKind: 'attack', instanceIndex: 0 },
+      createResolutionContext(events, atCap),
+      { observed: { actionKind: 'attack', instanceIndex: 0 } },
     )
 
     expect(events).toEqual([
@@ -2371,11 +2319,27 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
     }
   }
 
-  it('calls onEchoCast with (observerId, casterId) and never executes the placeholder response', () => {
+  // Phase 4.1-C2a (A1): echoCast now runs through `ctx.runAction` (a real resolveIntent +
+  // executeAction call), not an injectable `onEchoCast` stub -- so proving it requires a caster
+  // that can ACTUALLY cast. One equipped single-target spell and one living enemy keep the
+  // gem/target draws deterministic (pool size 1 either way) regardless of seed.
+  const ECHO_SPELL: Spell = {
+    id: 'echo-spell-fixture',
+    name: 'Echo Spell (fixture)',
+    targetShape: 'single',
+    spellPower: 0.1,
+    affinity: 'vitality',
+  }
+
+  it('runs a real granted cast (never the placeholder response), and is exempt from the self-re-entry guard, so a chancePercent:100 chain runs all the way to MAX_TRIGGER_CASCADE_DEPTH via CascadeTruncated', () => {
+    // The real echoed cast's OWN nested on-action-observed dispatch re-observes the SAME
+    // caster casting -- with chancePercent:100 and no other bound, the chain is stopped ONLY by
+    // the depth cap. White-boxed the same way the depth-cap tests above do: start the cascade
+    // artificially close to the cap so the exact, small number of hops is hand-derivable.
     const trait = echoObserverTrait('echo-fixture', 100)
     const player = makeParty('player', [
       { id: 'observer', innateTraitIds: [trait.id] },
-      { id: 'caster' },
+      { id: 'caster', equippedSpells: [ECHO_SPELL] },
     ])
     const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
     const state = createCombat({
@@ -2384,31 +2348,61 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       enemy: { party: enemy },
       registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
     })
+    const selfIds = [createCreatureId('observer'), createCreatureId('caster')]
 
-    const calls: Array<{ observerId: string; casterId: string }> = []
     const events: CombatEvent[] = []
-    fireHook(
-      'on-action-observed',
-      [createCreatureId('observer'), createCreatureId('caster')],
-      createCreatureId('caster'),
-      state,
-      events,
-      newCascade(),
-      { actionKind: 'cast', instanceIndex: 0 },
-      (observerId, casterId, s) => {
-        calls.push({ observerId, casterId })
-        return s
-      },
-    )
+    const nearCap = newCascade()
+    nearCap.depth = MAX_TRIGGER_CASCADE_DEPTH - 2 // exactly 2 more hops fit before the cap.
+    const ctx = createResolutionContext(events, nearCap)
+    fireHook('on-action-observed', selfIds, createCreatureId('caster'), state, ctx, {
+      observed: { actionKind: 'cast', instanceIndex: 0 },
+    })
 
-    expect(calls).toEqual([{ observerId: 'observer', casterId: 'caster' }])
-    expect(events.some((e) => e.type === 'TriggerFired')).toBe(true)
+    // depth 498 -> 499 (hop 1: TriggerFired, EchoCastGranted, a real SpellCast, which itself
+    // re-fires on-action-observed) -> 500 (hop 2: same again) -> 501 would exceed the cap ->
+    // CascadeTruncated, no 3rd TriggerFired/EchoCastGranted/SpellCast.
+    const triggerFired = events.filter((e) => e.type === 'TriggerFired')
+    const echoGranted = events.filter((e) => e.type === 'EchoCastGranted')
+    const spellCasts = events.filter((e) => e.type === 'SpellCast')
+    expect(triggerFired).toHaveLength(2)
+    expect(echoGranted).toEqual([
+      {
+        type: 'EchoCastGranted',
+        sourceId: createCreatureId('observer'),
+        casterId: createCreatureId('caster'),
+      },
+      {
+        type: 'EchoCastGranted',
+        sourceId: createCreatureId('observer'),
+        casterId: createCreatureId('caster'),
+      },
+    ])
+    expect(spellCasts).toHaveLength(2)
     // The placeholder's own factor:2 would be unmistakable (doubles Attack) -- proves
     // executeResponse genuinely never ran for this effect.
     expect(events.some((e) => e.type === 'StatModifierApplied')).toBe(false)
+
+    const truncations = events.filter(
+      (e): e is Extract<CombatEvent, { type: 'CascadeTruncated' }> =>
+        e.type === 'CascadeTruncated',
+    )
+    expect(truncations).toHaveLength(1)
+    expect(truncations[0]).toMatchObject({
+      creatureId: createCreatureId('observer'),
+      effectId: 'echo-fixture',
+      depth: MAX_TRIGGER_CASCADE_DEPTH + 1,
+    })
+    // The guard's own bookkeeping is symmetric (depth += / -= in lockstep around each
+    // ctx.runAction call) -- fully unwound back to the start once the outer call returns.
+    expect(nearCap.depth).toBe(MAX_TRIGGER_CASCADE_DEPTH - 2)
   })
 
-  it('stacks:false: two creatures carrying the SAME effect id -- only one onEchoCast call per firing', () => {
+  it('stacks:false: two creatures carrying the SAME effect id -- only one TriggerFired (and one ctx.runAction) per firing', () => {
+    // The caster has NO equipped spells, so a granted cast can never resolve to an action --
+    // isolates the dedup claim itself from the "did the granted cast actually happen" question
+    // the test above already covers. Only observer-a (first in dispatch order) claims the
+    // `stacks:false` slot; observer-b's own roll never even happens -- the AGGREGATE chance of
+    // an echo stays exactly chancePercent, not 1-(1-chancePercent)^2.
     const trait = echoObserverTrait('echo-fixture-dedup', 100)
     const player = makeParty('player', [
       { id: 'observer-a', innateTraitIds: [trait.id] },
@@ -2423,7 +2417,6 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
     })
 
-    let callCount = 0
     const events: CombatEvent[] = []
     fireHook(
       'on-action-observed',
@@ -2434,149 +2427,13 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       ],
       createCreatureId('caster'),
       state,
-      events,
-      newCascade(),
-      { actionKind: 'cast', instanceIndex: 0 },
-      (_observerId, _casterId, s) => {
-        callCount += 1
-        return s
-      },
+      createResolutionContext(events, newCascade()),
+      { observed: { actionKind: 'cast', instanceIndex: 0 } },
     )
 
-    // Only observer-a (first in dispatch order) claims the slot; observer-b's own roll never
-    // even happens -- the AGGREGATE chance of an echo stays exactly chancePercent, not
-    // 1-(1-chancePercent)^2.
-    expect(callCount).toBe(1)
-  })
-
-  it('is exempted from the self-re-entry guard, so the SAME effect instance can fire again within the same cascade', () => {
-    // Simulates chaining: onEchoCast recursively re-fires fireHook against the SAME cascade (the
-    // real combat.ts path an echoed cast's own nested on-action-observed dispatch takes). If
-    // echoCast were NOT exempted from `cascade.activeInstances`, the second call would find the
-    // observer's effect instance already "active" and silently skip it -- the chain would die
-    // after exactly one hop regardless of chancePercent.
-    const trait = echoObserverTrait('echo-fixture-chain', 100)
-    const player = makeParty('player', [
-      { id: 'observer', innateTraitIds: [trait.id] },
-      { id: 'caster' },
-    ])
-    const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
-    const state = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
-    })
-    const selfIds = [createCreatureId('observer'), createCreatureId('caster')]
-
-    let callCount = 0
-    const events: CombatEvent[] = []
-    const cascade = newCascade()
-    const onEchoCast = (
-      _observerId: CreatureId,
-      casterId: CreatureId,
-      s: CombatState,
-    ): CombatState => {
-      callCount += 1
-      if (callCount >= 2) return s // stop after exactly one re-fire (two calls total)
-      return fireHook(
-        'on-action-observed',
-        selfIds,
-        casterId,
-        s,
-        events,
-        cascade,
-        { actionKind: 'cast', instanceIndex: 0 },
-        onEchoCast,
-      ).state
-    }
-    fireHook(
-      'on-action-observed',
-      selfIds,
-      createCreatureId('caster'),
-      state,
-      events,
-      cascade,
-      { actionKind: 'cast', instanceIndex: 0 },
-      onEchoCast,
-    )
-
-    expect(callCount).toBe(2)
-    expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(2)
-    // The guard's own bookkeeping is symmetric (add/delete in lockstep) -- fully unwound after
-    // both recursive calls return, exactly as if echoCast had never touched it (it never did).
-    expect(cascade.activeInstances.size).toBe(0)
-  })
-
-  it('a chancePercent:100 chain terminates at MAX_TRIGGER_CASCADE_DEPTH via CascadeTruncated, never via self-re-entry', () => {
-    // Real play bounds an echo chain by the chancePercent roll (Overtone's own 10% -- CONVENTIONS:
-    // "a fresh cascade per echo would reset the counter and leave the chain bounded only by the
-    // 10% roll"). A chancePercent:100 fixture is the pathological case that same roll can never
-    // bound, so it exercises the depth-cap backstop instead -- white-boxed the same way the
-    // 'loop safety' describe block's own depth-cap test does: start the cascade artificially
-    // close to the cap so the exact, small number of hops before truncation is hand-derivable
-    // without writing out hundreds of events.
-    const trait = echoObserverTrait('echo-fixture-depth', 100)
-    const player = makeParty('player', [
-      { id: 'observer', innateTraitIds: [trait.id] },
-      { id: 'caster' },
-    ])
-    const enemy = makeParty('enemy', [{ id: 'enemy-actor' }])
-    const state = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
-    })
-    const selfIds = [createCreatureId('observer'), createCreatureId('caster')]
-
-    let callCount = 0
-    const events: CombatEvent[] = []
-    const nearCap = newCascade()
-    nearCap.depth = MAX_TRIGGER_CASCADE_DEPTH - 2 // exactly 2 more hops fit before the cap.
-    const onEchoCast = (
-      _observerId: CreatureId,
-      casterId: CreatureId,
-      s: CombatState,
-    ): CombatState => {
-      callCount += 1
-      return fireHook(
-        'on-action-observed',
-        selfIds,
-        casterId,
-        s,
-        events,
-        nearCap,
-        { actionKind: 'cast', instanceIndex: 0 },
-        onEchoCast,
-      ).state
-    }
-    fireHook(
-      'on-action-observed',
-      selfIds,
-      createCreatureId('caster'),
-      state,
-      events,
-      nearCap,
-      { actionKind: 'cast', instanceIndex: 0 },
-      onEchoCast,
-    )
-
-    // depth 498 -> 499 (hop 1, calls onEchoCast) -> 500 (hop 2, calls onEchoCast) -> 501 would
-    // exceed the cap -> CascadeTruncated, no 3rd TriggerFired, no 3rd onEchoCast call.
-    expect(callCount).toBe(2)
-    expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(2)
-    const truncations = events.filter(
-      (e): e is Extract<CombatEvent, { type: 'CascadeTruncated' }> =>
-        e.type === 'CascadeTruncated',
-    )
-    expect(truncations).toHaveLength(1)
-    expect(truncations[0]).toMatchObject({
-      creatureId: createCreatureId('observer'),
-      effectId: 'echo-fixture-depth',
-      depth: MAX_TRIGGER_CASCADE_DEPTH + 1,
-    })
-    expect(nearCap.depth).toBe(MAX_TRIGGER_CASCADE_DEPTH - 2) // fully unwound back to the start.
+    expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(1)
+    // No equipped spell -> the granted cast never resolves -> no EchoCastGranted at all.
+    expect(events.some((e) => e.type === 'EchoCastGranted')).toBe(false)
   })
 })
 
@@ -2606,8 +2463,7 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
       'striker-fixture',
       { self: createCreatureId('striker') },
       state,
-      events,
-      newCascade(),
+      createResolutionContext(events, newCascade()),
     )
 
     // count = 3 (striker + 2 hive-mates, self included) -> finalFactor = 1 + 0.02*3 = 1.06.
@@ -2655,8 +2511,7 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
       'fixture',
       { self: createCreatureId('a') },
       state,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     const a = [...result.state.playerParty].find((c) => c.id === createCreatureId('a'))!
     expect(getEffectiveStat(a, 'attack')).toBe(150)
@@ -2728,8 +2583,7 @@ describe('exact-instance rule (Phase 4.1-B, B4)', () => {
       createCreatureId('bearer'),
       { statusId: 'b4-tick-fixture', duration: 3 },
       created,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
 
     // Player side wins ties (default equal speed), so bearer's turn is the one this call
@@ -2795,8 +2649,7 @@ describe('exact-instance rule (Phase 4.1-B, B4)', () => {
       createCreatureId('bearer'),
       { statusId: 'b4-tick-fixture', duration: 3 },
       created,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     const oldInstanceId = withStatus.playerParty[0]!.activeEffects.find(
       (e) => e.category === 'condition-status',
@@ -2848,8 +2701,7 @@ describe('revive cap (Phase 4.1-B, D3)', () => {
         'fixture',
         { self: createCreatureId('reviver') },
         state,
-        events,
-        newCascade(),
+        createResolutionContext(events, newCascade()),
       )
       state = result.state
       return events

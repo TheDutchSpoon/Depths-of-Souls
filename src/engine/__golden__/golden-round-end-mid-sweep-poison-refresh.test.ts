@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from '../combat'
 import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
 import { updateCreature } from '../creature-lookup'
 import {
   SEED,
@@ -32,10 +33,15 @@ describe('golden replay: PR #64 fix 2 refresh path -- a status refreshed mid-swe
       ROTCORE,
       { statusId: 'poison' },
       created,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
-    state = applyStatus(ROTCORE, E1, { statusId: 'poison' }, state, [], newCascade())
+    state = applyStatus(
+      ROTCORE,
+      E1,
+      { statusId: 'poison' },
+      state,
+      createResolutionContext([], newCascade()),
+    )
     state = updateCreature(state, ROTCORE, { currentHp: ROTCORE_STARTING_HP })
     const events: CombatEvent[] = []
 

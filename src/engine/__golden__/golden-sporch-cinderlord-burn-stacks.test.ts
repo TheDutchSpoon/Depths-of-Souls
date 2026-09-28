@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from '../combat'
 import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
 import { updateCreature } from '../creature-lookup'
 import {
   SEED,
@@ -34,8 +35,7 @@ describe('golden replay: PR #64 fix 6 -- Sporch Cinderlord applies Burn with an 
       ENEMY_B,
       { statusId: 'burn', stacks: 2, duration: 1 },
       created,
-      [],
-      newCascade(),
+      createResolutionContext([], newCascade()),
     )
     state = updateCreature(state, VICTIM, { currentHp: VICTIM_STARTING_HP })
     const events: CombatEvent[] = []

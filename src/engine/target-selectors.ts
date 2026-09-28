@@ -33,6 +33,15 @@ export function targetSelectorHasCandidate(
     case 'highest-intelligence-enemy':
     case 'random-enemy':
       return livingEnemiesOf(creature, state).length > 0
+    case 'random':
+      // Phase 4.1-C2a: side-neutral -- existence over EITHER side, since this selector alone
+      // can't say which side is "intended" (that's the caller's job, resolved in actions.ts).
+      // A candidate exists as long as the creature has at least one living ally OR enemy, which
+      // is always true while the creature itself is alive (it's its own ally).
+      return (
+        livingAlliesOf(creature, state).length > 0 ||
+        livingEnemiesOf(creature, state).length > 0
+      )
     default: {
       const exhaustive: never = selector
       throw new Error(`Unhandled target selector kind: ${String(exhaustive)}`)
@@ -119,6 +128,14 @@ export function resolveTargetSelector(
       const index = Math.floor(nextRandom(state.rng) * pool.length)
       return pool[index]?.id ?? null
     }
+    case 'random':
+      // Phase 4.1-C2a (A1): 'random' needs the action's intended side to resolve, which this
+      // module never has -- actions.ts's resolveIntent resolves it directly (over
+      // livingEnemiesOf/livingAlliesOf, matching random-enemy/random-ally's own draw), never
+      // through this function.
+      throw new Error(
+        "resolveTargetSelector cannot resolve the side-neutral 'random' selector -- resolve it in actions.ts, where the intended side is known",
+      )
     default: {
       const exhaustive: never = selector
       throw new Error(`Unhandled target selector kind: ${String(exhaustive)}`)
@@ -139,6 +156,12 @@ export function peekTargetSelector(
   creature: Creature,
   state: CombatState,
 ): CreatureId | null {
-  if (selector.kind === 'random-enemy' || selector.kind === 'random-ally') return null
+  if (
+    selector.kind === 'random-enemy' ||
+    selector.kind === 'random-ally' ||
+    selector.kind === 'random'
+  ) {
+    return null
+  }
   return resolveTargetSelector(selector, creature, state)
 }
