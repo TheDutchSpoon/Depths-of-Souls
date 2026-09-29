@@ -1,22 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveFight } from '../combat'
-import {
-  playerParty,
-  enemyParty,
-  scripts,
-  SEED_A,
-  SEED_B,
-} from './golden-seed-sensitivity.fixture'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-seed-sensitivity.fixture'
+import { SEED_A, SEED_B } from './golden-seed-sensitivity.fixture'
 
 function runWith(seed: number) {
-  const { events, state } = resolveFight(
-    createCombat({
-      seed: seed,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts: scripts },
-    }),
-  )
+  const { events, state } = runGolden(fixture, { seed })
   return { events, result: state.result }
 }
 

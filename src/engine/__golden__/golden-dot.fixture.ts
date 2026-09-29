@@ -39,6 +39,8 @@ import { STATUS_REGISTRY } from '../../data/statuses'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import type { CombatEvent, FightResult } from '../types'
 import type { Script } from '../scripting-types'
+import { updateCreature } from '../creature-lookup'
+import type { CombatState } from '../types'
 
 export const SEED = 8008 // No RNG consumed (deterministic targeting); seed is inert.
 
@@ -158,3 +160,13 @@ export const expectedEvents: CombatEvent[] = [
 ]
 
 export const expectedResult: FightResult = 'win'
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // createCombat resets currentHp to effective max at fight-start (GAME_DESIGN), so TARGET's
+  // wounded starting HP has to be applied here, after creation -- see golden-dot.fixture.ts's
+  // header comment.
+  const initial = updateCreature(created, TARGET, { currentHp: TARGET_STARTING_HP })
+  return initial
+}

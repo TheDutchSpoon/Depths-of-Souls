@@ -54,6 +54,10 @@ import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { MYCONET_ROTCORE_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
+import { updateCreature } from '../creature-lookup'
+import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
+import type { CombatState } from '../types'
 
 export const SEED = 62 // No RNG consumed anywhere in this fixture; seed is inert.
 
@@ -151,3 +155,26 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'Waited', creatureId: TANK },
   { type: 'TurnEnded', creatureId: TANK },
 ]
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // Pre-apply Poison to both ROTCORE and E1, and wound ROTCORE to 1 HP, all before any turn
+  // resolves -- into a throwaway events array, mirroring the PR #64 repro's own setup idiom.
+  let state = applyStatus(
+    ROTCORE,
+    ROTCORE,
+    { statusId: 'poison' },
+    created,
+    createResolutionContext([], newCascade()),
+  )
+  state = applyStatus(
+    ROTCORE,
+    E1,
+    { statusId: 'poison' },
+    state,
+    createResolutionContext([], newCascade()),
+  )
+  state = updateCreature(state, ROTCORE, { currentHp: ROTCORE_STARTING_HP })
+  return state
+}

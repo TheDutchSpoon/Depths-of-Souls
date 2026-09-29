@@ -1,31 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveTurn } from '../combat'
-import {
-  SEED,
-  playerParty,
-  enemyParty,
-  scripts,
-  traits,
-  expectedEvents,
-  TURN_STEPS,
-} from './golden-swarmhive-queen.fixture'
-import type { CombatEvent } from '../types'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-swarmhive-queen.fixture'
+import { expectedEvents } from './golden-swarmhive-queen.fixture'
 
 describe('golden replay: Swarmhive Queen / all-allies-of-species (Phase 4 Slice H1, real content)', () => {
   it('matches the committed event log exactly across 2 rounds', () => {
-    let state = createCombat({
-      seed: SEED,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts: scripts, traits: traits },
-    })
-    const events: CombatEvent[] = []
-
-    for (let i = 0; i < TURN_STEPS; i++) {
-      const step = resolveTurn(state)
-      state = step.state
-      events.push(...step.events)
-    }
+    const { events, state } = runGolden(fixture)
 
     expect(events).toEqual(expectedEvents)
     expect(state.result).toBeNull() // nobody ever attacks -- fight not over

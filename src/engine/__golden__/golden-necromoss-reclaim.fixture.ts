@@ -31,6 +31,8 @@ import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { NECROMOSS_WISP_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
+import { updateCreature } from '../creature-lookup'
+import type { CombatState } from '../types'
 
 export const SEED = 5005 // No RNG consumed anywhere in this fixture; seed is inert.
 
@@ -102,3 +104,12 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'Waited', creatureId: WISP },
   { type: 'TurnEnded', creatureId: WISP },
 ]
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // createCombat resets currentHp to effective max at fight-start, so WISP's wounded starting
+  // HP has to be applied here, after creation -- see the fixture's header comment.
+  const state = updateCreature(created, WISP, { currentHp: WISP_STARTING_HP })
+  return state
+}

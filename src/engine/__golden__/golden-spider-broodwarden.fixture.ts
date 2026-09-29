@@ -37,6 +37,7 @@ import type { CombatEvent } from '../types'
 import type { Trait } from '../effect-types'
 
 export const SEED = 2 // Consumes exactly two RNG draws (Web's own break-free roll against TARGET
+export const TURN_STEPS = 1
 // then OTHERFOE, at Broodwarden's turn-start) -- see the header comment above for the trace.
 
 const BROODWARDEN = createCreatureId('broodwarden')

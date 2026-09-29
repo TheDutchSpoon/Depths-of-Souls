@@ -24,6 +24,7 @@ import { SPARKEATER_VOIDMAW_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import type { CombatEvent } from '../types'
 
 export const SEED = 9029 // No RNG consumed anywhere in this fixture; seed is inert.
+export const TURN_STEPS = 1
 
 const VOIDMAW = createCreatureId('sparkeater-voidmaw')
 const TARGET = createCreatureId('target')

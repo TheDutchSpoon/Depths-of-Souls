@@ -27,6 +27,7 @@ import type { CombatEvent } from '../types'
 import type { Trait } from '../effect-types'
 
 export const SEED = 9009 // No RNG consumed anywhere in this fixture (Sleep is never scanned by
+export const TURN_STEPS = 1
 // rollWebBreakFree, and nothing else here draws).
 
 const DOZER = createCreatureId('dozer')

@@ -50,7 +50,7 @@ export default tseslint.config(
   },
   {
     // The one file that legitimately needs them: the corpus digest's own generator, which writes
-    // its committed fixture to disk (`npm run corpus:update`) and reads the UPDATE_CORPUS env var.
+    // its committed fixture to disk (`npm run corpus:update`) and is switched on by Vitest's `--mode corpus-update`.
     files: ['src/engine/corpus-digest.test.ts'],
     rules: {
       'no-restricted-imports': 'off',

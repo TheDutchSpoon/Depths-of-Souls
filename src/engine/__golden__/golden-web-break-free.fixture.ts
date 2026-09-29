@@ -21,6 +21,7 @@ import type { CombatEvent } from '../types'
 import type { StatusDef, Trait } from '../effect-types'
 
 export const SEED = 7
+export const TURN_STEPS = 2
 
 const OTHER = createCreatureId('other')
 const BEARER = createCreatureId('bearer')

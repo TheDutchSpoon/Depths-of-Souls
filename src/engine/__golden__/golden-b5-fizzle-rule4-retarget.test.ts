@@ -1,30 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveTurn } from '../combat'
-import {
-  SEED,
-  playerParty,
-  enemyParty,
-  scripts,
-  traits,
-  expectedEvents,
-  TURN_STEPS,
-} from './golden-b5-fizzle-rule4-retarget.fixture'
-import type { CombatEvent } from '../types'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-b5-fizzle-rule4-retarget.fixture'
+import { expectedEvents } from './golden-b5-fizzle-rule4-retarget.fixture'
 
 describe('golden replay: B5 fizzle + rule 4 re-target (Phase 4.1-C2c)', () => {
   it('matches the committed event log exactly -- no hit on the corpse, instance 2 lands on the lowest-HP survivor', () => {
-    let state = createCombat({
-      seed: SEED,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts, traits },
-    })
-    const events: CombatEvent[] = []
-    for (let i = 0; i < TURN_STEPS; i++) {
-      const step = resolveTurn(state)
-      state = step.state
-      events.push(...step.events)
-    }
+    const { events, state } = runGolden(fixture)
     expect(events).toEqual(expectedEvents)
     expect(state.result).toBeNull()
   })

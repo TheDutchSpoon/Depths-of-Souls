@@ -437,6 +437,16 @@ function adjacentLivingTargets(target: Creature, party: readonly Creature[]): Cr
   return neighbors
 }
 
+/**
+ * CONVENTIONS "An action ends when its actor dies" (4.1-C2c, PR #73 review): true once the actor
+ * has died inside its own action (a retaliation after one of its hits, or a response nested in
+ * its own pre-hit hooks). Read fresh from `working`, never from the `actor` snapshot the executor
+ * was handed. Callers drop the rest of the action: no further events, no fizzle event.
+ */
+function actorDied(actor: Creature, working: CombatState): boolean {
+  return !findCreature(working, actor.id)?.alive
+}
+
 function executeAttack(
   actor: Creature,
   targetId: CreatureId,
@@ -450,6 +460,7 @@ function executeAttack(
     actor,
     'attack',
   ).entries()) {
+    if (actorDied(actor, working)) break // site 1: before target resolution / AttackDeclared
     resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working, {
       kind: 'attack',
     })
@@ -471,7 +482,8 @@ function executeAttack(
     }).state
     // B5 (CONVENTIONS): the pre-hit hooks may have killed the target -- that hit fizzles (no
     // damage, no Splashing for this instance). AttackDeclared stays in the log; no fizzle event.
-    // The next instance re-targets per rule 4.
+    // The next instance re-targets per rule 4. A dead ACTOR ends the whole action instead (site 2).
+    if (actorDied(actor, working)) break
     if (!findCreature(working, thisTargetId)?.alive) continue
     working = dealDamage(
       actor.id,
@@ -488,6 +500,7 @@ function executeAttack(
     // case an earlier splash hit's own damage-path cascade (e.g. Retaliate) already killed a
     // later one.
     for (const splashId of splashIds) {
+      if (actorDied(actor, working)) break // site 3: before each Splashing hit
       if (!findCreature(working, splashId)?.alive) continue
       working = dealDamage(
         actor.id,
@@ -617,6 +630,7 @@ function executeCastSingle(
     actor,
     'cast',
   ).entries()) {
+    if (actorDied(actor, working)) break // site 1: before target resolution / SpellCast
     resolvedTargetId = resolveInstanceTarget(
       actor,
       resolvedTargetId,
@@ -643,6 +657,7 @@ function executeCastSingle(
       observed: { actionKind: 'cast', instanceIndex },
     }).state
     // B5: same pre-hit-hook fizzle as executeAttack (no payload, no status); SpellCast stays.
+    if (actorDied(actor, working)) break // site 2
     if (!findCreature(working, thisTargetId)?.alive) continue
     working = applyCastPayload(actor, spell, thisTargetId, powerPercent, working, ctx)
     if (spell.appliesStatus) {
@@ -675,6 +690,7 @@ function executeCastAoe(
     actor,
     'cast',
   ).entries()) {
+    if (actorDied(actor, working)) break // site 1: before target freezing / SpellCast
     // Phase 4 Slice E: an ally-targeting AOE spell always freezes the caster's OWN living side
     // -- no Confusion roll at all (Confusion's redirect is scoped to a "harmful action" per
     // CONVENTIONS; a support cast on your own side is never one, so it must never touch
@@ -713,6 +729,7 @@ function executeCastAoe(
     }).state
 
     for (const targetId of targetIds) {
+      if (actorDied(actor, working)) break // site 4: before each AOE member's hit
       // Skip a frozen-list target that's no longer alive by the time its hit lands (a prior
       // hit's on-death/reflect cascade may have killed it). The frozen target *set* is
       // unchanged; this only skips *hitting* an already-dead member.

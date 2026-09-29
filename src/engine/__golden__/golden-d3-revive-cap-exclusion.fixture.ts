@@ -35,8 +35,12 @@ import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import type { CombatEvent } from '../types'
 import type { Trait } from '../effect-types'
+import { updateCreature } from '../creature-lookup'
+import { MAX_REVIVES_PER_CREATURE } from '../config'
+import type { CombatState } from '../types'
 
 export const SEED = 7
+export const TURN_STEPS = 1
 
 const REVIVER = createCreatureId('reviver')
 export const CAPPED = createCreatureId('capped')
@@ -93,3 +97,18 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'Waited', creatureId: REVIVER },
   { type: 'TurnEnded', creatureId: REVIVER },
 ]
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // createCombat resets currentHp/revivesUsed at fight-setup (S1/D3), so the pre-capped,
+  // pre-dead starting state has to be applied here, after creation -- see this fixture's own
+  // header comment (mirrors golden-dot.fixture.ts's identical constraint).
+  const withCapped = updateCreature(created, CAPPED, {
+    alive: false,
+    currentHp: 0,
+    revivesUsed: MAX_REVIVES_PER_CREATURE,
+  })
+  const initial = updateCreature(withCapped, ELIGIBLE, { alive: false, currentHp: 0 })
+  return initial
+}

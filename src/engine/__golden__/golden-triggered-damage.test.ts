@@ -1,24 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveFight } from '../combat'
-import {
-  SEED,
-  playerParty,
-  enemyParty,
-  scripts,
-  traits,
-  expectedEvents,
-  expectedResult,
-} from './golden-triggered-damage.fixture'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-triggered-damage.fixture'
+import { expectedEvents, expectedResult } from './golden-triggered-damage.fixture'
 
 describe('golden replay: triggered damage (retaliate), TriggerFired + death pre-emption', () => {
   it('fires RETALIATE via TriggerFired on non-lethal hits, and not on the killing blow', () => {
-    const initial = createCombat({
-      seed: SEED,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts: scripts, traits: traits },
-    })
-    const { state, events } = resolveFight(initial)
+    const { events, state } = runGolden(fixture)
 
     expect(events).toEqual(expectedEvents)
     expect(state.result).toBe(expectedResult)

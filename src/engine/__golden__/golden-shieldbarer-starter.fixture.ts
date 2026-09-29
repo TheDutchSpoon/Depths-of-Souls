@@ -22,6 +22,7 @@ import { TRAIT_REGISTRY, SHIELDBARER_STARTER_TRAIT } from '../../data/traits'
 import type { CombatEvent } from '../types'
 
 export const SEED = 4004 // No RNG consumed; seed is inert.
+export const TURN_STEPS = 1
 
 const PROVOKER = createCreatureId('provoker')
 const ALLY = createCreatureId('ally')

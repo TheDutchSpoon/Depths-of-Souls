@@ -45,6 +45,8 @@ import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { ROT_SOVEREIGN_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
+import { updateCreature } from '../creature-lookup'
+import type { CombatState } from '../types'
 
 export const SEED = 3030 // No RNG consumed anywhere in this fixture; seed is inert.
 
@@ -199,3 +201,13 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'TurnEnded', creatureId: SOVEREIGN },
 ]
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // createCombat resets currentHp to effective max at fight-start, so ADD's and WEAK's wounded
+  // starting HP have to be applied here, after creation -- see the fixture's header comment.
+  let state = updateCreature(created, ADD, { currentHp: ADD_STARTING_HP })
+  state = updateCreature(state, WEAK, { currentHp: WEAK_STARTING_HP })
+  return state
+}
