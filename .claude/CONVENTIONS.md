@@ -1551,9 +1551,10 @@ demo slice (their goldens stay byte-identical).
   interpreted-fight goldens.)
 - **Comment-only edits to an existing golden are allowed** (PR #72 review). A fixture's comments are
   its derivation, and a stale one misleads the next reader. So any PR may fix comments in an
-  existing golden fixture, byte-identical policy included, provided **the diff touches no
-  non-comment line**. The PR lists each such file, and the reviewer checks that its diff is
-  comments only. Any change beyond comments falls under the rule above.
+  existing golden fixture, byte-identical policy included, provided **the diff changes no
+  code token** (a trailing comment on a code line may change; the code on that line may not).
+  The PR lists each such file, and the reviewer checks that, with comments stripped, the old and
+  new file are identical. Any change beyond comments falls under the rule above.
 - **Two-tier golden discipline.** Small **focused** goldens are **hand-derived** (per-mechanism
   correctness — the expected log computed by hand). A large **integration** golden may be
   **generated-then-checkpoint-verified** (hand-check the load-bearing assertions: turn order, event
