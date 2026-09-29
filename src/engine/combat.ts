@@ -332,27 +332,29 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
  * for why this is a passively-consulted EffectDef rather than a 10th response verb). Rolled
  * ONLY when the actor carries the passive (chancePercent discipline: an ordinary creature never
  * touches state.rng here); on success, runs a real granted Cast through the shared action
- * pipeline (`gemSlot: 'random'`, no explicit targeting -- `ctx.runAction` reproduces today's
- * exact gem/target draw order and "no castable gem -> no-op" fizzle, see actions.ts's own header
- * comment on what's deliberately NOT yet wired here in C2a: no legality/lock check, matching
- * today -- that gating is Phase 4.1-C2c, B2).
+ * pipeline (`gemSlot: 'random'`, no explicit targeting -- `ctx.runAction` checks legality (locks),
+ * draws the gem then the target, and runs Confusion -> Tunnel Vision -> Provoke like any action).
+ *
+ * B2.1 (4.1-C2c): on a SKIPPED turn (`turnSkipped`, the turn-start suppressed flag) the chance is
+ * still rolled -- the RNG stream must not depend on the skip -- and only then is the grant refused,
+ * even if the lock is gone by now (cleansed by a turn-end hook). A skipped turn stays skipped.
  */
 function maybeFireBonusCast(
   actorId: CreatureId,
   state: CombatState,
   events: CombatEvent[],
+  turnSkipped: boolean,
 ): CombatState {
   const actor = getCreature(state, actorId)
   if (!actor.alive) return state
   const bonusCast = activeBonusCast(actor)
   if (!bonusCast) return state
   if (!(nextRandom(state.rng) < bonusCast.chancePercent / 100)) return state
+  if (turnSkipped) return state
 
   const ctx = createResolutionContext(events, newCascade())
   const intent: Intent = { action: { kind: 'cast', gemSlot: 'random' } }
-  // C2a-only (deleted in C2c, B2.3): keeps today's exact behaviour -- no Confusion/Tunnel
-  // Vision/Provoke for a bonus cast's target.
-  return ctx.runAction(actor.id, intent, state, { legacyGrantedTargeting: true })
+  return ctx.runAction(actor.id, intent, state)
 }
 
 function checkWinLoss(state: CombatState): FightResult | null {
@@ -511,10 +513,9 @@ export function resolveTurn(state: CombatState): {
   }
 
   // Turn-end hooks (incl. DoT/HoT ticks) and the granted-actions step (bonus-cast) fire BEFORE
-  // TurnEnded -- Phase 4.1-C, D6: TurnEnded is always the turn's last event (Phase 4 fired these
-  // after it; fixed here). Gating stays exactly as it is today (alive-only) -- whether a skipped
-  // (Stunned) turn should also refuse the granted cast is B2's own fix (Phase 4.1-C2c), out of
-  // this slice's scope; C1 only reorders WHEN this step runs relative to TurnEnded, not WHETHER.
+  // TurnEnded -- Phase 4.1-C, D6: TurnEnded is always the turn's last event. Both are alive-gated;
+  // the granted step additionally refuses on a skipped turn (`suppressed`, B2.1: rolls first) and,
+  // through runAction's legality check, on any lock active at that point (B2.2).
   if (getCreature(working, actor.id).alive) {
     working = fireHook(
       'on-turn-end',
@@ -525,7 +526,7 @@ export function resolveTurn(state: CombatState): {
     ).state
     // Phase 4 Slice F (Sorcerer starter): consulted directly, after the ordinary on-turn-end
     // hook -- see maybeFireBonusCast's own doc comment for why this isn't a hook response.
-    working = maybeFireBonusCast(actor.id, working, events)
+    working = maybeFireBonusCast(actor.id, working, events, suppressed)
   }
 
   // TURN-END CLEANUP (CONVENTIONS' "Turn structure"): a seam, here, with no status work (D6

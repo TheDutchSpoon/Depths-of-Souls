@@ -3,20 +3,6 @@ import { nextRandom } from './rng'
 import type { CombatState, Creature } from './types'
 import type { CreatureId } from './ids'
 
-/**
- * First living enemy by slot index, ascending. Deterministic, no RNG. Phase 1's only
- * targeting rule (no scripting/selectors yet); still the implicit fallback's rule in Phase 2.
- *
- * Returns null if the enemy side has no living creatures. That's structurally unreachable
- * when called from resolveTurn (win/loss is checked after every action, so a turn never
- * starts against an already-empty enemy side) — but this function stays honest about its
- * own contract rather than throwing.
- */
-export function getDefaultTarget(enemyParty: readonly Creature[]): CreatureId | null {
-  const target = enemyParty.find((c) => c.alive)
-  return target ? target.id : null
-}
-
 /** The enemy side relative to `creature`, alive-filtered. */
 export function livingEnemiesOf(
   creature: Creature,
@@ -74,7 +60,11 @@ export function resolveOffensiveTarget(
   return resolveProvoke(actor, state, resolveNormally)
 }
 
-function resolveProvoke(
+/** The Provoke step alone (callers own the Confusion and Tunnel Vision checks): draws one index
+ * among the opposing side's provoking members (even a single one) and returns that provoker,
+ * `resolveNormally` never called; with no provoker, resolves normally. Shared by
+ * `resolveOffensiveTarget` and rule 4's instance re-target (actions.ts). */
+export function resolveProvoke(
   actor: Creature,
   state: CombatState,
   resolveNormally: () => CreatureId | null,

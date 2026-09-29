@@ -9,7 +9,8 @@
 // one (index floor(r*1) = 0), so no gem-draw ambiguity muddies what this golden pins.
 // Enemies (always-wait): A (slot 0, HP 50, speed 1) and B (slot 1, HP 30, speed 2). Slot 0 has
 // MORE HP than slot 1, so the two defaults disagree: first-by-slot = A, lowest-HP = B.
-// No Provoker, no Confusion, no Tunnel Vision (those are C2c). All vitality (x1.0).
+// No Provoker, no Confusion, no Tunnel Vision, so the override pipeline (which every granted
+// cast goes through since C2c) draws nothing here. All vitality (x1.0).
 //
 // One round (queue: caster 20, B 2, A 1), three turns:
 //   CASTER waits. Turn-end: bonus-cast rolls (100%: passes whatever the draw), gem draw over

@@ -24,13 +24,6 @@ export interface RunActionOptions {
   /** An event to push AFTER the intent resolves (gem/target draws happened) but BEFORE the
    * resolved action executes -- e.g. `EchoCastGranted`, matching today's exact emission point. */
   readonly announce?: CombatEvent
-  /** C2a-only. Deleted in C2c (B2.3), whose goldens prove the flip. Skips the Confusion -> Tunnel
-   * Vision -> Provoke override pipeline for an enemy-side single target -- resolves it via the
-   * explicit-selector-or-default path directly, matching today's exact bonus-cast/echo behaviour
-   * (neither goes through that pipeline on `main`). Passed only by `maybeFireBonusCast`
-   * (combat.ts) and `fireHook`'s `echoCast` branch (resolution.ts) -- no other `runAction` caller
-   * sets it. */
-  readonly legacyGrantedTargeting?: true
 }
 
 /**
@@ -44,11 +37,12 @@ export interface RunActionOptions {
 export interface ResolutionContext {
   readonly events: CombatEvent[]
   readonly cascade: CascadeState
-  /** Resolves `intent` for `actorId` against `state` (target/gem draws) and, if it resolves to a
-   * real `Action`, pushes `options.announce` (if given) then executes it. A no-op (returns
-   * `state` unchanged, nothing pushed) if the actor is dead or `unknown`, or if the intent fails
-   * to resolve to an action at all (e.g. no castable gem) -- the SAME "fizzle silently" discipline
-   * every other "no valid target" path in the engine already uses. */
+  /** Checks `intent` is legal for `actorId` (locks included, every source), resolves it against
+   * `state` (target/gem draws) and, if it resolves to a real `Action`, pushes `options.announce`
+   * (if given) then executes it. A no-op (returns `state` unchanged, nothing drawn, nothing pushed)
+   * if the actor is dead or unknown, the intent is illegal (a lock, no castable gem, no valid
+   * target), or it fails to resolve -- a refused granted action emits nothing of its own
+   * (CONVENTIONS B2 rule 2). */
   readonly runAction: (
     actorId: CreatureId,
     intent: Intent,
