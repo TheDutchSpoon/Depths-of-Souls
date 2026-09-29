@@ -47,7 +47,7 @@ const AOE_SPELL: Spell = {
   affinity: 'vitality',
 }
 
-describe('defaultTargetingFor (Phase 4.1-C2a, A1 -- built now, wired in C2b/B1)', () => {
+describe('defaultTargetingFor (Phase 4.1-C2a, A1; wired into resolveIntent in C2b/B1)', () => {
   it('Attack defaults to lowest-hp-enemy', () => {
     const player = makeParty('player', [{ id: 'me' }])
     expect(defaultTargetingFor(player[0]!, { kind: 'attack' })).toEqual({
@@ -176,5 +176,62 @@ describe("resolveIntent's gemSlot: 'random' draw order (Phase 4.1-C2a, A1)", () 
 
     expect(seenGemSlots).toEqual(new Set([0, 1]))
     expect(sawDivergence).toBe(true)
+  })
+})
+
+describe('resolveIntent -- castable-filtered gem draw and resolved-side default (Phase 4.1-C2b)', () => {
+  it("gemSlot 'random' draws over the castable slots only, and draws NOTHING when none is castable", () => {
+    // Slot 0 = enemy spell, slot 1 = ally spell; the enemy side is empty, so only slot 1 castable.
+    const player = makeParty('player', [
+      { id: 'me', equippedSpells: [ENEMY_SPELL, ALLY_SPELL] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'dead', alive: false }])
+    for (let seed = 0; seed < 20; seed++) {
+      const state = makeState({
+        rng: createRngState(seed),
+        playerParty: player,
+        enemyParty: enemy,
+      })
+      const action = resolveIntent(
+        player[0]!,
+        { action: { kind: 'cast', gemSlot: 'random' } },
+        state,
+      )
+      expect(action).toEqual({
+        kind: 'cast',
+        targetShape: 'single',
+        gemSlot: 1,
+        targetId: player[0]!.id,
+      })
+    }
+    // Nothing castable at all: null, and the RNG bookmark never moved.
+    const onlyEnemy = makeParty('player', [{ id: 'me', equippedSpells: [ENEMY_SPELL] }])
+    const state = makeState({ playerParty: onlyEnemy, enemyParty: enemy })
+    const before = state.rng.position
+    expect(
+      resolveIntent(
+        onlyEnemy[0]!,
+        { action: { kind: 'cast', gemSlot: 'random' } },
+        state,
+      ),
+    ).toBeNull()
+    expect(state.rng.position).toBe(before)
+  })
+
+  it("a gemSlot 'random' cast with no targeting defaults by the DRAWN spell's side", () => {
+    const player = makeParty('player', [
+      { id: 'me', health: 40, equippedSpells: [ALLY_SPELL] },
+      { id: 'hurt', health: 40, currentHp: 5 },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(
+      resolveIntent(player[0]!, { action: { kind: 'cast', gemSlot: 'random' } }, state),
+    ).toEqual({
+      kind: 'cast',
+      targetShape: 'single',
+      gemSlot: 0,
+      targetId: player[1]!.id,
+    })
   })
 })

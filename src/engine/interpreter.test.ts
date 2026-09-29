@@ -79,9 +79,12 @@ describe('decideAction -- skip on invalid', () => {
     expect(decide(player[0]!, script, state)).toEqual({ kind: 'defend' })
   })
 
-  it('skips a targeting-required rule with no targeting field and falls through', () => {
+  it('a targeting-less rule is valid (B1): it matches, carries no targeting, and resolves to the side-aware default', () => {
     const player = makeParty('player', [{ id: 'me' }])
-    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const enemy = makeParty('enemy', [
+      { id: 'tanky', health: 50 }, // slot 0: first-by-slot, but NOT the lowest HP
+      { id: 'weak', health: 10 },
+    ])
     const script: Script = {
       id: 'test',
       rules: [
@@ -90,7 +93,108 @@ describe('decideAction -- skip on invalid', () => {
       ],
     }
     const state = makeState({ playerParty: player, enemyParty: enemy })
-    expect(decide(player[0]!, script, state)).toEqual({ kind: 'wait' })
+    expect(decideAction(player[0]!, script, state)).toEqual({
+      action: { kind: 'attack' },
+      targeting: undefined,
+    })
+    expect(decide(player[0]!, script, state)).toEqual({
+      kind: 'attack',
+      targetId: enemy[1]!.id,
+    })
+  })
+
+  it('a targeting-less ally-side spell rule defaults to the lowest-HP ally', () => {
+    const HEAL: Spell = {
+      id: 'heal',
+      name: 'Heal',
+      targetShape: 'single',
+      spellPower: 1,
+      affinity: 'vitality',
+      targetSide: 'ally',
+      payload: 'heal',
+    }
+    const player = makeParty('player', [
+      { id: 'me', health: 40, equippedSpells: [HEAL] },
+      { id: 'hurt', health: 40, currentHp: 5 },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const script: Script = {
+      id: 'test',
+      rules: [{ condition: { kind: 'always' }, action: { kind: 'cast', gemSlot: 0 } }],
+    }
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    expect(decide(player[0]!, script, state)).toEqual({
+      kind: 'cast',
+      targetShape: 'single',
+      gemSlot: 0,
+      targetId: player[1]!.id,
+    })
+  })
+})
+
+describe('decideAction -- acted-before-target on a targeting-less rule (B1 peek)', () => {
+  // Queue: tanky (slot 0, HP 50), me, weak (slot 1, HP 10). `me` acts before `weak`, the
+  // lowest-HP enemy = the side-aware default, but AFTER `tanky`, the first-by-slot enemy -- so the
+  // condition is true only if the peek uses the side-aware default.
+  const build = () => {
+    const player = makeParty('player', [{ id: 'me' }])
+    const enemy = makeParty('enemy', [
+      { id: 'tanky', health: 50 },
+      { id: 'weak', health: 10 },
+    ])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      turnQueue: [enemy[0]!.id, player[0]!.id, enemy[1]!.id],
+    })
+    return { player, enemy, state }
+  }
+  const script: Script = {
+    id: 'test',
+    rules: [
+      { condition: { kind: 'acted-before-target' }, action: { kind: 'attack' } },
+      { condition: { kind: 'always' }, action: { kind: 'wait' } },
+    ],
+  }
+
+  it('peeks the side-aware default (lowest-HP enemy) and draws no RNG', () => {
+    const { player, state } = build()
+    const before = state.rng.position
+    expect(decideAction(player[0]!, script, state).action.kind).toBe('attack')
+    expect(state.rng.position).toBe(before)
+  })
+
+  it('an explicit rule targeting still wins over the default', () => {
+    const { player, state } = build()
+    const explicit: Script = {
+      id: 'explicit',
+      rules: [
+        {
+          condition: { kind: 'acted-before-target' },
+          action: { kind: 'attack' },
+          targeting: { kind: 'highest-hp-enemy' }, // tanky, who acts BEFORE me
+        },
+        { condition: { kind: 'always' }, action: { kind: 'wait' } },
+      ],
+    }
+    expect(decideAction(player[0]!, explicit, state).action.kind).toBe('wait')
+  })
+
+  it('is false where no single default exists before the draw (gemSlot random)', () => {
+    const { state } = build()
+    const randomGem: Script = {
+      id: 'random-gem',
+      rules: [
+        {
+          condition: { kind: 'acted-before-target' },
+          action: { kind: 'cast', gemSlot: 'random' },
+        },
+        { condition: { kind: 'always' }, action: { kind: 'wait' } },
+      ],
+    }
+    const caster = makeParty('player', [{ id: 'me', equippedSpells: [EMBER_LANCE] }])
+    const s = makeState({ ...state, playerParty: caster })
+    expect(decideAction(caster[0]!, randomGem, s).action.kind).toBe('wait')
   })
 })
 

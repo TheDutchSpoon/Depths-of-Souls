@@ -823,10 +823,30 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   default is the engine's built-in fallback only; a script-level override is a Phase 6 decision.
   A rule without targeting uses this default target everywhere a rule's target is read, including
   the `acted-before-target` condition's lookahead peek (pure, no RNG; 4.1-C plan review).
+  - **The default comes from the resolved action** (4.1-C2b plan review). For a
+    `gemSlot: 'random'` cast, the gem is drawn first, and the default target follows the drawn
+    spell's side.
+  - **No single default, no peek.** In lookahead, before any draw, a `gemSlot: 'random'` rule
+    with no targeting has no default target, and neither does an AOE or a self-only rule. So
+    `acted-before-target` on such a rule is **false**.
+  - **Where the peek happens.** The interpreter supplies the default to the condition, so
+    `conditions.ts` never imports `actions.ts`. That import would be a cycle, because
+    `resolution.ts` imports `conditions.ts`.
 - **Every action source obeys the same rules** (Phase 4.1-C, B2):
   1. A creature whose turn is skipped (an `'all'` lock: Stun, Sleep) takes **no action of any
-     kind** that turn, granted ones included. Passive turn-end effects still fire.
-  2. **Silenced blocks every cast**, chosen or granted (Clear Mind immunity applies as usual).
+     kind** that turn, granted ones included. Passive turn-end effects still fire. This holds even
+     if the lock is gone by the granted-actions step, for example cleansed by a turn-end hook. A
+     skipped turn stays skipped. A chance-based grant still **rolls** its chance first, so the RNG
+     stream doesn't depend on the skip; only then is the grant refused.
+  2. **An active lock refuses every action it covers, chosen or granted, whenever the action is
+     checked** (4.1-C2b plan review). So **Silenced blocks every cast**, and an `'all'` lock that
+     lands mid-turn also refuses that turn's granted actions. Clear Mind immunity applies as
+     usual.
+     - `runAction` calls `checkLegality` before `resolveIntent` for every source. A refused action
+       **draws nothing**, and that includes the gem draw.
+     - The locks checked are **the acting creature's**. For an echo that's the caster. The bearer
+       of the granting effect is not the one acting: its trigger is passive, so its own locks
+       don't gate it.
   3. Extra actions pick a target (the side-aware default, or random where the intent says so),
      then go through Confusion → Tunnel Vision → Provoke like any action.
   4. When a single-target instance list's first target has died, later instances fall back to the
@@ -834,8 +854,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 - **A hit on a target that died during its own pre-hit hooks fizzles** (Phase 4.1-C, B5).
   `on-attack` / `on-cast` / `on-action-observed` fire **before** an instance's hit, and several
   real traits deal damage there. After an instance's pre-hit hooks, the target is re-checked: if it
-  died, **that hit fizzles** (no damage, no status, no payload, no second `on-damage-dealt`). Later
-  instances fall back per rule 4 above. AOE already skips dead members.
+  died, **that hit fizzles** (no damage, no status, no payload, no second `on-damage-dealt`, and no
+  Splashing hits for that instance). The instance's `AttackDeclared` / `SpellCast` has already been
+  emitted and stays in the log; there is no separate fizzle event. Later instances fall back per
+  rule 4 above. AOE already skips dead members.
 - **Interpreter** = pure engine code: `decideAction(creature, script, state) -> Intent` (the Phase 1
   seam, now consulting the script; from 4.1-C it returns the winning rule's **unresolved** intent,
   or the fallback intent, and `resolveIntent` + `executeAction` turn it into the action; RNG
@@ -1527,6 +1549,12 @@ demo slice (their goldens stay byte-identical).
   *deliberately* changes that behavior — a changed old golden must be a conscious, reviewed decision,
   not incidental. (E.g. Phase 1 goldens test raw engine math and stay as-is; Phase 2 adds
   interpreted-fight goldens.)
+- **Comment-only edits to an existing golden are allowed** (PR #72 review). A fixture's comments are
+  its derivation, and a stale one misleads the next reader. So any PR may fix comments in an
+  existing golden fixture, byte-identical policy included, provided **the diff changes no
+  code token** (a trailing comment on a code line may change; the code on that line may not).
+  The PR lists each such file, and the reviewer checks that, with comments stripped, the old and
+  new file are identical. Any change beyond comments falls under the rule above.
 - **Two-tier golden discipline.** Small **focused** goldens are **hand-derived** (per-mechanism
   correctness — the expected log computed by hand). A large **integration** golden may be
   **generated-then-checkpoint-verified** (hand-check the load-bearing assertions: turn order, event

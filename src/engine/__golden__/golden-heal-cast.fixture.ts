@@ -41,10 +41,11 @@ export const HEAL_SPELL: Spell = {
   payload: 'heal',
 }
 
-/** Real stock scripts have no ally-targeting rule (ALWAYS_CAST_SCRIPT's targeting is
- * lowest-hp-enemy) -- a fixture-only script authored for this slice's own tests, not real
- * content (per the brief: "at least one demo/fixture spell per new shape... for this slice's
- * own tests; the real spell set is authored in H1-H3"). */
+/** A fixture-only script with an explicit `lowest-hp-ally` rule, authored for this slice's own
+ * tests, not real content (per the brief: "at least one demo/fixture spell per new shape... for
+ * this slice's own tests; the real spell set is authored in H1-H3"). Since Phase 4.1-C2b (B1) the
+ * stock `always-cast` has no targeting field and an ally-side spell defaults to the lowest-HP
+ * ally, so it would also work here; this script pins the explicit-selector path. */
 export const HEAL_LOWEST_ALLY_SCRIPT: Script = {
   id: 'heal-lowest-ally-fixture',
   rules: [

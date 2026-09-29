@@ -17,14 +17,13 @@ export const ALWAYS_ATTACK_SCRIPT: Script = {
 export const ALWAYS_CAST_SCRIPT: Script = {
   id: 'always-cast',
   // Degrades to the implicit fallback automatically when slot 0 is empty (invalid action
-  // -> skip rule -> no more rules -> fallback). `targeting` is ignored at evaluation time
-  // if slot 0 holds an AOE spell (documented mismatch tolerance) -- the same script
-  // definition is reused as-is by both single-target and AOE loadouts.
+  // -> skip rule -> no more rules -> fallback). No `targeting` (B1): the engine's side-aware
+  // default picks the lowest-HP enemy for an enemy-side spell and the lowest-HP ally for an
+  // ally-side one, so the same script serves single-target, ally-side and AOE loadouts.
   rules: [
     {
       condition: { kind: 'always' },
       action: { kind: 'cast', gemSlot: 0 },
-      targeting: { kind: 'lowest-hp-enemy' },
     },
   ],
 }

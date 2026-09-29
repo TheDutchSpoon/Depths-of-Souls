@@ -1,33 +1,9 @@
 import { evaluateCondition } from './conditions'
-import { checkLegality } from './actions'
+import { checkLegality, defaultTargetingFor } from './actions'
 import type { CombatState, Creature } from './types'
-import type { Intent, Rule, RuleAction, Script } from './scripting-types'
-
-/**
- * Phase 4.1-C2a: whether `action` needs an EXPLICIT `targeting` field to be a valid rule -- this
- * gate is C2a-INTERIM (mirrors today's Phase-1-through-4.1-C1 behaviour exactly: a rule without
- * targeting is invalid, full stop). `checkLegality` (actions.ts) itself is already the general,
- * final-shape answer (missing targeting is fine -- some default target exists), since it also
- * has to answer the implicit fallback's own legality question (which never had a `targeting`
- * field to omit). C2b (B1) deletes this function outright and lets `checkLegality` alone decide
- * rule validity, once the engine's own default-target resolution actually uses the side-aware
- * default instead of today's first-by-slot one (see actions.ts's own header comment).
- */
-function ruleNeedsExplicitTargeting(action: RuleAction, creature: Creature): boolean {
-  if (action.kind === 'attack') return true
-  if (action.kind === 'cast') {
-    if (action.gemSlot === 'random') return true // no resolved spell yet to know AOE vs single
-    const spell = creature.equippedSpells[action.gemSlot]
-    // Shape is resolved from the equipped spell at evaluation time, not authored on the
-    // rule; a not-yet-equipped/empty slot still "needs" targeting so isRuleValid can gate on
-    // it (checkLegality already independently rejects an empty slot regardless).
-    return spell ? spell.targetShape === 'single' : true
-  }
-  return false // defend / provoke / wait: self-only, never need targeting
-}
+import type { Intent, Rule, Script } from './scripting-types'
 
 function isRuleValid(rule: Rule, creature: Creature, state: CombatState): boolean {
-  if (ruleNeedsExplicitTargeting(rule.action, creature) && !rule.targeting) return false
   return checkLegality(
     creature,
     { action: rule.action, targeting: rule.targeting },
@@ -36,10 +12,9 @@ function isRuleValid(rule: Rule, creature: Creature, state: CombatState): boolea
 }
 
 /**
- * Phase 4.1-C2a: mirrors today's `decideImplicitFallback` exactly, just expressed as an intent
- * instead of a pre-resolved Action -- `checkLegality` already replicates the old
- * `isActionSuppressed(creature, 'attack')` + "does the enemy side have a valid target" check
- * (see actions.ts's `hasValidTarget`), pure and RNG-free either way.
+ * The implicit fallback is an ordinary intent (`{ action: attack }`, no targeting): resolved later
+ * through the pipeline, so it gets the side-aware default (lowest-HP enemy). `checkLegality`
+ * decides Attack vs Wait, pure and RNG-free.
  */
 function decideImplicitFallback(creature: Creature, state: CombatState): Intent {
   const attack: Intent = { action: { kind: 'attack' } }
@@ -63,7 +38,11 @@ export function decideAction(
 ): Intent {
   if (script) {
     for (const rule of script.rules) {
-      if (!evaluateCondition(rule.condition, creature, state, rule.targeting)) continue
+      // B1: a targeting-less rule peeks the side-aware default (pure, no RNG). No single default
+      // before the draw (`gemSlot: 'random'`, AOE, self-only) -> `undefined` -> acted-before-target
+      // is false. conditions.ts never imports actions.ts (that would be a cycle).
+      const peekTargeting = rule.targeting ?? defaultTargetingFor(creature, rule.action)
+      if (!evaluateCondition(rule.condition, creature, state, peekTargeting)) continue
       if (!isRuleValid(rule, creature, state)) continue
       return { action: rule.action, targeting: rule.targeting }
     }

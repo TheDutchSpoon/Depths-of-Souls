@@ -5,12 +5,11 @@
 // `createResolutionContext` builds the `ResolutionContext` (resolution-types.ts) that threads
 // `runAction` down into resolution.ts, replacing the old `onEchoCast` callback.
 //
-// This slice (C2a) is PURE PLUMBING: every function here reproduces today's exact behaviour.
-// `defaultTargetingFor` already implements its final (4.1-C2b, B1) side-aware-default shape, but
-// nothing in this file wires it into `resolveIntent`'s own default-target resolution yet -- that
-// wiring is B1 itself (a C2b behaviour change), proven there by a dedicated discriminating
-// golden. Until then, `resolveIntent`'s own "no explicit targeting" default stays first-living-
-// by-slot (`getDefaultTarget`), matching today. ASSUMPTION (C2a): flagged in the PR description.
+// Phase 4.1-C2b (B1): `resolveIntent`'s default target is the side-aware one (`defaultTargetingFor`,
+// derived from the RESOLVED action -- a `gemSlot: 'random'` cast defaults by the drawn spell's
+// side), and `gemSlot: 'random'` draws over `castableGemSlots` (ASSUMPTION 13). `legacyDefaultTarget`
+// (first-living-by-slot) survives ONLY for `resolveInstanceTarget`'s post-death fallback and
+// `legacyGrantedTargeting` survives unchanged, until 4.1-C2c (B2.3/B2.4) deletes them.
 
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import {
@@ -129,9 +128,8 @@ function livingPoolFor(
 }
 
 /** Existence-only (no RNG): does `targeting` (or, absent, the intended side's default) have a
- * candidate at all? Absent targeting is legal here whenever the intended side has >=1 living
- * member -- checkLegality is the general "can this actor act at all" answer, unlike the
- * interpreter's own C2a-interim "a rule still needs an explicit selector" gate (interpreter.ts). */
+ * candidate at all? Absent targeting is legal whenever the intended side has >=1 living member
+ * (B1: the side-aware default always exists then). */
 function hasValidTarget(
   actor: Creature,
   targeting: TargetSelector | undefined,
@@ -202,17 +200,16 @@ export function checkLegality(
   }
 }
 
-// ---- Default targeting (final/B1 shape -- built now, wired in C2b) ----
+// ---- Default targeting (B1) ----
 
 /**
  * The side-aware default target SELECTOR for `action` on `actor`: `lowest-hp-enemy` for Attack
  * and an enemy-side spell, `lowest-hp-ally` for an ally-side spell. `undefined` for an AOE cast
  * (no single default target -- the whole side is hit), a `gemSlot: 'random'` cast (which spell
  * ends up chosen, and therefore which side is "intended", isn't known until gem resolution), and
- * a self-only action (Defend/Provoke/Wait). Phase 4.1-C2b (B1) wires this into `resolveIntent`'s
- * own default-target resolution and the `acted-before-target` peek; in C2a it is correct,
- * unit-tested plumbing, not yet a live code path (see this module's own header comment).
- */
+ * a self-only action (Defend/Provoke/Wait). `resolveIntent` calls it with the RESOLVED gem slot, so
+ * the `gemSlot: 'random'` case never reaches it unresolved there; the interpreter's
+ * `acted-before-target` peek calls it pre-draw and treats `undefined` as "no default, no peek". */
 export function defaultTargetingFor(
   actor: Creature,
   action: RuleAction,
@@ -241,10 +238,9 @@ export function defaultTargetingFor(
 
 // ---- Resolution (the only place action-level draws happen) ----
 
-/** Phase 4.1-C2a: byte-identical to today's Phase-1 default -- first LIVING creature by slot,
- * ascending, on the intended side. C2b (B1) replaces every caller of this with
- * `defaultTargetingFor`'s side-aware default (`lowest-hp-enemy`/`lowest-hp-ally`); until then
- * this is what an intent with no explicit `targeting` resolves to. */
+/** Phase 1's first-living-by-slot default. C2b (B1) retired it from `resolveIntent`; it survives
+ * only as `resolveInstanceTarget`'s post-death fallback until 4.1-C2c (B2.4) replaces that with the
+ * side-aware default + Provoke and deletes this (and `getDefaultTarget`). */
 function legacyDefaultTarget(
   actor: Creature,
   intendedSide: 'enemy' | 'ally',
@@ -266,36 +262,31 @@ function resolveRandomTarget(
   return pool[index]?.id ?? null
 }
 
-/** Explicit selector (including the new `'random'` kind) wins; absent targeting falls back to
- * today's first-by-slot default (see legacyDefaultTarget's own comment). */
-function resolveExplicitOrDefaultTarget(
+/** Resolves an already-defaulted selector (`intent.targeting ?? defaultTargetingFor(...)`).
+ * `'random'` draws over the intended side; an absent selector (no single default exists) is null. */
+function resolveSelectorTarget(
   actor: Creature,
   targeting: TargetSelector | undefined,
   intendedSide: 'enemy' | 'ally',
   state: CombatState,
 ): CreatureId | null {
-  if (targeting) {
-    if (targeting.kind === 'random')
-      return resolveRandomTarget(actor, intendedSide, state)
-    return resolveTargetSelector(targeting, actor, state)
-  }
-  return legacyDefaultTarget(actor, intendedSide, state)
+  if (!targeting) return null
+  if (targeting.kind === 'random') return resolveRandomTarget(actor, intendedSide, state)
+  return resolveTargetSelector(targeting, actor, state)
 }
 
-/** Uniform among the actor's non-null equipped spell slots (innate slots included) -- the exact
- * pool/formula today's bonus-cast/echo-cast already use for their own gem draw. */
+/** Phase 4.1-C2b (ASSUMPTION 13): uniform among the actor's CASTABLE slots (innate included) --
+ * `castableGemSlots`, the same set `checkLegality` uses. No castable slot means no draw. */
 function resolveGemSlot(
   actor: Creature,
   gemSlot: number | 'random',
   state: CombatState,
 ): number | null {
   if (gemSlot !== 'random') return gemSlot
-  const equipped = actor.equippedSpells
-    .map((spell, slot) => ({ spell, slot }))
-    .filter((entry): entry is { spell: Spell; slot: number } => entry.spell !== null)
-  if (equipped.length === 0) return null
-  const index = Math.floor(nextRandom(state.rng) * equipped.length)
-  return equipped[index]?.slot ?? null
+  const castable = castableGemSlots(actor, state)
+  if (castable.length === 0) return null
+  const index = Math.floor(nextRandom(state.rng) * castable.length)
+  return castable[index] ?? null
 }
 
 /** The options `resolveIntent` itself reads -- a narrower shape than the full `RunActionOptions`
@@ -305,9 +296,8 @@ export interface ResolveIntentOptions {
 }
 
 /** An enemy-side single target: the override pipeline (Confusion -> Tunnel Vision -> Provoke)
- * unless `legacyGrantedTargeting` is set, in which case it resolves via the explicit-selector-or-
- * default path directly -- C2a-only, matching today's exact bonus-cast/echo behaviour (deleted in
- * C2b, B2.3). */
+ * unless `legacyGrantedTargeting` is set, in which case it resolves the selector directly --
+ * C2a-only, matching today's exact bonus-cast/echo behaviour (deleted in C2c, B2.3). */
 function resolveEnemySingleTarget(
   actor: Creature,
   targeting: TargetSelector | undefined,
@@ -315,24 +305,21 @@ function resolveEnemySingleTarget(
   options: ResolveIntentOptions | undefined,
 ): CreatureId | null {
   if (options?.legacyGrantedTargeting) {
-    return resolveExplicitOrDefaultTarget(actor, targeting, 'enemy', state)
+    return resolveSelectorTarget(actor, targeting, 'enemy', state)
   }
   return resolveOffensiveTarget(actor, state, () =>
-    resolveExplicitOrDefaultTarget(actor, targeting, 'enemy', state),
+    resolveSelectorTarget(actor, targeting, 'enemy', state),
   )
 }
 
 /**
  * `resolveIntent(actor, intent, state)` -- the single place action-level random draws happen.
- * Gem resolution (for a Cast) draws before target resolution (matching today's bonus-cast/echo
- * order). Target resolution: explicit selector (including `'random'`) -> the legacy first-by-slot
- * default (see this module's header comment for why not yet the side-aware one) -> for an
- * enemy-side single target, Confusion -> Tunnel Vision -> Provoke (`resolveOffensiveTarget`,
- * targeting.ts, unchanged) -- UNLESS `options.legacyGrantedTargeting` is set (C2a-only; see
+ * Gem resolution (for a Cast) draws first, over the castable slots. Target resolution: explicit
+ * selector (including `'random'`) -> the side-aware default of the RESOLVED action
+ * (`defaultTargetingFor`) -> for an enemy-side single target, Confusion -> Tunnel Vision -> Provoke
+ * (`resolveOffensiveTarget`) -- UNLESS `options.legacyGrantedTargeting` is set (C2a-only; see
  * `resolveEnemySingleTarget`). An ally-side single target skips that override pipeline entirely
- * regardless (GAME_DESIGN §7). Returns `null` when no legal action results (defensive/unreachable
- * once checkLegality has passed, except for the fallback/bonus-cast/echo call sites, which don't
- * pre-check legality in C2a -- see combat.ts).
+ * regardless (GAME_DESIGN §7). Returns `null` when no legal action results.
  */
 export function resolveIntent(
   actor: Creature,
@@ -342,7 +329,8 @@ export function resolveIntent(
 ): Action | null {
   switch (intent.action.kind) {
     case 'attack': {
-      const targetId = resolveEnemySingleTarget(actor, intent.targeting, state, options)
+      const targeting = intent.targeting ?? defaultTargetingFor(actor, intent.action)
+      const targetId = resolveEnemySingleTarget(actor, targeting, state, options)
       return targetId ? { kind: 'attack', targetId } : null
     }
     case 'cast': {
@@ -353,11 +341,13 @@ export function resolveIntent(
       if (spell.targetShape === 'aoe') {
         return { kind: 'cast', targetShape: 'aoe', gemSlot }
       }
+      const targeting =
+        intent.targeting ?? defaultTargetingFor(actor, { kind: 'cast', gemSlot })
       const targetSide = spell.targetSide ?? 'enemy'
       const targetId =
         targetSide === 'ally'
-          ? resolveExplicitOrDefaultTarget(actor, intent.targeting, 'ally', state)
-          : resolveEnemySingleTarget(actor, intent.targeting, state, options)
+          ? resolveSelectorTarget(actor, targeting, 'ally', state)
+          : resolveEnemySingleTarget(actor, targeting, state, options)
       return targetId ? { kind: 'cast', targetShape: 'single', gemSlot, targetId } : null
     }
     case 'defend':
@@ -385,7 +375,7 @@ export function resolveIntent(
  * since v1 has no ally-targeting Attack) picks which party the post-death fallback default draws
  * from: the opposing side for an ordinary offensive instance, or the actor's OWN side for a
  * support-spell instance -- mirrors resolveOffensiveTarget's enemy-only contract not applying to
- * ally casts (GAME_DESIGN §7). Phase 4.1-C2a: unchanged (first-by-slot, no Provoke) -- C2b's
+ * ally casts (GAME_DESIGN §7). Phase 4.1-C2b: unchanged (first-by-slot, no Provoke) -- C2c's
  * rule 4 replaces this with the side-aware default + Provoke.
  */
 function resolveInstanceTarget(
