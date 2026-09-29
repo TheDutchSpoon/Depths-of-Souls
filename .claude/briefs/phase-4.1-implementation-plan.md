@@ -458,6 +458,17 @@ B2 (including rule 4) and B5 change no existing golden, so each needs a new disc
     instance fallback, and `legacyGrantedTargeting` survives unchanged. Each PR regenerates the
     digest once and attributes its own flips. The phase record gets a `4.1-C2b` section and a
     `4.1-C2c` section.
+  - **C2c also carries two additions (decided at the PR #73 review).**
+    - **The dead-actor rule** (CONVENTIONS "An action ends when its actor dies"): a flip like the
+      others, golden-neutral, with a golden for the main case and a discriminating test at each of
+      its four check sites. It changes corpus fights 308, 374, 433, 467 and 496, which the PR
+      attributes.
+    - **A test-only consolidation, in its own commit** (CONVENTIONS "Every golden replays through
+      one shared runner"): every golden goes through a shared runner that deep-freezes before
+      every turn, and the frozen-replay sweep file is retired. The same commit pins two behaviours
+      no test covered: an AOE cast skips a member that died earlier in the same cast, and a status
+      is never applied to a dead target. This commit changes no `expectedEvents` or
+      `expectedResult` anywhere.
 
 ### A1 — `actions.ts`
 - **Intent** = `{ action: RuleAction, targeting?: TargetSelector }`; `RuleAction`'s cast gains
@@ -597,6 +608,12 @@ Item: **A2.** Bonus-cast and echo-cast become data.
 - **Delete** the `bonus-cast` category (`BonusCastDef`, `activeBonusCast`, `maybeFireBonusCast`),
   `TriggeredDef.echoCast` and `runEchoCast`.
 - **Data test:** every `perform-action` trigger carries a `chancePercent` or a `condition`.
+- **The skipped-turn gate moves with the grant** (PR #73 review). Through C2c, B2 rule 1's gate is
+  a parameter of `maybeFireBonusCast`, fed by `resolveTurn`'s turn-start `suppressed` flag.
+  Deleting `maybeFireBonusCast` means the gate moves to where granted actions run: a grant whose
+  actor is the creature whose turn was skipped is refused **after** its chance roll, even if the
+  lock is gone by then. `golden-b2-skipped-turn-refuses-bonus-cast` is re-expressed with
+  `perform-action` and keeps proving both halves (the roll happens; the grant is refused).
 - **RNG draw order**, documented in code and in the golden comments: chance gate at trigger time →
   (after the granting action completes) random gem → random target.
 
@@ -775,7 +792,8 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
 - **Byte-identical PRs** (B, D): an empty golden diff, shown.
 - **Deliberate-change PRs** (C, E, F): every changed golden listed with its reason; the diff of
   each old golden contains only the listed kind of change.
-- **Determinism:** the frozen double-resolve test (B) stays green through the phase.
+- **Determinism:** the frozen double-resolve test (B) stays green through the phase, and from C2c
+  every golden replays deep-frozen before every turn through the shared golden runner.
 - **Behaviour tripwire: the corpus digest, from C2a on** (PR #71 review; CONVENTIONS "Testing").
   - **What it does:** one test hashes the event log of every fight in a fixed real-content corpus
     and compares the hashes against a committed, generated fixture.
@@ -889,6 +907,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     goldens. Granted casts keep today's targeting behind `legacyGrantedTargeting` until C2b
     (B2.3) deletes it.
 32. **Confirmed (design owner, PR #71 review).** The corpus digest replaces the 200-case seed sweep.
+33. **Confirmed (design owner, PR #73 review).** An action ends when its actor dies (CONVENTIONS),
+    built in C2c.
+34. **Confirmed (design owner, PR #73 review).** The golden-runner consolidation and the two new
+    pinning tests land in C2c as a separate test-only commit, not as their own PR.
 
 ## Sequencing summary
 
