@@ -847,6 +847,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
      - The locks checked are **the acting creature's**. For an echo that's the caster. The bearer
        of the granting effect is not the one acting: its trigger is passive, so its own locks
        don't gate it.
+     - **A refused granted action emits nothing of its own** (4.1-C2c plan review). The trigger
+       that granted it still shows its `TriggerFired`. There is no grant event (`EchoCastGranted`
+       today, `ActionGranted` from 4.1-E) and no action event. This is the same shape as a grant
+       that fizzles for want of a castable gem or a valid target.
   3. Extra actions pick a target (the side-aware default, or random where the intent says so),
      then go through Confusion → Tunnel Vision → Provoke like any action.
   4. When a single-target instance list's first target has died, later instances fall back to the
