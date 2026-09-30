@@ -1281,12 +1281,18 @@ each of the five (e.g. 4557 -> 4558, 4018 -> 3990) and no result changes. No oth
 #### `corpus:update` on Windows
 
 `package.json`: `vitest run src/engine/corpus-digest.test.ts --mode corpus-update`. The review's
-suggestion (read `import.meta.env.MODE`) does not work: Vitest pins `import.meta.env.MODE` to
-`'test'` inside tests and re-evaluates `vite.config.ts` per project with mode `'test'` (probed).
-So `vite.config.ts` reads the requested mode once from `process.argv` and forwards it as
-`test.env.CORPUS_UPDATE`; the test reads `import.meta.env.CORPUS_UPDATE === '1'` and the
-`node:process` import is gone. Checked: `npm run corpus:update` regenerates the fixture (5 rows
-changed), and a plain `npm run test` only compares.
+suggestion (read `import.meta.env.MODE`) does **not** work on the Windows machine this was built on.
+Observed there, with Vitest 4.1.11 / Node 24 / win32-x64 and this branch's config: a test run with
+`--mode corpus-update` reads `import.meta.env.MODE === 'test'` (probed twice, most recently by
+making the digest test throw `MODEPROBE=` plus the value: it printed `MODEPROBE=test`), and
+`vite.config.ts` is re-evaluated per project with mode `'test'`. A later hand-out reported the
+opposite on Linux (Vitest 5.0.1), so this is version- or platform-dependent and the two
+observations are recorded, not reconciled. `vite.config.ts` therefore reads the requested mode once
+from `process.argv` and forwards it as `test.env.CORPUS_UPDATE`; the test reads
+`import.meta.env.CORPUS_UPDATE === '1'` and the `node:process` import is gone. Checked:
+`npm run corpus:update` regenerates the fixture (5 rows changed), and a plain `npm run test` only
+compares. If `MODE` reads `'corpus-update'` on every supported platform, the forwarding can be
+replaced by reading `MODE` directly.
 
 #### Test-only consolidation (set 2)
 
@@ -1306,8 +1312,10 @@ ASSUMPTIONS (shape pinned):
 Expected-value check: `git diff -U0` over the fixtures shows one removed line in total (an unused
 `CombatEvent` import replaced); no `expectedEvents` / `expectedResult` line is added or removed in any
 fixture. In the tests, no `expect(events).toEqual(...)` / `expect(state.result)` line is removed or
-added; the only changed assertion lines are the slot-list checks (`state` -> `initial`, since the
-runner returns the starting state) and one `working.result` -> `state.result`.
+added; the only changed assertion lines are the six slot-list checks (`state` -> `initial`, since the
+runner returns the starting state) and one `working.result` -> `state.result`. (`golden-castable-draw`'s
+slot-order check, "asserted in the test" per its header, was dropped by the first rewrite and is
+restored, so it is unchanged, not a seventh change.)
 
 Counts: tests before this hand-out 786 (58 in the sweep); now 799 with the sweep file still present
 (+2 new goldens, +6 `actor-death`, +3 `dead-target-pins`, +2 sweep replays for the two new

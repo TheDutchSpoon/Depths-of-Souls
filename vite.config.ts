@@ -10,9 +10,11 @@ export default defineConfig(({ mode }) => ({
   test: {
     globals: true,
     // `vitest run ... --mode corpus-update` (npm run corpus:update) regenerates the corpus digest
-    // fixture. Vitest pins `import.meta.env.MODE` to 'test' inside tests and re-evaluates this
-    // config per project with mode 'test', so the requested mode is read once from the command
-    // line and forwarded as a plain env flag -- cross-platform, unlike a `VAR=1 cmd` npm script.
+    // fixture. Observed on Windows with Vitest 4.1.11: a test run with `--mode corpus-update` still
+    // reads `import.meta.env.MODE === 'test'`, and this config is re-evaluated per project with mode
+    // 'test'. So the requested mode is read once from the command line here and forwarded as a plain
+    // env flag -- cross-platform, unlike a `VAR=1 cmd` npm script. (Reported not to reproduce on
+    // Linux; if MODE ever reads 'corpus-update' everywhere, this forwarding can go.)
     env: { CORPUS_UPDATE: CORPUS_UPDATE ? '1' : '' },
     // Phase 4.1-A (S4): src/engine, src/data and src/state run in Node -- this ALSO enforces
     // engine purity (DOM globals are undefined there, so a stray `window`/`document` reference
