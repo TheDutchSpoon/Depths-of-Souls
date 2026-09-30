@@ -58,7 +58,7 @@ that each has a single golden policy (confirmed with the design owner):
 |---|---|---|
 | **4.1-A** | Data, store & generation | Engine goldens untouched; store/generation tests pin the Phase-4 placeholder config |
 | **4.1-B** | Engine foundations: plain-data state, instance ids, fight setup, conditions, innate spells, revive cap | **Byte-identical, all goldens** |
-| **4.1-C** | One action pipeline + turn skeleton, shipped as **C1** (turn skeleton) then **C2** (pipeline) | C1: deliberate, listed; C2: **byte-identical, all existing goldens** |
+| **4.1-C** | One action pipeline + turn skeleton, shipped as **C1** (turn skeleton), then **C2a** (pipeline plumbing), **C2b** (B1 + castable gem draw) and **C2c** (B2, B5, the dead-actor rule, the golden runner) | C1: deliberate, listed; C2a–C2c: **byte-identical, all existing goldens**; the corpus digest changes in C2b and C2c, attributed |
 | **4.1-D** | Spells carry responses | **Byte-identical, all goldens (hard requirement)** |
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify | Deliberate changes, listed |
@@ -687,6 +687,12 @@ Items: **A3, D6 status timing, D5, G2.**
 - The **Web break-free golden** moves its roll to turn-end cleanup.
 - Glow, Weaken, Vulnerability, Confusion goldens: only timing changes may appear; the modifier math
   must be identical.
+- **The F plan lists every affected golden with its fate** (PR #73 review): **re-derived by hand**
+  (the mechanism still exists, only its timing moves) or **retired** (the mechanism is gone, e.g. a
+  golden that exists only to pin the round-end sweep), with the golden that replaces its coverage.
+  36 of the 88 golden fixtures contain status events (after 4.1-C2c), so this list is the plan's
+  largest item. Every golden replays through the shared golden runner, so a re-derived golden
+  keeps the per-turn freeze with no extra work.
 
 ---
 
@@ -777,6 +783,19 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
   report in the PR and in the phase record. Content-doc numbers follow the data in the same PR.
 - Watch points to report explicitly: fight-count compounding (floor success vs per-fight win rate),
   floors 20–30, and the Unicorn's revive strength under the cap.
+- **Watch point: uncapped stat stacking stalls fights** (PR #73 review, measured on the corpus
+  after 4.1-C2c). 40 of the 500 corpus fights end as round-cap draws, and 31 of those have the
+  Shieldbarer starter's Rallying Cry (`on-provoke` → ×1.35 Defence to every ally, permanent) stacked
+  58 to 101 times on one creature. In corpus fight 374 the Unicorn reaches about 3 × 10¹⁰ effective
+  Defence, damage falls to the chip floor, and a Defence-scaled retaliation (Retaliating Shell) hits
+  for 75,204. Other traits reach 100–200 stacks too (fights 9, 83, 344, 348).
+  - **The rule is locked**: `stat-modifier` stacking is multiplicative and uncapped (GAME_DESIGN,
+    "Player-facing treatment"). The fix, if the report shows one is needed, is per content item:
+    the factor, or how often it can fire (for example once per turn, or a trigger condition), and
+    never a global stack cap.
+  - The report adds, per spec: the **round-cap draw rate**, and the **largest stack of one trait's
+    stat-modifier** seen on a creature. Whether draws get a target band is decided at the 4.1-H plan
+    review.
 
 ### Acceptance (4.1-H)
 - The simulator is deterministic (same seeds → identical report, asserted).

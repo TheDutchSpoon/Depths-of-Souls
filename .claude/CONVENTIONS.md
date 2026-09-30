@@ -1613,6 +1613,12 @@ demo slice (their goldens stay byte-identical).
   no browser), so this costs seconds.
 - **Deploy only from `main`, and only if tests pass** — the deploy step is gated on the test step
   (build/publish guarded to the `main` branch). Tests-on-every-change, deploy-on-main.
+- **Local runs match CI's toolchain** (PR #73 review). CI installs with `npm ci` on Node 24. Locally:
+  Node 24.15 or later (jsdom 30's minimum), and `npm ci` after every pull that changes
+  `package-lock.json`. A stale `node_modules` once ran Vitest 4.1.11 against a lockfile pinning
+  5.0.1, and a tool behaviour seen only there was nearly written into the code and the phase
+  record. When a tool behaves unexpectedly, check `npx <tool> --version` against the lockfile
+  before designing around it.
 
 ## Deployment & environments
 
