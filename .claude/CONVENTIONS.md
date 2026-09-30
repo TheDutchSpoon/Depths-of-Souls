@@ -201,9 +201,11 @@ data.
   strength is a balance constant, not a scaled hit. `heal`/`stat-modifier` reuse `applyHeal`/
   `applyStatModifier` (now exported from `resolution.ts`) called DIRECTLY from the Cast executor —
   neither emits `TriggerFired` (Cast is the chosen-action context here, not a trigger).
-- **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
-  Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5. After
-  A4 (4.1-D) it lives on the spell's `deal-damage`/`heal` response, not on the spell.
+- **The stat a spell's magnitude scales off** lives on the spell's `deal-damage` / `heal` response
+  from A4 (4.1-D), not on the spell: `offStat: 'cast'` for the default (remap-aware Intelligence),
+  or `scalingStat` (`Intelligence | Health | Attack | Defence | Speed`, read directly, no remap). A
+  pure-utility spell (status only, a cleanse) simply has no `deal-damage` / `heal` effect. The old
+  `scalingStat: 'none'` is gone (4.1-D plan review: no content used it). See GAME_DESIGN §5.
 
 ### Response vocabulary — nine verbs, and "no side doors"
 History: four in Phase 3; `heal` + `revive` joined as the two justified new verbs, `grant-action-state`
@@ -254,7 +256,10 @@ attack executor is correct.
   effective max HP (no overheal) **after any scaling**; distinct from Regen (the over-time status).
   **Slice E2** gives the triggered `heal` the same magnitude modes as `deal-damage`: flat
   (`amountPerStack`, Regen), **stat-scaled off the *healer's* stat** (`scalingStat`; Treants Elder →
-  Health), and **`magnitudeSource`** (× a count; Necromoss → dead-allies). **`StatPercent` always
+  Health), and **`magnitudeSource`** (× a count; Necromoss → dead-allies). **4.1-D** adds
+  **`offStat`** (a remap-aware slot, exactly as on `deal-damage`), so a heal spell keeps its
+  remap-aware Intelligence default. `amountPerStack`, `scalingStat` and `offStat` are mutually
+  exclusive; setting more than one is a resolver-invariant error. **`StatPercent` always
   reads the firing creature (`context.self`).** For self-targeted ticks (Regen/Poison/Burn) that is
   also the target. A percentage of a *different* target's stat (anti-tank %-max-HP damage, a
   %-of-ally's-max-HP heal) is still deferred — no locked content needs it — and would land as an
@@ -756,6 +761,19 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
       **nothing if that target is dead** (B5's fizzle rule applied inside a spell).
     - **Effects run once per landed target**, in list order. An `onCast` list (run once per cast)
       is added only when content needs it.
+    - **What a spell's list may hold** (validated at load, 4.1-D plan review): `deal-damage` and
+      `heal` in formula mode (`offStat` or `scalingStat`, no `magnitudeSource`), `apply-status`,
+      `apply-stat-modifier` and `remove-status`, each targeting **`cast-target` or `self`**. A
+      `self` effect also runs once per landed target: Life Siphon heals its caster once per target
+      it hits. `cast-target` is rejected outside a spell. Other verbs and targets join when content
+      needs them.
+    - **One landed target's list is atomic, like one hit** (4.1-D plan review). The dead-actor
+      checks ("An action ends when its actor dies") sit between landed targets and instances,
+      never between one target's effects. If a retaliation to the spell's damage kills the caster,
+      the rest of that target's list still runs; later targets and instances don't.
+    - **Magnitudes read the caster's live stats** when each effect runs, as Attack and every
+      response already do (4.1-D plan review). Before 4.1-D the cast path read a caster snapshot
+      taken at action start; no golden or corpus fight exercised the difference.
     - An instance's power (the action instance-list's `powerPercent`) scales `deal-damage` and
       `heal` magnitudes only, never statuses or stat-modifiers (matching the Slice E rule).
     - **Byte-identical goldens are a hard requirement** for the migration: every existing spell
@@ -875,7 +893,8 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   If the actor has died, the rest of the action is dropped: no further events from it, and no
   fizzle event. Events already emitted stay. This is the actor's mirror of "death pre-empts the
   victim's reaction" (hook interaction edges). A granted action already checks that its actor is
-  alive when it starts.
+  alive when it starts. The checks sit **between hits, never inside one**: a spell's effect list
+  for one landed target runs to completion (4.1-D).
 - **Interpreter** = pure engine code: `decideAction(creature, script, state) -> Intent` (the Phase 1
   seam, now consulting the script; from 4.1-C it returns the winning rule's **unresolved** intent,
   or the fallback intent, and `resolveIntent` + `executeAction` turn it into the action; RNG
