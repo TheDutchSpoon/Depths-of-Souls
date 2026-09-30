@@ -18,10 +18,22 @@ export const SPORE_CYST: Spell = {
   id: 'spore-cyst',
   name: 'Spore Cyst',
   targetShape: 'single',
-  spellPower: 0.45,
   affinity: 'wit',
-  appliesStatus: { statusId: 'spore', duration: 3 },
   unlockedAtBiome: 3,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.45,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'spore', duration: 3 },
+    },
+  ],
 }
 
 /** Rasping Chant: Endurance's first single-target enemy debuff (Root Grasp is plain damage,
@@ -34,11 +46,17 @@ export const RASPING_CHANT: Spell = {
   id: 'rasping-chant',
   name: 'Rasping Chant',
   targetShape: 'single',
-  spellPower: 1, // unread in stat-modifier payload mode
   affinity: 'endurance',
-  payload: 'stat-modifier',
-  statModifier: { stat: 'defence', factor: 0.8 },
   unlockedAtBiome: 3,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'apply-stat-modifier',
+      target: { kind: 'cast-target' },
+      stat: 'defence',
+      factor: 0.8,
+    },
+  ],
 }
 
 /** Puppet String: the first spell-authored producer of Confusion (Instinct's own new-mechanic
@@ -49,10 +67,22 @@ export const PUPPET_STRING: Spell = {
   id: 'puppet-string',
   name: 'Puppet String',
   targetShape: 'single',
-  spellPower: 0.8,
   affinity: 'instinct',
-  appliesStatus: { statusId: 'confusion', duration: 3 },
   unlockedAtBiome: 3,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.8,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'confusion', duration: 3 },
+    },
+  ],
 }
 
 /** Charnel Feast: Vitality's first AOE support spell (Regrowth/Afterglow are both
@@ -62,12 +92,17 @@ export const CHARNEL_FEAST: Spell = {
   id: 'charnel-feast',
   name: 'Charnel Feast',
   targetShape: 'aoe',
-  spellPower: 0.25,
   affinity: 'vitality',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
   unlockedAtBiome: 3,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.25,
+    },
+  ],
 }
 
 /** Withering Bolt: Violence's first spell-authored producer of Burn (statuses.ts's BURN had no
@@ -81,8 +116,20 @@ export const WITHERING_BOLT: Spell = {
   id: 'withering-bolt',
   name: 'Withering Bolt',
   targetShape: 'single',
-  spellPower: 0.45,
   affinity: 'violence',
-  appliesStatus: { statusId: 'burn', duration: 3 },
   unlockedAtBiome: 3,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.45,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'burn', duration: 3 },
+    },
+  ],
 }

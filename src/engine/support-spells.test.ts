@@ -36,21 +36,29 @@ const HEAL_SPELL: Spell = {
   id: 'test-heal',
   name: 'Test Heal',
   targetShape: 'single',
-  spellPower: 1,
   affinity: 'vitality',
   targetSide: 'ally',
-  payload: 'heal',
+  unlockedAtBiome: 1,
+  effects: [
+    { kind: 'heal', target: { kind: 'cast-target' }, offStat: 'cast', spellPower: 1 },
+  ],
 }
 
 const BUFF_AOE_SPELL: Spell = {
   id: 'test-buff-aoe',
   name: 'Test Buff AOE',
   targetShape: 'aoe',
-  spellPower: 1,
   affinity: 'vitality',
   targetSide: 'ally',
-  payload: 'stat-modifier',
-  statModifier: { stat: 'defence', factor: 1.2 },
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-stat-modifier',
+      target: { kind: 'cast-target' },
+      stat: 'defence',
+      factor: 1.2,
+    },
+  ],
 }
 
 describe('interpreter -- ally-targeting single Cast (Phase 4 Slice E)', () => {
@@ -159,11 +167,17 @@ describe('ally-targeting Cast end-to-end -- highest-attack-ally (Phase 4 Slice E
       id: 'test-buff-single',
       name: 'Test Buff Single',
       targetShape: 'single',
-      spellPower: 1,
       affinity: 'vitality',
       targetSide: 'ally',
-      payload: 'stat-modifier',
-      statModifier: { stat: 'defence', factor: 2 },
+      unlockedAtBiome: 1,
+      effects: [
+        {
+          kind: 'apply-stat-modifier',
+          target: { kind: 'cast-target' },
+          stat: 'defence',
+          factor: 2,
+        },
+      ],
     }
     const script: Script = {
       id: 'test-buff-highest-attack-ally',

@@ -40,8 +40,17 @@ export const FIXTURE_SPELL: Spell = {
   id: 'fixture-spell',
   name: 'Fixture Bolt',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.5,
+    },
+  ],
 }
 
 export const CAST_THEN_ATTACK_SCRIPT: Script = {

@@ -65,9 +65,17 @@ export const FIXTURE_WIT_BOLT: Spell = {
   id: 'fixture-wit-bolt',
   name: 'Fixture Wit Bolt',
   targetShape: 'single',
-  spellPower: 0.4,
   affinity: 'wit',
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.4,
+    },
+  ],
 }
 
 // Off-affinity for FIXTURE_CASTER -- proves the affinity gate actually filters, not just
@@ -76,9 +84,17 @@ export const FIXTURE_VIOLENCE_BOLT: Spell = {
   id: 'fixture-violence-bolt',
   name: 'Fixture Violence Bolt',
   targetShape: 'single',
-  spellPower: 0.4,
   affinity: 'violence',
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.4,
+    },
+  ],
 }
 
 // unlockedAtBiome:2 -- proves the cumulative-unlock filter actually filters, not just "picks
@@ -88,9 +104,17 @@ export const FIXTURE_WIT_BOLT_TIER2: Spell = {
   id: 'fixture-wit-bolt-tier2',
   name: 'Fixture Wit Bolt (Tier 2)',
   targetShape: 'single',
-  spellPower: 0.6,
   affinity: 'wit',
   unlockedAtBiome: 2,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.6,
+    },
+  ],
 }
 
 /** The global spell registry a generateFloor call rolls a cast-role loadout from (Phase 4

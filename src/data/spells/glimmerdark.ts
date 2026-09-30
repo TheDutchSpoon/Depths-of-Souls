@@ -28,13 +28,22 @@ export const BEACON_CHARGE: Spell = {
   id: 'beacon-charge',
   name: 'Beacon Charge',
   targetShape: 'single',
-  spellPower: 0.3,
   affinity: 'wit',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
-  appliesStatus: { statusId: 'glow' },
   unlockedAtBiome: 2,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.3,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'glow' },
+    },
+  ],
 }
 
 /**
@@ -42,7 +51,7 @@ export const BEACON_CHARGE: Spell = {
  * suggested by the brief as "apply 2 Glow to an ally." The engine has no "apply a status with no
  * damage/heal/buff riding along" payload mode (out of scope to add one -- this slice's only
  * permitted engine change is the unlock filter + the Spell field), and `appliesStatus` only fires
- * after a payload lands (`combat.ts`'s `applyCastPayload` then `if (spell.appliesStatus)`), so
+ * after a payload lands (pre-4.1-D: the cast path applied `appliesStatus` after a payload landed; a spell's effect list is now just data, so a status-only spell needs no workaround), so
  * Overcharge is authored on the `heal` payload -- same shape as Beacon Charge, but the trade is
  * inverted: a SMALLER heal (spellPower 0.15, half Beacon Charge's 0.3) buys TWO Glow stacks at
  * once (`stacks: 2`, mirroring Radiant's own `{ statusId: 'glow', stacks: 2 }` -- see
@@ -54,13 +63,22 @@ export const OVERCHARGE: Spell = {
   id: 'overcharge',
   name: 'Overcharge',
   targetShape: 'single',
-  spellPower: 0.15,
   affinity: 'wit',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
-  appliesStatus: { statusId: 'glow', stacks: 2 },
   unlockedAtBiome: 2,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.15,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'glow', stacks: 2 },
+    },
+  ],
 }
 
 /**
@@ -83,10 +101,22 @@ export const DISORIENT: Spell = {
   id: 'disorient',
   name: 'Disorient',
   targetShape: 'single',
-  spellPower: 0.85,
   affinity: 'instinct',
-  appliesStatus: { statusId: 'web', duration: 3 },
   unlockedAtBiome: 2,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.85,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'web', duration: 3 },
+    },
+  ],
 }
 
 /**
@@ -98,10 +128,22 @@ export const BLINDING_FLARE: Spell = {
   id: 'blinding-flare',
   name: 'Blinding Flare',
   targetShape: 'single',
-  spellPower: 0.7,
   affinity: 'violence',
-  appliesStatus: { statusId: 'vulnerability', duration: 3 },
   unlockedAtBiome: 2,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.7,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'vulnerability', duration: 3 },
+    },
+  ],
 }
 
 /**
@@ -113,13 +155,22 @@ export const AFTERGLOW: Spell = {
   id: 'afterglow',
   name: 'Afterglow',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'vitality',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
-  appliesStatus: { statusId: 'regen', duration: 3 },
   unlockedAtBiome: 2,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.5,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'regen', duration: 3 },
+    },
+  ],
 }
 
 /**
@@ -131,11 +182,20 @@ export const LUMINOUS_TIDE: Spell = {
   id: 'luminous-tide',
   name: 'Luminous Tide',
   targetShape: 'aoe',
-  spellPower: 0.2,
   affinity: 'wit',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
-  appliesStatus: { statusId: 'glow' },
   unlockedAtBiome: 2,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.2,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'glow' },
+    },
+  ],
 }

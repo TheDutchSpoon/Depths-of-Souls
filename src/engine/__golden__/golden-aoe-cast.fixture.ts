@@ -14,8 +14,17 @@ export const CINDER_NOVA: Spell = {
   id: 'cinder-nova',
   name: 'Cinder Nova',
   targetShape: 'aoe',
-  spellPower: 0.3,
   affinity: 'violence',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.3,
+    },
+  ],
 }
 
 export const CAST_AOE_SCRIPT: Script = {

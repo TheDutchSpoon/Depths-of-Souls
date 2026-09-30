@@ -32,11 +32,17 @@ export const BUFF_SPELL: Spell = {
   id: 'buff-fixture',
   name: 'Test Buff',
   targetShape: 'aoe',
-  spellPower: 1, // unused -- stat-modifier's magnitude is the authored statModifier field.
   affinity: 'vitality',
   targetSide: 'ally',
-  payload: 'stat-modifier',
-  statModifier: { stat: 'defence', factor: 1.5 },
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-stat-modifier',
+      target: { kind: 'cast-target' },
+      stat: 'defence',
+      factor: 1.5,
+    },
+  ],
 }
 
 export const playerParty = makeParty('player', [

@@ -43,8 +43,17 @@ export const BOLT: Spell = {
   id: 'bolt-fixture',
   name: 'Bolt (fixture)',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.5,
+    },
+  ],
 }
 
 export const ECHO_FIXTURE: Trait = {

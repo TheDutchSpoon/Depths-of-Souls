@@ -44,9 +44,22 @@ export const SMITE: Spell = {
   id: 'smite-fixture',
   name: 'Smite (fixture)',
   targetShape: 'single',
-  spellPower: 1.0,
   affinity: 'vitality',
-  appliesStatus: { statusId: WEAKEN.statusId, duration: 2 },
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 1.0,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: WEAKEN.statusId, duration: 2 },
+    },
+  ],
 }
 
 export const B5_CAST_FIXTURE: Trait = {
