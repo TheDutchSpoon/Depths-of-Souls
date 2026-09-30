@@ -84,8 +84,10 @@ describe('Rotcap Hollow: shape', () => {
 
   it('every spell that applies a status references a real STATUS_REGISTRY entry', () => {
     for (const spell of ROTCAP_HOLLOW_SPELLS) {
-      if (spell.appliesStatus) {
-        expect(STATUS_REGISTRY.has(spell.appliesStatus.statusId)).toBe(true)
+      for (const effect of spell.effects) {
+        if (effect.kind === 'apply-status') {
+          expect(STATUS_REGISTRY.has(effect.status.statusId)).toBe(true)
+        }
       }
     }
   })

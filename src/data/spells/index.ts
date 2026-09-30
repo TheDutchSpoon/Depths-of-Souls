@@ -1,3 +1,4 @@
+import { validateSpellEffects } from '../../engine/effect-types'
 import type { Spell } from '../../engine/types'
 import { CINDER_NOVA, EMBER_LANCE, VENOM_BOLT } from './core'
 import {
@@ -74,3 +75,8 @@ export const ALL_SPELLS: readonly Spell[] = [
   CHARNEL_FEAST,
   WITHERING_BOLT,
 ]
+
+// Phase 4.1-D (A4): load-time check that every spell's effect list holds only what a spell may
+// (deal-damage/heal in formula mode, apply-status, apply-stat-modifier, remove-status, each
+// targeting cast-target or self). Throws at import, like the trait/status validators.
+for (const spell of ALL_SPELLS) validateSpellEffects(spell)

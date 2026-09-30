@@ -35,10 +35,12 @@ export const HEAL_SPELL: Spell = {
   id: 'heal-fixture',
   name: 'Test Heal',
   targetShape: 'single',
-  spellPower: 1,
   affinity: 'vitality',
   targetSide: 'ally',
-  payload: 'heal',
+  unlockedAtBiome: 1,
+  effects: [
+    { kind: 'heal', target: { kind: 'cast-target' }, offStat: 'cast', spellPower: 1 },
+  ],
 }
 
 /** A fixture-only script with an explicit `lowest-hp-ally` rule, authored for this slice's own

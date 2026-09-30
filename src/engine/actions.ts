@@ -23,15 +23,7 @@ import {
   hasProvokeImmunity,
   hasStatusImmunity,
 } from './effects'
-import { getEffectiveStat, getOffensiveStat } from './effective-stats'
-import {
-  applyHeal,
-  applyStatModifier,
-  applyStatus,
-  dealDamage,
-  dealDamageWithOffStat,
-  fireHook,
-} from './resolution'
+import { dealDamage, executeResponse, fireHook } from './resolution'
 import {
   livingAlliesOf,
   livingEnemiesOf,
@@ -49,7 +41,6 @@ import type {
 import type { CreatureId } from './ids'
 import type { Intent, RuleAction, TargetSelector } from './scripting-types'
 import type { Action, CombatEvent, CombatState, Creature, Spell } from './types'
-import type { StatusSpec } from './effect-types'
 
 // ---- ResolutionContext factory ----
 
@@ -163,7 +154,7 @@ export function castableGemSlots(actor: Creature, state: CombatState): number[] 
       slots.push(slot)
       return
     }
-    const intendedSide = spell.targetSide === 'ally' ? 'ally' : 'enemy'
+    const intendedSide = spell.targetSide
     if (livingPoolFor(actor, intendedSide, state).length > 0) slots.push(slot)
   })
   return slots
@@ -191,7 +182,7 @@ export function checkLegality(
       const spell = actor.equippedSpells[gemSlot]
       if (!spell) return false
       if (spell.targetShape === 'aoe') return true
-      const intendedSide = spell.targetSide === 'ally' ? 'ally' : 'enemy'
+      const intendedSide = spell.targetSide
       return hasValidTarget(actor, intent.targeting, intendedSide, state)
     }
     case 'defend':
@@ -325,7 +316,7 @@ export function resolveIntent(
       }
       const targeting =
         intent.targeting ?? defaultTargetingFor(actor, { kind: 'cast', gemSlot })
-      const targetSide = spell.targetSide ?? 'enemy'
+      const targetSide = spell.targetSide
       const targetId =
         targetSide === 'ally'
           ? resolveSelectorTarget(actor, targeting, 'ally', state)
@@ -517,34 +508,22 @@ function executeAttack(
 }
 
 /**
- * Phase 4 Slice B: Spell.scalingStat resolution. Absent -> the pre-Slice-B remap-aware
- * Intelligence lookup (byte-identical to every existing spell, since getOffensiveStat's Cast
- * default IS Intelligence already). An explicit Stat reads it DIRECTLY via getEffectiveStat (no
- * stat-remap resolution), mirroring deal-damage's scalingStat. 'none' = flat/Int-independent:
- * offStat 0 (always chip-floor-only through the same formula -- not exercised by any v1
- * damage-dealing content).
+ * Phase 4.1-D (A4): runs a spell's effect list against ONE landed target -- the single target, or
+ * the AOE member being hit -- in list order, each through `executeResponse` DIRECTLY (not
+ * `fireHook`): a spell's effects are the chosen action, never a trigger, so none emits
+ * `TriggerFired` and none takes part in cascade-depth / self-re-entry accounting (ASSUMPTION
+ * D-A4, byte-identical with the pre-4.1-D direct calls). `cast-target` resolves to `targetId`, or
+ * to nothing once it has died (an `apply-status` after a killing hit lands nowhere, the old
+ * `applyStatusIfAlive`); `self` resolves to the caster, once per landed target.
+ *
+ * The list is ATOMIC (ASSUMPTION 35, design-owner confirmed): no dead-actor check between one
+ * target's effects -- if a retaliation to the damage kills the caster, the rest of this target's
+ * list still runs; the checks sit between targets and instances (the callers' loops). Magnitudes
+ * read the caster LIVE when each effect runs (ASSUMPTION 36), as Attack and every response do.
+ * `powerPercent` scales `deal-damage` / `heal` only (resolution.ts, `castPowerFraction`).
+ * `apply-stat-modifier`'s source id is the spell's id, as before.
  */
-function resolveSpellOffStat(
-  caster: Creature,
-  spell: Spell,
-  powerFraction: number,
-): number {
-  const spellPower = spell.spellPower * powerFraction
-  if (spell.scalingStat === undefined) return getOffensiveStat(caster, 'cast', spellPower)
-  if (spell.scalingStat === 'none') return 0
-  return getEffectiveStat(caster, spell.scalingStat) * spellPower
-}
-
-/**
- * Phase 4 Slice E: routes a landed Cast instance to its payload's own execution path.
- * 'damage' (default, byte-identical to pre-Slice-E) reuses dealDamageWithOffStat. 'heal' reuses
- * applyHeal directly -- magnitude is the SAME resolveSpellOffStat a damage spell would compute,
- * just applied as HP restored. 'stat-modifier' reuses applyStatModifier directly with the
- * spell's own authored `statModifier` (NOT scaled by powerPercent -- see Spell.statModifier's
- * doc comment). Neither heal nor stat-modifier emits TriggerFired (not a triggered response --
- * Cast itself is the chosen-action context).
- */
-function applyCastPayload(
+function executeSpellEffects(
   actor: Creature,
   spell: Spell,
   targetId: CreatureId,
@@ -552,63 +531,17 @@ function applyCastPayload(
   state: CombatState,
   ctx: ResolutionContext,
 ): CombatState {
-  const payload = spell.payload ?? 'damage'
-  switch (payload) {
-    case 'damage':
-      // Splashing is an attacks-only mechanic (brute.md: "attacks deal 100% of their damage to
-      // enemies adjacent to the target"; CONVENTIONS' "Splashing / Annihilate" bullet) -- Cast
-      // never splashes, so there is no splash loop here (contrast executeAttack above).
-      return dealDamageWithOffStat(
-        actor.id,
-        targetId,
-        resolveSpellOffStat(actor, spell, powerPercent / 100),
-        'cast',
-        'cast',
-        state,
-        ctx,
-      )
-    case 'heal':
-      return applyHeal(
-        actor.id,
-        targetId,
-        resolveSpellOffStat(actor, spell, powerPercent / 100),
-        state,
-        ctx,
-      )
-    case 'stat-modifier': {
-      if (!spell.statModifier) {
-        throw new Error(
-          'resolver invariant violated: stat-modifier-payload spell missing statModifier',
-        )
-      }
-      return applyStatModifier(
-        actor.id,
-        targetId,
-        spell.statModifier.stat,
-        spell.statModifier.factor,
-        spell.id,
-        state,
-        ctx,
-      )
-    }
-    default: {
-      const exhaustive: never = payload
-      throw new Error(`Unhandled spell payload: ${String(exhaustive)}`)
-    }
+  let working = state
+  for (const effect of spell.effects) {
+    working = executeResponse(
+      effect,
+      spell.id,
+      { self: actor.id, castTarget: targetId, castPowerFraction: powerPercent / 100 },
+      working,
+      ctx,
+    ).state
   }
-}
-
-/** Never applies a status to a corpse -- a cast's damage may have killed the target. */
-function applyStatusIfAlive(
-  sourceId: CreatureId,
-  targetId: CreatureId,
-  spec: StatusSpec,
-  state: CombatState,
-  ctx: ResolutionContext,
-): CombatState {
-  const target = getCreature(state, targetId)
-  if (!target.alive) return state
-  return applyStatus(sourceId, targetId, spec, state, ctx)
+  return working
 }
 
 function executeCastSingle(
@@ -622,7 +555,7 @@ function executeCastSingle(
   if (!spell)
     throw new Error('resolver invariant violated: cast referencing an empty gem slot')
 
-  const targetSide = spell.targetSide ?? 'enemy'
+  const targetSide = spell.targetSide
   let working = state
   let resolvedTargetId: CreatureId | null = targetId
 
@@ -659,16 +592,7 @@ function executeCastSingle(
     // B5: same pre-hit-hook fizzle as executeAttack (no payload, no status); SpellCast stays.
     if (actorDied(actor, working)) break // site 2
     if (!findCreature(working, thisTargetId)?.alive) continue
-    working = applyCastPayload(actor, spell, thisTargetId, powerPercent, working, ctx)
-    if (spell.appliesStatus) {
-      working = applyStatusIfAlive(
-        actor.id,
-        thisTargetId,
-        spell.appliesStatus,
-        working,
-        ctx,
-      )
-    }
+    working = executeSpellEffects(actor, spell, thisTargetId, powerPercent, working, ctx)
   }
   return working
 }
@@ -683,7 +607,7 @@ function executeCastAoe(
   if (!spell)
     throw new Error('resolver invariant violated: cast referencing an empty gem slot')
 
-  const targetSide = spell.targetSide ?? 'enemy'
+  const targetSide = spell.targetSide
   let working = state
 
   for (const [instanceIndex, powerPercent] of buildInstanceList(
@@ -735,16 +659,7 @@ function executeCastAoe(
       // unchanged; this only skips *hitting* an already-dead member.
       const target = getCreature(working, targetId)
       if (!target.alive) continue
-      working = applyCastPayload(actor, spell, targetId, powerPercent, working, ctx)
-      if (spell.appliesStatus) {
-        working = applyStatusIfAlive(
-          actor.id,
-          targetId,
-          spell.appliesStatus,
-          working,
-          ctx,
-        )
-      }
+      working = executeSpellEffects(actor, spell, targetId, powerPercent, working, ctx)
     }
   }
 

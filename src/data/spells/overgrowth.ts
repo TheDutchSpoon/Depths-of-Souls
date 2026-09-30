@@ -16,9 +16,17 @@ export const THORN_LASH: Spell = {
   id: 'thorn-lash',
   name: 'Thorn Lash',
   targetShape: 'single',
-  spellPower: 1.0,
   affinity: 'violence',
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 1.0,
+    },
+  ],
 }
 
 /** Weakening Bite: Violence's second spell is a debuff, not a second damage spell (design-owner
@@ -29,11 +37,17 @@ export const WEAKENING_BITE: Spell = {
   id: 'weakening-bite',
   name: 'Weakening Bite',
   targetShape: 'single',
-  spellPower: 1, // unread in stat-modifier payload mode
   affinity: 'violence',
-  payload: 'stat-modifier',
-  statModifier: { stat: 'defence', factor: 0.8 },
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'apply-stat-modifier',
+      target: { kind: 'cast-target' },
+      stat: 'defence',
+      factor: 0.8,
+    },
+  ],
 }
 
 /** Vine Snare: a spell-authored Web application (a second, independent producer of the status
@@ -43,10 +57,22 @@ export const VINE_SNARE: Spell = {
   id: 'vine-snare',
   name: 'Vine Snare',
   targetShape: 'single',
-  spellPower: 0.85,
   affinity: 'wit',
-  appliesStatus: { statusId: 'web', duration: 3 },
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.85,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'web', duration: 3 },
+    },
+  ],
 }
 
 /** Pollen Cloud: AOE, applies Sleep to everything it hits (a shorter duration than the
@@ -56,10 +82,22 @@ export const POLLEN_CLOUD: Spell = {
   id: 'pollen-cloud',
   name: 'Pollen Cloud',
   targetShape: 'aoe',
-  spellPower: 0.35,
   affinity: 'wit',
-  appliesStatus: { statusId: 'sleep', duration: 2 },
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.35,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'sleep', duration: 2 },
+    },
+  ],
 }
 
 /** Arcane Bolt: a normal biome-1 Wit spawn-pool spell (data-layer carrier reorg -- previously
@@ -72,9 +110,17 @@ export const ARCANE_BOLT: Spell = {
   id: 'arcane-bolt',
   name: 'Arcane Bolt',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'wit',
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.5,
+    },
+  ],
 }
 
 /** Root Grasp: scales off Defence instead of Intelligence (Spell.scalingStat, Slice B) -- a
@@ -85,65 +131,101 @@ export const ROOT_GRASP: Spell = {
   id: 'root-grasp',
   name: 'Root Grasp',
   targetShape: 'single',
-  spellPower: 1.0,
   affinity: 'endurance',
-  scalingStat: 'defence',
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      scalingStat: 'defence',
+      spellPower: 1.0,
+      damageSource: 'cast',
+    },
+  ],
 }
 
 export const BRAMBLE_WARD: Spell = {
   id: 'bramble-ward',
   name: 'Bramble Ward',
   targetShape: 'aoe',
-  spellPower: 1, // unread in stat-modifier payload mode; see Spell.statModifier's own doc comment
   affinity: 'endurance',
   targetSide: 'ally',
-  payload: 'stat-modifier',
-  statModifier: { stat: 'defence', factor: 1.2 },
   unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-stat-modifier',
+      target: { kind: 'cast-target' },
+      stat: 'defence',
+      factor: 1.2,
+    },
+  ],
 }
 
 export const REGROWTH: Spell = {
   id: 'regrowth',
   name: 'Regrowth',
   targetShape: 'single',
-  spellPower: 0.3,
   affinity: 'vitality',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
   unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.3,
+    },
+  ],
 }
 
 export const WILD_VIGOR: Spell = {
   id: 'wild-vigor',
   name: 'Wild Vigor',
   targetShape: 'single',
-  spellPower: 1, // unread in stat-modifier payload mode
   affinity: 'vitality',
   targetSide: 'ally',
-  payload: 'stat-modifier',
-  statModifier: { stat: 'attack', factor: 1.15 },
   unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-stat-modifier',
+      target: { kind: 'cast-target' },
+      stat: 'attack',
+      factor: 1.15,
+    },
+  ],
 }
 
 export const STINGER_SWARM: Spell = {
   id: 'stinger-swarm',
   name: 'Stinger Swarm',
   targetShape: 'single',
-  spellPower: 1.0,
   affinity: 'instinct',
   unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 1.0,
+    },
+  ],
 }
 
 export const HOWLING_INSTINCT: Spell = {
   id: 'howling-instinct',
   name: 'Howling Instinct',
   targetShape: 'aoe',
-  spellPower: 1, // unread in stat-modifier payload mode
   affinity: 'instinct',
   targetSide: 'ally',
-  payload: 'stat-modifier',
-  statModifier: { stat: 'speed', factor: 1.1 },
   unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-stat-modifier',
+      target: { kind: 'cast-target' },
+      stat: 'speed',
+      factor: 1.1,
+    },
+  ],
 }

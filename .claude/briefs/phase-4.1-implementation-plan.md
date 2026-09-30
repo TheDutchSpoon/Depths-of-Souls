@@ -578,6 +578,18 @@ parity bug**, not a golden to regenerate.
 - Re-express **every** spell in `src/data/spells/*` and every spell fixture. Content docs don't
   change (behaviour is identical).
 - Gem augments (Phase 8) will "append responses": no code for that now.
+- **Decided at the 4.1-D plan review** (CONVENTIONS "Spells carry responses" holds the rules):
+  - `heal` gains `offStat` (remap-aware, as on `deal-damage`); its three magnitude modes are
+    mutually exclusive.
+  - `scalingStat: 'none'` is dropped with its one unit test; no content or golden uses it.
+  - `unlockedAtBiome` is **required** on `Spell`, as the shape above says (every spell literal is
+    rewritten in this slice anyway).
+  - A load-time validator limits a spell's list to `deal-damage` / `heal` (formula mode, no
+    `magnitudeSource`), `apply-status`, `apply-stat-modifier` and `remove-status`, targeting
+    `cast-target` or `self`; `cast-target` is rejected in trait and status responses.
+  - One landed target's effect list is atomic: no actor check between its effects.
+  - Magnitudes read the caster's **live** stats (no action-start snapshot), pinned by a test in
+    which the caster's own `on-cast` trigger changes its Intelligence before the hit.
 
 ### Acceptance (4.1-D)
 - **Full golden suite byte-identical.** Plus a unit test per payload kind (damage, heal,
@@ -930,6 +942,12 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     built in C2c.
 34. **Confirmed (design owner, PR #73 review).** The golden-runner consolidation and the two new
     pinning tests land in C2c as a separate test-only commit, not as their own PR.
+35. **Confirmed (design owner, 4.1-D plan review).** A spell's effect list for one landed target is
+    atomic: the dead-actor checks sit between hits, never between one target's effects.
+36. **Confirmed (design owner, 4.1-D plan review).** Spell magnitudes read the caster's live stats
+    when each effect runs, not an action-start snapshot.
+37. **Confirmed (design owner, 4.1-D plan review).** `scalingStat: 'none'` is dropped; a
+    pure-utility spell has no damage/heal effect.
 
 ## Sequencing summary
 

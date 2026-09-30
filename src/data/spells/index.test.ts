@@ -19,7 +19,16 @@ import { ALL_SPELLS } from './index'
 // false-positive collision under this key; none exists in v1 content, so this is left as a known
 // sharp edge rather than a speculative field addition.
 function dedupKey(spell: Spell): string {
-  return `${spell.affinity}|${spell.targetShape}|${spell.payload ?? 'damage'}|${spell.spellPower}`
+  // 4.1-D: the old (payload, spellPower) pair, read off the spell's PRIMARY effect -- the first
+  // damage/heal/stat-modifier effect (an `apply-status` rider never distinguished two spells).
+  const primary = spell.effects.find((e) => e.kind !== 'apply-status')
+  const payload =
+    primary?.kind === 'apply-stat-modifier' ? 'stat-modifier' : (primary?.kind ?? 'none')
+  const spellPower =
+    primary?.kind === 'deal-damage' || primary?.kind === 'heal'
+      ? (primary.spellPower ?? 1)
+      : 1
+  return `${spell.affinity}|${spell.targetShape}|${payload}|${spellPower}`
 }
 
 describe('ALL_SPELLS (global registry)', () => {

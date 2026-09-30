@@ -131,6 +131,12 @@ export type ResponseTarget =
   // consume-stacks' "0 stacks" skip -- this is what makes Spore's contagion infect only fresh
   // hosts instead of endlessly refreshing the same one.
   | { readonly kind: 'random-ally-without-status'; readonly statusId: string }
+  // Phase 4.1-D (A4): valid ONLY inside `Spell.effects` (rejected in trait/status responses by
+  // `validateNoCastTargetInResponseTargets`). The spell's current landed target -- the single
+  // target, or the AOE member being hit -- or NOTHING if it has died (B5's fizzle rule applied
+  // inside a spell; also why an `apply-status` after a killing hit lands nowhere). Outside a cast
+  // context (no `castTarget` on the HookContext) resolving it is a resolver-invariant error.
+  | { readonly kind: 'cast-target' }
 
 // Applied via a spell or a triggered apply-status response (Slice C).
 export interface StatusSpec {
@@ -194,13 +200,19 @@ export type EffectResponse =
        * read from the bearer (the creature being healed), same composition as deal-damage's own
        * flatAmount -- see resolveFlatTotal (resolution.ts). */
       readonly amountPerStack?: number | StatPercent
+      /** Phase 4.1-D (A4, plan review F2): the remap-aware formula slot, mirroring deal-damage's
+       * own `offStat` -- `getOffensiveStat(HEALER, offStat, spellPower × count)`, so `'cast'` is
+       * the default Intelligence lookup a heal SPELL always used (a `stat-remap` redirects it;
+       * `scalingStat` reads its stat raw). The three magnitude modes (`amountPerStack` /
+       * `scalingStat` / `offStat`) are mutually exclusive -- a resolver-invariant error otherwise. */
+      readonly offStat?: RemapSlot
       /** Phase 4 Slice E2 (Treants Elder): stat-scaled mode -- `getEffectiveStat(HEALER,
        * scalingStat) × (spellPower ?? 1)`, mirroring deal-damage's own scalingStat/spellPower
        * pairing exactly. Reads the HEALER's (the firing creature's) own stat, never the
        * target's -- same "attacker's own stat" precedent as deal-damage; target-%-max-HP heals
        * (reading the TARGET's max HP) are deferred, no locked content needs them. */
       readonly scalingStat?: Stat
-      /** Coefficient on `scalingStat`; only read in that mode. Default 1.0. */
+      /** Coefficient on `scalingStat` / `offStat`; only read in those modes. Default 1.0. */
       readonly spellPower?: number
       /** Phase 4 Slice E2 (Necromoss): an alternative source for the repetition count this
        * response's own magnitude is scaled by -- `amountPerStack`'s `× stacks` (flat mode) or,
@@ -357,6 +369,13 @@ export function validateStatModifierConditions(defs: readonly EffectDef[]): void
  * kind either carries a `target` field or none at all (`suppress-action`).
  */
 function throwIfRandomSelectorTarget(target: ResponseTarget, context: string): void {
+  // Phase 4.1-D: `cast-target` only means something inside a spell's own effect list (it reads
+  // the cast's landed target), so every trait/perk/status site that runs this validator rejects it.
+  if (target.kind === 'cast-target') {
+    throw new Error(
+      `effect invariant violated: ${context} targets 'cast-target', which is only valid inside a spell's effect list`,
+    )
+  }
   if (target.kind === 'selector' && target.selector.kind === 'random') {
     throw new Error(
       `effect invariant violated: ${context} targets the intent-only 'random' selector -- a response target has no intended side to resolve it against; use an explicit selector instead`,
@@ -935,4 +954,57 @@ export interface Trait {
 export type BaselineEffectEntry = {
   readonly def: EffectDef
   readonly sourceTraitId: string
+}
+
+/**
+ * Phase 4.1-D (A4, plan review F1): the load-time validator for `Spell.effects` (called by
+ * `data/spells/index.ts` over the registry; also unit-tested directly). A spell's list may hold
+ * `deal-damage` / `heal` in FORMULA mode (`offStat` or `scalingStat`; no `flatAmount` /
+ * `amountPerStack`, no `magnitudeSource`), `apply-status`, `apply-stat-modifier` and
+ * `remove-status`, each targeting `cast-target` or `self`. Other verbs and targets join when
+ * content needs them. Throws at import time, like `validateStatModifierConditions`.
+ */
+export function validateSpellEffects(spell: Spell): void {
+  for (const [index, effect] of spell.effects.entries()) {
+    const context = `spell "${spell.id}" effect #${index} (${effect.kind})`
+    switch (effect.kind) {
+      case 'deal-damage':
+        if (effect.flatAmount !== undefined || effect.magnitudeSource !== undefined) {
+          throw new Error(
+            `spell invariant violated: ${context} must be formula mode (offStat/scalingStat), with no flatAmount/magnitudeSource`,
+          )
+        }
+        if (effect.offStat === undefined && effect.scalingStat === undefined) {
+          throw new Error(
+            `spell invariant violated: ${context} needs an offStat or a scalingStat`,
+          )
+        }
+        break
+      case 'heal':
+        if (effect.amountPerStack !== undefined || effect.magnitudeSource !== undefined) {
+          throw new Error(
+            `spell invariant violated: ${context} must be formula mode (offStat/scalingStat), with no amountPerStack/magnitudeSource`,
+          )
+        }
+        if (effect.offStat === undefined && effect.scalingStat === undefined) {
+          throw new Error(
+            `spell invariant violated: ${context} needs an offStat or a scalingStat`,
+          )
+        }
+        break
+      case 'apply-status':
+      case 'apply-stat-modifier':
+      case 'remove-status':
+        break
+      default:
+        throw new Error(`spell invariant violated: ${context} is not allowed in a spell`)
+    }
+    // Every verb that survived the switch carries a `target`.
+    const target = effect.target
+    if (target.kind !== 'cast-target' && target.kind !== 'self') {
+      throw new Error(
+        `spell invariant violated: ${context} must target cast-target or self, not ${target.kind}`,
+      )
+    }
+  }
 }

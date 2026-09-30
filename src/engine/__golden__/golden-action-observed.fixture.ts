@@ -36,8 +36,17 @@ export const TEST_SPELL: Spell = {
   id: 'test-observed-spell',
   name: 'Test Spell',
   targetShape: 'single',
-  spellPower: 1,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 1,
+    },
+  ],
 }
 
 export const ECHO_CAST_FIXTURE: Trait = {
