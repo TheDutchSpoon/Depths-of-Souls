@@ -1280,19 +1280,16 @@ each of the five (e.g. 4557 -> 4558, 4018 -> 3990) and no result changes. No oth
 
 #### `corpus:update` on Windows
 
-`package.json`: `vitest run src/engine/corpus-digest.test.ts --mode corpus-update`. The review's
-suggestion (read `import.meta.env.MODE`) does **not** work on the Windows machine this was built on.
-Observed there, with Vitest 4.1.11 / Node 24 / win32-x64 and this branch's config: a test run with
-`--mode corpus-update` reads `import.meta.env.MODE === 'test'` (probed twice, most recently by
-making the digest test throw `MODEPROBE=` plus the value: it printed `MODEPROBE=test`), and
-`vite.config.ts` is re-evaluated per project with mode `'test'`. A later hand-out reported the
-opposite on Linux (Vitest 5.0.1), so this is version- or platform-dependent and the two
-observations are recorded, not reconciled. `vite.config.ts` therefore reads the requested mode once
-from `process.argv` and forwards it as `test.env.CORPUS_UPDATE`; the test reads
-`import.meta.env.CORPUS_UPDATE === '1'` and the `node:process` import is gone. Checked:
-`npm run corpus:update` regenerates the fixture (5 rows changed), and a plain `npm run test` only
-compares. If `MODE` reads `'corpus-update'` on every supported platform, the forwarding can be
-replaced by reading `MODE` directly.
+`package.json`: `vitest run src/engine/corpus-digest.test.ts --mode corpus-update`; the digest test
+reads `import.meta.env.MODE === 'corpus-update'` directly, with no extra config in `vite.config.ts`
+and no `node:process` import. Checked on Windows with Vitest 5.0.1: `npm run corpus:update`
+regenerates the fixture and a plain `npm run test` only compares.
+
+History, for the record: an earlier build of this branch forwarded the mode through
+`vite.config.ts` because `import.meta.env.MODE` read `'test'` under `--mode corpus-update`. The cause
+was a stale local install (Vitest 4.1.11 in `node_modules` while `package.json` and the lockfile
+specify 5.0.1), not a platform difference: after `npm ci` the direct read works, and the
+forwarding was removed.
 
 #### Test-only consolidation (set 2)
 

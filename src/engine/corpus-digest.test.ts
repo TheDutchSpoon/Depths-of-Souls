@@ -82,7 +82,7 @@ describe('corpus digest (Phase 4.1-C2a, behaviour tripwire)', () => {
     const corpus = buildCorpus()
     const actual = corpus.map(digestFight)
 
-    if (import.meta.env.CORPUS_UPDATE === '1') {
+    if (import.meta.env.MODE === 'corpus-update') {
       const config = await prettier.resolveConfig(FIXTURE_PATH)
       const formatted = await prettier.format(renderFixture(actual), {
         ...config,
