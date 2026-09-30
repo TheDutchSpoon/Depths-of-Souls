@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveFight } from '../combat'
+import { runGolden } from '../test-utils/golden-runner'
 import type { CombatEvent } from '../types'
+import * as fixture from './golden-6v6-scripted.fixture'
 import {
-  SEED,
-  playerParty,
-  enemyParty,
-  scripts,
   expectedResult,
   expectedRoundCount,
   expectedRound1TurnOrder,
@@ -16,13 +13,7 @@ import {
 
 describe('golden replay: 6v6 scripted integration (generated, checkpoint-verified)', () => {
   it('matches the checkpointed structural properties of the real run', () => {
-    const initial = createCombat({
-      seed: SEED,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts: scripts },
-    })
-    const { state, events } = resolveFight(initial)
+    const { events, state } = runGolden(fixture)
 
     expect(state.result).toBe(expectedResult)
     expect(state.round).toBe(expectedRoundCount)

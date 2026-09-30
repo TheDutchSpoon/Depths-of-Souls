@@ -1101,3 +1101,254 @@ action).
 `runAction` (a refused action draws nothing), delete `legacyGrantedTargeting`, rule 4, the pre-hit
 fizzle; deletes `legacyDefaultTarget`/`getDefaultTarget` (retiring the two `getDefaultTarget`
 tests with the function); goldens 3-7 as amended at the plan review.
+
+## 4.1-C2c -- B2 (one rule set for every action source) and B5 (pre-hit fizzle)
+
+Completes 4.1-C. The plan review's doc-sync (CONVENTIONS B2 rule 2: a refused granted action emits
+nothing of its own) landed first as its own commit. Golden policy: every existing golden
+byte-identical; each flip lands with a new hand-derived golden.
+
+### What was built
+
+- **B2.1 -- a skipped turn refuses the granted cast.** `maybeFireBonusCast(actorId, state, events,
+  turnSkipped)` rolls the chance first, then returns if the turn was skipped; the call site passes
+  the turn-start `suppressed` flag. It holds even when the lock is gone by the granted step.
+- **B2.2 -- legality before resolution, for every source.** `runAction` calls `checkLegality`
+  before `resolveIntent` (main action included). A refused action draws nothing and emits nothing
+  (no `announce`, so a refused echo leaves only the bearer's `TriggerFired`). The actor is the
+  caster for an echo, so the bearer's own locks never gate its passive trigger.
+- **B2.3 -- `legacyGrantedTargeting` deleted**, with `ResolveIntentOptions` and both call-site
+  flags; `resolveIntent` is `(actor, intent, state)` again and `RunActionOptions` keeps only
+  `announce`. Bonus-cast and echo targets go through Confusion -> Tunnel Vision -> Provoke.
+- **B2.4 -- rule 4.** `resolveInstanceTarget(actor, previous, state, action, targetSide)` falls back
+  to `defaultTargetingFor(actor, action)` (the one B1 source of truth), then Provoke via
+  `resolveProvoke` (now exported from `targeting.ts`): one draw even for a single provoker, skipped
+  under Tunnel Vision and for an ally-side instance, never a Confusion roll. `legacyDefaultTarget`
+  and `getDefaultTarget` are deleted.
+- **B5.** After an instance's pre-hit hooks (`on-attack`/`on-cast` and `on-action-observed`),
+  `executeAttack` and `executeCastSingle` re-read the target; a dead one `continue`s the instance
+  (no damage, payload, status, `on-damage-dealt` or Splashing for it). `AttackDeclared`/`SpellCast`
+  stay; no fizzle event.
+
+### Golden impact (measured on main @ c0bb616 before building)
+
+Each flip alone, then all five together, full suite: **0 existing goldens and 0 unit tests
+change** in every run (only `corpus-digest` fails, as expected). Alone against main's digest:
+B2.1 0, B2.2 0, B2.3 87, B2.4 73, B5 18 fights changed.
+
+`git diff --stat -- src/engine/__golden__`: only the 10 new files added, plus two comment-only
+edits (below).
+
+### Corpus-digest attribution (fixed order; regenerated once via `npm run corpus:update`)
+
+Per-fight hashes dumped after each cumulative step and compared with the previous step:
+
+| Step | Changed vs previous step | Notes |
+|---|---|---|
+| 1. B2.1 | **0** | Proven by its golden only. |
+| 2. B2.2 | **0** | Proven by its golden only. |
+| 3. B2.3 | **87** | By source, each applied alone to step 2: bonus-cast **87**, echo **22**; the union is 87 because all 22 echo-moved fights also move under bonus-cast (overlap stated, not summed). |
+| 4. B2.4 | **72** | Measured after B2.3. Split: the side-aware default (without Provoke) moves **72**; adding the Provoke step moves **0** further fights but changes the log of **2** of those same 72 (default-only vs full differ in 2 fights, both inside the 72). Applied alone to main, B2.4 moves **73**, not 72: 3 of those already moved under B2.3 and land on the same path (so they don't move again in the step), and 2 fights B2.4 alone leaves untouched do move in the step because B2.3 changed their history (73 - 3 + 2 = 72). 49 of the step's 72 fights were also changed by B2.3. |
+| 5. B5 | **18** | One reason. |
+| **Cumulative vs committed digest** | **126** | Steps overlap: 87 + 72 + 18 > 126, later steps re-change fights an earlier step already changed. |
+
+The committed fixture diff is 126 changed rows, and the regenerated fixture is byte-identical to the
+cumulative dump of the five steps. **Undo all five reproduces main's committed digest exactly**
+(0 fights differ): all five reverted at once on the final code (skip gate removed; `runAction`'s
+legality check removed; granted casts skipping the override pipeline again; rule 4 back to
+first-by-slot with no Provoke; both B5 guards removed), digest regenerated and compared with
+`git show HEAD:` of the fixture. B2.1 and B2.2 move 0 corpus fights, so each is proven by its
+golden only.
+
+### New goldens (hand-derived; arithmetic and the mulberry32 draws are in each fixture header)
+
+Every one uses the uniform fixture shape, so the frozen replay sweep covers it (no bespoke-list
+entry). Each was shown failing with its mechanism removed (each mutation applied alone, then
+reverted; only the named golden(s) fail):
+
+| Golden | Mutation | Result |
+|---|---|---|
+| `golden-b2-skipped-turn-refuses-bonus-cast` (seed 9200; Stun applied at fight start, removed by an `on-turn-end` fixture trigger before the granted step, so only the gate refuses; later consumer: E1's `random-enemy` pick over 3 targets, draw #2 = 0.3225 -> CASTER, vs draw #1 = 0.8779 -> D2) | skip gate removed | fails (a `SpellCast` appears) |
+| same | refuse **before** the roll | fails (E1's pick shifts to D2) |
+| `golden-b2-silenced-refuses-bonus-cast` (seed 9211; permanent scoped-cast `suppress-action` fixture trait; the caster still attacks; E1's pick = draw #2 = 0.2864 -> CASTER, vs draw #3 = 0.4192 -> D1) | `checkLegality` removed from `runAction` | fails (a cast lands) |
+| same | draw the gem, then refuse | fails (E1's pick shifts to D1) |
+| `golden-b2-confused-bonus-cast-redirects` (seed 9229; Confusion roll 0.2319 < 0.5, ally pick 0.7761 over [caster, A1, A2] -> A2; default enemy would be E2) | granted casts skip the override pipeline again | fails (cast hits E2) |
+| `golden-b2-provoke-redirects-echo` (seed 9233; echo chance 50% with a passing first roll 0.1123 and a failing second 0.6661, so exactly one `EchoCastGranted`, no `CascadeTruncated`; the echo's draw #4 = 0.4413 over [P, X, Y] would pick X, a non-provoker) | granted casts skip the override pipeline again | fails (echo hits X) |
+| `golden-b5-fizzle-rule4-retarget` (no RNG; enemies A 30 / B 25 / C 20 with C the unique lowest, wounded to 5/20 at fight start; lethal `on-attack` fires because 5*100 = 500 <= 30*20 = 600, and not on B because 25*100 = 2500 > 30*25 = 750; instance 2 = 20 x 0.3 -> 6 on B) | B5 guard removed | fails (a `DamageDealt` on the corpse) |
+| same | rule 4 back to first-by-slot | fails (instance 2 hits A) |
+
+Plan-review corrections applied: the echo golden uses a sub-100% chance (a 100% echo re-triggers on
+its own echo every hop to the depth cap); the B5 golden's wound target is unambiguous (C's max HP
+is below B's, so no slot tie-break is involved).
+
+### New and retired unit tests
+
+- **Retired** (with `getDefaultTarget`, not changed): `targeting.test.ts` -- "returns null when the
+  enemy side has no living creatures" and "returns the first living enemy by slot, ascending".
+- **Changed:** none. No existing expected value moved.
+- **New (`actions.test.ts`, +10)**, each shown failing with its mechanism removed:
+  - `runAction` refuses a scoped-Cast lock and draws/emits nothing -- fails with legality removed
+    and with draw-gem-then-refuse.
+  - Clear Mind-style immunity re-permits the cast -- fails with the immunity check removed.
+  - An `'all'` lock applied by a turn-end hook refuses that turn's granted cast -- fails with
+    legality removed (and, by design, still passes with only the B2.1 skip gate removed: it pins
+    B2.2, not B2.1).
+  - An echo: a Stunned bearer still echoes (fails if the bearer's locks are checked); a locked
+    caster refuses the echo, leaving only the trigger's `TriggerFired` (fails with legality removed).
+  - Rule 4: lowest-HP default not first-by-slot (fails with first-by-slot restored); Provoke branch
+    with exactly one draw for a single provoker (fails with Provoke removed and with the single-
+    provoker shortcut); Tunnel Vision skips Provoke, no draw; a 100%-confused attacker is never
+    redirected and draws nothing (fails if the Confusion pipeline is used); an ally-side instance
+    skips Provoke (fails with first-by-slot and with Provoke applied to ally instances).
+
+### Comment-only edits to existing fixtures (code tokens compared old vs new: identical)
+
+- `golden-6v6.fixture.ts` (doc comment: default targeting is the lowest-HP enemy, and equal HP
+  makes the slot tie-break pick the first living enemy). The plan review named
+  `golden-6v6-scripted.fixture.ts:43`; the stale sentence is in `golden-6v6.fixture.ts` (there is
+  no such file name).
+- `golden-b1-bonus-cast-default.fixture.ts` ("(those are C2c)" now says the override pipeline draws
+  nothing here).
+
+### Verification
+
+`npx tsc -b`, `npm run lint`, `npm run format:check`, `npm run build` clean; `npx vitest run`:
+**124 files / 786 tests** (from 119 / 768: -2 retired, +10 unit, +5 golden tests, +5 sweep
+replays). Frozen double-resolve and replay sweep green. Note: `npm run corpus:update` uses a POSIX
+`VAR=x cmd` prefix and fails under Windows `cmd`; it was run with `--script-shell` pointing at Git
+Bash.
+
+### Review changes (PR #73)
+
+Two change sets, so they can be committed separately.
+
+- **Set 1 -- behaviour and its tests (items 1-3, 5):** `src/engine/actions.ts`;
+  `src/engine/actor-death.test.ts` (new); `__golden__/golden-actor-dies-attack.{fixture,test}.ts`
+  and `__golden__/golden-b5-cast-fizzle.{fixture,test}.ts` (new); `__corpus__/corpus-digest.fixture.ts`
+  (regenerated once); `package.json`, `vite.config.ts`, `corpus-digest.test.ts` and a comment in
+  `eslint.config.js` (item 3); `src/engine/test-utils/golden-runner.ts` (the two new golden tests
+  use it, so it ships with this set); this record.
+- **Set 2 -- test-only (item 4):** every other `__golden__/*.test.ts` (driving code only) and the
+  fixtures that gained a `TURN_STEPS` or `setup` export; `src/engine/dead-target-pins.test.ts`
+  (new); the deletion of `frozen-replay-sweep.test.ts`. No engine source, no `expectedEvents` /
+  `expectedResult`.
+
+#### B5 is built at two sites, each with its own test
+
+- `executeAttack`: `golden-b5-fizzle-rule4-retarget` (fails with the attack guard removed).
+- `executeCastSingle`: **new** `golden-b5-cast-fizzle` (seed inert, no RNG). SMITE = single-target
+  damage spell, spellPower 1.0, `appliesStatus` Weaken, with a second cast instance (30%). Enemies
+  A 30 / B 25 / C 20; C is wounded to 5 at fight start (15 flat, the unique minimum, no tie). The
+  `on-cast` trigger fires on C (5*100 = 500 <= 30*20 = 600), kills it, and the hit fizzles: no
+  `DamageDealt`, no `StatusApplied`. Instance 2 re-targets by rule 4 to B (25 < A's 30; first-by-slot
+  would be A), the trigger is false there (2500 > 750), 20 x 0.3 = 6 -> raw 6.06 -> 6, B 25 -> 19, and
+  Weaken lands on the living B. Fails with the cast guard removed (a `DamageDealt` on the corpse).
+
+#### Dead-actor rule ("An action ends when its actor dies")
+
+`actorDied(actor, working)` reads the actor fresh from `working` and the executors drop the rest of
+the action (no fizzle event; events already emitted stay) at the four sites CONVENTIONS names:
+
+1. the start of each instance, before target resolution and `AttackDeclared`/`SpellCast`
+   (`executeAttack`, `executeCastSingle`, the AOE instance loop);
+2. after each instance's pre-hit hooks, before the hit or payload (both single-target loops);
+3. before each Splashing hit;
+4. before each AOE member's hit.
+
+Tests (each shown failing with only its own check removed):
+
+| Site | Test | Mutation that fails it |
+|---|---|---|
+| 1, Attack | **golden** `golden-actor-dies-attack` (two-instance attacker HP 10, target retaliates with a lethal flat hit on the triggering source after instance 1: 20 dmg -> target 80, then 99 flat on the attacker; instance 2 emits nothing) | site-1 check removed from `executeAttack` |
+| 1, single Cast | `actor-death.test.ts`: no second `SpellCast` | site-1 check removed from `executeCastSingle` |
+| 1, AOE | `actor-death.test.ts`: no second instance's `SpellCast` | site-1 check removed from `executeCastAoe` |
+| 2, Attack | `actor-death.test.ts`: self-inflicted `on-attack` kill, only the self hit lands | site-2 check removed from `executeAttack` |
+| 2, single Cast | `actor-death.test.ts`: self-inflicted `on-cast` kill, no payload | site-2 check removed from `executeCastSingle` |
+| 3 | `actor-death.test.ts`: the first splash target retaliates and kills the attacker, the second splash target is not hit | site-3 check removed |
+| 4 | `actor-death.test.ts`: the first AOE member retaliates and kills the caster, the second is not hit | site-4 check removed |
+
+#### Corpus attribution (regenerated once, after items 1-3; `npm run corpus:update`)
+
+Row 6, after the fixed five steps: **the dead-actor rule moves exactly 5 fights**
+(308, 374, 433, 467, 496), exactly the five the review named (not individually replayed here; the review describes them as Brute killed by
+Snapback / Retaliating Shell after its first hit, and a Sorcerer killed by Retaliating Shell during an
+Overtone echo). 4 of the 5 (308, 374, 433, 496) were already changed by the earlier steps; 467 is
+new. **Cumulative vs main's digest: 127 changed fights** (was 126). **Outcomes: unchanged by this
+row.** Against main's digest 6 fights change result, the same 6 as before (2 draw -> win,
+3 loss -> draw, 1 loss -> win); one of the six (374) is among the five, and its result is the same before and after this row (the change vs main comes from the earlier steps). Event counts move by a few events in
+each of the five (e.g. 4557 -> 4558, 4018 -> 3990) and no result changes. No other fight moved.
+
+#### `corpus:update` on Windows
+
+`package.json`: `vitest run src/engine/corpus-digest.test.ts --mode corpus-update`; the digest test
+reads `import.meta.env.MODE === 'corpus-update'` directly, with no extra config in `vite.config.ts`
+and no `node:process` import. Checked on Windows with Vitest 5.0.1: `npm run corpus:update`
+regenerates the fixture and a plain `npm run test` only compares.
+
+History, for the record: an earlier build of this branch forwarded the mode through
+`vite.config.ts` because `import.meta.env.MODE` read `'test'` under `--mode corpus-update`. The cause
+was a stale local install (Vitest 4.1.11 in `node_modules` while `package.json` and the lockfile
+specify 5.0.1), not a platform difference: after `npm ci` the direct read works, and the
+forwarding was removed.
+
+#### Test-only consolidation (set 2)
+
+ASSUMPTIONS (shape pinned):
+- Helper: `src/engine/test-utils/golden-runner.ts`, exporting `runGolden(fixture, { seed? })` ->
+  `{ initial, state, events }`, `createGoldenState(fixture, seed?)` and `stepFrozen(state)`
+  (`resolveTurn(deepFreeze(state))`).
+- A fixture exports `SEED`, `playerParty`, `enemyParty`, optional `scripts`/`traits`/`statuses`,
+  optional `TURN_STEPS` (absent = run to the end) and optional `setup(state)` (the post-`createCombat`
+  wounds and pre-applied statuses; runs before the first frozen turn). A two-seed golden passes
+  `{ seed }`. No golden needed a custom `drive` export: `initial` is returned so the tests that
+  asserted on the starting state (slot lists, RNG position) still can.
+- Fixtures gained: `TURN_STEPS` where their test ran a bare `resolveTurn` or a hardcoded loop, and
+  `setup` in the 13 goldens that wounded or pre-applied (d3 x2, dot, necromoss-reclaim, rot-sovereign,
+  both round-end mid-sweep, sporch-cinderlord-burn-stacks, spore-spread x4, hollowkin-wretch-self-dot).
+
+Expected-value check: `git diff -U0` over the fixtures shows one removed line in total (an unused
+`CombatEvent` import replaced); no `expectedEvents` / `expectedResult` line is added or removed in any
+fixture. In the tests, no `expect(events).toEqual(...)` / `expect(state.result)` line is removed or
+added; the only changed assertion lines are the six slot-list checks (`state` -> `initial`, since the
+runner returns the starting state) and one `working.result` -> `state.result`. (`golden-castable-draw`'s
+slot-order check, "asserted in the test" per its header, was dropped by the first rewrite and is
+restored, so it is unchanged, not a seventh change.)
+
+Counts: tests before this hand-out 786 (58 in the sweep); now 799 with the sweep file still present
+(+2 new goldens, +6 `actor-death`, +3 `dead-target-pins`, +2 sweep replays for the two new
+fixtures); **741 once `frozen-replay-sweep.test.ts` is deleted** (-58: 56 replays + 2 accounting
+tests). No golden's own test count changed (88 golden test files, 90 tests). The sweep file is still
+in the working tree: deleting files is left to the owner.
+
+Freeze proof, two mutations against the shared runner:
+- Removing the per-turn clone at the top of `resolveTurn` (RNG writes hit the frozen input): **25
+  golden test files fail**, against 15 before (14 sweep entries + `golden-d3-revive-cap-exclusion`).
+  Newly caught, all previously excluded from the sweep: `golden-6v6-scripted`,
+  `golden-chance-percent`, `golden-cheat-death`, `golden-resonant-overtone`,
+  `golden-seed-sensitivity`, `golden-spider-broodwarden`, `golden-spore-spread`,
+  `golden-spore-spread-dot-kill`, `golden-spore-spread-filter`, `golden-web-break-free`. Goldens that
+  draw no RNG cannot fail this mutation.
+- So a second mutation writes a non-RNG field of the input at the top of `resolveTurn`
+  (`state.round = state.round`): **all 88 golden test files (90 tests) fail**, against 56 replays in
+  the sweep. Every golden is now frozen-replayed.
+
+Two behaviours no test pinned, in `dead-target-pins.test.ts` (hand-derived in the file):
+- An AOE cast skips a member that died earlier in the same cast (member 1, HP 5, dies to the 20-damage
+  hit; its `on-death` flat 99 on its lowest-HP ally kills member 2, HP 50; the loop must skip 2's
+  hit). Fails with the `if (!target.alive) continue` in the AOE member loop removed.
+- A status is never applied to a dead target (Smite, Int 20 vs HP 5, `appliesStatus` Weaken: the
+  kill emits no `StatusApplied`; a control on a survivor does). Fails with the alive check in
+  `applyStatusIfAlive` removed.
+
+### Verification (after PR #73)
+
+`npx tsc -b`, `npm run lint`, `npm run format:check`, `npm run build` clean; `npm run test`: 128 files /
+799 tests with the sweep file present (741 without it). `npm run corpus:update` now uses `--mode`.
+All existing goldens' `expectedEvents` are unchanged.
+
+### Spec notes (for the docs, before 4.1-D / 4.1-E)
+
+- The "attacker dying during its own pre-hit hooks" question is **decided and built** (CONVENTIONS "An
+  action ends when its actor dies"); nothing outstanding.
+- Nothing else surfaced: rule 2's "a refused granted action emits nothing" was the one gap earlier,
+  already in CONVENTIONS.

@@ -547,6 +547,9 @@ The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
   `on-damage-taken` (self) fires **only if the target survived** → then if it died: `CreatureDied` →
   `on-death` → `on-kill` (source) → `on-ally-death`/`on-enemy-death` (observers). Hit-reactions
   resolve before death-reactions.
+- **The same holds for the actor** (Phase 4.1-C2c). A creature killed inside its own action, say by
+  a retaliation after its first hit, does nothing more in that action: no further hit, splash hit
+  or AOE hit. What it already did stays.
 - **Applying a status emits `StatusApplied` then fires `on-status-applied`** (event-before-hook,
   matching intent→consequence ordering). Re-entrant chains (a status-application triggering another)
   are covered by the loop-safety guard.
@@ -950,9 +953,9 @@ Design constraints:
   blocks Cast, Pacified blocks Attack, Stun/Sleep block everything). A separate "**unresolvable selector → skip**" branch also exists, but with the v1
   selector set it has **no reachable trigger** (self always exists; ally-selectors include the
   acting creature so they always resolve; enemy-selectors always have a target because `decideAction`
-  never runs against an already-wiped enemy side — win/loss is checked after every action). It is
-  kept as a **defensive/structural seam** — documented but currently unreachable, like Phase 1's
-  `getDefaultTarget` null case — so that future selectors which *can* fail to resolve get correct
+  never runs against an already-wiped enemy side — win/loss is checked at the end of every turn, so
+  no turn starts after one side is gone). It is kept as a **defensive/structural seam**, documented
+  but currently unreachable, so that future selectors which *can* fail to resolve get correct
   behavior for free. This keeps scripts robust.
 - **Evaluation is side-effect-free lookahead**: walk rules top-down evaluating condition + validity
   as pure predicates over current state; the **first** rule that passes wins; only then is its

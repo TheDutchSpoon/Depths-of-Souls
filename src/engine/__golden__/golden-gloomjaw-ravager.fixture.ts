@@ -23,6 +23,7 @@ import { GLOOMJAW_RAVAGER_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import type { CombatEvent } from '../types'
 
 export const SEED = 9019 // No RNG consumed anywhere in this fixture; seed is inert.
+export const TURN_STEPS = 1
 
 const RAVAGER = createCreatureId('gloomjaw-ravager')
 const TARGET = createCreatureId('target')

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   adjacentLivingTargets,
-  getDefaultTarget,
   getProvokingMembers,
   livingAlliesOf,
   livingEnemiesOf,
@@ -29,23 +28,6 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     ...overrides,
   }
 }
-
-describe('getDefaultTarget', () => {
-  it('returns null when the enemy side has no living creatures', () => {
-    expect(getDefaultTarget([])).toBeNull()
-    const allDead = makeParty('enemy', [{ id: 'a', alive: false }])
-    expect(getDefaultTarget(allDead)).toBeNull()
-  })
-
-  it('returns the first living enemy by slot, ascending', () => {
-    const enemy = makeParty('enemy', [
-      { id: 'first', alive: false },
-      { id: 'second' },
-      { id: 'third' },
-    ])
-    expect(getDefaultTarget(enemy)).toBe(enemy[1]?.id)
-  })
-})
 
 describe('livingEnemiesOf / livingAlliesOf', () => {
   it('selects the opposing side, alive-filtered', () => {

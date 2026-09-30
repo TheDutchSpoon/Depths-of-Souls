@@ -26,6 +26,10 @@ import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
+import { updateCreature } from '../creature-lookup'
+import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
+import type { CombatState } from '../types'
 
 export const SEED = 1 // No RNG consumed anywhere in this fixture (empty pool) -- the test's own
 // trailing check asserts state.rng.position is still exactly SEED after the whole run.
@@ -74,3 +78,27 @@ export const expectedEvents: CombatEvent[] = [
   // No StatusApplied -- the pool is empty, so the trigger fizzles right here.
   { type: 'TurnEnded', creatureId: ATTACKER },
 ]
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // Pre-apply Spore to BOTH BEARER (its own on-death spread trigger only exists while it
+  // carries the status) and ALLY (so the filtered pool is empty), then wound BEARER -- all
+  // before any turn resolves, into a throwaway events array.
+  let state = applyStatus(
+    BEARER,
+    BEARER,
+    { statusId: 'spore' },
+    created,
+    createResolutionContext([], newCascade()),
+  )
+  state = applyStatus(
+    BEARER,
+    ALLY,
+    { statusId: 'spore' },
+    state,
+    createResolutionContext([], newCascade()),
+  )
+  state = updateCreature(state, BEARER, { currentHp: BEARER_STARTING_HP })
+  return state
+}

@@ -3,10 +3,22 @@
 // support-spells.test.ts (resolveIntent's ally-side path) already exercise.
 
 import { describe, expect, it } from 'vitest'
-import { castableGemSlots, defaultTargetingFor, resolveIntent } from './actions'
+import {
+  castableGemSlots,
+  createResolutionContext,
+  defaultTargetingFor,
+  executeAction,
+  resolveIntent,
+} from './actions'
+import { createCombat, resolveTurn } from './combat'
+import { newCascade } from './resolution'
+import { createEffectInstanceId } from './effect-types'
+import { ALWAYS_WAIT_SCRIPT as ALWAYS_WAIT } from '../data/scripts'
+import { STUN } from '../data/statuses'
 import { makeParty } from './__fixtures__/creatures'
 import { createRngState, nextRandom } from './rng'
-import type { CombatState, Spell } from './types'
+import type { CombatEvent, CombatState, Spell } from './types'
+import type { ActiveEffect, Trait } from './effect-types'
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {
@@ -233,5 +245,308 @@ describe('resolveIntent -- castable-filtered gem draw and resolved-side default 
       gemSlot: 0,
       targetId: player[1]!.id,
     })
+  })
+})
+
+// ---- Phase 4.1-C2c (B2, B5): one rule set for every action source ----
+
+function lock(scope: 'all' | 'cast', id = 'lock'): ActiveEffect {
+  return {
+    category: 'condition-status',
+    statusId: 'lock-' + id,
+    cap: 1,
+    triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action', scope } }],
+    polarity: 'debuff',
+    defaultDuration: 3,
+    instanceId: createEffectInstanceId('lock#' + id),
+    sourceTraitId: 'lock-' + id,
+    remainingDuration: 2,
+    stacks: 1,
+  }
+}
+
+const RANDOM_CAST = { action: { kind: 'cast', gemSlot: 'random' } } as const
+
+describe('runAction -- legality before resolution, for every source (B2.2, 4.1-C2c)', () => {
+  it('a scoped-Cast lock refuses a cast, and NOTHING is drawn or emitted (not even the gem draw)', () => {
+    const player = makeParty('player', [
+      { id: 'me', equippedSpells: [ENEMY_SPELL], activeEffects: [lock('cast')] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      rng: createRngState(42),
+    })
+    const events: CombatEvent[] = []
+    const ctx = createResolutionContext(events, newCascade())
+
+    const next = ctx.runAction(player[0]!.id, RANDOM_CAST, state)
+
+    expect(next).toBe(state)
+    expect(events).toEqual([])
+    expect(state.rng.position).toBe(createRngState(42).position) // zero draws
+  })
+
+  it('Clear Mind-style immunity re-permits the same cast', () => {
+    const silenced = lock('cast', 'silenced')
+    const clearMind: ActiveEffect = {
+      category: 'status-immunity',
+      statusId: 'lock-silenced',
+      instanceId: createEffectInstanceId('clear-mind'),
+      sourceTraitId: 'clear-mind',
+    }
+    const player = makeParty('player', [
+      { id: 'me', equippedSpells: [ENEMY_SPELL], activeEffects: [silenced, clearMind] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = makeState({ playerParty: player, enemyParty: enemy })
+    const events: CombatEvent[] = []
+    const ctx = createResolutionContext(events, newCascade())
+
+    ctx.runAction(player[0]!.id, RANDOM_CAST, state)
+
+    expect(events.some((e) => e.type === 'SpellCast')).toBe(true)
+  })
+
+  it("an 'all' lock applied MID-turn (a turn-end hook) refuses that turn's granted cast", () => {
+    // The lock lands AFTER turn-start, so the skipped-turn flag is false: this is B2.2 (legality
+    // at the granted step), not B2.1 (the skip gate).
+    const trait: Trait = {
+      id: 'lock-then-bonus-fixture',
+      name: 'Lock then bonus (fixture)',
+      effects: [
+        { category: 'bonus-cast', chancePercent: 100 },
+        {
+          category: 'triggered',
+          hook: 'on-turn-end',
+          response: {
+            kind: 'apply-status',
+            target: { kind: 'self' },
+            status: { statusId: STUN.statusId, duration: 3 },
+          },
+        },
+      ],
+    }
+    const state = createCombat({
+      seed: 5,
+      player: {
+        party: makeParty('player', [
+          {
+            id: 'me',
+            speed: 20,
+            scriptId: 'always-wait',
+            equippedSpells: [ENEMY_SPELL],
+            innateTraitIds: [trait.id],
+          },
+        ]),
+      },
+      enemy: { party: makeParty('enemy', [{ id: 'foe', speed: 1 }]) },
+      registries: {
+        scripts: new Map([['always-wait', ALWAYS_WAIT]]),
+        traits: new Map([[trait.id, trait]]),
+        statuses: new Map([[STUN.statusId, STUN]]),
+      },
+    })
+
+    const { events } = resolveTurn(state)
+
+    expect(events.some((e) => e.type === 'StatusApplied')).toBe(true)
+    expect(events.some((e) => e.type === 'SpellCast')).toBe(false)
+  })
+})
+
+describe('an echo is gated by the CASTER, never the bearer (B2.2, 4.1-C2c)', () => {
+  // Seed 7's draws: #1 0.0117 (echo roll, 50% -> passes), #2 0.0620 (gem), #3 0.9769 (random
+  // target), #4 0.6990 (the echo's own re-observation roll -> fails), so the chain is one echo.
+  const ECHO: ActiveEffect = {
+    category: 'triggered',
+    hook: 'on-action-observed',
+    observationFilter: { relationship: 'ally', actionKind: 'cast' },
+    chancePercent: 50,
+    stacks: false,
+    echoCast: true,
+    response: { kind: 'grant-action-state', target: { kind: 'self' } },
+    instanceId: createEffectInstanceId('echo#1'),
+    sourceTraitId: 'echo-fixture',
+  }
+
+  function run(casterEffects: ActiveEffect[], bearerEffects: ActiveEffect[]) {
+    const player = makeParty('player', [
+      { id: 'caster', equippedSpells: [ENEMY_SPELL], activeEffects: casterEffects },
+      { id: 'bearer', activeEffects: [ECHO, ...bearerEffects] },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 100 }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      rng: createRngState(7),
+    })
+    const events: CombatEvent[] = []
+    const ctx = createResolutionContext(events, newCascade())
+    executeAction(
+      player[0]!,
+      { kind: 'cast', targetShape: 'single', gemSlot: 0, targetId: enemy[0]!.id },
+      state,
+      ctx,
+    )
+    return events
+  }
+
+  it('a Stunned BEARER still echoes (its trigger is passive)', () => {
+    const events = run([], [lock('all', 'bearer')])
+    expect(events.filter((e) => e.type === 'EchoCastGranted')).toHaveLength(1)
+    expect(events.filter((e) => e.type === 'SpellCast')).toHaveLength(2)
+  })
+
+  it('a locked CASTER refuses the echo: the trigger shows, but no grant event and no cast', () => {
+    const events = run([lock('cast', 'caster')], [])
+    expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(1)
+    expect(events.some((e) => e.type === 'EchoCastGranted')).toBe(false)
+    // Only the original (directly executed) cast; the echo produced nothing.
+    expect(events.filter((e) => e.type === 'SpellCast')).toHaveLength(1)
+  })
+})
+
+describe('resolveInstanceTarget -- rule 4 (B2.4, 4.1-C2c)', () => {
+  // ATTACKER: Attack 20, a second 30% instance. Instance 1 (100%, 20 dmg) kills the first
+  // enemy (HP 5), so instance 2 must fall back. Defence 0 everywhere.
+  const SECOND_INSTANCE: ActiveEffect = {
+    category: 'action-instance',
+    actionKind: 'attack',
+    powerPercent: 30,
+    instanceId: createEffectInstanceId('inst#2'),
+    sourceTraitId: 'inst-fixture',
+  }
+
+  function attackFrom(
+    attackerEffects: ActiveEffect[],
+    enemyOverrides: Parameters<typeof makeParty>[1],
+  ) {
+    const player = makeParty('player', [
+      { id: 'me', attack: 20, defence: 0, activeEffects: attackerEffects },
+    ])
+    const enemy = makeParty('enemy', enemyOverrides)
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      rng: createRngState(42),
+    })
+    const events: CombatEvent[] = []
+    const ctx = createResolutionContext(events, newCascade())
+    executeAction(player[0]!, { kind: 'attack', targetId: enemy[0]!.id }, state, ctx)
+    const targets = events.flatMap((e) =>
+      e.type === 'AttackDeclared' ? [String(e.targetId)] : [],
+    )
+    return { targets, state }
+  }
+
+  it('falls back to the side-aware default (LOWEST HP), not first-by-slot', () => {
+    const { targets } = attackFrom(
+      [SECOND_INSTANCE],
+      [
+        { id: 'target', health: 5, defence: 0 },
+        { id: 'big', health: 40, defence: 0 }, // first living by slot after the kill
+        { id: 'small', health: 10, defence: 0 }, // lowest HP
+      ],
+    )
+    expect(targets).toEqual(['target', 'small'])
+  })
+
+  it('then Provoke: redirects to the provoker and draws exactly one value, even for a single provoker', () => {
+    const { targets, state } = attackFrom(
+      [SECOND_INSTANCE],
+      [
+        { id: 'target', health: 5, defence: 0 },
+        { id: 'small', health: 10, defence: 0 }, // the default would pick this
+        { id: 'provoker', health: 40, defence: 0, provoking: true },
+      ],
+    )
+    expect(targets).toEqual(['target', 'provoker'])
+    const sibling = createRngState(42)
+    nextRandom(sibling)
+    expect(state.rng.position).toBe(sibling.position)
+  })
+
+  it('Tunnel Vision skips the Provoke step: the default target, and no draw', () => {
+    const tunnelVision: ActiveEffect = {
+      category: 'provoke-immunity',
+      instanceId: createEffectInstanceId('tv'),
+      sourceTraitId: 'tunnel-vision',
+    }
+    const { targets, state } = attackFrom(
+      [SECOND_INSTANCE, tunnelVision],
+      [
+        { id: 'target', health: 5, defence: 0 },
+        { id: 'small', health: 10, defence: 0 },
+        { id: 'provoker', health: 40, defence: 0, provoking: true },
+      ],
+    )
+    expect(targets).toEqual(['target', 'small'])
+    expect(state.rng.position).toBe(createRngState(42).position)
+  })
+
+  it('never rolls Confusion: a 100%-confused attacker still re-targets an ENEMY, drawing nothing', () => {
+    const confused: ActiveEffect = {
+      category: 'friendly-fire-status',
+      statusId: 'confusion',
+      cap: 1,
+      chancePercent: 100,
+      polarity: 'debuff',
+      defaultDuration: 3,
+      instanceId: createEffectInstanceId('conf'),
+      sourceTraitId: 'confusion',
+      remainingDuration: 3,
+      stacks: 1,
+    }
+    const { targets, state } = attackFrom(
+      [SECOND_INSTANCE, confused],
+      [
+        { id: 'target', health: 5, defence: 0 },
+        { id: 'small', health: 10, defence: 0 },
+      ],
+    )
+    expect(targets).toEqual(['target', 'small'])
+    expect(state.rng.position).toBe(createRngState(42).position)
+  })
+
+  it('an ally-side instance skips Provoke: the lowest-HP ALLY, no draw, despite an enemy provoker', () => {
+    const player = makeParty('player', [
+      {
+        id: 'me',
+        equippedSpells: [ALLY_SPELL],
+        activeEffects: [
+          {
+            category: 'action-instance',
+            actionKind: 'cast',
+            powerPercent: 30,
+            instanceId: createEffectInstanceId('inst#c'),
+            sourceTraitId: 'inst-fixture',
+          },
+        ],
+      },
+      { id: 'dead-ally', alive: false },
+      { id: 'ally', health: 20, currentHp: 5 },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'provoker', provoking: true }])
+    const state = makeState({
+      playerParty: player,
+      enemyParty: enemy,
+      rng: createRngState(42),
+    })
+    const events: CombatEvent[] = []
+    executeAction(
+      player[0]!,
+      { kind: 'cast', targetShape: 'single', gemSlot: 0, targetId: player[1]!.id },
+      state,
+      createResolutionContext(events, newCascade()),
+    )
+    const targets = events.flatMap((e) =>
+      e.type === 'SpellCast' && e.targetShape === 'single' ? [String(e.targetId)] : [],
+    )
+    // The previously chosen ally is dead, so BOTH instances fall back to the lowest-HP living
+    // ally (ally, 5 HP; 'me' has 20), never the enemy provoker.
+    expect(targets).toEqual(['ally', 'ally'])
+    expect(state.rng.position).toBe(createRngState(42).position)
   })
 })

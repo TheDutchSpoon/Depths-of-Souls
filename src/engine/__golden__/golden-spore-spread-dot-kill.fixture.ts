@@ -43,6 +43,10 @@ import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
+import { updateCreature } from '../creature-lookup'
+import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
+import type { CombatState } from '../types'
 
 export const SEED = 99 // The one RNG draw (pool size 1) is deterministic regardless of value.
 
@@ -108,3 +112,20 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'Waited', creatureId: P },
   { type: 'TurnEnded', creatureId: P },
 ]
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // Pre-apply Spore to BEARER and wound it to 1 HP, both before any turn resolves -- into a
+  // throwaway events array, mirroring the PR #64 repro's own setup idiom (see the fixture's
+  // header comment).
+  let state = applyStatus(
+    P,
+    BEARER,
+    { statusId: 'spore' },
+    created,
+    createResolutionContext([], newCascade()),
+  )
+  state = updateCreature(state, BEARER, { currentHp: BEARER_STARTING_HP })
+  return state
+}

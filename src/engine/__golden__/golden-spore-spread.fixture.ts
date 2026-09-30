@@ -35,6 +35,8 @@ import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { SPORECLOUD_SEEDER_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
+import { updateCreature } from '../creature-lookup'
+import type { CombatState } from '../types'
 
 export const SEED = 3003 // No RNG consumed (single-candidate spread pool); seed is inert.
 
@@ -131,3 +133,12 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'TurnEnded', creatureId: SEEDER },
 ]
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // createCombat resets currentHp to effective max at fight-start, so BEARER's wounded
+  // starting HP has to be applied here, after creation -- see the fixture's header comment.
+  const state = updateCreature(created, BEARER, { currentHp: BEARER_STARTING_HP })
+  return state
+}

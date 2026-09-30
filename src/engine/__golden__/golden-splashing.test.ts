@@ -1,31 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveTurn } from '../combat'
-import {
-  SEED,
-  playerParty,
-  enemyParty,
-  scripts,
-  traits,
-  expectedEvents,
-  TURN_STEPS,
-} from './golden-splashing.fixture'
-import type { CombatEvent } from '../types'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-splashing.fixture'
+import { expectedEvents } from './golden-splashing.fixture'
 
 describe('golden replay: Splashing (Phase 4 Slice C)', () => {
   it('matches the committed event log exactly -- main hit + two distinctly-recomputed splash hits', () => {
-    let state = createCombat({
-      seed: SEED,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts: scripts, traits: traits },
-    })
-    const events: CombatEvent[] = []
-
-    for (let i = 0; i < TURN_STEPS; i++) {
-      const step = resolveTurn(state)
-      state = step.state
-      events.push(...step.events)
-    }
+    const { events, state } = runGolden(fixture)
 
     expect(events).toEqual(expectedEvents)
     expect(state.result).toBeNull() // all three enemies survive

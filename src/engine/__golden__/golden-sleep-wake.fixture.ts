@@ -31,6 +31,7 @@ import type { CombatEvent } from '../types'
 import type { ConditionStatusDef, StatusDef, Trait } from '../effect-types'
 
 export const SEED = 4004 // No RNG consumed anywhere in this fixture; seed is inert.
+export const TURN_STEPS = 2
 
 const ATTACKER = createCreatureId('attacker')
 const SLEEPER = createCreatureId('sleeper')

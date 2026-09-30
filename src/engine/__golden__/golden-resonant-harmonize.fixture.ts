@@ -37,6 +37,7 @@ import {
 import type { CombatEvent } from '../types'
 
 export const SEED = 6006 // No RNG consumed anywhere in this fixture; seed is inert.
+export const TURN_STEPS = 1
 
 const CHORUS = createCreatureId('resonant-chorus')
 const ADEPT = createCreatureId('resonant-adept')

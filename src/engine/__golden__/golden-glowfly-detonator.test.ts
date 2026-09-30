@@ -1,32 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveTurn } from '../combat'
-import {
-  SEED,
-  playerParty,
-  enemyParty,
-  scripts,
-  traits,
-  statuses,
-  expectedEvents,
-  TURN_STEPS,
-} from './golden-glowfly-detonator.fixture'
-import type { CombatEvent } from '../types'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-glowfly-detonator.fixture'
+import { expectedEvents } from './golden-glowfly-detonator.fixture'
 
 describe('golden replay: Glimmerdark Glowflies Charger -> Detonator (Phase 4 Slice H2, real content)', () => {
   it('matches the committed event log exactly (Glow charged by an ally, then consumed for a burst)', () => {
-    let state = createCombat({
-      seed: SEED,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts: scripts, traits: traits, statuses: statuses },
-    })
-    const events: CombatEvent[] = []
-
-    for (let i = 0; i < TURN_STEPS; i++) {
-      const step = resolveTurn(state)
-      state = step.state
-      events.push(...step.events)
-    }
+    const { events, state } = runGolden(fixture)
 
     expect(events).toEqual(expectedEvents)
     expect(state.result).toBeNull() // TARGET survives at 48 HP

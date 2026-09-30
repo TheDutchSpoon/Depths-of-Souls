@@ -26,6 +26,7 @@ import type { CombatEvent, Spell } from '../types'
 import type { Trait } from '../effect-types'
 
 export const SEED = 6161 // No RNG consumed anywhere in this fixture; seed is inert.
+export const TURN_STEPS = 1
 
 const CASTER = createCreatureId('caster')
 const RESONANT = createCreatureId('resonant')

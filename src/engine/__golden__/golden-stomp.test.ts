@@ -1,21 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveFight } from '../combat'
-import {
-  SEED,
-  playerParty,
-  enemyParty,
-  expectedEvents,
-  expectedResult,
-} from './golden-stomp.fixture'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-stomp.fixture'
+import { expectedEvents, expectedResult } from './golden-stomp.fixture'
 
 describe('golden replay: stomp', () => {
   it('matches the committed event log exactly', () => {
-    const initial = createCombat({
-      seed: SEED,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-    })
-    const { state, events } = resolveFight(initial)
+    const { events, state } = runGolden(fixture)
 
     expect(events).toEqual(expectedEvents)
     expect(state.result).toBe(expectedResult)

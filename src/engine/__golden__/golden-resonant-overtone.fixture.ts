@@ -38,6 +38,7 @@ import { RESONANT_OVERTONE_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import type { CombatEvent } from '../types'
 
 export const SEED = 7 // See the header trace above -- draw #1 < 10% (echo fires), draw #4 >= 10%
+export const TURN_STEPS = 1
 // (the echo's own re-observation fails to echo again).
 
 const CASTER = createCreatureId('caster')

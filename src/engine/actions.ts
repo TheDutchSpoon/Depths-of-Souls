@@ -7,15 +7,20 @@
 //
 // Phase 4.1-C2b (B1): `resolveIntent`'s default target is the side-aware one (`defaultTargetingFor`,
 // derived from the RESOLVED action -- a `gemSlot: 'random'` cast defaults by the drawn spell's
-// side), and `gemSlot: 'random'` draws over `castableGemSlots` (ASSUMPTION 13). `legacyDefaultTarget`
-// (first-living-by-slot) survives ONLY for `resolveInstanceTarget`'s post-death fallback and
-// `legacyGrantedTargeting` survives unchanged, until 4.1-C2c (B2.3/B2.4) deletes them.
+// side), and `gemSlot: 'random'` draws over `castableGemSlots` (ASSUMPTION 13).
+//
+// Phase 4.1-C2c (B2, B5): `runAction` calls `checkLegality` before `resolveIntent` for EVERY source,
+// so a lock refuses a chosen or granted action alike and a refused action draws nothing; granted
+// casts go through Confusion -> Tunnel Vision -> Provoke like any action; rule 4's instance
+// fallback is the side-aware default then Provoke; and a hit whose target died in its own pre-hit
+// hooks fizzles (B5).
 
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import {
   gatherExtraInstances,
   hasAnnihilate,
   hasSplashing,
+  hasProvokeImmunity,
   hasStatusImmunity,
 } from './effects'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
@@ -28,10 +33,10 @@ import {
   fireHook,
 } from './resolution'
 import {
-  getDefaultTarget,
   livingAlliesOf,
   livingEnemiesOf,
   resolveOffensiveTarget,
+  resolveProvoke,
   shouldRedirectAoeToAllies,
 } from './targeting'
 import { resolveTargetSelector, targetSelectorHasCandidate } from './target-selectors'
@@ -52,9 +57,10 @@ import type { StatusSpec } from './effect-types'
  * Builds a fresh ResolutionContext over `events` (shared, mutated in place by push) and
  * `cascade` (fresh per top-level action; see resolveTurn's own "fresh cascade per top-level
  * action" discipline). `runAction` is the seam resolution.ts reaches actions.ts through: it
- * resolves `intent` for `actorId`, pushes `options.announce` (if the intent resolved) right
- * before executing, then executes -- a no-op if the actor is dead/unknown or the intent doesn't
- * resolve to an action (no castable gem, no valid target).
+ * checks `intent` is legal for `actorId` (locks included -- B2.2, every source), resolves it, pushes
+ * `options.announce` (if the intent resolved) right before executing, then executes -- a silent
+ * no-op (nothing drawn, nothing pushed) if the actor is dead/unknown, the intent is illegal, or it
+ * doesn't resolve to an action (no castable gem, no valid target).
  */
 export function createResolutionContext(
   events: CombatEvent[],
@@ -68,9 +74,8 @@ export function createResolutionContext(
   ): CombatState => {
     const actor = findCreature(state, actorId)
     if (!actor || !actor.alive) return state
-    const action = resolveIntent(actor, intent, state, {
-      legacyGrantedTargeting: options?.legacyGrantedTargeting,
-    })
+    if (!checkLegality(actor, intent, state)) return state
+    const action = resolveIntent(actor, intent, state)
     if (!action) return state
     if (options?.announce) events.push(options.announce)
     return executeAction(actor, action, state, { events, cascade, runAction })
@@ -238,17 +243,6 @@ export function defaultTargetingFor(
 
 // ---- Resolution (the only place action-level draws happen) ----
 
-/** Phase 1's first-living-by-slot default. C2b (B1) retired it from `resolveIntent`; it survives
- * only as `resolveInstanceTarget`'s post-death fallback until 4.1-C2c (B2.4) replaces that with the
- * side-aware default + Provoke and deletes this (and `getDefaultTarget`). */
-function legacyDefaultTarget(
-  actor: Creature,
-  intendedSide: 'enemy' | 'ally',
-  state: CombatState,
-): CreatureId | null {
-  return getDefaultTarget(livingPoolFor(actor, intendedSide, state))
-}
-
 /** The `'random'` selector's own draw: uniform over living creatures on `intendedSide`, same
  * pool/order as today's `random-enemy`/`random-ally` (`livingEnemiesOf`/`livingAlliesOf`). */
 function resolveRandomTarget(
@@ -289,24 +283,13 @@ function resolveGemSlot(
   return castable[index] ?? null
 }
 
-/** The options `resolveIntent` itself reads -- a narrower shape than the full `RunActionOptions`
- * (which also carries `announce`, `runAction`'s own concern, never resolveIntent's). */
-export interface ResolveIntentOptions {
-  readonly legacyGrantedTargeting?: true
-}
-
-/** An enemy-side single target: the override pipeline (Confusion -> Tunnel Vision -> Provoke)
- * unless `legacyGrantedTargeting` is set, in which case it resolves the selector directly --
- * C2a-only, matching today's exact bonus-cast/echo behaviour (deleted in C2c, B2.3). */
+/** An enemy-side single target: the override pipeline (Confusion -> Tunnel Vision -> Provoke),
+ * for every action source (B2.3). */
 function resolveEnemySingleTarget(
   actor: Creature,
   targeting: TargetSelector | undefined,
   state: CombatState,
-  options: ResolveIntentOptions | undefined,
 ): CreatureId | null {
-  if (options?.legacyGrantedTargeting) {
-    return resolveSelectorTarget(actor, targeting, 'enemy', state)
-  }
   return resolveOffensiveTarget(actor, state, () =>
     resolveSelectorTarget(actor, targeting, 'enemy', state),
   )
@@ -317,20 +300,19 @@ function resolveEnemySingleTarget(
  * Gem resolution (for a Cast) draws first, over the castable slots. Target resolution: explicit
  * selector (including `'random'`) -> the side-aware default of the RESOLVED action
  * (`defaultTargetingFor`) -> for an enemy-side single target, Confusion -> Tunnel Vision -> Provoke
- * (`resolveOffensiveTarget`) -- UNLESS `options.legacyGrantedTargeting` is set (C2a-only; see
- * `resolveEnemySingleTarget`). An ally-side single target skips that override pipeline entirely
- * regardless (GAME_DESIGN §7). Returns `null` when no legal action results.
+ * (`resolveOffensiveTarget`). An ally-side single target skips that override pipeline entirely
+ * (GAME_DESIGN §7). Returns `null` when no legal action results. Legality (locks) is NOT checked
+ * here: `runAction` calls `checkLegality` first, so a refused action never reaches a draw.
  */
 export function resolveIntent(
   actor: Creature,
   intent: Intent,
   state: CombatState,
-  options?: ResolveIntentOptions,
 ): Action | null {
   switch (intent.action.kind) {
     case 'attack': {
       const targeting = intent.targeting ?? defaultTargetingFor(actor, intent.action)
-      const targetId = resolveEnemySingleTarget(actor, targeting, state, options)
+      const targetId = resolveEnemySingleTarget(actor, targeting, state)
       return targetId ? { kind: 'attack', targetId } : null
     }
     case 'cast': {
@@ -347,7 +329,7 @@ export function resolveIntent(
       const targetId =
         targetSide === 'ally'
           ? resolveSelectorTarget(actor, targeting, 'ally', state)
-          : resolveEnemySingleTarget(actor, targeting, state, options)
+          : resolveEnemySingleTarget(actor, targeting, state)
       return targetId ? { kind: 'cast', targetShape: 'single', gemSlot, targetId } : null
     }
     case 'defend':
@@ -367,28 +349,32 @@ export function resolveIntent(
 
 /**
  * ASSUMPTION 31: every instance after the first targets the SAME resolved target as instance 1
- * (the selector is not re-run per instance) -- except when that target has since died, which
- * falls back to the normal default-target selection (matching the Brute starter's own wording).
- * Returns null once no living target remains (nothing further in the list can resolve).
+ * (the selector is not re-run per instance) -- except when that target has since died. Rule 4
+ * (CONVENTIONS "Every action source obeys the same rules", 4.1-C2c): a dead previous target
+ * falls back to the side-aware default of the instance's own action (`defaultTargetingFor`, the
+ * same function B1 uses), then Provoke -- one draw even for a single provoker, skipped under Tunnel
+ * Vision and for an ally-side instance. It never rolls Confusion. Returns null once no living
+ * target remains (nothing further in the list can resolve).
  *
- * `targetSide` (Phase 4 Slice E, default 'enemy' -- Attack's own call site never passes it,
- * since v1 has no ally-targeting Attack) picks which party the post-death fallback default draws
- * from: the opposing side for an ordinary offensive instance, or the actor's OWN side for a
- * support-spell instance -- mirrors resolveOffensiveTarget's enemy-only contract not applying to
- * ally casts (GAME_DESIGN §7). Phase 4.1-C2b: unchanged (first-by-slot, no Provoke) -- C2c's
- * rule 4 replaces this with the side-aware default + Provoke.
+ * `targetSide` (Attack passes the default 'enemy'; a support spell's instances pass 'ally') says
+ * whether the Provoke step applies (GAME_DESIGN §7: ally-side actions are exempt).
  */
 function resolveInstanceTarget(
   actor: Creature,
   previousTargetId: CreatureId | null,
   state: CombatState,
+  action: RuleAction,
   targetSide: 'enemy' | 'ally' = 'enemy',
 ): CreatureId | null {
   if (previousTargetId) {
     const current = findCreature(state, previousTargetId)
     if (current?.alive) return previousTargetId
   }
-  return legacyDefaultTarget(actor, targetSide, state)
+  const selector = defaultTargetingFor(actor, action)
+  const resolveDefault = (): CreatureId | null =>
+    selector ? resolveTargetSelector(selector, actor, state) : null
+  if (targetSide === 'ally' || hasProvokeImmunity(actor)) return resolveDefault()
+  return resolveProvoke(actor, state, resolveDefault)
 }
 
 /**
@@ -451,6 +437,16 @@ function adjacentLivingTargets(target: Creature, party: readonly Creature[]): Cr
   return neighbors
 }
 
+/**
+ * CONVENTIONS "An action ends when its actor dies" (4.1-C2c, PR #73 review): true once the actor
+ * has died inside its own action (a retaliation after one of its hits, or a response nested in
+ * its own pre-hit hooks). Read fresh from `working`, never from the `actor` snapshot the executor
+ * was handed. Callers drop the rest of the action: no further events, no fizzle event.
+ */
+function actorDied(actor: Creature, working: CombatState): boolean {
+  return !findCreature(working, actor.id)?.alive
+}
+
 function executeAttack(
   actor: Creature,
   targetId: CreatureId,
@@ -464,7 +460,10 @@ function executeAttack(
     actor,
     'attack',
   ).entries()) {
-    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working)
+    if (actorDied(actor, working)) break // site 1: before target resolution / AttackDeclared
+    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working, {
+      kind: 'attack',
+    })
     if (!resolvedTargetId) break // no living target left for this or any further instance
 
     const thisTargetId = resolvedTargetId
@@ -481,6 +480,11 @@ function executeAttack(
     working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
       observed: { actionKind: 'attack', instanceIndex },
     }).state
+    // B5 (CONVENTIONS): the pre-hit hooks may have killed the target -- that hit fizzles (no
+    // damage, no Splashing for this instance). AttackDeclared stays in the log; no fizzle event.
+    // The next instance re-targets per rule 4. A dead ACTOR ends the whole action instead (site 2).
+    if (actorDied(actor, working)) break
+    if (!findCreature(working, thisTargetId)?.alive) continue
     working = dealDamage(
       actor.id,
       thisTargetId,
@@ -496,6 +500,7 @@ function executeAttack(
     // case an earlier splash hit's own damage-path cascade (e.g. Retaliate) already killed a
     // later one.
     for (const splashId of splashIds) {
+      if (actorDied(actor, working)) break // site 3: before each Splashing hit
       if (!findCreature(working, splashId)?.alive) continue
       working = dealDamage(
         actor.id,
@@ -625,7 +630,14 @@ function executeCastSingle(
     actor,
     'cast',
   ).entries()) {
-    resolvedTargetId = resolveInstanceTarget(actor, resolvedTargetId, working, targetSide)
+    if (actorDied(actor, working)) break // site 1: before target resolution / SpellCast
+    resolvedTargetId = resolveInstanceTarget(
+      actor,
+      resolvedTargetId,
+      working,
+      { kind: 'cast', gemSlot },
+      targetSide,
+    )
     if (!resolvedTargetId) break
 
     const thisTargetId = resolvedTargetId
@@ -644,6 +656,9 @@ function executeCastSingle(
     working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
       observed: { actionKind: 'cast', instanceIndex },
     }).state
+    // B5: same pre-hit-hook fizzle as executeAttack (no payload, no status); SpellCast stays.
+    if (actorDied(actor, working)) break // site 2
+    if (!findCreature(working, thisTargetId)?.alive) continue
     working = applyCastPayload(actor, spell, thisTargetId, powerPercent, working, ctx)
     if (spell.appliesStatus) {
       working = applyStatusIfAlive(
@@ -675,6 +690,7 @@ function executeCastAoe(
     actor,
     'cast',
   ).entries()) {
+    if (actorDied(actor, working)) break // site 1: before target freezing / SpellCast
     // Phase 4 Slice E: an ally-targeting AOE spell always freezes the caster's OWN living side
     // -- no Confusion roll at all (Confusion's redirect is scoped to a "harmful action" per
     // CONVENTIONS; a support cast on your own side is never one, so it must never touch
@@ -713,6 +729,7 @@ function executeCastAoe(
     }).state
 
     for (const targetId of targetIds) {
+      if (actorDied(actor, working)) break // site 4: before each AOE member's hit
       // Skip a frozen-list target that's no longer alive by the time its hit lands (a prior
       // hit's on-death/reflect cascade may have killed it). The frozen target *set* is
       // unchanged; this only skips *hitting* an already-dead member.

@@ -28,7 +28,9 @@ import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { HOLLOWKIN_WRETCH_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
-import type { CombatEvent } from '../types'
+import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
+import type { CombatEvent, CombatState } from '../types'
 
 export const SEED = 77 // No RNG consumed anywhere in this fixture; seed is inert.
 
@@ -93,3 +95,14 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'Waited', creatureId: P },
   { type: 'TurnEnded', creatureId: P },
 ]
+
+/** Post-`createCombat` step: pre-apply Poison to WRETCH before any turn resolves, into a throwaway
+ * events array, mirroring the PR #64 repro's own setup idiom. Runs before the first frozen turn. */
+export const setup = (created: CombatState): CombatState =>
+  applyStatus(
+    WRETCH,
+    WRETCH,
+    { statusId: 'poison' },
+    created,
+    createResolutionContext([], newCascade()),
+  )

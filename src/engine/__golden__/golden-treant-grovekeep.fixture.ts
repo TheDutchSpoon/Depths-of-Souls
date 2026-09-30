@@ -15,6 +15,7 @@ import { TRAIT_REGISTRY, TREANT_GROVEKEEP_TRAIT } from '../../data/traits'
 import type { CombatEvent } from '../types'
 
 export const SEED = 4004 // No RNG consumed anywhere in this fixture.
+export const TURN_STEPS = 1
 
 const GROVEKEEP = createCreatureId('grovekeep')
 const ALLY = createCreatureId('ally')

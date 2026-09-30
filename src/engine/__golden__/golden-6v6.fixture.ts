@@ -40,8 +40,9 @@ export const enemyParty = makeParty('enemy', [
  *
  * Every hit: core = max(30-5,0) = 25, chip = 0.01*30 = 0.3, raw = 25.3, final = 25
  * (neutral affinity, x1.0). Every enemy has 10 HP, so every player one-shots its
- * target. Default targeting always picks the first living enemy by slot, so as each
- * enemy dies, the next player's attack falls through to the next slot: p0->e0, p1->e1,
+ * target. Default targeting is the lowest-HP living enemy; every enemy has the same 10 HP, so
+ * the tie-break (player side, then slot, then id) picks the first living enemy by slot, and as
+ * each enemy dies, the next player's attack falls through to the next slot: p0->e0, p1->e1,
  * p2->e2, p3->e3, p4->e4, p5->e5. After p5's kill (the sixth and last enemy), the fight
  * ends as a win immediately -- none of the six enemies ever get a turn.
  */

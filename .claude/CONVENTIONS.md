@@ -847,6 +847,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
      - The locks checked are **the acting creature's**. For an echo that's the caster. The bearer
        of the granting effect is not the one acting: its trigger is passive, so its own locks
        don't gate it.
+     - **A refused granted action emits nothing of its own** (4.1-C2c plan review). The trigger
+       that granted it still shows its `TriggerFired`. There is no grant event (`EchoCastGranted`
+       today, `ActionGranted` from 4.1-E) and no action event. This is the same shape as a grant
+       that fizzles for want of a castable gem or a valid target.
   3. Extra actions pick a target (the side-aware default, or random where the intent says so),
      then go through Confusion → Tunnel Vision → Provoke like any action.
   4. When a single-target instance list's first target has died, later instances fall back to the
@@ -858,6 +862,20 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   Splashing hits for that instance). The instance's `AttackDeclared` / `SpellCast` has already been
   emitted and stays in the log; there is no separate fizzle event. Later instances fall back per
   rule 4 above. AOE already skips dead members.
+- **An action ends when its actor dies** (Phase 4.1-C2c, PR #73 review). A creature can die inside
+  its own action: a retaliation (`on-damage-taken` → `deal-damage` on the triggering source) after
+  one of its hits, or a response nested in its own pre-hit hooks (an echo whose hit is retaliated
+  against). The actor is re-checked at four points:
+  1. the start of each instance, before target resolution and before `AttackDeclared` /
+     `SpellCast`;
+  2. after each instance's pre-hit hooks, before the hit or payload;
+  3. before each Splashing hit;
+  4. before each AOE member's hit.
+
+  If the actor has died, the rest of the action is dropped: no further events from it, and no
+  fizzle event. Events already emitted stay. This is the actor's mirror of "death pre-empts the
+  victim's reaction" (hook interaction edges). A granted action already checks that its actor is
+  alive when it starts.
 - **Interpreter** = pure engine code: `decideAction(creature, script, state) -> Intent` (the Phase 1
   seam, now consulting the script; from 4.1-C it returns the winning rule's **unresolved** intent,
   or the fallback intent, and `resolveIntent` + `executeAction` turn it into the action; RNG
@@ -1568,6 +1586,9 @@ demo slice (their goldens stay byte-identical).
     lead to different logs. A one-spell caster pins nothing about the gem draw.
 
   The "fails with its mechanism removed" check is how a golden proves both.
+- **A mechanism built at more than one site needs a discriminating test at each site** (PR #73
+  review: B5's guard lives in both the attack and the single-target cast loop, and only the attack
+  one was tested; deleting the cast one left every test and the corpus green).
 - **Characterize the empty seams now.** Pin the current behavior of the "no-op today, real later"
   seams — `getEffectiveStat` returns base with no effects; the mod pools yield ×1.0 when empty; the
   remap-aware OffStat lookup returns effective Attack with no remap; `spellPower` is 1.0 for Attack.
@@ -1577,6 +1598,12 @@ demo slice (their goldens stay byte-identical).
 - **Every engine change ships with or updates a test.** The golden-replay suite is the canary.
 - **Snapshots are never written to** (B3): engine tests that resolve the same snapshot more than
   once, or assert on an input after resolving, wrap it in the deep-freeze helper.
+- **Every golden replays through one shared runner** (Phase 4.1-C2c, PR #73 review). The runner
+  deep-freezes the state before **every** turn, so every golden also proves the engine never writes
+  to its input. Each fixture exports what the runner needs to build its starting state, plus an
+  optional driver for a golden that isn't simply "run N turns" or "run to the end" (for example a
+  wound applied after `createCombat`). There is no separate frozen-replay sweep and no list of
+  excluded goldens.
 - **Balance is checked by the simulator, loosely** (D1): CI fails only on "badly broken" thresholds;
   target bands are reported, not asserted.
 
@@ -1586,6 +1613,12 @@ demo slice (their goldens stay byte-identical).
   no browser), so this costs seconds.
 - **Deploy only from `main`, and only if tests pass** — the deploy step is gated on the test step
   (build/publish guarded to the `main` branch). Tests-on-every-change, deploy-on-main.
+- **Local runs match CI's toolchain** (PR #73 review). CI installs with `npm ci` on Node 24. Locally:
+  Node 24.15 or later (jsdom 30's minimum), and `npm ci` after every pull that changes
+  `package-lock.json`. A stale `node_modules` once ran Vitest 4.1.11 against a lockfile pinning
+  5.0.1, and a tool behaviour seen only there was nearly written into the code and the phase
+  record. When a tool behaves unexpectedly, check `npx <tool> --version` against the lockfile
+  before designing around it.
 
 ## Deployment & environments
 

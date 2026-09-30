@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createCombat, resolveFight } from '../combat'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-cheat-death.fixture'
 import {
   SEED_SUCCESS,
   SEED_FAIL,
-  playerParty,
-  enemyParty,
-  scripts,
-  traits,
   expectedEventsSuccess,
   expectedResultSuccess,
   expectedEventsFail,
@@ -15,26 +12,14 @@ import {
 
 describe('golden replay: cheat-death (Phase 4 Slice D, Last Stand-shaped)', () => {
   it('a successful roll (SEED 7) survives at 1 HP -- no CreatureDied for the bearer', () => {
-    const initial = createCombat({
-      seed: SEED_SUCCESS,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts: scripts, traits: traits },
-    })
-    const { state, events } = resolveFight(initial)
+    const { state, events } = runGolden(fixture, { seed: SEED_SUCCESS })
 
     expect(events).toEqual(expectedEventsSuccess)
     expect(state.result).toBe(expectedResultSuccess)
   })
 
   it('a failed roll (SEED 1) dies normally, unaffected', () => {
-    const initial = createCombat({
-      seed: SEED_FAIL,
-      player: { party: playerParty },
-      enemy: { party: enemyParty },
-      registries: { scripts: scripts, traits: traits },
-    })
-    const { state, events } = resolveFight(initial)
+    const { state, events } = runGolden(fixture, { seed: SEED_FAIL })
 
     expect(events).toEqual(expectedEventsFail)
     expect(state.result).toBe(expectedResultFail)

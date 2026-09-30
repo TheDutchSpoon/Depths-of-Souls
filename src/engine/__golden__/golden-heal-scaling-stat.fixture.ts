@@ -22,6 +22,7 @@ import type { CombatEvent } from '../types'
 import type { Trait } from '../effect-types'
 
 export const SEED = 3131 // No RNG consumed anywhere in this fixture; seed is inert.
+export const TURN_STEPS = 2
 
 const FOE = createCreatureId('foe')
 const ELDER = createCreatureId('elder')

@@ -29,6 +29,10 @@ import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { SPORCH_CINDERLORD_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
+import { updateCreature } from '../creature-lookup'
+import { applyStatus, newCascade } from '../resolution'
+import { createResolutionContext } from '../actions'
+import type { CombatState } from '../types'
 
 export const SEED = 88 // No RNG consumed anywhere in this fixture; seed is inert.
 
@@ -129,3 +133,21 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'TurnEnded', creatureId: CINDERLORD },
 ]
+
+/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+ * frozen turn (see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState => {
+  // Pre-apply 2 Burn stacks to ENEMY_B at duration:1 (not Burn's own default of 3) and wound
+  // VICTIM, both before any turn resolves -- into a throwaway events array. Duration 1 (rather
+  // than the default 3) is what makes Cinderlord's own re-application visibly REFRESH it back
+  // up to 3, instead of landing on the same value it already had.
+  let state = applyStatus(
+    ENEMY_B,
+    ENEMY_B,
+    { statusId: 'burn', stacks: 2, duration: 1 },
+    created,
+    createResolutionContext([], newCascade()),
+  )
+  state = updateCreature(state, VICTIM, { currentHp: VICTIM_STARTING_HP })
+  return state
+}

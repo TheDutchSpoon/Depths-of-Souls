@@ -8,7 +8,6 @@
 import { describe, expect, it } from 'vitest'
 import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { env } from 'node:process'
 import prettier from 'prettier'
 import { createCombat, resolveFight } from './combat'
 import { buildCorpus } from './__corpus__/corpus'
@@ -83,7 +82,7 @@ describe('corpus digest (Phase 4.1-C2a, behaviour tripwire)', () => {
     const corpus = buildCorpus()
     const actual = corpus.map(digestFight)
 
-    if (env.UPDATE_CORPUS === '1') {
+    if (import.meta.env.MODE === 'corpus-update') {
       const config = await prettier.resolveConfig(FIXTURE_PATH)
       const formatted = await prettier.format(renderFixture(actual), {
         ...config,
