@@ -1,9 +1,11 @@
-// Golden: the Support-spell model's `stat-modifier` payload, AOE shape (Phase 4 Slice E) -- an
-// ally-targeting AOE Cast freezes the caster's OWN living side (mirroring the enemy-AOE freeze
-// rule) and reuses applyStatModifier directly per target (no TriggerFired -- Cast itself is the
+// Golden: a spell whose effect is an `apply-stat-modifier`, AOE shape (Phase 4 Slice E; a response
+// on `cast-target` since 4.1-D) -- an ally-targeting AOE Cast freezes the caster's OWN living side
+// (mirroring the enemy-AOE freeze rule) and applies the modifier through the response executor per
+// target (no TriggerFired -- Cast itself is the
 // chosen-action context, not a trigger), emitting the same StatModifierApplied event a triggered
-// stat-modifier would. The buff's magnitude (stat/factor) is an authored constant on the spell,
-// NOT scaled by spellPower/powerPercent (Spell.statModifier's own doc comment).
+// stat-modifier would. The buff's magnitude (stat/factor) is an authored constant on the effect,
+// NOT scaled by spellPower/powerPercent (the instance list's powerPercent scales deal-damage and
+// heal only).
 //
 // Hand-derived (independent `node -e` calculator). All vitality -> neutral affinity x1.0 on the
 // one damage hit. BUFFER (speed 20) acts before ALLY (speed 10) before FOE (speed 1, never
@@ -32,11 +34,17 @@ export const BUFF_SPELL: Spell = {
   id: 'buff-fixture',
   name: 'Test Buff',
   targetShape: 'aoe',
-  spellPower: 1, // unused -- stat-modifier's magnitude is the authored statModifier field.
   affinity: 'vitality',
   targetSide: 'ally',
-  payload: 'stat-modifier',
-  statModifier: { stat: 'defence', factor: 1.5 },
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-stat-modifier',
+      target: { kind: 'cast-target' },
+      stat: 'defence',
+      factor: 1.5,
+    },
+  ],
 }
 
 export const playerParty = makeParty('player', [

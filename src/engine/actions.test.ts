@@ -40,23 +40,49 @@ const ENEMY_SPELL: Spell = {
   id: 'enemy-spell-fixture',
   name: 'Enemy Spell (fixture)',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.5,
+    },
+  ],
 }
 const ALLY_SPELL: Spell = {
   id: 'ally-spell-fixture',
   name: 'Ally Spell (fixture)',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'vitality',
   targetSide: 'ally',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.5,
+    },
+  ],
 }
 const AOE_SPELL: Spell = {
   id: 'aoe-spell-fixture',
   name: 'AOE Spell (fixture)',
   targetShape: 'aoe',
-  spellPower: 0.3,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.3,
+    },
+  ],
 }
 
 describe('defaultTargetingFor (Phase 4.1-C2a, A1; wired into resolveIntent in C2b/B1)', () => {

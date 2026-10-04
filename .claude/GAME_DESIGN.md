@@ -354,9 +354,10 @@ Creatures are obtained via **souls**, not direct capture:
   - **Support is in scope** (heals, ally/self buffs) — a model extension over the offensive-only
     built Spell (see Phase-4 systems addenda in CONVENTIONS).
   - **Scaling:** off **Intelligence by default**; a minority off their **affinity's mapped stat**
-    (flavored exception); other-stat rare; **flat** (Int-independent) allowed for pure utility.
-    Carried by a `scalingStat` (`Intelligence | Health | Attack | Defence | Speed | none`) on the
-    spell's damage/heal effect.
+    (flavored exception); other-stat rare. The scaling stat sits on the spell's damage/heal effect
+    (remap-aware Intelligence by default, or a `scalingStat` of `Intelligence | Health | Attack |
+    Defence | Speed`). A pure-utility spell (status only, a cleanse) simply carries no damage/heal
+    effect.
   - **Every affinity has at least 3 biome-1 spells**, so every enemy's full distinct gem set can
     be filled from biome 1 on (a data test guards it).
   - Spell **flavor and affinity are independent layers** — an elementally-named spell can carry any
@@ -547,6 +548,9 @@ The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
   `on-damage-taken` (self) fires **only if the target survived** → then if it died: `CreatureDied` →
   `on-death` → `on-kill` (source) → `on-ally-death`/`on-enemy-death` (observers). Hit-reactions
   resolve before death-reactions.
+- **Nothing is done to a corpse.** Apart from a revive, no effect acts on a dead creature: no
+  damage, heal, status, stat change or cleanse. A spell whose first effect kills its target puts
+  nothing more on it, and a spell effect aimed at a caster killed mid-cast is dropped.
 - **The same holds for the actor** (Phase 4.1-C2c). A creature killed inside its own action, say by
   a retaliation after its first hit, does nothing more in that action: no further hit, splash hit
   or AOE hit. What it already did stays.

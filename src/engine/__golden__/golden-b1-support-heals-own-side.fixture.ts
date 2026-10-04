@@ -33,10 +33,12 @@ export const HEAL_SPELL: Spell = {
   id: 'heal-fixture',
   name: 'Test Heal',
   targetShape: 'single',
-  spellPower: 1,
   affinity: 'vitality',
   targetSide: 'ally',
-  payload: 'heal',
+  unlockedAtBiome: 1,
+  effects: [
+    { kind: 'heal', target: { kind: 'cast-target' }, offStat: 'cast', spellPower: 1 },
+  ],
 }
 
 export const playerParty = makeParty('player', [

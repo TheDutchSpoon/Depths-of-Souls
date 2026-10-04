@@ -6,20 +6,29 @@ import { ALL_SPELLS } from './index'
 // accidentally re-authored a near-complete Overgrowth kit under new names in Glimmerdark (9
 // exact-or-near reskins, since deleted -- see data/spells/glimmerdark.ts's own header comment).
 // This guard is cheap protection against the SAME mistake in H3+: two spells that are
-// mechanically identical (same affinity + targetShape + payload + magnitude) but for their name
+// mechanically identical (same affinity + targetShape + effect kind + magnitude) but for their name
 // and id.
 //
 // ASSUMPTION: the brief's own guard wording is "(affinity, targetShape, payload, factor)" --
-// "factor" isn't a literal field on Spell. Read here as `spellPower` (the field every spell
-// carries; for a `stat-modifier`-payload spell it's an unread placeholder, always authored as the
-// literal `1` -- see e.g. overgrowth.ts's WEAKENING_BITE/BRAMBLE_WARD -- which is exactly why this
-// simple key still caught every REAL duplicate pair pre-deletion: every stat-modifier reskin
-// shared the same placeholder). A future stat-modifier spell that deliberately reuses an existing
-// (affinity, targetShape) pair with a genuinely different `statModifier` would produce a
-// false-positive collision under this key; none exists in v1 content, so this is left as a known
-// sharp edge rather than a speculative field addition.
+// "factor" read as the primary effect's `spellPower`. Pre-4.1-D that field was a spell-level one
+// and an unread placeholder `1` on every stat-modifier spell, which is why this simple key caught
+// every REAL duplicate pair pre-deletion (every stat-modifier reskin shared the placeholder); the
+// key below keeps that behaviour (an `apply-stat-modifier` primary effect keys as spellPower 1). A
+// future stat-modifier spell that deliberately reuses an existing (affinity, targetShape) pair
+// with a genuinely different stat/factor would produce a false-positive collision under this key;
+// none exists in v1 content, so this is left as a known sharp edge rather than a speculative
+// addition.
 function dedupKey(spell: Spell): string {
-  return `${spell.affinity}|${spell.targetShape}|${spell.payload ?? 'damage'}|${spell.spellPower}`
+  // 4.1-D: the old (payload, spellPower) pair, read off the spell's PRIMARY effect -- the first
+  // damage/heal/stat-modifier effect (an `apply-status` rider never distinguished two spells).
+  const primary = spell.effects.find((e) => e.kind !== 'apply-status')
+  const payload =
+    primary?.kind === 'apply-stat-modifier' ? 'stat-modifier' : (primary?.kind ?? 'none')
+  const spellPower =
+    primary?.kind === 'deal-damage' || primary?.kind === 'heal'
+      ? (primary.spellPower ?? 1)
+      : 1
+  return `${spell.affinity}|${spell.targetShape}|${payload}|${spellPower}`
 }
 
 describe('ALL_SPELLS (global registry)', () => {

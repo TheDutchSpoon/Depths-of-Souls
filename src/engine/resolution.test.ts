@@ -2333,8 +2333,17 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
     id: 'echo-spell-fixture',
     name: 'Echo Spell (fixture)',
     targetShape: 'single',
-    spellPower: 0.1,
     affinity: 'vitality',
+    targetSide: 'enemy',
+    unlockedAtBiome: 1,
+    effects: [
+      {
+        kind: 'deal-damage',
+        target: { kind: 'cast-target' },
+        offStat: 'cast',
+        spellPower: 0.1,
+      },
+    ],
   }
 
   it('runs a real granted cast (never the placeholder response), and is exempt from the self-re-entry guard, so a chancePercent:100 chain runs all the way to MAX_TRIGGER_CASCADE_DEPTH via CascadeTruncated', () => {

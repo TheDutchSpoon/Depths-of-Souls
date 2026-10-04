@@ -29,8 +29,17 @@ const TEST_SPELL: Spell = {
   id: 'test-single-spell',
   name: 'Test Bolt',
   targetShape: 'single',
-  spellPower: 1,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 1,
+    },
+  ],
 }
 
 function damageDealtEvents(

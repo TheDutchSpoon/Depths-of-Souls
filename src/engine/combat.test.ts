@@ -23,15 +23,33 @@ const EMBER_LANCE: Spell = {
   id: 'ember-lance',
   name: 'Ember Lance',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'violence',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.5,
+    },
+  ],
 }
 const CINDER_NOVA: Spell = {
   id: 'cinder-nova',
   name: 'Cinder Nova',
   targetShape: 'aoe',
-  spellPower: 0.3,
   affinity: 'violence',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.3,
+    },
+  ],
 }
 
 function isAttackDeclared(event: { type: string }): event is AttackDeclaredEvent {
@@ -925,8 +943,17 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
       id: 's',
       name: 'S',
       targetShape: 'single',
-      spellPower: 1,
       affinity: 'vitality',
+      targetSide: 'enemy',
+      unlockedAtBiome: 1,
+      effects: [
+        {
+          kind: 'deal-damage',
+          target: { kind: 'cast-target' },
+          offStat: 'cast',
+          spellPower: 1,
+        },
+      ],
     }
     // off = Intelligence(20), def 0 -> core 20, chip 0.2 -> raw 20.2 -> final 20.
     expect(castHit(spell, { intelligence: 20 })).toMatchObject({ finalDamage: 20 })
@@ -937,29 +964,22 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
       id: 's',
       name: 'S',
       targetShape: 'single',
-      spellPower: 1,
       affinity: 'vitality',
-      scalingStat: 'defence',
+      targetSide: 'enemy',
+      unlockedAtBiome: 1,
+      effects: [
+        {
+          kind: 'deal-damage',
+          target: { kind: 'cast-target' },
+          scalingStat: 'defence',
+          spellPower: 1,
+          damageSource: 'cast',
+        },
+      ],
     }
     // off = Defence(15), NOT the 999 Intelligence -- def 0 -> core 15, chip 0.15 -> raw 15.15 -> 15.
     expect(castHit(spell, { defence: 15, intelligence: 999 })).toMatchObject({
       finalDamage: 15,
-    })
-  })
-
-  it("'none' is flat/Int-independent -- offStat 0, always chip-floor-only (min-1)", () => {
-    const spell: Spell = {
-      id: 's',
-      name: 'S',
-      targetShape: 'single',
-      spellPower: 1,
-      affinity: 'vitality',
-      scalingStat: 'none',
-    }
-    // off = 0, def 0 -> core 0, chip 0 -> raw 0 -> MAX(1, floor(0)) = 1.
-    expect(castHit(spell, { intelligence: 999 })).toMatchObject({
-      finalDamage: 1,
-      wasChipOnly: true,
     })
   })
 })

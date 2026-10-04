@@ -70,15 +70,33 @@ const BOLT: Spell = {
   id: 'bolt',
   name: 'Bolt',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.5,
+    },
+  ],
 }
 const NOVA: Spell = {
   id: 'nova',
   name: 'Nova',
   targetShape: 'aoe',
-  spellPower: 0.3,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.3,
+    },
+  ],
 }
 
 function count(events: CombatEvent[], type: CombatEvent['type']): number {

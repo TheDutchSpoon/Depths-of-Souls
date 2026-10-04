@@ -194,16 +194,18 @@ data.
   `shouldRedirectAoeToAllies`) — not just Provoke, which is all GAME_DESIGN §7's own text names —
   and draws **zero** RNG for targeting as a result (**design-owner-confirmed**, not just Provoke:
   Confusion's roll is scoped to a bearer's "harmful action" per this doc's own Confusion entry, and
-  a support cast on one's own side is definitionally never one, so there is nothing to redirect). A `stat-modifier`
-  payload's magnitude is an authored flat `{ stat, factor }` field on the spell (`Spell.
-  statModifier`), NOT derived from `scalingStat`/`spellPower` the way `damage`/`heal` payloads are,
-  and NOT scaled by an instance-list's `powerPercent` (Slice B) — an authored permanent buff's
-  strength is a balance constant, not a scaled hit. `heal`/`stat-modifier` reuse `applyHeal`/
-  `applyStatModifier` (now exported from `resolution.ts`) called DIRECTLY from the Cast executor —
-  neither emits `TriggerFired` (Cast is the chosen-action context here, not a trigger).
-- **Per-spell `scalingStat`** — `Intelligence | Health | Attack | Defence | Speed | none` (default
-  Intelligence, `none` = flat); the stat a spell's magnitude scales off. See GAME_DESIGN §5. After
-  A4 (4.1-D) it lives on the spell's `deal-damage`/`heal` response, not on the spell.
+  a support cast on one's own side is definitionally never one, so there is nothing to redirect).
+  History: Slice E's stat-modifier payload carried an authored `{ stat, factor }` on the spell, and
+  its heal/stat-modifier payloads called `applyHeal`/`applyStatModifier` directly from the Cast
+  executor. Since 4.1-D these are ordinary `heal` / `apply-stat-modifier` responses in the spell's
+  list, run through `executeResponse` directly. What carried over unchanged: an authored buff's
+  `factor` is a balance constant, never scaled by an instance-list's `powerPercent`, and no spell
+  effect emits `TriggerFired` (Cast is the chosen-action context, not a trigger).
+- **The stat a spell's magnitude scales off** lives on the spell's `deal-damage` / `heal` response
+  from A4 (4.1-D), not on the spell: `offStat: 'cast'` for the default (remap-aware Intelligence),
+  or `scalingStat` (`Intelligence | Health | Attack | Defence | Speed`, read directly, no remap). A
+  pure-utility spell (status only, a cleanse) simply has no `deal-damage` / `heal` effect. The old
+  `scalingStat: 'none'` is gone (4.1-D plan review: no content used it). See GAME_DESIGN §5.
 
 ### Response vocabulary — nine verbs, and "no side doors"
 History: four in Phase 3; `heal` + `revive` joined as the two justified new verbs, `grant-action-state`
@@ -225,6 +227,17 @@ through the one response path is. New verbs still need a review. Splashing/Annih
 `action-instance` are **not** side doors: they modify the *same* action, so being read in the
 attack executor is correct.
 
+- **No response acts on a dead target, except `revive`** (PR #74 review). This is a rule of the
+  verbs, not of any target kind: every verb with a `target` skips a dead one, whether it was named
+  as `self`, `triggering-source`, a selector or `cast-target`. That is `deal-damage`, `heal`,
+  `apply-status`, `apply-stat-modifier`, `remove-status` and `grant-action-state` today, and every
+  future targeted verb by default. No event is emitted for the skip. It is the verb-level half of
+  "dead creatures fire only `on-death`" (interaction edges): a corpse neither reacts nor is acted
+  on. Revive resets a creature's effects and action state anyway, so nothing done to a corpse could
+  matter; the rule keeps the log honest and removes the case from every future verb.
+  `consume-stacks` has no target: it spends the *firing* creature's own stacks as part of that
+  creature's trigger, so it runs whenever its trigger does, including an `on-death` trigger firing
+  as the creature dies. Its wrapped effect follows the rule like any other response.
 - **`perform-action`** (Phase 4.1-E, A2) — `{ kind: 'perform-action', actor: 'self' |
   'triggering-source', intent }`, where `intent` is the same rule-shaped intent the action pipeline
   takes (`{ action: RuleAction, targeting?: TargetSelector }`, with `gemSlot: 'random'` and a `'random'`
@@ -254,7 +267,19 @@ attack executor is correct.
   effective max HP (no overheal) **after any scaling**; distinct from Regen (the over-time status).
   **Slice E2** gives the triggered `heal` the same magnitude modes as `deal-damage`: flat
   (`amountPerStack`, Regen), **stat-scaled off the *healer's* stat** (`scalingStat`; Treants Elder →
-  Health), and **`magnitudeSource`** (× a count; Necromoss → dead-allies). **`StatPercent` always
+  Health), and **`magnitudeSource`** (× a count; Necromoss → dead-allies). **4.1-D** adds
+  **`offStat`** (a remap-aware slot, exactly as on `deal-damage`), so a heal spell keeps its
+  remap-aware Intelligence default. `amountPerStack`, `scalingStat` and `offStat` are mutually
+  exclusive; setting more than one is a resolver-invariant error. **One formula for every
+  formula-mode magnitude** (PR #74 review): `deal-damage` and `heal`, `offStat` or `scalingStat`
+  mode, fired by a trait or a spell, all compute **stat × (spellPower × multiplier)**. The
+  multiplier is the `magnitudeSource` count, a spell instance's `powerPercent / 100`, or 1. Nothing
+  checks whether it runs inside a spell. Float multiplication isn't associative, so this order is
+  part of the contract. Before 4.1-D a trait's `scalingStat` heal alone computed `(stat ×
+  spellPower) × count`. Neither order is more accurate (each floors one below the exact value on
+  different inputs), so the change was accepted as float noise: goldens and the corpus are
+  unchanged, and Necromoss's heal can differ by 1 HP on rare Health and modifier combinations. No
+  rounding or epsilon step is used. **`StatPercent` always
   reads the firing creature (`context.self`).** For self-targeted ticks (Regen/Poison/Burn) that is
   also the target. A percentage of a *different* target's stat (anti-tank %-max-HP damage, a
   %-of-ally's-max-HP heal) is still deferred — no locked content needs it — and would land as an
@@ -752,10 +777,37 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     status-only spell (Silence, Pacify), a cleanse or a drain (Life Siphon) is just data. This
     replaces `payload` / `spellPower` / `scalingStat` / `statModifier` / `appliesStatus` on the
     spell (the damage/heal magnitude fields move onto the responses).
-    - A new **`cast-target`** `ResponseTarget` resolves to the current landed target, or to
-      **nothing if that target is dead** (B5's fizzle rule applied inside a spell).
+    - A new **`cast-target`** `ResponseTarget` resolves to the current landed target. It never
+      appears outside a spell's list (validated at load), and resolving it outside a cast is a
+      resolver-invariant error. A landed target that has died gets nothing more from the list
+      because no verb acts on a corpse (the response-vocabulary rule), not because of the target
+      kind (PR #74 review; the 4.1-D plan had it resolve to nothing).
     - **Effects run once per landed target**, in list order. An `onCast` list (run once per cast)
       is added only when content needs it.
+    - **What a spell's list may hold** (validated at load, 4.1-D plan review): `deal-damage` and
+      `heal` in formula mode (`offStat` or `scalingStat`, no `magnitudeSource`), `apply-status`,
+      `apply-stat-modifier` and `remove-status`, each targeting **`cast-target` or `self`**. A
+      `self` effect also runs once per landed target: Life Siphon heals its caster once per target
+      it hits. `cast-target` is rejected outside a spell. Other verbs and targets join when content
+      needs them.
+    - **A spell's damage is cast damage** (PR #74 review). Every `deal-damage` in a spell resolves
+      to `damageSource: 'cast'`, so it counts as a cast for `cross-stat` and is logged as one; a
+      `scalingStat` damage effect must say so explicitly, since that mode defaults to `'attack'`.
+      An `offStat`, when used, is `'cast'`, and an effect sets exactly one magnitude mode. The
+      load-time validator checks all three, so a mis-authored spell fails at import, not mid-fight.
+    - **The loop-level guards cover the whole list.** B5's pre-hit fizzle and the AOE alive-skip
+      skip a landed target's entire list, `self` effects included: Life Siphon heals nothing for a
+      target that died in its own pre-hit hooks. A target killed by the list's *own* damage is
+      different: the rest of the list still runs (it's atomic), so its `self` effects still run
+      (Life Siphon heals for a killing blow), while effects aimed at the corpse land nowhere.
+    - **One landed target's list is atomic, like one hit** (4.1-D plan review). The dead-actor
+      checks ("An action ends when its actor dies") sit between landed targets and instances,
+      never between one target's effects. If a retaliation to the spell's damage kills the caster,
+      the rest of that target's list still runs; later targets and instances don't. A `self`
+      effect in that remainder lands nowhere, since its target is now a corpse.
+    - **Magnitudes read the caster's live stats** when each effect runs, as Attack and every
+      response already do (4.1-D plan review). Before 4.1-D the cast path read a caster snapshot
+      taken at action start; no golden or corpus fight exercised the difference.
     - An instance's power (the action instance-list's `powerPercent`) scales `deal-damage` and
       `heal` magnitudes only, never statuses or stat-modifiers (matching the Slice E rule).
     - **Byte-identical goldens are a hard requirement** for the migration: every existing spell
@@ -875,7 +927,9 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   If the actor has died, the rest of the action is dropped: no further events from it, and no
   fizzle event. Events already emitted stay. This is the actor's mirror of "death pre-empts the
   victim's reaction" (hook interaction edges). A granted action already checks that its actor is
-  alive when it starts.
+  alive when it starts. The checks sit **between hits, never inside one**: a spell's effect list
+  for one landed target runs to completion (4.1-D), and any of its effects aimed at the dead
+  caster land nowhere (no response acts on a corpse).
 - **Interpreter** = pure engine code: `decideAction(creature, script, state) -> Intent` (the Phase 1
   seam, now consulting the script; from 4.1-C it returns the winning rule's **unresolved** intent,
   or the fallback intent, and `resolveIntent` + `executeAction` turn it into the action; RNG
@@ -1137,7 +1191,8 @@ the same interpreter, differing only in how they attach and which hooks they use
   ids never appear in events, so goldens stay byte-identical.
 - **Interaction edges**: **dead creatures fire only `on-death`** (`fireHook` gates on `alive`
   per-effect — `effectsForHook` is a pure scan-filter and does no alive-gating; lethal damage fires
-  `on-death`, not `on-damage-taken` — death pre-empts the victim's reaction).
+  `on-death`, not `on-damage-taken` — death pre-empts the victim's reaction). **Nothing is done to
+  a dead creature either**, except `revive` (see the response vocabulary).
   **Damage-path hook order** (after `DamageDealt` lands): `on-damage-dealt` (source) fires
   **unconditionally, even on a lethal hit** → `on-damage-taken` (self) fires **only if the target
   survived** → then if it died: `CreatureDied` → `on-death` (self) → `on-kill` (source) →
@@ -1535,6 +1590,13 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
     as such.
   - **The corpus:** generated floors across every shipped biome, boss floors included, plus the
     shipped starters and Unicorn. Bonus-cast, echo, Provoke and Confusion must all fire in it.
+  - **It covers all real content** (PR #74 review, built in 4.1-E). Every spell in `ALL_SPELLS` is
+    cast and every status in `STATUS_REGISTRY` is applied at least once, and a test enforces both
+    against the registries, so new content is covered or fails loudly. A status no shipped content
+    can apply goes on the test's explicit exemption list, each entry with its reason. Generated
+    floors alone left 15 of 25 spells and three statuses (Stun, Weaken, Vulnerability) out of the
+    corpus, so a change to them was invisible to the digest. Coverage fights are appended, so
+    adding them never changes an existing digest entry.
   - **Why it exists:** it answers "did any behaviour move?", which scenario goldens can't. A
     change that only shows up in combinations no golden pins passes them all.
   - **Byte-identical PRs leave it unchanged.**

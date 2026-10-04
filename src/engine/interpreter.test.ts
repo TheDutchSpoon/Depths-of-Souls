@@ -37,15 +37,33 @@ const EMBER_LANCE: Spell = {
   id: 'ember-lance',
   name: 'Ember Lance',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'violence',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.5,
+    },
+  ],
 }
 const CINDER_NOVA: Spell = {
   id: 'cinder-nova',
   name: 'Cinder Nova',
   targetShape: 'aoe',
-  spellPower: 0.3,
   affinity: 'violence',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.3,
+    },
+  ],
 }
 
 describe('decideAction -- rule precedence', () => {
@@ -108,10 +126,12 @@ describe('decideAction -- skip on invalid', () => {
       id: 'heal',
       name: 'Heal',
       targetShape: 'single',
-      spellPower: 1,
       affinity: 'vitality',
       targetSide: 'ally',
-      payload: 'heal',
+      unlockedAtBiome: 1,
+      effects: [
+        { kind: 'heal', target: { kind: 'cast-target' }, offStat: 'cast', spellPower: 1 },
+      ],
     }
     const player = makeParty('player', [
       { id: 'me', health: 40, equippedSpells: [HEAL] },

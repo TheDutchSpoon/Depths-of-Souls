@@ -578,6 +578,29 @@ parity bug**, not a golden to regenerate.
 - Re-express **every** spell in `src/data/spells/*` and every spell fixture. Content docs don't
   change (behaviour is identical).
 - Gem augments (Phase 8) will "append responses": no code for that now.
+- **Decided at the 4.1-D plan review** (CONVENTIONS "Spells carry responses" holds the rules):
+  - `heal` gains `offStat` (remap-aware, as on `deal-damage`); its three magnitude modes are
+    mutually exclusive.
+  - `scalingStat: 'none'` is dropped with its one unit test; no content or golden uses it.
+  - `unlockedAtBiome` is **required** on `Spell`, as the shape above says (every spell literal is
+    rewritten in this slice anyway).
+  - A load-time validator limits a spell's list to `deal-damage` / `heal` (formula mode, no
+    `magnitudeSource`), `apply-status`, `apply-stat-modifier` and `remove-status`, targeting
+    `cast-target` or `self`; `cast-target` is rejected in trait and status responses.
+  - One landed target's effect list is atomic: no actor check between its effects.
+  - Magnitudes read the caster's **live** stats (no action-start snapshot), pinned by a test in
+    which the caster's own `on-cast` trigger changes its Intelligence before the hit.
+- **Decided at the PR #74 review** (CONVENTIONS holds the rules):
+  - One formula for every formula-mode magnitude, `deal-damage` or `heal`, trait or spell:
+    `stat × (spellPower × multiplier)`. The heal branch that picked an order by asking whether it
+    ran inside a spell is removed. Goldens and the corpus are unchanged; trait `scalingStat` heals
+    with a count move from `(stat × spellPower) × count`, accepted as float noise (Necromoss can
+    differ by 1 HP on rare inputs).
+  - No response acts on a dead target except `revive`: every targeted verb skips one (a verb
+    rule, whatever the target kind), `grant-action-state` included. `cast-target` is simply the
+    landed target. Targetless `consume-stacks` runs whenever its trigger does.
+  - The spell validator also requires cast-flavored damage (`damageSource` resolves to `'cast'`),
+    `offStat: 'cast'` when an `offStat` is used, and exactly one magnitude mode.
 
 ### Acceptance (4.1-D)
 - **Full golden suite byte-identical.** Plus a unit test per payload kind (damage, heal,
@@ -616,6 +639,27 @@ Item: **A2.** Bonus-cast and echo-cast become data.
   `perform-action` and keeps proving both halves (the roll happens; the grant is refused).
 - **RNG draw order**, documented in code and in the golden comments: chance gate at trigger time →
   (after the granting action completes) random gem → random target.
+
+### First commit: the corpus covers all real content (PR #74 review)
+
+A **test-only commit, before any engine change**, so E and F both start from a digest that sees
+every spell and status (CONVENTIONS "Corpus digest"). Today the 500 corpus fights cast only 10 of
+the 25 registered spells and never apply Stun, Weaken or Vulnerability, and F rewrites every status.
+
+- **Coverage fights** (a Part C in `__corpus__/corpus.ts`), **appended after Part B**, built from
+  real content only (shipped species, spells, scripts and specializations; no `__fixtures__`). The
+  fight shapes are the plan's (ASSUMPTION-tagged). Each spell's effects must actually land in its
+  fight: a heal finds a wounded ally, a status finds a living target.
+- **A coverage test** over the whole corpus: every id in `ALL_SPELLS` has a `SpellCast`, and every
+  id in `STATUS_REGISTRY` has a `StatusApplied`. Both lists are read from the registries, never
+  hand-copied. A status no shipped content can apply goes on an explicit exemption list in the test,
+  each entry with its reason (expected: `stun`, applied only by the Phase-3 mechanism trait
+  `reeling`, which no shipped creature carries; the plan confirms or corrects this).
+- **Digest:** regenerated through `corpus:update`. The first 500 entries must be **byte-identical**
+  (show it mechanically); only the appended entries are new.
+- **Proof it now sees what it missed:** for three previously invisible items (a spell that was
+  never cast, Weaken, Vulnerability), show that changing it alone fails the digest. Show that the
+  same change on the pre-commit corpus passed.
 
 ### Deliberate golden changes (4.1-E)
 - **Bonus-cast goldens** gain `TriggerFired` + `ActionGranted`; the cast sits in the granted-actions
@@ -755,6 +799,8 @@ Items: **D2, G4, §6, D4** (including B1's "a cast-role creature with no usable 
 ### Acceptance (4.1-G)
 - Store tests for every new action and reason; `can…` agreement tests.
 - Generation tests: full distinct sets, the safety net on a fixture pool of 2, the cast-role throw.
+- The corpus coverage test (from 4.1-E) passes with G's three new spells. With full gem sets most
+  spells get cast in generated fights, but a spell still missing needs its own coverage fight.
 - **Mechanism goldens unchanged** (they use fixtures). The per-biome content goldens (e.g.
   `golden-broodmother`, `golden-pollinator-pollenlord`, also in `src/engine/__golden__`) and the
   integration test change where a creature's script or loadout changed: regenerate the integration
@@ -930,6 +976,27 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     built in C2c.
 34. **Confirmed (design owner, PR #73 review).** The golden-runner consolidation and the two new
     pinning tests land in C2c as a separate test-only commit, not as their own PR.
+35. **Confirmed (design owner, 4.1-D plan review).** A spell's effect list for one landed target is
+    atomic: the dead-actor checks sit between hits, never between one target's effects.
+36. **Confirmed (design owner, 4.1-D plan review).** Spell magnitudes read the caster's live stats
+    when each effect runs, not an action-start snapshot.
+37. **Confirmed (design owner, 4.1-D plan review).** `scalingStat: 'none'` is dropped; a
+    pure-utility spell has no damage/heal effect.
+38. **Confirmed (design owner, PR #74 review).** One formula for every formula-mode magnitude:
+    `stat × (spellPower × multiplier)`, with no spell check. Trait `scalingStat` heals with a count
+    move to it from `(stat × spellPower) × count`; neither order is more accurate, goldens and the
+    corpus are unchanged, and the rare 1 HP Necromoss difference is accepted. Considered and
+    rejected: separate orders per verb (zero shipped change, but two formulas for no design reason)
+    and an epsilon before the floor (can't guarantee zero change; on the damage floor it changes
+    corpus fights).
+39. **Confirmed (design owner, PR #74 review).** No response acts on a dead target except
+    `revive`: every verb with a `target` skips a dead one (`grant-action-state` included), and
+    `cast-target` resolves to the landed target without an alive check. Targetless `consume-stacks`
+    runs whenever its trigger does, including `on-death`.
+40. **Confirmed (design owner, PR #74 review).** The corpus covers all real content: every
+    registered spell is cast and every registered status applied (explicit, reasoned exemptions
+    only), enforced by a test. It lands as the first, test-only commit of 4.1-E, so E and F start
+    from full coverage.
 
 ## Sequencing summary
 

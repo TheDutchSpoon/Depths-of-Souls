@@ -85,7 +85,7 @@ export const demoPlayerParty: Creature[] = [
     currentHp: 28,
     alive: true,
     scriptId: 'always-cast',
-    // Slot 0 holds Venom Bolt so always-cast applies poison (a real appliesStatus spell).
+    // Slot 0 holds Venom Bolt so always-cast applies poison (a real damage + apply-status spell).
     equippedSpells: [VENOM_BOLT],
     defending: false,
     provoking: false,

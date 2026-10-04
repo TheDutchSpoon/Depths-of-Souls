@@ -30,8 +30,17 @@ const TEST_AOE_SPELL: Spell = {
   id: 'test-aoe',
   name: 'Test AOE',
   targetShape: 'aoe',
-  spellPower: 1,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 1,
+    },
+  ],
 }
 
 /** createCombat always re-derives activeEffects from innateTraitIds at fight-start (it

@@ -5,8 +5,8 @@ import type {
   ActiveEffect,
   BaselineEffectEntry,
   Hook,
+  EffectResponse,
   StatusDef,
-  StatusSpec,
 } from './effect-types'
 
 // ---- Stats & affinity ----
@@ -19,65 +19,39 @@ export type Side = 'player' | 'enemy'
 
 // ---- Spells ----
 
+/**
+ * Phase 4.1-D (A4): a spell is data -- a target shape, an intended side, and a LIST of the same
+ * `EffectResponse`s traits use (`effects`). The magnitude fields (`spellPower`, `scalingStat`,
+ * the stat-modifier's `{ stat, factor }`, the status spec) live on those responses, not here.
+ * Effects run once per landed target, in list order, through `executeResponse` directly (a chosen
+ * action, never a trigger: no `TriggerFired`). `cast-target` names the current landed target; see
+ * CONVENTIONS "Spells carry responses" and `validateSpellEffects` (effect-types.ts).
+ */
 export interface Spell {
   readonly id: string
   readonly name: string
-  readonly targetShape: 'single' | 'aoe'
-  readonly spellPower: number
   /** Governs equipping only (canEquip(spell, creature) = spell.affinity === creature.affinity,
    * CONVENTIONS "Spell affinity & equip-gating") -- the damage affinity cycle stays keyed on
    * the CASTER's affinity, never the spell's. First consumer: Phase 4 Slice A's generation
    * module rolls cast-role enemies an affinity-matched spell from their biome's spell pool. */
   readonly affinity: Affinity
-  /** Applied to the target(s) after damage lands, if the target survives. */
-  readonly appliesStatus?: StatusSpec
-  /** Phase 4 Slice B: the stat this spell's magnitude scales off. Absent = the pre-Slice-B
-   * default, remap-aware Intelligence lookup (getOffensiveStat(caster,'cast',...) -- byte-
-   * identical to every existing spell). An explicit Stat reads it DIRECTLY via getEffectiveStat
-   * (no stat-remap resolution), mirroring deal-damage's scalingStat. 'none' = flat, Int-
-   * independent (offStat 0 -- a utility spell whose magnitude doesn't scale off any stat; not
-   * exercised by any v1 damage-dealing content, a forward reference for Slice E's non-damage
-   * payloads). */
-  readonly scalingStat?: Stat | 'none'
-  /** Phase 4 Slice E (Support-spell model): who this spell targets. Absent = 'enemy', the
-   * pre-Slice-E default -- every existing spell (EMBER_LANCE/CINDER_NOVA/VENOM_BOLT) is
-   * unaffected. 'ally' exempts the cast from the Provoke/Confusion targeting-override pipeline
-   * entirely (GAME_DESIGN §7: "Provoke applies only to enemy-targeting offensive actions;
-   * ally-targeting actions... are unaffected" -- ASSUMPTION: Confusion is bundled into that same
-   * exemption here, not just Provoke, since Confusion's roll is scoped to a "harmful action"
-   * per CONVENTIONS and a support cast on an ally isn't one) and, for 'aoe' shape, freezes the
-   * caster's own living side instead of the opposing side (mirroring the enemy-AOE freeze rule).
-   */
-  readonly targetSide?: 'enemy' | 'ally'
-  /** Phase 4 Slice E: what a successful cast actually does to its target(s). Absent = 'damage',
-   * the pre-Slice-E default (byte-identical -- every existing spell keeps going through
-   * dealDamageWithOffStat). 'heal' reuses the existing `heal` response-execution path directly
-   * (applyHeal), magnitude = the SAME scalingStat/spellPower-derived OffStat a damage spell would
-   * compute (resolveSpellOffStat), just applied as HP restored instead of HP removed. 'stat-modifier'
-   * reuses `apply-stat-modifier`'s execution (applyStatModifier) via the spell's own `statModifier`
-   * field below -- a permanent-for-the-fight buff/debuff, GAME_DESIGN §5's "stat-buff (self/ally)
-   * and stat-debuff (enemy)... permanent stat-modifiers (last the fight)". Neither payload emits
-   * TriggerFired -- Cast is the trigger context here, a chosen action, not a reaction. */
-  readonly payload?: 'damage' | 'heal' | 'stat-modifier'
-  /** Required iff payload is 'stat-modifier' (a resolver-invariant error otherwise, mirroring
-   * deal-damage's mutually-exclusive-modes check). The flat stat/factor pair applied via
-   * applyStatModifier -- NOT derived from scalingStat/spellPower (a stat buff's magnitude is an
-   * authored constant, not a scaled hit), so instance-list powerPercent scaling doesn't apply to
-   * it either (an "additional cast instance" would apply the SAME full-strength modifier again,
-   * stacking -- stat-modifier is uncapped/additive-across-sources by design, CONVENTIONS' Unified
-   * effect framework §1). */
-  readonly statModifier?: { readonly stat: Stat; readonly factor: number }
-  /** Phase 4 interstitial slice (cumulative spell unlock): the biome number (1-based, matching
-   * GAME_DESIGN's "Biome 1"/"Biome 2" numbering) at which this spell enters the shared pool.
-   * `generateFloor` rolls a cast-role enemy's loadout from every spell whose `unlockedAtBiome` is
-   * `<=` the current biome's number, filtered by affinity -- so a spell unlocked at biome 1 stays
-   * available at every deeper biome too (spells unlock cumulatively; this is distinct from
-   * species/creature biome-exclusivity, which is unaffected). Optional, defaulting to `1`
-   * (`spellsUnlockedAt`, generation.ts) -- byte-identical for every pre-existing Spell literal
-   * across the engine's own combat/resolution/interpreter tests and golden fixtures, none of
-   * which touch generation at all; every REAL spawn-pool spell in `data/spells/` sets it
-   * explicitly regardless. */
-  readonly unlockedAtBiome?: number
+  /** The biome number (1-based, matching GAME_DESIGN's "Biome 1"/"Biome 2" numbering) at which
+   * this spell enters the shared pool. `generateFloor` rolls a cast-role enemy's loadout from every
+   * spell whose `unlockedAtBiome` is `<=` the current biome's number, filtered by affinity -- so a
+   * spell unlocked at biome 1 stays available at every deeper biome too (spells unlock
+   * cumulatively; distinct from species/creature biome-exclusivity). REQUIRED since 4.1-D. */
+  readonly unlockedAtBiome: number
+  readonly targetShape: 'single' | 'aoe'
+  /** Who this spell targets (Phase 4 Slice E's Support-spell model, REQUIRED since 4.1-D).
+   * 'ally' exempts the cast from the Provoke/Confusion targeting-override pipeline entirely
+   * (GAME_DESIGN §7: "Provoke applies only to enemy-targeting offensive actions;
+   * ally-targeting actions... are unaffected" -- Confusion is bundled into that same exemption,
+   * since Confusion's roll is scoped to a "harmful action" and a support cast on an ally isn't
+   * one) and, for 'aoe' shape, freezes the caster's own living side instead of the opposing side
+   * (mirroring the enemy-AOE freeze rule). */
+  readonly targetSide: 'enemy' | 'ally'
+  /** What a successful cast does to each landed target, in order. */
+  readonly effects: readonly EffectResponse[]
 }
 
 // ---- Creature ----

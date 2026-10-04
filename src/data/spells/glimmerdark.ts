@@ -5,7 +5,7 @@ import type { Spell } from '../../engine/types'
 // spell unlock became cumulative (generateFloor rolls from the GLOBAL spell list, filtered to
 // `unlockedAtBiome <= currentBiomeIndex`, then by affinity -- see engine/generation.ts's
 // `spellsUnlockedAt`), 8 of those 10 turned out to be exact mechanical reskins of an Overgrowth
-// spell (same affinity + targetShape + payload + spellPower/statModifier, only the name
+// spell (same affinity + targetShape + effect kind + magnitude, only the name
 // differed) and a 9th (Glowspark Bolt) was a near-dup of Arcane Bolt violating this biome's own
 // "no affinity carries two plain damage spells" convention. All 9 are deleted -- Overgrowth's
 // biome-1 kit is inherited by every deeper biome now, so re-authoring it here was always
@@ -19,8 +19,8 @@ import type { Spell } from '../../engine/types'
 // (GAME_DESIGN §4) as spice on top of the inherited biome-1 base, not a re-authored kit -- each
 // on a mechanic no biome-1 spell already uses.
 
-/** Beacon Charge: a small heal (the support-spell model's `heal` payload) that ALSO charges the
- * target with a stack of Glow (`appliesStatus`, applied after the heal lands) -- ties the
+/** Beacon Charge: a small heal that ALSO charges the
+ * target with a stack of Glow (a `heal` effect, then an `apply-status` effect) -- ties the
  * Glowflies' resource into the shared spell pool, per species-locked.md's own "a spell may apply
  * any status, including another species' signature one" rule. Single-target + upside -> ~80-90%
  * band. */
@@ -28,23 +28,28 @@ export const BEACON_CHARGE: Spell = {
   id: 'beacon-charge',
   name: 'Beacon Charge',
   targetShape: 'single',
-  spellPower: 0.3,
   affinity: 'wit',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
-  appliesStatus: { statusId: 'glow' },
   unlockedAtBiome: 2,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.3,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'glow' },
+    },
+  ],
 }
 
 /**
  * ASSUMPTION (interstitial slice, NEW CONTENT -- surfaced for sign-off, not guessed): Overcharge,
- * suggested by the brief as "apply 2 Glow to an ally." The engine has no "apply a status with no
- * damage/heal/buff riding along" payload mode (out of scope to add one -- this slice's only
- * permitted engine change is the unlock filter + the Spell field), and `appliesStatus` only fires
- * after a payload lands (`combat.ts`'s `applyCastPayload` then `if (spell.appliesStatus)`), so
- * Overcharge is authored on the `heal` payload -- same shape as Beacon Charge, but the trade is
- * inverted: a SMALLER heal (spellPower 0.15, half Beacon Charge's 0.3) buys TWO Glow stacks at
+ * suggested by the brief as "apply 2 Glow to an ally." A `heal` effect plus an `apply-status`
+ * effect -- same shape as Beacon Charge, but the trade is inverted: a SMALLER heal (spellPower 0.15, half Beacon Charge's 0.3) buys TWO Glow stacks at
  * once (`stacks: 2`, mirroring Radiant's own `{ statusId: 'glow', stacks: 2 }` -- see
  * traits/glimmerdark.ts) instead of Beacon Charge's one. Distinguishable from Beacon Charge under
  * the dedup guard (data/spells/index.test.ts) by spellPower (0.15 vs 0.3). Exact numbers (0.15
@@ -54,13 +59,22 @@ export const OVERCHARGE: Spell = {
   id: 'overcharge',
   name: 'Overcharge',
   targetShape: 'single',
-  spellPower: 0.15,
   affinity: 'wit',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
-  appliesStatus: { statusId: 'glow', stacks: 2 },
   unlockedAtBiome: 2,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.15,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'glow', stacks: 2 },
+    },
+  ],
 }
 
 /**
@@ -71,11 +85,11 @@ export const OVERCHARGE: Spell = {
  * species-locked.md's own "a spell may apply any status, including another species' signature
  * one" rule (already precedented: Overgrowth's own Vine Snare applies `web` too), Disorient
  * reuses that SAME statusId rather than authoring a new near-identical StatusDef, which would
- * just be Web-with-a-new-name -- the exact anti-pattern this slice exists to undo. Authored on
- * the `damage` payload (the default) + `appliesStatus`, same shape as Vine Snare, but on
+ * just be Web-with-a-new-name -- the exact anti-pattern this slice exists to undo. Authored as
+ * a `deal-damage` effect + an `apply-status` effect, same shape as Vine Snare, but on
  * Instinct (Vine Snare is Wit) -- Instinct had no status-application spell besides core.ts's
  * Venom Bolt (poison), so this fills a real gap rather than re-skinning Vine Snare; distinct
- * under the dedup guard by affinity (instinct vs wit) AND by spellPower/appliesStatus vs Venom
+ * under the dedup guard by affinity (instinct vs wit) AND by spellPower and its status vs Venom
  * Bolt. spellPower 0.85 + duration 3 both mirror Vine Snare's own numbers exactly (single-target
  * + upside band, Web's own `defaultDuration`) -- deliberate consistency, not an oversight; flag
  * for design-owner sign-off same as any other new balance figure. */
@@ -83,10 +97,22 @@ export const DISORIENT: Spell = {
   id: 'disorient',
   name: 'Disorient',
   targetShape: 'single',
-  spellPower: 0.85,
   affinity: 'instinct',
-  appliesStatus: { statusId: 'web', duration: 3 },
   unlockedAtBiome: 2,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.85,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'web', duration: 3 },
+    },
+  ],
 }
 
 /**
@@ -98,10 +124,22 @@ export const BLINDING_FLARE: Spell = {
   id: 'blinding-flare',
   name: 'Blinding Flare',
   targetShape: 'single',
-  spellPower: 0.7,
   affinity: 'violence',
-  appliesStatus: { statusId: 'vulnerability', duration: 3 },
   unlockedAtBiome: 2,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.7,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'vulnerability', duration: 3 },
+    },
+  ],
 }
 
 /**
@@ -113,13 +151,22 @@ export const AFTERGLOW: Spell = {
   id: 'afterglow',
   name: 'Afterglow',
   targetShape: 'single',
-  spellPower: 0.5,
   affinity: 'vitality',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
-  appliesStatus: { statusId: 'regen', duration: 3 },
   unlockedAtBiome: 2,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.5,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'regen', duration: 3 },
+    },
+  ],
 }
 
 /**
@@ -131,11 +178,20 @@ export const LUMINOUS_TIDE: Spell = {
   id: 'luminous-tide',
   name: 'Luminous Tide',
   targetShape: 'aoe',
-  spellPower: 0.2,
   affinity: 'wit',
-  scalingStat: 'health',
   targetSide: 'ally',
-  payload: 'heal',
-  appliesStatus: { statusId: 'glow' },
   unlockedAtBiome: 2,
+  effects: [
+    {
+      kind: 'heal',
+      target: { kind: 'cast-target' },
+      scalingStat: 'health',
+      spellPower: 0.2,
+    },
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'glow' },
+    },
+  ],
 }

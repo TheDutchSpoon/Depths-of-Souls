@@ -91,6 +91,15 @@ interface HookContext {
    * `magnitudeSource: { kind: 'consumed-stacks' }` read outside this context is a resolver
    * invariant violation (resolveMagnitudeCount throws). */
   readonly consumedStacks?: number
+  /** Phase 4.1-D (A4): populated ONLY by a spell's own effect loop (actions.ts
+   * `executeSpellEffects`) -- the current landed target `cast-target` resolves to. Absent for
+   * every trigger; resolving `cast-target` without it is a resolver-invariant error. */
+  readonly castTarget?: CreatureId
+  /** Phase 4.1-D: the cast instance's `powerPercent / 100`, populated with `castTarget`. Scales
+   * a spell's `deal-damage` and `heal` ONLY (the instance list's rule); never a stat-modifier or a
+   * status. Replaces the magnitude `count` a `magnitudeSource` would supply (a spell may not carry
+   * one -- `validateSpellEffects`). */
+  readonly castPowerFraction?: number
 }
 
 // ---- Damage application + damage-path hooks ----
@@ -165,35 +174,6 @@ export function dealDamageWithScalingStat(
     targetId,
     offStat,
     damageSource === 'cast' ? 'cast' : 'attack',
-    damageSource,
-    state,
-    ctx,
-    statusId,
-  )
-}
-
-/**
- * Shared damage-formula core, ALSO exported directly for Spell.scalingStat (actions.ts): gathers
- * the attacker's armor-penetration + cross-stat (for `actionKind`) passives, runs
- * calculateDamage, applies + emits. `actionKind` also selects cross-stat's appliesTo bucket.
- * `offStat` is the caller's fully-resolved value (remap-aware for the default Cast path,
- * direct-stat for scalingStat, or 0 for a 'none'/flat-utility spell).
- */
-export function dealDamageWithOffStat(
-  attackerId: CreatureId,
-  targetId: CreatureId,
-  offStat: number,
-  actionKind: 'attack' | 'cast',
-  damageSource: 'attack' | 'cast' | 'dot',
-  state: CombatState,
-  ctx: ResolutionContext,
-  statusId?: string,
-): CombatState {
-  return dealDamageCore(
-    attackerId,
-    targetId,
-    offStat,
-    actionKind,
     damageSource,
     state,
     ctx,
@@ -615,6 +595,17 @@ function resolveResponseTargets(
         .filter((c) => c.speciesId !== undefined && c.speciesId === self.speciesId)
         .map((c) => c.id)
     }
+    case 'cast-target': {
+      if (context.castTarget === undefined) {
+        throw new Error(
+          'resolver invariant violated: cast-target resolved outside a spell cast (no castTarget in context)',
+        )
+      }
+      // The landed target, alive or not: a dead one gets nothing from the rest of the list
+      // because NO verb acts on a corpse except `revive` (the verb rule in executeResponse), not
+      // because this target kind filters it (4.1-D review item 3).
+      return [context.castTarget]
+    }
     case 'selector': {
       const id = resolveTargetSelector(
         target.selector,
@@ -736,7 +727,9 @@ export function executeResponse(
       // Absent -> exact pre-Slice-D values (byte-identical: `stacks`, or `1` -- a no-op
       // multiplier on spellPower).
       const flatCount = count ?? stacks
-      const formulaMultiplier = count ?? 1
+      // Phase 4.1-D: a spell's cast-instance fraction (`castPowerFraction`) takes the place of the
+      // implicit `1`, in the SAME multiplication order as the pre-4.1-D `spell.spellPower * pf`.
+      const formulaMultiplier = count ?? context.castPowerFraction ?? 1
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const t = findCreature(working, targetId)
@@ -789,9 +782,15 @@ export function executeResponse(
       // (Regen, the pre-Slice-E2 default) scales `amountPerStack` by `stacks` (or the live count,
       // if magnitudeSource replaces it); `scalingStat` mode reads the HEALER's (firing
       // creature's) own effective stat × spellPower × the same live count -- never the target's.
-      if (response.amountPerStack !== undefined && response.scalingStat !== undefined) {
+      // Phase 4.1-D (F2): offStat joins as the third mode; all three are mutually exclusive.
+      const healModesSet = [
+        response.amountPerStack !== undefined,
+        response.scalingStat !== undefined,
+        response.offStat !== undefined,
+      ].filter(Boolean).length
+      if (healModesSet > 1) {
         throw new Error(
-          'resolver invariant violated: heal response set more than one of amountPerStack/scalingStat',
+          'resolver invariant violated: heal response set more than one of amountPerStack/scalingStat/offStat',
         )
       }
       const stacks = context.stacks ?? 1
@@ -814,18 +813,31 @@ export function executeResponse(
       // Absent -> exact pre-Slice-E2 values (byte-identical: `stacks`, or `1` -- a no-op
       // multiplier on spellPower), same composition as deal-damage's own magnitudeSource.
       const flatCount = count ?? stacks
-      const formulaMultiplier = count ?? 1
+      const formulaMultiplier = count ?? context.castPowerFraction ?? 1
 
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const t = findCreature(working, targetId)
         if (!t || !t.alive) continue
-        const amount =
-          response.scalingStat !== undefined
-            ? getEffectiveStat(bearer, response.scalingStat) *
-              (response.spellPower ?? 1.0) *
-              formulaMultiplier
-            : resolveFlatTotal(bearer, response.amountPerStack ?? 0, flatCount)
+        let amount: number
+        if (response.offStat !== undefined) {
+          // Remap-aware (a stat-remap redirects the slot), the lookup a heal SPELL always used;
+          // `spellPower × multiplier` is associated exactly as the pre-4.1-D `sp * pf`.
+          amount = getOffensiveStat(
+            bearer,
+            response.offStat,
+            (response.spellPower ?? 1.0) * formulaMultiplier,
+          )
+        } else if (response.scalingStat !== undefined) {
+          // One formula for every formula-mode magnitude, trait or spell: `stat * (spellPower *
+          // multiplier)`, the order deal-damage uses in every mode and `offStat` gets through
+          // getOffensiveStat above (4.1-D review item 2; CONVENTIONS, heal).
+          amount =
+            getEffectiveStat(bearer, response.scalingStat) *
+            ((response.spellPower ?? 1.0) * formulaMultiplier)
+        } else {
+          amount = resolveFlatTotal(bearer, response.amountPerStack ?? 0, flatCount)
+        }
         working = applyHeal(context.self, targetId, amount, working, ctx)
       }
       return { state: working, suppressed: false }
@@ -850,6 +862,8 @@ export function executeResponse(
 
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        if (!findCreature(working, targetId)?.alive) continue
         working = applyStatModifier(
           context.self,
           targetId,
@@ -865,6 +879,8 @@ export function executeResponse(
     case 'apply-status': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        if (!findCreature(working, targetId)?.alive) continue
         working = applyStatus(context.self, targetId, response.status, working, ctx)
       }
       return { state: working, suppressed: false }
@@ -923,6 +939,8 @@ export function executeResponse(
     case 'grant-action-state': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D round 2).
+        if (!findCreature(working, targetId)?.alive) continue
         working = updateCreature(working, targetId, {
           ...(response.defending ? { defending: true } : {}),
           ...(response.provoking ? { provoking: true } : {}),
@@ -990,7 +1008,8 @@ export function executeResponse(
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
-        if (!target) continue
+        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        if (!target || !target.alive) continue
         const existing = target.activeEffects.find(
           (
             e,
@@ -1049,9 +1068,10 @@ function applyFlatDamage(
   return applyDamageAndEmit(sourceId, target, damage, damageSource, state, ctx, statusId)
 }
 
-/** Regen: a flat, stack-scaled heal, clamped to effective max Health -- no auto-heal past it.
- * Exported as of Phase 4 Slice E: a heal-payload Cast (actions.ts) calls this directly, the same
- * "not through a trigger" precedent already applied to apply-stat-modifier below. */
+/** Regen / spell heal: a flat or stat-scaled heal, clamped to effective max Health -- no
+ * auto-heal past it. Reached through `executeResponse`'s `heal` (a trigger's or a spell's own
+ * effect list); exported so the 4.1-D equivalence oracle (spell-effects.test.ts) can replay the
+ * pre-4.1-D cast path on the same primitive. */
 export function applyHeal(
   sourceId: CreatureId,
   targetId: CreatureId,
@@ -1164,9 +1184,9 @@ export function applyStatus(
   return working
 }
 
-/** Exported as of Phase 4 Slice E: a stat-modifier-payload Cast (actions.ts) calls this directly
- * (sourceTraitId = the spell's own id, for effect-instance-id/debugging legibility) -- the same
- * "reuse the response's execution path, not through a trigger" precedent as heal above. */
+/** Reached through `executeResponse`'s `apply-stat-modifier` (sourceTraitId = the firing trait's
+ * id, or the spell's own id for a spell's effect, for effect-instance-id/debugging legibility);
+ * exported for the 4.1-D equivalence oracle, like `applyHeal` above. */
 export function applyStatModifier(
   sourceId: CreatureId,
   targetId: CreatureId,

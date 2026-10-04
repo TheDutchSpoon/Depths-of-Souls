@@ -40,18 +40,29 @@ export const ENEMY_BOLT: Spell = {
   id: 'enemy-bolt-fixture',
   name: 'Enemy Bolt (fixture)',
   targetShape: 'single',
-  spellPower: 1,
   affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 1,
+    },
+  ],
 }
 
 export const HEAL_SPELL: Spell = {
   id: 'heal-fixture',
   name: 'Test Heal',
   targetShape: 'single',
-  spellPower: 1,
   affinity: 'vitality',
   targetSide: 'ally',
-  payload: 'heal',
+  unlockedAtBiome: 1,
+  effects: [
+    { kind: 'heal', target: { kind: 'cast-target' }, offStat: 'cast', spellPower: 1 },
+  ],
 }
 
 export const BONUS_CASTER_FIXTURE: Trait = {

@@ -1352,3 +1352,197 @@ All existing goldens' `expectedEvents` are unchanged.
   action ends when its actor dies"); nothing outstanding.
 - Nothing else surfaced: rule 2's "a refused granted action emits nothing" was the one gap earlier,
   already in CONVENTIONS.
+
+## 4.1-D -- Spells carry responses (byte-identical)
+
+A pure re-expression (A4). The plan review's doc-sync (CONVENTIONS "Spells carry responses", the brief's
+4.1-D "decided at the plan review" block, ASSUMPTIONS 35-37) landed first as its own commit. Golden
+policy: **byte-identical, hard requirement**. Met: no golden's expected values changed, no corpus
+regeneration. The review pass that followed (items 1-4 below) is also golden- and corpus-neutral,
+with **one deliberate, accepted exception** in a content-free corner: trait `scalingStat` heals with
+a `magnitudeSource` count now use `stat x (spellPower x count)` instead of `(stat x spellPower) x
+count` (item 2). The design owner accepted it as float noise; it moves no golden and no corpus
+fight (measured), and Necromoss-shaped content can differ by 1 HP on rare Health and modifier
+combinations.
+
+### What was built
+
+- **`Spell = { id, name, affinity, unlockedAtBiome, targetShape, targetSide, effects }`.** `payload`,
+  `spellPower`, `scalingStat`, `statModifier` and `appliesStatus` are deleted from `Spell`;
+  `targetSide` and `unlockedAtBiome` are now **required** (plan review F3). The `?? 'enemy'` fallbacks
+  in `actions.ts` are gone.
+- **`cast-target` `ResponseTarget`** (`effect-types.ts`, resolved in `resolution.ts`): the current
+  landed target, alive or not; resolving it with no `castTarget` on the context throws a
+  resolver-invariant error. A dead landed target gets nothing because **no verb acts on a corpse**
+  (the verb rule, below), not because `cast-target` filters it. `HookContext` gained `castTarget` and `castPowerFraction`
+  (transient; never in `CombatState`).
+- **`executeSpellEffects`** (`actions.ts`) replaces `applyCastPayload` / `applyStatusIfAlive` /
+  `resolveSpellOffStat`. It runs the list once per landed target, in list order, through
+  `executeResponse` directly (so no `TriggerFired`, no cascade-depth or self-guard accounting), from
+  `executeCastSingle` and `executeCastAoe`. The loop-level checks (the four dead-actor sites, the B5
+  pre-hit fizzle, the AOE frozen-member alive-skip) are untouched.
+- **`heal.offStat`** (plan review F2): the remap-aware formula slot, mirroring `deal-damage`. A heal
+  spell always used the remap-aware Intelligence lookup, and `heal.scalingStat` reads its stat raw.
+  The three heal magnitude modes (`amountPerStack` / `scalingStat` / `offStat`) are mutually
+  exclusive; the check is tested.
+- **`validateSpellEffects`** (`effect-types.ts`), called over `ALL_SPELLS` at import
+  (`data/spells/index.ts`): `deal-damage` / `heal` in formula mode only, `apply-status`,
+  `apply-stat-modifier`, `remove-status`; each targeting `cast-target` or `self` (plan review F1). A
+  `self` effect runs once per landed target. `cast-target` is **rejected** in trait, perk and status
+  responses (the existing `validate*NoRandomSelector*` validators now also throw on it). **Review
+  item 1:** a spell's damage and heal are cast-slot formula magnitudes: the validator also rejects a
+  `deal-damage` whose resolved damage source is not `'cast'` (`damageSource`, else `'attack'` in
+  `scalingStat` mode, else the `offStat` value, so a `scalingStat` effect must say `damageSource:
+  'cast'`), an `offStat` other than `'cast'` on `deal-damage` or `heal`, and an effect setting both
+  `offStat` and `scalingStat` (which used to pass import and throw mid-fight).
+- **One formula for every formula-mode magnitude (review item 2).** `heal`'s `scalingStat` mode is
+  `getEffectiveStat(bearer, stat) x (spellPower x multiplier)`, whatever the multiplier is (a cast's
+  power fraction or a `magnitudeSource` count). The `castPowerFraction !== undefined` branch is
+  gone, so nothing in `executeResponse` asks whether a heal runs inside a spell. That is the order
+  `deal-damage` uses in every mode and `heal.offStat` gets through `getOffensiveStat`.
+- **The verb rule (review item 3, completed in round 2):** `apply-status`, `apply-stat-modifier`,
+  `remove-status` and `grant-action-state` skip a target that is not alive, with no event, whatever
+  the target kind (`deal-damage` and `heal` already did; `revive` is the one verb that targets the
+  dead). `cast-target` therefore resolves to `[castTarget]` with no alive check. `consume-stacks`
+  is unchanged: it has no target and spends the firing creature's own stacks, so it runs whenever
+  its trigger does, `on-death` included.
+- **Dropped:** `Spell.scalingStat: 'none'` and its one unit test (ASSUMPTION 37).
+- **Re-expression:** every spell in `src/data/spells/*`, `__fixtures__/biomes.ts`, 14 golden
+  fixtures and the spell-carrying test files (see "Files changed"). A one-off codemod rewrote the
+  ~60 old-shape literals mechanically; `tsc -b` then found the rest (three species tests, the
+  registry dedup key, the `'none'` test), which were rewritten by hand. The mapping is exactly what
+  `toSpell` in `spell-effects.test.ts` does.
+- **Removed as dead:** `dealDamageWithOffStat` (its only caller was the old cast path).
+
+### Parity rules, pinned
+
+Each row was shown failing with its mechanism removed or broken, applied alone then reverted (a
+mutation runner swaps the exact source text, runs the **whole** suite, records the failing tests and
+restores the file; the files were compared byte-for-byte afterwards).
+
+| Rule / check site                                        | Proving test                                                                                                                                              | Mutation -> result                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1 cast slot, `'cast'` tag, no `TriggerFired`            | the equivalence tests                                                                                                                                     | damage forced to the attack slot -> 20 fail (equivalence x3, `combat.test` spell hits, corpus); a `TriggerFired` pushed per effect -> 28 fail                                                                                                                                       |
+| P2 counts as a cast (`cross-stat`), never splashes       | `P2: ...`                                                                                                                                                 | a splash loop added to the cast path -> that test fails                                                                                                                                                                                                                             |
+| P3 heal / stat-modifier emit no `TriggerFired`           | heal and stat-modifier equivalence                                                                                                                        | the same `TriggerFired` mutation                                                                                                                                                                                                                                                    |
+| P4 no status on a dead target                            | `dead-target-pins` "never applied to a dead target" (held by the verb rule since review item 3)                                                          | `apply-status` guard removed -> 4 fail (that test, the two new `apply-status` verb-rule tests, corpus)                                                                                                                                                                              |
+| P5 `powerPercent` scales damage and heal only            | stat-modifier equivalence ([100, 30]: full strength twice)                                                                                                | factor scaled by the fraction -> the equivalence test fails                                                                                                                                                                                                                         |
+| P5 float association (`stat x (sp x pf)`)                | damage equivalence; heal equivalence for `offStat` and for `scalingStat` (Int 60, sp 1.5: 26.999999999999996 -> 26, vs 27)                                | damage association changed -> 2 fail; heal `scalingStat` association changed -> the scalingStat case fails. **The first version of the heal test did not catch this** (20 x 0.5 x 0.3 is exact either way); found by the mutation run, fixed with the Int 60 case                   |
+| P6 `on-cast` / `on-action-observed` before the list      | `golden-on-action-hooks`, `golden-action-observed`, the ASSUMPTION 36 test, `actor-death` site 2                                                          | list run before the hooks -> 11 fail                                                                                                                                                                                                                                                |
+| P7 list order; AOE in slot order                         | damage + status, AOE + status                                                                                                                             | list reversed -> 7 fail                                                                                                                                                                                                                                                             |
+| P8 no depth / self-guard accounting                      | `P8: ...` (cascade at MAX-1, the target's reaction still fires)                                                                                           | `depth += 1` around the list -> that test fails                                                                                                                                                                                                                                     |
+| B5 (single): a dead target gets nothing                  | `golden-b5-cast-fizzle`; the stat-modifier, heal and `self`-effect tests                                                                                  | see the note below                                                                                                                                                                                                                                                                  |
+| Dead actor, single site 1 / site 2                       | `actor-death`                                                                                                                                             | check removed -> 1 / 2 (+ corpus) fail                                                                                                                                                                                                                                              |
+| Dead actor, AOE site 1 / site 4                          | `actor-death`, the ASSUMPTION 35 AOE test                                                                                                                 | check removed -> 1 / 2 fail                                                                                                                                                                                                                                                         |
+| AOE skips a member that died earlier                     | `dead-target-pins`; the AOE `self`-effect test                                                                                                            | see the note below                                                                                                                                                                                                                                                                  |
+| `cast-target`, single-target site                        | `cast-target resolves ... BOTH sites` (status only on the chosen target)                                                                                  | resolves to `self` -> 40 fail                                                                                                                                                                                                                                                       |
+| `cast-target`, AOE site                                  | same describe, AOE test (status on each member in slot order)                                                                                             | list given the first member only -> 7 fail                                                                                                                                                                                                                                          |
+| `self` effect once per landed target                     | single and AOE drain tests                                                                                                                                | self effects only for the first member -> the AOE test fails                                                                                                                                                                                                                        |
+| ASSUMPTION 35 (atomic list)                              | the two atomic tests                                                                                                                                      | an actor check added between effects -> both fail                                                                                                                                                                                                                                   |
+| ASSUMPTION 36 (live caster)                              | the `on-cast` doubles-Int test (live 20; a snapshot gives 10)                                                                                             | caster's effects reset to the snapshot before each effect -> that test + corpus fail                                                                                                                                                                                                |
+| `heal.offStat` remap-aware; modes exclusive              | the stat-remap heal test; the exclusivity test                                                                                                            | unconditional Int read -> fails; exclusivity dropped -> fails                                                                                                                                                                                                                       |
+| `cast-target` rejected outside spells; throws w/o context | validator tests; the no-context test                                                                                                                      | each removed -> its test fails                                                                                                                                                                                                                                                      |
+| Item 1: damage source resolves to `'cast'`                | validator tests: `scalingStat` without `damageSource`; explicit non-cast `damageSource`; the accepting case                                              | check removed -> both rejection tests fail                                                                                                                                                                                                                                         |
+| Item 1: `offStat` is `'cast'` only                        | validator tests, `deal-damage` and `heal` separately                                                                                                      | check removed from `deal-damage` -> its test fails; from `heal` -> its test fails                                                                                                                                                                                                  |
+| Item 1: not both `offStat` and `scalingStat`              | validator tests, `deal-damage` and `heal` separately                                                                                                      | check removed from `deal-damage` -> its test fails; from `heal` -> its test fails                                                                                                                                                                                                  |
+| Item 1: Root Grasp must say `damageSource: 'cast'`        | the import-time validator over `ALL_SPELLS`                                                                                                               | `damageSource: 'cast'` deleted from Root Grasp (`data/spells/overgrowth.ts`) -> **58 tests fail** (every suite importing the spell registry fails to load: "spell root-grasp effect #0 ... must resolve to damageSource 'cast'"); restored                                          |
+| Item 2: one `heal` formula, trait or spell                | new trait test (fixture trait: `scalingStat: health`, `spellPower 0.15`, count of 3 dead allies, Health 60 -> **26**, old order 27); the Int 60 spell case | the old `(stat x sp) x count` order restored -> the trait test fails (and the spell `scalingStat` association case)                                                                                                                                                                 |
+| Item 3: `apply-status` skips a corpse                     | spell `[deal-damage cast-target, apply-status self]` whose retaliation kills the caster; and a trait `apply-status` on a dead `triggering-source`        | guard removed -> both fail (+ `dead-target-pins`, corpus)                                                                                                                                                                                                                          |
+| Item 3: `apply-stat-modifier` skips a corpse              | the same spell shape with `apply-stat-modifier self`                                                                                                      | guard removed -> that test fails                                                                                                                                                                                                                                                   |
+| Item 3: `remove-status` skips a corpse                    | trait `remove-status` on a `triggering-source` that died earlier in the chain (no `StatusExpired`, corpse effect list unchanged)                          | guard removed -> that test fails                                                                                                                                                                                                                                                   |
+| Item 3 (round 2): `grant-action-state` skips a corpse | trait `grant-action-state` (`defending: true`) on a dead `triggering-source` (the dead victim's `defending` stays false) | guard removed -> that test fails (the only failure) |
+
+**Note: B5's `continue` and the AOE alive-skip are no longer the only guard** for a `cast-target`
+effect: no verb acts on a dead target, so a dead landed target already gets nothing. Removing either
+guard alone therefore failed **no** test at first (0 failing). They still matter for a `self` effect
+in the list, which targets the (living) caster, and "a dead target gets nothing from the list"
+includes it. Two tests were added (`B5 and the AOE alive-skip also guard self effects`), and each
+guard removed alone now fails exactly one test.
+
+### Equivalence tests
+
+One per payload kind (damage, heal, stat-modifier, damage + status, AOE + status), plus the
+explicit-`scalingStat` damage case and the two heal float-association cases. Each runs the same cast
+down the old and new paths from equal states and compares events, final state and RNG position. The
+"old" side is `legacyCast` in `spell-effects.test.ts`: the pre-4.1-D payload path as it stood on
+`main@eb37246`, replayed on the same exported primitives (`applyHeal`, `applyStatModifier`, `applyStatus`;
+damage via `dealDamage` / `dealDamageWithScalingStat`, which compute the value that
+`dealDamageWithOffStat(resolveSpellOffStat(...))` passed to the same core). Each case also pins its
+hand-derived numbers (arithmetic in comments).
+
+### Verification
+
+- **Expected exports vs `main`:** `main`'s `src` extracted with `git archive eb37246`, the branch's
+  `src` copied beside it; one throwaway vitest file imports **all 88 golden fixtures from both
+  trees** and deep-equals every `expected*`, `SEED` and `TURN_STEPS` export (268 declarations): **0
+  differences**. The same script fails (two assertions) when a branch export is perturbed, so it can
+  fail. No golden's `expected*` / `SEED` / `TURN_STEPS` line appears in the diff, and no
+  `__golden__/*.test.ts` file changed. 14 fixtures changed, **their spell inputs only** (plus the header comments of three of them, review item 4).
+- **Corpus digest:** `git diff --stat -- src/engine/__corpus__` is empty, `corpus:update` was never
+  run, and `corpus-digest.test.ts` passes.
+- **Test count, file by file** (per-test names compared, `main` baseline vs branch): 127 files / 741
+  tests -> 128 files / **786 tests**. The only differences: `combat.test.ts` 39 -> 38 (the retired
+  `'none'` test) and the new `spell-effects.test.ts` (0 -> 46: 33 from the build, 12 from the review
+  items, 1 from round 2). Every other file has the same tests with the same names.
+- **Every registered spell, field by field.** All **25** spells in `ALL_SPELLS` were compared against
+  their `main` shape through the documented mapping (payload / `spellPower` / `scalingStat` /
+  `statModifier` / `appliesStatus` / `targetSide ?? 'enemy'` / `unlockedAtBiome ?? 1` -> `effects`),
+  by a throwaway script that imports both trees (`git archive eb37246` beside the branch's `src`)
+  and deep-equals each spell, id order included: **0 differences**. Done by Claude (this build's
+  author), not an independent reviewer. The mix covered: 4 plain single damage, 1 plain AOE, 7
+  single and 1 AOE damage + status, 1 `scalingStat` damage, 5 stat-modifier (2 enemy single, 1 ally
+  single, 2 ally AOE) and 6 heal spells (all authored with an explicit `scalingStat`, 4 of them with
+  a status rider; the default remap-aware `offStat` heal is exercised only by tests).
+- **What the corpus covers.** The corpus casts only **10 of the 25** registered spells (Afterglow,
+  Arcane Bolt, Beacon Charge, Charnel Feast, Luminous Tide, Overcharge, Pollen Cloud, Regrowth, Vine
+  Snare, Wild Vigor; recounted on the final branch by running every corpus fight on `main` and on
+  the branch and collecting the `SpellCast` events: **the same 10 spells with identical cast
+  counts on both**). The other 15 spells are covered only by the field-by-field check above, the
+  golden suite and the equivalence tests, not by the corpus digest.
+- **Gates** (Node v24.19.0, `npm ci` run first, `vitest 5.0.1`): `npx tsc -b`, `npm run lint`,
+  `npm run format:check`, `npm run build` clean; `npm run test`: 786 passed. `src/engine/__corpus__`
+  unchanged; no `__golden__/*.test.ts` changed; golden `expected*` / `SEED` / `TURN_STEPS` exports
+  deep-equal to `main`'s (re-run on the final tree).
+- **Stale comments (review item 4).** `git grep -n "appliesStatus\|applyCastPayload\|resolveSpellOffStat\|dealDamageWithOffStat\|applyStatusIfAlive" -- src`
+  now returns only history-marked lines: the `executeSpellEffects` and `dead-target-pins` comments
+  ("pre-4.1-D"), the oracle's header and its explicitly labelled `LegacySpell` shape. Golden header
+  edits are comments only (`heal-cast`, `b5-cast-fizzle`, `buff-cast`); no fixture value changed.
+
+### Assumptions (inline-tagged; the brief's ASSUMPTIONS 35-37 are the design-owner decisions)
+
+| #    | Assumption                                                                        | Status                                                                                                                                                                                                                           |
+| ---- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 35   | A landed target's effect list is atomic: no dead-actor check between effects.     | Confirmed (plan review). Pinned.                                                                                                                                                                                                 |
+| 36   | Spell magnitudes read the caster's live stats.                                    | Confirmed (plan review). Pinned. **Not** byte-neutral in general: it changes behaviour whenever the caster's stats change mid-action; 0 goldens, 0 tests and 0 corpus fights are affected.                                       |
+| 37   | `scalingStat: 'none'` is dropped.                                                 | Confirmed (plan review).                                                                                                                                                                                                         |
+| D-A4 | Spell effects take no cascade-depth or self-guard accounting (direct `executeResponse`). | Pinned by the P8 test.                                                                                                                                                                                                    |
+| D-A7 | `apply-stat-modifier` from a spell keeps `sourceTraitId = spell.id`.              | As before.                                                                                                                                                                                                                       |
+| D-A8 | `cast-target` with no cast context throws; it is the landed target, and the corpse rule is a verb rule (no verb but `revive` acts on a dead creature). | Tested.                                                                                                                                                                                                                          |
+| D-A9 | Fixture and test spells are inline literals, no builder helper.                   | Goldens stay self-documenting.                                                                                                                                                                                                   |
+
+### Spec notes (for the docs, before 4.1-E)
+
+- **Redundant-but-load-bearing guards.** With the verb rule, the B5 `continue` and the AOE
+  alive-skip are only observable through `self` effects. **Landed in the PR #74 review doc-sync** (CONVENTIONS "Spells carry responses"): the loop-level
+  guards exist for the whole list, not just the `cast-target` effects.
+- **`self` and B5 fizzle.** A `self` effect does **not** run when the landed target died in its own
+  pre-hit hooks (B5: nothing from the list), but **does** run when the target died to the spell's own
+  damage (atomic list): Life Siphon still heals its caster for a killing blow. That follows from the
+  confirmed rules; **Landed in the PR #74 review doc-sync** (CONVENTIONS "Spells carry responses"), so Slice G's Life
+  Siphon test expectation is explicit.
+- Nothing else surfaced.
+
+### Files changed
+
+- **Engine:** `types.ts`, `effect-types.ts`, `resolution.ts`, `actions.ts`.
+- **Data:** `data/spells/{core,overgrowth,glimmerdark,rotcap-hollow,index}.ts`.
+- **Fixtures:** `__fixtures__/biomes.ts`; 14 golden fixtures (spell inputs only): `action-observed`,
+  `aoe-cast`, `b1-bonus-cast-default`, `b1-support-heals-own-side`,
+  `b2-confused-bonus-cast-redirects`, `b2-provoke-redirects-echo`, `b2-silenced-refuses-bonus-cast`,
+  `b2-skipped-turn-refuses-bonus-cast`, `b5-cast-fizzle`, `buff-cast`, `castable-draw`, `heal-cast`,
+  `on-action-hooks`, `scoped-suppression`.
+- **Tests re-expressed:** `actions`, `actor-death`, `combat` (the `'none'` test removed),
+  `confusion`, `dead-target-pins` (comment), `interpreter`, `resolution`, `splashing`,
+  `support-spells` in `src/engine`; `data/spells/index.test.ts` (dedup key over the primary
+  effect); the three `data/species/*.test.ts` (status spells read off `effects`).
+- **New:** `src/engine/spell-effects.test.ts` (46 tests).
