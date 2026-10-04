@@ -9,11 +9,8 @@ import { describe, expect, it } from 'vitest'
 import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import prettier from 'prettier'
-import { createCombat, resolveFight } from './combat'
-import { buildCorpus } from './__corpus__/corpus'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
-import { TRAIT_REGISTRY } from '../data/traits'
-import { STATUS_REGISTRY } from '../data/statuses'
+import { resolveFight } from './combat'
+import { buildCorpus, createCorpusCombat } from './__corpus__/corpus'
 import { CORPUS_DIGEST } from './__corpus__/corpus-digest.fixture'
 import type { CorpusFight } from './__corpus__/corpus'
 import type { CorpusDigestEntry } from './__corpus__/corpus-digest.fixture'
@@ -30,16 +27,7 @@ function fnv1a32(str: string): string {
 }
 
 function digestFight(fight: CorpusFight): CorpusDigestEntry {
-  const state = createCombat({
-    seed: fight.seed,
-    player: { party: fight.player },
-    enemy: { party: fight.enemy },
-    registries: {
-      scripts: STOCK_SCRIPTS_BY_ID,
-      traits: TRAIT_REGISTRY,
-      statuses: STATUS_REGISTRY,
-    },
-  })
+  const state = createCorpusCombat(fight)
   const { state: finalState, events } = resolveFight(state)
   if (finalState.result === null) {
     throw new Error(
