@@ -24,8 +24,9 @@
 //     the turn-start hooks and the turn is skipped. Turn-start cleanup runs regardless (B6):
 //     PROVOKER's `provoking` flag (still true from round 1) is cleared, emitting
 //     ActionStateEnded{defending:false, provoking:true}. Then TurnSkipped{provoker,
-//     'b6-stun-fixture'} fills the action slot, after the cleanup; no action follows. HERO's rule now resolves NORMALLY (no provoker left) -> the lowest-HP
-//     enemy is WEAKLING (10 HP) vs PROVOKER (20 HP) -- HERO hits WEAKLING, not PROVOKER, proving
+//     'b6-stun-fixture'} fills the action slot, after the cleanup; no action follows.
+//     HERO's rule now resolves NORMALLY (no provoker left) -> the lowest-HP enemy is WEAKLING (10
+//     HP) vs PROVOKER (20 HP) -- HERO hits WEAKLING, not PROVOKER, proving
 //     the redirect did not stick: off=10, def=0: raw=10.1, final=10. WEAKLING 10 -> 0, dies.
 //     PROVOKER is still alive, so the fight doesn't end here. WEAKLING's own round-2 turn is an
 //     empty dead-before-turn bracket.

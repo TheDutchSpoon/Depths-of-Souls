@@ -1,6 +1,7 @@
 // Golden: Sleep's two-effect composition (Phase 4 Slice E2) -- a status carrying BOTH a passive
-// `action-lock 'all'` (like Stun, so the sleeper's own turn is actually skipped, 4.1-F1) AND `on-damage-taken -> remove-status(self, sleep-fixture)` (the wake-up, firing
-// POST-damage so the waking hit still lands #1's vs-Sleeping bonus). Fixture-shaped, not real
+// `action-lock 'all'` (like Stun, so the sleeper's own turn is actually skipped, 4.1-F1)
+// AND `on-damage-taken -> remove-status(self, sleep-fixture)` (the wake-up, firing POST-damage so
+// the waking hit still lands #1's vs-Sleeping bonus). Fixture-shaped, not real
 // Sleep content (that's H1's job) -- proves the underlying lock + trigger + `remove-status`
 // mechanism end-to-end, composed with #1's `conditional-damage-bonus`.
 //
@@ -15,8 +16,9 @@
 //     (20.2) x 1.5 dealtMultiplier -> raw 30.299999999999997 -> final 30. SLEEPER 100 - 30 -> 70,
 //     survives -> on-damage-taken fires -> Sleep's wake-up trigger removes it (StatusExpired).
 //   SLEEPER's own turn: no lock is left (the Sleep was removed on ATTACKER's turn, same
-//     round) -> the turn is not skipped -> SLEEPER acts normally. SLEEPER->ATTACKER (off 15, def 0, no
-//     bonus -- ATTACKER never carries Sleep): core 15, chip 0.01*15=0.15 -> raw 15.15 ->
+//     round) -> the turn is not skipped -> SLEEPER acts normally.
+//     SLEEPER->ATTACKER (off 15, def 0, no bonus -- ATTACKER never carries Sleep): core 15, chip
+//     0.01*15=0.15 -> raw 15.15 ->
 //     final 15. ATTACKER 100 - 15 -> 85.
 //
 // Captured as exactly round 1's two turns (two explicit resolveTurn steps, mirroring
