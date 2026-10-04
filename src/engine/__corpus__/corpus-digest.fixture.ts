@@ -524,11 +524,11 @@ export const CORPUS_DIGEST: readonly CorpusDigestEntry[] = [
   { hash: '65c295a3', events: 3200, result: 'draw' },
   { hash: 'eee3280d', events: 3162, result: 'draw' },
   { hash: '2c02c0f2', events: 767, result: 'win' },
-  { hash: 'd1b32ca6', events: 1676, result: 'loss' },
+  { hash: '623f7717', events: 1669, result: 'win' },
   { hash: '4614e014', events: 838, result: 'win' },
   { hash: 'cca6e163', events: 421, result: 'loss' },
   { hash: 'fedac919', events: 1043, result: 'loss' },
-  { hash: 'cdb0f2fc', events: 872, result: 'win' },
+  { hash: 'be6429e6', events: 3534, result: 'draw' },
   { hash: 'cdef2f6e', events: 108, result: 'loss' },
   { hash: 'fdd93b5c', events: 557, result: 'win' },
 ]

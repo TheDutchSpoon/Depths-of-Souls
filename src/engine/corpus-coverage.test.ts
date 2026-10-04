@@ -4,12 +4,15 @@
 //   - every spell in ALL_SPELLS is cast, with its effects landing;
 //   - every status in STATUS_REGISTRY is applied;
 //   - every specialization perk with effects MATTERS: re-running its fight with only that perk
-//     removed changes the event log.
+//     removed changes the event log;
+//   - every corpus creature carries only spells of its own affinity (equip-gating), so the corpus
+//     never exercises a loadout the game cannot produce.
 // Anything no shipped content can reach sits on an explicit exemption list with its reason. An
 // exempt item that IS covered fails the test, so an exemption cannot outlive its reason.
 
 import { describe, expect, it } from 'vitest'
 import { resolveFight } from './combat'
+import { canEquip } from './generation'
 import { PERK_FIGHT_VARIANTS, buildCorpus, createCorpusCombat } from './__corpus__/corpus'
 import type { CorpusFight } from './__corpus__/corpus'
 import { ALL_SPELLS } from '../data/spells'
@@ -99,6 +102,7 @@ function castLanded(events: readonly CombatEvent[], at: number, spell: Spell): b
         return window.some(
           (e) =>
             e.type === 'StatusApplied' &&
+            e.sourceId === casterId &&
             e.statusId === effect.status.statusId &&
             hits(e.targetId, effect.target),
         )
@@ -135,6 +139,24 @@ function logOf(fight: CorpusFight): string {
 const resolved = buildCorpus().map(resolve)
 
 describe('corpus coverage (Phase 4.1-D2)', () => {
+  it('every creature carries only spells matching its own affinity', () => {
+    // Innate spells are prepended at fight setup and are not in the input creatures, so only the
+    // loadouts the corpus itself builds are checked.
+    const offenders: string[] = []
+    for (const [i, { fight }] of resolved.entries()) {
+      for (const c of [...fight.player, ...fight.enemy]) {
+        for (const spell of c.equippedSpells) {
+          if (spell && !canEquip(spell, c.affinity)) {
+            offenders.push(
+              `fight ${i}: ${c.id} (${c.affinity}) carries ${spell.id} (${spell.affinity})`,
+            )
+          }
+        }
+      }
+    }
+    expect(offenders, 'corpus loadouts equip-gating forbids').toEqual([])
+  })
+
   it('every spell in ALL_SPELLS is cast with its effects landing', () => {
     const landed = new Set<string>()
     for (const { spellsByCaster, events } of resolved) {

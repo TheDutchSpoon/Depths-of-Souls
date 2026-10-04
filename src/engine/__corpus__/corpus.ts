@@ -27,6 +27,7 @@ import {
   STINGER_SWARM,
   THORN_LASH,
   VENOM_BOLT,
+  VINE_SNARE,
   WEAKENING_BITE,
   WITHERING_BOLT,
 } from '../../data/spells'
@@ -454,7 +455,7 @@ function perkVariant(
 export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
   perkVariant('sorcerer', SORCERER, 0, { player: 20, enemy: 20 }, [
     sorcerer(),
-    beneficiaryCaster(ROOT_GRASP),
+    beneficiaryCaster(VINE_SNARE),
     dozerCaster(VENOM_BOLT),
     shieldbarer(),
   ]),
@@ -495,12 +496,14 @@ export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
   ]),
   // Lucidity only changes anything when a Confused creature takes harmful actions (each one rolls
   // the 50% redirect, which immunity skips), so four attackers face two Puppet String casters
-  // that a Provoking Shieldbarer keeps out of reach: Confusion is reapplied every round.
+  // that a Provoking Shieldbarer keeps out of reach: Confusion is reapplied every round. The enemy
+  // is level 40 so the casters outlive the party's early swings at any seed (at 20 they died
+  // after one or two casts at some seeds, leaving Lucidity nothing to skip).
   perkVariant(
     'shieldbarer-confusion',
     SHIELDBARER,
     4,
-    { player: 20, enemy: 20 },
+    { player: 20, enemy: 40 },
     [
       shieldbarer('always-attack'),
       shieldbarer('always-attack'),

@@ -1578,13 +1578,19 @@ entries. No engine, data, golden or script file changed.
   - `shieldbarer-confusion`: Lucidity only matters when a Confused creature takes harmful actions
     (the 50% redirect roll).
   - `shieldbarer-doomed`: Last Stand is a 50% roll per lethal hit.
-- **`corpus-coverage.test.ts` (4 tests, all lists read from the registries).**
+- **`corpus-coverage.test.ts` (5 tests, all lists read from the registries).**
   - Every spell is cast with its effects landing (the window from the cast to the next cast or
-    turn end holds each declared effect's consequence event; a heal must heal, so amount > 0).
+    turn end holds each declared effect's consequence event; a heal must heal, so amount > 0). Each effect's event must come from the caster
+    (`sourceId`), `apply-status` included (PR #77 review).
   - Every status is applied, minus the exemption list.
   - Every damage-modifier status is exercised (its bearer deals or takes damage while it holds).
   - Every perk with effects at max level matters: re-running with only that perk removed changes
     the event log, minus the exemption list.
+  - Every corpus creature carries only spells of its own affinity (equip-gating), checked on the
+    input creatures of every fight in Parts A, B and C (innate spells are added at fight setup, so
+    they are not in the input). Added at the PR #77 review: it failed on fight 515, which had
+    equipped Root Grasp (Endurance) on Pollinator Beneficiary (Wit); the fight now gives that
+    creature Vine Snare (Wit).
 - **`corpus-digest.test.ts`:** calls `createCorpusCombat` (behaviour-neutral).
 
 ### Exemptions (each with its reason in the test; an exempt item that is covered fails)
@@ -1600,30 +1606,44 @@ entries. No engine, data, golden or script file changed.
 - **Perk effect ids are positional** (`perk-7`): removing one perk renumbers every later one, so a
   naive "log changed" comparison called every perk after the removed one mattering. The test
   anonymises `perk-N` ids in `TriggerFired`. Caught when `aggressive` (inert) read as mattering.
-- **A seed sweep caught fragility.** Each of 100 combat-seed offsets must pass the whole test: the
-  first Part C design failed 6/40 (Last Stand, Lucidity on too few rolls) and the next 3/100
-  (Weaken not exercised); the final design passes 100/100.
+- **A seed sweep caught fragility.** The sweep runs the whole coverage test with every Part C
+  combat seed shifted by k x 7919 (spell fights `2000 + index`, perk fights `2100 + index`; the
+  generated Parts A and B untouched), through a temporary seed offset in `corpus.ts` that was
+  removed before the digest was regenerated. The first Part C design failed 6 of 40 offsets (Last
+  Stand, Lucidity on too few rolls) and the next 3 of 100 (Weaken not exercised). The PR #77
+  review found 4 of 200 failures on Lucidity alone (the Puppet String casters died early at some
+  seeds); the final design passes **200 of 200** (k = 0..199).
 - A generated-enemy opponent for the spell fights failed: Blinding Flare's caster was put to
   Sleep before it acted. That is why spells fight `WALL_ENEMY`.
 
 ### Chance-based coverage (no lucky seeds)
 
-- **Weaken (Concussive Blows, 25%):** 332 player attack hits in `brute` (29 Weakens) and 138 in
-  `brute-weakened` (10 Weakens), so the chance of no Weaken is 0.75^470 (effectively zero).
-- **Last Stand (50%):** 19 lethal-hit rolls across the shieldbarer fights (9 saves), so the chance
-  of no save is about 0.5^19.
-- **Lucidity (50% redirect per confused harmful action):** 9 confused attacks across two fights,
-  so the chance of no redirect to remove is about 0.5^9 (0.2%): the weakest margin, kept because
-  the seed sweep never missed it.
+- **Weaken (Concussive Blows, 25% per attack):** the earlier "332 + 138 = 470" counted attack
+  *hits* (Brute's extra instance, Flurry and Splashing multiply them); the perk rolls once per
+  attack. `AttackDeclared` by the party: 140 in `brute` (29 Weakens) and 46 in `brute-weakened`
+  (10 Weakens), **186 rolls** in total, so the chance of no Weaken is 0.75^186 (about 10^-23).
+- **Last Stand (50%):** 19 lethal-hit rolls across the shieldbarer fights (9 saves) at the
+  committed seeds, so the chance of no save is about 0.5^19.
+- **Lucidity:** it is a status-immunity to Confusion. Confusion still lands on an immune creature;
+  the immunity only skips the 50% redirect when the bearer acts, so Lucidity matters only if a
+  bearer takes harmful actions while Confused. In `shieldbarer-confusion` the two Puppet String
+  casters used to die after one or two casts at some seeds, so the enemy is now level 40 and the
+  casters outlive the party's swings (the fight runs to the round cap). Measured over 200 seed
+  offsets (k x 7919, k = 0..199) across the four Shieldbarer fights: harmful actions by a Confused
+  Lucidity bearer, **worst case 101 in total** (99 in `shieldbarer-confusion` alone, 2 in
+  `shieldbarer`; the other two contribute none), never zero at any offset. The chance of no
+  redirect to remove is then at worst 0.5^101.
 
 ### Verification
 
-- Tests 786 -> 790 (+4, all in the one new file); no other file's count changed. Digest test
+- Tests 786 -> 791 (+5, all in the one new file); no other file's count changed. Digest test
   2.99 s -> 2.73 s.
 - Goldens: 88 fixtures, 269 `expected*` / `SEED` / `TURN_STEPS` exports imported from `main` and
   the branch and deep-equal.
 - Digest regenerated once through `corpus:update`: 500 -> 522 entries, the first 500
-  byte-identical to `main`'s (entry-by-entry script); 22 appended.
+  byte-identical to `main`'s (entry-by-entry script); 22 appended. After the PR #77 fixes only
+  two Part C entries changed from the previous push: 515 (`sorcerer`, loadout fixed) and 519
+  (`shieldbarer-confusion`, enemy level 40); regenerated once, at the end.
 - Proof it sees what it missed (data change alone; the pre-slice digest passes, the new one fails):
   `ember-lance` spellPower (fight 500), Weaken duration (516, 517), Weaken magnitude (517),
   Vulnerability magnitude (504).
@@ -1636,10 +1656,11 @@ entries. No engine, data, golden or script file changed.
 
 - `aggressive` joins `clear-mind` as a perk exemption until 4.1-F authors `pacified`.
 - Perk effect ids are positional; anything comparing logs across different perk sets must
-  anonymise them.
+  anonymise them. **Landed** in CONVENTIONS "Corpus digest" (with the seed-sweep rule and the
+  equip-gate check).
 
 ### Files changed
 
 - `src/engine/__corpus__/corpus.ts`, `src/engine/__corpus__/corpus-digest.fixture.ts` (22 appended
   entries), `src/engine/corpus-digest.test.ts`.
-- **New:** `src/engine/corpus-coverage.test.ts` (4 tests).
+- **New:** `src/engine/corpus-coverage.test.ts` (5 tests).
