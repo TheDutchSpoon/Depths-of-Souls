@@ -1664,3 +1664,175 @@ entries. No engine, data, golden or script file changed.
 - `src/engine/__corpus__/corpus.ts`, `src/engine/__corpus__/corpus-digest.fixture.ts` (22 appended
   entries), `src/engine/corpus-digest.test.ts`.
 - **New:** `src/engine/corpus-coverage.test.ts` (5 tests).
+
+## 4.1-E -- `perform-action` (bonus-cast and echo-cast become data)
+
+Golden policy: **deliberate, listed** (8 existing goldens re-derived by hand, 3 new). Branch
+`phase-4.1-slice-e`, on top of the doc-sync commit (`90d70cb`, which holds every living-doc change
+for this slice).
+
+### What was built
+
+- **The response.** `perform-action { actor: 'self' | 'triggering-source', intent }` joins
+  `EffectResponse` (nine verbs). `executeResponse` does not run anything: it pushes a
+  `QueuedGrant { sourceId, actorId, intent, effectId, depth }` onto the new `ResolutionContext.grants`
+  list. `depth` is `cascade.depth` at that moment (the granting trigger's own, +1 included).
+  `actor: 'triggering-source'` is the hook's source **including the bearer** (the PR #64 rule is
+  for response targets only), so Overtone still echoes its own casts. No actor-state check at
+  enqueue: only the actor's state when the grant runs decides it.
+- **The drain.** `drainGrantedActions(ctx, state, { skippedTurnOf? })` in `actions.ts`: FIFO over
+  `ctx.grants` (index loop, so a granted action's own grants append to the back); each entry runs
+  through `ctx.runAction` with `cascade.depth` set to the entry's depth (restored afterwards) and
+  `ActionGranted { sourceId, actorId, effectId }` passed as the `announce` event, so it is pushed
+  only once the grant is accepted (after legality and the gem/target draws), right before the
+  action's first event. Refusals emit nothing: the skipped-turn gate (here), then `runAction`'s
+  dead-actor check, `checkLegality` (locks) and "does not resolve" (no gem, no target).
+- **Where each scope drains** (`combat.ts`; each `ResolutionContext` is drained once, by whoever
+  created it, at its scope's end): fight-start hooks (before `RoundStarted`), round-end hooks
+  (right after the hook pass, before the countdown), turn-start hooks (**after the turn-start
+  cleanup**, before decide + action), the chosen action (right after it, before the turn-end
+  hooks), the turn-end hooks (the skeleton's granted-actions step). The two turn-level drains that
+  can follow a skipped turn pass `skippedTurnOf: suppressed ? actor.id : undefined`; the fact
+  lives in `resolveTurn`'s existing turn-start `suppressed` local, never in `CombatState`.
+- **Depth and the guard.** The granted action runs at the granting trigger's depth, so an echo
+  chain still truncates at `MAX_TRIGGER_CASCADE_DEPTH`. The re-entry guard needs no exemption any
+  more: `perform-action` only enqueues, the guard is released when `executeResponse` returns, and
+  the drain runs after the stack has unwound. `stacks: false` dedup is unchanged (it claims before
+  the chance roll, in `fireHook`).
+- **RNG draw order** (documented in `effect-types.ts`, `actions.ts` and every affected golden): the
+  chance roll at trigger time; when the grant runs, the gem draw, the target draw, then any
+  Confusion / Tunnel Vision / Provoke draw.
+- **Content.** Arcane Surge = `triggered { on-turn-end, chancePercent 50, perform-action(self, cast
+  'random') }` + the unchanged `innate-spell`. Resonant Overtone = `triggered { on-action-observed,
+  filter ally/cast, chancePercent 10, stacks false, perform-action(triggering-source, cast
+  'random', targeting 'random') }`. The Sorcerer perk "Echo" (`action-instance`) is untouched.
+- **Load-time rejections.** A spell's effect list rejects `perform-action` (the spell validator's
+  default branch; now tested). `consume-stacks`' wrapped effect rejects it (inside
+  `validateNoRandomSelectorInResponseTargets` and the status counterpart, so it runs at the same
+  three sites: traits, perks, statuses). A `perform-action` response carries no response target, so
+  the `'random'` selector check skips it; its `intent.targeting` may be `'random'`.
+- **Guard lint.** `hasRealGuard` (`chancePercent < 100`, or a condition other than `always`),
+  `performActionTriggers`, `statusPerformActionTriggers`, `findUnguardedPerformActions`,
+  `findUnguardedStatusPerformActions` in `effect-types.ts`. `src/data/perform-action.data.test.ts`
+  reads the trait registry, every perk at every level and the status registry; it also asserts the
+  lint is not vacuous (it finds exactly Arcane Surge and Resonant Overtone).
+- **Deleted.** `BonusCastDef`, `BonusCastEffect`, `activeBonusCast`, `maybeFireBonusCast`,
+  `TriggeredDef.echoCast`, `ResolvedHookEffect.echoCast`, `ECHO_CAST_INTENT`, the `echoCast` branch
+  of `fireHook`, `EchoCastGrantedEvent`. `ActionGrantedEvent` replaces the last. `CombatDemo.tsx`
+  gets the one-line event rename.
+- `ResolutionContext.runAction` stays (the scopes and the drain call it); `resolution.ts` still
+  imports nothing from `actions.ts` or `combat.ts`.
+
+### Golden impact (expected exports imported from `HEAD` and from the branch, then diffed)
+
+Only these files changed under `__golden__/`; every other golden file is byte-identical (git).
+Per changed fixture, the difference of `expectedEvents` old vs new, by import:
+
+| Golden | Change |
+|---|---|
+| `golden-b1-bonus-cast-default` | + `TriggerFired` (on-turn-end), + `ActionGranted`; order of the rest unchanged |
+| `golden-b2-confused-bonus-cast-redirects` | same two events added |
+| `golden-castable-draw` | same two events added |
+| `golden-sorcerer-starter` | same two events added |
+| `golden-b2-silenced-refuses-bonus-cast` | + `TriggerFired` only (the grant is refused at drain: nothing of its own) |
+| `golden-b2-skipped-turn-refuses-bonus-cast` | + one `TriggerFired` (the grant's trigger, declared first) before the Stun-removal `TriggerFired`; still proves both halves (the chance is draw #1, E1's pick is draw #2; then the gate refuses although Stun is gone) |
+| `golden-b2-provoke-redirects-echo` | `EchoCastGranted` -> `ActionGranted` (with `effectId`); the original hit now lands **before** the echo (the echo follows the whole payload); draws #1-#5 unchanged |
+| `golden-resonant-overtone` | same: `EchoCastGranted` -> `ActionGranted`, original hit first; draws #1-#4 unchanged |
+| `golden-b2-provoke-redirects-echo.test.ts` | the one assertion counting `EchoCastGranted` now counts `ActionGranted` |
+
+All eight were re-derived by hand (comments updated) before the engine was run against them; each
+passed on the first run, so no log was regenerated.
+
+New goldens (hand-derived; arithmetic and draws in each fixture header):
+- `golden-e-echo-chain-truncated`: real cap, a 100%-chance fixture Overtone on a single bearer
+  (every hop through the same instance). The per-hop template is written by hand; a loop only
+  repeats it. Checkpoints (hops 1, 2, 499, 500 and the truncation) are asserted separately by
+  index; 2007 events, 500 grants, 501 casts, one `CascadeTruncated { depth: 501 }`.
+- `golden-e-grant-during-granted-action`: FIFO. Queue [Defend, Provoke]; running Defend raises a
+  Wait that goes to the back: Defended, Provoked, Waited (LIFO would give Defended, Waited,
+  Provoked).
+- `golden-e-grant-actor-dies-first`: a retaliation kills the echo's actor during the original cast;
+  the queued echo then emits nothing (no `ActionGranted`, no `SpellCast`).
+
+### New and changed unit tests
+
+- `perform-action.test.ts` (18): the scopes' drain positions (incl. a Defend granted at turn start
+  surviving that turn's cleanup; a turn-start grant refused on a skipped turn; the chosen action's
+  grants before a turn-end hook's event), `actor: 'triggering-source'` including the bearer, bearer
+  death not cancelling, a dead actor refused, `skippedTurnOf`, the spell and `consume-stacks`
+  rejections (traits/perks and statuses), the `'random'` intent target allowed, `hasRealGuard` and
+  the two `findUnguarded...` helpers.
+- `perform-action.data.test.ts` (4): the registries lint (traits, perks at every level, statuses)
+  and non-vacuity.
+- Migrated: `combat.test.ts` (bonus-cast describe -> an on-turn-end `perform-action` fixture),
+  `actions.test.ts` (the mid-turn lock test and the echo gating tests; the echo test drains the
+  context), `resolution.test.ts` (the echo describe: `fireHook` now only queues, the white-box
+  depth test starts at 498 and drains: still 2 hops then `CascadeTruncated`), `starters.test.ts`
+  (Arcane Surge's shape). `effects.test.ts`: the `activeBonusCast` describe (2 tests) is gone with
+  the function.
+
+### Corpus-digest attribution (regenerated once, `npm run corpus:update`)
+
+- 522 entries before and after. **128 fights changed; all 128 contain a creature carrying Arcane
+  Surge or Resonant Overtone** (64 Surge only, 64 both; no corpus fight has an Overtone without the
+  Seer). The other **298 fights carrying neither are byte-identical** to the pre-slice digest, as
+  are 96 fights that carry one but whose log did not change. 128 + 298 + 96 = 522.
+- Changed indices: 300-324, 330, 332-338, 340-349, 365-368, 370-374, 379, 390, 391, 394, 396-399,
+  411, 414, 416-418, 421-424, 427, 433, 434, 438-448, 450, 452-474, 481-484, 486-497, 499, 515,
+  516, 518, 521 (none in Part A, which is indices 0-299). Fight 433 (the echo's retaliation killing
+  the Sorcerer mid-cast) is among them.
+- `ActionGranted` events across the corpus: **Arcane Surge 2530** (in 127 fights), **Resonant
+  Overtone 339** (in 46 fights); both above 0. `corpus-coverage.test.ts` (5 tests) is green.
+
+### Verification
+
+- Tests **791 -> 818 (+27)**, reconciled per file against `main`: `perform-action.test.ts` +18,
+  `perform-action.data.test.ts` +4, `golden-e-echo-chain-truncated` +3,
+  `golden-e-grant-actor-dies-first` +2, `golden-e-grant-during-granted-action` +2,
+  `effects.test.ts` -2 (54 -> 52). No other file's count changed.
+- Mutations, each shown failing the named tests (all reverted; the tree was byte-identical after):
+  nested instead of queued (15 failing, incl. the echo goldens and unit tests); queued depth reset
+  to 0 (truncation golden + the white-box depth test); skipped-turn gate dropped (b2-skipped golden
+  + 2 unit tests); dead-actor check dropped (actor-dies golden + unit test); guard lint accepting
+  everything (the `hasRealGuard` / `findUnguarded...` tests); re-entry guard held through the grant
+  (truncation golden + white-box test); LIFO drain (FIFO golden); the action's grants drained in
+  the turn-end step (the "before the turn-end hooks" test); `skippedTurnOf` only on the turn-end
+  drain (the turn-start skip test); turn-start drain before the cleanup (the Defend-survives test);
+  spell validator and `consume-stacks` validator each removed (their tests); guard accepting
+  `chancePercent: 100` and `always` (their tests); bearer death cancelling the grant (the
+  ASSUMPTION 6 test); `triggering-source` resolving to nothing for the bearer (the unit test and
+  the truncation golden); the fight-start, round-end and turn-end drains each removed (their tests;
+  the turn-end one also fails 4 re-derived goldens and the combat tests).
+- Gates: test / lint / format:check / build / `tsc -b`, all green.
+
+### Spec notes (for the docs, before 4.1-F)
+
+- **Stale living-doc text, left for the doc-sync (not edited by this slice):**
+  - the brief's "Deliberate golden changes (4.1-E)" third bullet still says "truncated by a
+    lowered depth cap in the fixture (or by chance)"; the plan-review block above it (real cap, a
+    single-bearer Overtone) is what was built;
+  - CONVENTIONS "One action pipeline" and the brief's vocabulary table describe
+    `ResolutionContext { events, cascade, runAction }`; it is now `{ events, cascade, grants,
+    runAction }` (the `grants` queue is what a response uses; `runAction` is what the drain and the
+    scopes call);
+  - the brief's E section line "`ActionGranted` right after `TriggerFired` when the grant
+    succeeds" (the plan-review block and CONVENTIONS already say it is emitted when the grant runs).
+- **4.1-F will meet this:** once DoT ticks move to `on-turn-end`, Arcane Surge's roll (an innate
+  effect, so earlier in effect order than statuses) happens before a tick; a Seer then killed by
+  that tick still rolled and shows `TriggerFired`, and its queued cast is refused at drain (dead
+  actor). Not an E change: no shipped content used `on-turn-end` before this slice.
+- The grant queue means `TriggerFired` and `ActionGranted` are no longer adjacent in the log; any
+  UI/log reader that paired them by position must pair by `effectId` and `sourceId` instead.
+
+### Files changed
+
+- Engine: `actions.ts` (`createResolutionContext`, `drainGrantedActions`), `combat.ts` (drains;
+  `maybeFireBonusCast` deleted), `resolution.ts`, `resolution-types.ts` (`QueuedGrant`, `grants`),
+  `effect-types.ts`, `effects.ts`, `types.ts`.
+- Data: `traits/starters.ts`, `traits/glimmerdark.ts`. UI: `CombatDemo.tsx` (event rename).
+- Goldens: the 8 fixtures and 1 test above; 3 new golden pairs. Corpus: `corpus-digest.fixture.ts`
+  (128 entries changed).
+- Tests: `perform-action.test.ts`, `perform-action.data.test.ts` (new); `actions.test.ts`,
+  `combat.test.ts`, `effects.test.ts`, `resolution.test.ts`, `species/starters.test.ts`.
+- Needs deleting or renaming: nothing. (Several golden files keep "bonus-cast" in their names; a
+  rename means deleting files, so they are left for you to rename if wanted.)
