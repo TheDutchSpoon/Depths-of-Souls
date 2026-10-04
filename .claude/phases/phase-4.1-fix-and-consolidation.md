@@ -1847,3 +1847,215 @@ New goldens (hand-derived; arithmetic and draws in each fixture header):
   earlier sections' references to the old file names (4.1-C2b, 4.1-C2c and the 4.1-D golden list)
   were updated to the new names, a one-off approved exception; their prose is as built.
 - Nothing needs deleting.
+
+## 4.1-F1 -- Statuses as effect containers (A3), timing unchanged
+
+Golden policy: **deliberate, narrow** (the turn-skip shape and the two fixture locks only). Branch
+`phase-4.1-slice-f`, on top of the plan-check doc-sync commit (`5c84cba`, which holds every living-doc
+change for this slice: CONVENTIONS "Action locks", "The effect taxonomy", "Immunity", "The bright
+line"; the brief's A3 plan-review block; ASSUMPTIONS 44-48). Timing is untouched: DoT/HoT ticks stay
+on the round-end sweep, durations still count rounds, the Web roll stays at turn start, no in-turn
+win checks (all F2). No Silenced/Pacified content, no perk-exemption change (F3).
+
+### What was built
+
+- **One status shape.** `StatusDef { statusId, cap, polarity, defaultDuration, effects: EffectDef[] }`.
+  The four old categories (`condition-status`, `damage-modifier`, `turn-order-status`,
+  `friendly-fire-status`) and their `*Def` / `*Effect` types, `StatusTrigger` and every bespoke
+  reader are deleted. A status instance is one `ActiveEffect`, `category: 'status'`:
+  `{ ...StatusDef, instanceId, sourceTraitId: statusId, remainingDuration, stacks }`, appended to
+  `activeEffects` where the old instance was, so canonical effect order is unchanged.
+- **Four new passive `EffectDef` categories** (carrier-agnostic: a trait or perk may carry one,
+  ASSUMPTION 44): `action-lock { scope: 'all' | 'attack' | 'cast' }`, `turn-order { position,
+  breakChancePercent? }`, `friendly-fire { chancePercent }`, and a trimmed `damage-modifier
+  { direction, magnitude, magnitudeSource?, accumulation?, reductionCap? }` (ASSUMPTION 48: kept
+  as its own category; `conditional-damage-bonus` and `taken-reduction` are untouched).
+- **The one effect iterator** (`effects.ts` `flatEffects`). Trait/perk effects pass through; a status
+  is flattened in place into its own `effects`, each tagged `statusId`, `statusStacks` and
+  `sourceInstanceId`, with its own guard identity `${statusInstanceId}#effect#${index}` (PR #64 rule:
+  Spore's tick killing its host still lets `on-death` spread, because the guard is per trigger).
+  **Immunity is checked here, once**, and covers every effect of the status (ASSUMPTION 47, below).
+  Every reader goes through it: `effectsForHook`, the dealt/taken modifier gatherers (taken order
+  kept: damage-modifiers, then taken-reductions), armor-penetration, cross-stat, action-instance,
+  cheat-death, provoke-immunity, splashing, annihilate, `conditional-damage-bonus`, `isActionLocked`,
+  `firstAllLock`, `activeFriendlyFireStatus`, `turnOrderPosition`, the Web roll. `getEffectiveStat`
+  and `resolveRemappedStat` read the raw list: the validator bans `stat-modifier` / `stat-remap`
+  inside a status, so there is nothing to flatten. `hasStatus` / `consume-stacks` / `remove-status` /
+  `applyStatus` / the sweep read the raw container (an immune bearer's status still exists).
+- **Stacks as the default count.** A status-fired response's repetition count is its
+  `magnitudeSource` if declared, else the status's `stacks` (undefined for a trait's own trigger, so
+  traits are unchanged): flat and formula mode of `deal-damage` / `heal`, `apply-stat-modifier`'s
+  per-unit rate (only above one stack, so a single stack keeps `factor` verbatim, not the
+  float-lossy `1 + (factor - 1) * 1`), and the `damage-modifier` / `taken-reduction` count. No
+  shipped status uses a formula-mode response, so this is new behaviour with one test per verb.
+- **Locks and the skip.**
+  - `checkLegality` reads locks through the iterator for every action source: an `'all'` lock makes
+    **every** kind illegal (Attack, Cast, Defend, Provoke, Wait; ASSUMPTION 46), a scoped lock only
+    its own. `isActionSuppressed` and `hasStatusImmunity` at that site are gone.
+  - `resolveTurn` reads the first `'all'` lock **twice** (ASSUMPTION 45): right after the turn-start
+    hook pass (feeds the turn-start drain's `skippedTurnOf`) and at the action slot, after the
+    cleanup and the turn-start grants (a lock gained in the grants would otherwise reach the decide
+    step, where every rule is illegal and the unchecked fallback Wait is refused: an empty bracket
+    with no `TurnSkipped`). A turn is skipped if either read finds a lock and the actor is alive;
+    the combined value feeds the turn-end drain. `TurnSkipped { creatureId, effectId }` is emitted in
+    the action slot; `effectId` is the first lock's carrier id (the status id for a status).
+  - `suppress-action` is deleted from `EffectResponse`, `executeResponse` and `fireHook`, which now
+    return `{ state }` (no `suppressed`).
+- **Validators.** `validateStatusDef` (called over every stock status at import) rejects, inside a
+  status, `stat-modifier`, `stat-remap`, `status-immunity` and `innate-spell`, then runs the existing
+  `'random'`-selector / `cast-target` / `consume-stacks` checks over `def.effects`.
+  `validateNoBreakChanceOutsideStatus` rejects `turn-order.breakChancePercent` on a trait
+  (`validateTrait`, new export of `data/traits`) or a perk (`validateSpecialization`).
+  `statusPerformActionTriggers` / `findUnguardedStatusPerformActions` keep their names and read
+  `def.effects`, so the 4.1-E guard lint covers every status trigger.
+- **Web.** `turn-order { position: 'last', breakChancePercent: 10 }`; the roll is still at turn start,
+  in the same bearer order, one draw per status-borne `turn-order` effect that has the field, drawing
+  nothing when no Web is present (or the bearer is immune).
+- **UI.** `CombatDemo.tsx` `describeEvent` gains the `TurnSkipped` case.
+
+### The round-end sweep, and what F2 deletes
+
+The sweep is only adapted: `snapshotStatuses` / `decrementAndExpireSnapshot` test `category ===
+'status'` instead of four categories; `statusTriggerGate`, the snapshot, the refresh rule
+(`reappliedThisSweep`) and the touched-set derived from `StatusApplied` events are unchanged.
+**F2 deletes:** `snapshotStatuses`, `decrementAndExpireSnapshot`, `statusTriggerGate` and
+`FireHookOptions.statusTriggerGate`, `reappliedThisSweep`, the status part of `resolveRoundEndSweep`,
+the turn-start call site of `rollWebBreakFree` (it moves to turn-end cleanup), and the stock statuses'
+`on-round-end` hook (their ticks move to `on-turn-end`).
+
+### Immunity extension (ASSUMPTION 47), stated in full
+
+Before F1, `fireHook` never checked immunity: it was consulted only for a lock
+(`isActionSuppressed`) and for Confusion's roll. Now the iterator skips **every effect of every kind**
+of an immune bearer's status: its locks, friendly-fire, **triggers (a DoT tick included)**,
+damage-modifiers, and turn-order (so an immune bearer's Web neither moves it last nor rolls to break).
+The status still exists, stacks, counts down and counts for `has-status`. Why this changes nothing
+today: the only immunities in content are to Confusion (Lucidity), Silenced and Pacified (Clear Mind /
+Aggressive), and Silenced / Pacified are not authored until F3, so the only live immunity case is
+Confusion's single `friendly-fire` effect, which behaved exactly this way before (no roll, no draw).
+Lucidity's corpus coverage stays green.
+
+### Golden impact (expected exports imported from `HEAD` and from the branch, then diffed)
+
+A throwaway harness in a pristine worktree of `5c84cba` imported every `*.fixture.ts` from both trees
+and compared every `expected*`, `SEED` and `TURN_STEPS` export with `isDeepStrictEqual`: **91 fixtures,
+86 byte-identical, 5 changed**, each only by the allowed change (the mapping below reproduces the old
+expected log for the three skip goldens; the two fixture-lock goldens differ only by the removed
+`TriggerFired`).
+
+| Golden                                        | Change                                                                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `golden-stun`                                 | the lock's on-turn-start `TriggerFired` -> `TurnSkipped { victim, 'stun' }`                                          |
+| `golden-b6-provoke-stun-cleanup`              | same, in the action slot **after** `ActionStateEnded` (the old `TriggerFired` was before it)                         |
+| `golden-b2-skipped-turn-refuses-granted-cast` | same                                                                                                                 |
+| `golden-scoped-suppression`                   | fixture lock re-expressed as a trait-borne `action-lock cast`; the `TriggerFired` removed                            |
+| `golden-b2-silenced-refuses-granted-cast`     | same                                                                                                                 |
+
+**`golden-sleep-wake` and `golden-lullpollen-dozer` are byte-identical** (as the plan review expected):
+neither expected log has a skipped turn (the sleeper wakes before its turn; Lullpollen runs one turn).
+Only their fixture _inputs_ changed shape. Every other fixture changed only its status literals
+(inputs), never an expected export.
+
+### Corpus-digest attribution (regenerated once, `npm run corpus:update`)
+
+522 fights: **506 byte-identical, 16 changed** (16 rows in the fixture). Every changed fight contains
+a `TurnSkipped` (382 in total). **Mechanical mapping:** each `TurnSkipped` replaced by one
+`TriggerFired { sourceId, hook: 'on-turn-start', effectId }` per `'all'`-lock status the creature holds
+(tracked from `StatusApplied` / `StatusExpired` / `Revived`), in application order, ahead of an
+immediately preceding same-creature `ActionStateEnded`: **16 of 16 reproduce the pre-F1 event log
+exactly** (so a creature holding two locks gets two old `TriggerFired` events back).
+
+### New and changed unit tests
+
+- `status-containers.test.ts` (new, 34): the skip (`'all'` lock skips; names the first of two locks
+  in both orders; a lock gained in the turn-start hooks skips that turn; a lock gained in the
+  turn-start grants still skips, via the action-slot read; the turn-end drain refuses the grant of a
+  creature skipped by that read even after the lock is removed); locks at every site (script rule,
+  implicit fallback with an `'attack'` lock, granted cast, `'all'` refusing all five kinds, a granted
+  Defend refused under an `'all'` lock gained mid-action, with a control); immunity per reader (lock,
+  friendly-fire single and AOE with zero draws, a DoT tick, dealt and taken modifiers, turn-order,
+  the Web roll's draw count) each with a non-immune control and `has-status` true; stacks as the
+  default count (formula `deal-damage`, flat `deal-damage`, formula `heal`, `apply-stat-modifier`,
+  `damage-modifier`); every effect kind a status may carry read through the iterator (armor-penetration,
+  cross-stat, action-instance, provoke-immunity, splashing, annihilate, cheat-death,
+  conditional-damage-bonus, taken-reduction with stacks); the validator (one test per rejection,
+  plus the accept case and the trait/perk breakChance wiring).
+- `statuses.test.ts` +1 (the validator over every stock status; its shape assertions were rewritten to
+  the container shape). `resolution.test.ts` -2: the `suppress-action scope` describe (two tests
+  asserting the deleted `suppressed` flag) is replaced by the `status-containers` lock tests; the
+  `suppress-action (on-turn-start)` test now asserts `TurnSkipped` and no `TriggerFired`.
+- **Assertion edits to tests outside the golden list, each forced by the allowed change:**
+  `perform-action.test.ts`'s turn-start skip test counted `on-turn-start` `TriggerFired` as 2 (the
+  grant's plus the lock's); it is now 1 plus one `TurnSkipped`. Nothing else changed its assertions.
+- **Shape-only edits** (inline old-shape status literals; assertions untouched): `actions`, `combat`,
+  `conditions`, `confusion`, `effective-stats`, `effects`, `interpreter`, `perform-action`,
+  `resolution`, `spell-effects`, `support-spells`, `targeting`, `turn-order` tests;
+  `corpus-coverage.test.ts` (two reads of the status category -> `effects.find`); fixtures
+  `golden-b4-cleanse-then-tick`, `golden-b4-remove-then-reapply`, `golden-b6-provoke-stun-cleanup`,
+  `golden-consume-stacks`, `golden-defend-count`, `golden-defend-count-additive-cap`,
+  `golden-sleep-wake`, `golden-turn-order-status`, `golden-web-break-free`.
+
+### Verification
+
+- Tests **818 -> 851 (+33)**, reconciled per file against the pristine tree: `status-containers.test.ts`
+  +34 (new), `statuses.test.ts` +1 (5 -> 6), `resolution.test.ts` -2 (81 -> 79). No other file's count
+  changed (the script diffs all 135 files).
+- **Mutations** (38 harness runs, full suite each, every file restored from an in-memory copy; the
+  tree was re-verified green afterwards). **36 killed**, each by a named test:
+  - lock read removed from the skip (action-slot read; corpus digest, `perform-action.test.ts`
+    turn-start skip test); lock read removed from `checkLegality` (15 failing, `actions.test.ts`);
+    `'all'` not covering Defend/Provoke/Wait (the two `status-containers` tests);
+  - skip gate not fed to the turn-end drain (`status-containers` + `golden-b2-skipped-turn-...`);
+    action-slot read removed (two `status-containers` tests); turn-end drain fed read 1 only
+    (the `status-containers` turn-end test);
+  - immunity removed from the iterator (13 failing); stacks not the default count: `effectsForHook`
+    (7), `deal-damage` (10), `heal`, `apply-stat-modifier`, `damage-modifier` (each its own test);
+  - each of the four validator rejections, the breakChance check (function, trait call, perk call),
+    the status `'random'`-selector check (one test each);
+  - each reader bypassing the iterator, one at a time (`effectsForHook`, both modifier gatherers,
+    armor-penetration, cross-stat, action-instance, provoke-immunity, splashing, annihilate,
+    cheat-death, conditional-damage-bonus, `isActionLocked`, `firstAllLock`,
+    `activeFriendlyFireStatus`, `turnOrderPosition`, the Web roll): each fails its table row.
+  - **2 survived, both equivalent mutants:** removing the first (after-hooks) lock read, and not feeding
+    the gate to the **turn-start** drain. With an `'all'` lock illegal for every kind (ASSUMPTION 46),
+    nothing between the first read and that drain can remove the lock (the cleanup touches only
+    defending/provoking; the drain holds only the actor's own grants, which are themselves refused
+    by the lock), so the lock refuses what the gate would. The gate is kept as defence in depth, as
+    specified; the **turn-end** gate is not redundant (turn-end hooks can remove the lock) and is
+    pinned.
+- Load-time wiring: the validators run at import (`data/statuses.ts`, `data/traits/index.ts`), as before;
+  tests call the validator functions (`validateStatusDef`, `validateTrait`, `validateSpecialization`).
+  No test pins the import-time loop call itself (same as the earlier validators).
+- Gates: test / lint / format:check / build / `tsc -b`, all green. Toolchain: Node 24.19.0, Vitest
+  5.0.3, TypeScript 6.0.3.
+
+### Spec notes (for the docs, before F2)
+
+- **B2 rule 1 at the turn-start drain is now redundant** (see the surviving mutants): the lock refuses
+  the grant itself. Still needed at the turn-end drain. CONVENTIONS' "skipped turn refuses grants"
+  can say so.
+- A trait-borne `'all'` lock names itself by the trait id (`perk-N` / `enemy-effect-N` for side
+  effects) in `TurnSkipped.effectId`; no content does this yet.
+- `turn-order` and the Web roll now honour immunity (see above); `TurnSkipped` is emitted for a skip
+  detected at either read, so a creature stunned in its own turn-start grants shows it.
+- A creature holding two `'all'` locks emitted two `TriggerFired` events before and one `TurnSkipped`
+  now; the corpus mapping proves the logs otherwise match.
+- The brief's golden list named `golden-sleep-wake` and `golden-lullpollen-dozer` as skip goldens;
+  neither has a skipped turn in its expected log.
+- One golden file name still says `turn-order-status` (`golden-turn-order-status`); cosmetic, left as is.
+- `golden-b6-provoke-stun-cleanup`: the skip event follows `ActionStateEnded` (the action slot, per the
+  skeleton), where the old `TriggerFired` preceded it.
+
+### Files changed
+
+- Engine: `effect-types.ts`, `effects.ts` (iterator, lock readers), `resolution.ts`, `actions.ts`,
+  `combat.ts`, `turn-order.ts`, `effective-stats.ts`, `types.ts` (`TurnSkipped`),
+  `scripting-types.ts` (comment).
+- Data: `statuses.ts` (container shape), `traits/index.ts` (`validateTrait`), `specializations.ts`,
+  comments in `spells/glimmerdark.ts`, `traits/core.ts`, `traits/glimmerdark.ts`. UI: `CombatDemo.tsx`.
+- Goldens: the 5 expected-changing ones above (+ `golden-stun.test.ts` title), the shape-only fixtures
+  listed above, `corpus-digest.fixture.ts` (16 rows). Tests: `status-containers.test.ts` (new),
+  `statuses.test.ts`, `resolution.test.ts`, and the shape-only edits above.
+- Nothing needs deleting from the repo. The scratch worktree of `5c84cba` (with a `node_modules`
+  junction) under the session scratchpad can be removed with `git worktree remove --force` when
+  convenient (remove the junction first so `node_modules` is not followed).
