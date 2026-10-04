@@ -661,6 +661,16 @@ regenerates it for its own deliberate changes.
   an exempt item is covered.
 - A table in the PR: for each spell, status and perk, the fight that covers it and the evidence (the
   landing event, or the hash change when the perk is removed).
+- **Decided at the PR #77 review:**
+  - Perk **`aggressive`** joins `clear-mind` on the exemption list: it is immunity to Pacified,
+    which isn't authored until 4.1-F (the same rule; the brief only expected `clear-mind`).
+  - Damage-modifier statuses must be **exercised**, not only applied (their bearer deals or takes
+    damage while they hold), or their magnitude is invisible to the digest. Built in the PR.
+  - Corpus loadouts must be reachable: every corpus creature's equipped spells match its affinity,
+    asserted in the coverage test.
+  - Chance-based coverage is proven by a seed sweep over Part C's combat seeds, with the worst case
+    reported. Lucidity's fight is made robust (its Puppet String casters must survive long enough
+    to keep the party Confused).
 
 ## 4.1-E — `perform-action`
 
@@ -752,6 +762,10 @@ Items: **A3, D6 status timing, D5, G2.**
 - Content doc entries move from the pending section into the Overgrowth spell table.
 - Focused goldens: Silence stops a caster's cast (it falls through its script); Pacify stops an
   attacker; Clear Mind / Aggressive immunity lets the action through while `has-status` stays true.
+- **Corpus coverage:** drop the `clear-mind` and `aggressive` perk exemptions from
+  `corpus-coverage.test.ts` (an exempt perk that matters fails the test). Both must then matter in
+  a corpus fight; add a coverage fight if no existing one shows it, and regenerate the digest in
+  the same PR.
 
 ### Deliberate golden changes (4.1-F)
 - **Every status golden changes timing**; the Phase-3 round-end goldens (`golden-dot`,
@@ -868,6 +882,11 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
   58 to 101 times on one creature. In corpus fight 374 the Unicorn reaches about 3 × 10¹⁰ effective
   Defence, damage falls to the chip floor, and a Defence-scaled retaliation (Retaliating Shell) hits
   for 75,204. Other traits reach 100–200 stacks too (fights 9, 83, 344, 348).
+  - **More data (PR #77 review, after 4.1-D2):** the Part C coverage fights face a wall of
+    Shieldbarers that Provoke and Defend for 100 rounds, so they stack hardest. In fight 507
+    (Bramble Ward) Rallying Cry fires 513 times and Bramble Ward 300 times, effective Defence
+    reaches about 1.6 × 10²³ and one creature carries 201 active effects. These are coverage
+    fights, not balance data, so the simulator's draw-rate figures should come from its own runs.
   - **The rule is locked**: `stat-modifier` stacking is multiplicative and uncapped (GAME_DESIGN,
     "Player-facing treatment"). The fix, if the report shows one is needed, is per content item:
     the factor, or how often it can fire (for example once per turn, or a trigger condition), and
