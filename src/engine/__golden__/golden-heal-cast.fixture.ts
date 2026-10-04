@@ -1,7 +1,8 @@
-// Golden: the Support-spell model's `heal` payload (Phase 4 Slice E) -- a single-target
-// ally-targeting Cast reuses applyHeal directly (no TriggerFired -- Cast itself is the chosen-
-// action context, not a trigger). Magnitude is the SAME resolveSpellOffStat a damage spell would
-// compute (scalingStat absent -> remap-aware Intelligence, x spellPower); applied as HP restored,
+// Golden: a spell whose effect is a `heal` (Phase 4 Slice E; a `heal` response on `cast-target`
+// since 4.1-D) -- a single-target ally-targeting Cast heals through the response executor
+// directly (no TriggerFired -- Cast itself is the chosen-action context, not a trigger).
+// Magnitude is the SAME value a damage spell would compute (`offStat: 'cast'` -> remap-aware
+// Intelligence, x spellPower); applied as HP restored,
 // clamped to effective max Health (no overheal).
 //
 // Hand-derived (independent `node -e` calculator). All vitality -> neutral affinity x1.0 on the

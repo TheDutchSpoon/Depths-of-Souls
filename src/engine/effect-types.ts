@@ -131,11 +131,13 @@ export type ResponseTarget =
   // consume-stacks' "0 stacks" skip -- this is what makes Spore's contagion infect only fresh
   // hosts instead of endlessly refreshing the same one.
   | { readonly kind: 'random-ally-without-status'; readonly statusId: string }
-  // Phase 4.1-D (A4): valid ONLY inside `Spell.effects` (rejected in trait/status responses by
-  // `validateNoCastTargetInResponseTargets`). The spell's current landed target -- the single
-  // target, or the AOE member being hit -- or NOTHING if it has died (B5's fizzle rule applied
-  // inside a spell; also why an `apply-status` after a killing hit lands nowhere). Outside a cast
-  // context (no `castTarget` on the HookContext) resolving it is a resolver-invariant error.
+  // Phase 4.1-D (A4): valid ONLY inside `Spell.effects` (rejected in trait/perk/status responses
+  // by `throwIfRandomSelectorTarget`'s validators). The spell's current landed target -- the
+  // single target, or the AOE member being hit -- alive or not. A dead landed target gets nothing
+  // because no verb acts on a corpse (`revive` excepted; the verb rule in `executeResponse`), not
+  // because this target kind filters it -- which is why an `apply-status` after a killing hit
+  // lands nowhere. Outside a cast context (no `castTarget` on the HookContext) resolving it is a
+  // resolver-invariant error.
   | { readonly kind: 'cast-target' }
 
 // Applied via a spell or a triggered apply-status response (Slice C).
@@ -660,7 +662,7 @@ export type CheatDeathDef = {
  * executeResponse. Phase 4.1-C2a: routed through `actions.ts`'s `resolveIntent`/`executeAction`
  * (via `ResolutionContext.runAction`) rather than calling the executors directly, but the
  * semantics are unchanged -- on a successful roll it reuses the EXACT Cast-execution path a
- * chosen action would (on-cast/on-action-observed still fire, payload/appliesStatus/instance-list
+ * chosen action would (on-cast/on-action-observed still fire, the spell's effect list and the instance list
  * all apply unchanged), picking uniformly among the actor's non-null equipped slots. */
 export type BonusCastDef = {
   readonly category: 'bonus-cast'
@@ -700,7 +702,7 @@ export type EffectDef =
   | InnateSpellDef
 
 // ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
-// a spell's appliesStatus, never innate. Declared in a separate status registry (data/statuses.ts),
+// a spell's `apply-status` effect, never innate. Declared in a separate status registry (data/statuses.ts),
 // looked up by statusId at application time -- NOT part of a Trait's own EffectDef union. ----
 
 export type DamageModifierDirection = 'dealt' | 'taken'
@@ -979,6 +981,27 @@ export function validateSpellEffects(spell: Spell): void {
             `spell invariant violated: ${context} needs an offStat or a scalingStat`,
           )
         }
+        if (effect.offStat !== undefined && effect.scalingStat !== undefined) {
+          throw new Error(
+            `spell invariant violated: ${context} sets both offStat and scalingStat`,
+          )
+        }
+        if (effect.offStat !== undefined && effect.offStat !== 'cast') {
+          throw new Error(
+            `spell invariant violated: ${context} must use offStat 'cast' (a spell's damage is cast damage)`,
+          )
+        }
+        // The RESOLVED damage source (executeResponse): `damageSource`, else 'attack' in
+        // scalingStat mode, else the offStat value. A spell's damage is a cast: it must resolve to
+        // 'cast' (cross-stat / conditional-damage-bonus / the DamageDealt tag all key on it).
+        if (
+          (effect.damageSource ??
+            (effect.scalingStat !== undefined ? 'attack' : effect.offStat)) !== 'cast'
+        ) {
+          throw new Error(
+            `spell invariant violated: ${context} must resolve to damageSource 'cast' (a scalingStat effect needs damageSource: 'cast' explicitly)`,
+          )
+        }
         break
       case 'heal':
         if (effect.amountPerStack !== undefined || effect.magnitudeSource !== undefined) {
@@ -989,6 +1012,16 @@ export function validateSpellEffects(spell: Spell): void {
         if (effect.offStat === undefined && effect.scalingStat === undefined) {
           throw new Error(
             `spell invariant violated: ${context} needs an offStat or a scalingStat`,
+          )
+        }
+        if (effect.offStat !== undefined && effect.scalingStat !== undefined) {
+          throw new Error(
+            `spell invariant violated: ${context} sets both offStat and scalingStat`,
+          )
+        }
+        if (effect.offStat !== undefined && effect.offStat !== 'cast') {
+          throw new Error(
+            `spell invariant violated: ${context} must use offStat 'cast' (a spell's heal reads the cast slot)`,
           )
         }
         break

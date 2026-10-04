@@ -1,12 +1,12 @@
 // Golden: B5 on the CAST path (Phase 4.1-C2c, PR #73 review) -- the twin of
 // golden-b5-fizzle-rule4-retarget, which only covers executeAttack. A single-target DAMAGE spell
-// with `appliesStatus`, whose target is killed by an `on-cast` trigger during that instance's
-// pre-hit hooks: the hit fizzles (no payload, no status), SpellCast stays, and the caster's second
+// followed by an `apply-status` effect, whose target is killed by an `on-cast` trigger during that instance's
+// pre-hit hooks: the hit fizzles (no damage, no status), SpellCast stays, and the caster's second
 // cast instance re-targets by rule 4. Hand-derived; no RNG (seed inert).
 //
 // CASTER (player, speed 20, Int 20, HP 40, script `always-cast` = slot 0, default target
 // lowest-hp-enemy): slots after createCombat exactly [SMITE] (asserted). SMITE = single-target
-// enemy-side damage spell, spellPower 1.0, appliesStatus Weaken (2 turns). One trait
+// enemy-side damage spell, spellPower 1.0, then an `apply-status` Weaken effect (2 turns). One trait
 // `b5-cast-fixture`:
 //   (1) action-instance cast 30% -> the instance list is [100, 30];
 //   (2) on-fight-start deal-damage 15 (flat) to `lowest-hp-enemy` (the wound: createCombat resets
@@ -23,7 +23,7 @@
 //   SpellCast(B). on-cast on B: 25*100 = 2500 <= 30*25 = 750 FALSE -> no trigger. Hit: off 20 x
 //   (1.0 x 0.3) = 6, def 0 -> core 6, chip 0.06 -> raw 6.06 -> final 6; B 25 - 6 = 19 (no clamp).
 //   Then Weaken lands on B (a LIVING target): StatusApplied(B, weaken, 1 stack, 2 turns).
-// With the cast guard removed the log gains a DamageDealt on the dead C (the payload runs), and
+// With the cast guard removed the log gains a DamageDealt on the dead C (the effect list runs), and
 // with first-by-slot restored for rule 4 the second SpellCast targets A.
 
 import { makeParty } from '../__fixtures__/creatures'

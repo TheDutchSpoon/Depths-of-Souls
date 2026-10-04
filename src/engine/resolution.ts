@@ -601,8 +601,10 @@ function resolveResponseTargets(
           'resolver invariant violated: cast-target resolved outside a spell cast (no castTarget in context)',
         )
       }
-      // B5's fizzle rule inside a spell: a dead landed target gets nothing from the rest of the list.
-      return findCreature(state, context.castTarget)?.alive ? [context.castTarget] : []
+      // The landed target, alive or not: a dead one gets nothing from the rest of the list
+      // because NO verb acts on a corpse except `revive` (the verb rule in executeResponse), not
+      // because this target kind filters it (4.1-D review item 3).
+      return [context.castTarget]
     }
     case 'selector': {
       const id = resolveTargetSelector(
@@ -827,13 +829,12 @@ export function executeResponse(
             (response.spellPower ?? 1.0) * formulaMultiplier,
           )
         } else if (response.scalingStat !== undefined) {
-          // Float association is part of the byte-identity contract: a SPELL heal was
-          // `stat * (spellPower * pf)`, a trait heal (Treants/Necromoss) stays `(stat * sp) * count`.
-          const stat = getEffectiveStat(bearer, response.scalingStat)
+          // One formula for every formula-mode magnitude, trait or spell: `stat * (spellPower *
+          // multiplier)`, the order deal-damage uses in every mode and `offStat` gets through
+          // getOffensiveStat above (4.1-D review item 2; CONVENTIONS, heal).
           amount =
-            context.castPowerFraction !== undefined
-              ? stat * ((response.spellPower ?? 1.0) * context.castPowerFraction)
-              : stat * (response.spellPower ?? 1.0) * formulaMultiplier
+            getEffectiveStat(bearer, response.scalingStat) *
+            ((response.spellPower ?? 1.0) * formulaMultiplier)
         } else {
           amount = resolveFlatTotal(bearer, response.amountPerStack ?? 0, flatCount)
         }
@@ -861,6 +862,8 @@ export function executeResponse(
 
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        if (!findCreature(working, targetId)?.alive) continue
         working = applyStatModifier(
           context.self,
           targetId,
@@ -876,6 +879,8 @@ export function executeResponse(
     case 'apply-status': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        if (!findCreature(working, targetId)?.alive) continue
         working = applyStatus(context.self, targetId, response.status, working, ctx)
       }
       return { state: working, suppressed: false }
@@ -1001,7 +1006,8 @@ export function executeResponse(
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
-        if (!target) continue
+        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        if (!target || !target.alive) continue
         const existing = target.activeEffects.find(
           (
             e,

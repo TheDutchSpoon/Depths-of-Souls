@@ -3,11 +3,12 @@
 //
 //  1. One old-vs-new EQUIVALENCE test per payload kind (damage, heal, stat-modifier, damage +
 //     status, AOE + status). The "old" side is `legacyCast` below: the pre-4.1-D cast executor's
-//     payload path transcribed verbatim from `main@eb37246` (`applyCastPayload`,
+//     payload path as it stood on `main@eb37246` (`applyCastPayload`,
 //     `resolveSpellOffStat`, `applyStatusIfAlive`, and the executeCastSingle/Aoe loops minus their
-//     hook firing, which is a no-op on a trait-free fixture), built on the same exported
-//     primitives (damage via `dealDamage`/`dealDamageWithScalingStat`, the two calls whose value
-//     and core are exactly the old `dealDamageWithOffStat(resolveSpellOffStat(...))`). Both sides start from equal states; the events, the final state and the RNG
+//     hook firing, which is a no-op on a trait-free fixture), replayed on the current primitives.
+//     It is NOT verbatim: the old damage call (`dealDamageWithOffStat`, since deleted) is replaced
+//     by `dealDamage` / `dealDamageWithScalingStat`, which compute the same value from the same
+//     `spellPower x pf` and call the same core. Both sides start from equal states; the events, the final state and the RNG
 //     position must be identical. Each case also pins its hand-derived numbers.
 //  2. Pins for each parity rule and check site the plan names (P2, P5, P8, B5 on the cast path,
 //     `cast-target` at BOTH the single-target and the AOE site, `self` once per landed target, the
@@ -101,6 +102,8 @@ const findCreature = (state: CombatState, id: string): Creature =>
 
 // ---- The legacy oracle (main@eb37246) ----
 
+/** The PRE-4.1-D `Spell` shape (history): `spellPower`, `scalingStat`, `payload`, `statModifier` and
+ * `appliesStatus` were spell-level fields. Only the legacy oracle below reads it. */
 interface LegacySpell {
   readonly id: string
   readonly targetShape: 'single' | 'aoe'
@@ -1155,5 +1158,248 @@ describe('validateSpellEffects', () => {
     expect(() => validateStatusNoRandomSelectorInResponseTargets(status)).toThrow(
       /only valid inside a spell's effect list/,
     )
+  })
+})
+
+// ---- 4.1-D review item 1: a spell's damage is cast damage ----
+
+describe("validateSpellEffects: a spell's damage and heal are cast-slot formula magnitudes", () => {
+  const base = toSpell({ id: 's', targetShape: 'single', spellPower: 1 })
+  const withEffects = (effects: EffectResponse[]): Spell => ({ ...base, effects })
+  const cast = { kind: 'cast-target' } as const
+
+  it('rejects a scalingStat deal-damage that leaves damageSource unset (it resolves to attack)', () => {
+    expect(() =>
+      validateSpellEffects(
+        withEffects([
+          { kind: 'deal-damage', target: cast, scalingStat: 'defence', spellPower: 1 },
+        ]),
+      ),
+    ).toThrow(/damageSource 'cast'/)
+  })
+
+  it("rejects a deal-damage whose explicit damageSource is not 'cast'", () => {
+    expect(() =>
+      validateSpellEffects(
+        withEffects([
+          {
+            kind: 'deal-damage',
+            target: cast,
+            offStat: 'cast',
+            spellPower: 1,
+            damageSource: 'attack',
+          },
+        ]),
+      ),
+    ).toThrow(/damageSource 'cast'/)
+  })
+
+  it("accepts a scalingStat deal-damage that says damageSource: 'cast'", () => {
+    expect(() =>
+      validateSpellEffects(
+        withEffects([
+          {
+            kind: 'deal-damage',
+            target: cast,
+            scalingStat: 'defence',
+            spellPower: 1,
+            damageSource: 'cast',
+          },
+        ]),
+      ),
+    ).not.toThrow()
+  })
+
+  it.each(['deal-damage', 'heal'] as const)(
+    "rejects an offStat other than 'cast' on %s",
+    (kind) => {
+      expect(() =>
+        validateSpellEffects(
+          withEffects([{ kind, target: cast, offStat: 'attack', spellPower: 1 }]),
+        ),
+      ).toThrow(/offStat 'cast'/)
+    },
+  )
+
+  it.each(['deal-damage', 'heal'] as const)(
+    'rejects %s setting both offStat and scalingStat (it used to throw mid-fight)',
+    (kind) => {
+      expect(() =>
+        validateSpellEffects(
+          withEffects([
+            {
+              kind,
+              target: cast,
+              offStat: 'cast',
+              scalingStat: 'defence',
+              spellPower: 1,
+              ...(kind === 'deal-damage' ? { damageSource: 'cast' as const } : {}),
+            },
+          ]),
+        ),
+      ).toThrow(/both offStat and scalingStat/)
+    },
+  )
+})
+
+// ---- 4.1-D review item 2: one formula for every formula-mode magnitude ----
+
+describe('heal scalingStat mode: stat x (spellPower x multiplier), for a trait too', () => {
+  it('a trait heal scaled by a live count: 26, not the old (stat x sp) x count = 27', () => {
+    // Fixture trait (not real content): heal self, scalingStat health, spellPower 0.15,
+    // magnitudeSource count of dead-allies. Healer effective Health 60, wounded to 20 (missing 40,
+    // so the heal is not clamped). 3 dead allies -> count 3.
+    //   spellPower x count = 0.15 x 3 = 0.44999999999999996
+    //   60 x 0.44999999999999996 = 26.999999999999996 -> floor 26   (this order)
+    //   (60 x 0.15) x 3 = 9 x 3 = 27 -> 27                        (the pre-review trait order)
+    const player = makeParty('player', [
+      { id: 'me', health: 60, currentHp: 20 },
+      { id: 'd1', alive: false },
+      { id: 'd2', alive: false },
+      { id: 'd3', alive: false },
+    ])
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'heal',
+        target: { kind: 'self' },
+        scalingStat: 'health',
+        spellPower: 0.15,
+        magnitudeSource: { kind: 'count', of: 'dead-allies' },
+      },
+      'fixture-trait',
+      { self: player[0]!.id },
+      makeState(player, makeParty('enemy', [{ id: 'e0' }])),
+      createResolutionContext(events, newCascade()),
+    )
+    expect(events).toMatchObject([{ type: 'HealApplied', amount: 26, remainingHp: 46 }])
+  })
+})
+
+// ---- 4.1-D review item 3: no response acts on a dead creature, except revive ----
+
+describe('the verb rule: no response acts on a corpse', () => {
+  // Spell: damage the landed target, then a `self` effect. The target retaliates with a lethal
+  // flat 99 on whoever hit it, so the caster (HP 10) is dead BEFORE the self effect runs (the list
+  // is atomic, ASSUMPTION 35, so the effect is attempted).
+  const RETALIATE = () =>
+    eff({
+      category: 'triggered',
+      hook: 'on-damage-taken',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'triggering-source' },
+        flatAmount: 99,
+        damageSource: 'attack',
+      },
+    })
+  const selfEffectSpell = (effect: EffectResponse): Spell => ({
+    id: 'self-after-damage',
+    name: 'Self After Damage',
+    affinity: 'vitality',
+    unlockedAtBiome: 1,
+    targetShape: 'single',
+    targetSide: 'enemy',
+    effects: [
+      {
+        kind: 'deal-damage',
+        target: { kind: 'cast-target' },
+        offStat: 'cast',
+        spellPower: 1,
+      },
+      effect,
+    ],
+  })
+  function castThenRetaliationKillsCaster(effect: EffectResponse) {
+    const spell = selfEffectSpell(effect)
+    const player = makeParty('player', [
+      { id: 'me', health: 10, equippedSpells: [spell] },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'e0', health: 100, defence: 0, activeEffects: [RETALIATE()] },
+    ])
+    const out = runNew(
+      player[0]!,
+      { kind: 'cast', targetShape: 'single', gemSlot: 0, targetId: enemy[0]!.id },
+      makeState(player, enemy),
+    )
+    // The caster really did die before its own self effect (else this test proves nothing).
+    expect(findCreature(out.state, 'me').alive).toBe(false)
+    expect(
+      out.events.some((e) => e.type === 'CreatureDied' && String(e.creatureId) === 'me'),
+    ).toBe(true)
+    return out
+  }
+
+  it('apply-status, `self` in a spell: no StatusApplied for the dead caster', () => {
+    const { events } = castThenRetaliationKillsCaster({
+      kind: 'apply-status',
+      target: { kind: 'self' },
+      status: { statusId: 'weaken', duration: 2 },
+    })
+    expect(events.some((e) => e.type === 'StatusApplied')).toBe(false)
+  })
+
+  it('apply-stat-modifier, `self` in a spell: no StatModifierApplied for the dead caster', () => {
+    const { events, state } = castThenRetaliationKillsCaster({
+      kind: 'apply-stat-modifier',
+      target: { kind: 'self' },
+      stat: 'defence',
+      factor: 0.5,
+    })
+    expect(events.some((e) => e.type === 'StatModifierApplied')).toBe(false)
+    expect(getEffectiveStat(findCreature(state, 'me'), 'defence')).toBe(20)
+  })
+
+  // Trait sites: A kills B (HP 1) with an attack; A's `on-kill` fires with `triggering-source` =
+  // the VICTIM B, already dead. B carries Weaken (applied before the attack).
+  function killVictimThenTraitResponds(response: EffectResponse) {
+    const attacker = makeParty('player', [
+      {
+        id: 'a',
+        attack: 40,
+        activeEffects: [eff({ category: 'triggered', hook: 'on-kill', response })],
+      },
+    ])
+    const victim = makeParty('enemy', [{ id: 'b', health: 1, defence: 0 }])
+    const state = makeState(attacker, victim)
+    const prepared = applyStatus(
+      attacker[0]!.id,
+      victim[0]!.id,
+      { statusId: 'weaken', duration: 3 },
+      state,
+      createResolutionContext([], newCascade()),
+    )
+    const before = findCreature(prepared, 'b').activeEffects
+    expect(before.length).toBeGreaterThan(0)
+    const out = runNew(
+      findCreature(prepared, 'a'),
+      { kind: 'attack', targetId: victim[0]!.id },
+      prepared,
+    )
+    const corpse = findCreature(out.state, 'b')
+    expect(corpse.alive).toBe(false)
+    expect(out.events.some((e) => e.type === 'TriggerFired')).toBe(true) // the trigger did fire
+    return { ...out, before, corpse }
+  }
+
+  it('remove-status, from a trait: nothing is removed from the dead triggering-source', () => {
+    const { events, corpse, before } = killVictimThenTraitResponds({
+      kind: 'remove-status',
+      target: { kind: 'triggering-source' },
+      filter: { statusId: 'weaken' },
+    })
+    expect(events.some((e) => e.type === 'StatusExpired')).toBe(false)
+    expect(corpse.activeEffects).toEqual(before)
+  })
+
+  it('apply-status, from a trait: nothing is applied to the dead triggering-source', () => {
+    const { events, corpse, before } = killVictimThenTraitResponds({
+      kind: 'apply-status',
+      target: { kind: 'triggering-source' },
+      status: { statusId: 'weaken', duration: 3 },
+    })
+    expect(events.some((e) => e.type === 'StatusApplied')).toBe(false)
+    expect(corpse.activeEffects).toEqual(before)
   })
 })

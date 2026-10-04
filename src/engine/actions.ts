@@ -512,9 +512,10 @@ function executeAttack(
  * the AOE member being hit -- in list order, each through `executeResponse` DIRECTLY (not
  * `fireHook`): a spell's effects are the chosen action, never a trigger, so none emits
  * `TriggerFired` and none takes part in cascade-depth / self-re-entry accounting (ASSUMPTION
- * D-A4, byte-identical with the pre-4.1-D direct calls). `cast-target` resolves to `targetId`, or
- * to nothing once it has died (an `apply-status` after a killing hit lands nowhere, the old
- * `applyStatusIfAlive`); `self` resolves to the caster, once per landed target.
+ * D-A4, byte-identical with the pre-4.1-D direct calls). `cast-target` resolves to `targetId`; a
+ * dead one gets nothing because no verb acts on a corpse (`executeResponse`'s verb rule; pre-4.1-D
+ * this was `applyStatusIfAlive`), so an `apply-status` after a killing hit lands nowhere.
+ * `self` resolves to the caster, once per landed target.
  *
  * The list is ATOMIC (ASSUMPTION 35, design-owner confirmed): no dead-actor check between one
  * target's effects -- if a retaliation to the damage kills the caster, the rest of this target's
