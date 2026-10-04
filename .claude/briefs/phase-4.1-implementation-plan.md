@@ -776,6 +776,23 @@ that adaptation along with the sweep.
   (if two `'all'` locks are active, the first in canonical effect order names it, ASSUMPTION 28).
 - **Load-time validator:** a status carrying `stat-modifier` or `stat-remap` fails to load.
 - Delete the four old `StatusDef` categories and their bespoke readers.
+- **Decided at the 4.1-F1 plan review** (CONVENTIONS "Action locks", "The effect taxonomy",
+  "Immunity" and "The bright line" hold the rules):
+  - `action-lock` is carrier-agnostic, so the two fixture locks stay trait-borne and their goldens
+    only lose the lock's `TriggerFired`. `TurnSkipped` is `{ creatureId, effectId }`, the carrier's
+    definition id (ASSUMPTION 44).
+  - The skip is read right after the turn-start hook pass and again at the action slot; a lock
+    gained during the actor's own turn-start hooks skips that turn (ASSUMPTION 45).
+  - An `'all'` lock makes every action kind illegal in `checkLegality`, Defend, Provoke and Wait
+    included (ASSUMPTION 46).
+  - Every effect is carrier-agnostic and every reader goes through the one iterator. The status
+    validator rejects `stat-modifier`, `stat-remap`, `status-immunity` and `innate-spell`;
+    `breakChancePercent` is rejected outside a status. Immunity covers every effect kind of the
+    status and is read only from non-status carriers (ASSUMPTION 47).
+  - The status damage-modifier stays its own category (ASSUMPTION 48).
+  - Golden list: `golden-sleep-wake` and `golden-lullpollen-dozer` are expected **unchanged** (no
+    skipped turn in their expected logs); only their fixture inputs change shape. Test files with
+    inline old-shape status literals get shape-only edits, assertions untouched.
 
 ### D6 status timing
 - **Durations count the bearer's own turns**: in the bearer's **turn-end cleanup**, each of its
@@ -1121,6 +1138,23 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 43. **Confirmed (design owner, 4.1-E plan review).** Only the actor's state decides a queued
     grant: dead, skipped turn or locked when it runs means refused. The bearer dying after its
     trigger fired does not cancel it.
+44. **Confirmed (design owner, 4.1-F1 plan review).** `action-lock`, like every effect, may be
+    carried by a trait as well as a status. `TurnSkipped` is `{ creatureId, effectId }`, where
+    `effectId` is the carrier's definition id (the status id for a status), as in `TriggerFired`.
+45. **Confirmed (design owner, 4.1-F1 plan review).** A turn is skipped when an `'all'` lock is
+    active right after the turn-start hook pass or at the action slot. A lock gained during the
+    actor's own turn-start hooks skips that turn (GAME_DESIGN: "the check happens when the
+    creature's turn comes up"); no shipped content gains or loses a lock at turn start.
+46. **Confirmed (4.1-F1 plan review; CONVENTIONS B2 rule 2, GAME_DESIGN "a lock stops every
+    action").** An `'all'` lock makes every action kind illegal, Defend, Provoke and Wait included.
+    No shipped content grants those to a locked creature, so nothing changes today.
+47. **Confirmed (4.1-F1 plan review).** Every effect is carrier-agnostic and read through the one
+    iterator. Inside a status the validator rejects `stat-modifier`, `stat-remap`,
+    `status-immunity` and `innate-spell`; `turn-order.breakChancePercent` is rejected outside a
+    status. Immunity skips every effect kind of the status (turn-order and the Web roll included)
+    and is read only from non-status carriers.
+48. **Confirmed (4.1-F1 plan review).** The status damage-modifier stays its own category; no
+    fold into `conditional-damage-bonus` or `taken-reduction`.
 
 ## Sequencing summary
 
