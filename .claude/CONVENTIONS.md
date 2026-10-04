@@ -500,11 +500,17 @@ attack executor is correct.
     needs: the turn-start grants run after it and must already know the turn is skipped. The
     second keeps a lock gained during the turn-start grants from reaching the decide step. A lock
     gained during the actor's own turn-start hooks therefore skips that same turn.
+  - **Neither read is redundant with `checkLegality`** (PR #79 review). The turn-start drain can
+    hold grants of other creatures, raised in the cascade of the actor's turn-start hooks, ahead of
+    the actor's own. Such a grant can remove the lock (cleanse a Stun, wake a Sleeper) before the
+    actor's grant runs. The first read still skips the turn, and B2 rule 1 still refuses the
+    actor's grant.
   - The skipped turn emits **`TurnSkipped { creatureId, effectId }`** in the action slot (after the
     turn-start cleanup and the turn-start grants, only if the actor is alive), and takes no action
     of any kind; passive turn-end effects still fire. `effectId` names the first `'all'` lock in
-    canonical effect order by its carrier's definition id (the status id for a status), the same
-    id `TriggerFired.effectId` carries. *History:*
+    canonical effect order at the action slot or, if none is left there, the one the first read
+    found (PR #79 review). It names the lock by its carrier's definition id (the status id for a
+    status), the same id `TriggerFired.effectId` carries. *History:*
   Slice B built this as a `scope` parameter on the `suppress-action` response with a two-path split
   (an `'all'` suppression fired from `on-turn-start` and set a whole-turn flag; a scoped one was
   scanned for by the interpreter), which emitted a no-op `TriggerFired` every turn start. 4.1-F
@@ -931,9 +937,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 - **Every action source obeys the same rules** (Phase 4.1-C, B2):
   1. A creature whose turn is skipped (an `'all'` lock: Stun, Sleep) takes **no action of any
      kind** that turn, granted ones included. Passive turn-end effects still fire. This holds even
-     if the lock is gone by the granted-actions step, for example cleansed by a turn-end hook. A
-     skipped turn stays skipped. A chance-based grant still **rolls** its chance first, so the RNG
-     stream doesn't depend on the skip; only then is the grant refused.
+     if the lock is gone by the granted-actions step, for example cleansed by a turn-end hook, or
+     by an earlier grant in the turn-start drain (PR #79 review). A skipped turn stays skipped. A
+     chance-based grant still **rolls** its chance first, so the RNG stream doesn't depend on the
+     skip; only then is the grant refused.
   2. **An active lock refuses every action it covers, chosen or granted, whenever the action is
      checked** (4.1-C2b plan review). So **Silenced blocks every cast**, and an `'all'` lock that
      lands mid-turn also refuses that turn's granted actions. Clear Mind immunity applies as
@@ -1164,6 +1171,10 @@ the same interpreter, differing only in how they attach and which hooks they use
     A later consolidation is possible.
   - **Every effect is carrier-agnostic** except where a validator says otherwise (below): a status
     may carry any effect a trait carries, and every reader goes through the one effect iterator.
+    Two readers read the raw effect list on purpose: `getEffectiveStat` and the stat remap, because
+    a status may not carry `stat-modifier` or `stat-remap`. The status lifecycle reads the
+    containers themselves: `has-status`, applying and refreshing, `remove-status`,
+    `consume-stacks`, counting down, and the immunity lookup (PR #79 review).
   - **`breakChancePercent` is status-only**: breaking free removes the status instance, so a
     `turn-order` carrying it on any other carrier is rejected at load.
 - **Immunity is checked once, in the effect iterator** (4.1-F): an immune bearer's iterator skips
