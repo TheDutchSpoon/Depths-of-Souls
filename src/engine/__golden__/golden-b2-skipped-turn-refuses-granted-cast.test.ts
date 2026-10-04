@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { runGolden } from '../test-utils/golden-runner'
-import * as fixture from './golden-b2-skipped-turn-refuses-bonus-cast.fixture'
-import { expectedEvents } from './golden-b2-skipped-turn-refuses-bonus-cast.fixture'
+import * as fixture from './golden-b2-skipped-turn-refuses-granted-cast.fixture'
+import { expectedEvents } from './golden-b2-skipped-turn-refuses-granted-cast.fixture'
 
 describe('golden replay: B2.1 -- a skipped turn refuses the granted cast, after rolling (Phase 4.1-C2c)', () => {
   it('matches the committed event log exactly', () => {

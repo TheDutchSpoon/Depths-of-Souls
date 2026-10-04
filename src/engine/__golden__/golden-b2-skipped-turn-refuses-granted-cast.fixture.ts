@@ -1,8 +1,8 @@
 // Golden: B2.1 (Phase 4.1-C2c) -- a creature whose turn was SKIPPED takes no granted action
-// either, even though the lock is gone by the granted-actions step; the bonus-cast's chance is
+// either, even though the lock is gone by the granted-actions step; the granted cast's chance is
 // still ROLLED first, so the RNG stream doesn't depend on the skip. Hand-derived.
 //
-// CASTER (player, speed 20, Int 20, HP 40, defence 0): trait `b2-stunned-bonus-caster-fixture` =
+// CASTER (player, speed 20, Int 20, HP 40, defence 0): trait `b2-stunned-granted-caster-fixture` =
 //   [on-turn-end perform-action(self, cast 'random') chancePercent 100 (4.1-E; was `bonus-cast`),
 //    on-fight-start apply-status Stun (self),
 //    on-turn-end remove-status Stun (self)].
@@ -70,9 +70,9 @@ export const RANDOM_ATTACK_SCRIPT: Script = {
   ],
 }
 
-export const STUNNED_BONUS_CASTER: Trait = {
-  id: 'b2-stunned-bonus-caster-fixture',
-  name: 'Stunned Bonus Caster (fixture)',
+export const STUNNED_GRANTED_CASTER: Trait = {
+  id: 'b2-stunned-granted-caster-fixture',
+  name: 'Stunned Granted Caster (fixture)',
   effects: [
     {
       category: 'triggered',
@@ -114,7 +114,7 @@ export const playerParty = makeParty('player', [
     speed: 20,
     scriptId: 'always-wait',
     equippedSpells: [BOLT],
-    innateTraitIds: [STUNNED_BONUS_CASTER.id],
+    innateTraitIds: [STUNNED_GRANTED_CASTER.id],
   },
   { id: 'd1', health: 40, defence: 0, speed: 5, scriptId: 'always-wait' },
   { id: 'd2', health: 40, defence: 0, speed: 4, scriptId: 'always-wait' },
@@ -137,7 +137,7 @@ export const scripts: ReadonlyMap<string, Script> = new Map([
   [RANDOM_ATTACK_SCRIPT.id, RANDOM_ATTACK_SCRIPT],
 ])
 export const traits: ReadonlyMap<string, Trait> = new Map([
-  [STUNNED_BONUS_CASTER.id, STUNNED_BONUS_CASTER],
+  [STUNNED_GRANTED_CASTER.id, STUNNED_GRANTED_CASTER],
 ])
 export const statuses: ReadonlyMap<string, StatusDef> = new Map([[STUN.statusId, STUN]])
 
@@ -147,7 +147,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'TriggerFired',
     sourceId: CASTER,
     hook: 'on-fight-start',
-    effectId: STUNNED_BONUS_CASTER.id,
+    effectId: STUNNED_GRANTED_CASTER.id,
   },
   {
     type: 'StatusApplied',
@@ -171,7 +171,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'TriggerFired',
     sourceId: CASTER,
     hook: 'on-turn-end',
-    effectId: STUNNED_BONUS_CASTER.id,
+    effectId: STUNNED_GRANTED_CASTER.id,
   },
   // ... then the remove-status trigger removes the Stun -- the lock is gone before the
   // granted-actions step.
@@ -179,7 +179,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'TriggerFired',
     sourceId: CASTER,
     hook: 'on-turn-end',
-    effectId: STUNNED_BONUS_CASTER.id,
+    effectId: STUNNED_GRANTED_CASTER.id,
   },
   { type: 'StatusExpired', creatureId: CASTER, statusId: STUN.statusId },
   // The grant was then refused by the skipped-turn gate: NO ActionGranted, NO SpellCast, NO

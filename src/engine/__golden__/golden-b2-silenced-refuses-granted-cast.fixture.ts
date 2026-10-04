@@ -1,21 +1,21 @@
 // Golden: B2.2 (Phase 4.1-C2c) -- Silence (a scoped Cast lock) refuses a granted cast, and a
 // refused action DRAWS NOTHING (not even the gem draw). The Silenced creature still attacks (a
-// scoped lock leaves other actions choosable) and the bonus-cast's chance is still rolled.
+// scoped lock leaves other actions choosable) and the granted cast's chance is still rolled.
 // Hand-derived.
 //
 // CASTER (player, speed 20, Attack 10, Int 20, HP 40, defence 0, script `always-attack`): trait
-// `b2-silenced-bonus-caster-fixture` = [on-turn-end perform-action(self, cast 'random') at
+// `b2-silenced-granted-caster-fixture` = [on-turn-end perform-action(self, cast 'random') at
 // chancePercent 100 (4.1-E; was `bonus-cast`), permanent on-turn-start
 // suppress-action scope 'cast'] -- a fixture stand-in for Silenced (authored content lands in F),
 // like golden-scoped-suppression's. Slots after createCombat (asserted): exactly [BOLT].
 // Round 1, CASTER: turn-start TriggerFired (scoped: does NOT set the whole-turn skip), then it
 // attacks the lowest-HP enemy (E2 30 < E1 40): core 10 - 0, chip 0.1 -> raw 10.1 -> final 10;
-// E2 30 -> 20. Turn end: bonus-cast rolls (draw #1) -> then runAction's checkLegality refuses the
+// E2 30 -> 20. Turn end: granted cast rolls (draw #1) -> then runAction's checkLegality refuses the
 // Cast lock -> no gem draw, no SpellCast.
 //
 // LATER RNG CONSUMER: E1 (speed 10, Attack 10, `random-attack`) picks among player creatures
 // [CASTER, D1, D2] with floor(r * 3). Seed 9211's draws: #1 0.4014, #2 0.2864, #3 0.4192.
-//   - As built: #1 = bonus roll, E1's pick = #2 = 0.2864 -> floor(0.86) = 0 -> CASTER.
+//   - As built: #1 = grant roll, E1's pick = #2 = 0.2864 -> floor(0.86) = 0 -> CASTER.
 //   - Draw-the-gem-THEN-refuse (mutation): the gem draw takes #2, E1's pick = #3 = 0.4192 ->
 //     floor(1.26) = 1 -> D1. Different log.
 //   - checkLegality removed from runAction: the cast lands (SpellCast + DamageDealt on E2/E1).
@@ -30,7 +30,7 @@ import type { Script } from '../scripting-types'
 import type { Trait } from '../effect-types'
 
 export const SEED = 9211
-export const TURN_STEPS = 2 // CASTER (attacks, no bonus cast), E1
+export const TURN_STEPS = 2 // CASTER (attacks, no granted cast), E1
 
 const CASTER = createCreatureId('caster')
 const E1 = createCreatureId('e1')
@@ -64,9 +64,9 @@ export const RANDOM_ATTACK_SCRIPT: Script = {
   ],
 }
 
-export const SILENCED_BONUS_CASTER: Trait = {
-  id: 'b2-silenced-bonus-caster-fixture',
-  name: 'Silenced Bonus Caster (fixture)',
+export const SILENCED_GRANTED_CASTER: Trait = {
+  id: 'b2-silenced-granted-caster-fixture',
+  name: 'Silenced Granted Caster (fixture)',
   effects: [
     {
       category: 'triggered',
@@ -96,7 +96,7 @@ export const playerParty = makeParty('player', [
     speed: 20,
     scriptId: 'always-attack',
     equippedSpells: [BOLT],
-    innateTraitIds: [SILENCED_BONUS_CASTER.id],
+    innateTraitIds: [SILENCED_GRANTED_CASTER.id],
   },
   { id: 'd1', health: 40, defence: 0, speed: 5, scriptId: 'always-wait' },
   { id: 'd2', health: 40, defence: 0, speed: 4, scriptId: 'always-wait' },
@@ -119,7 +119,7 @@ export const scripts: ReadonlyMap<string, Script> = new Map([
   [RANDOM_ATTACK_SCRIPT.id, RANDOM_ATTACK_SCRIPT],
 ])
 export const traits: ReadonlyMap<string, Trait> = new Map([
-  [SILENCED_BONUS_CASTER.id, SILENCED_BONUS_CASTER],
+  [SILENCED_GRANTED_CASTER.id, SILENCED_GRANTED_CASTER],
 ])
 
 export const expectedEvents: CombatEvent[] = [
@@ -130,7 +130,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'TriggerFired',
     sourceId: CASTER,
     hook: 'on-turn-start',
-    effectId: SILENCED_BONUS_CASTER.id,
+    effectId: SILENCED_GRANTED_CASTER.id,
   },
   { type: 'AttackDeclared', attackerId: CASTER, targetId: E2 },
   {
@@ -151,7 +151,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'TriggerFired',
     sourceId: CASTER,
     hook: 'on-turn-end',
-    effectId: SILENCED_BONUS_CASTER.id,
+    effectId: SILENCED_GRANTED_CASTER.id,
   },
   { type: 'TurnEnded', creatureId: CASTER },
   { type: 'TurnStarted', creatureId: E1 },

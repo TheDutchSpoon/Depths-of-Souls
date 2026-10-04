@@ -1107,10 +1107,10 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
   })
 })
 
-describe('Arcane Surge-shaped bonus cast = on-turn-end perform-action (Phase 4.1-E)', () => {
-  const BONUS_CASTER_FIXTURE: Trait = {
-    id: 'bonus-caster-fixture',
-    name: 'Bonus Caster (fixture)',
+describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4.1-E)', () => {
+  const GRANTED_CASTER_FIXTURE: Trait = {
+    id: 'granted-caster-fixture',
+    name: 'Granted Caster (fixture)',
     effects: [
       {
         category: 'triggered',
@@ -1145,19 +1145,19 @@ describe('Arcane Surge-shaped bonus cast = on-turn-end perform-action (Phase 4.1
       {
         id: 'caster',
         scriptId: 'always-wait',
-        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
         equippedSpells: [EMBER_LANCE],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', health: 100, speed: 1 }])
-    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    const traits = new Map([[GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE]])
     let state = createCombat({
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
       registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
     })
-    // Bonus-cast rolls succeed (first draw < 0.5); the second draw picks equipped slot 0
+    // Granted-cast rolls succeed (first draw < 0.5); the second draw picks equipped slot 0
     // regardless of its value (only one equipped slot).
     state = { ...state, rng: { position: SUCCEEDS_POSITION } }
     const { events } = resolveTurn(state)
@@ -1181,12 +1181,12 @@ describe('Arcane Surge-shaped bonus cast = on-turn-end perform-action (Phase 4.1
       {
         id: 'caster',
         scriptId: 'always-wait',
-        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
         equippedSpells: [EMBER_LANCE],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    const traits = new Map([[GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE]])
     let state = createCombat({
       seed: 1,
       player: { party: player },
@@ -1203,12 +1203,12 @@ describe('Arcane Surge-shaped bonus cast = on-turn-end perform-action (Phase 4.1
       {
         id: 'caster',
         scriptId: 'always-wait',
-        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
         equippedSpells: [null, null, null],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    const traits = new Map([[GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE]])
     let state = createCombat({
       seed: 1,
       player: { party: player },
@@ -1225,12 +1225,12 @@ describe('Arcane Surge-shaped bonus cast = on-turn-end perform-action (Phase 4.1
       {
         id: 'caster',
         scriptId: 'always-wait',
-        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
         equippedSpells: [CINDER_NOVA],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe1' }, { id: 'foe2' }])
-    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    const traits = new Map([[GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE]])
     let state = createCombat({
       seed: 1,
       player: { party: player },

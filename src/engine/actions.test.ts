@@ -160,7 +160,7 @@ describe('castableGemSlots (Phase 4.1-C2a, A1)', () => {
 })
 
 describe("resolveIntent's gemSlot: 'random' draw order (Phase 4.1-C2a, A1)", () => {
-  it('draws the gem slot BEFORE the target across seeds 0-19 -- pinned for byte-identity with bonus-cast/echo', () => {
+  it('draws the gem slot BEFORE the target across seeds 0-19 -- pinned for byte-identity with granted-cast/echo', () => {
     // Two DISTINCT slots (0/1) and three enemies (unequal pool sizes) so the gem-first and
     // target-first hypotheses can resolve to DIFFERENT concrete picks -- a discriminating proof,
     // not just a draw-count check (the rng's own position after N draws is the same regardless

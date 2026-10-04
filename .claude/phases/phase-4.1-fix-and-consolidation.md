@@ -993,7 +993,7 @@ existing golden byte-identical; each flip lands with a new, hand-derived golden.
   `gemSlot: 'random'` intent with no targeting, so an enemy-side single-target spell now defaults
   to the LOWEST-HP enemy (`legacyGrantedTargeting` only skips Confusion -> Tunnel Vision -> Provoke,
   which is C2c; it no longer keeps first-by-slot). Before, it hit the first living enemy by slot.
-  `golden-b1-bonus-cast-default` pins it (the corpus digest was the only prior tripwire).
+  `golden-b1-granted-cast-default` pins it (the corpus digest was the only prior tripwire).
 - **Targeting-less rules are valid.** `interpreter.isRuleValid` is `checkLegality` alone;
   `ruleNeedsExplicitTargeting` is **deleted**. `always-cast` drops its `targeting`
   (`data/scripts.ts`); both changes had to land together (dropping the selector while the gate
@@ -1052,7 +1052,7 @@ Each was shown failing with its flip undone, then reverted:
 | `golden-b1-fallback-lowest-hp` (script-less attacker; enemies slot 0 HP 25, slot 1 HP 15; hits slot 1) | Default -> first-by-slot (the retired Phase-1 default) | fails (hits slot 0) |
 | `golden-b1-support-heals-own-side` (enemy support, stock `always-cast`, ally heal; the healed ally is wounded in-fight, heal 10 < missing 15, no clamp) | Default -> first-by-slot; and separately, `always-cast` regains `targeting: lowest-hp-enemy` | both fail (heal lands on the wrong creature) |
 | `golden-castable-draw` (bonus-caster, post-`createCombat` slots [enemy-side innate, ally heal]; seed 8002: chance roll 0.8341, gem draw 0.2492 -> unfiltered picks slot 0 = the enemy spell, which fizzles; filtered pool is [slot 1]) | Unfiltered draw | fails (no `SpellCast`/`HealApplied`); the same golden also fails under the first-by-slot default undo (the heal would land on the caster) |
-| `golden-b1-bonus-cast-default` (bonus-caster, `chancePercent` 100, exactly one enemy-side single-target spell, post-`createCombat` slots [bolt] asserted; enemies slot 0 HP 50, slot 1 HP 30; always-wait so the cast is the only hit; 30 - 10 = 20, no kill, no clamp; no Provoker/Confusion/Tunnel Vision) | Restore first-by-slot for the bonus-cast path only (`legacyGrantedTargeting` + enemy-side + no targeting) | fails (hits slot 0: `targetId` a, `remainingHp` 40); it is the only golden that fails under this mutation |
+| `golden-b1-granted-cast-default` (bonus-caster, `chancePercent` 100, exactly one enemy-side single-target spell, post-`createCombat` slots [bolt] asserted; enemies slot 0 HP 50, slot 1 HP 30; always-wait so the cast is the only hit; 30 - 10 = 20, no kill, no clamp; no Provoker/Confusion/Tunnel Vision) | Restore first-by-slot for the bonus-cast path only (`legacyGrantedTargeting` + enemy-side + no targeting) | fails (hits slot 0: `targetId` a, `remainingHp` 40); it is the only golden that fails under this mutation |
 
 The castable-draw test also asserts the post-`createCombat` `equippedSpells` order, since fight
 setup prepends innate spells. The new goldens are frozen-sweep-covered too (+4 replay
@@ -1086,7 +1086,7 @@ action).
 
 ### Review changes (PR #72)
 
-- **F1:** `golden-b1-bonus-cast-default` (above), with its discrimination proof.
+- **F1:** `golden-b1-granted-cast-default` (above), with its discrimination proof.
 - **L1:** the B1 attribution row is split into its parts (above).
 - **L2 -- comment-only edits to two existing golden fixtures** (existing fixtures may be edited in
   comments only; verified by stripping comments from the old and new file and comparing the
@@ -1168,11 +1168,11 @@ reverted; only the named golden(s) fail):
 
 | Golden | Mutation | Result |
 |---|---|---|
-| `golden-b2-skipped-turn-refuses-bonus-cast` (seed 9200; Stun applied at fight start, removed by an `on-turn-end` fixture trigger before the granted step, so only the gate refuses; later consumer: E1's `random-enemy` pick over 3 targets, draw #2 = 0.3225 -> CASTER, vs draw #1 = 0.8779 -> D2) | skip gate removed | fails (a `SpellCast` appears) |
+| `golden-b2-skipped-turn-refuses-granted-cast` (seed 9200; Stun applied at fight start, removed by an `on-turn-end` fixture trigger before the granted step, so only the gate refuses; later consumer: E1's `random-enemy` pick over 3 targets, draw #2 = 0.3225 -> CASTER, vs draw #1 = 0.8779 -> D2) | skip gate removed | fails (a `SpellCast` appears) |
 | same | refuse **before** the roll | fails (E1's pick shifts to D2) |
-| `golden-b2-silenced-refuses-bonus-cast` (seed 9211; permanent scoped-cast `suppress-action` fixture trait; the caster still attacks; E1's pick = draw #2 = 0.2864 -> CASTER, vs draw #3 = 0.4192 -> D1) | `checkLegality` removed from `runAction` | fails (a cast lands) |
+| `golden-b2-silenced-refuses-granted-cast` (seed 9211; permanent scoped-cast `suppress-action` fixture trait; the caster still attacks; E1's pick = draw #2 = 0.2864 -> CASTER, vs draw #3 = 0.4192 -> D1) | `checkLegality` removed from `runAction` | fails (a cast lands) |
 | same | draw the gem, then refuse | fails (E1's pick shifts to D1) |
-| `golden-b2-confused-bonus-cast-redirects` (seed 9229; Confusion roll 0.2319 < 0.5, ally pick 0.7761 over [caster, A1, A2] -> A2; default enemy would be E2) | granted casts skip the override pipeline again | fails (cast hits E2) |
+| `golden-b2-confused-granted-cast-redirects` (seed 9229; Confusion roll 0.2319 < 0.5, ally pick 0.7761 over [caster, A1, A2] -> A2; default enemy would be E2) | granted casts skip the override pipeline again | fails (cast hits E2) |
 | `golden-b2-provoke-redirects-echo` (seed 9233; echo chance 50% with a passing first roll 0.1123 and a failing second 0.6661, so exactly one `EchoCastGranted`, no `CascadeTruncated`; the echo's draw #4 = 0.4413 over [P, X, Y] would pick X, a non-provoker) | granted casts skip the override pipeline again | fails (echo hits X) |
 | `golden-b5-fizzle-rule4-retarget` (no RNG; enemies A 30 / B 25 / C 20 with C the unique lowest, wounded to 5/20 at fight start; lethal `on-attack` fires because 5*100 = 500 <= 30*20 = 600, and not on B because 25*100 = 2500 > 30*25 = 750; instance 2 = 20 x 0.3 -> 6 on B) | B5 guard removed | fails (a `DamageDealt` on the corpse) |
 | same | rule 4 back to first-by-slot | fails (instance 2 hits A) |
@@ -1207,7 +1207,7 @@ is below B's, so no slot tie-break is involved).
   makes the slot tie-break pick the first living enemy). The plan review named
   `golden-6v6-scripted.fixture.ts:43`; the stale sentence is in `golden-6v6.fixture.ts` (there is
   no such file name).
-- `golden-b1-bonus-cast-default.fixture.ts` ("(those are C2c)" now says the override pipeline draws
+- `golden-b1-granted-cast-default.fixture.ts` ("(those are C2c)" now says the override pipeline draws
   nothing here).
 
 ### Verification
@@ -1537,9 +1537,9 @@ hand-derived numbers (arithmetic in comments).
 - **Engine:** `types.ts`, `effect-types.ts`, `resolution.ts`, `actions.ts`.
 - **Data:** `data/spells/{core,overgrowth,glimmerdark,rotcap-hollow,index}.ts`.
 - **Fixtures:** `__fixtures__/biomes.ts`; 14 golden fixtures (spell inputs only): `action-observed`,
-  `aoe-cast`, `b1-bonus-cast-default`, `b1-support-heals-own-side`,
-  `b2-confused-bonus-cast-redirects`, `b2-provoke-redirects-echo`, `b2-silenced-refuses-bonus-cast`,
-  `b2-skipped-turn-refuses-bonus-cast`, `b5-cast-fizzle`, `buff-cast`, `castable-draw`, `heal-cast`,
+  `aoe-cast`, `b1-granted-cast-default`, `b1-support-heals-own-side`,
+  `b2-confused-granted-cast-redirects`, `b2-provoke-redirects-echo`, `b2-silenced-refuses-granted-cast`,
+  `b2-skipped-turn-refuses-granted-cast`, `b5-cast-fizzle`, `buff-cast`, `castable-draw`, `heal-cast`,
   `on-action-hooks`, `scoped-suppression`.
 - **Tests re-expressed:** `actions`, `actor-death`, `combat` (the `'none'` test removed),
   `confusion`, `dead-target-pins` (comment), `interpreter`, `resolution`, `splashing`,
@@ -1730,12 +1730,12 @@ Per changed fixture, the difference of `expectedEvents` old vs new, by import:
 
 | Golden | Change |
 |---|---|
-| `golden-b1-bonus-cast-default` | + `TriggerFired` (on-turn-end), + `ActionGranted`; order of the rest unchanged |
-| `golden-b2-confused-bonus-cast-redirects` | same two events added |
+| `golden-b1-granted-cast-default` | + `TriggerFired` (on-turn-end), + `ActionGranted`; order of the rest unchanged |
+| `golden-b2-confused-granted-cast-redirects` | same two events added |
 | `golden-castable-draw` | same two events added |
 | `golden-sorcerer-starter` | same two events added |
-| `golden-b2-silenced-refuses-bonus-cast` | + `TriggerFired` only (the grant is refused at drain: nothing of its own) |
-| `golden-b2-skipped-turn-refuses-bonus-cast` | + one `TriggerFired` (the grant's trigger, declared first) before the Stun-removal `TriggerFired`; still proves both halves (the chance is draw #1, E1's pick is draw #2; then the gate refuses although Stun is gone) |
+| `golden-b2-silenced-refuses-granted-cast` | + `TriggerFired` only (the grant is refused at drain: nothing of its own) |
+| `golden-b2-skipped-turn-refuses-granted-cast` | + one `TriggerFired` (the grant's trigger, declared first) before the Stun-removal `TriggerFired`; still proves both halves (the chance is draw #1, E1's pick is draw #2; then the gate refuses although Stun is gone) |
 | `golden-b2-provoke-redirects-echo` | `EchoCastGranted` -> `ActionGranted` (with `effectId`); the original hit now lands **before** the echo (the echo follows the whole payload); draws #1-#5 unchanged |
 | `golden-resonant-overtone` | same: `EchoCastGranted` -> `ActionGranted`, original hit first; draws #1-#4 unchanged |
 | `golden-b2-provoke-redirects-echo.test.ts` | the one assertion counting `EchoCastGranted` now counts `ActionGranted` |
@@ -1774,9 +1774,18 @@ New goldens (hand-derived; arithmetic and draws in each fixture header):
 ### Corpus-digest attribution (regenerated once, `npm run corpus:update`)
 
 - 522 entries before and after. **128 fights changed; all 128 contain a creature carrying Arcane
-  Surge or Resonant Overtone** (64 Surge only, 64 both; no corpus fight has an Overtone without the
-  Seer). The other **298 fights carrying neither are byte-identical** to the pre-slice digest, as
-  are 96 fights that carry one but whose log did not change. 128 + 298 + 96 = 522.
+  Surge or Resonant Overtone.** Fights by what they carry:
+
+  | Carries | Fights | Changed | Unchanged |
+  |---|---|---|---|
+  | neither | 298 | 0 | 298 |
+  | Overtone only | 20 | 0 | 20 |
+  | Arcane Surge only | 98 | 64 | 34 |
+  | both | 106 | 64 | 42 |
+
+  Total: 128 changed and 394 unchanged; 522 fights in all. Overtone never fires in the 20
+  Overtone-only fights, so none changed. None of the 96 unchanged fights that carry Surge or
+  Overtone shows a `TriggerFired` from either.
 - Changed indices: 300-324, 330, 332-338, 340-349, 365-368, 370-374, 379, 390, 391, 394, 396-399,
   411, 414, 416-418, 421-424, 427, 433, 434, 438-448, 450, 452-474, 481-484, 486-497, 499, 515,
   516, 518, 521 (none in Part A, which is indices 0-299). Fight 433 (the echo's retaliation killing
@@ -1807,16 +1816,9 @@ New goldens (hand-derived; arithmetic and draws in each fixture header):
 
 ### Spec notes (for the docs, before 4.1-F)
 
-- **Stale living-doc text, left for the doc-sync (not edited by this slice):**
-  - the brief's "Deliberate golden changes (4.1-E)" third bullet still says "truncated by a
-    lowered depth cap in the fixture (or by chance)"; the plan-review block above it (real cap, a
-    single-bearer Overtone) is what was built;
-  - CONVENTIONS "One action pipeline" and the brief's vocabulary table describe
-    `ResolutionContext { events, cascade, runAction }`; it is now `{ events, cascade, grants,
-    runAction }` (the `grants` queue is what a response uses; `runAction` is what the drain and the
-    scopes call);
-  - the brief's E section line "`ActionGranted` right after `TriggerFired` when the grant
-    succeeds" (the plan-review block and CONVENTIONS already say it is emitted when the grant runs).
+- The brief's vocabulary-table row for `ResolutionContext` (no `grants`), its E line "inherits
+  depth + 1" and its "Deliberate golden changes (4.1-E)" bullet about a lowered depth cap all
+  predated the plan review. All three are updated in the docs commit on this branch.
 - **4.1-F will meet this:** once DoT ticks move to `on-turn-end`, Arcane Surge's roll (an innate
   effect, so earlier in effect order than statuses) happens before a tick; a Seer then killed by
   that tick still rolled and shows `TriggerFired`, and its queued cast is refused at drain (dead
@@ -1834,5 +1836,14 @@ New goldens (hand-derived; arithmetic and draws in each fixture header):
   (128 entries changed).
 - Tests: `perform-action.test.ts`, `perform-action.data.test.ts` (new); `actions.test.ts`,
   `combat.test.ts`, `effects.test.ts`, `resolution.test.ts`, `species/starters.test.ts`.
-- Needs deleting or renaming: nothing. (Several golden files keep "bonus-cast" in their names; a
-  rename means deleting files, so they are left for you to rename if wanted.)
+- Renamed (`git mv`, fixture + test pairs; "bonus cast" names a mechanism this slice deleted):
+  `golden-b1-bonus-cast-default` -> `golden-b1-granted-cast-default`,
+  `golden-b2-confused-bonus-cast-redirects` -> `golden-b2-confused-granted-cast-redirects`,
+  `golden-b2-silenced-refuses-bonus-cast` -> `golden-b2-silenced-refuses-granted-cast`,
+  `golden-b2-skipped-turn-refuses-bonus-cast` -> `golden-b2-skipped-turn-refuses-granted-cast`. The
+  fixture trait ids and constants went the same way (`bonus-caster-fixture` -> `granted-caster-fixture`,
+  `BONUS_CASTER_*` -> `GRANTED_CASTER_*`); only the `effectId` strings in five goldens' `expectedEvents`
+  changed (the four above and `golden-castable-draw`), every other golden export is identical. The
+  earlier sections' references to the old file names (4.1-C2b, 4.1-C2c and the 4.1-D golden list)
+  were updated to the new names, a one-off approved exception; their prose is as built.
+- Nothing needs deleting.

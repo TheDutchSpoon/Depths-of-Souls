@@ -33,7 +33,7 @@ import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { TRAIT_REGISTRY, SORCERER_STARTER_TRAIT } from '../../data/traits'
 import type { CombatEvent, FightResult } from '../types'
 
-export const SEED = 7 // First mulberry32 draw ~0.0117 -- the bonus-cast roll succeeds (< 50%).
+export const SEED = 7 // First mulberry32 draw ~0.0117 -- the granted cast roll succeeds (< 50%).
 
 const CASTER = createCreatureId('caster')
 const FOE = createCreatureId('foe')

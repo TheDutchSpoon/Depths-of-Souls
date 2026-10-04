@@ -2238,11 +2238,11 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
   })
 
   it('on-action-observed rides the same MAX_TRIGGER_CASCADE_DEPTH guard as every other hook', () => {
-    // No RESPONSE VERB can itself perform an Attack/Cast/Defend/Provoke action -- this fixture's
-    // own plain apply-stat-modifier response can't build a real recursive chain through
-    // on-action-observed alone. (Phase 4 Slice H2: `echoCast` IS now a real exception -- it
-    // bypasses the response vocabulary entirely to re-fire a real Cast; see the dedicated
-    // 'echo-cast' describe block below for its own depth-cap coverage.) This is the same
+    // `perform-action` (4.1-E) is a response that queues a real action, so a chain through
+    // on-action-observed can now be built from responses alone. Its depth coverage is in the
+    // "echo = perform-action(triggering-source)" describe block below and in
+    // golden-e-echo-chain-truncated. This fixture's plain apply-stat-modifier response still can't
+    // chain, which is why the test white-boxes the cascade at the cap. This is the same
     // white-box technique the 'loop safety' describe block above uses for on-damage-taken: fire
     // the hook with a cascade already AT the cap, proving the guard is wired for this hook too,
     // not just the damage-path ones.

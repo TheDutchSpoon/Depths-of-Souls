@@ -62,7 +62,7 @@ function resolve(fight: CorpusFight): ResolvedFight {
 }
 
 /** Do all of `spell`'s effects show up as consequence events of the cast at `events[at]`? The
- * window runs from the cast to the next cast or turn end (an echo or bonus cast opens its own). */
+ * window runs from the cast to the next cast or turn end (an echo or granted cast opens its own). */
 function castLanded(events: readonly CombatEvent[], at: number, spell: Spell): boolean {
   const cast = events[at]
   if (cast?.type !== 'SpellCast') throw new Error('castLanded: not a SpellCast')
