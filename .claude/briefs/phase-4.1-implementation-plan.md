@@ -612,9 +612,10 @@ parity bug**, not a golden to regenerate.
 ## 4.1-D2 — The corpus covers all real content
 
 Item: from the **PR #74 review** (ASSUMPTION 40). A **test-only PR** between D and E, so E and F
-both start from a digest that sees every spell and status (CONVENTIONS "Corpus digest"). Today the
-500 corpus fights cast only 10 of the 25 registered spells and never apply Stun, Weaken or
-Vulnerability, and F rewrites every status. It is its own slice, not E's first commit, because a PR
+both start from a digest that sees every spell, status and specialization perk (CONVENTIONS
+"Corpus digest"). Today the 500 corpus fights cast only 10 of the 25 registered spells, never apply
+Stun, Weaken or Vulnerability, and never include a single perk (the corpus passes no player-wide
+effects). E rewrites extra casts and grants, and F rewrites every status. It is its own slice, not E's first commit, because a PR
 keeps one golden policy and regenerates the digest at most once (WORKFLOWS "Golden policy"), and E
 regenerates it for its own deliberate changes.
 
@@ -622,12 +623,31 @@ regenerates it for its own deliberate changes.
   real content only (shipped species, spells, scripts and specializations; no `__fixtures__`). The
   fight shapes are the plan's (ASSUMPTION-tagged). Each spell's effects must actually land in its
   fight: a heal finds a wounded ally, a status finds a living target.
-- **A coverage test** over the whole corpus: every id in `ALL_SPELLS` has a `SpellCast`, and every
-  id in `STATUS_REGISTRY` has a `StatusApplied`. Both lists are read from the registries, never
-  hand-copied. A status no shipped content can apply goes on an explicit exemption list in the test,
-  each entry with its reason (expected: `stun`, applied only by the Phase-3 mechanism trait
-  `reeling`, which no shipped creature carries; the plan confirms or corrects this).
-- **No engine, data or golden change.** Only `__corpus__/`, the digest fixture and the new test.
+- **Perk fights:** one per specialization to start, with every perk of that spec at max level (a
+  fully maxed spec, which the design allows), passed as player-wide effects. Add variant fights
+  (another party or scripts, a longer fight, or the spec without a masking perk) wherever a perk
+  doesn't yet matter (below). The evidence sets the number of fights.
+- **A coverage test** over the whole corpus, every list read from its registry, never hand-copied:
+  - every id in `ALL_SPELLS` has a `SpellCast` whose effects all landed (the plan's window check);
+  - every id in `STATUS_REGISTRY` has a `StatusApplied`;
+  - **every perk with non-empty effects matters:** its fight re-run with only that perk removed
+    produces a different event log. That catches a `TriggerFired`, a changed number or a changed
+    random draw alike, without per-perk event knowledge. Perks with empty effects (the `p8`
+    masteries today) drop out by rule.
+  - Exemptions are explicit lists in the test, each entry with its reason. Expected: status `stun`
+    (applied only by the Phase-3 mechanism trait `reeling`, which no shipped creature carries) and
+    perk `clear-mind` (immunity to Silenced, which isn't authored until 4.1-F). The plan confirms
+    or corrects both.
+  - An exempt item that *is* covered fails the test, so an exemption can't outlive its reason. When
+    F authors Silenced, Clear Mind starts to matter and F must drop its exemption.
+- **Coverage must not hang on a lucky seed.** Where coverage rides on a chance roll (Concussive
+  Blows is 25% at max), the fight makes the roll happen many times, and the PR reports the roll
+  count and the resulting chance of no hit. A later slice's change to the RNG draw order must not
+  silently drop coverage.
+- **No engine, data or golden change.** The scope is `__corpus__/` (Part C, plus a shared
+  `createCorpusCombat(fight)` and an optional `playerEffects` on `CorpusFight`), the digest fixture,
+  a behaviour-neutral change to `corpus-digest.test.ts` (it calls `createCorpusCombat`), and the new
+  coverage test.
 
 ### Golden policy and acceptance (4.1-D2)
 - **Byte-identical:** every golden unchanged (expected exports compared by import). The digest is
@@ -636,8 +656,21 @@ regenerates it for its own deliberate changes.
 - **Proof it now sees what it missed:** for three previously invisible items (a spell that was never
   cast, Weaken, Vulnerability), show that changing it alone fails the new digest, and that the same
   change passed the pre-slice digest.
-- The coverage test is shown failing when a spell or status is added to its registry without
-  coverage (e.g. a throwaway registry entry), and when the exemption list is emptied.
+- The coverage test is shown failing when a spell, a status or a perk is added to its registry
+  without coverage (e.g. a throwaway registry entry), when an exemption list is emptied, and when
+  an exempt item is covered.
+- A table in the PR: for each spell, status and perk, the fight that covers it and the evidence (the
+  landing event, or the hash change when the perk is removed).
+- **Decided at the PR #77 review:**
+  - Perk **`aggressive`** joins `clear-mind` on the exemption list: it is immunity to Pacified,
+    which isn't authored until 4.1-F (the same rule; the brief only expected `clear-mind`).
+  - Damage-modifier statuses must be **exercised**, not only applied (their bearer deals or takes
+    damage while they hold), or their magnitude is invisible to the digest. Built in the PR.
+  - Corpus loadouts must be reachable: every corpus creature's equipped spells match its affinity,
+    asserted in the coverage test.
+  - Chance-based coverage is proven by a seed sweep over Part C's combat seeds, with the worst case
+    reported. Lucidity's fight is made robust (its Puppet String casters must survive long enough
+    to keep the party Confused).
 
 ## 4.1-E — `perform-action`
 
@@ -729,6 +762,10 @@ Items: **A3, D6 status timing, D5, G2.**
 - Content doc entries move from the pending section into the Overgrowth spell table.
 - Focused goldens: Silence stops a caster's cast (it falls through its script); Pacify stops an
   attacker; Clear Mind / Aggressive immunity lets the action through while `has-status` stays true.
+- **Corpus coverage:** drop the `clear-mind` and `aggressive` perk exemptions from
+  `corpus-coverage.test.ts` (an exempt perk that matters fails the test). Both must then matter in
+  a corpus fight; add a coverage fight if no existing one shows it, and regenerate the digest in
+  the same PR.
 
 ### Deliberate golden changes (4.1-F)
 - **Every status golden changes timing**; the Phase-3 round-end goldens (`golden-dot`,
@@ -845,6 +882,11 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
   58 to 101 times on one creature. In corpus fight 374 the Unicorn reaches about 3 × 10¹⁰ effective
   Defence, damage falls to the chip floor, and a Defence-scaled retaliation (Retaliating Shell) hits
   for 75,204. Other traits reach 100–200 stacks too (fights 9, 83, 344, 348).
+  - **More data (PR #77 review, after 4.1-D2):** the Part C coverage fights face a wall of
+    Shieldbarers that Provoke and Defend for 100 rounds, so they stack hardest. In fight 507
+    (Bramble Ward) Rallying Cry fires 513 times and Bramble Ward 300 times, effective Defence
+    reaches about 1.6 × 10²³ and one creature carries 201 active effects. These are coverage
+    fights, not balance data, so the simulator's draw-rate figures should come from its own runs.
   - **The rule is locked**: `stat-modifier` stacking is multiplicative and uncapped (GAME_DESIGN,
     "Player-facing treatment"). The fix, if the report shows one is needed, is per content item:
     the factor, or how often it can fire (for example once per turn, or a trigger condition), and
@@ -1003,9 +1045,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     `revive`: every verb with a `target` skips a dead one (`grant-action-state` included), and
     `cast-target` resolves to the landed target without an alive check. Targetless `consume-stacks`
     runs whenever its trigger does, including `on-death`.
-40. **Confirmed (design owner, PR #74 review).** The corpus covers all real content: every
-    registered spell is cast and every registered status applied (explicit, reasoned exemptions
-    only), enforced by a test. It lands as its own test-only slice, **4.1-D2**, between D and E, so
+40. **Confirmed (design owner, PR #74 review; perks added at the 4.1-D2 plan review).** The corpus
+    covers all real content: every registered spell is cast with its effects landing, every
+    registered status is applied, and every specialization perk with effects matters (removing it
+    changes its fight's event log). Explicit, reasoned exemptions only, enforced by a test. It lands as its own test-only slice, **4.1-D2**, between D and E, so
     E and F start from full coverage (one golden policy per PR, one digest regeneration per PR).
 
 ## Sequencing summary

@@ -1590,13 +1590,33 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
     as such.
   - **The corpus:** generated floors across every shipped biome, boss floors included, plus the
     shipped starters and Unicorn. Bonus-cast, echo, Provoke and Confusion must all fire in it.
-  - **It covers all real content** (PR #74 review, built in 4.1-D2). Every spell in `ALL_SPELLS` is
-    cast and every status in `STATUS_REGISTRY` is applied at least once, and a test enforces both
-    against the registries, so new content is covered or fails loudly. A status no shipped content
-    can apply goes on the test's explicit exemption list, each entry with its reason. Generated
-    floors alone left 15 of 25 spells and three statuses (Stun, Weaken, Vulnerability) out of the
-    corpus, so a change to them was invisible to the digest. Coverage fights are appended, so
-    adding them never changes an existing digest entry.
+  - **It covers all real content** (PR #74 review, built in 4.1-D2). A test enforces these
+    against the registries, so new content is covered or fails loudly:
+    - every spell in `ALL_SPELLS` is cast with its effects landing: each effect's consequence
+      event, from the caster, on the cast's target (or on the caster, for a `self` effect);
+    - every status in `STATUS_REGISTRY` is applied, and every damage-modifier status is
+      **exercised**: its bearer deals (a `dealt` modifier) or takes (a `taken` one) damage while
+      it holds. An applied modifier that never meets a hit has a magnitude the digest can't see;
+    - every specialization perk with effects **matters**: re-running its fight with only that perk
+      removed changes the event log. Presence isn't enough, because a perk whose trigger never
+      happens, or that another perk masks, is invisible to the digest;
+    - every corpus creature's equipped spells match its affinity (equip-gating), so the corpus
+      holds only loadouts the game can produce. Innate spells are added at fight setup and aren't
+      part of the input loadout.
+  - **Perk effect ids are positional** (`perk-N`, numbered across the side's effect list). A log
+    comparison across different perk sets anonymises them, or removing one perk renumbers every
+    later one and makes it look like it matters.
+  - Anything no shipped content can reach goes on the test's explicit exemption list, each entry
+    with its reason. An exempt item that is covered fails the test, so the slice that makes it
+    reachable must drop the exemption.
+  - Coverage never rides on one lucky seed: a chance-based mechanism gets enough rolls in its fight
+    that a change to the RNG draw order can't silently drop it. The PR shows this with a **seed
+    sweep** over the coverage fights' combat seeds, and reports the worst case the sweep saw, not
+    the roll count at the committed seed. (PR #77 review: Lucidity had 9 rolls at the committed
+    seed and failed the whole test at 4 of 200 offsets, because its casters died early.)
+  - Before 4.1-D2, generated floors left 15 of 25 spells, three statuses (Stun, Weaken,
+    Vulnerability) and every perk out of the corpus, so a change to them was invisible. Coverage
+    fights are appended, so adding them never changes an existing digest entry.
   - **Why it exists:** it answers "did any behaviour move?", which scenario goldens can't. A
     change that only shows up in combinations no golden pins passes them all.
   - **Byte-identical PRs leave it unchanged.**
