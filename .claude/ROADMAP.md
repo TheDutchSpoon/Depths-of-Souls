@@ -229,6 +229,8 @@ finding labels B1, A4, … are a separate scheme.)
   for every action source; pre-hit fizzle; the turn skeleton (turn-start cleanup, `ActionStateEnded`,
   `TurnEnded` last); `is-provoking` deleted.
 - **4.1-D — spells carry responses (byte-identical):** `Spell.effects`, `cast-target`.
+- **4.1-D2 — the corpus covers all real content (test-only):** every registered spell cast and
+  every registered status applied in the corpus, enforced by a test.
 - **4.1-E — `perform-action`:** actions atomic, `ActionGranted`, "no side doors"; bonus-cast and
   echo-cast become data.
 - **4.1-F — statuses & status timing:** statuses as effect containers (`action-lock`, `TurnSkipped`,

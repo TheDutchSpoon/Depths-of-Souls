@@ -1590,7 +1590,7 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
     as such.
   - **The corpus:** generated floors across every shipped biome, boss floors included, plus the
     shipped starters and Unicorn. Bonus-cast, echo, Provoke and Confusion must all fire in it.
-  - **It covers all real content** (PR #74 review, built in 4.1-E). Every spell in `ALL_SPELLS` is
+  - **It covers all real content** (PR #74 review, built in 4.1-D2). Every spell in `ALL_SPELLS` is
     cast and every status in `STATUS_REGISTRY` is applied at least once, and a test enforces both
     against the registries, so new content is covered or fails loudly. A status no shipped content
     can apply goes on the test's explicit exemption list, each entry with its reason. Generated

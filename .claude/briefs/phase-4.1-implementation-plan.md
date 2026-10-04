@@ -60,6 +60,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-B** | Engine foundations: plain-data state, instance ids, fight setup, conditions, innate spells, revive cap | **Byte-identical, all goldens** |
 | **4.1-C** | One action pipeline + turn skeleton, shipped as **C1** (turn skeleton), then **C2a** (pipeline plumbing), **C2b** (B1 + castable gem draw) and **C2c** (B2, B5, the dead-actor rule, the golden runner) | C1: deliberate, listed; C2a–C2c: **byte-identical, all existing goldens**; the corpus digest changes in C2b and C2c, attributed |
 | **4.1-D** | Spells carry responses | **Byte-identical, all goldens (hard requirement)** |
+| **4.1-D2** | The corpus covers all real content (test-only, from the PR #74 review) | **Byte-identical**: every golden and every existing digest entry unchanged; the digest only gains appended coverage entries |
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify | Deliberate changes, listed |
 | **4.1-G** | Hub actions + enemy behaviour | Engine goldens untouched except any listed; content tests change |
@@ -608,6 +609,36 @@ parity bug**, not a golden to regenerate.
 
 ---
 
+## 4.1-D2 — The corpus covers all real content
+
+Item: from the **PR #74 review** (ASSUMPTION 40). A **test-only PR** between D and E, so E and F
+both start from a digest that sees every spell and status (CONVENTIONS "Corpus digest"). Today the
+500 corpus fights cast only 10 of the 25 registered spells and never apply Stun, Weaken or
+Vulnerability, and F rewrites every status. It is its own slice, not E's first commit, because a PR
+keeps one golden policy and regenerates the digest at most once (WORKFLOWS "Golden policy"), and E
+regenerates it for its own deliberate changes.
+
+- **Coverage fights** (a Part C in `__corpus__/corpus.ts`), **appended after Part B**, built from
+  real content only (shipped species, spells, scripts and specializations; no `__fixtures__`). The
+  fight shapes are the plan's (ASSUMPTION-tagged). Each spell's effects must actually land in its
+  fight: a heal finds a wounded ally, a status finds a living target.
+- **A coverage test** over the whole corpus: every id in `ALL_SPELLS` has a `SpellCast`, and every
+  id in `STATUS_REGISTRY` has a `StatusApplied`. Both lists are read from the registries, never
+  hand-copied. A status no shipped content can apply goes on an explicit exemption list in the test,
+  each entry with its reason (expected: `stun`, applied only by the Phase-3 mechanism trait
+  `reeling`, which no shipped creature carries; the plan confirms or corrects this).
+- **No engine, data or golden change.** Only `__corpus__/`, the digest fixture and the new test.
+
+### Golden policy and acceptance (4.1-D2)
+- **Byte-identical:** every golden unchanged (expected exports compared by import). The digest is
+  regenerated once, through `corpus:update`; its first 500 entries must be **byte-identical**
+  (shown mechanically), and only the appended entries are new.
+- **Proof it now sees what it missed:** for three previously invisible items (a spell that was never
+  cast, Weaken, Vulnerability), show that changing it alone fails the new digest, and that the same
+  change passed the pre-slice digest.
+- The coverage test is shown failing when a spell or status is added to its registry without
+  coverage (e.g. a throwaway registry entry), and when the exemption list is emptied.
+
 ## 4.1-E — `perform-action`
 
 Item: **A2.** Bonus-cast and echo-cast become data.
@@ -639,27 +670,6 @@ Item: **A2.** Bonus-cast and echo-cast become data.
   `perform-action` and keeps proving both halves (the roll happens; the grant is refused).
 - **RNG draw order**, documented in code and in the golden comments: chance gate at trigger time →
   (after the granting action completes) random gem → random target.
-
-### First commit: the corpus covers all real content (PR #74 review)
-
-A **test-only commit, before any engine change**, so E and F both start from a digest that sees
-every spell and status (CONVENTIONS "Corpus digest"). Today the 500 corpus fights cast only 10 of
-the 25 registered spells and never apply Stun, Weaken or Vulnerability, and F rewrites every status.
-
-- **Coverage fights** (a Part C in `__corpus__/corpus.ts`), **appended after Part B**, built from
-  real content only (shipped species, spells, scripts and specializations; no `__fixtures__`). The
-  fight shapes are the plan's (ASSUMPTION-tagged). Each spell's effects must actually land in its
-  fight: a heal finds a wounded ally, a status finds a living target.
-- **A coverage test** over the whole corpus: every id in `ALL_SPELLS` has a `SpellCast`, and every
-  id in `STATUS_REGISTRY` has a `StatusApplied`. Both lists are read from the registries, never
-  hand-copied. A status no shipped content can apply goes on an explicit exemption list in the test,
-  each entry with its reason (expected: `stun`, applied only by the Phase-3 mechanism trait
-  `reeling`, which no shipped creature carries; the plan confirms or corrects this).
-- **Digest:** regenerated through `corpus:update`. The first 500 entries must be **byte-identical**
-  (show it mechanically); only the appended entries are new.
-- **Proof it now sees what it missed:** for three previously invisible items (a spell that was
-  never cast, Weaken, Vulnerability), show that changing it alone fails the digest. Show that the
-  same change on the pre-commit corpus passed.
 
 ### Deliberate golden changes (4.1-E)
 - **Bonus-cast goldens** gain `TriggerFired` + `ActionGranted`; the cast sits in the granted-actions
@@ -799,7 +809,7 @@ Items: **D2, G4, §6, D4** (including B1's "a cast-role creature with no usable 
 ### Acceptance (4.1-G)
 - Store tests for every new action and reason; `can…` agreement tests.
 - Generation tests: full distinct sets, the safety net on a fixture pool of 2, the cast-role throw.
-- The corpus coverage test (from 4.1-E) passes with G's three new spells. With full gem sets most
+- The corpus coverage test (from 4.1-D2) passes with G's three new spells. With full gem sets most
   spells get cast in generated fights, but a spell still missing needs its own coverage fight.
 - **Mechanism goldens unchanged** (they use fixtures). The per-biome content goldens (e.g.
   `golden-broodmother`, `golden-pollinator-pollenlord`, also in `src/engine/__golden__`) and the
@@ -995,13 +1005,14 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     runs whenever its trigger does, including `on-death`.
 40. **Confirmed (design owner, PR #74 review).** The corpus covers all real content: every
     registered spell is cast and every registered status applied (explicit, reasoned exemptions
-    only), enforced by a test. It lands as the first, test-only commit of 4.1-E, so E and F start
-    from full coverage.
+    only), enforced by a test. It lands as its own test-only slice, **4.1-D2**, between D and E, so
+    E and F start from full coverage (one golden policy per PR, one digest regeneration per PR).
 
 ## Sequencing summary
 
 `4.1-A` (data, store, generation) → `4.1-B` (engine foundations, byte-identical) → `4.1-C`
-(action pipeline + turn skeleton) → `4.1-D` (spells carry responses, byte-identical) → `4.1-E`
+(action pipeline + turn skeleton) → `4.1-D` (spells carry responses, byte-identical) → `4.1-D2`
+(the corpus covers all real content, test-only) → `4.1-E`
 (`perform-action`) → `4.1-F` (status containers + timing + Web + Silence/Pacify) → `4.1-G` (hub
 actions + enemy behaviour) → `4.1-H` (simulator + tuning) → then the Phase 4.5 demo brief. Each PR
 branches from `main` after the previous merge.
