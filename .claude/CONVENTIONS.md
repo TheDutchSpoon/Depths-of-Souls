@@ -227,13 +227,17 @@ through the one response path is. New verbs still need a review. Splashing/Annih
 `action-instance` are **not** side doors: they modify the *same* action, so being read in the
 attack executor is correct.
 
-- **No response acts on a dead creature, except `revive`** (PR #74 review). This is a rule of the
-  verbs, not of any target kind: `deal-damage` and `heal` always skipped a dead target, and
-  `apply-status`, `apply-stat-modifier` and `remove-status` skip one too, whether it was named as
-  `self`, `triggering-source`, a selector or `cast-target`. No event is emitted for the skip. It is
-  the verb-level half of "dead creatures fire only `on-death`" (interaction edges): a corpse neither
-  reacts nor is acted on. Revive resets a creature's effects anyway, so a status on a corpse could
-  never matter; the rule keeps the log honest and removes the case from every future verb.
+- **No response acts on a dead target, except `revive`** (PR #74 review). This is a rule of the
+  verbs, not of any target kind: every verb with a `target` skips a dead one, whether it was named
+  as `self`, `triggering-source`, a selector or `cast-target`. That is `deal-damage`, `heal`,
+  `apply-status`, `apply-stat-modifier`, `remove-status` and `grant-action-state` today, and every
+  future targeted verb by default. No event is emitted for the skip. It is the verb-level half of
+  "dead creatures fire only `on-death`" (interaction edges): a corpse neither reacts nor is acted
+  on. Revive resets a creature's effects and action state anyway, so nothing done to a corpse could
+  matter; the rule keeps the log honest and removes the case from every future verb.
+  `consume-stacks` has no target: it spends the *firing* creature's own stacks as part of that
+  creature's trigger, so it runs whenever its trigger does, including an `on-death` trigger firing
+  as the creature dies. Its wrapped effect follows the rule like any other response.
 - **`perform-action`** (Phase 4.1-E, A2) — `{ kind: 'perform-action', actor: 'self' |
   'triggering-source', intent }`, where `intent` is the same rule-shaped intent the action pipeline
   takes (`{ action: RuleAction, targeting?: TargetSelector }`, with `gemSlot: 'random'` and a `'random'`

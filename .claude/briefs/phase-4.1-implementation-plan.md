@@ -596,8 +596,9 @@ parity bug**, not a golden to regenerate.
     ran inside a spell is removed. Goldens and the corpus are unchanged; trait `scalingStat` heals
     with a count move from `(stat × spellPower) × count`, accepted as float noise (Necromoss can
     differ by 1 HP on rare inputs).
-  - No response acts on a dead creature except `revive` (a verb rule, whatever the target kind);
-    `cast-target` is simply the landed target.
+  - No response acts on a dead target except `revive`: every targeted verb skips one (a verb
+    rule, whatever the target kind), `grant-action-state` included. `cast-target` is simply the
+    landed target. Targetless `consume-stacks` runs whenever its trigger does.
   - The spell validator also requires cast-flavored damage (`damageSource` resolves to `'cast'`),
     `offStat: 'cast'` when an `offStat` is used, and exactly one magnitude mode.
 
@@ -965,8 +966,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     rejected: separate orders per verb (zero shipped change, but two formulas for no design reason)
     and an epsilon before the floor (can't guarantee zero change; on the damage floor it changes
     corpus fights).
-39. **Confirmed (design owner, PR #74 review).** No response acts on a dead creature except
-    `revive`; `cast-target` resolves to the landed target without an alive check.
+39. **Confirmed (design owner, PR #74 review).** No response acts on a dead target except
+    `revive`: every verb with a `target` skips a dead one (`grant-action-state` included), and
+    `cast-target` resolves to the landed target without an alive check. Targetless `consume-stacks`
+    runs whenever its trigger does, including `on-death`.
 
 ## Sequencing summary
 
