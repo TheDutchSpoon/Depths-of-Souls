@@ -158,8 +158,9 @@ Gloomjaw Stalker openers. Update the creature descriptions when the roles land.
 **Resonant Overtone's echo timing (4.1-E):** the echo becomes an ordinary "perform an action"
 response. The chance, the random gem and the random target are unchanged, but the echoed cast now
 happens **after the original cast has fully resolved** (all its hits and effects), instead of in the
-middle of it, and it obeys every action rule (a Silenced caster can't echo). The log shows
-`ActionGranted` instead of `EchoCastGranted`.
+middle of it, and it obeys every action rule (a Silenced caster can't echo, and a caster killed
+during its own cast, by a retaliation say, loses the echo). The log shows `ActionGranted` instead
+of `EchoCastGranted`.
 
 **Status timing (4.1-F):** every status's duration (Glow, Grant Act First, the Regen from
 Afterglow, the Web from Disorient, the Vulnerability from Blinding Flare) counts the **bearer's own
