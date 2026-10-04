@@ -1393,6 +1393,15 @@ describe('the verb rule: no response acts on a corpse', () => {
     expect(corpse.activeEffects).toEqual(before)
   })
 
+  it('grant-action-state, from a trait: the dead triggering-source is not set defending', () => {
+    const { corpse } = killVictimThenTraitResponds({
+      kind: 'grant-action-state',
+      target: { kind: 'triggering-source' },
+      defending: true,
+    })
+    expect(corpse.defending).toBe(false)
+  })
+
   it('apply-status, from a trait: nothing is applied to the dead triggering-source', () => {
     const { events, corpse, before } = killVictimThenTraitResponds({
       kind: 'apply-status',

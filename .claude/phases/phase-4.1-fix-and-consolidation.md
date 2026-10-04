@@ -1400,10 +1400,12 @@ combinations.
   power fraction or a `magnitudeSource` count). The `castPowerFraction !== undefined` branch is
   gone, so nothing in `executeResponse` asks whether a heal runs inside a spell. That is the order
   `deal-damage` uses in every mode and `heal.offStat` gets through `getOffensiveStat`.
-- **The verb rule (review item 3):** `apply-status`, `apply-stat-modifier` and `remove-status` skip a
-  target that is not alive, with no event, whatever the target kind (`deal-damage` and `heal` already
-  did; `revive` is the one verb that targets the dead). `cast-target` therefore resolves to
-  `[castTarget]` with no alive check.
+- **The verb rule (review item 3, completed in round 2):** `apply-status`, `apply-stat-modifier`,
+  `remove-status` and `grant-action-state` skip a target that is not alive, with no event, whatever
+  the target kind (`deal-damage` and `heal` already did; `revive` is the one verb that targets the
+  dead). `cast-target` therefore resolves to `[castTarget]` with no alive check. `consume-stacks`
+  is unchanged: it has no target and spends the firing creature's own stacks, so it runs whenever
+  its trigger does, `on-death` included.
 - **Dropped:** `Spell.scalingStat: 'none'` and its one unit test (ASSUMPTION 37).
 - **Re-expression:** every spell in `src/data/spells/*`, `__fixtures__/biomes.ts`, 14 golden
   fixtures and the spell-carrying test files (see "Files changed"). A one-off codemod rewrote the
@@ -1448,6 +1450,7 @@ restores the file; the files were compared byte-for-byte afterwards).
 | Item 3: `apply-status` skips a corpse                     | spell `[deal-damage cast-target, apply-status self]` whose retaliation kills the caster; and a trait `apply-status` on a dead `triggering-source`        | guard removed -> both fail (+ `dead-target-pins`, corpus)                                                                                                                                                                                                                          |
 | Item 3: `apply-stat-modifier` skips a corpse              | the same spell shape with `apply-stat-modifier self`                                                                                                      | guard removed -> that test fails                                                                                                                                                                                                                                                   |
 | Item 3: `remove-status` skips a corpse                    | trait `remove-status` on a `triggering-source` that died earlier in the chain (no `StatusExpired`, corpse effect list unchanged)                          | guard removed -> that test fails                                                                                                                                                                                                                                                   |
+| Item 3 (round 2): `grant-action-state` skips a corpse | trait `grant-action-state` (`defending: true`) on a dead `triggering-source` (the dead victim's `defending` stays false) | guard removed -> that test fails (the only failure) |
 
 **Note: B5's `continue` and the AOE alive-skip are no longer the only guard** for a `cast-target`
 effect: no verb acts on a dead target, so a dead landed target already gets nothing. Removing either
@@ -1478,9 +1481,9 @@ hand-derived numbers (arithmetic in comments).
 - **Corpus digest:** `git diff --stat -- src/engine/__corpus__` is empty, `corpus:update` was never
   run, and `corpus-digest.test.ts` passes.
 - **Test count, file by file** (per-test names compared, `main` baseline vs branch): 127 files / 741
-  tests -> 128 files / **785 tests**. The only differences: `combat.test.ts` 39 -> 38 (the retired
-  `'none'` test) and the new `spell-effects.test.ts` (0 -> 45: 33 from the build, 12 from the review
-  items). Every other file has the same tests with the same names.
+  tests -> 128 files / **786 tests**. The only differences: `combat.test.ts` 39 -> 38 (the retired
+  `'none'` test) and the new `spell-effects.test.ts` (0 -> 46: 33 from the build, 12 from the review
+  items, 1 from round 2). Every other file has the same tests with the same names.
 - **Every registered spell, field by field.** All **25** spells in `ALL_SPELLS` were compared against
   their `main` shape through the documented mapping (payload / `spellPower` / `scalingStat` /
   `statModifier` / `appliesStatus` / `targetSide ?? 'enemy'` / `unlockedAtBiome ?? 1` -> `effects`),
@@ -1497,7 +1500,7 @@ hand-derived numbers (arithmetic in comments).
   counts on both**). The other 15 spells are covered only by the field-by-field check above, the
   golden suite and the equivalence tests, not by the corpus digest.
 - **Gates** (Node v24.19.0, `npm ci` run first, `vitest 5.0.1`): `npx tsc -b`, `npm run lint`,
-  `npm run format:check`, `npm run build` clean; `npm run test`: 785 passed. `src/engine/__corpus__`
+  `npm run format:check`, `npm run build` clean; `npm run test`: 786 passed. `src/engine/__corpus__`
   unchanged; no `__golden__/*.test.ts` changed; golden `expected*` / `SEED` / `TURN_STEPS` exports
   deep-equal to `main`'s (re-run on the final tree).
 - **Stale comments (review item 4).** `git grep -n "appliesStatus\|applyCastPayload\|resolveSpellOffStat\|dealDamageWithOffStat\|applyStatusIfAlive" -- src`
@@ -1520,13 +1523,13 @@ hand-derived numbers (arithmetic in comments).
 ### Spec notes (for the docs, before 4.1-E)
 
 - **Redundant-but-load-bearing guards.** With the verb rule, the B5 `continue` and the AOE
-  alive-skip are only observable through `self` effects. CONVENTIONS should say the loop-level guards
-  exist for the whole list, not just the `cast-target` effects (a one-line note under "Spells carry
-  responses").
+  alive-skip are only observable through `self` effects. **Landed in the PR #74 review doc-sync** (CONVENTIONS "Spells carry responses"): the loop-level
+  guards exist for the whole list, not just the `cast-target` effects.
 - **`self` and B5 fizzle.** A `self` effect does **not** run when the landed target died in its own
   pre-hit hooks (B5: nothing from the list), but **does** run when the target died to the spell's own
   damage (atomic list): Life Siphon still heals its caster for a killing blow. That follows from the
-  confirmed rules; worth stating in the docs so Slice G's Life Siphon test expectation is explicit.
+  confirmed rules; **Landed in the PR #74 review doc-sync** (CONVENTIONS "Spells carry responses"), so Slice G's Life
+  Siphon test expectation is explicit.
 - Nothing else surfaced.
 
 ### Files changed
@@ -1542,4 +1545,4 @@ hand-derived numbers (arithmetic in comments).
   `confusion`, `dead-target-pins` (comment), `interpreter`, `resolution`, `splashing`,
   `support-spells` in `src/engine`; `data/spells/index.test.ts` (dedup key over the primary
   effect); the three `data/species/*.test.ts` (status spells read off `effects`).
-- **New:** `src/engine/spell-effects.test.ts` (45 tests).
+- **New:** `src/engine/spell-effects.test.ts` (46 tests).

@@ -939,6 +939,8 @@ export function executeResponse(
     case 'grant-action-state': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
+        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D round 2).
+        if (!findCreature(working, targetId)?.alive) continue
         working = updateCreature(working, targetId, {
           ...(response.defending ? { defending: true } : {}),
           ...(response.provoking ? { provoking: true } : {}),
