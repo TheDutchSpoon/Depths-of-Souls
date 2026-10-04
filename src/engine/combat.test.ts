@@ -1107,11 +1107,22 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
   })
 })
 
-describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () => {
-  const BONUS_CASTER_FIXTURE: Trait = {
-    id: 'bonus-caster-fixture',
-    name: 'Bonus Caster (fixture)',
-    effects: [{ category: 'bonus-cast', chancePercent: 50 }],
+describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4.1-E)', () => {
+  const GRANTED_CASTER_FIXTURE: Trait = {
+    id: 'granted-caster-fixture',
+    name: 'Granted Caster (fixture)',
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-turn-end',
+        chancePercent: 50,
+        response: {
+          kind: 'perform-action',
+          actor: 'self',
+          intent: { action: { kind: 'cast', gemSlot: 'random' } },
+        },
+      },
+    ],
   }
 
   // Phase 4.1-B (B-1): CombatState.rng is plain data, computed from `position` via real
@@ -1134,25 +1145,25 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
       {
         id: 'caster',
         scriptId: 'always-wait',
-        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
         equippedSpells: [EMBER_LANCE],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', health: 100, speed: 1 }])
-    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    const traits = new Map([[GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE]])
     let state = createCombat({
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
       registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
     })
-    // Bonus-cast rolls succeed (first draw < 0.5); the second draw picks equipped slot 0
+    // Granted-cast rolls succeed (first draw < 0.5); the second draw picks equipped slot 0
     // regardless of its value (only one equipped slot).
     state = { ...state, rng: { position: SUCCEEDS_POSITION } }
     const { events } = resolveTurn(state)
 
     // Phase 4.1-C (D6): TurnEnded is always the turn's last event -- the granted-actions step
-    // (bonus-cast) now fires BEFORE it, not after (Phase 4 fired it after).
+    // (the queued perform-action grant) now runs BEFORE it, not after (Phase 4 fired it after).
     const turnEndedIndex = events.findIndex((e) => e.type === 'TurnEnded')
     const spellCastIndex = events.findIndex(isSpellCast)
     expect(spellCastIndex).toBeLessThan(turnEndedIndex)
@@ -1170,12 +1181,12 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
       {
         id: 'caster',
         scriptId: 'always-wait',
-        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
         equippedSpells: [EMBER_LANCE],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    const traits = new Map([[GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE]])
     let state = createCombat({
       seed: 1,
       player: { party: player },
@@ -1192,12 +1203,12 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
       {
         id: 'caster',
         scriptId: 'always-wait',
-        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
         equippedSpells: [null, null, null],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    const traits = new Map([[GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE]])
     let state = createCombat({
       seed: 1,
       player: { party: player },
@@ -1214,12 +1225,12 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
       {
         id: 'caster',
         scriptId: 'always-wait',
-        innateTraitIds: [BONUS_CASTER_FIXTURE.id],
+        innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
         equippedSpells: [CINDER_NOVA],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe1' }, { id: 'foe2' }])
-    const traits = new Map([[BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE]])
+    const traits = new Map([[GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE]])
     let state = createCombat({
       seed: 1,
       player: { party: player },

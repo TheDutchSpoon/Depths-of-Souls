@@ -194,14 +194,13 @@ export const RESONANT_ADEPT_TRAIT: Trait = {
 /** Resonant Overtone (rare, amplifier): PR #60 review -- replaces the previous "gain both
  * stats" (a bigger numeric copy of Chorus+Adept) with echo-cast, species-locked.md's actual
  * spec'd mechanic: `on-ally-action (cast) -> 10% the caster echo-casts a random one of its own
- * spells` (non-stacking; echoes are themselves observable -> chains). Built on the `echoCast`
- * primitive (effect-types.ts's `TriggeredDef.echoCast`, CONVENTIONS' H2 addenda) -- NOT a new
- * response verb, reusing the bonus-cast pattern. `response` is a structurally-required but
- * functionally-inert placeholder (a `grant-action-state` with neither flag set is a true no-op)
- * -- never actually executed; firing this effect runs a real granted cast through the action
- * pipeline instead (Phase 4.1-C2a: `ctx.runAction`, see fireHook's own echoCast branch,
- * resolution.ts). `stacks: false` keeps the
- * aggregate 10% chance from compounding when multiple Overtones are on the board. */
+ * spells` (non-stacking; echoes are themselves observable -> chains). Phase 4.1-E (A2): a
+ * `perform-action(triggering-source, cast gemSlot 'random' at a 'random' target)` response -- the
+ * observed caster (the bearer included: an `ally` observation includes self) casts again once the
+ * original cast, payload and all, has completed (the grant is queued and drained after the
+ * action). The chain passes through the same Overtone again each hop; only cascade depth bounds
+ * it. `stacks: false` keeps the aggregate 10% chance from compounding when multiple Overtones
+ * are on the board. */
 export const RESONANT_OVERTONE_TRAIT: Trait = {
   id: 'resonant-overtone-crescendo',
   name: 'Crescendo',
@@ -212,8 +211,14 @@ export const RESONANT_OVERTONE_TRAIT: Trait = {
       observationFilter: { relationship: 'ally', actionKind: 'cast' },
       chancePercent: 10,
       stacks: false,
-      echoCast: true,
-      response: { kind: 'grant-action-state', target: { kind: 'self' } },
+      response: {
+        kind: 'perform-action',
+        actor: 'triggering-source',
+        intent: {
+          action: { kind: 'cast', gemSlot: 'random' },
+          targeting: { kind: 'random' },
+        },
+      },
     },
   ],
 }

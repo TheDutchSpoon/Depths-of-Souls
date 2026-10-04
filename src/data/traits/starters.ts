@@ -9,10 +9,12 @@ import { ARCANE_BOLT } from '../spells'
 // "Wit affinity, high Intelligence. Trait: grants one spell as a permanent extra gem + 50%
 // chance on-turn-end to cast a random equipped spell" (species-locked.md / sorcerer.md).
 
-/** NEW PRIMITIVE (Slice F) -- see effect-types.ts's `BonusCastDef` doc comment for the full
- * reasoning (not a 10th response verb; a passively-consulted EffectDef, read by combat.ts's
- * resolveTurn directly). "50% chance on-turn-end to cast a random equipped spell." Phase 4.1-B
- * (A8): the "grants one spell as a permanent extra gem" half is now `innate-spell { spell:
+/** "50% chance on-turn-end to cast a random equipped spell." Phase 4.1-E (A2): an ordinary
+ * `on-turn-end` trigger whose `perform-action(self, cast gemSlot 'random')` response queues the
+ * cast; it runs in the turn's granted-actions step (after the turn-end hooks), through the one
+ * action pipeline (locks, Confusion -> Tunnel Vision -> Provoke, a skipped turn refuses it). The
+ * chance is rolled at trigger time; the gem, then the target, are drawn when the grant runs.
+ * Phase 4.1-B (A8): the "grants one spell as a permanent extra gem" half is `innate-spell { spell:
  * ARCANE_BOLT }` instead of a fixed `SpeciesCreature.equippedSpells` loadout baked into the
  * species template -- it lives on the trait so it travels through fusion, whichever parent the
  * Seer is. Not a gem: no level, no augments, no equip gate. `createCombat`'s fight-setup prepends
@@ -21,7 +23,16 @@ export const SORCERER_STARTER_TRAIT: Trait = {
   id: 'sorcerer-starter-arcane-surge',
   name: 'Arcane Surge',
   effects: [
-    { category: 'bonus-cast', chancePercent: 50 },
+    {
+      category: 'triggered',
+      hook: 'on-turn-end',
+      chancePercent: 50,
+      response: {
+        kind: 'perform-action',
+        actor: 'self',
+        intent: { action: { kind: 'cast', gemSlot: 'random' } },
+      },
+    },
     { category: 'innate-spell', spell: ARCANE_BOLT },
   ],
 }

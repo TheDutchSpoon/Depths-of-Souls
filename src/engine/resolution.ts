@@ -9,9 +9,9 @@
 //
 // Phase 4.1-C2a (A1): every function below threads a `ResolutionContext` (`resolution-types.ts`)
 // instead of separate `events`/`cascade` arguments. This module imports NOTHING from
-// `actions.ts` or `combat.ts`, not even a type — it reaches action resolution (echo-cast today;
-// `perform-action` from 4.1-E) only through `ctx.runAction`, a closure `actions.ts` builds and
-// hands down. `newCascade` stays here (a plain factory, not a type) since `actions.ts` and
+// `actions.ts` or `combat.ts`, not even a type — it never runs an action: a `perform-action`
+// response (4.1-E) only enqueues a grant on `ctx.grants`, and the scope that created the context
+// drains it (actions.ts `drainGrantedActions`). `newCascade` stays here (a plain factory, not a type) since `actions.ts` and
 // `combat.ts` both need to call it to build a fresh `ResolutionContext`.
 
 import { calculateDamage } from './damage'
@@ -43,7 +43,6 @@ import {
 import { nextRandom } from './rng'
 import type { DamageResult } from './damage'
 import type { CreatureId } from './ids'
-import type { Intent } from './scripting-types'
 import type { CascadeState, ResolutionContext } from './resolution-types'
 import type { CombatState, Creature, Stat } from './types'
 import type {
@@ -64,15 +63,6 @@ export type { CascadeState, ResolutionContext } from './resolution-types'
 
 export function newCascade(): CascadeState {
   return { depth: 0, activeInstances: new Set() }
-}
-
-/** Phase 4 Slice H2 (PR #60 review, E2): what an echo-cast actually runs -- gemSlot 'random'
- * drawn before the target, target 'random' over the observed caster's own living side (matching
- * random-enemy/random-ally's pool/order). Phase 4.1-C2a: routed through `ctx.runAction` instead
- * of the old `onEchoCast` callback. */
-const ECHO_CAST_INTENT: Intent = {
-  action: { kind: 'cast', gemSlot: 'random' },
-  targeting: { kind: 'random' },
 }
 
 interface HookContext {
@@ -520,27 +510,9 @@ export function fireHook(
       const stacks = effect.stacks
       const statusId = effect.statusId
 
-      // Phase 4 Slice H2 (PR #60 review, E2/E2.3): echoCast bypasses executeResponse entirely
-      // (its `response` field is a structurally-required, functionally-inert placeholder -- see
-      // TriggeredDef.echoCast's own doc comment) and is deliberately EXEMPTED from the
-      // self-re-entry guard below (no `activeInstances.add`/`delete`) so a later chain hop can
-      // revisit the SAME Overtone instance -- only `cascade.depth`/MAX_TRIGGER_CASCADE_DEPTH
-      // bounds it, never self-re-entry. Phase 4.1-C2a: runs through `ctx.runAction` (replacing
-      // the old `onEchoCast` callback) -- `source` is the OBSERVED actor (who actually casts);
-      // `self.id` is the effect's bearer (who granted the echo, `EchoCastGranted.sourceId`).
-      if (effect.echoCast) {
-        if (source) {
-          cascade.depth += 1
-          // The actor is the CASTER (`source`): its locks gate the echo (B2.2), never the
-          // bearer's, and its target goes through Confusion -> Tunnel Vision -> Provoke (B2.3).
-          working = ctx.runAction(source, ECHO_CAST_INTENT, working, {
-            announce: { type: 'EchoCastGranted', sourceId: self.id, casterId: source },
-          })
-          cascade.depth -= 1
-        }
-        continue
-      }
-
+      // A `perform-action` response only ENQUEUES its grant (executeResponse), so the self-re-entry
+      // guard below is released before the granted action ever starts: an echo chain can pass
+      // through the same Overtone again, and only `cascade.depth` bounds it (4.1-E, A2).
       cascade.activeInstances.add(effect.instanceId)
       cascade.depth += 1
       const result = executeResponse(
@@ -884,6 +856,26 @@ export function executeResponse(
         working = applyStatus(context.self, targetId, response.status, working, ctx)
       }
       return { state: working, suppressed: false }
+    }
+    case 'perform-action': {
+      // Phase 4.1-E (A2): ENQUEUE only -- actions are atomic, so the granted action starts after the
+      // granting action completes, when the scope that owns `ctx` drains `ctx.grants`
+      // (actions.ts `drainGrantedActions`). `'triggering-source'` is the hook's source INCLUDING
+      // the bearer (the PR #64 "never the firing creature" rule is for response targets). No
+      // actor-state check here: only the actor's state WHEN THE GRANT RUNS decides it (dead,
+      // locked, skipped turn), and the bearer dying afterwards doesn't cancel it. `depth` is the
+      // granting trigger's depth (fireHook already added its +1), so a chain stays depth-bounded.
+      const actorId = response.actor === 'self' ? context.self : context.source
+      if (actorId) {
+        ctx.grants.push({
+          sourceId: context.self,
+          actorId,
+          intent: response.intent,
+          effectId: sourceTraitId,
+          depth: ctx.cascade.depth,
+        })
+      }
+      return { state, suppressed: false }
     }
     case 'suppress-action':
       // Undeclared/'all' scope preserves the exact pre-Slice-B behavior (Stun: the whole turn

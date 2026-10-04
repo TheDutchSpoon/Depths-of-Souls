@@ -217,8 +217,8 @@ function describeEvent(event: CombatEvent): string {
       return `Fight ended: ${event.result}`
     case 'TriggerFired':
       return `  ${event.sourceId} triggers ${event.effectId} (${event.hook})`
-    case 'EchoCastGranted':
-      return `  ${event.sourceId} echoes -- ${event.casterId} casts again`
+    case 'ActionGranted':
+      return `  ${event.sourceId} grants ${event.actorId} an action (${event.effectId})`
     case 'StatusApplied':
       return `  ${event.targetId} gains ${event.statusId} x${event.stacks} (${event.duration}r)`
     case 'StatusExpired':

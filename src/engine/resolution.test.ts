@@ -7,7 +7,7 @@ import {
   fireHook,
   newCascade,
 } from './resolution'
-import { createResolutionContext } from './actions'
+import { createResolutionContext, drainGrantedActions } from './actions'
 import { getEffectiveStat } from './effective-stats'
 import { updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
@@ -2238,11 +2238,11 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
   })
 
   it('on-action-observed rides the same MAX_TRIGGER_CASCADE_DEPTH guard as every other hook', () => {
-    // No RESPONSE VERB can itself perform an Attack/Cast/Defend/Provoke action -- this fixture's
-    // own plain apply-stat-modifier response can't build a real recursive chain through
-    // on-action-observed alone. (Phase 4 Slice H2: `echoCast` IS now a real exception -- it
-    // bypasses the response vocabulary entirely to re-fire a real Cast; see the dedicated
-    // 'echo-cast' describe block below for its own depth-cap coverage.) This is the same
+    // `perform-action` (4.1-E) is a response that queues a real action, so a chain through
+    // on-action-observed can now be built from responses alone. Its depth coverage is in the
+    // "echo = perform-action(triggering-source)" describe block below and in
+    // golden-e-echo-chain-truncated. This fixture's plain apply-stat-modifier response still can't
+    // chain, which is why the test white-boxes the cascade at the cap. This is the same
     // white-box technique the 'loop safety' describe block above uses for on-damage-taken: fire
     // the hook with a cascade already AT the cap, proving the guard is wired for this hook too,
     // not just the damage-path ones.
@@ -2297,11 +2297,7 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
   })
 })
 
-describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)', () => {
-  // A response with an obvious, easy-to-detect side effect (StatModifierApplied) stands in for
-  // RESONANT_OVERTONE_TRAIT's real inert grant-action-state placeholder -- proves executeResponse
-  // is never invoked for an echoCast-flagged effect (not just "the placeholder happens to be a
-  // no-op"), since this one very much ISN'T.
+describe('echo = perform-action(triggering-source) (Phase 4.1-E, A2 -- Resonant Overtone shape)', () => {
   function echoObserverTrait(id: string, chancePercent: number): Trait {
     return {
       id,
@@ -2313,21 +2309,21 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
           observationFilter: { relationship: 'ally', actionKind: 'cast' },
           chancePercent,
           stacks: false,
-          echoCast: true,
           response: {
-            kind: 'apply-stat-modifier',
-            target: { kind: 'self' },
-            stat: 'attack',
-            factor: 2,
+            kind: 'perform-action',
+            actor: 'triggering-source',
+            intent: {
+              action: { kind: 'cast', gemSlot: 'random' },
+              targeting: { kind: 'random' },
+            },
           },
         },
       ],
     }
   }
 
-  // Phase 4.1-C2a (A1): echoCast now runs through `ctx.runAction` (a real resolveIntent +
-  // executeAction call), not an injectable `onEchoCast` stub -- so proving it requires a caster
-  // that can ACTUALLY cast. One equipped single-target spell and one living enemy keep the
+  // 4.1-E: the grant is queued by fireHook and run by `drainGrantedActions` (a real resolveIntent
+  // + executeAction call) -- so proving it requires a caster that can ACTUALLY cast. One equipped single-target spell and one living enemy keep the
   // gem/target draws deterministic (pool size 1 either way) regardless of seed.
   const ECHO_SPELL: Spell = {
     id: 'echo-spell-fixture',
@@ -2346,7 +2342,7 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
     ],
   }
 
-  it('runs a real granted cast (never the placeholder response), and is exempt from the self-re-entry guard, so a chancePercent:100 chain runs all the way to MAX_TRIGGER_CASCADE_DEPTH via CascadeTruncated', () => {
+  it('queues a real granted cast, and the self-re-entry guard never blocks it, so a chancePercent:100 chain runs all the way to MAX_TRIGGER_CASCADE_DEPTH via CascadeTruncated', () => {
     // The real echoed cast's OWN nested on-action-observed dispatch re-observes the SAME
     // caster casting -- with chancePercent:100 and no other bound, the chain is stopped ONLY by
     // the depth cap. White-boxed the same way the depth-cap tests above do: start the cascade
@@ -2369,34 +2365,44 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
     const nearCap = newCascade()
     nearCap.depth = MAX_TRIGGER_CASCADE_DEPTH - 2 // exactly 2 more hops fit before the cap.
     const ctx = createResolutionContext(events, nearCap)
-    fireHook('on-action-observed', selfIds, createCreatureId('caster'), state, ctx, {
-      observed: { actionKind: 'cast', instanceIndex: 0 },
-    })
+    const fired = fireHook(
+      'on-action-observed',
+      selfIds,
+      createCreatureId('caster'),
+      state,
+      ctx,
+      {
+        observed: { actionKind: 'cast', instanceIndex: 0 },
+      },
+    )
+    // Nothing ran yet: fireHook only QUEUED the grant (hop 1, depth 499).
+    expect(events.filter((e) => e.type === 'SpellCast')).toHaveLength(0)
+    expect(ctx.grants).toHaveLength(1)
+    drainGrantedActions(ctx, fired.state)
 
-    // depth 498 -> 499 (hop 1: TriggerFired, EchoCastGranted, a real SpellCast, which itself
-    // re-fires on-action-observed) -> 500 (hop 2: same again) -> 501 would exceed the cap ->
-    // CascadeTruncated, no 3rd TriggerFired/EchoCastGranted/SpellCast.
+    // depth 498 -> 499 (hop 1: TriggerFired at fire time; when it runs, ActionGranted + a real
+    // SpellCast, which itself re-fires on-action-observed and queues hop 2 at depth 500) -> hop 2
+    // runs at depth 500 -> its re-observation would be depth 501, over the cap -> CascadeTruncated,
+    // no 3rd TriggerFired/ActionGranted/SpellCast.
     const triggerFired = events.filter((e) => e.type === 'TriggerFired')
-    const echoGranted = events.filter((e) => e.type === 'EchoCastGranted')
+    const echoGranted = events.filter((e) => e.type === 'ActionGranted')
     const spellCasts = events.filter((e) => e.type === 'SpellCast')
     expect(triggerFired).toHaveLength(2)
     expect(echoGranted).toEqual([
       {
-        type: 'EchoCastGranted',
+        type: 'ActionGranted',
         sourceId: createCreatureId('observer'),
-        casterId: createCreatureId('caster'),
+        actorId: createCreatureId('caster'),
+        effectId: 'echo-fixture',
       },
       {
-        type: 'EchoCastGranted',
+        type: 'ActionGranted',
         sourceId: createCreatureId('observer'),
-        casterId: createCreatureId('caster'),
+        actorId: createCreatureId('caster'),
+        effectId: 'echo-fixture',
       },
     ])
     expect(spellCasts).toHaveLength(2)
-    // The placeholder's own factor:2 would be unmistakable (doubles Attack) -- proves
-    // executeResponse genuinely never ran for this effect.
-    expect(events.some((e) => e.type === 'StatModifierApplied')).toBe(false)
-
     const truncations = events.filter(
       (e): e is Extract<CombatEvent, { type: 'CascadeTruncated' }> =>
         e.type === 'CascadeTruncated',
@@ -2407,9 +2413,10 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       effectId: 'echo-fixture',
       depth: MAX_TRIGGER_CASCADE_DEPTH + 1,
     })
-    // The guard's own bookkeeping is symmetric (depth += / -= in lockstep around each
-    // ctx.runAction call) -- fully unwound back to the start once the outer call returns.
+    // The depth bookkeeping is symmetric (fireHook's += / -= around each response, the drain's
+    // set / restore around each grant) -- fully unwound once the scope's drain returns.
     expect(nearCap.depth).toBe(MAX_TRIGGER_CASCADE_DEPTH - 2)
+    expect(ctx.grants).toHaveLength(0)
   })
 
   it('stacks:false: two creatures carrying the SAME effect id -- only one TriggerFired (and one ctx.runAction) per firing', () => {
@@ -2433,6 +2440,7 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
     })
 
     const events: CombatEvent[] = []
+    const ctx = createResolutionContext(events, newCascade())
     fireHook(
       'on-action-observed',
       [
@@ -2442,13 +2450,13 @@ describe('echo-cast (Phase 4 Slice H2, PR #60 review, E2 -- Resonant Overtone)',
       ],
       createCreatureId('caster'),
       state,
-      createResolutionContext(events, newCascade()),
+      ctx,
       { observed: { actionKind: 'cast', instanceIndex: 0 } },
     )
 
     expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(1)
-    // No equipped spell -> the granted cast never resolves -> no EchoCastGranted at all.
-    expect(events.some((e) => e.type === 'EchoCastGranted')).toBe(false)
+    // Only one grant was queued (the second Overtone never even rolled).
+    expect(ctx.grants).toHaveLength(1)
   })
 })
 

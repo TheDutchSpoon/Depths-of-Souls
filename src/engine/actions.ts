@@ -1,9 +1,9 @@
 // Phase 4.1-C2a (A1): the one action pipeline. Every action source -- a script rule, the
-// implicit fallback, a granted action (bonus-cast/echo today; `perform-action` from 4.1-E) --
-// goes through this module: `checkLegality` (pure, draws nothing), `resolveIntent` (the only
-// place action-level draws happen), `executeAction` (the executors, moved here from combat.ts).
-// `createResolutionContext` builds the `ResolutionContext` (resolution-types.ts) that threads
-// `runAction` down into resolution.ts, replacing the old `onEchoCast` callback.
+// implicit fallback, a `perform-action` grant (4.1-E) -- goes through this module:
+// `checkLegality` (pure, draws nothing), `resolveIntent` (the only place action-level draws
+// happen), `executeAction` (the executors, moved here from combat.ts).
+// `createResolutionContext` builds the `ResolutionContext` (resolution-types.ts) the resolver
+// threads; `drainGrantedActions` (4.1-E) runs the `perform-action` grants it queued.
 //
 // Phase 4.1-C2b (B1): `resolveIntent`'s default target is the side-aware one (`defaultTargetingFor`,
 // derived from the RESOLVED action -- a `gemSlot: 'random'` cast defaults by the drawn spell's
@@ -47,7 +47,8 @@ import type { Action, CombatEvent, CombatState, Creature, Spell } from './types'
 /**
  * Builds a fresh ResolutionContext over `events` (shared, mutated in place by push) and
  * `cascade` (fresh per top-level action; see resolveTurn's own "fresh cascade per top-level
- * action" discipline). `runAction` is the seam resolution.ts reaches actions.ts through: it
+ * action" discipline). `runAction` is the one-action entry the scopes in combat.ts and
+ * `drainGrantedActions` call (resolution.ts only enqueues grants, 4.1-E): it
  * checks `intent` is legal for `actorId` (locks included -- B2.2, every source), resolves it, pushes
  * `options.announce` (if the intent resolved) right before executing, then executes -- a silent
  * no-op (nothing drawn, nothing pushed) if the actor is dead/unknown, the intent is illegal, or it
@@ -57,21 +58,75 @@ export function createResolutionContext(
   events: CombatEvent[],
   cascade: CascadeState,
 ): ResolutionContext {
-  const runAction = (
+  // One context object, shared by every executor `runAction` starts, so they all enqueue onto the
+  // SAME `grants` queue (4.1-E) -- built first, `runAction` closes over it.
+  const ctx: ResolutionContext = { events, cascade, grants: [], runAction }
+  function runAction(
     actorId: CreatureId,
     intent: Intent,
     state: CombatState,
     options?: RunActionOptions,
-  ): CombatState => {
+  ): CombatState {
     const actor = findCreature(state, actorId)
-    if (!actor || !actor.alive) return state
+    if (!actor || !actor.alive) return state // the dead-actor refusal (a queued grant's too)
     if (!checkLegality(actor, intent, state)) return state
     const action = resolveIntent(actor, intent, state)
     if (!action) return state
     if (options?.announce) events.push(options.announce)
-    return executeAction(actor, action, state, { events, cascade, runAction })
+    return executeAction(actor, action, state, ctx)
   }
-  return { events, cascade, runAction }
+  return ctx
+}
+
+export interface DrainGrantsOptions {
+  /** The creature whose turn was skipped this turn, if any (B2 rule 1): a grant whose actor is
+   * that creature is refused, even if the lock that skipped the turn is gone by now. The chance
+   * roll already happened at trigger time, so the RNG stream doesn't depend on the skip. Supplied
+   * by `resolveTurn` from its turn-start `suppressed` flag; transient, never in `CombatState`. */
+  readonly skippedTurnOf?: CreatureId
+}
+
+/**
+ * Phase 4.1-E (A2): runs `ctx.grants` -- the `perform-action` grants raised in this context's
+ * scope -- FIRST IN, FIRST OUT, once the scope's own work is done (the chosen action, a hook pass,
+ * ...). Actions are atomic: a granted action starts only now, after the granting action completed.
+ * A grant raised BY a granted action goes to the back of the queue, behind those already waiting.
+ *
+ * Each entry runs at its granting trigger's cascade depth (`grant.depth`, which already includes
+ * that trigger's +1), restored afterwards -- the granting trigger has unwound, so without carrying
+ * the depth an echo chain would restart at 0 and never truncate. The re-entry guard needs no
+ * exemption: it is empty by now.
+ *
+ * Refusals emit nothing of their own (the earlier `TriggerFired` stays): the skipped-turn gate
+ * (here), then everything `runAction` checks -- a dead actor, a lock, no castable gem / valid
+ * target. RNG draws, in order: gem, target, Confusion/Provoke (chance was rolled at trigger time).
+ * `ActionGranted` is announced only once the grant is accepted, right before the action's first event.
+ */
+export function drainGrantedActions(
+  ctx: ResolutionContext,
+  state: CombatState,
+  options: DrainGrantsOptions = {},
+): CombatState {
+  let working = state
+  // Index loop on purpose: a granted action may append to `ctx.grants` while it runs (FIFO).
+  for (let i = 0; i < ctx.grants.length; i++) {
+    const grant = ctx.grants[i]
+    if (!grant) continue
+    if (grant.actorId === options.skippedTurnOf) continue // B2 rule 1
+    const outerDepth = ctx.cascade.depth
+    ctx.cascade.depth = grant.depth
+    working = ctx.runAction(grant.actorId, grant.intent, working, {
+      announce: {
+        type: 'ActionGranted',
+        sourceId: grant.sourceId,
+        actorId: grant.actorId,
+        effectId: grant.effectId,
+      },
+    })
+    ctx.cascade.depth = outerDepth
+  }
+  ctx.grants.length = 0
+  return working
 }
 
 // ---- Legality (pure, draws nothing) ----
@@ -584,9 +639,8 @@ function executeCastSingle(
     })
     working = fireHook('on-cast', [actor.id], thisTargetId, working, ctx).state
     // Phase 4 Slice E2 (general action-observation system): Resonants' own consumer shape
-    // (relationship 'ally', actionKind 'cast') -- see CONVENTIONS' actor-vs-observer routing.
-    // Phase 4 Slice H2 (PR #60 review, E2): an echoCast-flagged effect fires through
-    // ctx.runAction now (resolution.ts's fireHook), inert everywhere no effect declares it.
+    // (relationship 'ally', actionKind 'cast') -- see CONVENTIONS' actor-vs-observer routing. An
+    // echo (a `perform-action` grant) raised here is queued, and runs after this whole action.
     working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
       observed: { actionKind: 'cast', instanceIndex },
     }).state

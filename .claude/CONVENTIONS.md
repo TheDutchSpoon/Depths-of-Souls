@@ -247,17 +247,46 @@ attack executor is correct.
   50` → `perform-action(self, { action: cast, gemSlot: 'random' })`; **Resonant Overtone** =
   `on-action-observed` (ally cast), `chancePercent: 10`, `stacks: false` →
   `perform-action(triggering-source, { action: cast, gemSlot: 'random', targeting: 'random' })`.
-  - **Actions are atomic:** no action starts while another is resolving. A granted action is
-    queued on the `ResolutionContext` and runs **after the granting action (all its instances)
-    completes**; responses stay nested and immediate. Turn-end grants run in the turn skeleton's
-    "granted actions" step (see "Turn structure").
-  - **Bounded by cascade depth**, not by the self-re-entry guard: an echo chain must be able to
-    pass through the same Overtone again. A **data test** requires every `perform-action` trigger to
-    carry a `chancePercent` or a `condition`, so no unconditional self-perpetuating grant can be
-    authored.
-  - **`ActionGranted { sourceId, actorId, effectId }`** is emitted right after `TriggerFired` when
-    the grant succeeds (replaces `EchoCastGranted`). A grant whose actor can't act or has nothing
-    legal to do fizzles with `TriggerFired` only (the uniform fizzle shape).
+  - **Actions are atomic:** no action starts while another is resolving. A grant is queued on the
+    `ResolutionContext` (its `grants` list) and runs **after the granting action (all its
+    instances) completes**; responses stay nested and immediate.
+  - **Where grants run** (4.1-E plan review). Each scope that raises grants drains them once, at
+    its end:
+    - the chosen action's grants run right after that action, before the turn-end hooks (an echo
+      follows the cast it echoes);
+    - the turn-end hooks' grants run in the skeleton's "granted actions" step;
+    - the turn-start hooks' grants run after the turn-start cleanup and before the decide step, so
+      a Defend or Provoke granted at turn start isn't ended by that same turn's cleanup;
+    - the fight-start and round-end hooks' grants run right after that hook pass. These are
+      round-level actions; no shipped content raises them.
+
+    The queue is **first in, first out**: a grant raised by a granted action goes to the back,
+    behind grants already waiting.
+  - **Bounded by cascade depth**, not by the self-re-entry guard. A queue entry carries the
+    granting trigger's depth (which already includes its +1), and the granted action runs at that
+    depth. The granting trigger has unwound before its grant runs, so the re-entry guard never sees
+    an echo chain; an echo chain can pass through the same Overtone again and still truncates at
+    `MAX_TRIGGER_CASCADE_DEPTH`.
+  - **Where it may appear:** trait effects, perk effects and status triggers. It is rejected at
+    load time inside a spell's effect list and inside `consume-stacks`' wrapped effect. A **data
+    test** reads every registry and requires each `perform-action` trigger to carry a real guard:
+    a `chancePercent` below 100, or a `condition` other than `always`. That is a lint against
+    unconditional self-perpetuating grants; the depth bound is what guarantees termination.
+  - **`ActionGranted { sourceId, actorId, effectId }`** (replaces `EchoCastGranted`) is emitted
+    when the queued grant **runs and is accepted**: after the actor's legality check and the gem
+    and target draws, immediately before the granted action's first event. A grant that is refused
+    or fizzles when it runs emits nothing of its own; the earlier `TriggerFired` stays (the uniform
+    fizzle shape). So `TriggerFired` and `ActionGranted` are not adjacent: whatever the granting
+    action did after the trigger sits between them.
+  - **Who acts:** `actor: 'self'` is the bearer. `actor: 'triggering-source'` is the hook's source,
+    **including the bearer itself**: an `ally` observation includes self, so Overtone echoes its own
+    casts. The "`triggering-source` never resolves to the firing creature" rule is about response
+    targets, not this field.
+  - **Only the actor's state decides a grant.** The bearer dying after its trigger fired does not
+    cancel the grant. The actor being dead, on a skipped turn or locked when the grant runs does
+    (B2 rules 1–2).
+  - **RNG draw order:** the chance roll at trigger time; then, when the grant runs, the gem, the
+    target, and any Confusion or Provoke draws.
   - Distinct from `grant-action-state` ("gains defending") — that sets a flag, it is not an
     action. An "insert an extra turn" primitive is a different, complementary concept (the intent
     can later gain `action: 'script'`); not built.
@@ -703,9 +732,11 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   → turn-start hooks
   → TURN-START CLEANUP   defending / provoking end (runs on skipped turns too);
                          emits ActionStateEnded only when a flag was actually set
+  → turn-start grants    (grants raised by the turn-start hooks, see A2)
   → decide + action      (or TurnSkipped, if an 'all' action-lock is active)
+  → action grants        (grants raised by the action, right after it, see A2)
   → turn-end hooks       incl. DoT / HoT ticks (status triggers on on-turn-end)
-  → granted actions      (perform-action grants queued during the turn, see A2)
+  → granted actions      (grants raised by the turn-end hooks, see A2)
   → TURN-END CLEANUP     the bearer's own status timers count down + expire; the Web roll
   → TurnEnded
   ```
@@ -852,13 +883,14 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     happen.** Target resolution: explicit selector → **side-aware default** → random; then, for an
     enemy-side single target, **Confusion → Tunnel Vision → Provoke**.
   - **`executeAction`** — the executors (moved out of `combat.ts`).
-  - **The effect → action seam is a transient `ResolutionContext { events, cascade, runAction }`**,
+  - **The effect → action seam is a transient `ResolutionContext { events, cascade, grants, runAction }`**,
     created per top-level action by the action layer and threaded through the resolver. It
     replaces `onEchoCast` and the separate `events`/`cascade` arguments, and it is how a response
     (`perform-action`) queues an action without `resolution.ts` importing `combat.ts`. It is never
     stored in `CombatState`. `fireHook`'s per-call specifics move to an options object.
   - Rejected: patching each source, routing everything through `decideAction`, legality inside
-    the executor, an action queue at this stage, an import cycle, a global registry, a runner
+    the executor, an action queue at this stage (4.1-E then adds the grant queue for
+    `perform-action`), an import cycle, a global registry, a runner
     stored in state. A single ~1,300-line "resolver core" module was acceptable but scales worse;
     generator/stack-machine resolution only pays off if players make choices mid-cascade, which the
     design doesn't have.
@@ -900,8 +932,8 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
        of the granting effect is not the one acting: its trigger is passive, so its own locks
        don't gate it.
      - **A refused granted action emits nothing of its own** (4.1-C2c plan review). The trigger
-       that granted it still shows its `TriggerFired`. There is no grant event (`EchoCastGranted`
-       today, `ActionGranted` from 4.1-E) and no action event. This is the same shape as a grant
+       that granted it still shows its `TriggerFired`. There is no grant event (`ActionGranted`)
+       and no action event. This is the same shape as a grant
        that fizzles for want of a castable gem or a valid target.
   3. Extra actions pick a target (the side-aware default, or random where the intent says so),
      then go through Confusion → Tunnel Vision → Provoke like any action.
@@ -1268,9 +1300,9 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   `CombatState`, never serialized** (same principle as effective stats). It lives on the transient
   `ResolutionContext` (4.1-C).
 - **Granted actions (`perform-action`) are bounded by depth, not by the re-entry guard**: a granted
-  action inherits the granting context's depth + 1, so an echo chain through the same Overtone is
-  allowed and still truncates at 500. Every `perform-action` trigger must carry a `chancePercent`
-  or `condition` (data test).
+  action runs at the depth its queue entry carries (the granting trigger's, which includes the +1),
+  so an echo chain through the same Overtone is allowed and still truncates at 500. Every
+  `perform-action` trigger must carry a real guard (data test; see the response vocabulary).
 
 ### Trait model (Phase 3)
 - **`Trait { id, name, effects: readonly Effect[] }`** — a named wrapper (UI identity/flavor) over
@@ -1299,7 +1331,9 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   whoever hit me" response would otherwise target itself (Snapjaws Jaws hitting itself on Poison;
   Hollowkin Wretch Confusing itself). `triggering-source` resolves to **no target** when the source
   is `self`; the hook itself still fires (Sleep must still wake on DoT), and the fizzle emits
-  `TriggerFired` only.
+  `TriggerFired` only. This rule is about response targets. `perform-action`'s
+  `actor: 'triggering-source'` is not a target: it resolves to the source even when that is the
+  bearer (4.1-E plan review).
 - **"attack" / "cast" in a trait or spell = the real actions** — same damage formula, OffStat,
   affinity, Defence, pools, min-1 floor; the trait/spell supplies only the spellPower coefficient +
   target. No separate trigger-damage formula. **DoT is the lone Defence-bypass exception**; a

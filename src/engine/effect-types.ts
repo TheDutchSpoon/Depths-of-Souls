@@ -10,7 +10,7 @@
 // engine-internal and golden-invisible, so it need not be complete now.
 
 import type { Spell, Stat } from './types'
-import type { ComparatorOp, Condition, TargetSelector } from './scripting-types'
+import type { ComparatorOp, Condition, Intent, TargetSelector } from './scripting-types'
 
 // Stable per-fight identity for an effect instance. Deterministic (never RNG) so goldens
 // reproduce; the stack-scoped self-re-entry guard (Slice B) keys on this.
@@ -296,6 +296,22 @@ export type EffectResponse =
       readonly target: ResponseTarget
       readonly filter: { readonly statusId: string }
     }
+  // Phase 4.1-E (A2): make `actor` take a REAL action through the one action pipeline. It does not
+  // execute anything itself: fireHook's response runs, `executeResponse` QUEUES a grant on the
+  // `ResolutionContext` (`ctx.grants`), and the scope that created the context drains it at its end
+  // (actions.ts `drainGrantedActions`) -- actions are atomic, so the granted action starts only after
+  // the granting action (all its instances) has completed. `actor: 'self'` is the bearer;
+  // `'triggering-source'` is the hook's source INCLUDING the bearer itself (Overtone echoes its own
+  // casts -- the PR #64 "never resolves to the firing creature" rule covers response TARGETS, not
+  // this field). Legal on trait/perk effects and status triggers only: a spell's effect list and
+  // `consume-stacks`' wrapped effect reject it at load time. RNG draw order: the trigger's
+  // `chancePercent` roll at trigger time; then, when the grant runs, the gem draw, the target draw,
+  // and any Confusion/Provoke draws.
+  | {
+      readonly kind: 'perform-action'
+      readonly actor: 'self' | 'triggering-source'
+      readonly intent: Intent
+    }
 
 // ---- Effect definitions (as authored in a Trait; no instance identity yet) ----
 
@@ -400,8 +416,16 @@ function validateResponseTargetNoRandomSelector(
       throwIfRandomSelectorTarget(response.target, context)
       return
     case 'suppress-action':
+    case 'perform-action': // no response target (its `intent.targeting` MAY be `'random'`)
       return
     case 'consume-stacks':
+      // Phase 4.1-E: a grant hidden inside a wrapped effect would dodge the guard lint (below), and
+      // no content wants one -- rejected at load time (CONVENTIONS "perform-action").
+      if (response.effect.kind === 'perform-action') {
+        throw new Error(
+          `effect invariant violated: ${context} wraps 'perform-action' inside consume-stacks, which is not allowed`,
+        )
+      }
       validateResponseTargetNoRandomSelector(response.effect, context)
       return
     default: {
@@ -437,6 +461,42 @@ export function validateStatusNoRandomSelectorInResponseTargets(def: StatusDef):
       `status "${def.statusId}"'s "${trigger.hook}" trigger's response`,
     )
   }
+}
+
+/** Phase 4.1-E (A2): the "real guard" a `perform-action` trigger must carry (CONVENTIONS): a
+ * `chancePercent` strictly below 100, or a `condition` other than `{ kind: 'always' }`. A lint
+ * against unconditional self-perpetuating grants -- termination is guaranteed by the cascade-depth
+ * bound, not by this. `chancePercent: 100` and `always` are trivially-true guards, so they don't count. */
+export function hasRealGuard(trigger: {
+  readonly chancePercent?: number
+  readonly condition?: Condition
+}): boolean {
+  if (trigger.chancePercent !== undefined && trigger.chancePercent < 100) return true
+  return trigger.condition !== undefined && trigger.condition.kind !== 'always'
+}
+
+/** Every `perform-action` trigger carried by `defs` (a trait's or a perk's effects). */
+export function performActionTriggers(defs: readonly EffectDef[]): TriggeredDef[] {
+  return defs.filter(
+    (def): def is TriggeredDef =>
+      def.category === 'triggered' && def.response.kind === 'perform-action',
+  )
+}
+
+/** The status-registry counterpart: a condition-status's `triggers` that carry `perform-action`. */
+export function statusPerformActionTriggers(def: StatusDef): StatusTrigger[] {
+  if (def.category !== 'condition-status') return []
+  return def.triggers.filter((t) => t.response.kind === 'perform-action')
+}
+
+/** Phase 4.1-E data-test helper: the `perform-action` triggers in `defs` WITHOUT a real guard. */
+export function findUnguardedPerformActions(defs: readonly EffectDef[]): TriggeredDef[] {
+  return performActionTriggers(defs).filter((t) => !hasRealGuard(t))
+}
+
+/** The status-registry counterpart of `findUnguardedPerformActions`. */
+export function findUnguardedStatusPerformActions(def: StatusDef): StatusTrigger[] {
+  return statusPerformActionTriggers(def).filter((t) => !hasRealGuard(t))
 }
 
 export type StatRemapDef = {
@@ -530,24 +590,6 @@ export type TriggeredDef = {
    * carry it (two Overtones must not raise the echo chance above 10% -- branching factor stays
    * 1). Kept general (not echo-cast-specific), though Resonant Overtone is its only v1 consumer. */
   readonly stacks?: boolean
-  /** Phase 4 Slice H2 (PR #60 review, E2 -- Resonant Overtone's echo-cast). When true, firing
-   * this effect does NOT call `executeResponse` on `response` at all -- `response` is a
-   * structurally-required, functionally-inert placeholder (a `grant-action-state` with neither
-   * flag set is the convention; see RESONANT_OVERTONE_TRAIT). Instead, fireHook (resolution.ts)
-   * calls `ctx.runAction` (Phase 4.1-C2a, `ResolutionContext`, `resolution-types.ts`) with the
-   * hook's own `source` (the OBSERVED actor, e.g. the ally who just cast -- NOT this effect's own
-   * bearer) as the one who casts again, resolving a real `gemSlot: 'random'` cast through the
-   * action pipeline (actions.ts). This is deliberately NOT a 10th `EffectResponse` verb --
-   * `executeResponse` (resolution.ts) cannot reach `executeCastSingle`/`executeCastAoe`
-   * (actions.ts) without a resolution.ts -> actions.ts import cycle, the same reason `bonus-cast`
-   * (a passive EffectDef, not a response) exists; `ctx.runAction` is exactly the seam that lets
-   * a response (from 4.1-E, `perform-action`) reach it without that cycle either. Also exempted
-   * from the self-re-entry guard (fireHook does not add this effect's `instanceId` to
-   * `cascade.activeInstances` around the call) so a chain can revisit the SAME Overtone instance
-   * on a later hop -- termination relies on `cascade.depth`/`MAX_TRIGGER_CASCADE_DEPTH`, which is
-   * still incremented around the call, never on self-re-entry. Meaningful only when `hook` is
-   * `'on-action-observed'`. */
-  readonly echoCast?: boolean
   readonly response: EffectResponse
 }
 
@@ -649,26 +691,6 @@ export type CheatDeathDef = {
   readonly chancePercent: number
 }
 
-/** Phase 4 Slice F (Sorcerer starter's "50% on-turn-end, cast a random equipped spell") --
- * NEW PRIMITIVE, surfaced by this starter's content, flagged for design-owner sign-off. NOT
- * modeled as a 10th `EffectResponse` verb: CONVENTIONS' "hold the line at nine" pins the
- * RESPONSE vocabulary specifically, and a real Cast needs actions.ts's own executor functions
- * (executeCastSingle/executeCastAoe) plus its target-resolution helpers -- resolution.ts's
- * generic executeResponse has no access to those (and gaining it would mean a resolution.ts ->
- * actions.ts import cycle). So this is a permanent-for-fight passive `EffectDef` category
- * instead, structurally in the same family as ArmorPenetrationDef/CrossStatDef/etc. (gathered
- * read-time, never a status) but consulted directly by combat.ts's resolveTurn -- immediately
- * after the actor's ordinary on-turn-end hook fires -- rather than through fireHook/
- * executeResponse. Phase 4.1-C2a: routed through `actions.ts`'s `resolveIntent`/`executeAction`
- * (via `ResolutionContext.runAction`) rather than calling the executors directly, but the
- * semantics are unchanged -- on a successful roll it reuses the EXACT Cast-execution path a
- * chosen action would (on-cast/on-action-observed still fire, the spell's effect list and the instance list
- * all apply unchanged), picking uniformly among the actor's non-null equipped slots. */
-export type BonusCastDef = {
-  readonly category: 'bonus-cast'
-  readonly chancePercent: number
-}
-
 /** Phase 4.1-B (A8): the Sorcerer starter's granted spell (Arcane Bolt), re-authored off
  * `SpeciesCreature.equippedSpells` (a fixed starter loadout baked into species data, lost/broken
  * by Phase 8 fusion) onto Arcane Surge as a passive, permanent-for-fight `EffectDef` -- so it
@@ -698,7 +720,6 @@ export type EffectDef =
   | CheatDeathDef
   | ConditionalDamageBonusDef
   | TakenReductionDef
-  | BonusCastDef
   | InnateSpellDef
 
 // ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
@@ -869,7 +890,6 @@ export type AnnihilateEffect = AnnihilateDef & InstanceIdentity
 export type CheatDeathEffect = CheatDeathDef & InstanceIdentity
 export type ConditionalDamageBonusEffect = ConditionalDamageBonusDef & InstanceIdentity
 export type TakenReductionEffect = TakenReductionDef & InstanceIdentity
-export type BonusCastEffect = BonusCastDef & InstanceIdentity
 export type InnateSpellEffect = InnateSpellDef & InstanceIdentity
 export type TurnOrderStatusEffect = TurnOrderStatusDef &
   InstanceIdentity &
@@ -901,9 +921,6 @@ export type ResolvedHookEffect = {
    * before it's even allowed to roll `chancePercent`. Always undefined for a status-sourced
    * entry (no v1 status declares it). */
   readonly nonStacking?: boolean
-  /** Phase 4 Slice H2 (PR #60 review, E2): mirrors a `TriggeredDef`'s own `echoCast`. Always
-   * undefined for a status-sourced entry. */
-  readonly echoCast?: boolean
   /** Phase 4.1-B (B4): the REAL owning instance's id -- for a TriggeredDef-sourced entry this
    * equals `instanceId` above (same value used for the cascade self-re-entry guard); for a
    * status-trigger-sourced entry this is the status's own SHARED instance id (`e.instanceId`),
@@ -934,7 +951,6 @@ export type ActiveEffect =
   | FriendlyFireStatusEffect
   | ConditionalDamageBonusEffect
   | TakenReductionEffect
-  | BonusCastEffect
   | InnateSpellEffect
 
 // ---- Trait ----

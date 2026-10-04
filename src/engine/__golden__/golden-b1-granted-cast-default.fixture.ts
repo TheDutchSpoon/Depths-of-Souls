@@ -1,9 +1,11 @@
-// Golden: B1 (Phase 4.1-C2b) -- a bonus cast with an enemy-side single-target spell and no
+// Golden: B1 (Phase 4.1-C2b) -- a granted cast with an enemy-side single-target spell and no
 // explicit targeting takes the SIDE-AWARE default: the LOWEST-HP enemy, not Phase 1's first
 // living enemy by slot. Hand-derived.
 //
-// CASTER (player): Int 20, speed 20, always-wait (so the ONLY hit in the log is the bonus cast),
-// trait `bonus-caster-fixture` = bonus-cast chancePercent 100. Exactly ONE equipped spell,
+// CASTER (player): Int 20, speed 20, always-wait (so the ONLY hit in the log is the granted cast),
+// trait `granted-caster-fixture` = on-turn-end perform-action(self, cast 'random') at chancePercent
+// 100 (re-expressed from `bonus-cast` in 4.1-E: the log gains TriggerFired + ActionGranted
+// before the SpellCast; target/damage unchanged). Exactly ONE equipped spell,
 // BOLT (enemy-side single target, spellPower 0.5). The trait has no innate-spell, so the slot
 // list after createCombat is exactly [BOLT] (asserted in the test): the gem draw is a pool of
 // one (index floor(r*1) = 0), so no gem-draw ambiguity muddies what this golden pins.
@@ -13,13 +15,13 @@
 // cast goes through since C2c) draws nothing here. All vitality (x1.0).
 //
 // One round (queue: caster 20, B 2, A 1), three turns:
-//   CASTER waits. Turn-end: bonus-cast rolls (100%: passes whatever the draw), gem draw over
+//   CASTER waits. Turn-end: granted cast rolls (100%: passes whatever the draw), gem draw over
 //   [slot 0] -> slot 0, target = default lowest-hp-enemy {A 50, B 30} -> B.
 //     off = Int 20 x spellPower 0.5 = 10, def 0: core 10, chip 0.01*10 = 0.1 -> raw 10.1 -> final
 //     10. B 30 - 10 = 20 (no kill -- the fight goes on -- and no clamp: remainingHp 20).
 //   B waits; A waits. Fight not over (result null).
 //
-// With first-by-slot restored for the bonus-cast path, the cast hits A (remainingHp 40) instead.
+// With first-by-slot restored for the granted cast path, the cast hits A (remainingHp 40) instead.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -33,6 +35,7 @@ export const TURN_STEPS = 3 // caster, B, A
 const CASTER = createCreatureId('caster')
 const A = createCreatureId('a')
 const B = createCreatureId('b')
+const TRAIT_ID = 'granted-caster-fixture'
 
 export const BOLT: Spell = {
   id: 'bolt-fixture',
@@ -51,14 +54,25 @@ export const BOLT: Spell = {
   ],
 }
 
-export const BONUS_CASTER_FIXTURE: Trait = {
-  id: 'bonus-caster-fixture',
-  name: 'Bonus Caster (fixture)',
-  effects: [{ category: 'bonus-cast', chancePercent: 100 }],
+export const GRANTED_CASTER_FIXTURE: Trait = {
+  id: 'granted-caster-fixture',
+  name: 'Granted Caster (fixture)',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-turn-end',
+      chancePercent: 100,
+      response: {
+        kind: 'perform-action',
+        actor: 'self',
+        intent: { action: { kind: 'cast', gemSlot: 'random' } },
+      },
+    },
+  ],
 }
 
 export const traits: ReadonlyMap<string, Trait> = new Map([
-  [BONUS_CASTER_FIXTURE.id, BONUS_CASTER_FIXTURE],
+  [GRANTED_CASTER_FIXTURE.id, GRANTED_CASTER_FIXTURE],
 ])
 
 export const playerParty = makeParty('player', [
@@ -69,7 +83,7 @@ export const playerParty = makeParty('player', [
     speed: 20,
     scriptId: 'always-wait',
     equippedSpells: [BOLT],
-    innateTraitIds: ['bonus-caster-fixture'],
+    innateTraitIds: ['granted-caster-fixture'],
   },
 ])
 
@@ -85,6 +99,10 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
   { type: 'Waited', creatureId: CASTER },
+  // 4.1-E: the granted cast is now an on-turn-end `perform-action` grant (chance = draw #1, then
+  // drained in the granted-actions step: gem draw #2, target draw -> default, no draw).
+  { type: 'TriggerFired', sourceId: CASTER, hook: 'on-turn-end', effectId: TRAIT_ID },
+  { type: 'ActionGranted', sourceId: CASTER, actorId: CASTER, effectId: TRAIT_ID },
   {
     type: 'SpellCast',
     targetShape: 'single',

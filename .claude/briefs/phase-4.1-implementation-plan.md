@@ -173,7 +173,7 @@ Cross-reference this table when implementing. "Deleted" rows are removed outrigh
 | `MAX_REVIVES_PER_CREATURE = 10`, `Creature.revivesUsed` | Config + engine field | B | Ineligible dead allies excluded; empty pool fizzles, no draw |
 | `actions.ts`: `checkLegality`, `resolveIntent`, `executeAction` | Module | C | One pipeline for every action source |
 | Intent `{ action: RuleAction, targeting? }` + `gemSlot: 'random'` + `'random'` target | Type | C | Rule-shaped intent |
-| `ResolutionContext { events, cascade, runAction }` | Transient resolver object | C | Replaces `onEchoCast` and loose `events`/`cascade` args |
+| `ResolutionContext { events, cascade, runAction }` | Transient resolver object | C | Replaces `onEchoCast` and loose `events`/`cascade` args; E adds `grants` (the `perform-action` queue) |
 | Optional rule targeting, side-aware default | Interpreter rule | C | `lowest-hp-enemy` / `lowest-hp-ally` by intended side |
 | Implicit fallback as an intent | Interpreter rule | C | The fallback attack uses the side-aware default (`lowest-hp-enemy`) like any rule; script-less goldens are rewritten |
 | Pre-hit fizzle | Resolver rule | C | Target dead after pre-hit hooks → that hit fizzles |
@@ -681,11 +681,12 @@ Item: **A2.** Bonus-cast and echo-cast become data.
 - **Actions are atomic:** a granted action is **queued** on the context and runs **after the
   granting action (all its instances) completes**. Grants during the turn-end hooks run in the
   skeleton's granted-actions step. Responses stay nested and immediate.
-- **Bounded by cascade depth**, not the self-re-entry guard: a granted action inherits depth + 1; an
-  echo chain may pass through the same Overtone.
-- **`ActionGranted { sourceId, actorId, effectId }`** right after `TriggerFired` when the grant
-  succeeds; a grant whose actor can't act or has nothing legal fizzles with `TriggerFired` only.
-  `EchoCastGranted` is deleted.
+- **Bounded by cascade depth**, not the self-re-entry guard: a granted action runs at its queue
+  entry's depth (the granting trigger's, +1 included); an echo chain may pass through the same
+  Overtone.
+- **`ActionGranted { sourceId, actorId, effectId }`** when the queued grant runs and is accepted,
+  immediately before the granted action's first event (decided at the plan review, below). A grant
+  refused or fizzling when it runs emits nothing of its own. `EchoCastGranted` is deleted.
 - **Content:**
   - Arcane Surge: `on-turn-end`, `chancePercent: 50` → `perform-action(self, { action: { kind:
     'cast', gemSlot: 'random' } })`.
@@ -694,23 +695,43 @@ Item: **A2.** Bonus-cast and echo-cast become data.
     'random' })`.
 - **Delete** the `bonus-cast` category (`BonusCastDef`, `activeBonusCast`, `maybeFireBonusCast`),
   `TriggeredDef.echoCast` and `runEchoCast`.
-- **Data test:** every `perform-action` trigger carries a `chancePercent` or a `condition`.
+- **Data test:** every `perform-action` trigger carries a real guard: a `chancePercent` below 100,
+  or a `condition` other than `always` (decided at the plan review, below).
 - **The skipped-turn gate moves with the grant** (PR #73 review). Through C2c, B2 rule 1's gate is
   a parameter of `maybeFireBonusCast`, fed by `resolveTurn`'s turn-start `suppressed` flag.
   Deleting `maybeFireBonusCast` means the gate moves to where granted actions run: a grant whose
   actor is the creature whose turn was skipped is refused **after** its chance roll, even if the
-  lock is gone by then. `golden-b2-skipped-turn-refuses-bonus-cast` is re-expressed with
+  lock is gone by then. `golden-b2-skipped-turn-refuses-granted-cast` is re-expressed with
   `perform-action` and keeps proving both halves (the roll happens; the grant is refused).
 - **RNG draw order**, documented in code and in the golden comments: chance gate at trigger time →
   (after the granting action completes) random gem → random target.
+
+- **Decided at the 4.1-E plan review** (CONVENTIONS "`perform-action`" holds the rules):
+  - Each scope that raises grants drains them once, at its end: the chosen action's grants right
+    after it; the turn-end hooks' grants in the granted-actions step; the turn-start hooks' grants
+    after the turn-start cleanup; fight-start and round-end grants right after their hook pass. The
+    queue is FIFO, and each entry carries its granting trigger's depth.
+  - `ActionGranted` is emitted when the grant runs and is accepted (ASSUMPTION 41).
+  - `actor: 'triggering-source'` includes the bearer, so Overtone keeps echoing its own casts
+    (ASSUMPTION 42).
+  - Only the actor's state decides a grant; the bearer dying doesn't cancel it (ASSUMPTION 43).
+  - `perform-action` is rejected inside spells and inside `consume-stacks`' wrapped effect. The
+    data test requires a real guard: `chancePercent` below 100, or a `condition` other than
+    `always`.
+  - The truncation golden uses the real cap (500) and a 100%-chance fixture Overtone on a single
+    bearer, so the chain passes through the same Overtone every hop. The per-hop events are written
+    by hand as a template in the fixture; a loop only repeats the template, and explicit checkpoints
+    are asserted. No test-only cap parameter in `src/engine`.
+  - The coding agent edits code, tests and the phase record only. Every living-doc change for this
+    slice is in this doc-sync.
 
 ### Deliberate golden changes (4.1-E)
 - **Bonus-cast goldens** gain `TriggerFired` + `ActionGranted`; the cast sits in the granted-actions
   step.
 - **Echo goldens**: `EchoCastGranted` → `ActionGranted`, and the echo now follows the original cast's
   full payload instead of interrupting it.
-- A new fixture golden: an echo chain passing through the same Overtone twice, truncated by a
-  lowered depth cap in the fixture (or by chance), asserting `CascadeTruncated` if truncated.
+- A new fixture golden: an echo chain passing through the same Overtone every hop, truncated at the
+  real cap (500) with one `CascadeTruncated`, per the plan-review block above.
 
 ---
 
@@ -778,6 +799,12 @@ Items: **A3, D6 status timing, D5, G2.**
 - The **Web break-free golden** moves its roll to turn-end cleanup.
 - Glow, Weaken, Vulnerability, Confusion goldens: only timing changes may appear; the modifier math
   must be identical.
+- **Arcane Surge shares the `on-turn-end` pass with DoT ticks** (from 4.1-E, PR #78 review). Surge
+  is an innate effect, so in canonical effect order (statuses after innate traits) it rolls before
+  the bearer's status ticks. A Seer killed by its own tick has already rolled: its `TriggerFired`
+  stays and the queued cast is refused at drain (dead actor), per "only the actor's state decides a
+  grant". No special case; corpus fights where a ticking Seer dies change for this reason and are
+  attributed as such.
 - **The F plan lists every affected golden with its fate** (PR #73 review): **re-derived by hand**
   (the mechanism still exists, only its timing moves) or **retired** (the mechanism is gone, e.g. a
   golden that exists only to pin the round-end sweep), with the golden that replaces its coverage.
@@ -1050,6 +1077,16 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     registered status is applied, and every specialization perk with effects matters (removing it
     changes its fight's event log). Explicit, reasoned exemptions only, enforced by a test. It lands as its own test-only slice, **4.1-D2**, between D and E, so
     E and F start from full coverage (one golden policy per PR, one digest regeneration per PR).
+41. **Confirmed (design owner, 4.1-E plan review).** `ActionGranted` is emitted when the queued
+    grant runs and is accepted (after legality and the gem and target draws, immediately before the
+    granted action's first event), not at trigger time. A grant's success is only known when it
+    runs, and a refused grant emits nothing of its own.
+42. **Confirmed (design owner, 4.1-E plan review).** `perform-action`'s `actor:
+    'triggering-source'` resolves to the hook's source even when that is the bearer. The PR #64
+    rule covers response targets only. Overtone keeps echoing its own casts, as it does today.
+43. **Confirmed (design owner, 4.1-E plan review).** Only the actor's state decides a queued
+    grant: dead, skipped turn or locked when it runs means refused. The bearer dying after its
+    trigger fired does not cancel it.
 
 ## Sequencing summary
 

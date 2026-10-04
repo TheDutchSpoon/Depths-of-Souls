@@ -16,19 +16,18 @@
 // (the only observer) vs a single TARGET.
 //
 // CASTER's real cast triggers on-action-observed dispatch #1: OVERTONE's own chancePercent(10)
-// roll is draw #1 = 0.0117 < 0.10 -> SUCCEEDS. echoCast fires (bypassing its own placeholder
-// response entirely -- no StatModifierApplied/etc., see RESONANT_OVERTONE_TRAIT's own doc
-// comment): draw #2 = 0.0620 (gem index, only 1 equipped -> slot 0 regardless of value), draw
-// #3 = 0.9769 (target index, only 1 living enemy -> TARGET regardless of value) -- EchoCastGranted,
-// then CASTER casts AGAIN (the echo), which fires its OWN nested on-action-observed dispatch #2
-// BEFORE its own damage lands (recursion precedes payload, same as any instance): OVERTONE rolls
-// AGAIN, draw #4 = 0.6990 >= 0.10 -> FAILS, chain stops at exactly one echo. The echo's own damage
-// then lands (nested), and only THEN does the ORIGINAL cast's own damage land (the outer call
-// resumes after the whole nested chain unwinds) -- so the echo's DamageDealt appears BEFORE the
-// original cast's own, even though the original cast was declared first.
+// roll is draw #1 = 0.0117 < 0.10 -> SUCCEEDS: TriggerFired, and (4.1-E) the response
+// `perform-action(triggering-source)` only QUEUES the echo. The ORIGINAL cast's own damage lands
+// first (TARGET 100 -> 90); then the grant runs as the CASTER: draw #2 = 0.0620 (gem index, only 1
+// equipped -> slot 0 regardless of value), draw #3 = 0.9769 (target index, only 1 living enemy ->
+// TARGET regardless of value) -- ActionGranted, then CASTER casts AGAIN (the echo), whose own
+// on-action-observed dispatch #2 rolls OVERTONE AGAIN (the chain passes through the same
+// Overtone): draw #4 = 0.6990 >= 0.10 -> FAILS, chain stops at exactly one echo. The echo's own
+// damage then lands (TARGET 90 -> 80). Before 4.1-E the echo ran nested inside the original cast's
+// pre-hit dispatch, so ITS damage came first; the draws and numbers are unchanged.
 //
 //   Both hits: off = Intelligence(20) x spellPower(0.5) = 10; vs def 0: core 10, chip 0.1 -> raw
-//     10.1 -> final 10. TARGET 100 -10 (echo) -10 (original) = 80, survives.
+//     10.1 -> final 10. TARGET 100 -10 (original) -10 (echo) = 80, survives.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -96,16 +95,7 @@ export const expectedEvents: CombatEvent[] = [
     hook: 'on-action-observed',
     effectId: RESONANT_OVERTONE_TRAIT.id,
   },
-  { type: 'EchoCastGranted', sourceId: OVERTONE, casterId: CASTER },
-  // The echo's own nested SpellCast -- its on-action-observed dispatch rolls again and fails
-  // (draw #4 >= 10%), so no TriggerFired/EchoCastGranted appears for it.
-  {
-    type: 'SpellCast',
-    targetShape: 'single',
-    casterId: CASTER,
-    gemSlot: 0,
-    targetId: TARGET,
-  },
+  // The ORIGINAL cast's own damage lands first -- the echo is only queued by the trigger above.
   {
     type: 'DamageDealt',
     sourceId: CASTER,
@@ -117,8 +107,22 @@ export const expectedEvents: CombatEvent[] = [
     remainingHp: 90,
     damageSource: 'cast',
   },
-  // Only now does the ORIGINAL cast's own damage land -- the whole echo chain resolved and
-  // unwound first (on-action-observed fires before that instance's own payload, recursively).
+  // The queued grant runs (draws #2, #3) and is accepted.
+  {
+    type: 'ActionGranted',
+    sourceId: OVERTONE,
+    actorId: CASTER,
+    effectId: RESONANT_OVERTONE_TRAIT.id,
+  },
+  // The echo's own SpellCast -- its on-action-observed dispatch rolls again and fails
+  // (draw #4 >= 10%), so no further TriggerFired/ActionGranted appears.
+  {
+    type: 'SpellCast',
+    targetShape: 'single',
+    casterId: CASTER,
+    gemSlot: 0,
+    targetId: TARGET,
+  },
   {
     type: 'DamageDealt',
     sourceId: CASTER,

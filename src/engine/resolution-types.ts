@@ -1,7 +1,8 @@
 // Phase 4.1-C2a (A1): a LEAF types module. `resolution.ts` imports `CascadeState`/
 // `ResolutionContext` from here (types only) and never imports `actions.ts` or `combat.ts` --
-// it reaches action resolution only through `ctx.runAction`, whose concrete implementation
-// (backed by `resolveIntent`/`executeAction`) is constructed in `actions.ts` and handed down.
+// it never runs an action: a `perform-action` response (4.1-E) only enqueues onto `ctx.grants`,
+// and the scope that created the context drains it with `actions.ts`'s `drainGrantedActions`
+// (`ctx.runAction`, constructed in `actions.ts` and handed down, is what the drain calls).
 // This file itself imports only the other leaf modules (`types.ts`, `ids.ts`, `effect-types.ts`,
 // `scripting-types.ts`), never `resolution.ts`/`actions.ts`/`combat.ts`, so there is no cycle in
 // either direction.
@@ -22,21 +23,43 @@ export interface CascadeState {
 
 export interface RunActionOptions {
   /** An event to push AFTER the intent resolves (gem/target draws happened) but BEFORE the
-   * resolved action executes -- e.g. `EchoCastGranted`, matching today's exact emission point. */
+   * resolved action executes -- `ActionGranted` for a drained `perform-action` grant. */
   readonly announce?: CombatEvent
+}
+
+/**
+ * Phase 4.1-E (A2): one queued `perform-action` grant. `executeResponse` pushes it onto
+ * `ResolutionContext.grants`; the scope that created the context drains the queue at its end
+ * (`actions.ts` `drainGrantedActions`), first in, first out. `depth` is the granting trigger's
+ * cascade depth (it already includes that trigger's +1): the granted action runs at that depth, so
+ * a chain of grants stays bounded by `MAX_TRIGGER_CASCADE_DEPTH` even though the granting trigger
+ * has unwound by then.
+ */
+export interface QueuedGrant {
+  /** The effect's bearer (`ActionGranted.sourceId`). */
+  readonly sourceId: CreatureId
+  /** Who acts. */
+  readonly actorId: CreatureId
+  readonly intent: Intent
+  /** The granting effect's definition id (`ActionGranted.effectId`, same as its `TriggerFired`). */
+  readonly effectId: string
+  readonly depth: number
 }
 
 /**
  * Phase 4.1-C2a (A1): the effect -> action seam. Created per top-level action by the action
  * layer (`actions.ts`'s `createResolutionContext`) and threaded through the whole resolver,
  * replacing the separate `events`/`cascade` arguments every resolution.ts function used to take,
- * and replacing `onEchoCast` -- a triggered response that needs to run a real action (echo-cast
- * today; `perform-action` from Phase 4.1-E) calls `ctx.runAction` instead of a hook-specific
- * callback. Never stored in `CombatState` (transient, call-stack-scoped, like `CascadeState`).
+ * and replacing the old echo callback. A response that needs an action run (`perform-action`, Phase 4.1-E)
+ * ENQUEUES onto `grants`; the scope that created the context runs `runAction` itself, draining the
+ * queue at its end. Never stored in `CombatState` (transient, call-stack-scoped, like `CascadeState`).
  */
 export interface ResolutionContext {
   readonly events: CombatEvent[]
   readonly cascade: CascadeState
+  /** The `perform-action` grants raised in this scope and not yet run (see `QueuedGrant`). A
+   * response only ever enqueues here -- `resolution.ts` never runs an action itself. */
+  readonly grants: QueuedGrant[]
   /** Checks `intent` is legal for `actorId` (locks included, every source), resolves it against
    * `state` (target/gem draws) and, if it resolves to a real `Action`, pushes `options.announce`
    * (if given) then executes it. A no-op (returns `state` unchanged, nothing drawn, nothing pushed)
