@@ -590,6 +590,16 @@ parity bug**, not a golden to regenerate.
   - One landed target's effect list is atomic: no actor check between its effects.
   - Magnitudes read the caster's **live** stats (no action-start snapshot), pinned by a test in
     which the caster's own `on-cast` trigger changes its Intelligence before the hit.
+- **Decided at the PR #74 review** (CONVENTIONS holds the rules):
+  - One formula for every formula-mode magnitude, `deal-damage` or `heal`, trait or spell:
+    `stat × (spellPower × multiplier)`. The heal branch that picked an order by asking whether it
+    ran inside a spell is removed. Goldens and the corpus are unchanged; trait `scalingStat` heals
+    with a count move from `(stat × spellPower) × count`, accepted as float noise (Necromoss can
+    differ by 1 HP on rare inputs).
+  - No response acts on a dead creature except `revive` (a verb rule, whatever the target kind);
+    `cast-target` is simply the landed target.
+  - The spell validator also requires cast-flavored damage (`damageSource` resolves to `'cast'`),
+    `offStat: 'cast'` when an `offStat` is used, and exactly one magnitude mode.
 
 ### Acceptance (4.1-D)
 - **Full golden suite byte-identical.** Plus a unit test per payload kind (damage, heal,
@@ -948,6 +958,15 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     when each effect runs, not an action-start snapshot.
 37. **Confirmed (design owner, 4.1-D plan review).** `scalingStat: 'none'` is dropped; a
     pure-utility spell has no damage/heal effect.
+38. **Confirmed (design owner, PR #74 review).** One formula for every formula-mode magnitude:
+    `stat × (spellPower × multiplier)`, with no spell check. Trait `scalingStat` heals with a count
+    move to it from `(stat × spellPower) × count`; neither order is more accurate, goldens and the
+    corpus are unchanged, and the rare 1 HP Necromoss difference is accepted. Considered and
+    rejected: separate orders per verb (zero shipped change, but two formulas for no design reason)
+    and an epsilon before the floor (can't guarantee zero change; on the damage floor it changes
+    corpus fights).
+39. **Confirmed (design owner, PR #74 review).** No response acts on a dead creature except
+    `revive`; `cast-target` resolves to the landed target without an alive check.
 
 ## Sequencing summary
 

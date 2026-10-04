@@ -548,6 +548,9 @@ The dormant hook seams (no-ops since Phase 1) activate here. How a hook fires:
   `on-damage-taken` (self) fires **only if the target survived** → then if it died: `CreatureDied` →
   `on-death` → `on-kill` (source) → `on-ally-death`/`on-enemy-death` (observers). Hit-reactions
   resolve before death-reactions.
+- **Nothing is done to a corpse.** Apart from a revive, no effect acts on a dead creature: no
+  damage, heal, status, stat change or cleanse. A spell whose first effect kills its target puts
+  nothing more on it, and a spell effect aimed at a caster killed mid-cast is dropped.
 - **The same holds for the actor** (Phase 4.1-C2c). A creature killed inside its own action, say by
   a retaliation after its first hit, does nothing more in that action: no further hit, splash hit
   or AOE hit. What it already did stays.
