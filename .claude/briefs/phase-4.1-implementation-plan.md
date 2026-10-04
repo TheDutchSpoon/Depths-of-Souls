@@ -683,9 +683,9 @@ Item: **A2.** Bonus-cast and echo-cast become data.
   skeleton's granted-actions step. Responses stay nested and immediate.
 - **Bounded by cascade depth**, not the self-re-entry guard: a granted action inherits depth + 1; an
   echo chain may pass through the same Overtone.
-- **`ActionGranted { sourceId, actorId, effectId }`** right after `TriggerFired` when the grant
-  succeeds; a grant whose actor can't act or has nothing legal fizzles with `TriggerFired` only.
-  `EchoCastGranted` is deleted.
+- **`ActionGranted { sourceId, actorId, effectId }`** when the queued grant runs and is accepted,
+  immediately before the granted action's first event (decided at the plan review, below). A grant
+  refused or fizzling when it runs emits nothing of its own. `EchoCastGranted` is deleted.
 - **Content:**
   - Arcane Surge: `on-turn-end`, `chancePercent: 50` → `perform-action(self, { action: { kind:
     'cast', gemSlot: 'random' } })`.
@@ -703,6 +703,25 @@ Item: **A2.** Bonus-cast and echo-cast become data.
   `perform-action` and keeps proving both halves (the roll happens; the grant is refused).
 - **RNG draw order**, documented in code and in the golden comments: chance gate at trigger time →
   (after the granting action completes) random gem → random target.
+
+- **Decided at the 4.1-E plan review** (CONVENTIONS "`perform-action`" holds the rules):
+  - Each scope that raises grants drains them once, at its end: the chosen action's grants right
+    after it; the turn-end hooks' grants in the granted-actions step; the turn-start hooks' grants
+    after the turn-start cleanup; fight-start and round-end grants right after their hook pass. The
+    queue is FIFO, and each entry carries its granting trigger's depth.
+  - `ActionGranted` is emitted when the grant runs and is accepted (ASSUMPTION 41).
+  - `actor: 'triggering-source'` includes the bearer, so Overtone keeps echoing its own casts
+    (ASSUMPTION 42).
+  - Only the actor's state decides a grant; the bearer dying doesn't cancel it (ASSUMPTION 43).
+  - `perform-action` is rejected inside spells and inside `consume-stacks`' wrapped effect. The
+    data test requires a real guard: `chancePercent` below 100, or a `condition` other than
+    `always`.
+  - The truncation golden uses the real cap (500) and a 100%-chance fixture Overtone on a single
+    bearer, so the chain passes through the same Overtone every hop. The per-hop events are written
+    by hand as a template in the fixture; a loop only repeats the template, and explicit checkpoints
+    are asserted. No test-only cap parameter in `src/engine`.
+  - The coding agent edits code, tests and the phase record only. Every living-doc change for this
+    slice is in this doc-sync.
 
 ### Deliberate golden changes (4.1-E)
 - **Bonus-cast goldens** gain `TriggerFired` + `ActionGranted`; the cast sits in the granted-actions
@@ -1050,6 +1069,16 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     registered status is applied, and every specialization perk with effects matters (removing it
     changes its fight's event log). Explicit, reasoned exemptions only, enforced by a test. It lands as its own test-only slice, **4.1-D2**, between D and E, so
     E and F start from full coverage (one golden policy per PR, one digest regeneration per PR).
+41. **Confirmed (design owner, 4.1-E plan review).** `ActionGranted` is emitted when the queued
+    grant runs and is accepted (after legality and the gem and target draws, immediately before the
+    granted action's first event), not at trigger time. A grant's success is only known when it
+    runs, and a refused grant emits nothing of its own.
+42. **Confirmed (design owner, 4.1-E plan review).** `perform-action`'s `actor:
+    'triggering-source'` resolves to the hook's source even when that is the bearer. The PR #64
+    rule covers response targets only. Overtone keeps echoing its own casts, as it does today.
+43. **Confirmed (design owner, 4.1-E plan review).** Only the actor's state decides a queued
+    grant: dead, skipped turn or locked when it runs means refused. The bearer dying after its
+    trigger fired does not cancel it.
 
 ## Sequencing summary
 

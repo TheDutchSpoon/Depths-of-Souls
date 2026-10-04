@@ -52,8 +52,9 @@ the rule is **"no side doors"**: every triggered behaviour is a response; explic
 keywords). A granted action (`perform-action`) runs after the granting action completes (actions
 are atomic). **"attack"/"cast" in a trait/spell mean the real actions** (full formula; DoT the lone
 Defence-bypass). **Turn** (4.1): TurnStarted → turn-start hooks → start cleanup (defend/provoke
-end) → action (or `TurnSkipped`) → turn-end hooks (DoT ticks) → granted actions → end cleanup
-(bearer's status timers count down; Web roll) → TurnEnded. **Statuses**: durations count the
+end) → turn-start grants → action (or `TurnSkipped`) → the action's grants → turn-end hooks (DoT
+ticks) → granted actions → end cleanup (bearer's status timers count down; Web roll) →
+TurnEnded. **Statuses**: durations count the
 **bearer's own turns** (4.1), born-this-turn rule (4.1), **Stun = a status with an
 `action-lock`** (4.1), single-instance stacking to a declared cap. **Loop safety**: instance-level stack-scoped
 self-re-entry guard + `MAX_TRIGGER_CASCADE_DEPTH=500` (chain depth) + mandatory `CascadeTruncated`;
