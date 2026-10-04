@@ -80,7 +80,7 @@ export const OVERCHARGE: Spell = {
 /**
  * ASSUMPTION (interstitial slice, NEW CONTENT -- surfaced for sign-off): Disorient, suggested by
  * the brief as "apply act-last to an enemy, reusing the turn-order primitive." The turn-order
- * primitive's act-last pole is already the `web` StatusDef (`category: 'turn-order-status',
+ * primitive's act-last pole is already the `web` StatusDef (a `turn-order` effect,
  * position: 'last'`, data/statuses.ts) -- per CONVENTIONS' "statuses are shared primitives" and
  * species-locked.md's own "a spell may apply any status, including another species' signature
  * one" rule (already precedented: Overgrowth's own Vine Snare applies `web` too), Disorient

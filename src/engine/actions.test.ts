@@ -279,10 +279,10 @@ describe('resolveIntent -- castable-filtered gem draw and resolved-side default 
 
 function lock(scope: 'all' | 'cast', id = 'lock'): ActiveEffect {
   return {
-    category: 'condition-status',
+    category: 'status',
     statusId: 'lock-' + id,
     cap: 1,
-    triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action', scope } }],
+    effects: [{ category: 'action-lock', scope: scope }],
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId('lock#' + id),
@@ -531,16 +531,16 @@ describe('resolveInstanceTarget -- rule 4 (B2.4, 4.1-C2c)', () => {
 
   it('never rolls Confusion: a 100%-confused attacker still re-targets an ENEMY, drawing nothing', () => {
     const confused: ActiveEffect = {
-      category: 'friendly-fire-status',
+      category: 'status',
       statusId: 'confusion',
       cap: 1,
-      chancePercent: 100,
       polarity: 'debuff',
       defaultDuration: 3,
       instanceId: createEffectInstanceId('conf'),
       sourceTraitId: 'confusion',
       remainingDuration: 3,
       stacks: 1,
+      effects: [{ category: 'friendly-fire', chancePercent: 100 }],
     }
     const { targets, state } = attackFrom(
       [SECOND_INSTANCE, confused],

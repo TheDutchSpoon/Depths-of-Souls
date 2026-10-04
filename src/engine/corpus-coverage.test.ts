@@ -196,9 +196,11 @@ describe('corpus coverage (Phase 4.1-D2)', () => {
       const held = new Map<string, 'dealt' | 'taken'>() // "creature|status" -> direction
       for (const e of events) {
         if (e.type === 'StatusApplied') {
-          const def = STATUS_REGISTRY.get(e.statusId)
-          if (def?.category === 'damage-modifier')
-            held.set(e.targetId + '|' + e.statusId, def.direction)
+          const modifier = STATUS_REGISTRY.get(e.statusId)?.effects.find(
+            (eff) => eff.category === 'damage-modifier',
+          )
+          if (modifier?.category === 'damage-modifier')
+            held.set(e.targetId + '|' + e.statusId, modifier.direction)
         } else if (e.type === 'StatusExpired') {
           held.delete(e.creatureId + '|' + e.statusId)
         } else if (e.type === 'DamageDealt') {
@@ -211,8 +213,8 @@ describe('corpus coverage (Phase 4.1-D2)', () => {
         }
       }
     }
-    const modifiers = [...STATUS_REGISTRY.values()].filter(
-      (d) => d.category === 'damage-modifier',
+    const modifiers = [...STATUS_REGISTRY.values()].filter((d) =>
+      d.effects.some((eff) => eff.category === 'damage-modifier'),
     )
     expect(
       modifiers.map((d) => d.statusId).filter((id) => !exercised.has(id)),

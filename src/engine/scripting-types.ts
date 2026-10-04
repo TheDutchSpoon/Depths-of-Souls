@@ -67,7 +67,7 @@ export interface EnemyWeakToMeExistsCondition {
 }
 
 /** Matches a literal statusId (never a category) among the subject pool's status-carrying
- * effects (condition-status + timed damage-modifier -- never stat-modifiers). Existential over
+ * status containers (4.1-F1; never stat-modifiers). Existential over
  * the pool, same as hp-percent's `any` qualifier; no lowest/highest qualifier here. */
 export interface HasStatusCondition {
   readonly kind: 'has-status'

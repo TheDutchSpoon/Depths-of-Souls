@@ -231,6 +231,8 @@ function describeEvent(event: CombatEvent): string {
       return `  ${event.targetId} heals ${event.amount} -- ${event.remainingHp} HP`
     case 'CascadeTruncated':
       return `  cascade truncated at ${event.creatureId}/${event.effectId} (depth ${event.depth})`
+    case 'TurnSkipped':
+      return `  ${event.creatureId}'s turn is skipped (${event.effectId})`
     case 'Revived':
       return `  ${event.targetId} is revived at ${event.currentHp} HP`
     default: {

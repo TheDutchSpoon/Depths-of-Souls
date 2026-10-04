@@ -8,22 +8,17 @@
 import { getEffectiveStat, hasStatus as hasStatusImpl } from './effective-stats'
 import { createEffectInstanceId } from './effect-types'
 import type {
-  ActionInstanceEffect,
   ActiveEffect,
-  ArmorPenetrationEffect,
   BaselineEffectEntry,
-  CheatDeathEffect,
   CountOf,
-  CrossStatEffect,
-  DamageModifierEffect,
   EffectDef,
   EffectInstanceId,
-  FriendlyFireStatusEffect,
+  FlatEffect,
+  FriendlyFireEffect,
   Hook,
   MagnitudeSource,
   ResolvedHookEffect,
   StatusDef,
-  TakenReductionEffect,
   Trait,
 } from './effect-types'
 import type { CombatState, Creature } from './types'
@@ -128,6 +123,14 @@ function withInstance(
       return { ...def, instanceId, sourceTraitId }
     case 'innate-spell':
       return { ...def, instanceId, sourceTraitId }
+    case 'action-lock':
+      return { ...def, instanceId, sourceTraitId }
+    case 'turn-order':
+      return { ...def, instanceId, sourceTraitId }
+    case 'friendly-fire':
+      return { ...def, instanceId, sourceTraitId }
+    case 'damage-modifier':
+      return { ...def, instanceId, sourceTraitId }
     default: {
       const exhaustive: never = def
       throw new Error(`Unknown effect def category: ${String(exhaustive)}`)
@@ -136,65 +139,81 @@ function withInstance(
 }
 
 /**
- * The creature's hook reactions registered for `hook`, in canonical active-effects order,
- * resolved to a uniform `ResolvedHookEffect` shape (Phase 4 Slice E2) regardless of source.
- * Matches BOTH permanent triggered traits (Retaliate, Grudge -- one hook each) and timed
- * condition-status effects (DoT/Regen/Stun/Sleep -- each of `triggers[]` checked independently,
- * since a status may subscribe to more than one hook, e.g. Sleep's on-turn-start suppress +
- * on-damage-taken wake-up) -- both fire via the same hook-dispatch machinery in resolution.ts's
- * fireHook, which reads this uniform shape without caring which one supplied it. Scan-and-filter
- * (a hook-type index is deferred until profiling shows it's needed). The alive/death gating is
- * the caller's (fireHook) responsibility, not this lookup's.
+ * Phase 4.1-F1 (A3): THE effect iterator -- the one way every reader sees a creature's effects.
+ * A trait/perk effect is yielded as is. A status (a timed container, `category: 'status'`) is
+ * flattened in place into its own `effects`, in order, each tagged with the status it came from
+ * (`statusId`, `statusStacks` -- the default count the effect scales by -- and
+ * `sourceInstanceId`) and given its own guard identity `${statusInstanceId}#effect#${index}`
+ * (PR #64: a trigger's self-re-entry guard is scoped to ONE trigger, never the whole status).
+ *
+ * **Immunity is checked here, once** (CONVENTIONS "Immunity"): every effect, of every kind, of a
+ * status the bearer is immune to is skipped -- locks, friendly-fire, triggers (a tick included),
+ * damage-modifiers, turn-order (so the Web roll draws nothing). The status itself still exists,
+ * stacks, counts down and counts for `has-status` (those read `activeEffects` directly, never
+ * this). Immunity is read only from non-status carriers (a status may not carry
+ * `status-immunity`, `validateStatusDef`), so it can't depend on itself.
+ *
+ * `getEffectiveStat`/`resolveRemappedStat` read `activeEffects` raw instead: the validator bans
+ * `stat-modifier`/`stat-remap` inside a status, so there is nothing for them to flatten.
+ */
+export function flatEffects(creature: Creature): readonly FlatEffect[] {
+  const effects = creature.activeEffects
+  if (!effects.some((e) => e.category === 'status')) {
+    return effects as readonly FlatEffect[] // no container: nothing to flatten
+  }
+  const out: FlatEffect[] = []
+  for (const e of effects) {
+    if (e.category !== 'status') {
+      out.push(e)
+      continue
+    }
+    if (hasStatusImmunity(creature, e.statusId)) continue
+    e.effects.forEach((def, index) => {
+      out.push({
+        ...def,
+        instanceId: createEffectInstanceId(`${e.instanceId}#effect#${index}`),
+        sourceTraitId: e.statusId,
+        statusId: e.statusId,
+        statusStacks: e.stacks,
+        sourceInstanceId: e.instanceId,
+      })
+    })
+  }
+  return out
+}
+
+/**
+ * The creature's hook reactions registered for `hook`, in canonical effect order (the iterator's
+ * order: trait/perk effects, then each status's effects in application order), resolved to a
+ * uniform `ResolvedHookEffect` shape regardless of source -- a trait's own trigger or a trigger
+ * inside a status container (Sleep's wake-up, a DoT tick, Spore's spread). `fireHook`
+ * (resolution.ts) reads this shape without caring which one supplied it. Scan-and-filter (a
+ * hook-type index is deferred until profiling shows it's needed). The alive/death gating is the
+ * caller's (fireHook) responsibility, not this lookup's.
  */
 export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffect[] {
   const results: ResolvedHookEffect[] = []
-  for (const e of creature.activeEffects) {
-    if (e.category === 'triggered') {
-      if (e.hook !== hook) continue
-      results.push({
-        instanceId: e.instanceId,
-        sourceTraitId: e.sourceTraitId,
-        condition: e.condition,
-        chancePercent: e.chancePercent,
-        observationFilter: e.observationFilter,
-        response: e.response,
-        // Phase 4 Slice H2 (PR #60 review, E2.1): only a TriggeredDef can declare it (no status
-        // content uses it), so it stays undefined via the condition-status branch below.
-        nonStacking: e.stacks === false ? true : undefined,
-        // Phase 4.1-B (B4): a plain triggered trait/perk's own instanceId IS its real owning
-        // instance (same value used for the cascade guard above).
-        sourceInstanceId: e.instanceId,
-      })
-    } else if (e.category === 'condition-status') {
-      e.triggers.forEach((trigger, index) => {
-        if (trigger.hook !== hook) return
-        results.push({
-          // PR #64 fix 1: a per-TRIGGER guard identity, not the status's own shared instanceId.
-          // A status with more than one trigger (Sleep, Spore) previously had every trigger
-          // resolve to the SAME instanceId here -- fireHook's self-re-entry guard
-          // (cascade.activeInstances) then blocked a later trigger (e.g. Spore's on-death spread)
-          // from firing while an EARLIER, unrelated trigger on the same status instance (Spore's
-          // own on-round-end DoT tick) was still unwinding on the call stack, since both shared
-          // one guard key. Each trigger now gets its own derived id for this guard-only purpose;
-          // everything that keys off the REAL status instance -- refresh, removal, the round-end
-          // sweep snapshot -- still reads `ActiveEffect.instanceId` directly (e.instanceId, never
-          // this derived one), so status identity/stacking/duration are completely unaffected.
-          instanceId: createEffectInstanceId(`${e.instanceId}#trigger#${index}`),
-          sourceTraitId: e.sourceTraitId,
-          condition: trigger.condition,
-          chancePercent: trigger.chancePercent,
-          response: trigger.response,
-          stacks: e.stacks,
-          statusId: e.statusId,
-          // Phase 4.1-B (B4): the status's own REAL shared instance id -- distinct from the
-          // derived per-trigger guard id above (`instanceId`). fireHook checks this against the
-          // creature's LIVE activeEffects before firing: a status removed (cleansed) or replaced
-          // by a fresh instance (removed then reapplied) earlier in the SAME hook pass must not
-          // let a stale candidate captured at list-build time still fire.
-          sourceInstanceId: e.instanceId,
-        })
-      })
-    }
+  for (const e of flatEffects(creature)) {
+    if (e.category !== 'triggered' || e.hook !== hook) continue
+    results.push({
+      instanceId: e.instanceId,
+      sourceTraitId: e.sourceTraitId,
+      condition: e.condition,
+      chancePercent: e.chancePercent,
+      observationFilter: e.observationFilter,
+      response: e.response,
+      // Phase 4 Slice H2 (PR #60 review, E2.1): the dedup flag (`stacks: false`).
+      nonStacking: e.stacks === false ? true : undefined,
+      // Present only when the trigger came out of a status container.
+      stacks: e.statusStacks,
+      statusId: e.statusId,
+      // Phase 4.1-B (B4): the REAL owning instance's id -- a plain trigger's own id, or the
+      // status's shared instance id (distinct from the derived per-trigger guard `instanceId`).
+      // fireHook checks it against the creature's LIVE activeEffects before firing: a status
+      // removed (cleansed) or replaced earlier in the SAME hook pass must not let a stale
+      // candidate captured at list-build time still fire.
+      sourceInstanceId: e.sourceInstanceId ?? e.instanceId,
+    })
   }
   return results
 }
@@ -218,10 +237,9 @@ export function clampedHp(creature: Creature): number {
 }
 
 /** Phase 4 Slice F (review amendment): the shared structural shape `damageModifierCount`/
- * `takenFactorFor` read -- satisfied by BOTH `DamageModifierEffect` (a status; always carries a
- * required `stacks`) and `TakenReductionEffect` (a permanent passive; carries no `stacks` at
- * all, so it structurally omits the field rather than setting it). Lets Bulwark's new
- * perk-granted passive reuse these two helpers verbatim instead of duplicating them. */
+ * `takenFactorFor` read -- satisfied by BOTH `damage-modifier` and `taken-reduction` entries.
+ * `stacks` is the carrying status's stack count (4.1-F1: the default repetition count); absent
+ * outside a status. */
 interface TakenReductionSource {
   readonly magnitude: number
   readonly magnitudeSource?: MagnitudeSource
@@ -230,14 +248,21 @@ interface TakenReductionSource {
   readonly stacks?: number
 }
 
-/** Phase 4 Slice D: the live repetition count a damage-modifier effect's `magnitude` is
- * multiplied/exponentiated by -- `e.stacks` (pre-Slice-D behavior) unless the effect declares a
- * `magnitudeSource`, in which case the live resolveCount(...) reading is used instead (recomputed
- * every read -- see DamageModifierDef's own doc comment). Phase 4 Slice F: `e.stacks ?? 1` --
- * byte-identical for a `DamageModifierEffect` (`stacks` is always a defined number there) and the
- * correct "flat single application" reading for a `TakenReductionEffect` that omits both
- * `magnitudeSource` and `stacks` (it carries no stack bookkeeping at all, being a permanent
- * passive, not a status). */
+function modifierSource(e: FlatEffect & TakenReductionSource): TakenReductionSource {
+  return {
+    magnitude: e.magnitude,
+    magnitudeSource: e.magnitudeSource,
+    accumulation: e.accumulation,
+    reductionCap: e.reductionCap,
+    stacks: e.statusStacks,
+  }
+}
+
+/** Phase 4 Slice D: the live repetition count a damage-modifier's `magnitude` is
+ * multiplied/exponentiated by -- the carrying status's `stacks` (4.1-F1: a status's effects get
+ * its stacks as their default count) unless the effect declares a `magnitudeSource`, in which
+ * case the live resolveCount(...) reading is used instead (recomputed every read). `?? 1`: the
+ * flat single application for an effect carried outside a status. */
 function damageModifierCount(
   bearer: Creature,
   state: CombatState,
@@ -248,28 +273,24 @@ function damageModifierCount(
     : (e.stacks ?? 1)
 }
 
-/** Attacker's additive dealt-mod pool contribution from active damage-modifier statuses
+/** Attacker's additive dealt-mod pool contribution from active `damage-modifier` effects
  * (e.g. Weaken: -20%/stack). Read passively, like getEffectiveStat -- never fired via a hook. */
 export function gatherDealtMods(creature: Creature, state: CombatState): number[] {
-  return creature.activeEffects
-    .filter(
-      (e): e is DamageModifierEffect =>
-        e.category === 'damage-modifier' && e.direction === 'dealt',
-    )
-    .map((e) => e.magnitude * damageModifierCount(creature, state, e))
+  const mods: number[] = []
+  for (const e of flatEffects(creature)) {
+    if (e.category !== 'damage-modifier' || e.direction !== 'dealt') continue
+    mods.push(e.magnitude * damageModifierCount(creature, state, modifierSource(e)))
+  }
+  return mods
 }
 
-/** Phase 4 Slice D, PR #47 review amendment: collapses one `taken`-direction damage-modifier
- * effect to its single contributed factor, per its `accumulation` mode (CONVENTIONS'
- * "Taken-reduction accumulation", DamageModifierDef's own doc comment). `'multiplicative'`
- * (default/absent -- byte-identical to every pre-amendment read): `magnitude ** count`,
- * asymptoting toward 0, never clamped. `'additive'` (Bulwark): the per-unit reduction
- * `(1 - magnitude)` summed × count, hard-clamped at `reductionCap` (default 1 -- i.e.
- * unclamped -- if somehow omitted on an additive effect, though real content always sets it).
- * The collapsed factor is what enters the multiplicative `Π(takenFactors)` pool alongside every
- * other source -- additive WITHIN a source, multiplicative ACROSS sources. Phase 4 Slice F:
- * generalized to `TakenReductionSource` so Bulwark's new perk-granted `TakenReductionEffect`
- * reuses this verbatim alongside `DamageModifierEffect`'s own `taken` entries. */
+/** Phase 4 Slice D, PR #47 review amendment: collapses one `taken`-direction modifier to its
+ * single contributed factor, per its `accumulation` mode (CONVENTIONS' "Taken-reduction
+ * accumulation"). `'multiplicative'` (default/absent): `magnitude ** count`, asymptoting toward
+ * 0, never clamped. `'additive'` (Bulwark): the per-unit reduction `(1 - magnitude)` summed ×
+ * count, hard-clamped at `reductionCap` (default 1 -- unclamped -- if somehow omitted). The
+ * collapsed factor enters the multiplicative `Π(takenFactors)` pool alongside every other source
+ * -- additive WITHIN a source, multiplicative ACROSS sources. */
 function takenFactorFor(
   bearer: Creature,
   state: CombatState,
@@ -284,22 +305,25 @@ function takenFactorFor(
   return e.magnitude ** count
 }
 
-/** Defender's multiplicative taken-pool contribution from active damage-modifier statuses
- * (e.g. Vulnerability: x1.5/stack, compounding via magnitude ** stacks) AND (Phase 4 Slice F,
- * review amendment) permanent perk-granted `taken-reduction` passives (Bulwark) -- both flavors
- * share the exact same `accumulation: 'additive'`-with-`reductionCap` hard-cap shape, so both
- * are collapsed via the same `takenFactorFor`. */
+/** Defender's multiplicative taken-pool contribution from active `damage-modifier` (taken)
+ * effects (e.g. Vulnerability: x1.5/stack) AND permanent perk-granted `taken-reduction`
+ * passives (Bulwark) -- both share the same hard-cap shape, so both collapse via
+ * `takenFactorFor`. Order is part of the contract (float multiplication is not associative):
+ * every damage-modifier first, then every taken-reduction, each in iterator order. */
 export function gatherTakenFactors(creature: Creature, state: CombatState): number[] {
-  const damageModifiers = creature.activeEffects.filter(
-    (e): e is DamageModifierEffect =>
-      e.category === 'damage-modifier' && e.direction === 'taken',
-  )
-  const takenReductions = creature.activeEffects.filter(
-    (e): e is TakenReductionEffect => e.category === 'taken-reduction',
-  )
-  return [...damageModifiers, ...takenReductions].map((e) =>
-    takenFactorFor(creature, state, e),
-  )
+  const effects = flatEffects(creature)
+  const factors: number[] = []
+  for (const e of effects) {
+    if (e.category === 'damage-modifier' && e.direction === 'taken') {
+      factors.push(takenFactorFor(creature, state, modifierSource(e)))
+    }
+  }
+  for (const e of effects) {
+    if (e.category === 'taken-reduction') {
+      factors.push(takenFactorFor(creature, state, modifierSource(e)))
+    }
+  }
+  return factors
 }
 
 /** Phase 4.1-B (B-8): re-exported from effective-stats.ts, which now owns the canonical
@@ -311,9 +335,10 @@ export const hasStatus = hasStatusImpl
 /** Attacker's summed armor-penetration passives (additive across sources, clamped [0,1]) --
  * read passively by dealDamage/dealDamageWithScalingStat, never fired via a hook. */
 export function gatherArmorPenetration(creature: Creature): number {
-  const total = creature.activeEffects
-    .filter((e): e is ArmorPenetrationEffect => e.category === 'armor-penetration')
-    .reduce((sum, e) => sum + e.percent, 0)
+  let total = 0
+  for (const e of flatEffects(creature)) {
+    if (e.category === 'armor-penetration') total += e.percent
+  }
   return Math.min(1, Math.max(0, total))
 }
 
@@ -324,65 +349,62 @@ export function gatherCrossStatContribution(
   creature: Creature,
   actionKind: 'attack' | 'cast',
 ): number {
-  return creature.activeEffects
-    .filter(
-      (e): e is CrossStatEffect =>
-        e.category === 'cross-stat' &&
-        (e.appliesTo === actionKind || e.appliesTo === 'both'),
-    )
-    .reduce(
-      (sum, e) => sum + e.percentPerRank * getEffectiveStat(creature, e.fromStat),
-      0,
-    )
+  let total = 0
+  for (const e of flatEffects(creature)) {
+    if (
+      e.category === 'cross-stat' &&
+      (e.appliesTo === actionKind || e.appliesTo === 'both')
+    ) {
+      total += e.percentPerRank * getEffectiveStat(creature, e.fromStat)
+    }
+  }
+  return total
 }
 
 /** The powerPercent of each active action-instance passive matching `actionKind` (or 'both'),
- * in canonical active-effects order -- appended after the base [100] entry to build an Attack/
- * Cast's instance list (combat.ts's buildInstanceList). See ActionInstanceDef's own doc comment
- * for the inline ASSUMPTION this primitive's exact shape rests on. */
+ * in canonical effect order -- appended after the base [100] entry to build an Attack/Cast's
+ * instance list (actions.ts's buildInstanceList). See ActionInstanceDef's own doc comment for the
+ * inline ASSUMPTION this primitive's exact shape rests on. */
 export function gatherExtraInstances(
   creature: Creature,
   actionKind: 'attack' | 'cast',
 ): number[] {
-  return creature.activeEffects
-    .filter(
-      (e): e is ActionInstanceEffect =>
-        e.category === 'action-instance' &&
-        (e.actionKind === actionKind || e.actionKind === 'both'),
-    )
-    .map((e) => e.powerPercent)
+  const out: number[] = []
+  for (const e of flatEffects(creature)) {
+    if (
+      e.category === 'action-instance' &&
+      (e.actionKind === actionKind || e.actionKind === 'both')
+    ) {
+      out.push(e.powerPercent)
+    }
+  }
+  return out
 }
 
-/** Instantiates a status definition into an ActiveEffect with fresh duration/stack bookkeeping.
- * `instanceId` follows the `${creatureId}#status#${statusId}` scheme (deterministic, never RNG). */
+/** Instantiates a status definition into a container `ActiveEffect` with fresh duration/stack
+ * bookkeeping (4.1-F1: ONE instance shape; the def's `effects` are embedded on it). */
 export function instantiateStatus(
   def: StatusDef,
   instanceId: EffectInstanceId,
   remainingDuration: number,
   stacks: number,
 ): ActiveEffect {
-  const base = { instanceId, sourceTraitId: def.statusId, remainingDuration, stacks }
-  switch (def.category) {
-    case 'condition-status':
-      return { ...def, ...base }
-    case 'damage-modifier':
-      return { ...def, ...base }
-    case 'turn-order-status':
-      return { ...def, ...base }
-    case 'friendly-fire-status':
-      return { ...def, ...base }
-    default: {
-      const exhaustive: never = def
-      throw new Error(`Unknown status category: ${String(exhaustive)}`)
-    }
+  return {
+    ...def,
+    category: 'status',
+    instanceId,
+    sourceTraitId: def.statusId,
+    remainingDuration,
+    stacks,
   }
 }
 
 // ---- Phase 4 Slice C: permanent-passive checks + status-carrying lookups ----
 
 /** True iff `creature` carries a status-immunity for `statusId` (Clear Mind/Aggressive/
- * Lucidity). Consulted at each immune-able status's OWN effect-execution site -- never at
- * applyStatus, per "immunity suppresses the effect, not the application". */
+ * Lucidity). Read only from NON-status carriers (the raw list, never the iterator), and only
+ * consulted by the effect iterator (`flatEffects`) -- never at applyStatus, per "immunity
+ * suppresses the effect, not the application". */
 export function hasStatusImmunity(creature: Creature, statusId: string): boolean {
   return creature.activeEffects.some(
     (e) => e.category === 'status-immunity' && e.statusId === statusId,
@@ -392,36 +414,66 @@ export function hasStatusImmunity(creature: Creature, statusId: string): boolean
 /** Tunnel Vision: true iff `creature`'s single-target offensive actions skip the enemy Provoke
  * redirect entirely (targeting.ts's override pipeline). */
 export function hasProvokeImmunity(creature: Creature): boolean {
-  return creature.activeEffects.some((e) => e.category === 'provoke-immunity')
+  return flatEffects(creature).some((e) => e.category === 'provoke-immunity')
 }
 
 /** Proficient Warrior: true iff `creature`'s single-target Attack/Cast main hits also splash
  * onto adjacent (or, with Annihilate, all other living) enemies. */
 export function hasSplashing(creature: Creature): boolean {
-  return creature.activeEffects.some((e) => e.category === 'splashing')
+  return flatEffects(creature).some((e) => e.category === 'splashing')
 }
 
 /** Annihilate: true iff `creature`'s Splashing (when also present) hits all other living
  * enemies instead of just adjacent ones. Inert alone -- callers must check hasSplashing too. */
 export function hasAnnihilate(creature: Creature): boolean {
-  return creature.activeEffects.some((e) => e.category === 'annihilate')
+  return flatEffects(creature).some((e) => e.category === 'annihilate')
 }
 
 /**
- * Confusion: `creature`'s active friendly-fire-status effect, EXCLUDING one the creature is
- * immune to (Lucidity) -- an immune bearer is treated as having no active friendly-fire status
- * at all, so its roll (and RNG consumption) never happens, per "immunity suppresses the effect"
- * extended to also suppress the roll itself for this passively-read status kind. At most one
- * such status is expected in v1 content; the first match wins if content ever stacks more than
- * one (deliberately permissive, not a modeled interaction).
+ * Confusion: `creature`'s first active `friendly-fire` effect (carried by the Confusion status).
+ * Immunity (Lucidity) needs no check here -- the iterator already hid an immune status's effects,
+ * so an immune bearer has no friendly-fire at all and its roll (and RNG draw) never happens. At
+ * most one such effect is expected in v1 content; the first in canonical order wins.
  */
 export function activeFriendlyFireStatus(
   creature: Creature,
-): FriendlyFireStatusEffect | undefined {
-  return creature.activeEffects.find(
-    (e): e is FriendlyFireStatusEffect =>
-      e.category === 'friendly-fire-status' && !hasStatusImmunity(creature, e.statusId),
+): (FriendlyFireEffect & { readonly statusId?: string }) | undefined {
+  for (const e of flatEffects(creature)) {
+    if (e.category === 'friendly-fire') return e
+  }
+  return undefined
+}
+
+/** The action kinds an action lock can refuse (every `Action['kind']`). */
+export type LockableKind = 'attack' | 'cast' | 'defend' | 'provoke' | 'wait'
+
+/**
+ * Phase 4.1-F1 (A3, CONVENTIONS "Action locks"): true iff an active `action-lock` makes `kind`
+ * illegal for `creature` -- an `'all'` lock refuses EVERY kind (Attack, Cast, Defend, Provoke,
+ * Wait), a scoped lock only its own. Read through the iterator, so an immune bearer's status lock
+ * doesn't count. `checkLegality` (actions.ts) is the one caller on the action path.
+ */
+export function isActionLocked(creature: Creature, kind: LockableKind): boolean {
+  return flatEffects(creature).some(
+    (e) => e.category === 'action-lock' && (e.scope === 'all' || e.scope === kind),
   )
+}
+
+/**
+ * The first active `'all'` action-lock in canonical effect order, as the id of its carrier's
+ * definition (the status id for a status, the trait id for a trait-borne lock -- the value
+ * `TriggerFired.effectId` carries), or `undefined`. `resolveTurn` reads it to skip a turn and to
+ * name the `TurnSkipped` event.
+ */
+export function firstAllLock(
+  creature: Creature,
+): { readonly effectId: string } | undefined {
+  for (const e of flatEffects(creature)) {
+    if (e.category === 'action-lock' && e.scope === 'all') {
+      return { effectId: e.sourceTraitId }
+    }
+  }
+  return undefined
 }
 
 // ---- Phase 4 Slice D: resource & counter primitives ----
@@ -511,8 +563,9 @@ export function resolveMagnitudeCount(
  * clamp). 0 for a creature with no cheat-death effect -- applyDamageAndEmit (resolution.ts)
  * skips the RNG draw entirely in that case, never rolling for an ordinary creature. */
 export function gatherCheatDeathChance(creature: Creature): number {
-  const total = creature.activeEffects
-    .filter((e): e is CheatDeathEffect => e.category === 'cheat-death')
-    .reduce((sum, e) => sum + e.chancePercent, 0)
+  let total = 0
+  for (const e of flatEffects(creature)) {
+    if (e.category === 'cheat-death') total += e.chancePercent
+  }
   return Math.min(100, Math.max(0, total))
 }

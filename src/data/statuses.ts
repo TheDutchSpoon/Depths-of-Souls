@@ -1,15 +1,10 @@
-import { validateStatusNoRandomSelectorInResponseTargets } from '../engine/effect-types'
-import type {
-  ConditionStatusDef,
-  DamageModifierDef,
-  FriendlyFireStatusDef,
-  StatusDef,
-  TurnOrderStatusDef,
-} from '../engine/effect-types'
+import { validateStatusDef } from '../engine/effect-types'
+import type { StatusDef } from '../engine/effect-types'
 
-// Representative & temporary Phase 3 status content (replaced when the real roster lands,
-// Phase 4+). Each is a data instance of the built condition-status / damage-modifier
-// primitives -- no per-status special-casing in the engine.
+// Status content. Since Phase 4.1-F1 (A3) every status is the same shape: a container
+// `{ statusId, cap, polarity, defaultDuration, effects: EffectDef[] }` of ordinary effects (the
+// ones a trait carries), read through the engine's one effect iterator -- no per-status
+// special-casing in the engine, and no bespoke status categories.
 
 /** DoT: 3% of the bearer's own effective max HP per stack per round (percent-hp-condition-ticks
  * brief -- the same fraction of max HP at every level, unlike a flat number), bypassing
@@ -18,12 +13,12 @@ import type {
  * through its own damage formula (own Defence/dealt-buffs applying to its own poison); see
  * resolveFlatTotal (resolution.ts). No TriggerFired per tick -- its StatusApplied already
  * announced it. */
-export const POISON: ConditionStatusDef = {
-  category: 'condition-status',
+export const POISON: StatusDef = {
   statusId: 'poison',
   cap: 5,
-  triggers: [
+  effects: [
     {
+      category: 'triggered',
       hook: 'on-round-end',
       response: {
         kind: 'deal-damage',
@@ -43,12 +38,12 @@ export const POISON: ConditionStatusDef = {
 
 /** DoT: 5% of the bearer's own effective max HP per stack per round. Same stat-derived flat
  * mode as POISON -- see its doc comment for why this isn't `scalingStat`. */
-export const BURN: ConditionStatusDef = {
-  category: 'condition-status',
+export const BURN: StatusDef = {
   statusId: 'burn',
   cap: 3,
-  triggers: [
+  effects: [
     {
+      category: 'triggered',
       hook: 'on-round-end',
       response: {
         kind: 'deal-damage',
@@ -68,12 +63,12 @@ export const BURN: ConditionStatusDef = {
 /** HoT: 5% of the bearer's (the healed creature's) own effective max HP per stack per round,
  * clamped to effective max Health (no auto-heal past it). Same stat-derived flat mode as
  * POISON/BURN's own deal-damage, mirrored onto heal. */
-export const REGEN: ConditionStatusDef = {
-  category: 'condition-status',
+export const REGEN: StatusDef = {
   statusId: 'regen',
   cap: 3,
-  triggers: [
+  effects: [
     {
+      category: 'triggered',
       hook: 'on-round-end',
       response: {
         kind: 'heal',
@@ -88,13 +83,13 @@ export const REGEN: ConditionStatusDef = {
   defaultDuration: 3,
 }
 
-/** Just a condition-status: an on-turn-start suppress-action -- the Phase 1 empty-bracket skip,
- * no special resolver branch. Single-instance (cap 1); stacking would be inert either way. */
-export const STUN: ConditionStatusDef = {
-  category: 'condition-status',
+/** Just a status carrying a passive `action-lock { scope: 'all' }` (4.1-F1): when the bearer's turn
+ * comes up it is skipped (`TurnSkipped`), and every action it could take, chosen or granted, is
+ * illegal. No special resolver branch. Single-instance (cap 1); stacking would be inert either way. */
+export const STUN: StatusDef = {
   statusId: 'stun',
   cap: 1,
-  triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action' } }],
+  effects: [{ category: 'action-lock', scope: 'all' }],
   polarity: 'debuff',
   // Matches REELING's own real usage (duration: 1), never actually read by it.
   defaultDuration: 1,
@@ -102,11 +97,9 @@ export const STUN: ConditionStatusDef = {
 
 /** Damage-modifier: -20% damage DEALT per stack, additive into (1 + Σ dealtMods). Capped at
  * 1 stack per GAME_DESIGN ("~1 stack + duration"). */
-export const WEAKEN: DamageModifierDef = {
-  category: 'damage-modifier',
+export const WEAKEN: StatusDef = {
   statusId: 'weaken',
-  direction: 'dealt',
-  magnitude: -0.2,
+  effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.2 }],
   cap: 1,
   polarity: 'debuff',
   // Phase 4 Slice F (review amendment): Concussive Blows (data/specializations.ts) now omits
@@ -116,11 +109,9 @@ export const WEAKEN: DamageModifierDef = {
 
 /** Damage-modifier: x1.5 damage TAKEN per stack, multiplicative (Π(takenFactors), compounding
  * via magnitude ** stacks). */
-export const VULNERABILITY: DamageModifierDef = {
-  category: 'damage-modifier',
+export const VULNERABILITY: StatusDef = {
   statusId: 'vulnerability',
-  direction: 'taken',
-  magnitude: 1.5,
+  effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.5 }],
   cap: 2,
   polarity: 'debuff',
   // Matches combat.test.ts's own real usage (duration: 3), never actually read by it.
@@ -128,7 +119,7 @@ export const VULNERABILITY: DamageModifierDef = {
 }
 
 /** Phase 4 Slice H1 (The Overgrowth, Spiders): a Webbed creature acts LAST until it breaks free
- * -- a `turn-order-status` at `position: 'last'` (Blindclaws' H2 act-first grant-act-first status
+ * -- a `turn-order` effect at `position: 'last'` (Blindclaws' H2 act-first grant-act-first status
  * will be the SAME primitive at the opposite pole -- "same tool, opposite pole" per
  * species-locked.md). Deliberately light per the design doc: a 10%/turn break-free roll
  * (`breakChancePercent`, Slice E2's already-built mechanism -- rolled at every creature's
@@ -136,32 +127,30 @@ export const VULNERABILITY: DamageModifierDef = {
  * bad-luck backstop (`defaultDuration`/`cap`) -- the reward lives in Spiders' Ambusher exploit
  * (+% damage to Webbed), not in the status itself lasting long. Single-instance (cap 1):
  * re-applying Web to an already-Webbed target just refreshes it, never stacks. */
-export const WEB: TurnOrderStatusDef = {
-  category: 'turn-order-status',
+export const WEB: StatusDef = {
   statusId: 'web',
   cap: 1,
-  position: 'last',
-  breakChancePercent: 10,
+  effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 10 }],
   polarity: 'debuff',
   defaultDuration: 3,
 }
 
-/** Phase 4 Slice H1 (The Overgrowth, Lullpollen): a condition-status with TWO triggers (per
- * ConditionStatusDef's own doc comment -- Sleep is the first status to need more than one),
- * mirroring Stun's on-turn-start suppress-action exactly (the sleeper's turn is skipped) PLUS an
+/** Phase 4 Slice H1 (The Overgrowth, Lullpollen): a status with TWO effects (its 'all' lock
+ * plus a trigger -- Sleep was the first status to need more than one),
+ * mirroring Stun's 'all' action-lock exactly (the sleeper's turn is skipped) PLUS an
  * on-damage-taken -> remove-status(self) wake-up. Because the wake-up fires AFTER damage lands
  * (applyDamageAndEmit's existing on-damage-taken point, post-DamageDealt), a "vs Sleeping" payoff
  * (Lullpollen's Reaper) still reads the target as asleep at the moment its own bonus is gathered
  * -- the hit that wakes the target is also the hit that benefits from the bonus, per the design
  * doc's "the waking hit still lands its vs-Sleeping bonus, then wakes." Default 3 turns if never
  * struck; single-instance (cap 1).*/
-export const SLEEP: ConditionStatusDef = {
-  category: 'condition-status',
+export const SLEEP: StatusDef = {
   statusId: 'sleep',
   cap: 1,
-  triggers: [
-    { hook: 'on-turn-start', response: { kind: 'suppress-action' } },
+  effects: [
+    { category: 'action-lock', scope: 'all' },
     {
+      category: 'triggered',
       hook: 'on-damage-taken',
       response: {
         kind: 'remove-status',
@@ -180,30 +169,27 @@ export const SLEEP: ConditionStatusDef = {
  * exactly what the dealt-pool's existing per-stack additive term already means; no new StatusDef
  * category needed. Its own intrinsic effect (the dealt-mod) applies whether or not it's ever
  * consumed; Glowflies' Detonator (`consume-stacks`) is the payoff hook, not a requirement. */
-export const GLOW: DamageModifierDef = {
-  category: 'damage-modifier',
+export const GLOW: StatusDef = {
   statusId: 'glow',
-  direction: 'dealt',
-  magnitude: 0.08,
+  effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: 0.08 }],
   cap: 5,
   polarity: 'buff',
   defaultDuration: 4,
 }
 
-/** Phase 4 Slice H2 (Glimmerdark, Blindclaws): the act-FIRST pole of the same `turn-order-status`
+/** Phase 4 Slice H2 (Glimmerdark, Blindclaws): the act-FIRST pole of the same `turn-order`
  * primitive Web (act-last, H1) already proved -- "same tool, opposite pole"
  * (species-locked.md). No `breakChancePercent` -- unlike Web, nothing breaks this early; it just
  * runs its duration. Single-instance (cap 1): re-applying just refreshes it. */
-export const GRANT_ACT_FIRST: TurnOrderStatusDef = {
-  category: 'turn-order-status',
+export const GRANT_ACT_FIRST: StatusDef = {
   statusId: 'grant-act-first',
   cap: 1,
-  position: 'first',
+  effects: [{ category: 'turn-order', position: 'first' }],
   polarity: 'buff',
   defaultDuration: 3,
 }
 
-/** Phase 4 Slice H3 (Rotcap Hollow, Sporecloud): a DoT condition-status with TWO triggers (the
+/** Phase 4 Slice H3 (Rotcap Hollow, Sporecloud): a DoT status with TWO triggers (the
  * Sleep-established pattern for a status needing more than one hook) -- 4% of the bearer's own
  * effective max HP per stack per round (same stat-derived flat mode as POISON/BURN), PLUS an
  * `on-death -> apply-status({kind:'random-ally-without-status', statusId:'spore'}, spore)` --
@@ -220,12 +206,12 @@ export const GRANT_ACT_FIRST: TurnOrderStatusDef = {
  * `resolveResponseTargets` returns an empty target list, so the trigger's own `TriggerFired` is
  * still emitted but nothing follows it -- a fizzle, not a silent no-op -- which is what keeps the
  * disease spreading to FRESH hosts instead of endlessly refreshing one. */
-export const SPORE: ConditionStatusDef = {
-  category: 'condition-status',
+export const SPORE: StatusDef = {
   statusId: 'spore',
   cap: 3,
-  triggers: [
+  effects: [
     {
+      category: 'triggered',
       hook: 'on-round-end',
       response: {
         kind: 'deal-damage',
@@ -236,6 +222,7 @@ export const SPORE: ConditionStatusDef = {
       },
     },
     {
+      category: 'triggered',
       hook: 'on-death',
       response: {
         kind: 'apply-status',
@@ -248,15 +235,14 @@ export const SPORE: ConditionStatusDef = {
   defaultDuration: 3,
 }
 
-/** Phase 4 Slice H3 (Rotcap Hollow, Hollowkin): a `friendly-fire-status` (built in Slice C,
+/** Phase 4 Slice H3 (Rotcap Hollow, Hollowkin): a `friendly-fire` effect (built in Slice C,
  * given its first real producer/consumer here) -- a 50% roll, consulted once per the bearer's
  * harmful offensive action (species-locked.md's own "3-turn default ... 50% chance it strikes
  * its own side"), that redirects the whole action to the bearer's own living side instead. */
-export const CONFUSION: FriendlyFireStatusDef = {
-  category: 'friendly-fire-status',
+export const CONFUSION: StatusDef = {
   statusId: 'confusion',
   cap: 1,
-  chancePercent: 50,
+  effects: [{ category: 'friendly-fire', chancePercent: 50 }],
   polarity: 'debuff',
   defaultDuration: 3,
 }
@@ -285,8 +271,9 @@ export const STATUS_REGISTRY: ReadonlyMap<string, StatusDef> = new Map(
   STOCK_STATUSES.map((s) => [s.statusId, s]),
 )
 
-// Phase 4.1-C2a (PR #71 review): load-time check -- throws at import time if any
-// condition-status's own trigger targets the intent-only 'random' selector.
+// Load-time check (4.1-C2a, extended in 4.1-F1) -- throws at import time if any status carries an
+// effect a status may not carry (stat-modifier / stat-remap / status-immunity / innate-spell), or
+// a trigger targets the intent-only 'random' selector.
 for (const status of STOCK_STATUSES) {
-  validateStatusNoRandomSelectorInResponseTargets(status)
+  validateStatusDef(status)
 }

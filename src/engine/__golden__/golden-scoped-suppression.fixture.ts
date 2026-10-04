@@ -1,9 +1,8 @@
-// Golden: scoped suppress-action (Phase 4 Slice B) -- a Silenced-shaped creature's Cast rule is
-// skipped (interpreter-level gating, not the hook-fired whole-turn-skip Stun uses) while its
-// Attack rule -- lower in the SAME script -- still fires. The suppression trait still fires its
-// own on-turn-start hook every turn (TriggerFired, "every status has an intrinsic effect" per
-// CONVENTIONS) but does NOT set resolveTurn's whole-turn `suppressed` flag, since its scope is
-// 'cast', not 'all'.
+// Golden: scoped action-lock (Phase 4 Slice B; re-expressed on a passive trait-borne `action-lock`
+// in 4.1-F1) -- a Silenced-shaped creature's Cast rule is illegal (checkLegality) while its Attack
+// rule -- lower in the SAME script -- still fires. The lock is passive: it fires no hook, so the
+// old per-turn on-turn-start TriggerFired is gone (the one deliberate F1 change to this golden),
+// and its scope is 'cast', not 'all', so the turn is not skipped.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // HERO's Cast rule (slot 0 holds a real, single-target spell -- proving the skip is caused by
@@ -27,13 +26,7 @@ const DUMMY = createCreatureId('dummy')
 export const SILENCED_FIXTURE: Trait = {
   id: 'silenced-fixture',
   name: 'Silenced (fixture)',
-  effects: [
-    {
-      category: 'triggered',
-      hook: 'on-turn-start',
-      response: { kind: 'suppress-action', scope: 'cast' },
-    },
-  ],
+  effects: [{ category: 'action-lock', scope: 'cast' }],
 }
 
 export const FIXTURE_SPELL: Spell = {
@@ -105,12 +98,6 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: HERO },
-  {
-    type: 'TriggerFired',
-    sourceId: HERO,
-    hook: 'on-turn-start',
-    effectId: 'silenced-fixture',
-  },
   { type: 'AttackDeclared', attackerId: HERO, targetId: DUMMY },
   {
     type: 'DamageDealt',

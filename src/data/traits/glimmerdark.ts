@@ -83,7 +83,7 @@ export const GLOWFLY_RADIANT_TRAIT: Trait = {
 // ---- Blindclaws (Instinct lean) -- closed mechanic: ambush via turn order ----
 
 /** Blindclaws' Setter (enabler): every turn, grants the team's hardest hitter the initiative --
- * `grant-act-first` (turn-order-status, position 'first' -- see data/statuses.ts), so that ally
+ * `grant-act-first` (a `turn-order` effect, position 'first' -- see data/statuses.ts), so that ally
  * acts first starting NEXT round (re-application refreshes, same "own-turn-start, affects future
  * rounds" pattern as Overgrowth's Weaver Webbing an enemy). */
 export const BLINDCLAWS_SETTER_TRAIT: Trait = {

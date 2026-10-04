@@ -1139,13 +1139,13 @@ describe('validateSpellEffects', () => {
       /only valid inside a spell's effect list/,
     )
     const status: StatusDef = {
-      category: 'condition-status',
       statusId: 'cast-target-test',
       cap: 1,
       polarity: 'debuff',
       defaultDuration: 1,
-      triggers: [
+      effects: [
         {
+          category: 'triggered',
           hook: 'on-turn-end',
           response: {
             kind: 'apply-status',

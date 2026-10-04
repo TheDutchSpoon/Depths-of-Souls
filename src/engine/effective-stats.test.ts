@@ -145,10 +145,10 @@ describe('getEffectiveStat — stat-modifier folding', () => {
   it('includes a conditional modifier gated on has-status', () => {
     const hasFixtureStatus: SelfCondition = { kind: 'has-status', statusId: 'fixture' }
     const status: ActiveEffect = {
-      category: 'condition-status',
+      category: 'status',
       statusId: 'fixture',
       cap: 1,
-      triggers: [],
+      effects: [],
       polarity: 'buff',
       defaultDuration: 3,
       instanceId: createEffectInstanceId('fixture-status'),

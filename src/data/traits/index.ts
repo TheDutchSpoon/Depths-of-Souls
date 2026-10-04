@@ -1,5 +1,6 @@
 import type { Trait } from '../../engine/effect-types'
 import {
+  validateNoBreakChanceOutsideStatus,
   validateNoRandomSelectorInResponseTargets,
   validateStatModifierConditions,
 } from '../../engine/effect-types'
@@ -174,7 +175,14 @@ export const TRAIT_REGISTRY: ReadonlyMap<string, Trait> = new Map(
 // validateSpecialization's own precedent) if any trait's stat-modifier reads the stat it gates.
 // Phase 4.1-C2a (PR #71 review): also rejects the intent-only 'random' selector in any trigger's
 // response target.
-for (const trait of STOCK_TRAITS) {
+// Phase 4.1-F1: also rejects `turn-order.breakChancePercent` (status-only). Exported so a data
+// test can feed it a deliberately broken trait.
+export function validateTrait(trait: Trait): void {
   validateStatModifierConditions(trait.effects)
+  validateNoBreakChanceOutsideStatus(trait.effects)
   validateNoRandomSelectorInResponseTargets(trait.effects)
+}
+
+for (const trait of STOCK_TRAITS) {
+  validateTrait(trait)
 }

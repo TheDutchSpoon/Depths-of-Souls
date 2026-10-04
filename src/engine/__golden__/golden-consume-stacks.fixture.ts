@@ -20,7 +20,7 @@ import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import type { CombatEvent, FightResult } from '../types'
-import type { DamageModifierDef, Trait } from '../effect-types'
+import type { StatusDef, Trait } from '../effect-types'
 
 export const SEED = 2002 // No RNG consumed; seed is inert.
 
@@ -29,14 +29,13 @@ const TARGET = createCreatureId('target')
 
 const GLOW_STATUS_ID = 'glow-fixture'
 
-export const GLOW: DamageModifierDef = {
-  category: 'damage-modifier',
+export const GLOW: StatusDef = {
   statusId: GLOW_STATUS_ID,
   cap: 5,
-  direction: 'dealt',
-  magnitude: 0.1, // +10% dealt per stack -- never actually read here, consumed before any hit
+  // +10% dealt per stack -- never actually read here, consumed before any hit
   polarity: 'buff',
   defaultDuration: 3,
+  effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: 0.1 }],
 }
 
 export const DETONATOR_FIXTURE: Trait = {

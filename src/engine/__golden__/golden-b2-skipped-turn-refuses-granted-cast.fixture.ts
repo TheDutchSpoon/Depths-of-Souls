@@ -8,8 +8,8 @@
 //    on-turn-end remove-status Stun (self)].
 // Slots after createCombat (asserted in the test): exactly [BOLT] (enemy-side single target,
 // spellPower 0.5) -- so if the gate were removed there IS something castable to cast.
-// Round 1, CASTER's turn: Stun (applied at fight start) suppresses at turn start -> `suppressed`
-// is true, no action. The turn-end hooks fire in effect order: the grant's trigger (chance roll =
+// Round 1, CASTER's turn: Stun (applied at fight start) is an 'all' lock -> read after the
+// turn-start hooks, the turn is skipped (TurnSkipped), no action. The turn-end hooks fire in effect order: the grant's trigger (chance roll =
 // draw #1, queued), then the remove-status trigger REMOVES Stun, so by the granted-actions step no
 // lock exists: checkLegality alone would let the cast through. Only the skipped-turn GATE
 // (`drainGrantedActions`' `skippedTurnOf`) refuses it (this is what separates B2.1 from B2.2). The
@@ -159,13 +159,8 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
-  // Stun's own turn-start suppression: TriggerFired, then the empty bracket (no action).
-  {
-    type: 'TriggerFired',
-    sourceId: CASTER,
-    hook: 'on-turn-start',
-    effectId: STUN.statusId,
-  },
+  // Stun's 'all' lock (passive, 4.1-F1): the skipped turn fills the action slot with TurnSkipped.
+  { type: 'TurnSkipped', creatureId: CASTER, effectId: STUN.statusId },
   // The grant's trigger (declared first, so it fires first): the chance is rolled (draw #1) ...
   {
     type: 'TriggerFired',

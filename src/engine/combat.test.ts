@@ -17,7 +17,7 @@ import {
 } from '../data/traits'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
-import type { EffectDef, StatusDef, Trait, TurnOrderStatusDef } from './effect-types'
+import type { EffectDef, StatusDef, Trait } from './effect-types'
 
 const EMBER_LANCE: Spell = {
   id: 'ember-lance',
@@ -737,22 +737,18 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       ],
     }
     const WEAKEN_TEST: StatusDef = {
-      category: 'damage-modifier',
       statusId: 'weaken-test',
-      direction: 'dealt',
-      magnitude: -0.1,
       cap: 1,
       polarity: 'debuff',
       defaultDuration: 3,
+      effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.1 }],
     }
     const VULNERABILITY_TEST: StatusDef = {
-      category: 'damage-modifier',
       statusId: 'vulnerability-test',
-      direction: 'taken',
-      magnitude: 1.2,
       cap: 1,
       polarity: 'debuff',
       defaultDuration: 3,
+      effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.2 }],
     }
     const alwaysWaitScript: Script = {
       id: 'always-wait-sweep-test',
@@ -791,10 +787,10 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       (c) => c.id === createCreatureId('z'),
     )!
     const weaken = z.activeEffects.find(
-      (e) => e.category === 'damage-modifier' && e.statusId === 'weaken-test',
+      (e) => e.category === 'status' && e.statusId === 'weaken-test',
     )
     const vulnerability = z.activeEffects.find(
-      (e) => e.category === 'damage-modifier' && e.statusId === 'vulnerability-test',
+      (e) => e.category === 'status' && e.statusId === 'vulnerability-test',
     )
 
     // Refreshed THIS sweep (on-round-end re-applied it) -> NOT decremented: stays at 5, not 4.
@@ -985,14 +981,12 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
 })
 
 describe('Web break-free (Phase 4 Slice E2)', () => {
-  const WEB_TEST_STATUS: TurnOrderStatusDef = {
-    category: 'turn-order-status',
+  const WEB_TEST_STATUS: StatusDef = {
     statusId: 'web-test-fixture',
     cap: 1,
-    position: 'last',
-    breakChancePercent: 50,
     polarity: 'debuff',
     defaultDuration: 3,
+    effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 50 }],
   }
 
   const WEB_SELF_FIXTURE: Trait = {
@@ -1038,9 +1032,9 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
     // succeeds and the status is never removed. This isolates "one roll per turn-start" from
     // removal (covered separately by the golden below) -- otherwise a successful break partway
     // through would stop further rolls, making the count comparison flaky-by-design.
-    const NEVER_BREAKS_STATUS: TurnOrderStatusDef = {
+    const NEVER_BREAKS_STATUS: StatusDef = {
       ...WEB_TEST_STATUS,
-      breakChancePercent: 0,
+      effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 0 }],
     }
     const player = makeParty('player', [
       {

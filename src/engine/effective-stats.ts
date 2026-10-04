@@ -3,12 +3,11 @@ import type { SelfCondition } from './effect-types'
 import type { Creature, Stat } from './types'
 
 /**
- * True iff `creature` carries the literal statusId among its status-carrying effects
- * (condition-status, damage-modifier, turn-order-status, friendly-fire-status) -- what
- * scripting's has-status condition scopes to. Never matches a stat-modifier/stat-remap/plain-
- * triggered effect, nor the permanent perk-granted passives (status-immunity/provoke-immunity/
- * splashing/annihilate/innate-spell/etc.), which carry no statusId and are never themselves a
- * status.
+ * True iff `creature` carries a status container (`category: 'status'`, 4.1-F1) with the
+ * literal statusId -- what scripting's has-status condition scopes to. Reads the raw list, never
+ * the effect iterator: an immune bearer's status still exists and counts. Never matches a
+ * stat-modifier/stat-remap/plain-triggered effect, nor the permanent perk-granted passives, which
+ * carry no statusId and are never themselves a status.
  *
  * Phase 4.1-B (S2/B-8): lives HERE, not effects.ts, so `evaluateSelfCondition`'s `has-status`
  * branch (below) can read it without effects.ts -> effective-stats.ts becoming a cycle --
@@ -17,12 +16,7 @@ import type { Creature, Stat } from './types'
  */
 export function hasStatus(creature: Creature, statusId: string): boolean {
   return creature.activeEffects.some(
-    (e) =>
-      (e.category === 'condition-status' ||
-        e.category === 'damage-modifier' ||
-        e.category === 'turn-order-status' ||
-        e.category === 'friendly-fire-status') &&
-      e.statusId === statusId,
+    (e) => e.category === 'status' && e.statusId === statusId,
   )
 }
 

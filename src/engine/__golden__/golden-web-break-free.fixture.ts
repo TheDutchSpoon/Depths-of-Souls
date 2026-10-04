@@ -29,13 +29,11 @@ const BEARER = createCreatureId('bearer')
 const WEB_STATUS_ID = 'web-test-fixture'
 
 export const WEB_TEST_STATUS: StatusDef = {
-  category: 'turn-order-status',
   statusId: WEB_STATUS_ID,
   cap: 1,
-  position: 'last',
-  breakChancePercent: 50,
   polarity: 'debuff',
   defaultDuration: 3,
+  effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 50 }],
 }
 
 export const WEB_SELF_FIXTURE: Trait = {

@@ -31,21 +31,19 @@ const HASTY = createCreatureId('hasty')
 const NORMAL_SLOW = createCreatureId('normal-slow')
 
 export const WEB_FIXTURE_STATUS: StatusDef = {
-  category: 'turn-order-status',
   statusId: 'web-fixture',
   cap: 1,
-  position: 'last',
   polarity: 'debuff',
   defaultDuration: 3,
+  effects: [{ category: 'turn-order', position: 'last' }],
 }
 
 export const HASTE_FIXTURE_STATUS: StatusDef = {
-  category: 'turn-order-status',
   statusId: 'haste-fixture',
   cap: 1,
-  position: 'first',
   polarity: 'buff',
   defaultDuration: 3,
+  effects: [{ category: 'turn-order', position: 'first' }],
 }
 
 export const WEBBED_TRAIT: Trait = {

@@ -61,16 +61,16 @@ describe('buildTurnQueue', () => {
 // turn-order-status primitive, opposite pole (species-locked.md).
 function turnOrderStatus(position: 'first' | 'last', id: string): ActiveEffect {
   return {
-    category: 'turn-order-status',
+    category: 'status',
     statusId: id,
     cap: 1,
-    position,
     polarity: position === 'first' ? 'buff' : 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId(id),
     sourceTraitId: id,
     remainingDuration: 3,
     stacks: 1,
+    effects: [{ category: 'turn-order', position }],
   }
 }
 

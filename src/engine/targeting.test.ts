@@ -148,16 +148,16 @@ function provokeImmunity(id = 'tunnel-vision'): ActiveEffect {
 
 function confusion(chancePercent: number, id = 'confusion'): ActiveEffect {
   return {
-    category: 'friendly-fire-status',
+    category: 'status',
     statusId: id,
     cap: 3,
-    chancePercent,
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId(id),
     sourceTraitId: id,
     remainingDuration: 3,
     stacks: 1,
+    effects: [{ category: 'friendly-fire', chancePercent }],
   }
 }
 

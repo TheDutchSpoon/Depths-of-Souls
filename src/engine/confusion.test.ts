@@ -13,16 +13,16 @@ import type { CombatEvent, CombatState, Spell } from './types'
 
 function confusionFixture(chancePercent: number): ActiveEffect {
   return {
-    category: 'friendly-fire-status',
+    category: 'status',
     statusId: 'confusion-fixture',
     cap: 1,
-    chancePercent,
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId('confusion-fixture'),
     sourceTraitId: 'confusion-fixture',
     remainingDuration: 3,
     stacks: 1,
+    effects: [{ category: 'friendly-fire', chancePercent }],
   }
 }
 

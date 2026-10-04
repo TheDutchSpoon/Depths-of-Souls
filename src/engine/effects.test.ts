@@ -194,10 +194,8 @@ describe('effectiveMaxHp / clampedHp', () => {
 
 describe('gatherDealtMods / gatherTakenFactors', () => {
   const weaken: ActiveEffect = {
-    category: 'damage-modifier',
+    category: 'status',
     statusId: 'weaken',
-    direction: 'dealt',
-    magnitude: -0.2,
     cap: 1,
     polarity: 'debuff',
     defaultDuration: 3,
@@ -205,12 +203,11 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     sourceTraitId: 'weaken',
     remainingDuration: 2,
     stacks: 1,
+    effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.2 }],
   }
   const vulnerability: ActiveEffect = {
-    category: 'damage-modifier',
+    category: 'status',
     statusId: 'vulnerability',
-    direction: 'taken',
-    magnitude: 1.5,
     cap: 2,
     polarity: 'debuff',
     defaultDuration: 3,
@@ -218,6 +215,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     sourceTraitId: 'vulnerability',
     remainingDuration: 2,
     stacks: 2,
+    effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.5 }],
   }
   const unrelated: ActiveEffect = {
     category: 'stat-modifier',
@@ -239,18 +237,24 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
 
   it('a magnitudeSource replaces `stacks` as the live count the magnitude is scaled by (Phase 4 Slice D)', () => {
     const bulwarkShaped: ActiveEffect = {
-      category: 'damage-modifier',
+      category: 'status',
       statusId: 'bulwark-fixture',
-      direction: 'taken',
-      magnitude: 0.9,
-      magnitudeSource: { kind: 'count', of: 'self-defend-count' },
       cap: 999,
       polarity: 'buff',
       defaultDuration: 3,
       instanceId: createEffectInstanceId('b'),
       sourceTraitId: 'bulwark-fixture',
       remainingDuration: 999,
-      stacks: 1, // ignored -- magnitudeSource overrides it with the live defendCount below
+      stacks: 1,
+      // ignored -- magnitudeSource overrides it with the live defendCount below,
+      effects: [
+        {
+          category: 'damage-modifier',
+          direction: 'taken',
+          magnitude: 0.9,
+          magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+        },
+      ],
     }
     const c = makeCreature({ activeEffects: [bulwarkShaped], defendCount: 3 })
     const party = [c]
@@ -261,13 +265,8 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
   describe("accumulation: 'additive' (Phase 4 Slice D, PR #47 review amendment -- real Bulwark shape)", () => {
     function bulwark(reductionCap: number): ActiveEffect {
       return {
-        category: 'damage-modifier',
+        category: 'status',
         statusId: 'bulwark-additive-fixture',
-        direction: 'taken',
-        magnitude: 0.95, // per-unit factor -- perUnitReduction = 1 - 0.95 = 0.05
-        magnitudeSource: { kind: 'count', of: 'self-defend-count' },
-        accumulation: 'additive',
-        reductionCap,
         cap: 1,
         polarity: 'buff',
         defaultDuration: 3,
@@ -275,6 +274,17 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
         sourceTraitId: 'bulwark-additive-fixture',
         remainingDuration: 999,
         stacks: 1,
+        effects: [
+          {
+            category: 'damage-modifier',
+            direction: 'taken',
+            // per-unit factor -- perUnitReduction = 1 - 0.95 = 0.05
+            magnitude: 0.95,
+            magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+            accumulation: 'additive',
+            reductionCap,
+          },
+        ],
       }
     }
 
@@ -298,11 +308,8 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
 
     it('is byte-identical to the pre-amendment multiplicative default when accumulation is absent', () => {
       const multiplicative: ActiveEffect = {
-        category: 'damage-modifier',
+        category: 'status',
         statusId: 'bulwark-fixture',
-        direction: 'taken',
-        magnitude: 0.9,
-        magnitudeSource: { kind: 'count', of: 'self-defend-count' },
         cap: 999,
         polarity: 'buff',
         defaultDuration: 3,
@@ -310,6 +317,14 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
         sourceTraitId: 'bulwark-fixture',
         remainingDuration: 999,
         stacks: 1,
+        effects: [
+          {
+            category: 'damage-modifier',
+            direction: 'taken',
+            magnitude: 0.9,
+            magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+          },
+        ],
       }
       const c = makeCreature({ activeEffects: [multiplicative], defendCount: 32 })
       // 0.9 ** 32 -- asymptotic, never clamped, no cap field consulted.
@@ -323,11 +338,12 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
 describe('hasStatus', () => {
   it('is true only when a matching statusId is present among status-carrying effects', () => {
     const dot: ActiveEffect = {
-      category: 'condition-status',
+      category: 'status',
       statusId: 'poison',
       cap: 5,
-      triggers: [
+      effects: [
         {
+          category: 'triggered',
           hook: 'on-round-end',
           response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
         },
@@ -505,16 +521,16 @@ describe('hasStatusImmunity / hasProvokeImmunity / hasSplashing / hasAnnihilate 
 
 describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
   const confusion: ActiveEffect = {
-    category: 'friendly-fire-status',
+    category: 'status',
     statusId: 'confusion',
     cap: 1,
-    chancePercent: 50,
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId('confusion'),
     sourceTraitId: 'confusion',
     remainingDuration: 3,
     stacks: 1,
+    effects: [{ category: 'friendly-fire', chancePercent: 50 }],
   }
 
   it('returns the active friendly-fire-status effect when present and not immune', () => {
@@ -591,11 +607,12 @@ describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
 
   it('enemies-with-status counts living OPPOSING creatures bearing the given statusId', () => {
     const poisoned: ActiveEffect = {
-      category: 'condition-status',
+      category: 'status',
       statusId: 'poison',
       cap: 5,
-      triggers: [
+      effects: [
         {
+          category: 'triggered',
           hook: 'on-round-end',
           response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
         },

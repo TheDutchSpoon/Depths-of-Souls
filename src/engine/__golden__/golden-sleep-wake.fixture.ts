@@ -28,7 +28,7 @@ import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import type { CombatEvent } from '../types'
-import type { ConditionStatusDef, StatusDef, Trait } from '../effect-types'
+import type { StatusDef, Trait } from '../effect-types'
 
 export const SEED = 4004 // No RNG consumed anywhere in this fixture; seed is inert.
 export const TURN_STEPS = 2
@@ -38,13 +38,13 @@ const SLEEPER = createCreatureId('sleeper')
 
 const SLEEP_STATUS_ID = 'sleep-fixture'
 
-export const SLEEP_FIXTURE: ConditionStatusDef = {
-  category: 'condition-status',
+export const SLEEP_FIXTURE: StatusDef = {
   statusId: SLEEP_STATUS_ID,
   cap: 1,
-  triggers: [
-    { hook: 'on-turn-start', response: { kind: 'suppress-action' } },
+  effects: [
+    { category: 'action-lock', scope: 'all' },
     {
+      category: 'triggered',
       hook: 'on-damage-taken',
       response: {
         kind: 'remove-status',

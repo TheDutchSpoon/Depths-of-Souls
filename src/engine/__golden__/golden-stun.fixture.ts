@@ -1,4 +1,4 @@
-// Golden: Stun's condition-status suppress-action, applied via a trait's apply-status response
+// Golden: Stun's 'all' action-lock status, applied via a trait's apply-status response
 // (REELING: on-damage-taken -> self-stun for 1 round). Proves the empty-bracket skip: VICTIM's
 // very next turn (same round it was hit, since STRIKER acts first) has NO AttackDeclared between
 // its TurnStarted/TurnEnded. Also exercises death pre-empting on-damage-taken (no re-stun, no new
@@ -76,8 +76,9 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'TurnEnded', creatureId: STRIKER },
   { type: 'TurnStarted', creatureId: VICTIM },
-  { type: 'TriggerFired', sourceId: VICTIM, hook: 'on-turn-start', effectId: 'stun' },
-  // No AttackDeclared here -- the empty bracket IS the skip.
+  // 4.1-F1: the lock is passive -- the skipped turn shows TurnSkipped (no TriggerFired).
+  { type: 'TurnSkipped', creatureId: VICTIM, effectId: 'stun' },
+  // No AttackDeclared here -- the skip fills the action slot.
   { type: 'TurnEnded', creatureId: VICTIM },
   { type: 'StatusExpired', creatureId: VICTIM, statusId: 'stun' },
   { type: 'RoundStarted', round: 2 },

@@ -36,7 +36,7 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import type { CombatEvent } from '../types'
-import type { ConditionStatusDef, StatusDef, Trait } from '../effect-types'
+import type { StatusDef, Trait } from '../effect-types'
 import type { Script } from '../scripting-types'
 
 export const SEED = 6660 // No RNG-sensitive branch anywhere; seed is inert.
@@ -47,11 +47,10 @@ const WEAKLING = createCreatureId('weakling')
 
 const STUN_STATUS_ID = 'b6-stun-fixture'
 
-export const STUN_FIXTURE: ConditionStatusDef = {
-  category: 'condition-status',
+export const STUN_FIXTURE: StatusDef = {
   statusId: STUN_STATUS_ID,
   cap: 1,
-  triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action' } }],
+  effects: [{ category: 'action-lock', scope: 'all' }],
   polarity: 'debuff',
   defaultDuration: 3,
 }
@@ -176,16 +175,12 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: WEAKLING },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: PROVOKER },
-  {
-    type: 'TriggerFired',
-    sourceId: PROVOKER,
-    hook: 'on-turn-start',
-    effectId: STUN_STATUS_ID,
-  },
-  // B6 fix: cleanup runs even though the turn is suppressed -- PROVOKER's stale `provoking`
+  // B6 fix: cleanup runs even though the turn is skipped -- PROVOKER's stale `provoking`
   // flag from round 1 is cleared here, not carried into a redirect that no longer applies.
   { type: 'ActionStateEnded', creatureId: PROVOKER, defending: false, provoking: true },
-  // No action: the turn was suppressed (empty bracket).
+  // 4.1-F1: the lock is passive (no on-turn-start TriggerFired); the skip fills the action slot,
+  // after the cleanup.
+  { type: 'TurnSkipped', creatureId: PROVOKER, effectId: STUN_STATUS_ID },
   { type: 'TurnEnded', creatureId: PROVOKER },
   { type: 'TurnStarted', creatureId: HERO },
   // No provoker left -- HERO's rule resolves normally to the actual lowest-HP enemy (WEAKLING,

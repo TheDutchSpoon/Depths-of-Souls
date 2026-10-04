@@ -24,10 +24,10 @@ import {
   validateStatusNoRandomSelectorInResponseTargets,
 } from './effect-types'
 import type {
-  ConditionStatusEffect,
   EffectDef,
   ObservationFilter,
   StatusDef,
+  StatusEffect,
   Trait,
 } from './effect-types'
 
@@ -73,17 +73,11 @@ function firstTurnEventsHitting(
   return resolveTurn(initial).events
 }
 
-describe('suppress-action (on-turn-start)', () => {
+describe("'all' action-lock (a trait-borne passive; 4.1-F1)", () => {
   const STUN_SELF: Trait = {
     id: 'stun-self',
     name: 'Stun Self',
-    effects: [
-      {
-        category: 'triggered',
-        hook: 'on-turn-start',
-        response: { kind: 'suppress-action' },
-      },
-    ],
+    effects: [{ category: 'action-lock', scope: 'all' }],
   }
 
   it('skips the acting creature’s action entirely (empty bracket, no action event)', () => {
@@ -114,11 +108,12 @@ describe('suppress-action (on-turn-start)', () => {
     expect(
       events.some(
         (e) =>
-          e.type === 'TriggerFired' &&
-          e.effectId === 'stun-self' &&
-          e.hook === 'on-turn-start',
+          e.type === 'TurnSkipped' &&
+          e.creatureId === 'hero' &&
+          e.effectId === 'stun-self',
       ),
     ).toBe(true)
+    expect(events.some((e) => e.type === 'TriggerFired')).toBe(false) // the lock is passive
   })
 })
 
@@ -414,11 +409,11 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
 
 describe('applyStatus + condition-status content (Slice C)', () => {
   const TEST_DOT: StatusDef = {
-    category: 'condition-status',
     statusId: 'test-dot',
     cap: 3,
-    triggers: [
+    effects: [
       {
+        category: 'triggered',
         hook: 'on-round-end',
         response: {
           kind: 'deal-damage',
@@ -481,7 +476,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
     )
     expect(events[0]).toMatchObject({ type: 'StatusApplied', duration: 3 })
     const p = result.playerParty.find((c) => c.id === createCreatureId('p'))!
-    const effect = p.activeEffects.find((e) => e.category === 'condition-status')!
+    const effect = p.activeEffects.find((e) => e.category === 'status')!
     expect(effect).toMatchObject({ remainingDuration: 3 })
   })
 
@@ -518,9 +513,7 @@ describe('applyStatus + condition-status content (Slice C)', () => {
     const p = [...state.playerParty, ...state.enemyParty].find(
       (c) => c.id === createCreatureId('p'),
     )!
-    const effect = p.activeEffects.find(
-      (e) => e.category === 'condition-status',
-    ) as ConditionStatusEffect
+    const effect = p.activeEffects.find((e) => e.category === 'status') as StatusEffect
     expect(effect.stacks).toBe(3) // capped
     expect(effect.remainingDuration).toBe(5) // refreshed to the latest application's duration
   })
@@ -575,11 +568,11 @@ describe('applyStatus + condition-status content (Slice C)', () => {
 
 describe('heal response (Regen)', () => {
   const TEST_REGEN: StatusDef = {
-    category: 'condition-status',
     statusId: 'test-regen',
     cap: 3,
-    triggers: [
+    effects: [
       {
+        category: 'triggered',
         hook: 'on-round-end',
         response: {
           kind: 'heal',
@@ -965,13 +958,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
 
   it('DoT: the victim’s own damage-dealt buff does not amplify its own tick -- flat mode never reads dealtMods', () => {
     const DEALT_BUFF_FIXTURE: StatusDef = {
-      category: 'damage-modifier',
       statusId: 'dealt-buff-fixture',
       cap: 1,
-      direction: 'dealt',
-      magnitude: 0.5, // +50% dealt on a real formula hit -- irrelevant to flat mode
+      // +50% dealt on a real formula hit -- irrelevant to flat mode
       polarity: 'buff',
       defaultDuration: 3,
+      effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: 0.5 }],
     }
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
@@ -1015,13 +1007,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
 
   it('DoT: the victim’s own taken-damage multiplier does not change its own tick -- flat mode never reads takenFactors', () => {
     const VULNERABLE_FIXTURE: StatusDef = {
-      category: 'damage-modifier',
       statusId: 'vulnerable-fixture',
       cap: 1,
-      direction: 'taken',
-      magnitude: 1.5, // x1.5 taken on a real formula hit -- irrelevant to flat mode
+      // x1.5 taken on a real formula hit -- irrelevant to flat mode
       polarity: 'debuff',
       defaultDuration: 3,
+      effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.5 }],
     }
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
@@ -1446,7 +1437,6 @@ describe('grant-action-state response (Phase 4 Slice B)', () => {
     )!
     expect(a.defending).toBe(true)
     expect(a.provoking).toBe(false)
-    expect(result.suppressed).toBe(false)
   })
 })
 
@@ -1610,13 +1600,11 @@ describe('revive response (Phase 4 Slice B)', () => {
 
 describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', () => {
   const GLOW: StatusDef = {
-    category: 'damage-modifier',
     statusId: 'glow-fixture',
     cap: 5,
-    direction: 'dealt',
-    magnitude: 0.1,
     polarity: 'buff',
     defaultDuration: 3,
+    effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: 0.1 }],
   }
 
   function stateWithGlowStacks(stacks: number) {
@@ -1711,11 +1699,11 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
 
 describe('remove-status response (Phase 4 Slice E2)', () => {
   const TEST_DEBUFF: StatusDef = {
-    category: 'condition-status',
     statusId: 'test-debuff',
     cap: 3,
-    triggers: [
+    effects: [
       {
+        category: 'triggered',
         hook: 'on-round-end',
         response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
       },
@@ -2039,40 +2027,6 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
     const state = stateWithBearer(new Map<string, Trait>()) // no traits -- chancePercent sums to 0
     const { finalPosition } = hit(state, SUCCEEDS_POSITION)
     expect(finalPosition).toBe(SUCCEEDS_POSITION)
-  })
-})
-
-describe('suppress-action scope (Phase 4 Slice B)', () => {
-  it('undeclared/"all" scope still sets suppressed:true -- byte-identical to pre-Slice-B (Stun)', () => {
-    const state = createCombat({
-      seed: 1,
-      player: { party: makeParty('player', [{ id: 'a' }]) },
-      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
-    })
-    const result = executeResponse(
-      { kind: 'suppress-action' },
-      'fixture',
-      { self: createCreatureId('a') },
-      state,
-      createResolutionContext([], newCascade()),
-    )
-    expect(result.suppressed).toBe(true)
-  })
-
-  it('a scoped ("attack" | "cast") suppress-action does NOT set the whole-turn suppressed flag', () => {
-    const state = createCombat({
-      seed: 1,
-      player: { party: makeParty('player', [{ id: 'a' }]) },
-      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
-    })
-    const result = executeResponse(
-      { kind: 'suppress-action', scope: 'cast' },
-      'fixture',
-      { self: createCreatureId('a') },
-      state,
-      createResolutionContext([], newCascade()),
-    )
-    expect(result.suppressed).toBe(false)
   })
 })
 
@@ -2543,11 +2497,11 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
 
 describe('exact-instance rule (Phase 4.1-B, B4)', () => {
   const TICK_STATUS: StatusDef = {
-    category: 'condition-status',
     statusId: 'b4-tick-fixture',
     cap: 1,
-    triggers: [
+    effects: [
       {
+        category: 'triggered',
         hook: 'on-turn-end',
         response: {
           kind: 'deal-damage',
@@ -2675,7 +2629,7 @@ describe('exact-instance rule (Phase 4.1-B, B4)', () => {
       createResolutionContext([], newCascade()),
     )
     const oldInstanceId = withStatus.playerParty[0]!.activeEffects.find(
-      (e) => e.category === 'condition-status',
+      (e) => e.category === 'status',
     )!.instanceId
 
     const { events, state } = resolveTurn(withStatus)
@@ -2692,7 +2646,7 @@ describe('exact-instance rule (Phase 4.1-B, B4)', () => {
     expect(events.some((e) => e.type === 'DamageDealt')).toBe(false)
 
     const newInstance = state.playerParty[0]!.activeEffects.find(
-      (e) => e.category === 'condition-status',
+      (e) => e.category === 'status',
     )!
     expect(newInstance.instanceId).not.toBe(oldInstanceId)
   })
@@ -2832,13 +2786,13 @@ describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", ()
 
   it("throws when a condition-status's own trigger response targets it", () => {
     const status: StatusDef = {
-      category: 'condition-status',
       statusId: 'fixture-status',
       cap: 1,
       polarity: 'debuff',
       defaultDuration: 1,
-      triggers: [
+      effects: [
         {
+          category: 'triggered',
           hook: 'on-turn-end',
           response: {
             kind: 'grant-action-state',
@@ -2866,13 +2820,13 @@ describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", ()
     expect(() => validateNoRandomSelectorInResponseTargets(effects)).not.toThrow()
 
     const status: StatusDef = {
-      category: 'condition-status',
       statusId: 'fixture-status',
       cap: 1,
       polarity: 'debuff',
       defaultDuration: 1,
-      triggers: [
+      effects: [
         {
+          category: 'triggered',
           hook: 'on-turn-end',
           response: { kind: 'grant-action-state', target: { kind: 'self' } },
         },
