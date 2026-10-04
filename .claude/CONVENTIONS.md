@@ -1590,6 +1590,13 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
     as such.
   - **The corpus:** generated floors across every shipped biome, boss floors included, plus the
     shipped starters and Unicorn. Bonus-cast, echo, Provoke and Confusion must all fire in it.
+  - **It covers all real content** (PR #74 review, built in 4.1-E). Every spell in `ALL_SPELLS` is
+    cast and every status in `STATUS_REGISTRY` is applied at least once, and a test enforces both
+    against the registries, so new content is covered or fails loudly. A status no shipped content
+    can apply goes on the test's explicit exemption list, each entry with its reason. Generated
+    floors alone left 15 of 25 spells and three statuses (Stun, Weaken, Vulnerability) out of the
+    corpus, so a change to them was invisible to the digest. Coverage fights are appended, so
+    adding them never changes an existing digest entry.
   - **Why it exists:** it answers "did any behaviour move?", which scenario goldens can't. A
     change that only shows up in combinations no golden pins passes them all.
   - **Byte-identical PRs leave it unchanged.**
