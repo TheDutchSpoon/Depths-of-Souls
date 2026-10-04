@@ -58,7 +58,7 @@ describe('buildTurnQueue', () => {
 })
 
 // Phase 4 Slice C: Web (act-last) / Blindclaws' grant-act-first (act-first) -- the same
-// turn-order-status primitive, opposite pole (species-locked.md).
+// turn-order primitive, opposite pole (species-locked.md).
 function turnOrderStatus(position: 'first' | 'last', id: string): ActiveEffect {
   return {
     category: 'status',

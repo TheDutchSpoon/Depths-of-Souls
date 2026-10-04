@@ -533,12 +533,12 @@ describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
     effects: [{ category: 'friendly-fire', chancePercent: 50 }],
   }
 
-  it('returns the active friendly-fire-status effect when present and not immune', () => {
+  it('returns the active friendly-fire effect when present and not immune', () => {
     const c = makeCreature({ activeEffects: [confusion] })
     expect(activeFriendlyFireStatus(c)?.statusId).toBe('confusion')
   })
 
-  it('returns undefined for a creature with no friendly-fire-status', () => {
+  it('returns undefined for a creature with no friendly-fire effect', () => {
     expect(activeFriendlyFireStatus(makeCreature({}))).toBeUndefined()
   })
 

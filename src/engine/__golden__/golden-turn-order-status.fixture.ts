@@ -1,4 +1,4 @@
-// Golden: the `turn-order-status` StatusDef category (Phase 4 Slice C) -- Web (act-last) /
+// Golden: the `turn-order` effect inside a status (Phase 4 Slice C; a `StatusDef` category until 4.1-F1) -- Web (act-last) /
 // Blindclaws' grant-act-first (act-first), applied at fight-start via an on-fight-start
 // triggered apply-status response, read PASSIVELY by buildTurnQueue (never hook-fired itself).
 // Proves position beats raw Speed entirely, and that a Speed-sorted "normal" group of
@@ -8,7 +8,7 @@
 //
 //   WEBBED  (player, speed 30 -- HIGHEST raw Speed) carries act-LAST -> must still act dead last.
 //   HASTY   (enemy,  speed  5 -- LOWEST  raw Speed) carries act-FIRST -> must still act first.
-//   NORMAL_FAST (player, speed 20) / NORMAL_SLOW (enemy, speed 10): no turn-order-status ->
+//   NORMAL_FAST (player, speed 20) / NORMAL_SLOW (enemy, speed 10): no turn-order effect ->
 //     the "normal" pole, Speed-sorted regardless of side (20 before 10).
 //
 //   Expected round-1 queue: HASTY -> NORMAL_FAST -> NORMAL_SLOW -> WEBBED.

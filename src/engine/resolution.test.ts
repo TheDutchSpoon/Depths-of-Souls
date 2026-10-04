@@ -407,7 +407,7 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
   })
 })
 
-describe('applyStatus + condition-status content (Slice C)', () => {
+describe('applyStatus + status-container content (Slice C)', () => {
   const TEST_DOT: StatusDef = {
     statusId: 'test-dot',
     cap: 3,
@@ -2784,7 +2784,7 @@ describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", ()
     )
   })
 
-  it("throws when a condition-status's own trigger response targets it", () => {
+  it("throws when a status's own trigger response targets it", () => {
     const status: StatusDef = {
       statusId: 'fixture-status',
       cap: 1,

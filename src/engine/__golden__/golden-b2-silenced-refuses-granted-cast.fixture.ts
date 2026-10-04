@@ -6,11 +6,12 @@
 // CASTER (player, speed 20, Attack 10, Int 20, HP 40, defence 0, script `always-attack`): trait
 // `b2-silenced-granted-caster-fixture` = [on-turn-end perform-action(self, cast 'random') at
 // chancePercent 100 (4.1-E; was `bonus-cast`), a trait-borne passive `action-lock` scope 'cast'
-// (4.1-F1: was a permanent on-turn-start suppress-action)] -- a fixture stand-in for Silenced
-// (authored content lands in F3), like golden-scoped-suppression's. Slots after createCombat (asserted): exactly [BOLT].
+// (4.1-F1: was a permanent on-turn-start suppression)] -- a fixture stand-in for Silenced
+// (authored content lands in F3), like golden-scoped-suppression's. Slots after createCombat
+// (asserted): exactly [BOLT].
 // Round 1, CASTER: (4.1-F1: the lock is passive, so no turn-start TriggerFired any more; scoped,
-// so it does NOT skip the turn), it attacks the lowest-HP enemy (E2 30 < E1 40): core 10 - 0, chip 0.1 -> raw 10.1 -> final 10;
-// E2 30 -> 20. Turn end: granted cast rolls (draw #1) -> then runAction's checkLegality refuses the
+// so it does NOT skip the turn), it attacks the lowest-HP enemy (E2 30 < E1 40): core 10 - 0,
+// chip 0.1 -> raw 10.1 -> final 10; E2 30 -> 20. Turn end: granted cast rolls (draw #1) -> then runAction's checkLegality refuses the
 // Cast lock -> no gem draw, no SpellCast.
 //
 // LATER RNG CONSUMER: E1 (speed 10, Attack 10, `random-attack`) picks among player creatures

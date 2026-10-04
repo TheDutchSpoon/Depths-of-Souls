@@ -9,9 +9,9 @@
 // Slots after createCombat (asserted in the test): exactly [BOLT] (enemy-side single target,
 // spellPower 0.5) -- so if the gate were removed there IS something castable to cast.
 // Round 1, CASTER's turn: Stun (applied at fight start) is an 'all' lock -> read after the
-// turn-start hooks, the turn is skipped (TurnSkipped), no action. The turn-end hooks fire in effect order: the grant's trigger (chance roll =
-// draw #1, queued), then the remove-status trigger REMOVES Stun, so by the granted-actions step no
-// lock exists: checkLegality alone would let the cast through. Only the skipped-turn GATE
+// turn-start hooks, the turn is skipped (TurnSkipped), no action. The turn-end hooks fire in
+// effect order: the grant's trigger (chance roll = draw #1, queued), then the remove-status
+// trigger REMOVES Stun, so by the granted-actions step no lock exists: checkLegality alone would let the cast through. Only the skipped-turn GATE
 // (`drainGrantedActions`' `skippedTurnOf`) refuses it (this is what separates B2.1 from B2.2). The
 // gate sits AFTER the roll: the chance roll is draw #1 at trigger time, whatever the skip.
 //

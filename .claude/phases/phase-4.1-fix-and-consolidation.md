@@ -1967,7 +1967,7 @@ exactly** (so a creature holding two locks gets two old `TriggerFired` events ba
 
 ### New and changed unit tests
 
-- `status-containers.test.ts` (new, 34): the skip (`'all'` lock skips; names the first of two locks
+- `status-containers.test.ts` (new, 35): the skip (`'all'` lock skips; names the first of two locks
   in both orders; a lock gained in the turn-start hooks skips that turn; a lock gained in the
   turn-start grants still skips, via the action-slot read; the turn-end drain refuses the grant of a
   creature skipped by that read even after the lock is removed); locks at every site (script rule,
@@ -1997,11 +1997,11 @@ exactly** (so a creature holding two locks gets two old `TriggerFired` events ba
 
 ### Verification
 
-- Tests **818 -> 851 (+33)**, reconciled per file against the pristine tree: `status-containers.test.ts`
-  +34 (new), `statuses.test.ts` +1 (5 -> 6), `resolution.test.ts` -2 (81 -> 79). No other file's count
+- Tests **818 -> 852 (+34)**, reconciled per file against the pristine tree: `status-containers.test.ts`
+  +35 (new), `statuses.test.ts` +1 (5 -> 6), `resolution.test.ts` -2 (81 -> 79). No other file's count
   changed (the script diffs all 135 files).
 - **Mutations** (38 harness runs, full suite each, every file restored from an in-memory copy; the
-  tree was re-verified green afterwards). **36 killed**, each by a named test:
+  tree was re-verified green afterwards). **36 killed in the first run**, each by a named test:
   - lock read removed from the skip (action-slot read; corpus digest, `perform-action.test.ts`
     turn-start skip test); lock read removed from `checkLegality` (15 failing, `actions.test.ts`);
     `'all'` not covering Defend/Provoke/Wait (the two `status-containers` tests);
@@ -2016,13 +2016,16 @@ exactly** (so a creature holding two locks gets two old `TriggerFired` events ba
     armor-penetration, cross-stat, action-instance, provoke-immunity, splashing, annihilate,
     cheat-death, conditional-damage-bonus, `isActionLocked`, `firstAllLock`,
     `activeFriendlyFireStatus`, `turnOrderPosition`, the Web roll): each fails its table row.
-  - **2 survived, both equivalent mutants:** removing the first (after-hooks) lock read, and not feeding
-    the gate to the **turn-start** drain. With an `'all'` lock illegal for every kind (ASSUMPTION 46),
-    nothing between the first read and that drain can remove the lock (the cleanup touches only
-    defending/provoking; the drain holds only the actor's own grants, which are themselves refused
-    by the lock), so the lock refuses what the gate would. The gate is kept as defence in depth, as
-    specified; the **turn-end** gate is not redundant (turn-end hooks can remove the lock) and is
-    pinned.
+  - **2 survived the first run, and are killed by the review-fix test** (the 38 runs above: 36 killed,
+    2 survived; with the fix, **38 of 38 killed**): removing the first (after-hooks) lock read, and not
+    feeding `skippedTurnOf` to the **turn-start** drain. Both were first judged equivalent, on the
+    argument that the lock itself refuses the grant. That was wrong: the turn-start drain can hold
+    another creature's grant ahead of the actor's own, and that grant can remove the lock before the
+    actor's grant runs. The test "an earlier grant in the turn-start drain can remove the lock" pins
+    it with a hand-derived log (Y's AOE cast removes X's stun mid-drain; X's granted attack must still
+    be refused by the gate, and the turn still skipped by the first read). With the first read
+    removed X's attack runs and X then takes a normal turn (`Waited`), with no `TurnSkipped`; with
+    the gate removed X's attack runs inside a skipped turn. Each mutation fails exactly that test.
 - Load-time wiring: the validators run at import (`data/statuses.ts`, `data/traits/index.ts`), as before;
   tests call the validator functions (`validateStatusDef`, `validateTrait`, `validateSpecialization`).
   No test pins the import-time loop call itself (same as the earlier validators).
@@ -2031,9 +2034,11 @@ exactly** (so a creature holding two locks gets two old `TriggerFired` events ba
 
 ### Spec notes (for the docs, before F2)
 
-- **B2 rule 1 at the turn-start drain is now redundant** (see the surviving mutants): the lock refuses
-  the grant itself. Still needed at the turn-end drain. CONVENTIONS' "skipped turn refuses grants"
-  can say so.
+- **The first lock read and the turn-start gate are load-bearing**: an earlier grant in the same
+  turn-start drain can remove the lock before the actor's own grant runs (the review-fix test). The
+  turn-end gate is load-bearing for the same reason (turn-end hooks can remove the lock).
+- `TurnSkipped.effectId` names the first `'all'` lock at the action slot or, if none is left
+  there, the one the first read found.
 - A trait-borne `'all'` lock names itself by the trait id (`perk-N` / `enemy-effect-N` for side
   effects) in `TurnSkipped.effectId`; no content does this yet.
 - `turn-order` and the Web roll now honour immunity (see above); `TurnSkipped` is emitted for a skip

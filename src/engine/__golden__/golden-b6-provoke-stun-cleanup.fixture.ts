@@ -1,11 +1,12 @@
 // Golden: B6 (Phase 4.1-C, D6) -- a provoking creature Stunned before its next turn stops
 // provoking at that turn's start, with no stale redirect afterward. Before this fix, turn-start
-// cleanup only ran inside the `!suppressed` decide+action gate, so a Stunned/Sleeping creature
+// cleanup only ran inside the not-skipped decide+action gate, so a Stunned/Sleeping creature
 // kept Defend/Provoke through its own skipped turn -- Provoke would have kept redirecting HERO's
 // attacks at PROVOKER in round 2 even after it was Stunned.
 //
-// PROVOKER carries a fixture trait that self-inflicts a Stun-shaped status (on-turn-start ->
-// suppress-action, scope 'all') the instant it takes damage (on-damage-taken -> apply-status).
+// PROVOKER carries a fixture trait that self-inflicts a Stun-shaped status (a passive
+// `action-lock { scope: 'all' }`, 4.1-F1) the instant it takes damage (on-damage-taken ->
+// apply-status).
 // WEAKLING has less HP than PROVOKER throughout, so HERO's "attack the lowest-HP enemy" rule is
 // the discriminator: whichever enemy it actually hits reveals whether Provoke's redirect is still
 // active.
@@ -19,11 +20,11 @@
 //     instead: off=10, def=0: core=10, chip=0.01*10=0.1 -> raw=10.1 -> final=10. PROVOKER
 //     30 -> 20, survives -> on-damage-taken fires -> self-applies the stun-fixture status
 //     (StatusApplied). WEAKLING waits.
-//   Round 2: PROVOKER's turn-start hooks fire the stun-fixture's on-turn-start -> suppress-action
-//     (TriggerFired, suppressed=true). Turn-start cleanup runs regardless (B6): PROVOKER's
-//     `provoking` flag (still true from round 1) is cleared, emitting
-//     ActionStateEnded{defending:false, provoking:true}. No action follows (empty bracket -- the
-//     turn was skipped). HERO's rule now resolves NORMALLY (no provoker left) -> the lowest-HP
+//   Round 2: the stun-fixture's 'all' lock is passive, so no TriggerFired; it is read right after
+//     the turn-start hooks and the turn is skipped. Turn-start cleanup runs regardless (B6):
+//     PROVOKER's `provoking` flag (still true from round 1) is cleared, emitting
+//     ActionStateEnded{defending:false, provoking:true}. Then TurnSkipped{provoker,
+//     'b6-stun-fixture'} fills the action slot, after the cleanup; no action follows. HERO's rule now resolves NORMALLY (no provoker left) -> the lowest-HP
 //     enemy is WEAKLING (10 HP) vs PROVOKER (20 HP) -- HERO hits WEAKLING, not PROVOKER, proving
 //     the redirect did not stick: off=10, def=0: raw=10.1, final=10. WEAKLING 10 -> 0, dies.
 //     PROVOKER is still alive, so the fight doesn't end here. WEAKLING's own round-2 turn is an

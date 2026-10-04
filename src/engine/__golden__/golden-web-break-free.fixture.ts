@@ -1,5 +1,5 @@
 // Golden: Web's break-free roll (Phase 4 Slice E2) -- a per-GLOBAL-turn chance rolled at EVERY
-// creature's turn-start against every current Web-bearer (TurnOrderStatusDef.breakChancePercent),
+// creature's turn-start against every current Web-bearer (TurnOrderDef.breakChancePercent),
 // NOT the bearer's own hook. Fixture-shaped, not real Web content (that's H1's job).
 //
 // Hand-derived (independent `node -e` mulberry32 trace against rng.ts's exact algorithm). BEARER

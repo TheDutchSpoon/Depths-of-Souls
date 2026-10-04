@@ -1,5 +1,5 @@
 // Golden: Stun's 'all' action-lock status, applied via a trait's apply-status response
-// (REELING: on-damage-taken -> self-stun for 1 round). Proves the empty-bracket skip: VICTIM's
+// (REELING: on-damage-taken -> self-stun for 1 round). Proves the skip (`TurnSkipped`): VICTIM's
 // very next turn (same round it was hit, since STRIKER acts first) has NO AttackDeclared between
 // its TurnStarted/TurnEnded. Also exercises death pre-empting on-damage-taken (no re-stun, no new
 // StatusApplied, on the killing blow) -- reusing Slice B's pinned hook order.

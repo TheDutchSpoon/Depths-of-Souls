@@ -7,7 +7,7 @@
 // Sleep is set up via a FIXTURE-ONLY second trait on Dozer herself (`SLEEP_SETUP_FIXTURE`,
 // on-fight-start -> apply-status(all-enemies, sleep)) -- same reasoning as Broodwarden's own
 // golden (createCombat recomputes activeEffects from innateTraitIds at fight-start, so a raw
-// activeEffects preset would be silently wiped). Unlike Web, Sleep (`condition-status`) is never
+// activeEffects preset would be silently wiped). Unlike Web, Sleep (a status container) is never
 // scanned by rollWebBreakFree, so this fixture draws ZERO RNG anywhere -- the seed is inert.
 //
 // Hand-derived (independent `node -e` calculator, identical arithmetic to Broodwarden's own

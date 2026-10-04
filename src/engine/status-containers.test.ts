@@ -294,6 +294,201 @@ describe("the skip: an 'all' lock", () => {
     expect(events.filter((e) => e.type === 'ActionGranted')).toHaveLength(1) // only the cast
     expect(events.some((e) => e.type === 'AttackDeclared')).toBe(false)
   })
+
+  it("an earlier grant in the turn-start drain can remove the lock: the first read still skips the turn and its gate still refuses the actor's grant", () => {
+    // Setup (no RNG anywhere). X (player slot 0, speed 20) carries x-trait, effects in order:
+    //   1 on-fight-start apply-status(self, stun, 5)
+    //   2 on-turn-start  apply-status(all-allies, glow)
+    //   3 on-turn-start  perform-action(self, attack)
+    // Y (player slot 1, speed 5) carries y-trait: on-status-applied (stacks: false) ->
+    // perform-action(self, cast slot 0); slot 0 = an ally-side AOE whose only effect is
+    // remove-status(cast-target, stun). FOE (enemy, speed 1, HP 500) only waits.
+    //
+    // Fight start: effect 1 -> TriggerFired + StatusApplied(x, stun, stacks 1, duration 5).
+    // X's turn: TurnStarted. Turn-start hooks, in effect order: effect 2 -> TriggerFired, glow lands
+    // on x then y (default duration 4); Y's on-status-applied fires for y only -> TriggerFired(y),
+    // queueing Y's cast FIRST. Effect 3 -> TriggerFired(x), queueing X's attack SECOND.
+    // First read (right after the hook pass): X holds stun -> the turn is skipped, 'stun'.
+    // Cleanup: nothing to end. Turn-start drain, FIFO, with skippedTurnOf = X:
+    //   Y's cast: legal for Y -> ActionGranted(y), SpellCast aoe over the ally side [x, y], then
+    //     remove-status(stun) on x -> StatusExpired(x, stun) (nothing on y: no event). The lock is
+    //     now GONE.
+    //   X's attack: refused by the skip gate -- NOT by the lock, which no longer exists: no
+    //     ActionGranted for X, no AttackDeclared.
+    // Action slot (second read): no lock left, but the first read already skipped the turn, so no
+    // decide (no Waited) and TurnSkipped names the first read's lock: effectId 'stun'.
+    const FIXTURE_X = createCreatureId('x')
+    const FIXTURE_Y = createCreatureId('y')
+    const REMOVE_STUN_AOE: Spell = {
+      id: 'remove-stun-aoe-fixture',
+      name: 'Remove Stun AOE (fixture)',
+      targetShape: 'aoe',
+      affinity: 'vitality',
+      targetSide: 'ally',
+      unlockedAtBiome: 1,
+      effects: [
+        {
+          kind: 'remove-status',
+          target: { kind: 'cast-target' },
+          filter: { statusId: 'stun' },
+        },
+      ],
+    }
+    const xTrait: Trait = {
+      id: 'x-trait',
+      name: 'X (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-fight-start',
+          response: {
+            kind: 'apply-status',
+            target: { kind: 'self' },
+            status: { statusId: 'stun', duration: 5 },
+          },
+        },
+        {
+          category: 'triggered',
+          hook: 'on-turn-start',
+          response: {
+            kind: 'apply-status',
+            target: { kind: 'all-allies' },
+            status: { statusId: 'glow' },
+          },
+        },
+        {
+          category: 'triggered',
+          hook: 'on-turn-start',
+          response: {
+            kind: 'perform-action',
+            actor: 'self',
+            intent: { action: { kind: 'attack' } },
+          },
+        },
+      ],
+    }
+    const yTrait: Trait = {
+      id: 'y-trait',
+      name: 'Y (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-status-applied',
+          stacks: false,
+          response: {
+            kind: 'perform-action',
+            actor: 'self',
+            intent: { action: { kind: 'cast', gemSlot: 0 } },
+          },
+        },
+      ],
+    }
+    const state = createCombat({
+      seed: 7,
+      player: {
+        party: makeParty('player', [
+          {
+            id: 'x',
+            health: 100,
+            speed: 20,
+            scriptId: 'always-wait',
+            innateTraitIds: ['x-trait'],
+          },
+          {
+            id: 'y',
+            health: 100,
+            speed: 5,
+            scriptId: 'always-wait',
+            innateTraitIds: ['y-trait'],
+            equippedSpells: [REMOVE_STUN_AOE],
+          },
+        ]),
+      },
+      enemy: {
+        party: makeParty('enemy', [
+          { id: 'foe', health: 500, speed: 1, scriptId: 'always-wait' },
+        ]),
+      },
+      registries: {
+        scripts: STOCK_SCRIPTS_BY_ID,
+        traits: new Map([
+          ['x-trait', xTrait],
+          ['y-trait', yTrait],
+        ]),
+        statuses: STATUS_REGISTRY,
+      },
+    })
+    const { events } = resolveTurn(state)
+    expect(events).toEqual([
+      { type: 'FightStarted' },
+      {
+        type: 'TriggerFired',
+        sourceId: FIXTURE_X,
+        hook: 'on-fight-start',
+        effectId: 'x-trait',
+      },
+      {
+        type: 'StatusApplied',
+        targetId: FIXTURE_X,
+        statusId: 'stun',
+        stacks: 1,
+        duration: 5,
+        sourceId: FIXTURE_X,
+      },
+      { type: 'RoundStarted', round: 1 },
+      { type: 'TurnStarted', creatureId: FIXTURE_X },
+      {
+        type: 'TriggerFired',
+        sourceId: FIXTURE_X,
+        hook: 'on-turn-start',
+        effectId: 'x-trait',
+      },
+      {
+        type: 'StatusApplied',
+        targetId: FIXTURE_X,
+        statusId: 'glow',
+        stacks: 1,
+        duration: 4,
+        sourceId: FIXTURE_X,
+      },
+      {
+        type: 'StatusApplied',
+        targetId: FIXTURE_Y,
+        statusId: 'glow',
+        stacks: 1,
+        duration: 4,
+        sourceId: FIXTURE_X,
+      },
+      {
+        type: 'TriggerFired',
+        sourceId: FIXTURE_Y,
+        hook: 'on-status-applied',
+        effectId: 'y-trait',
+      },
+      {
+        type: 'TriggerFired',
+        sourceId: FIXTURE_X,
+        hook: 'on-turn-start',
+        effectId: 'x-trait',
+      },
+      {
+        type: 'ActionGranted',
+        sourceId: FIXTURE_Y,
+        actorId: FIXTURE_Y,
+        effectId: 'y-trait',
+      },
+      {
+        type: 'SpellCast',
+        targetShape: 'aoe',
+        casterId: FIXTURE_Y,
+        gemSlot: 0,
+        targetIds: [FIXTURE_X, FIXTURE_Y],
+      },
+      { type: 'StatusExpired', creatureId: FIXTURE_X, statusId: 'stun' },
+      { type: 'TurnSkipped', creatureId: FIXTURE_X, effectId: 'stun' },
+      { type: 'TurnEnded', creatureId: FIXTURE_X },
+    ])
+  })
 })
 
 describe('locks in checkLegality, at every site', () => {
