@@ -1,17 +1,18 @@
 import type { Creature } from './types'
 import type { CreatureId } from './ids'
 import { getEffectiveStat } from './effective-stats'
+import { flatEffects } from './effects'
 import { compareBySideSlotId } from './tie-break'
 
 /**
- * Phase 4 Slice C: the bearer's active turn-order-status position, read passively (never a
- * hook). ASSUMPTION 9: a bearer carrying both an act-first AND an act-last instance at once
+ * Phase 4 Slice C: the bearer's active `turn-order` position (carried by Web / Grant Act First),
+ * read through the effect iterator (4.1-F1: an immune bearer's status doesn't count), never a hook. ASSUMPTION 9: a bearer carrying both an act-first AND an act-last instance at once
  * resolves to 'first' -- first wins over last when both are simultaneously active.
  */
 function turnOrderPosition(creature: Creature): 'first' | 'last' | null {
   let position: 'first' | 'last' | null = null
-  for (const effect of creature.activeEffects) {
-    if (effect.category !== 'turn-order-status') continue
+  for (const effect of flatEffects(creature)) {
+    if (effect.category !== 'turn-order') continue
     if (effect.position === 'first') return 'first'
     position = 'last'
   }
@@ -35,7 +36,7 @@ function sortBySpeed(group: readonly Creature[]): CreatureId[] {
  * partitioned into an act-first pole, the normal group, and an act-last pole (Phase 4 Slice C
  * -- Web/Blindclaws' turn-order status), each internally ordered by descending effective
  * Speed with the existing side/slot/id tie-break, then concatenated first -> normal -> last.
- * With no turn-order-status effects present, both poles are empty and this is byte-identical
+ * With no `turn-order` effects present, both poles are empty and this is byte-identical
  * to the pre-Slice-C single-group sort. Called once per round; never called again mid-round
  * even if something changes Speed or position (nothing can mid-round in v1).
  */

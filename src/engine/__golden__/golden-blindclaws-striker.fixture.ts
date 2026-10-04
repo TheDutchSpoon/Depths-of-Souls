@@ -22,7 +22,7 @@
 //     TARGET 82-24=58.
 //
 // Round 2 queue: STRIKER's grant-act-first (applied round 1, still active) puts it in the
-// act-first pole alone; the normal pool (no turn-order-status) is TARGET(15)/SETTER(10) sorted
+// act-first pole alone; the normal pool (no turn-order effect) is TARGET(15)/SETTER(10) sorted
 // desc. Queue: STRIKER -> TARGET -> SETTER.
 //   STRIKER's turn: now queue-index 0 vs TARGET's index 1 -> acted-before-target is TRUE -> +35%
 //     dealt (conditional-damage-bonus). off 24, def 0: core 24, chip 0.24 -> (24.24) x 1.35 ->

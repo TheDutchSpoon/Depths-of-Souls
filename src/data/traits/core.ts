@@ -125,7 +125,7 @@ export const VENGEFUL: Trait = {
 }
 
 /** Triggered + apply-status: when dealt damage, this creature is stunned (reeling) for 1 round.
- * Exercises Stun's condition-status suppress-action end-to-end from a trait's apply-status
+ * Exercises Stun's 'all' action-lock end-to-end from a trait's apply-status
  * response (Slice C). */
 export const REELING: Trait = {
   id: 'reeling',

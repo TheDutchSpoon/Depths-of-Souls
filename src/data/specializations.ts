@@ -33,6 +33,7 @@
 
 import type { EffectDef } from '../engine/effect-types'
 import {
+  validateNoBreakChanceOutsideStatus,
   validateNoRandomSelectorInResponseTargets,
   validateStatModifierConditions,
 } from '../engine/effect-types'
@@ -75,6 +76,7 @@ export function validateSpecialization(spec: Specialization): void {
   for (const perk of spec.perks) {
     const effects = typeof perk.effects === 'function' ? perk.effects(1) : perk.effects
     validateStatModifierConditions(effects)
+    validateNoBreakChanceOutsideStatus(effects)
     validateNoRandomSelectorInResponseTargets(effects)
   }
 }

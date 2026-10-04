@@ -62,7 +62,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-D** | Spells carry responses | **Byte-identical, all goldens (hard requirement)** |
 | **4.1-D2** | The corpus covers all real content (test-only, from the PR #74 review) | **Byte-identical**: every golden and every existing digest entry unchanged; the digest only gains appended coverage entries |
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
-| **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify | Deliberate changes, listed |
+| **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: existing goldens and digest entries byte-identical, the digest gains appended coverage fights |
 | **4.1-G** | Hub actions + enemy behaviour | Engine goldens untouched except any listed; content tests change |
 | **4.1-H** | Balance simulator + first tuning pass | Content numbers change; mechanism goldens untouched |
 
@@ -739,6 +739,26 @@ Item: **A2.** Bonus-cast and echo-cast become data.
 
 Items: **A3, D6 status timing, D5, G2.**
 
+### The split: F1, F2, F3 (decided before the F kickoff)
+
+F ships as three PRs, in this order, each under one golden policy:
+
+| PR | Items | Golden policy |
+|---|---|---|
+| **4.1-F1** | A3: statuses as effect containers, `action-lock` + `TurnSkipped`, `suppress-action` deleted, immunity in the iterator, the status load-time validator. **Timing unchanged:** ticks stay on the round-end sweep and the Web roll stays at turn start. | **Deliberate, narrow.** The only allowed changes are the turn-skip shape (a skipped turn shows `TurnSkipped` instead of the lock's on-turn-start `TriggerFired`) and the two goldens whose fixture traits lock with `suppress-action` (`golden-scoped-suppression`, `golden-b2-silenced-refuses-granted-cast`) re-expressed on `action-lock`, so the lock's own `TriggerFired` disappears. Every other golden is byte-identical. Every changed corpus fight contains a `TurnSkipped`, and mapping each one back to the old shape reproduces `main`'s log. |
+| **4.1-F2** | D6 status timing (durations count the bearer's turns, ticks on `on-turn-end`, born-this-turn, the round-end sweep deleted, in-turn win checks) and D5 (the Web roll in turn-end cleanup). | **Deliberate, listed:** timing. The plan lists every affected golden with its fate. |
+| **4.1-F3** | G2: Silenced/Pacified, Silence/Pacify, the perk exemptions dropped, the spell dedup key. | Existing goldens and existing digest entries **byte-identical** (shown mechanically); new hand-derived goldens; the digest only gains appended coverage fights. |
+
+**Why three, not one.** F re-expresses every status. With timing unchanged, F1's refactor can be
+proven behaviour-neutral mechanically: by importing every golden and by mapping the corpus digest
+back to `main`. Done in the same PR as the timing change, a refactor bug would hide among ~36
+goldens re-derived for timing, and the digest couldn't tell the two kinds of change apart. F2's
+diffs are then timing only. F3 comes last so its new goldens are written once, against the final
+timing (Silenced's three turns count the bearer's own turns).
+
+**The cost, accepted:** F1 adapts the round-end sweep to read status containers, and F2 deletes
+that adaptation along with the sweep.
+
 ### A3 — statuses carry `EffectDef[]`
 - `StatusDef = { statusId, cap, polarity, defaultDuration, effects: EffectDef[] }`. Re-express every
   status:
@@ -756,6 +776,23 @@ Items: **A3, D6 status timing, D5, G2.**
   (if two `'all'` locks are active, the first in canonical effect order names it, ASSUMPTION 28).
 - **Load-time validator:** a status carrying `stat-modifier` or `stat-remap` fails to load.
 - Delete the four old `StatusDef` categories and their bespoke readers.
+- **Decided at the 4.1-F1 plan review** (CONVENTIONS "Action locks", "The effect taxonomy",
+  "Immunity" and "The bright line" hold the rules):
+  - `action-lock` is carrier-agnostic, so the two fixture locks stay trait-borne and their goldens
+    only lose the lock's `TriggerFired`. `TurnSkipped` is `{ creatureId, effectId }`, the carrier's
+    definition id (ASSUMPTION 44).
+  - The skip is read right after the turn-start hook pass and again at the action slot; a lock
+    gained during the actor's own turn-start hooks skips that turn (ASSUMPTION 45).
+  - An `'all'` lock makes every action kind illegal in `checkLegality`, Defend, Provoke and Wait
+    included (ASSUMPTION 46).
+  - Every effect is carrier-agnostic and every reader goes through the one iterator. The status
+    validator rejects `stat-modifier`, `stat-remap`, `status-immunity` and `innate-spell`;
+    `breakChancePercent` is rejected outside a status. Immunity covers every effect kind of the
+    status and is read only from non-status carriers (ASSUMPTION 47).
+  - The status damage-modifier stays its own category (ASSUMPTION 48).
+  - Golden list: `golden-sleep-wake` and `golden-lullpollen-dozer` are expected **unchanged** (no
+    skipped turn in their expected logs); only their fixture inputs change shape. Test files with
+    inline old-shape status literals get shape-only edits, assertions untouched.
 
 ### D6 status timing
 - **Durations count the bearer's own turns**: in the bearer's **turn-end cleanup**, each of its
@@ -775,7 +812,7 @@ Items: **A3, D6 status timing, D5, G2.**
   Web's `turn-order` effect (`breakChancePercent`), the roll happens in **turn-end cleanup**, it
   skips Webs applied during the current turn, and it follows the roll-only-when-present discipline.
 
-### G2 — Silence and Pacify
+### G2 — Silence and Pacify (F3)
 - **Silenced** (`action-lock { scope: 'cast' }`) and **Pacified** (`action-lock { scope: 'attack' }`)
   statuses: cap 1, `defaultDuration: 3`, polarity debuff (ASSUMPTION 30).
 - **Silence** (Violence) and **Pacify** (Wit): single enemy, `effects: [apply-status(cast-target,
@@ -786,16 +823,29 @@ Items: **A3, D6 status timing, D5, G2.**
 - **Corpus coverage:** drop the `clear-mind` and `aggressive` perk exemptions from
   `corpus-coverage.test.ts` (an exempt perk that matters fails the test). Both must then matter in
   a corpus fight; add a coverage fight if no existing one shows it, and regenerate the digest in
-  the same PR.
+  the same PR. Silence and Pacify themselves must pass the coverage test (cast, status landed).
+- **The spell dedup key** (`data/spells/index.test.ts`, from the PR #74 review): key a status-only
+  spell by its status ids. Today every status-only spell of one affinity and shape keys to
+  `…|none|1`, so a second one in an affinity would be a false duplicate. Silence and Pacify are the
+  first status-only spells; they differ by affinity, so they don't collide either way.
+- **Adding spells must not shift existing fights.** The F3 plan checks whether any generation or
+  corpus path draws from the spell registry (a new `unlockedAtBiome: 1` spell would then move
+  draws); if one does, the PR's golden policy changes and the plan says so before building.
 
 ### Deliberate golden changes (4.1-F)
+
+F1's changes are the stun and sleep goldens' skip shape and the two fixture locks re-expressed on
+`action-lock`; every other item below is F2's, except the G2 goldens (F3, new only).
+
 - **Every status golden changes timing**; the Phase-3 round-end goldens (`golden-dot`,
   `golden-round-end-interaction`, `golden-round-end-mid-sweep-poison(-refresh)` and every golden
   whose statuses count down or tick) are **rewritten as hand-derived turn-end equivalents**.
 - A new **turn-end interaction golden**: a DoT tick kills its bearer, whose `on-death` applies a
   status; assert `on-death` fires, the new status follows the born-this-turn rule, and the win check.
-- The **stun and sleep goldens** gain `TurnSkipped` and lose the no-op `TriggerFired`.
-- The **scoped-suppression golden** is rewritten on `action-lock`.
+- The **stun and sleep goldens** gain `TurnSkipped` and lose the no-op `TriggerFired` (F1); their
+  timing changes in F2.
+- The **scoped-suppression golden** and **`golden-b2-silenced-refuses-granted-cast`** are rewritten
+  on `action-lock` (F1): their fixture lock's on-turn-start `TriggerFired` disappears.
 - The **Web break-free golden** moves its roll to turn-end cleanup.
 - Glow, Weaken, Vulnerability, Confusion goldens: only timing changes may appear; the modifier math
   must be identical.
@@ -805,7 +855,7 @@ Items: **A3, D6 status timing, D5, G2.**
   stays and the queued cast is refused at drain (dead actor), per "only the actor's state decides a
   grant". No special case; corpus fights where a ticking Seer dies change for this reason and are
   attributed as such.
-- **The F plan lists every affected golden with its fate** (PR #73 review): **re-derived by hand**
+- **The F2 plan lists every affected golden with its fate** (PR #73 review): **re-derived by hand**
   (the mechanism still exists, only its timing moves) or **retired** (the mechanism is gone, e.g. a
   golden that exists only to pin the round-end sweep), with the golden that replaces its coverage.
   36 of the 88 golden fixtures contain status events (after 4.1-C2c), so this list is the plan's
@@ -960,8 +1010,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 
 1. **Confirmed.** Eight slices, lettered **A–H**, each under one golden policy. A coding plan may
    merge two adjacent slices only if both are byte-identical or both deliberate, and it says so.
-   Consequence: **G2 lands in F, two slices after A4** (not "right after" it), because
-   Silenced/Pacified are authored on A3's `action-lock`, which F builds.
+   Consequence: **G2 lands in F3, after A4** (not "right after" it), because
+   Silenced/Pacified are authored on A3's `action-lock`, which F1 builds.
 2. **Confirmed (design owner).** The implicit fallback is an ordinary intent (`{ action: attack }`)
    through the pipeline and gets the **side-aware default (`lowest-hp-enemy`)** like any rule. Phase
    1's first-by-slot default (`getDefaultTarget`) is retired, and the **old goldens that depended on
@@ -1008,20 +1058,20 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     non-empty, not locked, with at least one valid target on its intended side.
 14. **`'random'` target** = uniform over living creatures on the action's intended side (today's
     echo draw), then the override pipeline for enemy-side single targets.
-15. **C leaves the Web roll at turn start**; F moves it to turn-end cleanup.
-16. **C leaves the round-end status sweep in place**; F deletes it. C's turn-end cleanup is a
-    seam with no status work.
+15. **C leaves the Web roll at turn start**; F2 moves it to turn-end cleanup (F1 leaves it).
+16. **C leaves the round-end status sweep in place**; F2 deletes it (F1 adapts it to containers).
+    C's turn-end cleanup is a seam with no status work.
 17. **In C, bonus-cast and echo-cast keep their data shape and events** but run through the
     pipeline (bonus-cast in the granted-actions step); E turns them into `perform-action`.
 18. **Born-this-turn tracking** uses the minimum state that works (e.g. stamping an instance with the
-    turn it was applied or refreshed); the F plan pins it and shows it adds nothing to events.
+    turn it was applied or refreshed); the F2 plan pins it and shows it adds nothing to events.
 19. **Win/loss check points inside a turn** (after the action, after each turn-end hook firing that can
     kill, after each granted action) and whether `TurnEnded` is still emitted when the fight ends
-    mid-turn: the F plan pins them, matching today's "the fight ends the instant a side is wiped".
+    mid-turn: the F2 plan pins them, matching today's "the fight ends the instant a side is wiped".
     PR #70 review data point: today `resolveTurn` checks only once, after `TurnEnded`. Adding the
     in-turn checks is golden-neutral on the C1 suite (verified by mutation), but once DoTs tick on
     `on-turn-end` the end-only check turns a win into a **draw** when the last living creature on
-    the winning side dies to its own tick after emptying the other side. F's win-check golden
+    the winning side dies to its own tick after emptying the other side. F2's win-check golden
     covers exactly that case.
 20. **New spell placeholder numbers:** Pounce 100% Speed; Stifling Weight Weaken at its default
     duration; Life Siphon 70% Intelligence damage + heal self for 35% of Intelligence. Tuned in H.
@@ -1043,10 +1093,11 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     disambiguation.
 27. **Materializing a `fusion` source throws** until Phase 8 implements fused derivation (the variant
     exists only so save v1 never needs reshaping).
-28. **`TurnSkipped` names the first `'all'` lock in canonical effect order** when two are active.
+28. **`TurnSkipped` names the first `'all'` lock in canonical effect order** when two are active
+    (F1).
 29. **The `support` role's ally-side gem filter is an engine change** in G: the cast intent's
     `gemSlot: 'random'` gains an optional `side` filter (shape pinned by the G plan).
-30. **Silenced and Pacified have polarity `debuff`.**
+30. **Silenced and Pacified have polarity `debuff`** (F3).
 31. **Confirmed (design owner, PR #71 review).** C2a is byte-identical in behaviour, not just on
     goldens. Granted casts keep today's targeting behind `legacyGrantedTargeting` until C2b
     (B2.3) deletes it.
@@ -1087,12 +1138,29 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 43. **Confirmed (design owner, 4.1-E plan review).** Only the actor's state decides a queued
     grant: dead, skipped turn or locked when it runs means refused. The bearer dying after its
     trigger fired does not cancel it.
+44. **Confirmed (design owner, 4.1-F1 plan review).** `action-lock`, like every effect, may be
+    carried by a trait as well as a status. `TurnSkipped` is `{ creatureId, effectId }`, where
+    `effectId` is the carrier's definition id (the status id for a status), as in `TriggerFired`.
+45. **Confirmed (design owner, 4.1-F1 plan review).** A turn is skipped when an `'all'` lock is
+    active right after the turn-start hook pass or at the action slot. A lock gained during the
+    actor's own turn-start hooks skips that turn (GAME_DESIGN: "the check happens when the
+    creature's turn comes up"); no shipped content gains or loses a lock at turn start.
+46. **Confirmed (4.1-F1 plan review; CONVENTIONS B2 rule 2, GAME_DESIGN "a lock stops every
+    action").** An `'all'` lock makes every action kind illegal, Defend, Provoke and Wait included.
+    No shipped content grants those to a locked creature, so nothing changes today.
+47. **Confirmed (4.1-F1 plan review).** Every effect is carrier-agnostic and read through the one
+    iterator. Inside a status the validator rejects `stat-modifier`, `stat-remap`,
+    `status-immunity` and `innate-spell`; `turn-order.breakChancePercent` is rejected outside a
+    status. Immunity skips every effect kind of the status (turn-order and the Web roll included)
+    and is read only from non-status carriers.
+48. **Confirmed (4.1-F1 plan review).** The status damage-modifier stays its own category; no
+    fold into `conditional-damage-bonus` or `taken-reduction`.
 
 ## Sequencing summary
 
 `4.1-A` (data, store, generation) → `4.1-B` (engine foundations, byte-identical) → `4.1-C`
 (action pipeline + turn skeleton) → `4.1-D` (spells carry responses, byte-identical) → `4.1-D2`
-(the corpus covers all real content, test-only) → `4.1-E`
-(`perform-action`) → `4.1-F` (status containers + timing + Web + Silence/Pacify) → `4.1-G` (hub
+(the corpus covers all real content, test-only) → `4.1-E` (`perform-action`) → `4.1-F1` (status
+containers) → `4.1-F2` (status timing + Web roll) → `4.1-F3` (Silence/Pacify) → `4.1-G` (hub
 actions + enemy behaviour) → `4.1-H` (simulator + tuning) → then the Phase 4.5 demo brief. Each PR
 branches from `main` after the previous merge.

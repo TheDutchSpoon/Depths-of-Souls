@@ -22,13 +22,7 @@ import { makeParty } from './__fixtures__/creatures'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import { STUN } from '../data/statuses'
 import type { CombatEvent, CombatState, Spell } from './types'
-import type {
-  ActiveEffect,
-  ConditionStatusDef,
-  EffectDef,
-  StatusDef,
-  Trait,
-} from './effect-types'
+import type { ActiveEffect, EffectDef, StatusDef, Trait } from './effect-types'
 import type { Intent } from './scripting-types'
 
 const BOLT: Spell = {
@@ -130,8 +124,8 @@ describe('where each scope drains its grants (ASSUMPTION 3)', () => {
   })
 
   it('a turn-start grant on a SKIPPED turn is refused (the skip gate covers the turn-start drain, not just the turn-end one)', () => {
-    // Stun is applied at fight start; its on-turn-start suppression sets the turn's skip flag in the
-    // same hook pass that queued the Defend, so the grant must be refused when it would run.
+    // Stun is applied at fight start; its 'all' lock is read right after the turn-start hook pass
+    // that queued the Defend (4.1-F1), so the grant must be refused when it would run.
     const stunAtStart: EffectDef = {
       category: 'triggered',
       hook: 'on-fight-start',
@@ -150,7 +144,8 @@ describe('where each scope drains its grants (ASSUMPTION 3)', () => {
     // The chance WAS rolled and the trigger shown (only the grant is refused).
     expect(
       events.filter((e) => e.type === 'TriggerFired' && e.hook === 'on-turn-start'),
-    ).toHaveLength(2) // the grant's trigger + Stun's own suppression
+    ).toHaveLength(1) // the grant's trigger only: Stun's lock is passive, it fires nothing
+    expect(events.filter((e) => e.type === 'TurnSkipped')).toHaveLength(1)
   })
 
   it("the chosen action's grants run right after it, BEFORE the turn-end hooks", () => {
@@ -340,14 +335,14 @@ describe('load-time rejections (ASSUMPTION 7)', () => {
   })
 
   it("consume-stacks' wrapped effect rejects perform-action (status triggers)", () => {
-    const status: ConditionStatusDef = {
-      category: 'condition-status',
+    const status: StatusDef = {
       statusId: 'wrapped-fixture',
       cap: 1,
       polarity: 'debuff',
       defaultDuration: 1,
-      triggers: [
+      effects: [
         {
+          category: 'triggered',
           hook: 'on-turn-end',
           chancePercent: 50,
           response: { kind: 'consume-stacks', statusId: 'glow', effect: performAction },
@@ -418,13 +413,13 @@ describe('the guard lint helpers (ASSUMPTION 7)', () => {
 
   it('findUnguardedStatusPerformActions covers status triggers too', () => {
     const status: StatusDef = {
-      category: 'condition-status',
       statusId: 'grant-status-fixture',
       cap: 1,
       polarity: 'buff',
       defaultDuration: 1,
-      triggers: [
+      effects: [
         {
+          category: 'triggered',
           hook: 'on-turn-end',
           response: { kind: 'perform-action', actor: 'self', intent: WAIT },
         },

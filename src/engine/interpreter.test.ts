@@ -417,12 +417,11 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
   })
 })
 
-describe('decideAction -- scoped suppress-action (Phase 4 Slice B)', () => {
+describe('decideAction -- scoped action-lock (Phase 4 Slice B; passive lock since 4.1-F1)', () => {
   function suppressEffect(scope: 'attack' | 'cast'): ActiveEffect {
     return {
-      category: 'triggered',
-      hook: 'on-turn-start',
-      response: { kind: 'suppress-action', scope },
+      category: 'action-lock',
+      scope,
       instanceId: createEffectInstanceId('fixture#suppress'),
       sourceTraitId: 'fixture-suppress',
     }
@@ -502,14 +501,12 @@ describe('decideAction -- scoped suppress-action (Phase 4 Slice B)', () => {
   })
 })
 
-describe('decideAction -- status-immunity vs scoped suppress-action (Phase 4 Slice C)', () => {
+describe('decideAction -- status-immunity vs scoped action-lock (Phase 4 Slice C)', () => {
   const SILENCED_CAST_SUPPRESSION: ActiveEffect = {
-    category: 'condition-status',
+    category: 'status',
     statusId: 'silenced',
     cap: 1,
-    triggers: [
-      { hook: 'on-turn-start', response: { kind: 'suppress-action', scope: 'cast' } },
-    ],
+    effects: [{ category: 'action-lock', scope: 'cast' }],
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId('me#status#silenced'),

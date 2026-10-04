@@ -32,7 +32,7 @@ import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import type { CombatEvent, FightResult } from '../types'
-import type { DamageModifierDef, Trait } from '../effect-types'
+import type { StatusDef, Trait } from '../effect-types'
 
 export const SEED = 1002 // No RNG consumed; seed is inert.
 
@@ -57,17 +57,24 @@ export const BULWARK_ADDITIVE_FIXTURE: Trait = {
   ],
 }
 
-export const BULWARK_ADDITIVE_STATUS: DamageModifierDef = {
-  category: 'damage-modifier',
+export const BULWARK_ADDITIVE_STATUS: StatusDef = {
   statusId: BULWARK_STATUS_ID,
-  cap: 1, // applied exactly once -- magnitudeSource, not re-application, drives the scaling
-  direction: 'taken',
-  magnitude: 0.95, // same per-unit-factor authoring as the multiplicative fixture
-  magnitudeSource: { kind: 'count', of: 'self-defend-count' },
-  accumulation: 'additive',
-  reductionCap: 0.8, // shieldbarer.md's real "cap 80%"
+  cap: 1,
+  // applied exactly once -- magnitudeSource, not re-application, drives the scaling
   polarity: 'buff',
   defaultDuration: 3,
+  effects: [
+    {
+      category: 'damage-modifier',
+      direction: 'taken',
+      // same per-unit-factor authoring as the multiplicative fixture
+      magnitude: 0.95,
+      magnitudeSource: { kind: 'count', of: 'self-defend-count' },
+      accumulation: 'additive',
+      // shieldbarer.md's real "cap 80%"
+      reductionCap: 0.8,
+    },
+  ],
 }
 
 export const playerParty = makeParty('player', [

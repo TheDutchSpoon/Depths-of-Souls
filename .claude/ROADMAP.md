@@ -233,9 +233,10 @@ finding labels B1, A4, … are a separate scheme.)
   every registered status applied in the corpus, enforced by a test.
 - **4.1-E — `perform-action`:** actions atomic, `ActionGranted`, "no side doors"; bonus-cast and
   echo-cast become data.
-- **4.1-F — statuses & status timing:** statuses as effect containers (`action-lock`, `TurnSkipped`,
-  the no-temporary-stat-modifier validator); status timing in bearer turns; Web's roll in turn-end
-  cleanup; Silence and Pacify authored.
+- **4.1-F — statuses & status timing**, in three PRs: **F1** statuses as effect containers
+  (`action-lock`, `TurnSkipped`, the no-temporary-stat-modifier validator; timing unchanged);
+  **F2** status timing in bearer turns and Web's roll in turn-end cleanup; **F3** Silence and
+  Pacify authored.
 - **4.1-G — hub actions & enemy behaviour:** `summon`, `setPartySlot`; `setPerkLevel` /
   `refundAllPerks` and no `PerkDef.phase`; `newGame({ seed })`; role scripts, full enemy gem sets,
   three new biome-1 spells, stored player gem sets.

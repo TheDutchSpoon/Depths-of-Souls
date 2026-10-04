@@ -2,12 +2,8 @@
 // framework"). Traits, statuses, and (later) gem augments / artifact infusions are all
 // instances of this ONE data-driven, hook-based model.
 //
-// Phase 3 lands in three slices. Slice A (this) implements the PASSIVE categories only —
-// `stat-modifier` and `stat-remap`, folded on read. The 13-hook `Hook` vocabulary and the
-// triggered `EffectResponse` / `StatusSpec` surface are declared here now (front-loaded for a
-// stable type surface) but are wired in Slice B (triggers + cascade safety) and Slice C
-// (statuses + round-end sweep). The `ActiveEffect` union itself grows across slices — that is
-// engine-internal and golden-invisible, so it need not be complete now.
+// Phase 4.1-F1 (A3): statuses are containers of these same effects (`StatusDef.effects`), read
+// through the one effect iterator (effects.ts `flatEffects`).
 
 import type { Spell, Stat } from './types'
 import type { ComparatorOp, Condition, Intent, TargetSelector } from './scripting-types'
@@ -250,12 +246,6 @@ export type EffectResponse =
        * would fold LIVE on every getEffectiveStat read -- no "application moment" to freeze at). */
       readonly magnitudeSource?: MagnitudeSource
     }
-  // Undeclared (or 'all') scope preserves the exact pre-Slice-B behavior: the whole turn is
-  // skipped via resolveTurn's on-turn-start `suppressed` flag (Stun). A scoped suppression
-  // ('attack' | 'cast', e.g. Pacified/Silenced) does NOT set that flag -- it is instead read
-  // passively by the INTERPRETER (interpreter.ts, not resolution.ts) at rule-validity time,
-  // gating only that one action kind while leaving the rest of the turn choosable.
-  | { readonly kind: 'suppress-action'; readonly scope?: 'all' | 'attack' | 'cast' }
   // Phase 4 Slice B. Target must be DEAD (see ResponseTarget's random-dead-ally). Returns the
   // target to its slot at the DEATH-RESET baseline (a fresh instantiation of innateTraitIds --
   // no ramp preserved) with currentHp = round(baselineMaxHp * pct), computed from that fresh
@@ -272,7 +262,7 @@ export type EffectResponse =
     }
   // Phase 4 Slice D (Glowflies' Detonator). SELF-scoped (no target field, unlike every other
   // response) -- reads and clears the FIRING creature's own statusId stacks, matching the
-  // condition-status/triggered-response convention that trigger evaluation is self-scoped.
+  // status/triggered-response convention that trigger evaluation is self-scoped.
   // ASSUMPTION 18: emits StatusExpired for the consumed status (it's genuinely gone, not merely
   // decremented). 0/absent stacks is a full no-op per CONVENTIONS ("applyStatus's cap-driven
   // model means 'no status present' and '0 stacks' are the same state") -- resolution.ts skips
@@ -384,7 +374,7 @@ export function validateStatModifierConditions(defs: readonly EffectDef[]): void
  * mistake fails fast at import (mirrors `validateStatModifierCondition`'s own precedent) instead
  * of throwing mid-fight the first time the response actually fires. Recurses into `consume-
  * stacks`'s own wrapped `effect` (the only response that nests another). Every other response
- * kind either carries a `target` field or none at all (`suppress-action`).
+ * kind either carries a `target` field or none at all (`perform-action`).
  */
 function throwIfRandomSelectorTarget(target: ResponseTarget, context: string): void {
   // Phase 4.1-D: `cast-target` only means something inside a spell's own effect list (it reads
@@ -415,7 +405,6 @@ function validateResponseTargetNoRandomSelector(
     case 'remove-status':
       throwIfRandomSelectorTarget(response.target, context)
       return
-    case 'suppress-action':
     case 'perform-action': // no response target (its `intent.targeting` MAY be `'random'`)
       return
     case 'consume-stacks':
@@ -450,16 +439,51 @@ export function validateNoRandomSelectorInResponseTargets(
   }
 }
 
-/** The status-registry counterpart: a `ConditionStatusDef`'s own `triggers` carry responses too
- * (the one status category that does -- `damage-modifier`/`turn-order-status`/`friendly-fire-
- * status` are read passively, never fired, so they have none to check). */
+/** The status-registry counterpart: a status carries ordinary effects (4.1-F1), so its triggers'
+ * responses are checked exactly like a trait's, with the status named in the message. */
 export function validateStatusNoRandomSelectorInResponseTargets(def: StatusDef): void {
-  if (def.category !== 'condition-status') return
-  for (const trigger of def.triggers) {
-    validateResponseTargetNoRandomSelector(
-      trigger.response,
-      `status "${def.statusId}"'s "${trigger.hook}" trigger's response`,
-    )
+  for (const effect of def.effects) {
+    if (effect.category === 'triggered') {
+      validateResponseTargetNoRandomSelector(
+        effect.response,
+        `status "${def.statusId}"'s "${effect.hook}" trigger's response`,
+      )
+    }
+  }
+}
+
+/** Phase 4.1-F1 (CONVENTIONS "The bright line"): the load-time validator for a status's effects.
+ * Throws if a status carries `stat-modifier` / `stat-remap` (no temporary stat-modifier),
+ * `status-immunity` (immunity is read only from non-status carriers, so it can't depend on
+ * itself) or `innate-spell` (innate spells are placed at fight setup, so a status's could never
+ * take effect), then runs the response-target checks over its triggers. Called over every stock
+ * status at import (`data/statuses.ts`). */
+export function validateStatusDef(def: StatusDef): void {
+  for (const effect of def.effects) {
+    switch (effect.category) {
+      case 'stat-modifier':
+      case 'stat-remap':
+      case 'status-immunity':
+      case 'innate-spell':
+        throw new Error(
+          `effect invariant violated: status "${def.statusId}" carries a '${effect.category}' effect, which a status may not carry`,
+        )
+      default:
+        break
+    }
+  }
+  validateStatusNoRandomSelectorInResponseTargets(def)
+}
+
+/** Phase 4.1-F1: `turn-order.breakChancePercent` is status-only (breaking free removes the status
+ * instance), so a trait or perk effect list carrying it is rejected at load. */
+export function validateNoBreakChanceOutsideStatus(defs: readonly EffectDef[]): void {
+  for (const def of defs) {
+    if (def.category === 'turn-order' && def.breakChancePercent !== undefined) {
+      throw new Error(
+        'effect invariant violated: turn-order.breakChancePercent is only valid inside a status (breaking free removes the status instance)',
+      )
+    }
   }
 }
 
@@ -483,10 +507,9 @@ export function performActionTriggers(defs: readonly EffectDef[]): TriggeredDef[
   )
 }
 
-/** The status-registry counterpart: a condition-status's `triggers` that carry `perform-action`. */
-export function statusPerformActionTriggers(def: StatusDef): StatusTrigger[] {
-  if (def.category !== 'condition-status') return []
-  return def.triggers.filter((t) => t.response.kind === 'perform-action')
+/** The status-registry counterpart: a status's trigger effects that carry `perform-action`. */
+export function statusPerformActionTriggers(def: StatusDef): TriggeredDef[] {
+  return performActionTriggers(def.effects)
 }
 
 /** Phase 4.1-E data-test helper: the `perform-action` triggers in `defs` WITHOUT a real guard. */
@@ -495,7 +518,7 @@ export function findUnguardedPerformActions(defs: readonly EffectDef[]): Trigger
 }
 
 /** The status-registry counterpart of `findUnguardedPerformActions`. */
-export function findUnguardedStatusPerformActions(def: StatusDef): StatusTrigger[] {
+export function findUnguardedStatusPerformActions(def: StatusDef): TriggeredDef[] {
   return statusPerformActionTriggers(def).filter((t) => !hasRealGuard(t))
 }
 
@@ -598,11 +621,12 @@ export type TriggeredDef = {
 // content, never surfaced as a status themselves, gathered read-time and consulted at each
 // mechanism's own site (never a hook, never applyStatus).
 
-/** Clear Mind / Aggressive / Lucidity: consulted at each STATUS'S OWN effect-execution site --
- * suppress-action's scope check in the interpreter (isActionSuppressed), Confusion's
- * friendly-fire roll in targeting.ts -- never at applyStatus. Per CONVENTIONS' "immunity
- * suppresses the effect, not the application": the status still applies/stacks/counts for
- * has-status; only its effect is skipped for an immune bearer. */
+/** Clear Mind / Aggressive / Lucidity: since 4.1-F1 consulted in ONE place, the effect iterator
+ * (effects.ts `flatEffects`), which skips every effect of an immune status -- its locks,
+ * friendly-fire, triggers, damage-modifiers and turn-order -- never at applyStatus. Per
+ * CONVENTIONS' "immunity suppresses the effect, not the application": the status still
+ * applies/stacks/counts down/counts for has-status; only its effects are skipped for an immune
+ * bearer. Read only from non-status carriers (a status may not carry one). */
 export type StatusImmunityDef = {
   readonly category: 'status-immunity'
   readonly statusId: string
@@ -704,6 +728,58 @@ export type InnateSpellDef = {
   readonly spell: Spell
 }
 
+// ---- Phase 4.1-F1 (A3): the passives statuses carry. Like every effect they are carrier-agnostic
+// (a trait or perk may carry one; a status carries them in `StatusDef.effects`). ----
+
+/** CONVENTIONS "Action locks": read by `checkLegality` (every action source) and by
+ * `resolveTurn`'s skip read. `'all'` makes every action kind illegal and skips the turn; a
+ * scoped lock makes only its own kind illegal. */
+export type ActionLockDef = {
+  readonly category: 'action-lock'
+  readonly scope: 'all' | 'attack' | 'cast'
+}
+
+/** Web (act-last) / Grant Act First (act-first): read by `buildTurnQueue` (turn-order.ts).
+ * `breakChancePercent` is the global per-turn break-free roll (combat.ts's `rollWebBreakFree`):
+ * status-only, since breaking free removes the status instance
+ * (`validateNoBreakChanceOutsideStatus`). A bearer carrying both poles resolves to 'first'
+ * (ASSUMPTION 9). */
+export type TurnOrderDef = {
+  readonly category: 'turn-order'
+  readonly position: 'first' | 'last'
+  readonly breakChancePercent?: number
+}
+
+/** Confusion: a `chancePercent` roll, consulted once per the bearer's harmful offensive action,
+ * that redirects the whole action to the bearer's own living side (targeting.ts). */
+export type FriendlyFireDef = {
+  readonly category: 'friendly-fire'
+  readonly chancePercent: number
+}
+
+export type DamageModifierDirection = 'dealt' | 'taken'
+
+/** Weaken/Vulnerability/Glow: read PASSIVELY by the damage formula's pools. The repetition count
+ * is `magnitudeSource` if declared, else the carrying status's `stacks` (1 outside a status). */
+export type DamageModifierDef = {
+  readonly category: 'damage-modifier'
+  readonly direction: DamageModifierDirection
+  /** Per-stack term: for 'dealt', an ADDITIVE contribution to (1 + Σ dealtMods); for 'taken', a
+   * per-stack MULTIPLICATIVE factor compounding via magnitude ** count into Π(takenFactors). */
+  readonly magnitude: number
+  /** Phase 4 Slice D (Bulwark-shaped): when present, the live resolveCount(...) reading REPLACES
+   * the status's `stacks` as the exponent/multiplier `magnitude` is raised to/multiplied by,
+   * recomputed every read. */
+  readonly magnitudeSource?: MagnitudeSource
+  /** Phase 4 Slice D (PR #47 review): how a count combines with `magnitude` for a 'taken'
+   * effect. 'multiplicative' (default): `magnitude ** count`. 'additive': `factor = 1 -
+   * min((1 - magnitude) × count, reductionCap)`. Taken-only; dealt is already additive across
+   * sources. */
+  readonly accumulation?: 'multiplicative' | 'additive'
+  /** Meaningful only when `accumulation` is 'additive': the hard clamp on TOTAL reduction. */
+  readonly reductionCap?: number
+}
+
 // EffectDef is what a TRAIT authors (permanent-for-fight passives/triggers -- timed statuses are
 // a separate, parallel concept below, never authored directly on a Trait).
 export type EffectDef =
@@ -721,139 +797,34 @@ export type EffectDef =
   | ConditionalDamageBonusDef
   | TakenReductionDef
   | InnateSpellDef
+  | ActionLockDef
+  | TurnOrderDef
+  | FriendlyFireDef
+  | DamageModifierDef
 
-// ---- Statuses (Slice C): timed effects applied IN-FIGHT by a trait's apply-status response or
-// a spell's `apply-status` effect, never innate. Declared in a separate status registry (data/statuses.ts),
-// looked up by statusId at application time -- NOT part of a Trait's own EffectDef union. ----
+// ---- Statuses (Slice C): timed containers of effects applied IN-FIGHT by a trait's apply-status
+// response or a spell's `apply-status` effect, never innate. Declared in a separate status registry
+// (data/statuses.ts), looked up by statusId at application time. ----
 
-export type DamageModifierDirection = 'dealt' | 'taken'
-
-/** Phase 4 Slice E2: one hook reaction a `ConditionStatusDef` subscribes to. A status may need
- * MORE THAN ONE (Sleep: `on-turn-start -> suppress-action` so the sleeper's turn is actually
- * skipped, like Stun, PLUS `on-damage-taken -> remove-status(self)` for the wake-up) -- unlike a
- * `Trait`, whose `effects: EffectDef[]` already gets multiplicity for free from its own array, a
- * single `ConditionStatusDef` object had no such list before this slice. `chancePercent` mirrors
- * `TriggeredDef`'s own field (Slice E2) -- no v1 status content sets it yet, but the unified
- * resolved-trigger record (effectsForHook) reads it uniformly regardless of source. */
-export type StatusTrigger = {
-  readonly hook: Hook
-  readonly condition?: Condition
-  readonly chancePercent?: number
-  readonly response: EffectResponse
-}
-
-/** DoT (Poison/Burn), Regen, Stun: fires each of `triggers`' responses on its own declared hook,
- * same machinery as any trigger. `condition`/`chancePercent` mirror TriggeredDef's (self-scoped,
- * optional) so fireHook checks both uniformly; no v1 status content uses more than one trigger
- * yet except Sleep (H1). */
-export type ConditionStatusDef = {
-  readonly category: 'condition-status'
+/** Phase 4.1-F1 (A3): a status is a timed, stacking CONTAINER of ordinary effects. The status owns
+ * the lifecycle (apply, refresh, stack to `cap`, count down, expire, `has-status`); its
+ * `effects` own the behaviour, read through the one effect iterator (effects.ts `flatEffects`),
+ * which hands each its status's `stacks` as the default count and skips them all for an immune
+ * bearer. The bright line (`validateStatusDef`): no stat-modifier / stat-remap / status-immunity /
+ * innate-spell inside a status. */
+export type StatusDef = {
   readonly statusId: string
   /** Max stacks a re-application can reach. */
   readonly cap: number
-  readonly triggers: readonly StatusTrigger[]
-  /** Phase 4 Slice E2: a status's beneficial/harmful nature isn't mechanically derivable, so it's
-   * declared explicitly on every status from birth -- consumed by `remove-status`'s future
-   * polarity-filter branch (cleanse/dispel spells, not yet built; see remove-status's own doc
-   * comment) and inert everywhere else this slice. */
+  readonly effects: readonly EffectDef[]
+  /** A status's beneficial/harmful nature isn't mechanically derivable, so it's declared on every
+   * status -- consumed by `remove-status`'s future polarity-filter branch (cleanse/dispel). */
   readonly polarity: 'buff' | 'debuff'
   /** Phase 4 Slice F (review amendment): the duration a fresh application (or re-application)
-   * uses when its own `StatusSpec.duration` is omitted -- so the same status lands consistently
-   * everywhere it's applied without every producer (traits/perks/spells) repeating the same
-   * number. An explicit `StatusSpec.duration` always overrides this. See `applyStatus`
-   * (resolution.ts) for the exact `spec.duration ?? def.defaultDuration` resolution. */
+   * uses when its own `StatusSpec.duration` is omitted; an explicit one always overrides it. See
+   * `applyStatus` (resolution.ts) for the `spec.duration ?? def.defaultDuration` resolution. */
   readonly defaultDuration: number
 }
-
-/** Weaken/Vulnerability: read PASSIVELY by the damage formula's pools, never fired via a hook. */
-export type DamageModifierDef = {
-  readonly category: 'damage-modifier'
-  readonly statusId: string
-  readonly cap: number
-  readonly direction: DamageModifierDirection
-  /** Per-stack term: for 'dealt', an ADDITIVE contribution to (1 + Σ dealtMods); for 'taken', a
-   * per-stack MULTIPLICATIVE factor compounding via magnitude ** stacks into Π(takenFactors). */
-  readonly magnitude: number
-  /** Phase 4 Slice D (Bulwark-shaped): when present, the live resolveCount(...) reading
-   * REPLACES the applied status's own `stacks` bookkeeping as the exponent/multiplier `magnitude`
-   * is raised to/multiplied by -- `magnitude ** resolveCount(...)` ('taken') or `magnitude *
-   * resolveCount(...)` ('dealt'), recomputed every read (never cached, unlike `stacks`). Lets a
-   * status applied ONCE (e.g. at on-fight-start) keep scaling off live state -- e.g.
-   * self-defend-count -- instead of needing repeated re-application to grow its `stacks`. Absent
-   * is byte-identical to pre-Slice-D behavior (uses `stacks` exactly as before). */
-  readonly magnitudeSource?: MagnitudeSource
-  /** Phase 4 Slice D, PR #47 review amendment -- ASSUMPTION (field shape proposed here, per the
-   * design agent's request; CONVENTIONS' "Taken-reduction accumulation" bullet pins the decided
-   * SEMANTICS, not this exact shape). How a `magnitudeSource`-driven count combines with
-   * `magnitude` for a `direction: 'taken'` effect. `'multiplicative'` (default, byte-identical to
-   * every pre-amendment read): `magnitude ** count`, asymptoting toward 0, never clamped -- the
-   * model for ordinary stacking taken-reductions and every FUTURE count-scaled taken source.
-   * `'additive'` (Bulwark: "-5% per Defend, cap 80%"): the per-unit reduction `(1 - magnitude)` is
-   * SUMMED × count, then hard-clamped at `reductionCap` -- `factor = 1 - min((1 - magnitude) ×
-   * count, reductionCap)`. `magnitude` keeps the SAME per-unit-factor meaning in both modes (0.95
-   * = "this source's own single-unit factor is x0.95") so an author picking a value doesn't need
-   * a different sign/scale convention per mode -- only the COMBINATION rule differs. Additive
-   * within a source, multiplicative across sources: the collapsed single factor still enters
-   * Π(takenFactors) alongside every other active taken source, never bypassing it. Ignored (reads
-   * as multiplicative) for `direction: 'dealt'` or when no `magnitudeSource` is present -- the
-   * dealt pool is already additive-across-sources by construction (Σ dealtMods), so this axis is
-   * taken-only. */
-  readonly accumulation?: 'multiplicative' | 'additive'
-  /** Required (meaningful) only when `accumulation` is `'additive'` -- the hard clamp on TOTAL
-   * reduction, a fraction (e.g. 0.8 for Bulwark's "cap 80%"). Distinct from `cap` above, which
-   * bounds the STACK COUNT a re-application can reach (applyStatus's cap-driven stacking model,
-   * an unrelated axis a magnitudeSource-driven source doesn't use -- Bulwark is applied once and
-   * never re-stacked; its own `cap` is 1). */
-  readonly reductionCap?: number
-  /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
-  readonly polarity: 'buff' | 'debuff'
-  /** Phase 4 Slice F: see ConditionStatusDef's own doc comment. */
-  readonly defaultDuration: number
-}
-
-/** Web (act-last) / Blindclaws' grant-act-first (act-first) -- same primitive, opposite pole
- * (species-locked.md). Read PASSIVELY by buildTurnQueue (turn-order.ts) at round-start queue
- * build, never fired via a hook. ASSUMPTION 9: a bearer carrying both poles at once (two
- * independently-applied turn-order statuses, or a re-application with a different position)
- * resolves to 'first' -- first wins over last when both are simultaneously active. */
-export type TurnOrderStatusDef = {
-  readonly category: 'turn-order-status'
-  readonly statusId: string
-  readonly cap: number
-  readonly position: 'first' | 'last'
-  /** Phase 4 Slice E2 (Web): the per-GLOBAL-turn break-free chance -- rolled in the turn loop
-   * (combat.ts's rollWebBreakFree) at EVERY creature's turn-start against every bearer of this
-   * status, NOT the bearer's own hook (that's why this is a status field, not a triggered
-   * response). Uses the chancePercent discipline: rolled only when present, so a board with no
-   * Web never touches state.rng. Absent for a position with no break-free mechanic (e.g.
-   * Blindclaws' grant-act-first). */
-  readonly breakChancePercent?: number
-  /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
-  readonly polarity: 'buff' | 'debuff'
-  /** Phase 4 Slice F: see ConditionStatusDef's own doc comment. */
-  readonly defaultDuration: number
-}
-
-/** Confusion: a chancePercent roll, consulted once per the bearer's harmful offensive action
- * (single-target AND AOE alike -- targeting.ts's override pipeline / combat.ts's AOE cast),
- * that redirects the whole action to the bearer's own living side instead of the enemy side.
- * Read PASSIVELY like TurnOrderStatusDef, never fired via a hook. ASSUMPTION (Slice C): the
- * roll always happens exactly once for a confused, non-immune bearer's harmful action -- win or
- * lose -- per species-locked.md's "Confusion consumes combat RNG"; an immune bearer (Lucidity)
- * never rolls at all (the effect, including its RNG consumption, is fully suppressed). */
-export type FriendlyFireStatusDef = {
-  readonly category: 'friendly-fire-status'
-  readonly statusId: string
-  readonly cap: number
-  readonly chancePercent: number
-  /** Phase 4 Slice E2: see ConditionStatusDef's own doc comment. */
-  readonly polarity: 'buff' | 'debuff'
-  /** Phase 4 Slice F: see ConditionStatusDef's own doc comment. */
-  readonly defaultDuration: number
-}
-
-export type StatusDef =
-  ConditionStatusDef | DamageModifierDef | TurnOrderStatusDef | FriendlyFireStatusDef
 
 // ---- Active effect instances (what lives on Creature.activeEffects) ----
 
@@ -874,12 +845,15 @@ interface StatusInstanceState {
 export type StatModifierEffect = StatModifierDef & InstanceIdentity
 export type StatRemapEffect = StatRemapDef & InstanceIdentity
 export type TriggeredEffect = TriggeredDef & InstanceIdentity
-export type ConditionStatusEffect = ConditionStatusDef &
+/** A status instance (4.1-F1): the `StatusDef` (its `effects` embedded, as the old def spread
+ * was) plus live duration/stack bookkeeping. `sourceTraitId` is the statusId. */
+export type StatusEffect = StatusDef &
   InstanceIdentity &
-  StatusInstanceState
-export type DamageModifierEffect = DamageModifierDef &
-  InstanceIdentity &
-  StatusInstanceState
+  StatusInstanceState & { readonly category: 'status' }
+export type DamageModifierEffect = DamageModifierDef & InstanceIdentity
+export type ActionLockEffect = ActionLockDef & InstanceIdentity
+export type TurnOrderEffect = TurnOrderDef & InstanceIdentity
+export type FriendlyFireEffect = FriendlyFireDef & InstanceIdentity
 export type ArmorPenetrationEffect = ArmorPenetrationDef & InstanceIdentity
 export type CrossStatEffect = CrossStatDef & InstanceIdentity
 export type ActionInstanceEffect = ActionInstanceDef & InstanceIdentity
@@ -891,17 +865,10 @@ export type CheatDeathEffect = CheatDeathDef & InstanceIdentity
 export type ConditionalDamageBonusEffect = ConditionalDamageBonusDef & InstanceIdentity
 export type TakenReductionEffect = TakenReductionDef & InstanceIdentity
 export type InnateSpellEffect = InnateSpellDef & InstanceIdentity
-export type TurnOrderStatusEffect = TurnOrderStatusDef &
-  InstanceIdentity &
-  StatusInstanceState
-export type FriendlyFireStatusEffect = FriendlyFireStatusDef &
-  InstanceIdentity &
-  StatusInstanceState
 
 /** Phase 4 Slice E2: what `effectsForHook` (effects.ts) returns -- a single hook reaction,
- * already resolved down to a uniform shape regardless of whether it came from a `TriggeredEffect`
- * (one hook per effect) or one entry of a `ConditionStatusEffect`'s `triggers[]` (a status may
- * have several). `fireHook` (resolution.ts) consumes this shape uniformly, never branching on
+ * already resolved down to a uniform shape regardless of whether it came from a trait's
+ * `TriggeredEffect` or a `triggered` effect inside a status container (4.1-F1). `fireHook` (resolution.ts) consumes this shape uniformly, never branching on
  * which one supplied it. `stacks`/`statusId` are present only when the source was a status. */
 export type ResolvedHookEffect = {
   readonly instanceId: EffectInstanceId
@@ -925,7 +892,7 @@ export type ResolvedHookEffect = {
    * equals `instanceId` above (same value used for the cascade self-re-entry guard); for a
    * status-trigger-sourced entry this is the status's own SHARED instance id (`e.instanceId`),
    * distinct from `instanceId` above (which is the derived per-trigger guard id,
-   * `${e.instanceId}#trigger#${index}`, scoped to cascade dedup only). `fireHook` re-checks this
+   * `${e.instanceId}#effect#${index}`, scoped to cascade dedup only). `fireHook` re-checks this
    * against the creature's LIVE `activeEffects` immediately before firing each candidate -- an
    * effect reacts only if its exact owning instance still exists at that moment (the exact-
    * instance rule: a candidate list built once at the top of a hook pass can otherwise fire a
@@ -937,7 +904,7 @@ export type ActiveEffect =
   | StatModifierEffect
   | StatRemapEffect
   | TriggeredEffect
-  | ConditionStatusEffect
+  | StatusEffect
   | DamageModifierEffect
   | ArmorPenetrationEffect
   | CrossStatEffect
@@ -947,11 +914,27 @@ export type ActiveEffect =
   | SplashingEffect
   | AnnihilateEffect
   | CheatDeathEffect
-  | TurnOrderStatusEffect
-  | FriendlyFireStatusEffect
+  | TurnOrderEffect
+  | FriendlyFireEffect
+  | ActionLockEffect
   | ConditionalDamageBonusEffect
   | TakenReductionEffect
   | InnateSpellEffect
+
+/** Phase 4.1-F1 (A3): one entry of the effect iterator (effects.ts `flatEffects`) -- an ordinary
+ * effect instance, plus, when it came out of a status container, the status it belongs to. For a
+ * status-borne entry `instanceId` is the per-effect guard id (`${statusInstanceId}#effect#${index}`,
+ * the PR #64 rule) and `sourceInstanceId` is the status's real instance id; for a plain entry
+ * `sourceInstanceId` is absent (read `instanceId`). `statusStacks` is named so as not to collide
+ * with `TriggeredDef.stacks` (the E2.1 dedup flag). */
+type FlatOf<T> = T extends unknown
+  ? T & {
+      readonly statusId?: string
+      readonly statusStacks?: number
+      readonly sourceInstanceId?: EffectInstanceId
+    }
+  : never
+export type FlatEffect = FlatOf<Exclude<ActiveEffect, StatusEffect>>
 
 // ---- Trait ----
 

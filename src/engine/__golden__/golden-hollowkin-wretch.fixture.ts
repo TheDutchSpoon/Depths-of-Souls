@@ -1,6 +1,6 @@
 // Golden: Rotcap Hollow's Hollowkin Wretch (species-locked.md's "Puppet" mechanic) -- the real,
 // shipped `HOLLOWKIN_WRETCH_TRAIT` retaliates against whoever strikes it by confusing them,
-// proving Confusion's real data (data/statuses.ts's CONFUSION -- a `friendly-fire-status` built
+// proving Confusion's real data (data/statuses.ts's CONFUSION -- a `friendly-fire` effect built
 // in Slice C, given its first real producer here) applies correctly end to end against real
 // content. The redirect ROLL itself (the 50%/harmful-action friendly-fire mechanism) is already
 // covered generically against fixture content in confusion.test.ts (Slice C) -- this golden

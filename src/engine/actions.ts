@@ -21,7 +21,7 @@ import {
   hasAnnihilate,
   hasSplashing,
   hasProvokeImmunity,
-  hasStatusImmunity,
+  isActionLocked,
 } from './effects'
 import { dealDamage, executeResponse, fireHook } from './resolution'
 import {
@@ -82,7 +82,7 @@ export interface DrainGrantsOptions {
   /** The creature whose turn was skipped this turn, if any (B2 rule 1): a grant whose actor is
    * that creature is refused, even if the lock that skipped the turn is gone by now. The chance
    * roll already happened at trigger time, so the RNG stream doesn't depend on the skip. Supplied
-   * by `resolveTurn` from its turn-start `suppressed` flag; transient, never in `CombatState`. */
+   * by `resolveTurn` from its `'all'`-lock skip read (4.1-F1); transient, never in `CombatState`. */
   readonly skippedTurnOf?: CreatureId
 }
 
@@ -130,41 +130,6 @@ export function drainGrantedActions(
 }
 
 // ---- Legality (pure, draws nothing) ----
-
-/**
- * Phase 4 Slice B: scoped suppress-action (Silenced=Cast, Pacified=Attack) gates legality HERE,
- * not via resolution.ts's hook-fired `suppressed` flag (that flag stays reserved for
- * unscoped/'all' suppression -- Stun's existing whole-turn-skip mechanism, byte-identical). A
- * pure scan of the acting creature's active effects for a present suppress-action response
- * whose scope covers `kind` -- ASSUMPTION 8: only ever gates Attack/Cast; Defend/Provoke/Wait
- * are never suppressible in v1, so this is never consulted for those kinds.
- *
- * Phase 4 Slice C (Clear Mind / Aggressive): a status-carrying (condition-status) suppression
- * is skipped entirely when the creature carries a matching status-immunity -- per CONVENTIONS'
- * "immunity suppresses the effect, not the application", the status still applies/stacks/
- * counts for has-status; only its suppress-action effect is ignored here. A plain permanent
- * `triggered` suppression (no statusId to key immunity off) is never immune-gated.
- */
-function isActionSuppressed(creature: Creature, kind: 'attack' | 'cast'): boolean {
-  const matchesScope = (response: {
-    kind: string
-    scope?: 'all' | 'attack' | 'cast'
-  }) => {
-    if (response.kind !== 'suppress-action') return false
-    const scope = response.scope ?? 'all'
-    return scope === 'all' || scope === kind
-  }
-  return creature.activeEffects.some((e) => {
-    if (e.category === 'triggered') return matchesScope(e.response)
-    // Phase 4 Slice E2: a condition-status may carry MORE THAN ONE trigger (e.g. Sleep's
-    // on-turn-start suppress + on-damage-taken wake-up) -- check every trigger's response, not
-    // just one, regardless of which hook it's declared on (this scan doesn't care about hook,
-    // matching its pre-Slice-E2 behavior for the single-trigger case).
-    if (e.category !== 'condition-status') return false
-    if (hasStatusImmunity(creature, e.statusId)) return false
-    return e.triggers.some((t) => matchesScope(t.response))
-  })
-}
 
 /** The `enemy`/`ally` pool for `intendedSide`, relative to `actor`'s own side (mirrors
  * livingEnemiesOf/livingAlliesOf's own "relative to the acting creature" convention). */
@@ -217,8 +182,10 @@ export function castableGemSlots(actor: Creature, state: CombatState): number[] 
 
 /**
  * `checkLegality(actor, intent, state)` -- pure, draws nothing. Can the actor take this action
- * at all: locks (scoped suppression), an empty slot, no castable gem for `gemSlot: 'random'`, no
- * valid target? Used by the interpreter's lookahead over script rules, and by the implicit
+ * at all: an `action-lock` (4.1-F1: an `'all'` lock refuses EVERY kind, Attack/Cast/Defend/Provoke/
+ * Wait; a scoped lock only its own -- read through the effect iterator, so an immune bearer's
+ * status lock doesn't count), an empty slot, no castable gem for `gemSlot: 'random'`, no valid
+ * target? Used by the interpreter's lookahead over script rules, and by the implicit
  * fallback to decide whether Attack is legal at all before resolving it.
  */
 export function checkLegality(
@@ -226,12 +193,11 @@ export function checkLegality(
   intent: Intent,
   state: CombatState,
 ): boolean {
+  if (isActionLocked(actor, intent.action.kind)) return false
   switch (intent.action.kind) {
     case 'attack':
-      if (isActionSuppressed(actor, 'attack')) return false
       return hasValidTarget(actor, intent.targeting, 'enemy', state)
     case 'cast': {
-      if (isActionSuppressed(actor, 'cast')) return false
       const gemSlot = intent.action.gemSlot
       if (gemSlot === 'random') return castableGemSlots(actor, state).length > 0
       const spell = actor.equippedSpells[gemSlot]

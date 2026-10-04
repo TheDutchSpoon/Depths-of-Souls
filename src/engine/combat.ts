@@ -3,7 +3,13 @@ import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
 import { compareBySideSlotId } from './tie-break'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
-import { resolveBaselineEffects, instantiateEffectDefs, effectiveMaxHp } from './effects'
+import {
+  resolveBaselineEffects,
+  instantiateEffectDefs,
+  effectiveMaxHp,
+  firstAllLock,
+  flatEffects,
+} from './effects'
 import { fireHook, newCascade } from './resolution'
 import { createResolutionContext, drainGrantedActions } from './actions'
 import { decideAction } from './interpreter'
@@ -139,9 +145,10 @@ function livingIds(state: CombatState): CreatureId[] {
 
 /**
  * Phase 4 Slice E2 (Web break-free): rolled at EVERY creature's turn-start (a per-GLOBAL-turn
- * chance, not the bearer's own hook -- see TurnOrderStatusDef.breakChancePercent's own doc
- * comment), against every LIVING bearer of an active turn-order-status carrying
- * breakChancePercent. A board with no such bearer draws nothing (only-when-present discipline).
+ * chance, not the bearer's own hook -- see TurnOrderDef.breakChancePercent's own doc comment),
+ * against every LIVING bearer of an active status-borne `turn-order` effect carrying
+ * breakChancePercent (read through the effect iterator, 4.1-F1: an immune bearer's Web has no
+ * effects, so it draws nothing). F2 moves this roll to turn-end cleanup. A board with no such bearer draws nothing (only-when-present discipline).
  * Bearers are iterated in the canonical side->slot->id tie-break order (not raw activeEffects
  * array order) so the draw sequence is deterministic and goldens are stable regardless of party
  * construction order. On a successful roll, the specific effect instance is removed and
@@ -156,13 +163,16 @@ function rollWebBreakFree(state: CombatState, events: CombatEvent[]): CombatStat
   let working = state
   for (const bearer of bearers) {
     const current = getCreature(working, bearer.id)
-    for (const effect of current.activeEffects) {
-      if (effect.category !== 'turn-order-status') continue
+    for (const effect of flatEffects(current)) {
+      if (effect.category !== 'turn-order') continue
       if (effect.breakChancePercent === undefined) continue
+      // Status-only (validateNoBreakChanceOutsideStatus): the roll removes the status instance.
+      if (effect.sourceInstanceId === undefined || effect.statusId === undefined) continue
+      const statusInstanceId = effect.sourceInstanceId
       if (nextRandom(working.rng) < effect.breakChancePercent / 100) {
         working = updateCreature(working, bearer.id, {
           activeEffects: current.activeEffects.filter(
-            (e) => e.instanceId !== effect.instanceId,
+            (e) => e.instanceId !== statusInstanceId,
           ),
         })
         events.push({
@@ -182,8 +192,7 @@ interface StatusSnapshotEntry {
   readonly statusId: string
 }
 
-/** Every status-carrying effect (condition-status/damage-modifier) present right now, across
- * both parties (alive or not -- a status on a just-dead bearer still needs decrementing/expiry
+/** Every status container present right now, across both parties (alive or not -- a status on a just-dead bearer still needs decrementing/expiry
  * bookkeeping). This is the "start-of-sweep snapshot": statuses BORN during this same sweep
  * (e.g. from an on-death trait) are never in it, so they keep full duration and start counting
  * at the NEXT round-end. */
@@ -191,15 +200,7 @@ function snapshotStatuses(state: CombatState): StatusSnapshotEntry[] {
   const entries: StatusSnapshotEntry[] = []
   for (const creature of [...state.playerParty, ...state.enemyParty]) {
     for (const effect of creature.activeEffects) {
-      if (
-        effect.category === 'condition-status' ||
-        effect.category === 'damage-modifier' ||
-        // Phase 4 Slice C: turn-order-status (Web/Blindclaws) and friendly-fire-status
-        // (Confusion) decrement/expire on the same round-end schedule as any other status,
-        // even though both are read PASSIVELY (never fired via a hook).
-        effect.category === 'turn-order-status' ||
-        effect.category === 'friendly-fire-status'
-      ) {
+      if (effect.category === 'status') {
         entries.push({
           creatureId: creature.id,
           instanceId: effect.instanceId,
@@ -230,15 +231,7 @@ function decrementAndExpireSnapshot(
     const creature = findCreature(working, creatureId)
     if (!creature) continue
     const effect = creature.activeEffects.find((e) => e.instanceId === instanceId)
-    if (
-      !effect ||
-      (effect.category !== 'condition-status' &&
-        effect.category !== 'damage-modifier' &&
-        effect.category !== 'turn-order-status' &&
-        effect.category !== 'friendly-fire-status')
-    ) {
-      continue
-    }
+    if (!effect || effect.category !== 'status') continue
 
     const remainingDuration = effect.remainingDuration - 1
     if (remainingDuration > 0) {
@@ -270,7 +263,7 @@ function decrementAndExpireSnapshot(
  */
 function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): CombatState {
   const snapshot = snapshotStatuses(state)
-  // PR #64 review fix 2: a condition-status's on-round-end trigger may only fire for a
+  // PR #64 review fix 2: a status's on-round-end trigger may only fire for a
   // (creature, statusId) pair that existed at THIS sweep's own start -- a status applied mid-
   // sweep (e.g. Myconet Rotcore's on-death Poison-burst, itself triggered by a DoT tick killing
   // Rotcore earlier in this same sweep) must not also tick in the sweep that just created it.
@@ -434,9 +427,11 @@ export function resolveTurn(state: CombatState): {
   working = rollWebBreakFree(working, events)
 
   // Turn-start hooks fire on the acting creature (if it entered the turn alive), after the
-  // TurnStarted boundary. A suppress-action response (Stun) skips the action entirely -- the
-  // empty bracket IS the skip.
-  let suppressed = false
+  // TurnStarted boundary. The skip (4.1-F1, CONVENTIONS "Action locks"): a turn is skipped if an
+  // 'all' action-lock is active right after the turn-start hook pass (read 1, below -- the
+  // turn-start grants need it) or at the action slot (read 2). `skipped` is the first read's
+  // carrier id, if any; the combined value (`skipEffectId`) is fixed at the action slot.
+  let skipped: string | undefined
   if (actor.alive) {
     const turnStartCtx = createResolutionContext(events, newCascade())
     const startResult = fireHook(
@@ -447,11 +442,13 @@ export function resolveTurn(state: CombatState): {
       turnStartCtx,
     )
     working = startResult.state
-    suppressed = startResult.suppressed
+    // Read 1: live state after the hooks (a lock gained during them skips this very turn).
+    const afterHooks = getCreature(working, actor.id)
+    skipped = afterHooks.alive ? firstAllLock(afterHooks)?.effectId : undefined
 
     // Turn-start cleanup (Phase 4.1-C, D6): "until its next turn" expires HERE, right after
-    // turn-start hooks, UNCONDITIONALLY on suppression -- runs on a Stunned/skipped turn too
-    // (fixes B6: previously this lived inside the `!suppressed` decide+action gate below, so a
+    // turn-start hooks, UNCONDITIONALLY on a skip -- runs on a Stunned/skipped turn too
+    // (fixes B6: previously this lived inside the not-skipped decide+action gate below, so a
     // Stunned or Sleeping creature kept Defend/Provoke through its own skipped turn). Gated only
     // on the actor being alive AT THIS POINT (re-checked fresh -- a turn-start hook may have
     // killed it), matching the existing "re-resolve after turn-start hooks" discipline already
@@ -478,13 +475,22 @@ export function resolveTurn(state: CombatState): {
     // here must not be ended by this same turn's cleanup -- and before decide + action. A skipped
     // turn refuses them (B2 rule 1: `skippedTurnOf`).
     working = drainGrantedActions(turnStartCtx, working, {
-      skippedTurnOf: suppressed ? actor.id : undefined,
+      skippedTurnOf: skipped !== undefined ? actor.id : undefined,
     })
   }
 
-  // Re-resolve after turn-start hooks/cleanup/grants before acting.
+  // Re-resolve after turn-start hooks/cleanup/grants before acting. Read 2, at the action slot: a
+  // lock gained during the turn-start grants would otherwise reach the decide step, where every
+  // rule is illegal under an 'all' lock. Either read skips the turn; the slot's own read names it
+  // when present (canonical effect order, fresh state).
   const actorAfterStart = getCreature(working, actor.id)
-  if (actorAfterStart.alive && !suppressed) {
+  const skipEffectId = actorAfterStart.alive
+    ? (firstAllLock(actorAfterStart)?.effectId ?? skipped)
+    : undefined
+  if (actorAfterStart.alive && skipEffectId !== undefined) {
+    // The skipped turn fills the action slot: no decide, no action, no action grants.
+    events.push({ type: 'TurnSkipped', creatureId: actor.id, effectId: skipEffectId })
+  } else if (actorAfterStart.alive) {
     const script = actor.scriptId ? (working.scripts.get(actor.scriptId) ?? null) : null
     const intent: Intent = decideAction(actorAfterStart, script, working)
     // Fresh cascade per top-level action: depth resets to 0, guard set starts empty.
@@ -494,20 +500,20 @@ export function resolveTurn(state: CombatState): {
     const ctx = createResolutionContext(events, newCascade())
     working = ctx.runAction(actorAfterStart.id, intent, working)
     // The action's grants (an echo of its cast, ...) run right after it, before the turn-end
-    // hooks (4.1-E, A2). Not a skipped turn (this block is `!suppressed`), so no gate.
+    // hooks (4.1-E, A2). Not a skipped turn (the branch above took it), so no gate.
     working = drainGrantedActions(ctx, working)
   }
 
   // Turn-end hooks (incl. DoT/HoT ticks) and the granted-actions step fire BEFORE TurnEnded --
   // Phase 4.1-C, D6: TurnEnded is always the turn's last event. The hook pass is alive-gated; the
   // granted step runs the grants those hooks raised (Arcane Surge's roll happened in the hook
-  // pass), refusing on a skipped turn (`suppressed`, B2.1: the chance was rolled first) and,
+  // pass), refusing on a skipped turn (either lock read, B2.1: the chance was rolled first) and,
   // through runAction's checks, on a dead actor or any lock active at that point (B2.2).
   if (getCreature(working, actor.id).alive) {
     const turnEndCtx = createResolutionContext(events, newCascade())
     working = fireHook('on-turn-end', [actor.id], undefined, working, turnEndCtx).state
     working = drainGrantedActions(turnEndCtx, working, {
-      skippedTurnOf: suppressed ? actor.id : undefined,
+      skippedTurnOf: skipEffectId !== undefined ? actor.id : undefined,
     })
   }
 

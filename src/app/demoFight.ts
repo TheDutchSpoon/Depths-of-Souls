@@ -151,7 +151,7 @@ export const demoPlayerParty: Creature[] = [
     equippedSpells: [],
     defending: false,
     provoking: false,
-    // Reeling: stunned for 1 round whenever hit -- shows a suppressed, empty-bracket turn.
+    // Reeling: stunned for 1 round whenever hit -- shows a skipped turn (`TurnSkipped`).
     innateTraitIds: [REELING.id],
     activeEffects: [],
     defendCount: 0,

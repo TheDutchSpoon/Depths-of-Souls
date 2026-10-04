@@ -250,11 +250,12 @@ describe('evaluateCondition -- enemy-weak-to-me-exists', () => {
 
 describe('evaluateCondition -- has-status', () => {
   const poisonEffect: ActiveEffect = {
-    category: 'condition-status',
+    category: 'status',
     statusId: 'poison',
     cap: 5,
-    triggers: [
+    effects: [
       {
+        category: 'triggered',
         hook: 'on-round-end',
         response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
       },
@@ -292,10 +293,10 @@ describe('evaluateCondition -- has-status', () => {
 
   it('self subject checks the acting creature itself', () => {
     const stunEffect: ActiveEffect = {
-      category: 'condition-status',
+      category: 'status',
       statusId: 'stun',
       cap: 1,
-      triggers: [{ hook: 'on-turn-start', response: { kind: 'suppress-action' } }],
+      effects: [{ category: 'action-lock', scope: 'all' }],
       polarity: 'debuff',
       defaultDuration: 3,
       instanceId: createEffectInstanceId('s'),

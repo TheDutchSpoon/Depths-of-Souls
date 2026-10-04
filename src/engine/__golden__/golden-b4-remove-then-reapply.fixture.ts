@@ -32,11 +32,11 @@ const BEARER = createCreatureId('bearer')
 const TICK_STATUS_ID = 'b4-golden-tick-2'
 
 export const TICK_STATUS: StatusDef = {
-  category: 'condition-status',
   statusId: TICK_STATUS_ID,
   cap: 1,
-  triggers: [
+  effects: [
     {
+      category: 'triggered',
       hook: 'on-turn-end',
       response: {
         kind: 'deal-damage',

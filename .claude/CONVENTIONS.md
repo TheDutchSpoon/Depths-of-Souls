@@ -488,12 +488,29 @@ attack executor is correct.
   is left UNCHANGED (only `remainingHp` reflects the save) — matches the existing overkill
   precedent, where `finalDamage` already isn't guaranteed to equal actual HP removed.
 - **Action locks: `action-lock { scope: 'all' | 'attack' | 'cast' }`** (Phase 4.1-F, A3) — a
-  **passive** effect carried by a status: **Stun** and **Sleep** lock `'all'`, **Silenced** locks
-  `'cast'`, **Pacified** locks `'attack'`. The action layer's `checkLegality` reads locks directly,
-  so a locked action is illegal for **every** action source (script rule, implicit fallback, or a
-  `perform-action` grant). An `'all'` lock skips the turn: the turn emits **`TurnSkipped {
-  creatureId, statusId }`** between `TurnStarted` and `TurnEnded` and takes no action of any kind;
-  passive turn-end effects still fire. A scoped lock leaves the other actions choosable. *History:*
+  **passive** effect. In content a status carries it: **Stun** and **Sleep** lock `'all'`,
+  **Silenced** locks `'cast'`, **Pacified** locks `'attack'`. Like every effect it is
+  carrier-agnostic, so a trait may carry one too (test fixtures do; 4.1-F1 plan review). The action
+  layer's `checkLegality` reads locks directly, so a locked action is illegal for **every** action
+  source (script rule, implicit fallback, or a `perform-action` grant). A scoped lock makes only its
+  own kind illegal and leaves the other actions choosable. An **`'all'` lock makes every action
+  kind illegal**: Attack, Cast, Defend, Provoke and Wait.
+  - **The skip.** A turn is skipped when an `'all'` lock is active **right after the turn-start
+    hook pass**, or **at the action slot** (4.1-F1 plan review). The first read is what B2 rule 1
+    needs: the turn-start grants run after it and must already know the turn is skipped. The
+    second keeps a lock gained during the turn-start grants from reaching the decide step. A lock
+    gained during the actor's own turn-start hooks therefore skips that same turn.
+  - **Neither read is redundant with `checkLegality`** (PR #79 review). The turn-start drain can
+    hold grants of other creatures, raised in the cascade of the actor's turn-start hooks, ahead of
+    the actor's own. Such a grant can remove the lock (cleanse a Stun, wake a Sleeper) before the
+    actor's grant runs. The first read still skips the turn, and B2 rule 1 still refuses the
+    actor's grant.
+  - The skipped turn emits **`TurnSkipped { creatureId, effectId }`** in the action slot (after the
+    turn-start cleanup and the turn-start grants, only if the actor is alive), and takes no action
+    of any kind; passive turn-end effects still fire. `effectId` names the first `'all'` lock in
+    canonical effect order at the action slot or, if none is left there, the one the first read
+    found (PR #79 review). It names the lock by its carrier's definition id (the status id for a
+    status), the same id `TriggerFired.effectId` carries. *History:*
   Slice B built this as a `scope` parameter on the `suppress-action` response with a two-path split
   (an `'all'` suppression fired from `on-turn-start` and set a whole-turn flag; a scoped one was
   scanned for by the interpreter), which emitted a no-op `TriggerFired` every turn start. 4.1-F
@@ -733,7 +750,8 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   → TURN-START CLEANUP   defending / provoking end (runs on skipped turns too);
                          emits ActionStateEnded only when a flag was actually set
   → turn-start grants    (grants raised by the turn-start hooks, see A2)
-  → decide + action      (or TurnSkipped, if an 'all' action-lock is active)
+  → decide + action      (or TurnSkipped, if an 'all' action-lock is active after the
+                         turn-start hooks or at this slot)
   → action grants        (grants raised by the action, right after it, see A2)
   → turn-end hooks       incl. DoT / HoT ticks (status triggers on on-turn-end)
   → granted actions      (grants raised by the turn-end hooks, see A2)
@@ -919,9 +937,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 - **Every action source obeys the same rules** (Phase 4.1-C, B2):
   1. A creature whose turn is skipped (an `'all'` lock: Stun, Sleep) takes **no action of any
      kind** that turn, granted ones included. Passive turn-end effects still fire. This holds even
-     if the lock is gone by the granted-actions step, for example cleansed by a turn-end hook. A
-     skipped turn stays skipped. A chance-based grant still **rolls** its chance first, so the RNG
-     stream doesn't depend on the skip; only then is the grant refused.
+     if the lock is gone by the granted-actions step, for example cleansed by a turn-end hook, or
+     by an earlier grant in the turn-start drain (PR #79 review). A skipped turn stays skipped. A
+     chance-based grant still **rolls** its chance first, so the RNG stream doesn't depend on the
+     skip; only then is the grant refused.
   2. **An active lock refuses every action it covers, chosen or granted, whenever the action is
      checked** (4.1-C2b plan review). So **Silenced blocks every cast**, and an `'all'` lock that
      lands mid-turn also refuses that turn's granted actions. Clear Mind immunity applies as
@@ -1075,7 +1094,7 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   `SpellCast` intent followed by N `DamageDealt`). Plus the Phase 3 trigger-intent event
   `TriggerFired` (precedes a trigger's consequences) and the loop-safety `CascadeTruncated`
   (mandatory when the cascade cap truncates a chain). Phase 4.1 adds **`ActionStateEnded`**
-  (turn-start cleanup ends defending/provoking, 4.1-C), **`TurnSkipped { creatureId, statusId }`**
+  (turn-start cleanup ends defending/provoking, 4.1-C), **`TurnSkipped { creatureId, effectId }`**
   (an `'all'` action-lock skips the turn, 4.1-F) and **`ActionGranted { sourceId, actorId, effectId
   }`** (a `perform-action` grant succeeded, 4.1-E, replacing `EchoCastGranted`). Their families
   (PR #70 review): `ActionStateEnded` is a **consequence** (a state ending, like `StatusExpired`);
@@ -1140,17 +1159,35 @@ the same interpreter, differing only in how they attach and which hooks they use
 - **The effect taxonomy.** Trait effects (built through Phase 4): `stat-modifier`, `stat-remap`,
   `triggered`, `armor-penetration`, `cross-stat`, `action-instance`, `status-immunity`,
   `provoke-immunity`, `splashing`, `annihilate`, `conditional-damage-bonus`, `taken-reduction`,
-  `cheat-death` (`bonus-cast` is deleted in 4.1-E). Status-borne passives (4.1-F): a stack-scaled
-  **damage-modifier** (Weaken, Vulnerability, Glow), **`turn-order { position, breakChancePercent?
-  }`** (Web, Grant Act First), **`friendly-fire { chancePercent }`** (Confusion) and **`action-lock {
-  scope }`** (Stun, Sleep, Silenced, Pacified). DoT/HoT statuses (Poison, Burn, Regen, Spore) carry
-  `triggered` effects. Traits add `innate-spell { spell }` in 4.1-B (A8). Whether the status
-  damage-modifier folds into an existing category is the 4.1-F plan's call.
+  `cheat-death` (`bonus-cast` is deleted in 4.1-E). Passives added for statuses (4.1-F): a
+  stack-scaled **damage-modifier** (Weaken, Vulnerability, Glow), **`turn-order { position,
+  breakChancePercent? }`** (Web, Grant Act First), **`friendly-fire { chancePercent }`**
+  (Confusion) and **`action-lock { scope }`** (Stun, Sleep, Silenced, Pacified). DoT/HoT statuses
+  (Poison, Burn, Regen, Spore) carry `triggered` effects. Traits add `innate-spell { spell }` in
+  4.1-B (A8).
+  - The status **damage-modifier stays its own category** (4.1-F1 plan): folding it into
+    `conditional-damage-bonus` would re-derive `magnitude × stacks` as a percent and could move
+    float results; folding the taken direction into `taken-reduction` would rename perk content.
+    A later consolidation is possible.
+  - **Every effect is carrier-agnostic** except where a validator says otherwise (below): a status
+    may carry any effect a trait carries, and every reader goes through the one effect iterator.
+    Two readers read the raw effect list on purpose: `getEffectiveStat` and the stat remap, because
+    a status may not carry `stat-modifier` or `stat-remap`. The status lifecycle reads the
+    containers themselves: `has-status`, applying and refreshing, `remove-status`,
+    `consume-stacks`, counting down, and the immunity lookup (PR #79 review).
+  - **`breakChancePercent` is status-only**: breaking free removes the status instance, so a
+    `turn-order` carrying it on any other carrier is rejected at load.
 - **Immunity is checked once, in the effect iterator** (4.1-F): an immune bearer's iterator skips
-  every effect of that status. The status still exists, stacks and counts for `has-status`.
+  every effect of that status, of every kind: its locks, its friendly-fire, its triggers (a tick
+  included), its damage-modifiers and its turn-order (so the Web roll skips it and draws nothing).
+  The status still exists, stacks, counts down and counts for `has-status`. Immunity is read only
+  from carriers that aren't statuses (traits, perks); a status may not carry `status-immunity`, so
+  immunity can't depend on itself.
 - **The bright line survives by validator:** a load-time validator rejects `stat-modifier` and
   `stat-remap` inside a status (**no temporary stat-modifier**, GAME_DESIGN §6). Relaxing it would
-  be a deliberate design decision, never a refactor side effect.
+  be a deliberate design decision, never a refactor side effect. The same validator rejects, inside
+  a status, `status-immunity` (above) and `innate-spell` (innate spells are placed at fight setup,
+  so a status's could never take effect) (4.1-F1 plan review).
 - **Player-facing treatment by category** (bright line, from Phase 3):
   1. **`stat-modifier`** — scales a stat (`stat`, `factor`); folds into effective stats
      **multiplicatively** (`base × Π(factors)`). **Always permanent-for-fight, uncapped, NOT surfaced
@@ -1387,7 +1424,7 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   clamps to effective max whenever it changes (Health debuff lowers cap+current; Health buff raises
   cap, no auto-heal). HP% stays 0–100.
 - **Turn-skipping statuses are passive locks** (4.1-F): Stun and Sleep carry `action-lock { scope:
-  'all' }`; the skipped turn emits `TurnSkipped { creatureId, statusId }` inside its
+  'all' }`; the skipped turn emits `TurnSkipped { creatureId, effectId }` inside its
   `TurnStarted`/`TurnEnded` bracket. Built in Phase 3 as an `on-turn-start` trigger with a
   `suppress-action` response (a `TriggerFired` inside the empty bracket); that verb is removed.
 - **A status can carry several triggers** (Slice E2). Most carry one (Poison/Burn/Regen/Spore);

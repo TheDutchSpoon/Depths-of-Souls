@@ -279,12 +279,23 @@ export interface ActionGrantedEvent {
   readonly effectId: string
 }
 
+/** Phase 4.1-F1 (A3): an `'all'` action-lock skipped this turn -- fills the turn's action slot
+ * (after the turn-start cleanup and grants), like `Waited`. `effectId` is the first `'all'` lock's
+ * carrier's definition id in canonical effect order (the status id for a status), the same value
+ * `TriggerFired.effectId` carries. Replaces the old lock's no-op on-turn-start `TriggerFired`. */
+export interface TurnSkippedEvent {
+  readonly type: 'TurnSkipped'
+  readonly creatureId: CreatureId
+  readonly effectId: string
+}
+
 export type IntentEvent =
   | AttackDeclaredEvent
   | SpellCastEvent
   | DefendedEvent
   | ProvokedEvent
   | WaitedEvent
+  | TurnSkippedEvent
   | TriggerFiredEvent
   | ActionGrantedEvent
 
