@@ -3,14 +3,9 @@ import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
 import { compareBySideSlotId } from './tie-break'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
-import {
-  resolveBaselineEffects,
-  instantiateEffectDefs,
-  effectiveMaxHp,
-  activeBonusCast,
-} from './effects'
+import { resolveBaselineEffects, instantiateEffectDefs, effectiveMaxHp } from './effects'
 import { fireHook, newCascade } from './resolution'
-import { createResolutionContext } from './actions'
+import { createResolutionContext, drainGrantedActions } from './actions'
 import { decideAction } from './interpreter'
 import type { CreatureId } from './ids'
 import type { EffectDef, EffectInstanceId, InnateSpellEffect } from './effect-types'
@@ -301,14 +296,20 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
     }
     return true
   }
-  const fired = fireHook(
+  const roundEndCtx = createResolutionContext(events, newCascade())
+  const hooked = fireHook(
     'on-round-end',
     livingIds(state),
     undefined,
     state,
-    createResolutionContext(events, newCascade()),
-    { statusTriggerGate },
+    roundEndCtx,
+    {
+      statusTriggerGate,
+    },
   ).state
+  // 4.1-E (A2): round-level grants run right after the hook pass (no shipped content raises one),
+  // before the countdown bookkeeping below.
+  const fired = drainGrantedActions(roundEndCtx, hooked)
 
   const reappliedThisSweep = new Set<string>()
   for (let i = firstSweepEventIndex; i < events.length; i++) {
@@ -323,39 +324,11 @@ function resolveRoundEndSweep(state: CombatState, events: CombatEvent[]): Combat
 
 // The action executors (attack/cast/defend/provoke/wait) all moved to actions.ts (Phase
 // 4.1-C2a, A1) -- combat.ts now only orchestrates the turn skeleton, dispatching every action
-// through actions.ts's `checkLegality`/`resolveIntent`/`executeAction` (or, for the main
-// scripted/fallback action and the granted bonus-cast below, `ResolutionContext.runAction`,
-// which wraps that same pipeline).
-
-/**
- * Phase 4 Slice F (Sorcerer starter's bonus-cast passive -- see BonusCastDef's own doc comment
- * for why this is a passively-consulted EffectDef rather than a 10th response verb). Rolled
- * ONLY when the actor carries the passive (chancePercent discipline: an ordinary creature never
- * touches state.rng here); on success, runs a real granted Cast through the shared action
- * pipeline (`gemSlot: 'random'`, no explicit targeting -- `ctx.runAction` checks legality (locks),
- * draws the gem then the target, and runs Confusion -> Tunnel Vision -> Provoke like any action).
- *
- * B2.1 (4.1-C2c): on a SKIPPED turn (`turnSkipped`, the turn-start suppressed flag) the chance is
- * still rolled -- the RNG stream must not depend on the skip -- and only then is the grant refused,
- * even if the lock is gone by now (cleansed by a turn-end hook). A skipped turn stays skipped.
- */
-function maybeFireBonusCast(
-  actorId: CreatureId,
-  state: CombatState,
-  events: CombatEvent[],
-  turnSkipped: boolean,
-): CombatState {
-  const actor = getCreature(state, actorId)
-  if (!actor.alive) return state
-  const bonusCast = activeBonusCast(actor)
-  if (!bonusCast) return state
-  if (!(nextRandom(state.rng) < bonusCast.chancePercent / 100)) return state
-  if (turnSkipped) return state
-
-  const ctx = createResolutionContext(events, newCascade())
-  const intent: Intent = { action: { kind: 'cast', gemSlot: 'random' } }
-  return ctx.runAction(actor.id, intent, state)
-}
+// through actions.ts's `checkLegality`/`resolveIntent`/`executeAction` (via
+// `ResolutionContext.runAction`, which wraps that same pipeline). Every `ResolutionContext`
+// built below is drained exactly once, at the end of its own scope, by `drainGrantedActions`
+// (Phase 4.1-E, A2: `perform-action` grants -- Arcane Surge, Resonant Overtone -- queue on the
+// context and run only after the granting action/hook pass completes).
 
 function checkWinLoss(state: CombatState): FightResult | null {
   const playerAlive = state.playerParty.some((c) => c.alive)
@@ -396,13 +369,15 @@ export function resolveTurn(state: CombatState): {
   // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start.
   if (working.round === 0) {
     events.push({ type: 'FightStarted' })
+    const fightStartCtx = createResolutionContext(events, newCascade())
     working = fireHook(
       'on-fight-start',
       livingIds(working),
       undefined,
       working,
-      createResolutionContext(events, newCascade()),
+      fightStartCtx,
     ).state
+    working = drainGrantedActions(fightStartCtx, working) // round-level grants (A2)
   }
 
   // Round boundary: the queue is exhausted (or this is the very first call).
@@ -463,12 +438,13 @@ export function resolveTurn(state: CombatState): {
   // empty bracket IS the skip.
   let suppressed = false
   if (actor.alive) {
+    const turnStartCtx = createResolutionContext(events, newCascade())
     const startResult = fireHook(
       'on-turn-start',
       [actor.id],
       undefined,
       working,
-      createResolutionContext(events, newCascade()),
+      turnStartCtx,
     )
     working = startResult.state
     suppressed = startResult.suppressed
@@ -497,9 +473,16 @@ export function resolveTurn(state: CombatState): {
         })
       }
     }
+
+    // Turn-start grants (4.1-E, A2) run AFTER the turn-start cleanup -- a Defend/Provoke granted
+    // here must not be ended by this same turn's cleanup -- and before decide + action. A skipped
+    // turn refuses them (B2 rule 1: `skippedTurnOf`).
+    working = drainGrantedActions(turnStartCtx, working, {
+      skippedTurnOf: suppressed ? actor.id : undefined,
+    })
   }
 
-  // Re-resolve after turn-start hooks/cleanup before acting.
+  // Re-resolve after turn-start hooks/cleanup/grants before acting.
   const actorAfterStart = getCreature(working, actor.id)
   if (actorAfterStart.alive && !suppressed) {
     const script = actor.scriptId ? (working.scripts.get(actor.scriptId) ?? null) : null
@@ -510,23 +493,22 @@ export function resolveTurn(state: CombatState): {
     // confirmed the intent legal, which decideAction always does before returning it).
     const ctx = createResolutionContext(events, newCascade())
     working = ctx.runAction(actorAfterStart.id, intent, working)
+    // The action's grants (an echo of its cast, ...) run right after it, before the turn-end
+    // hooks (4.1-E, A2). Not a skipped turn (this block is `!suppressed`), so no gate.
+    working = drainGrantedActions(ctx, working)
   }
 
-  // Turn-end hooks (incl. DoT/HoT ticks) and the granted-actions step (bonus-cast) fire BEFORE
-  // TurnEnded -- Phase 4.1-C, D6: TurnEnded is always the turn's last event. Both are alive-gated;
-  // the granted step additionally refuses on a skipped turn (`suppressed`, B2.1: rolls first) and,
-  // through runAction's legality check, on any lock active at that point (B2.2).
+  // Turn-end hooks (incl. DoT/HoT ticks) and the granted-actions step fire BEFORE TurnEnded --
+  // Phase 4.1-C, D6: TurnEnded is always the turn's last event. The hook pass is alive-gated; the
+  // granted step runs the grants those hooks raised (Arcane Surge's roll happened in the hook
+  // pass), refusing on a skipped turn (`suppressed`, B2.1: the chance was rolled first) and,
+  // through runAction's checks, on a dead actor or any lock active at that point (B2.2).
   if (getCreature(working, actor.id).alive) {
-    working = fireHook(
-      'on-turn-end',
-      [actor.id],
-      undefined,
-      working,
-      createResolutionContext(events, newCascade()),
-    ).state
-    // Phase 4 Slice F (Sorcerer starter): consulted directly, after the ordinary on-turn-end
-    // hook -- see maybeFireBonusCast's own doc comment for why this isn't a hook response.
-    working = maybeFireBonusCast(actor.id, working, events, suppressed)
+    const turnEndCtx = createResolutionContext(events, newCascade())
+    working = fireHook('on-turn-end', [actor.id], undefined, working, turnEndCtx).state
+    working = drainGrantedActions(turnEndCtx, working, {
+      skippedTurnOf: suppressed ? actor.id : undefined,
+    })
   }
 
   // TURN-END CLEANUP (CONVENTIONS' "Turn structure"): a seam, here, with no status work (D6

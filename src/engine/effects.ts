@@ -12,7 +12,6 @@ import type {
   ActiveEffect,
   ArmorPenetrationEffect,
   BaselineEffectEntry,
-  BonusCastEffect,
   CheatDeathEffect,
   CountOf,
   CrossStatEffect,
@@ -127,8 +126,6 @@ function withInstance(
       return { ...def, instanceId, sourceTraitId }
     case 'taken-reduction':
       return { ...def, instanceId, sourceTraitId }
-    case 'bonus-cast':
-      return { ...def, instanceId, sourceTraitId }
     case 'innate-spell':
       return { ...def, instanceId, sourceTraitId }
     default: {
@@ -161,10 +158,9 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
         chancePercent: e.chancePercent,
         observationFilter: e.observationFilter,
         response: e.response,
-        // Phase 4 Slice H2 (PR #60 review, E2.1/E2): only a TriggeredDef can declare either (no
-        // status content uses them), so both stay undefined via the condition-status branch below.
+        // Phase 4 Slice H2 (PR #60 review, E2.1): only a TriggeredDef can declare it (no status
+        // content uses it), so it stays undefined via the condition-status branch below.
         nonStacking: e.stacks === false ? true : undefined,
-        echoCast: e.echoCast,
         // Phase 4.1-B (B4): a plain triggered trait/perk's own instanceId IS its real owning
         // instance (same value used for the cascade guard above).
         sourceInstanceId: e.instanceId,
@@ -425,17 +421,6 @@ export function activeFriendlyFireStatus(
   return creature.activeEffects.find(
     (e): e is FriendlyFireStatusEffect =>
       e.category === 'friendly-fire-status' && !hasStatusImmunity(creature, e.statusId),
-  )
-}
-
-/** Phase 4 Slice F (Sorcerer starter): `creature`'s active bonus-cast passive, if any --
- * consulted directly by combat.ts's resolveTurn (never through fireHook/executeResponse; see
- * BonusCastDef's own doc comment for why). At most one is expected in v1 content; the first
- * match wins if content ever stacks more than one (deliberately permissive, matching
- * activeFriendlyFireStatus's own precedent). */
-export function activeBonusCast(creature: Creature): BonusCastEffect | undefined {
-  return creature.activeEffects.find(
-    (e): e is BonusCastEffect => e.category === 'bonus-cast',
   )
 }
 

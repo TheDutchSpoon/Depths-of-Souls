@@ -144,9 +144,18 @@ describe('Sorcerer starter loadout (Phase 4.1-B, A8)', () => {
 })
 
 describe('signature traits', () => {
-  it('Sorcerer starter: bonus-cast at 50% + an innate Arcane Bolt (Phase 4.1-B, A8)', () => {
+  it('Sorcerer starter: a 50% on-turn-end perform-action(self, random cast) + an innate Arcane Bolt (4.1-B A8, 4.1-E A2)', () => {
     expect(SORCERER_STARTER_TRAIT.effects).toEqual([
-      { category: 'bonus-cast', chancePercent: 50 },
+      {
+        category: 'triggered',
+        hook: 'on-turn-end',
+        chancePercent: 50,
+        response: {
+          kind: 'perform-action',
+          actor: 'self',
+          intent: { action: { kind: 'cast', gemSlot: 'random' } },
+        },
+      },
       { category: 'innate-spell', spell: ARCANE_BOLT },
     ])
   })

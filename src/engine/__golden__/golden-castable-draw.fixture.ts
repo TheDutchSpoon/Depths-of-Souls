@@ -3,7 +3,8 @@
 // an already-EMPTY enemy side. Hand-derived.
 //
 // CASTER (player slot 0): HP 40, Int 10, attack 20, speed 20, always-attack; trait
-// `bonus-caster-fixture` = innate-spell ENEMY_BOLT + bonus-cast chancePercent 100. Fight setup
+// `bonus-caster-fixture` = innate-spell ENEMY_BOLT + an on-turn-end perform-action(self, cast
+// 'random') at chancePercent 100 (4.1-E; was `bonus-cast`; the draws are unchanged). Fight setup
 // PREPENDS innate spells (A8), so the equipped slots after createCombat are exactly
 //   slot 0 = ENEMY_BOLT (enemy-side, innate)     slot 1 = HEAL_SPELL (ally-side, the gem)
 // (asserted in the test). WOUNDABLE (player slot 1): HP 30, speed 10, always-wait.
@@ -35,6 +36,7 @@ export const SEED = 8002
 const CASTER = createCreatureId('caster')
 const WOUNDABLE = createCreatureId('woundable')
 const FOE = createCreatureId('foe')
+const TRAIT_ID = 'bonus-caster-fixture'
 
 export const ENEMY_BOLT: Spell = {
   id: 'enemy-bolt-fixture',
@@ -70,7 +72,16 @@ export const BONUS_CASTER_FIXTURE: Trait = {
   name: 'Bonus Caster (fixture)',
   effects: [
     { category: 'innate-spell', spell: ENEMY_BOLT },
-    { category: 'bonus-cast', chancePercent: 100 },
+    {
+      category: 'triggered',
+      hook: 'on-turn-end',
+      chancePercent: 100,
+      response: {
+        kind: 'perform-action',
+        actor: 'self',
+        intent: { action: { kind: 'cast', gemSlot: 'random' } },
+      },
+    },
   ],
 }
 
@@ -137,6 +148,10 @@ export const expectedEvents: CombatEvent[] = [
     damageSource: 'attack',
   },
   { type: 'CreatureDied', creatureId: FOE },
+  // 4.1-E: the bonus cast is an on-turn-end `perform-action` grant -- the chance roll (draw #1)
+  // happens in the turn-end hook pass, the grant runs in the granted-actions step.
+  { type: 'TriggerFired', sourceId: CASTER, hook: 'on-turn-end', effectId: TRAIT_ID },
+  { type: 'ActionGranted', sourceId: CASTER, actorId: CASTER, effectId: TRAIT_ID },
   {
     type: 'SpellCast',
     targetShape: 'single',

@@ -15,7 +15,6 @@ import {
   hasSplashing,
   hasAnnihilate,
   activeFriendlyFireStatus,
-  activeBonusCast,
   resolveCount,
   resolveMagnitudeCount,
   gatherCheatDeathChance,
@@ -538,23 +537,6 @@ describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
     expect(activeFriendlyFireStatus(c)).toBeUndefined()
     // Still counts for has-status -- the status itself is untouched by immunity.
     expect(hasStatus(c, 'confusion')).toBe(true)
-  })
-})
-
-describe('activeBonusCast (Phase 4 Slice F, Sorcerer starter)', () => {
-  it('returns the active bonus-cast effect when present', () => {
-    const bonusCast: ActiveEffect = {
-      category: 'bonus-cast',
-      chancePercent: 50,
-      instanceId: createEffectInstanceId('bonus-cast'),
-      sourceTraitId: 'sorcerer-starter-arcane-surge',
-    }
-    const c = makeCreature({ activeEffects: [bonusCast] })
-    expect(activeBonusCast(c)?.chancePercent).toBe(50)
-  })
-
-  it('returns undefined for a creature with no bonus-cast passive', () => {
-    expect(activeBonusCast(makeCreature({}))).toBeUndefined()
   })
 })
 

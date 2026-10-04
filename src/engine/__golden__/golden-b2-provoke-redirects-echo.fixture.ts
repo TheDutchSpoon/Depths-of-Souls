@@ -14,12 +14,14 @@
 //   CASTER's `always-cast` (slot 0, default target lowest-hp-enemy) -> Provoke: one provoker,
 //     draw #1 -> index floor(0.0401 * 1) = 0 -> P. SpellCast(P).
 //   on-action-observed dispatch #1: OVERTONE's chance roll #2 = 0.1123 < 0.50 -> passes.
-//     TriggerFired; echo runs as the CASTER: gem draw #3 (over one castable slot -> slot 0);
-//     target `'random'` then the override pipeline: Confusion none, Tunnel Vision none, Provoke:
-//     the ECHO'S TARGET DRAW is #4 = 0.4413 over the provokers [P] -> P. EchoCastGranted, then
-//     the echo's own SpellCast(P).
-//   Nested on-action-observed dispatch #2: OVERTONE rolls #5 = 0.6661 >= 0.50 -> fails; the
-//     chain stops. The echo's damage lands, then the original's (recursion precedes payload).
+//     TriggerFired; the echo is QUEUED (4.1-E: `perform-action(triggering-source)`), and the
+//     original cast's own damage lands first: P 100 -> 90.
+//   The grant then runs as the CASTER (draw order: chance #2 at trigger time, then when it runs):
+//     gem draw #3 (over one castable slot -> slot 0); target `'random'` then the override
+//     pipeline: Confusion none, Tunnel Vision none, Provoke: the ECHO'S TARGET DRAW is #4 =
+//     0.4413 over the provokers [P] -> P. ActionGranted, then the echo's own SpellCast(P).
+//   The echo's own on-action-observed dispatch: OVERTONE rolls #5 = 0.6661 >= 0.50 -> fails; the
+//     chain stops. The echo's damage lands: P 90 -> 80.
 // WHY THE SEED: before C2c (granted casts skipped the override pipeline) the echo's `'random'` draw #4 = 0.4413 would
 // pick uniformly over ALL living enemies [P, X, Y] -> floor(0.4413 * 3) = floor(1.32) = 1 -> X, a
 // NON-provoker. Under the override pipeline it is P.
@@ -66,8 +68,14 @@ export const ECHO_FIXTURE: Trait = {
       observationFilter: { relationship: 'ally', actionKind: 'cast' },
       chancePercent: 50,
       stacks: false,
-      echoCast: true,
-      response: { kind: 'grant-action-state', target: { kind: 'self' } },
+      response: {
+        kind: 'perform-action',
+        actor: 'triggering-source',
+        intent: {
+          action: { kind: 'cast', gemSlot: 'random' },
+          targeting: { kind: 'random' },
+        },
+      },
     },
   ],
 }
@@ -137,8 +145,15 @@ export const expectedEvents: CombatEvent[] = [
     hook: 'on-action-observed',
     effectId: ECHO_FIXTURE.id,
   },
-  { type: 'EchoCastGranted', sourceId: OVERTONE, casterId: CASTER },
-  // The echo's own SpellCast: its target went through Provoke -> P (NOT the random pick X).
+  hit(90), // 4.1-E: the ORIGINAL cast's payload completes first (the echo is queued) ...
+  // ... then the grant runs (draws #3 gem, #4 target) and is accepted: ActionGranted, then the
+  // echo's own SpellCast, whose target went through Provoke -> P (NOT the random pick X).
+  {
+    type: 'ActionGranted',
+    sourceId: OVERTONE,
+    actorId: CASTER,
+    effectId: ECHO_FIXTURE.id,
+  },
   {
     type: 'SpellCast',
     targetShape: 'single',
@@ -146,7 +161,6 @@ export const expectedEvents: CombatEvent[] = [
     gemSlot: 0,
     targetId: P,
   },
-  hit(90), // the echo's damage lands first
-  hit(80), // then the original cast's
+  hit(80), // the echo's damage (its own re-observation, draw #5, failed to echo again)
   { type: 'TurnEnded', creatureId: CASTER },
 ]

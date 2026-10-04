@@ -4,7 +4,8 @@
 // Hand-derived.
 //
 // CASTER (player, speed 20, Attack 10, Int 20, HP 40, defence 0, script `always-attack`): trait
-// `b2-silenced-bonus-caster-fixture` = [bonus-cast chancePercent 100, permanent on-turn-start
+// `b2-silenced-bonus-caster-fixture` = [on-turn-end perform-action(self, cast 'random') at
+// chancePercent 100 (4.1-E; was `bonus-cast`), permanent on-turn-start
 // suppress-action scope 'cast'] -- a fixture stand-in for Silenced (authored content lands in F),
 // like golden-scoped-suppression's. Slots after createCombat (asserted): exactly [BOLT].
 // Round 1, CASTER: turn-start TriggerFired (scoped: does NOT set the whole-turn skip), then it
@@ -67,7 +68,16 @@ export const SILENCED_BONUS_CASTER: Trait = {
   id: 'b2-silenced-bonus-caster-fixture',
   name: 'Silenced Bonus Caster (fixture)',
   effects: [
-    { category: 'bonus-cast', chancePercent: 100 },
+    {
+      category: 'triggered',
+      hook: 'on-turn-end',
+      chancePercent: 100,
+      response: {
+        kind: 'perform-action',
+        actor: 'self',
+        intent: { action: { kind: 'cast', gemSlot: 'random' } },
+      },
+    },
     {
       category: 'triggered',
       hook: 'on-turn-start',
@@ -134,7 +144,15 @@ export const expectedEvents: CombatEvent[] = [
     remainingHp: 20,
     damageSource: 'attack',
   },
-  // Bonus-cast rolled and was refused by the Cast lock: no SpellCast, nothing else.
+  // The grant's trigger fired (chance rolled, draw #1) and the grant was then refused by the Cast
+  // lock when it ran: no ActionGranted, no SpellCast, nothing else (4.1-E: a refused grant emits
+  // nothing of its own; this TriggerFired is the one new event).
+  {
+    type: 'TriggerFired',
+    sourceId: CASTER,
+    hook: 'on-turn-end',
+    effectId: SILENCED_BONUS_CASTER.id,
+  },
   { type: 'TurnEnded', creatureId: CASTER },
   { type: 'TurnStarted', creatureId: E1 },
   // E1's random pick = draw #2 (0.2864) -> index 0 = CASTER.

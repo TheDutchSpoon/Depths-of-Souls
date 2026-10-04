@@ -3,7 +3,9 @@
 // living enemy by slot. Hand-derived.
 //
 // CASTER (player): Int 20, speed 20, always-wait (so the ONLY hit in the log is the bonus cast),
-// trait `bonus-caster-fixture` = bonus-cast chancePercent 100. Exactly ONE equipped spell,
+// trait `bonus-caster-fixture` = on-turn-end perform-action(self, cast 'random') at chancePercent
+// 100 (re-expressed from `bonus-cast` in 4.1-E: the log gains TriggerFired + ActionGranted
+// before the SpellCast; target/damage unchanged). Exactly ONE equipped spell,
 // BOLT (enemy-side single target, spellPower 0.5). The trait has no innate-spell, so the slot
 // list after createCombat is exactly [BOLT] (asserted in the test): the gem draw is a pool of
 // one (index floor(r*1) = 0), so no gem-draw ambiguity muddies what this golden pins.
@@ -33,6 +35,7 @@ export const TURN_STEPS = 3 // caster, B, A
 const CASTER = createCreatureId('caster')
 const A = createCreatureId('a')
 const B = createCreatureId('b')
+const TRAIT_ID = 'bonus-caster-fixture'
 
 export const BOLT: Spell = {
   id: 'bolt-fixture',
@@ -54,7 +57,18 @@ export const BOLT: Spell = {
 export const BONUS_CASTER_FIXTURE: Trait = {
   id: 'bonus-caster-fixture',
   name: 'Bonus Caster (fixture)',
-  effects: [{ category: 'bonus-cast', chancePercent: 100 }],
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-turn-end',
+      chancePercent: 100,
+      response: {
+        kind: 'perform-action',
+        actor: 'self',
+        intent: { action: { kind: 'cast', gemSlot: 'random' } },
+      },
+    },
+  ],
 }
 
 export const traits: ReadonlyMap<string, Trait> = new Map([
@@ -85,6 +99,10 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
   { type: 'Waited', creatureId: CASTER },
+  // 4.1-E: the bonus cast is now an on-turn-end `perform-action` grant (chance = draw #1, then
+  // drained in the granted-actions step: gem draw #2, target draw -> default, no draw).
+  { type: 'TriggerFired', sourceId: CASTER, hook: 'on-turn-end', effectId: TRAIT_ID },
+  { type: 'ActionGranted', sourceId: CASTER, actorId: CASTER, effectId: TRAIT_ID },
   {
     type: 'SpellCast',
     targetShape: 'single',

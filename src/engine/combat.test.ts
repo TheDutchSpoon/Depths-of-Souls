@@ -1107,11 +1107,22 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
   })
 })
 
-describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () => {
+describe('Arcane Surge-shaped bonus cast = on-turn-end perform-action (Phase 4.1-E)', () => {
   const BONUS_CASTER_FIXTURE: Trait = {
     id: 'bonus-caster-fixture',
     name: 'Bonus Caster (fixture)',
-    effects: [{ category: 'bonus-cast', chancePercent: 50 }],
+    effects: [
+      {
+        category: 'triggered',
+        hook: 'on-turn-end',
+        chancePercent: 50,
+        response: {
+          kind: 'perform-action',
+          actor: 'self',
+          intent: { action: { kind: 'cast', gemSlot: 'random' } },
+        },
+      },
+    ],
   }
 
   // Phase 4.1-B (B-1): CombatState.rng is plain data, computed from `position` via real
@@ -1152,7 +1163,7 @@ describe('bonus-cast (Phase 4 Slice F, Sorcerer starter -- new primitive)', () =
     const { events } = resolveTurn(state)
 
     // Phase 4.1-C (D6): TurnEnded is always the turn's last event -- the granted-actions step
-    // (bonus-cast) now fires BEFORE it, not after (Phase 4 fired it after).
+    // (the queued perform-action grant) now runs BEFORE it, not after (Phase 4 fired it after).
     const turnEndedIndex = events.findIndex((e) => e.type === 'TurnEnded')
     const spellCastIndex = events.findIndex(isSpellCast)
     expect(spellCastIndex).toBeLessThan(turnEndedIndex)

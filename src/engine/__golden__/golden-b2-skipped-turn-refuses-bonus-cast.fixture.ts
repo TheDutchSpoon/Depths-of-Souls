@@ -3,21 +3,23 @@
 // still ROLLED first, so the RNG stream doesn't depend on the skip. Hand-derived.
 //
 // CASTER (player, speed 20, Int 20, HP 40, defence 0): trait `b2-stunned-bonus-caster-fixture` =
-//   [bonus-cast chancePercent 100,
+//   [on-turn-end perform-action(self, cast 'random') chancePercent 100 (4.1-E; was `bonus-cast`),
 //    on-fight-start apply-status Stun (self),
 //    on-turn-end remove-status Stun (self)].
 // Slots after createCombat (asserted in the test): exactly [BOLT] (enemy-side single target,
 // spellPower 0.5) -- so if the gate were removed there IS something castable to cast.
 // Round 1, CASTER's turn: Stun (applied at fight start) suppresses at turn start -> `suppressed`
-// is true, no action. The turn-end hook then REMOVES Stun, so by the granted-actions step no lock
-// exists: checkLegality alone would let the cast through. Only the skipped-turn GATE refuses it
-// (this is what separates B2.1 from B2.2). The gate sits AFTER the roll: bonus-cast rolls draw #1.
+// is true, no action. The turn-end hooks fire in effect order: the grant's trigger (chance roll =
+// draw #1, queued), then the remove-status trigger REMOVES Stun, so by the granted-actions step no
+// lock exists: checkLegality alone would let the cast through. Only the skipped-turn GATE
+// (`drainGrantedActions`' `skippedTurnOf`) refuses it (this is what separates B2.1 from B2.2). The
+// gate sits AFTER the roll: the chance roll is draw #1 at trigger time, whatever the skip.
 //
 // LATER RNG CONSUMER: E1 (enemy, speed 10, Attack 10, script `random-attack` = attack a
 // `random-enemy`) acts next and picks uniformly among the player side's living creatures in slot
 // order [CASTER, D1, D2] with draw floor(r * 3). Seed 9200's mulberry32 draws (independent node
 // trace): #1 0.8779, #2 0.3225, #3 0.3805.
-//   - As built: draw #1 = the bonus-cast chance roll (100% -> passes whatever it is, but IS
+//   - As built: draw #1 = the grant's chance roll (100% -> passes whatever it is, but IS
 //     drawn), then E1's pick is draw #2 = 0.3225 -> floor(0.9675) = 0 -> CASTER.
 //   - Refuse-BEFORE-roll (the mutation): E1's pick would be draw #1 = 0.8779 -> floor(2.63) = 2
 //     -> D2. Different log.
@@ -72,7 +74,16 @@ export const STUNNED_BONUS_CASTER: Trait = {
   id: 'b2-stunned-bonus-caster-fixture',
   name: 'Stunned Bonus Caster (fixture)',
   effects: [
-    { category: 'bonus-cast', chancePercent: 100 },
+    {
+      category: 'triggered',
+      hook: 'on-turn-end',
+      chancePercent: 100,
+      response: {
+        kind: 'perform-action',
+        actor: 'self',
+        intent: { action: { kind: 'cast', gemSlot: 'random' } },
+      },
+    },
     {
       category: 'triggered',
       hook: 'on-fight-start',
@@ -155,7 +166,15 @@ export const expectedEvents: CombatEvent[] = [
     hook: 'on-turn-start',
     effectId: STUN.statusId,
   },
-  // Turn-end hook removes the Stun -- the lock is gone before the granted-actions step.
+  // The grant's trigger (declared first, so it fires first): the chance is rolled (draw #1) ...
+  {
+    type: 'TriggerFired',
+    sourceId: CASTER,
+    hook: 'on-turn-end',
+    effectId: STUNNED_BONUS_CASTER.id,
+  },
+  // ... then the remove-status trigger removes the Stun -- the lock is gone before the
+  // granted-actions step.
   {
     type: 'TriggerFired',
     sourceId: CASTER,
@@ -163,7 +182,8 @@ export const expectedEvents: CombatEvent[] = [
     effectId: STUNNED_BONUS_CASTER.id,
   },
   { type: 'StatusExpired', creatureId: CASTER, statusId: STUN.statusId },
-  // Bonus-cast rolled (draw #1) and was then refused: NO SpellCast, NO DamageDealt here.
+  // The grant was then refused by the skipped-turn gate: NO ActionGranted, NO SpellCast, NO
+  // DamageDealt here.
   { type: 'TurnEnded', creatureId: CASTER },
   { type: 'TurnStarted', creatureId: E1 },
   // E1's random pick = draw #2 (0.3225) -> index 0 = CASTER.

@@ -7,6 +7,7 @@ import {
   castableGemSlots,
   createResolutionContext,
   defaultTargetingFor,
+  drainGrantedActions,
   executeAction,
   resolveIntent,
 } from './actions'
@@ -342,7 +343,16 @@ describe('runAction -- legality before resolution, for every source (B2.2, 4.1-C
       id: 'lock-then-bonus-fixture',
       name: 'Lock then bonus (fixture)',
       effects: [
-        { category: 'bonus-cast', chancePercent: 100 },
+        {
+          category: 'triggered',
+          hook: 'on-turn-end',
+          chancePercent: 100,
+          response: {
+            kind: 'perform-action',
+            actor: 'self',
+            intent: { action: { kind: 'cast', gemSlot: 'random' } },
+          },
+        },
         {
           category: 'triggered',
           hook: 'on-turn-end',
@@ -391,8 +401,14 @@ describe('an echo is gated by the CASTER, never the bearer (B2.2, 4.1-C2c)', () 
     observationFilter: { relationship: 'ally', actionKind: 'cast' },
     chancePercent: 50,
     stacks: false,
-    echoCast: true,
-    response: { kind: 'grant-action-state', target: { kind: 'self' } },
+    response: {
+      kind: 'perform-action',
+      actor: 'triggering-source',
+      intent: {
+        action: { kind: 'cast', gemSlot: 'random' },
+        targeting: { kind: 'random' },
+      },
+    },
     instanceId: createEffectInstanceId('echo#1'),
     sourceTraitId: 'echo-fixture',
   }
@@ -410,25 +426,26 @@ describe('an echo is gated by the CASTER, never the bearer (B2.2, 4.1-C2c)', () 
     })
     const events: CombatEvent[] = []
     const ctx = createResolutionContext(events, newCascade())
-    executeAction(
+    const after = executeAction(
       player[0]!,
       { kind: 'cast', targetShape: 'single', gemSlot: 0, targetId: enemy[0]!.id },
       state,
       ctx,
     )
+    drainGrantedActions(ctx, after) // 4.1-E: the echo is queued; the scope drains it
     return events
   }
 
   it('a Stunned BEARER still echoes (its trigger is passive)', () => {
     const events = run([], [lock('all', 'bearer')])
-    expect(events.filter((e) => e.type === 'EchoCastGranted')).toHaveLength(1)
+    expect(events.filter((e) => e.type === 'ActionGranted')).toHaveLength(1)
     expect(events.filter((e) => e.type === 'SpellCast')).toHaveLength(2)
   })
 
   it('a locked CASTER refuses the echo: the trigger shows, but no grant event and no cast', () => {
     const events = run([lock('cast', 'caster')], [])
     expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(1)
-    expect(events.some((e) => e.type === 'EchoCastGranted')).toBe(false)
+    expect(events.some((e) => e.type === 'ActionGranted')).toBe(false)
     // Only the original (directly executed) cast; the echo produced nothing.
     expect(events.filter((e) => e.type === 'SpellCast')).toHaveLength(1)
   })

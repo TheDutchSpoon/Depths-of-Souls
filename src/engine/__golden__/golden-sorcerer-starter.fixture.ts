@@ -1,5 +1,5 @@
 // Golden: the Sorcerer starter's real signature trait (data/traits/starters.ts's
-// SORCERER_STARTER_TRAIT, the new `bonus-cast` primitive) + its real granted spell (ARCANE_BOLT,
+// SORCERER_STARTER_TRAIT, an on-turn-end `perform-action` since 4.1-E) + its real granted spell (ARCANE_BOLT,
 // data/spells/overgrowth.ts -- also a normal biome-1 Wit spawn-pool spell as of the data-layer
 // carrier reorg)
 // -- "50% chance on-turn-end to cast a random equipped spell." Phase 4.1-B (A8, design-review
@@ -15,11 +15,11 @@
 // its own RNG draw, isolating this golden to proving the ONE thing that actually varies: the
 // chancePercent roll succeeding, at real seed 7 (chosen empirically -- its very first mulberry32
 // draw is ~0.0117, comfortably under 50%; no other RNG-consuming mechanism exists anywhere in
-// this fight before the bonus-cast check, so this IS the roll it consumes).
+// this fight before the Surge roll, so this IS the roll it consumes).
 //
 // Hand-derived (independent `node -e` calculator). CASTER acts (Waits, per its own script) then,
-// at turn-end, the bonus-cast passive fires -- BEFORE TurnEnded (Phase 4.1-C, D6: TurnEnded is
-// always the turn's last event; Phase 4 fired the bonus cast after it).
+// at turn-end, Arcane Surge's trigger rolls and queues the cast, which runs in the granted-actions
+// step -- BEFORE TurnEnded (Phase 4.1-C, D6: TurnEnded is always the turn's last event).
 //
 //   ARCANE_BOLT: spellPower 0.5, scalingStat unset -> default remap-aware Intelligence lookup.
 //   effInt 20 (no modifiers) x spellPower 0.5 x instance-list powerFraction 1.0 (no extra
@@ -69,6 +69,20 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
   { type: 'Waited', creatureId: CASTER },
+  // 4.1-E: Arcane Surge is an on-turn-end `perform-action` trigger -- TriggerFired at the chance
+  // roll (draw #1, the same draw as before), ActionGranted once the queued cast runs.
+  {
+    type: 'TriggerFired',
+    sourceId: CASTER,
+    hook: 'on-turn-end',
+    effectId: SORCERER_STARTER_TRAIT.id,
+  },
+  {
+    type: 'ActionGranted',
+    sourceId: CASTER,
+    actorId: CASTER,
+    effectId: SORCERER_STARTER_TRAIT.id,
+  },
   {
     type: 'SpellCast',
     targetShape: 'single',

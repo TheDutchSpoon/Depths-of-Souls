@@ -11,7 +11,7 @@ describe('golden replay: B2.3 -- a Provoke redirects an echo (Phase 4.1-C2c)', (
     ])
 
     expect(events).toEqual(expectedEvents)
-    expect(events.filter((e) => e.type === 'EchoCastGranted')).toHaveLength(1)
+    expect(events.filter((e) => e.type === 'ActionGranted')).toHaveLength(1)
     expect(events.some((e) => e.type === 'CascadeTruncated')).toBe(false)
     expect(state.result).toBeNull()
   })
