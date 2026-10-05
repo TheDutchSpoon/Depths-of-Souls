@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "corpus:update": "vitest run src/engine/corpus-digest.test.ts --mode corpus-update"
+    "corpus:update": "vitest run src/engine/corpus-digest.test.ts --mode corpus-update",
+    "sim": "vitest run src/state/balance-sim.test.ts --mode sim --silent=false"
   },
   "dependencies": {
     "react": "^19.3.0",

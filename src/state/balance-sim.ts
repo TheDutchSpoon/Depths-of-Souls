@@ -1,0 +1,1365 @@
+// Phase 4.1-H1 (D1): the deterministic balance simulator. It drives the REAL store (`newGame`,
+// `setSpec`, `runScriptedIntro`, `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with the
+// documented player policy below, over a fixed list of seeds, and builds a plain-data report of the
+// design targets (T1-T5), the 4.1-H watch points and ASSUMPTION 22's thresholds. It REPORTS; it
+// asserts nothing (the CI threshold test is H2's). It changes no number and no file under src/.
+//
+// Run the full report with `npm run sim` (vitest in `--mode sim`, the corpus pattern).
+//
+// ---- The player policy (brief ASSUMPTIONS 21, 96-102) ----
+// One run = one spec x one seed: `newGame({ seed })`, `setSpec`, `runScriptedIntro`, then a loop of
+// FLOOR RUNS (one `descend` each) until the seed clears the content frontier (`frontier`) or
+// reaches RUN_CAP floor runs (`cap`).
+//  - Which floor (ASSUMPTION 97): after a clear, push to `deepestFloor + 1`. After a FAILED PUSH the
+//    next run re-farms `deepestFloor`; while `deepestFloor` is 0 there is nothing to re-farm, so a
+//    failed floor-1 push is retried (floor 1 is `deepestFloor + 1` again: a push).
+//  - Hard wall (ASSUMPTION 98): WALL_FAILED_PUSHES failed pushes at one floor, re-farm runs
+//    between them not resetting the count. A walled seed KEEPS GOING; the simulator records the
+//    first wall floor and the failed-push count per floor.
+//  - After every run (and once before the first): (1) summon every creature id whose soul has
+//    reached 100%, once per id, the first time (ASSUMPTION 96; ids already owned start in the
+//    set; a pass walks `soulProgress` in key order); (2) set the party to the six highest-level
+//    instances, ordered level descending then instance ordinal ascending, through `setPartySlot`
+//    (ASSUMPTION 99); (3) refund and re-buy perks from scratch: each FUNCTIONAL perk (its
+//    max-level effects are non-empty) in data order takes the most levels the remaining budget
+//    allows, then the next (ASSUMPTION 100).
+//  - Boss-floor lock probe (ASSUMPTION 101): before every run on a boss floor the simulator
+//    snapshots the store state, runs the same floor once with the probe creature on its own script
+//    plus `Cast <Pacify's slot> -> highest-hp-enemy` as the FIRST rule, restores the snapshot, and
+//    only then plays the policy run. The policy run is the only one that advances the seed, and
+//    both fight the identical floor (the floor's draw derives from `runSeed` and `runCounter`,
+//    which the restore returns). The probe creature is the active-party instance with the highest
+//    level (ties: ordinal) whose STORED gems already hold Pacify; its gems are never edited; no
+//    such creature means the probe is `n/a`. The probe scripts are registered up front in the
+//    store's script registry; a script nothing references is inert, and a test proves it.
+//
+// Nothing here is pinned to a balance value: the simulator runs the store's default config, and
+// the H2 tuning pass moves those numbers.
+
+import type { BalanceConfig } from '../engine/balance-types'
+import { ROUND_CAP, MAX_REVIVES_PER_CREATURE } from '../engine/config'
+import type { StatusDef } from '../engine/effect-types'
+import {
+  biomeForFloor,
+  contentFrontier,
+  isBossFloor,
+  type BiomeData,
+  type SpeciesCreature,
+} from '../engine/generation'
+import { bossLevel, enemyLevelRange, fightCount } from '../engine/curves'
+import type { Rule, Script } from '../engine/scripting-types'
+import type { CombatEvent } from '../engine/types'
+import { BIOMES } from '../data/biomes'
+import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
+import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import {
+  resolvePerkEffects,
+  SPECIALIZATIONS,
+  SPECIALIZATIONS_BY_ID,
+  type PerkDef,
+  type Specialization,
+} from '../data/specializations'
+import {
+  BRUTE_STARTER,
+  SHIELDBARER_STARTER,
+  SORCERER_STARTER,
+  UNICORN,
+} from '../data/species/starters'
+import { STATUS_REGISTRY } from '../data/statuses'
+import { TRAIT_REGISTRY } from '../data/traits'
+import type { InstanceId } from './ids'
+import { perkPointsFor, staticCreatureIdFor, type Instance } from './rewards'
+import { createGameStore, PARTY_SIZE } from './store'
+import type { GameActions, GameState } from './store'
+
+// ---- Named constants ----
+
+/** The fixed seed list of the full report (ASSUMPTION 105): 1..40. */
+export const SIM_SEEDS: readonly number[] = Array.from({ length: 40 }, (_, i) => i + 1)
+/** The normal suite's determinism seeds (ASSUMPTION 105). */
+export const SMOKE_SEEDS: readonly number[] = [1, 2, 3]
+/** A seed stops after this many floor runs (ASSUMPTION 98). */
+export const RUN_CAP = 400
+/** A hard wall: this many failed pushes at one floor (ASSUMPTION 98). */
+export const WALL_FAILED_PUSHES = 5
+/** "The first session" = the first this many floor runs (T3, ASSUMPTION 22). */
+export const FIRST_SESSION_RUNS = 10
+export const PACIFY_SPELL_ID = 'pacify'
+export const PACIFIED_STATUS_ID = 'pacified'
+/** Highest cast slot a probe script is registered for (3 gem slots + up to 5 innate spells). */
+const MAX_PROBE_SLOT = 8
+
+// ---- Types: policy ----
+
+export type RunKind = 'push' | 'farm'
+export type StopReason = 'frontier' | 'cap'
+export type LockScope = 'all' | 'attack' | 'cast'
+
+export interface Progress {
+  readonly runs: number
+  readonly deepestFloor: number
+  /** True iff the last run was a push that failed. */
+  readonly lastRunFailedPush: boolean
+  /** Failed pushes per floor (only floors with at least one). */
+  readonly failedPushes: Readonly<Record<number, number>>
+  readonly firstWallFloor: number | null
+}
+
+export const INITIAL_PROGRESS: Progress = {
+  runs: 0,
+  deepestFloor: 0,
+  lastRunFailedPush: false,
+  failedPushes: {},
+  firstWallFloor: null,
+}
+
+/** ASSUMPTION 97: the next run's floor and kind. */
+export function nextRun(progress: Progress): { floor: number; kind: RunKind } {
+  if (progress.lastRunFailedPush && progress.deepestFloor >= 1) {
+    return { floor: progress.deepestFloor, kind: 'farm' }
+  }
+  return { floor: progress.deepestFloor + 1, kind: 'push' }
+}
+
+/** ASSUMPTION 98: why a seed stops, or null to keep going. */
+export function stopReason(
+  progress: Progress,
+  frontier: number,
+  runCap: number,
+): StopReason | null {
+  if (progress.deepestFloor >= frontier) return 'frontier'
+  if (progress.runs >= runCap) return 'cap'
+  return null
+}
+
+/** Folds one floor run's result into the progress (pure). */
+export function advanceProgress(
+  progress: Progress,
+  floor: number,
+  kind: RunKind,
+  cleared: boolean,
+): Progress {
+  const failedPush = kind === 'push' && !cleared
+  const failedPushes = failedPush
+    ? { ...progress.failedPushes, [floor]: (progress.failedPushes[floor] ?? 0) + 1 }
+    : progress.failedPushes
+  const firstWallFloor =
+    progress.firstWallFloor === null &&
+    failedPush &&
+    (failedPushes[floor] ?? 0) >= WALL_FAILED_PUSHES
+      ? floor
+      : progress.firstWallFloor
+  return {
+    runs: progress.runs + 1,
+    deepestFloor: cleared
+      ? Math.max(progress.deepestFloor, floor)
+      : progress.deepestFloor,
+    lastRunFailedPush: failedPush,
+    failedPushes,
+    firstWallFloor,
+  }
+}
+
+/** ASSUMPTION 99: the six highest-level instances, level descending then ordinal ascending. */
+export function orderedParty(
+  collection: ReadonlyMap<InstanceId, Instance>,
+): readonly InstanceId[] {
+  return [...collection.values()]
+    .sort((a, b) => b.level - a.level || ordinalOf(a.id) - ordinalOf(b.id))
+    .slice(0, PARTY_SIZE)
+    .map((instance) => instance.id)
+}
+
+function ordinalOf(id: InstanceId): number {
+  return Number(String(id).slice('inst-'.length))
+}
+
+/** ASSUMPTION 100: a perk is functional when its max-level effects are non-empty (the rule the
+ * data test pins for the nine inert Phase 8 perks). */
+export function isFunctionalPerk(perk: PerkDef): boolean {
+  return resolvePerkEffects(perk, perk.maxLevel).length > 0
+}
+
+/** ASSUMPTION 100: the greedy purchase from scratch -- each functional perk in data order takes
+ * the most levels the remaining budget allows (up to its max), then the next. Only perks with at
+ * least one level are listed. */
+export function planPerkLevels(
+  spec: Specialization,
+  budget: number,
+): readonly { readonly perkId: string; readonly level: number }[] {
+  const plan: { perkId: string; level: number }[] = []
+  let remaining = budget
+  for (const perk of spec.perks) {
+    if (!isFunctionalPerk(perk)) continue
+    const level = Math.min(perk.maxLevel, Math.floor(remaining / perk.costPerLevel))
+    if (level <= 0) continue
+    plan.push({ perkId: perk.id, level })
+    remaining -= level * perk.costPerLevel
+  }
+  return plan
+}
+
+// ---- Static creature lookup (the store's standalone list, mirrored for the probe) ----
+
+const STANDALONE_CREATURES: readonly SpeciesCreature[] = [
+  SORCERER_STARTER,
+  BRUTE_STARTER,
+  SHIELDBARER_STARTER,
+  UNICORN,
+]
+
+function speciesCreatureFor(creatureId: string): SpeciesCreature | undefined {
+  const standalone = STANDALONE_CREATURES.find((c) => c.id === creatureId)
+  if (standalone) return standalone
+  for (const biome of BIOMES) {
+    for (const species of biome.speciesPool) {
+      const found = species.creatures.find((c) => c.id === creatureId)
+      if (found) return found
+    }
+  }
+  return undefined
+}
+
+/** How many `innate-spell` effects a creature's innate traits carry: `createCombat` prepends them
+ * to the gem slots, so stored gem N is cast slot `innateSpellCount + N` (ASSUMPTION 101). */
+export function innateSpellCount(creature: SpeciesCreature): number {
+  let count = 0
+  for (const traitId of creature.innateTraitIds) {
+    const trait = TRAIT_REGISTRY.get(traitId)
+    if (!trait) continue
+    for (const effect of trait.effects) {
+      if (effect.category === 'innate-spell') count += 1
+    }
+  }
+  return count
+}
+
+// ---- The probe: scripts, creature choice ----
+
+export function probeScriptId(baseScriptId: string, castSlot: number): string {
+  return `sim-probe/${baseScriptId}/${castSlot}`
+}
+
+const PROBE_FIRST_RULE = (castSlot: number): Rule => ({
+  condition: { kind: 'always' },
+  action: { kind: 'cast', gemSlot: castSlot },
+  targeting: { kind: 'highest-hp-enemy' },
+})
+
+/** The stock registry plus one probe script per (stock script, cast slot): the creature's own
+ * script with the Pacify cast added as the FIRST rule (ASSUMPTION 101). */
+export function buildSimScripts(
+  base: ReadonlyMap<string, Script> = STOCK_SCRIPTS_BY_ID,
+): ReadonlyMap<string, Script> {
+  const scripts = new Map(base)
+  for (const [id, script] of base) {
+    for (let slot = 0; slot <= MAX_PROBE_SLOT; slot++) {
+      const probeId = probeScriptId(id, slot)
+      scripts.set(probeId, {
+        id: probeId,
+        rules: [PROBE_FIRST_RULE(slot), ...script.rules],
+      })
+    }
+  }
+  return scripts
+}
+
+export interface ProbeChoice {
+  readonly instanceId: InstanceId
+  readonly castSlot: number
+  readonly baseScriptId: string
+}
+
+/** ASSUMPTION 101: the active-party instance with the highest level (ties: ordinal) whose STORED
+ * gems already hold Pacify; null when there is none (the probe is `n/a`). */
+export function pickProbeCreature(
+  state: Pick<GameState, 'collection' | 'activeParty'>,
+): ProbeChoice | null {
+  let best: Instance | null = null
+  for (const id of state.activeParty) {
+    if (id === null) continue
+    const instance = state.collection.get(id)
+    if (!instance || !instance.gems.includes(PACIFY_SPELL_ID)) continue
+    if (
+      best === null ||
+      instance.level > best.level ||
+      (instance.level === best.level && ordinalOf(instance.id) < ordinalOf(best.id))
+    ) {
+      best = instance
+    }
+  }
+  if (best === null) return null
+  const creature = speciesCreatureFor(staticCreatureIdFor(best))
+  if (!creature) return null
+  return {
+    instanceId: best.id,
+    castSlot: innateSpellCount(creature) + best.gems.indexOf(PACIFY_SPELL_ID),
+    baseScriptId: best.scriptId ?? creature.defaultScriptId,
+  }
+}
+
+// ---- Event analysis (pure, over a floor run's event list) ----
+
+/** Splits a floor run's events into its fights (each starts at `FightStarted`). */
+export function splitFights(events: readonly CombatEvent[]): CombatEvent[][] {
+  const fights: CombatEvent[][] = []
+  for (const event of events) {
+    if (event.type === 'FightStarted') fights.push([])
+    fights[fights.length - 1]?.push(event)
+  }
+  return fights
+}
+
+export interface StackCount {
+  readonly targetId: string
+  readonly attribution: string
+  readonly count: number
+}
+
+export interface StackAttribution {
+  readonly stacks: readonly StackCount[]
+  /** Applications attributed to no trigger or spell. */
+  readonly unattributed: number
+  readonly applications: number
+}
+
+export const UNATTRIBUTED = '(unattributed)'
+export const SPELL_ATTRIBUTION = '(spell)'
+
+/** ASSUMPTION 103: a `StatModifierApplied` is attributed to the latest `TriggerFired` effect id or
+ * `SpellCast` from its source in the current turn (markers clear at each turn and round
+ * boundary), else to `(unattributed)`. A stack is the number of such applications per (target,
+ * attribution). Input: ONE fight's events. */
+export function attributeStatModifiers(events: readonly CombatEvent[]): StackAttribution {
+  const marker = new Map<string, string>()
+  const counts = new Map<string, StackCount>()
+  let unattributed = 0
+  let applications = 0
+  for (const event of events) {
+    switch (event.type) {
+      case 'FightStarted':
+      case 'RoundStarted':
+      case 'TurnStarted':
+      case 'TurnEnded':
+        marker.clear()
+        break
+      case 'TriggerFired':
+        marker.set(event.sourceId, event.effectId)
+        break
+      case 'SpellCast':
+        marker.set(event.casterId, SPELL_ATTRIBUTION)
+        break
+      case 'StatModifierApplied': {
+        applications += 1
+        const attribution = marker.get(event.sourceId) ?? UNATTRIBUTED
+        if (attribution === UNATTRIBUTED) unattributed += 1
+        const key = `${event.targetId}|${attribution}`
+        const prev = counts.get(key)
+        counts.set(key, {
+          targetId: event.targetId,
+          attribution,
+          count: (prev?.count ?? 0) + 1,
+        })
+        break
+      }
+      default:
+        break
+    }
+  }
+  return { stacks: [...counts.values()], unattributed, applications }
+}
+
+/** Status id -> the scopes of its `action-lock` effects, read from the registry (ASSUMPTION 102:
+ * never hard-coded ids). */
+export function lockScopesByStatus(
+  statuses: ReadonlyMap<string, StatusDef>,
+): ReadonlyMap<string, readonly LockScope[]> {
+  const out = new Map<string, readonly LockScope[]>()
+  for (const [id, def] of statuses) {
+    const scopes: LockScope[] = []
+    for (const effect of def.effects) {
+      if (effect.category === 'action-lock') scopes.push(effect.scope)
+    }
+    if (scopes.length > 0) out.set(id, scopes)
+  }
+  return out
+}
+
+export interface BossLockStats {
+  readonly bossTurns: number
+  /** Turns the boss started while holding any action-lock status. */
+  readonly lockedTurns: number
+  readonly lockedByScope: Readonly<Record<LockScope, number>>
+  /** `StatusApplied` of Pacified on the boss (a refresh counts as another landing). */
+  readonly pacifyLands: number
+}
+
+/** ASSUMPTION 102: counts the boss's turns and its LOCKED turns (a turn it starts while holding any
+ * status whose effects include an `action-lock`), tracked from StatusApplied / StatusExpired /
+ * CreatureDied. A turn is counted once per distinct scope it is locked by. Input: one fight. */
+export function bossLockStats(
+  events: readonly CombatEvent[],
+  bossId: string,
+  lockScopes: ReadonlyMap<string, readonly LockScope[]>,
+): BossLockStats {
+  const held = new Set<string>()
+  let bossTurns = 0
+  let lockedTurns = 0
+  let pacifyLands = 0
+  const byScope: Record<LockScope, number> = { all: 0, attack: 0, cast: 0 }
+  for (const event of events) {
+    switch (event.type) {
+      case 'StatusApplied':
+        if (event.targetId === bossId) {
+          held.add(event.statusId)
+          if (event.statusId === PACIFIED_STATUS_ID) pacifyLands += 1
+        }
+        break
+      case 'StatusExpired':
+        if (event.creatureId === bossId) held.delete(event.statusId)
+        break
+      case 'CreatureDied':
+        if (event.creatureId === bossId) held.clear()
+        break
+      case 'TurnStarted': {
+        if (event.creatureId !== bossId) break
+        bossTurns += 1
+        const scopes = new Set<LockScope>()
+        for (const statusId of held) {
+          for (const scope of lockScopes.get(statusId) ?? []) scopes.add(scope)
+        }
+        if (scopes.size > 0) lockedTurns += 1
+        for (const scope of scopes) byScope[scope] += 1
+        break
+      }
+      default:
+        break
+    }
+  }
+  return { bossTurns, lockedTurns, lockedByScope: byScope, pacifyLands }
+}
+
+/** The enemy-side creature ids that start round 1 (every living creature gets a TurnStarted). */
+export function firstRoundEnemyIds(events: readonly CombatEvent[]): readonly string[] {
+  const ids: string[] = []
+  let round = 0
+  for (const event of events) {
+    if (event.type === 'RoundStarted') round = event.round
+    else if (
+      round === 1 &&
+      event.type === 'TurnStarted' &&
+      /-enemy-\d+$/.test(event.creatureId)
+    )
+      ids.push(event.creatureId)
+  }
+  return ids
+}
+
+export interface FightMetrics {
+  readonly result: 'win' | 'loss' | 'draw'
+  readonly maxRound: number
+  /** A draw that ran the full ROUND_CAP rounds. */
+  readonly capDraw: boolean
+  readonly deaths: number
+  readonly largestStack: StackCount | null
+  readonly unattributed: number
+  readonly applications: number
+  /** Revives by the Unicorn (source = its combat id); null when it isn't in the party. */
+  readonly unicornRevives: number | null
+  /** The most times one creature was revived in this fight. */
+  readonly maxRevivesOnOne: number
+  readonly boss: BossFightMetrics | null
+}
+
+export interface BossFightMetrics extends BossLockStats {
+  readonly bossTemplateId: string
+  /** Stat-modifier applications attributed to the boss's own trait id (when it has one). */
+  readonly attributedToBossTrait: number
+  readonly peakAttack: number
+}
+
+export interface FightContext {
+  readonly unicornId: string | null
+  readonly bossId: string | null
+  readonly bossTemplateId: string | null
+  /** The boss's innate trait ids (to attribute its own stat-modifier stacks, e.g. Attrition). */
+  readonly bossTraitIds: readonly string[]
+  readonly lockScopes: ReadonlyMap<string, readonly LockScope[]>
+}
+
+export function analyzeFight(
+  events: readonly CombatEvent[],
+  ctx: FightContext,
+): FightMetrics {
+  let result: 'win' | 'loss' | 'draw' = 'draw'
+  let maxRound = 0
+  let deaths = 0
+  let unicornRevives = ctx.unicornId === null ? null : 0
+  const revivedCounts = new Map<string, number>()
+  for (const event of events) {
+    if (event.type === 'FightEnded') result = event.result
+    else if (event.type === 'RoundStarted') maxRound = Math.max(maxRound, event.round)
+    else if (event.type === 'CreatureDied') deaths += 1
+    else if (event.type === 'Revived') {
+      revivedCounts.set(event.targetId, (revivedCounts.get(event.targetId) ?? 0) + 1)
+      if (ctx.unicornId !== null && event.sourceId === ctx.unicornId) {
+        unicornRevives = (unicornRevives ?? 0) + 1
+      }
+    }
+  }
+  const attribution = attributeStatModifiers(events)
+  let largestStack: StackCount | null = null
+  for (const stack of attribution.stacks) {
+    if (largestStack === null || stack.count > largestStack.count) largestStack = stack
+  }
+  let boss: BossFightMetrics | null = null
+  if (ctx.bossId !== null && ctx.bossTemplateId !== null) {
+    let attributedToBossTrait = 0
+    for (const stack of attribution.stacks) {
+      if (stack.targetId === ctx.bossId && ctx.bossTraitIds.includes(stack.attribution)) {
+        attributedToBossTrait += stack.count
+      }
+    }
+    let peakAttack = 0
+    for (const event of events) {
+      if (
+        event.type === 'StatModifierApplied' &&
+        event.targetId === ctx.bossId &&
+        event.stat === 'attack'
+      ) {
+        peakAttack = Math.max(peakAttack, event.effectiveAfter)
+      }
+    }
+    boss = {
+      ...bossLockStats(events, ctx.bossId, ctx.lockScopes),
+      bossTemplateId: ctx.bossTemplateId,
+      attributedToBossTrait,
+      peakAttack,
+    }
+  }
+  return {
+    result,
+    maxRound,
+    capDraw: result === 'draw' && maxRound >= ROUND_CAP,
+    deaths,
+    largestStack,
+    unattributed: attribution.unattributed,
+    applications: attribution.applications,
+    unicornRevives,
+    maxRevivesOnOne: Math.max(0, ...revivedCounts.values()),
+    boss,
+  }
+}
+
+// ---- Run records ----
+
+type Store = ReturnType<typeof createGameStore>
+type StoreState = GameState & GameActions
+
+export interface BossVisit {
+  readonly floor: number
+  /** First time this seed fought this boss floor. */
+  readonly firstVisit: boolean
+  readonly bossTemplateId: string
+  /** The simple policy's run (the canonical one). */
+  readonly policy: {
+    readonly cleared: boolean
+    readonly metrics: BossFightMetrics | null
+  }
+  /** The probe run, or null when `n/a` (no party creature holds Pacify). */
+  readonly probe: {
+    readonly cleared: boolean
+    readonly metrics: BossFightMetrics | null
+  } | null
+  /** Creatures that died in the policy run's boss fight (the Attrition view). */
+  readonly policyDeaths: number
+}
+
+export interface RunRecord {
+  readonly index: number
+  readonly floor: number
+  readonly kind: RunKind
+  readonly cleared: boolean
+  readonly partyLevels: readonly number[]
+  readonly fightsRun: number
+  readonly fightsWon: number
+}
+
+export interface UnicornTotals {
+  readonly fightsWithUnicorn: number
+  readonly winsWithUnicorn: number
+  readonly fightsWithoutUnicorn: number
+  readonly winsWithoutUnicorn: number
+  readonly revives: number
+  readonly fightsWithRevive: number
+  readonly maxRevivesInFight: number
+  /** Fights where some creature was revived MAX_REVIVES_PER_CREATURE times. */
+  readonly fightsAtCap: number
+}
+
+export interface SeedResult {
+  readonly specId: string
+  readonly seed: number
+  readonly stop: StopReason
+  readonly runs: readonly RunRecord[]
+  readonly deepestFloor: number
+  readonly firstWallFloor: number | null
+  readonly failedPushes: Readonly<Record<number, number>>
+  readonly firstTryFloor1Clear: boolean
+  readonly clearsToFirstSoul: number | null
+  readonly runsToFirstSoul: number | null
+  readonly partySizeAfterSession: number | null
+  readonly deepestAfterSession: number | null
+  readonly fights: number
+  readonly draws: number
+  readonly capDraws: number
+  readonly largestStack: (StackCount & { readonly floor: number }) | null
+  readonly unattributed: number
+  readonly applications: number
+  readonly unicorn: UnicornTotals
+  readonly bossVisits: readonly BossVisit[]
+}
+
+export interface SimOptions {
+  readonly seeds: readonly number[]
+  /** Defaults to RUN_CAP. */
+  readonly runCap?: number
+  /** Defaults to every spec. */
+  readonly specIds?: readonly string[]
+  /** Defaults to true; false skips the lock probe (the tests' policy-only comparison). */
+  readonly probeBosses?: boolean
+  /** Defaults to the stock registry plus the probe scripts. */
+  readonly scripts?: ReadonlyMap<string, Script>
+  readonly config?: BalanceConfig
+}
+
+// ---- Applying the policy to the store ----
+
+/** ASSUMPTION 96. Mutates `summoned`; returns the ids summoned this pass. */
+export function summonPass(store: Store, summoned: Set<string>): readonly string[] {
+  const done: string[] = []
+  for (const [creatureId, progress] of [...store.getState().soulProgress]) {
+    if (progress < 100 || summoned.has(creatureId)) continue
+    const result = store.getState().summon(creatureId)
+    if (!result.ok) throw new Error(`balance-sim: summon(${creatureId}) refused`)
+    summoned.add(creatureId)
+    done.push(creatureId)
+  }
+  return done
+}
+
+/** ASSUMPTION 99, applied through `setPartySlot`. */
+export function applyPartyOrder(store: Store): void {
+  const ids = orderedParty(store.getState().collection)
+  ids.forEach((id, slot) => {
+    const result = store.getState().setPartySlot(slot, id)
+    if (!result.ok) throw new Error(`balance-sim: setPartySlot(${slot}) refused`)
+  })
+}
+
+/** ASSUMPTION 100, applied through `refundAllPerks` + `setPerkLevel`. */
+export function applyPerkPlan(store: Store): void {
+  const state = store.getState()
+  if (state.chosenSpec === null) return
+  const spec = SPECIALIZATIONS_BY_ID.get(state.chosenSpec)
+  if (!spec) throw new Error(`balance-sim: unknown spec ${state.chosenSpec}`)
+  state.refundAllPerks()
+  for (const { perkId, level } of planPerkLevels(
+    spec,
+    perkPointsFor(state.bossesCleared),
+  )) {
+    const result = store.getState().setPerkLevel(perkId, level)
+    if (!result.ok) throw new Error(`balance-sim: setPerkLevel(${perkId}) refused`)
+  }
+}
+
+function partyLevels(state: StoreState): number[] {
+  const levels: number[] = []
+  for (const id of state.activeParty) {
+    if (id === null) continue
+    const instance = state.collection.get(id)
+    if (instance) levels.push(instance.level)
+  }
+  return levels
+}
+
+/** The Unicorn's combat id (`<template>-player-<dense slot>`) for the current party, or null. */
+function unicornCombatId(state: StoreState): string | null {
+  let slot = 0
+  for (const id of state.activeParty) {
+    if (id === null) continue
+    const instance = state.collection.get(id)
+    if (!instance) continue
+    if (staticCreatureIdFor(instance) === UNICORN.id)
+      return `${UNICORN.id}-player-${slot}`
+    slot += 1
+  }
+  return null
+}
+
+/** ASSUMPTION 102: true the first time a seed fights a boss floor; records the visit. */
+export function noteBossVisit(seen: Set<number>, floor: number): boolean {
+  const first = !seen.has(floor)
+  seen.add(floor)
+  return first
+}
+
+/** One probe descent: snapshot, run the floor with the probe creature on its probe script,
+ * restore. Returns the outcome's events, or null when `n/a`. */
+export function runProbe(
+  store: Store,
+  floor: number,
+): { readonly cleared: boolean; readonly events: readonly CombatEvent[] } | null {
+  const snapshot = store.getState()
+  const choice = pickProbeCreature(snapshot)
+  if (choice === null) return null
+  const instance = snapshot.collection.get(choice.instanceId)
+  if (!instance) return null
+  const collection = new Map(snapshot.collection)
+  collection.set(choice.instanceId, {
+    ...instance,
+    scriptId: probeScriptId(choice.baseScriptId, choice.castSlot),
+  })
+  store.setState({ collection })
+  const result = store.getState().descend(floor)
+  store.setState(snapshot, true)
+  if (!result.ok) throw new Error(`balance-sim: probe descend(${floor}) refused`)
+  return { cleared: result.outcome.cleared, events: result.outcome.events }
+}
+
+function bossContext(
+  floor: number,
+  biomes: readonly BiomeData[],
+  runSeed: number,
+  unicornId: string | null,
+): FightContext | null {
+  if (!isBossFloor(floor)) return null
+  const biomeId = biomeForFloor(floor, biomes, new Map(), runSeed)
+  const biome = biomes.find((b) => b.id === biomeId)
+  if (!biome?.boss) return null
+  return {
+    unicornId,
+    bossId: `${biome.boss.creature.id}-enemy-0`,
+    bossTemplateId: biome.boss.creature.id,
+    bossTraitIds: biome.boss.creature.innateTraitIds,
+    lockScopes: lockScopesByStatus(STATUS_REGISTRY),
+  }
+}
+
+function noBossContext(unicornId: string | null): FightContext {
+  return {
+    unicornId,
+    bossId: null,
+    bossTemplateId: null,
+    bossTraitIds: [],
+    lockScopes: new Map(),
+  }
+}
+
+/** One seed under the policy. */
+export function runSeed(specId: string, seed: number, options: SimOptions): SeedResult {
+  const runCap = options.runCap ?? RUN_CAP
+  const config = options.config ?? DEFAULT_BALANCE_CONFIG
+  const store = createGameStore({
+    scripts: options.scripts ?? buildSimScripts(),
+    balanceConfig: config,
+  })
+  store.getState().newGame({ seed })
+  store.getState().setSpec(specId)
+  store.getState().runScriptedIntro()
+  const frontier = contentFrontier(BIOMES)
+
+  const summoned = new Set<string>()
+  for (const instance of store.getState().collection.values()) {
+    summoned.add(staticCreatureIdFor(instance))
+  }
+  const prepare = (): void => {
+    summonPass(store, summoned)
+    applyPartyOrder(store)
+    applyPerkPlan(store)
+  }
+  prepare()
+
+  let progress = INITIAL_PROGRESS
+  const runs: RunRecord[] = []
+  const bossVisits: BossVisit[] = []
+  const seenBossFloors = new Set<number>()
+  let firstTryFloor1Clear = false
+  let clears = 0
+  let clearsToFirstSoul: number | null = null
+  let runsToFirstSoul: number | null = null
+  let partySizeAfterSession: number | null = null
+  let deepestAfterSession: number | null = null
+  let fights = 0
+  let draws = 0
+  let capDraws = 0
+  let largestStack: SeedResult['largestStack'] = null
+  let unattributed = 0
+  let applications = 0
+  const unicorn = {
+    fightsWithUnicorn: 0,
+    winsWithUnicorn: 0,
+    fightsWithoutUnicorn: 0,
+    winsWithoutUnicorn: 0,
+    revives: 0,
+    fightsWithRevive: 0,
+    maxRevivesInFight: 0,
+    fightsAtCap: 0,
+  }
+
+  for (;;) {
+    const stop = stopReason(progress, frontier, runCap)
+    if (stop !== null) {
+      return {
+        specId,
+        seed,
+        stop,
+        runs,
+        deepestFloor: progress.deepestFloor,
+        firstWallFloor: progress.firstWallFloor,
+        failedPushes: progress.failedPushes,
+        firstTryFloor1Clear,
+        clearsToFirstSoul,
+        runsToFirstSoul,
+        partySizeAfterSession,
+        deepestAfterSession,
+        fights,
+        draws,
+        capDraws,
+        largestStack,
+        unattributed,
+        applications,
+        unicorn,
+        bossVisits,
+      }
+    }
+
+    const { floor, kind } = nextRun(progress)
+    const before = store.getState()
+    const levels = partyLevels(before)
+    const unicornId = unicornCombatId(before)
+    const bossCtx = bossContext(floor, BIOMES, before.runSeed, unicornId)
+
+    // The probe runs first and is rolled back, so the policy run fights the identical floor.
+    let probeRun: ReturnType<typeof runProbe> = null
+    if (bossCtx !== null && options.probeBosses !== false)
+      probeRun = runProbe(store, floor)
+
+    const result = store.getState().descend(floor)
+    if (!result.ok)
+      throw new Error(`balance-sim: descend(${floor}) refused: ${result.reason}`)
+    const outcome = result.outcome
+    const fightEvents = splitFights(outcome.events)
+    const metrics = fightEvents.map((e) =>
+      analyzeFight(e, bossCtx ?? noBossContext(unicornId)),
+    )
+
+    let fightsWon = 0
+    for (const m of metrics) {
+      fights += 1
+      if (m.result === 'win') fightsWon += 1
+      if (m.result === 'draw') draws += 1
+      if (m.capDraw) capDraws += 1
+      unattributed += m.unattributed
+      applications += m.applications
+      if (
+        m.largestStack &&
+        (largestStack === null || m.largestStack.count > largestStack.count)
+      ) {
+        largestStack = { ...m.largestStack, floor }
+      }
+      if (m.unicornRevives === null) {
+        unicorn.fightsWithoutUnicorn += 1
+        if (m.result === 'win') unicorn.winsWithoutUnicorn += 1
+      } else {
+        unicorn.fightsWithUnicorn += 1
+        if (m.result === 'win') unicorn.winsWithUnicorn += 1
+        unicorn.revives += m.unicornRevives
+        if (m.unicornRevives > 0) unicorn.fightsWithRevive += 1
+        unicorn.maxRevivesInFight = Math.max(unicorn.maxRevivesInFight, m.unicornRevives)
+      }
+      if (m.maxRevivesOnOne >= MAX_REVIVES_PER_CREATURE) unicorn.fightsAtCap += 1
+    }
+
+    if (bossCtx !== null && bossCtx.bossTemplateId !== null) {
+      const probeMetrics =
+        probeRun === null
+          ? null
+          : analyzeFight(splitFights(probeRun.events)[0] ?? [], bossCtx).boss
+      bossVisits.push({
+        floor,
+        firstVisit: noteBossVisit(seenBossFloors, floor),
+        bossTemplateId: bossCtx.bossTemplateId,
+        policy: { cleared: outcome.cleared, metrics: metrics[0]?.boss ?? null },
+        probe:
+          probeRun === null ? null : { cleared: probeRun.cleared, metrics: probeMetrics },
+        policyDeaths: metrics[0]?.deaths ?? 0,
+      })
+    }
+
+    runs.push({
+      index: progress.runs + 1,
+      floor,
+      kind,
+      cleared: outcome.cleared,
+      partyLevels: levels,
+      fightsRun: metrics.length,
+      fightsWon,
+    })
+    if (progress.runs === 0) firstTryFloor1Clear = floor === 1 && outcome.cleared
+    if (outcome.cleared) clears += 1
+    progress = advanceProgress(progress, floor, kind, outcome.cleared)
+
+    prepare()
+
+    if (
+      clearsToFirstSoul === null &&
+      [...store.getState().soulProgress.values()].some((p) => p >= 100)
+    ) {
+      clearsToFirstSoul = clears
+      runsToFirstSoul = progress.runs
+    }
+    if (progress.runs === FIRST_SESSION_RUNS) {
+      partySizeAfterSession = store
+        .getState()
+        .activeParty.filter((id) => id !== null).length
+      deepestAfterSession = progress.deepestFloor
+    }
+  }
+}
+
+// ---- The report ----
+
+export interface FloorRow {
+  readonly floor: number
+  readonly attemptedSeeds: number
+  readonly clearedSeeds: number
+  readonly runs: number
+  readonly clears: number
+  readonly pushRuns: number
+  readonly pushClears: number
+  readonly failedPushes: number
+  readonly fightsRun: number
+  readonly fightsWon: number
+  readonly fightsPerFloor: number
+  readonly meanPartyLevel: number | null
+  readonly enemyMin: number
+  readonly enemyMax: number
+  readonly bossLevel: number | null
+}
+
+export interface BossFloorRow {
+  readonly floor: number
+  readonly bossTemplateId: string
+  readonly scope: 'first-visit' | 'all-visits'
+  readonly visits: number
+  readonly policyClears: number
+  readonly probeAvailable: number
+  readonly probeNotAvailable: number
+  /** Over the visits that have a probe: the policy run's and the probe run's clears. */
+  readonly policyClearsWhereProbed: number
+  readonly probeClears: number
+  readonly policyBossTurns: number
+  readonly policyLockedTurns: number
+  readonly policyLockedByScope: Readonly<Record<LockScope, number>>
+  readonly probeBossTurns: number
+  readonly probeLockedTurns: number
+  readonly probeLockedByScope: Readonly<Record<LockScope, number>>
+  /** Probe runs where Pacify landed on the boss at least once, and landings in total. */
+  readonly probeRunsWithPacifyLand: number
+  readonly probePacifyLands: number
+}
+
+export interface AttritionRow {
+  readonly visits: number
+  readonly policyClears: number
+  readonly meanDeaths: number | null
+  readonly maxAttritionStacks: number
+  readonly maxPeakAttack: number
+}
+
+export interface Thresholds {
+  readonly floor1ClearRatePct: number
+  readonly floor1Pass: boolean
+  /** The median of clears-to-first-soul over seeds (a seed that never completes counts as
+   * infinity); the threshold is median <= 30 (ASSUMPTION 107). */
+  readonly medianClearsToFirstSoul: number | null
+  readonly maxClearsToFirstSoul: number | null
+  readonly seedsWithoutSoul: number
+  readonly firstSoulPass: boolean
+  readonly seedsReachingFloor5InSession: number
+  readonly floor5Pass: boolean
+}
+
+export interface SpecReport {
+  readonly specId: string
+  readonly seeds: number
+  readonly t1: { readonly firstTryClears: number; readonly seeds: number }
+  readonly t2: {
+    readonly clearsToFirstSoul: readonly number[]
+    readonly runsToFirstSoul: readonly number[]
+    readonly seedsWithoutSoul: number
+  }
+  readonly t3: { readonly partySizeCounts: Readonly<Record<number, number>> }
+  readonly t4: {
+    readonly stopReasons: Readonly<Record<StopReason, number>>
+    readonly deepestFloors: readonly number[]
+    readonly firstWallFloors: Readonly<Record<number, number>>
+    readonly seedsWalled: number
+    readonly seedsWalledBeforeFloor10: number
+    readonly failedPushesByFloor: Readonly<Record<number, number>>
+  }
+  readonly floors: readonly FloorRow[]
+  readonly fights: number
+  readonly draws: number
+  readonly capDraws: number
+  readonly largestStack:
+    (StackCount & { readonly floor: number; readonly seed: number }) | null
+  readonly unattributed: number
+  readonly applications: number
+  readonly unicorn: UnicornTotals
+  readonly bosses: readonly BossFloorRow[]
+  readonly attrition: AttritionRow
+  readonly thresholds: Thresholds
+}
+
+export interface BalanceReport {
+  readonly seeds: readonly number[]
+  readonly runCap: number
+  readonly frontier: number
+  readonly specs: readonly SpecReport[]
+}
+
+function sumLocks(
+  items: readonly Readonly<Record<LockScope, number>>[],
+): Record<LockScope, number> {
+  return {
+    all: items.reduce((s, i) => s + i.all, 0),
+    attack: items.reduce((s, i) => s + i.attack, 0),
+    cast: items.reduce((s, i) => s + i.cast, 0),
+  }
+}
+
+function median(values: readonly number[]): number | null {
+  if (values.length === 0) return null
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
+}
+
+export function buildBossRows(
+  results: readonly Pick<SeedResult, 'bossVisits'>[],
+): BossFloorRow[] {
+  const floors = [
+    ...new Set(results.flatMap((r) => r.bossVisits.map((v) => v.floor))),
+  ].sort((a, b) => a - b)
+  const rows: BossFloorRow[] = []
+  for (const floor of floors) {
+    for (const scope of ['first-visit', 'all-visits'] as const) {
+      const visits = results
+        .flatMap((r) => r.bossVisits)
+        .filter((v) => v.floor === floor && (scope === 'all-visits' || v.firstVisit))
+      const probed = visits.filter((v) => v.probe !== null)
+      const policyMetrics = visits.flatMap((v) =>
+        v.policy.metrics ? [v.policy.metrics] : [],
+      )
+      const probeMetrics = probed.flatMap((v) =>
+        v.probe?.metrics ? [v.probe.metrics] : [],
+      )
+      rows.push({
+        floor,
+        bossTemplateId: visits[0]?.bossTemplateId ?? '',
+        scope,
+        visits: visits.length,
+        policyClears: visits.filter((v) => v.policy.cleared).length,
+        probeAvailable: probed.length,
+        probeNotAvailable: visits.length - probed.length,
+        policyClearsWhereProbed: probed.filter((v) => v.policy.cleared).length,
+        probeClears: probed.filter((v) => v.probe?.cleared).length,
+        policyBossTurns: policyMetrics.reduce((s, m) => s + m.bossTurns, 0),
+        policyLockedTurns: policyMetrics.reduce((s, m) => s + m.lockedTurns, 0),
+        policyLockedByScope: sumLocks(policyMetrics.map((m) => m.lockedByScope)),
+        probeBossTurns: probeMetrics.reduce((s, m) => s + m.bossTurns, 0),
+        probeLockedTurns: probeMetrics.reduce((s, m) => s + m.lockedTurns, 0),
+        probeLockedByScope: sumLocks(probeMetrics.map((m) => m.lockedByScope)),
+        probeRunsWithPacifyLand: probeMetrics.filter((m) => m.pacifyLands > 0).length,
+        probePacifyLands: probeMetrics.reduce((s, m) => s + m.pacifyLands, 0),
+      })
+    }
+  }
+  return rows
+}
+
+function buildFloorRows(
+  results: readonly SeedResult[],
+  frontier: number,
+  config: BalanceConfig,
+): FloorRow[] {
+  const rows: FloorRow[] = []
+  for (let floor = 1; floor <= frontier; floor++) {
+    const runs = results.flatMap((r) => r.runs.filter((run) => run.floor === floor))
+    const range = enemyLevelRange(floor, config)
+    const meanLevels = runs
+      .filter((run) => run.partyLevels.length > 0)
+      .map((run) => run.partyLevels.reduce((s, l) => s + l, 0) / run.partyLevels.length)
+    const pushes = runs.filter((run) => run.kind === 'push')
+    rows.push({
+      floor,
+      attemptedSeeds: results.filter((r) => r.runs.some((run) => run.floor === floor))
+        .length,
+      clearedSeeds: results.filter((r) => r.deepestFloor >= floor).length,
+      runs: runs.length,
+      clears: runs.filter((run) => run.cleared).length,
+      pushRuns: pushes.length,
+      pushClears: pushes.filter((run) => run.cleared).length,
+      failedPushes: results.reduce((s, r) => s + (r.failedPushes[floor] ?? 0), 0),
+      fightsRun: runs.reduce((s, run) => s + run.fightsRun, 0),
+      fightsWon: runs.reduce((s, run) => s + run.fightsWon, 0),
+      fightsPerFloor: isBossFloor(floor) ? 1 : fightCount(floor, config),
+      meanPartyLevel:
+        meanLevels.length === 0
+          ? null
+          : meanLevels.reduce((s, l) => s + l, 0) / meanLevels.length,
+      enemyMin: range.min,
+      enemyMax: range.max,
+      bossLevel: isBossFloor(floor) ? bossLevel(floor, config) : null,
+    })
+  }
+  return rows
+}
+
+function buildSpecReport(
+  specId: string,
+  results: readonly SeedResult[],
+  frontier: number,
+  config: BalanceConfig,
+): SpecReport {
+  const firstTryClears = results.filter((r) => r.firstTryFloor1Clear).length
+  const soulClears = results.flatMap((r) =>
+    r.clearsToFirstSoul === null ? [] : [r.clearsToFirstSoul],
+  )
+  const soulRuns = results.flatMap((r) =>
+    r.runsToFirstSoul === null ? [] : [r.runsToFirstSoul],
+  )
+  const seedsWithoutSoul = results.length - soulClears.length
+  const partySizeCounts: Record<number, number> = {}
+  for (const r of results) {
+    if (r.partySizeAfterSession === null) continue
+    partySizeCounts[r.partySizeAfterSession] =
+      (partySizeCounts[r.partySizeAfterSession] ?? 0) + 1
+  }
+  const firstWallFloors: Record<number, number> = {}
+  const failedPushesByFloor: Record<number, number> = {}
+  for (const r of results) {
+    if (r.firstWallFloor !== null) {
+      firstWallFloors[r.firstWallFloor] = (firstWallFloors[r.firstWallFloor] ?? 0) + 1
+    }
+    for (const [floor, count] of Object.entries(r.failedPushes)) {
+      failedPushesByFloor[Number(floor)] =
+        (failedPushesByFloor[Number(floor)] ?? 0) + count
+    }
+  }
+  let largestStack: SpecReport['largestStack'] = null
+  for (const r of results) {
+    if (
+      r.largestStack &&
+      (largestStack === null || r.largestStack.count > largestStack.count)
+    ) {
+      largestStack = { ...r.largestStack, seed: r.seed }
+    }
+  }
+  const sumUnicorn = (key: keyof UnicornTotals): number =>
+    results.reduce((s, r) => s + r.unicorn[key], 0)
+  const bosses = buildBossRows(results)
+
+  const attritionVisits = results
+    .flatMap((r) => r.bossVisits)
+    .filter((v) => v.bossTemplateId === 'rot-sovereign')
+  const attritionMetrics = attritionVisits.flatMap((v) =>
+    v.policy.metrics ? [v.policy.metrics] : [],
+  )
+
+  const medianSoul = seedsWithoutSoul * 2 > results.length ? null : median(soulClears)
+  const floor1Rate = results.length === 0 ? 0 : (100 * firstTryClears) / results.length
+  const reachFive = results.filter((r) => (r.deepestAfterSession ?? 0) >= 5).length
+
+  return {
+    specId,
+    seeds: results.length,
+    t1: { firstTryClears, seeds: results.length },
+    t2: { clearsToFirstSoul: soulClears, runsToFirstSoul: soulRuns, seedsWithoutSoul },
+    t3: { partySizeCounts },
+    t4: {
+      stopReasons: {
+        frontier: results.filter((r) => r.stop === 'frontier').length,
+        cap: results.filter((r) => r.stop === 'cap').length,
+      },
+      deepestFloors: results.map((r) => r.deepestFloor),
+      firstWallFloors,
+      seedsWalled: results.filter((r) => r.firstWallFloor !== null).length,
+      seedsWalledBeforeFloor10: results.filter(
+        (r) => r.firstWallFloor !== null && r.firstWallFloor < 10,
+      ).length,
+      failedPushesByFloor,
+    },
+    floors: buildFloorRows(results, frontier, config),
+    fights: results.reduce((s, r) => s + r.fights, 0),
+    draws: results.reduce((s, r) => s + r.draws, 0),
+    capDraws: results.reduce((s, r) => s + r.capDraws, 0),
+    largestStack,
+    unattributed: results.reduce((s, r) => s + r.unattributed, 0),
+    applications: results.reduce((s, r) => s + r.applications, 0),
+    unicorn: {
+      fightsWithUnicorn: sumUnicorn('fightsWithUnicorn'),
+      winsWithUnicorn: sumUnicorn('winsWithUnicorn'),
+      fightsWithoutUnicorn: sumUnicorn('fightsWithoutUnicorn'),
+      winsWithoutUnicorn: sumUnicorn('winsWithoutUnicorn'),
+      revives: sumUnicorn('revives'),
+      fightsWithRevive: sumUnicorn('fightsWithRevive'),
+      maxRevivesInFight: Math.max(0, ...results.map((r) => r.unicorn.maxRevivesInFight)),
+      fightsAtCap: sumUnicorn('fightsAtCap'),
+    },
+    bosses,
+    attrition: {
+      visits: attritionVisits.length,
+      policyClears: attritionVisits.filter((v) => v.policy.cleared).length,
+      meanDeaths:
+        attritionVisits.length === 0
+          ? null
+          : attritionVisits.reduce((s, v) => s + v.policyDeaths, 0) /
+            attritionVisits.length,
+      maxAttritionStacks: Math.max(
+        0,
+        ...attritionMetrics.map((m) => m.attributedToBossTrait),
+      ),
+      maxPeakAttack: Math.max(0, ...attritionMetrics.map((m) => m.peakAttack)),
+    },
+    thresholds: {
+      floor1ClearRatePct: floor1Rate,
+      floor1Pass: floor1Rate >= 80,
+      medianClearsToFirstSoul: medianSoul,
+      maxClearsToFirstSoul: soulClears.length === 0 ? null : Math.max(...soulClears),
+      seedsWithoutSoul,
+      firstSoulPass: medianSoul !== null && medianSoul <= 30,
+      seedsReachingFloor5InSession: reachFive,
+      floor5Pass: reachFive > 0,
+    },
+  }
+}
+
+/** Runs every (spec, seed) and builds the plain-data report. Deterministic: same options, same
+ * report. */
+export function buildReport(options: SimOptions): BalanceReport {
+  const config = options.config ?? DEFAULT_BALANCE_CONFIG
+  const frontier = contentFrontier(BIOMES)
+  const specIds = options.specIds ?? SPECIALIZATIONS.map((s) => s.id)
+  const scripts = options.scripts ?? buildSimScripts()
+  const specs = specIds.map((specId) => {
+    const results = options.seeds.map((seed) =>
+      runSeed(specId, seed, { ...options, scripts }),
+    )
+    return buildSpecReport(specId, results, frontier, config)
+  })
+  return { seeds: options.seeds, runCap: options.runCap ?? RUN_CAP, frontier, specs }
+}
+
+// ---- Formatting ----
+
+function pct(n: number, d: number): string {
+  return d === 0 ? 'n/a' : `${((100 * n) / d).toFixed(1)}%`
+}
+
+function fmt(n: number | null, digits = 1): string {
+  return n === null ? 'n/a' : n.toFixed(digits)
+}
+
+function pad(value: string | number, width: number): string {
+  return String(value).padStart(width)
+}
+
+function verdict(pass: boolean): string {
+  return pass ? 'PASS' : 'FAIL'
+}
+
+function formatSpec(spec: SpecReport, frontier: number): string[] {
+  const out: string[] = []
+  const t = spec.thresholds
+  out.push('', `=== ${spec.specId} (${spec.seeds} seeds) ===`)
+  out.push(
+    `T1 floor-1 first-try clear: ${spec.t1.firstTryClears}/${spec.t1.seeds} = ${pct(spec.t1.firstTryClears, spec.t1.seeds)} (target >= 95%)`,
+  )
+  out.push(
+    `T2 clears until first soul: median ${fmt(median(spec.t2.clearsToFirstSoul))}, max ${fmt(t.maxClearsToFirstSoul, 0)}, runs median ${fmt(median(spec.t2.runsToFirstSoul))}, seeds without a soul ${spec.t2.seedsWithoutSoul} (target ~10)`,
+  )
+  const sizes = Object.entries(spec.t3.partySizeCounts)
+    .map(([size, count]) => `${size}:${count}`)
+    .join(' ')
+  out.push(
+    `T3 party size after ${FIRST_SESSION_RUNS} floor runs (size:seeds): ${sizes || 'n/a'} (target 6)`,
+  )
+  const walls = Object.entries(spec.t4.firstWallFloors)
+    .map(([floor, count]) => `f${floor}:${count}`)
+    .join(' ')
+  out.push(
+    `T4 stop: frontier ${spec.t4.stopReasons.frontier}, cap ${spec.t4.stopReasons.cap}; walled seeds ${spec.t4.seedsWalled} (before floor 10: ${spec.t4.seedsWalledBeforeFloor10}); first-wall floors ${walls || 'none'}; deepest floor median ${fmt(median(spec.t4.deepestFloors))}`,
+  )
+  out.push(
+    `T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):`,
+    '  floor  reached cleared  runs  clear%  pushFail   fights    p    p^n   partyLv  enemyLv   boss',
+  )
+  for (const row of spec.floors) {
+    const p = row.fightsRun === 0 ? null : row.fightsWon / row.fightsRun
+    const predicted = p === null ? null : p ** row.fightsPerFloor
+    out.push(
+      `  ${pad(row.floor, 5)}  ${pad(row.attemptedSeeds, 7)} ${pad(row.clearedSeeds, 7)} ${pad(row.runs, 5)} ${pad(pct(row.clears, row.runs), 7)} ${pad(row.failedPushes, 8)} ${pad(row.fightsRun, 8)} ${pad(fmt(p, 3), 5)} ${pad(fmt(predicted, 3), 6)} ${pad(fmt(row.meanPartyLevel), 8)}  ${pad(`${row.enemyMin}-${row.enemyMax}`, 7)} ${pad(row.bossLevel ?? '', 5)}`,
+    )
+  }
+  out.push(
+    `Floors 20-${frontier} (watch point), failed pushes by floor: ${
+      Object.entries(spec.t4.failedPushesByFloor)
+        .filter(([floor]) => Number(floor) >= 20)
+        .map(([floor, count]) => `f${floor}:${count}`)
+        .join(' ') || 'none'
+    }`,
+  )
+  const u = spec.unicorn
+  out.push(
+    `Unicorn revives: in party for ${u.fightsWithUnicorn} fights (win ${pct(u.winsWithUnicorn, u.fightsWithUnicorn)}; not in party ${u.fightsWithoutUnicorn} fights, win ${pct(u.winsWithoutUnicorn, u.fightsWithoutUnicorn)}); ${u.revives} revives, ${u.fightsWithRevive} fights with one, max ${u.maxRevivesInFight} in a fight, ${u.fightsAtCap} fights with a creature at the cap (${MAX_REVIVES_PER_CREATURE})`,
+  )
+  out.push(
+    `Draws: ${spec.draws}/${spec.fights} fights = ${pct(spec.draws, spec.fights)}; round-cap draws ${spec.capDraws} = ${pct(spec.capDraws, spec.fights)}`,
+  )
+  const ls = spec.largestStack
+  out.push(
+    `Largest stack of one trait's stat-modifier on a creature: ${ls ? `${ls.count}x ${ls.attribution} (floor ${ls.floor}, seed ${ls.seed}, ${ls.targetId})` : 'none'}; unattributed ${spec.unattributed}/${spec.applications} applications`,
+  )
+  out.push('Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):')
+  for (const row of spec.bosses) {
+    out.push(
+      `  floor ${row.floor} ${row.bossTemplateId} [${row.scope}] visits ${row.visits}: policy clear ${pct(row.policyClears, row.visits)}; probe n/a ${row.probeNotAvailable}; where probed (${row.probeAvailable}): policy ${pct(row.policyClearsWhereProbed, row.probeAvailable)} vs probe ${pct(row.probeClears, row.probeAvailable)}; boss locked-turn share policy ${pct(row.policyLockedTurns, row.policyBossTurns)} (all ${row.policyLockedByScope.all} attack ${row.policyLockedByScope.attack} cast ${row.policyLockedByScope.cast}) vs probe ${pct(row.probeLockedTurns, row.probeBossTurns)} (all ${row.probeLockedByScope.all} attack ${row.probeLockedByScope.attack} cast ${row.probeLockedByScope.cast}); Pacify lands in ${row.probeRunsWithPacifyLand}/${row.probeAvailable} probe runs (${row.probePacifyLands} landings)`,
+    )
+  }
+  const a = spec.attrition
+  out.push(
+    `Rot Sovereign's Attrition (policy runs): ${a.visits} visits, ${a.policyClears} cleared, mean deaths ${fmt(a.meanDeaths)}, max Attrition stacks ${a.maxAttritionStacks}, peak boss Attack ${a.maxPeakAttack}`,
+  )
+  out.push(
+    `ASSUMPTION 22: floor-1 clear >= 80%: ${fmt(t.floor1ClearRatePct)}% ${verdict(t.floor1Pass)}; first soul median <= 30 clears: ${fmt(t.medianClearsToFirstSoul)} ${verdict(t.firstSoulPass)}; a seed reaches floor 5 in the first session: ${t.seedsReachingFloor5InSession} seeds ${verdict(t.floor5Pass)}`,
+  )
+  return out
+}
+
+export function formatReport(report: BalanceReport): string {
+  const lines = [
+    `Balance report: ${report.seeds.length} seeds (${report.seeds[0]}..${report.seeds[report.seeds.length - 1]}), run cap ${report.runCap}, content frontier floor ${report.frontier}`,
+  ]
+  for (const spec of report.specs) lines.push(...formatSpec(spec, report.frontier))
+  lines.push('', 'ASSUMPTION 22 summary (reported, not asserted):')
+  for (const spec of report.specs) {
+    const t = spec.thresholds
+    lines.push(
+      `  ${spec.specId}: floor-1 ${verdict(t.floor1Pass)}, first soul ${verdict(t.firstSoulPass)}, floor 5 ${verdict(t.floor5Pass)}`,
+    )
+  }
+  return lines.join('\n')
+}
