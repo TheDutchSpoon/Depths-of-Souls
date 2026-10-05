@@ -2311,3 +2311,117 @@ log has more events -> win check; the Weaver's `TriggerFired` -> Weaver; a dot `
   `golden-spider-broodwarden`, `golden-defend-count`, `golden-round-end-interaction` (+ its test title),
   `corpus-digest.fixture.ts` (274 rows). Tests: `status-timing.test.ts` (new) and the edits above.
 - `golden-castable-draw.fixture.ts` and `golden-castable-draw.test.ts` were deleted (retired, ASSUMPTION 53).
+
+## 4.1-F3 -- Silence & Pacify (G2) and the fight-start win check
+
+Golden policy: **every golden byte-identical; the digest deliberate and narrow** (existing entries change
+only through the cast-role loadout roll; four appended entries). Branch `phase-4.1-slice-f3`, on top of the
+plan-check doc-sync commit (`e595111`; ASSUMPTIONS 56-65 are the plan-review rulings).
+
+### What was built
+
+- **Statuses** `SILENCED` (`action-lock { scope: 'cast' }`) and `PACIFIED` (`action-lock { scope: 'attack' }`):
+  cap 1, `defaultDuration: 3`, polarity debuff, appended to `STOCK_STATUSES`. They pass `validateStatusDef`,
+  which already runs in `createCombat` (F2).
+- **Spells** `SILENCE` (Violence) and `PACIFY` (Wit) in `data/spells/overgrowth.ts`: single enemy,
+  `effects: [apply-status(cast-target, silenced | pacified)]` (duration omitted, inherited 3), biome 1, no
+  damage, no tuned numbers. **Appended last to `ALL_SPELLS`** (Silence, then Pacify); a test pins the original
+  25 ids in order.
+- **The fight-start win check (ASSUMPTION 61), three sites** in `resolveTurn`'s `round === 0` block: the
+  `on-fight-start` hook pass and its drain take `stopWhen: fightOver`, and win/loss is checked right after
+  both, before `RoundStarted`. A fight-start wipe ends as `FightStarted ... FightEnded`, with no round and no
+  turn. Run against the whole suite before the build (and again after), it changes no existing test, golden
+  or digest entry.
+- **Dedup key (ASSUMPTION 60).** A spell is status-only when every effect is `apply-status`; it keys by
+  `affinity|shape|status:<sorted status ids>` (`data/spells/index.test.ts`). The test keeps no copy of the
+  old key: a throwaway pair (two Violence single-target status-only spells applying `silenced` and
+  `pacified`) asserts distinct keys, and the revert mutation is what shows they collided before.
+- **Golden runner** (`test-utils/golden-runner.ts`): optional `playerEffects` / `enemyEffects` on
+  `GoldenFixture`, passed straight to `createCombat`'s per-side `effects`. Absent for every pre-F3 fixture.
+- **Content doc** (`content/overgrowth.md`, the one living doc this slice owns): Silenced and Pacified in the
+  Statuses section with their plain-language rules; Silence and Pacify moved from the pending table into the
+  Overgrowth spell table (heading count updated).
+
+### Corpus
+
+- **Exemptions dropped:** `PERK_EXEMPTIONS` is empty (`clear-mind`, `aggressive` removed); the `stun` status
+  exemption stays.
+- **Appended entries (new rows, after the previous last entry):** 522 `sorcerer-silenced` (Clear Mind, seed
+  2107: an all-Seer party against a level-80 Brute casting Silence every turn) and 523 `brute-pacified`
+  (Aggressive, seed 2108: an all-Brute party against a level-80 Pollinator Beneficiary casting Pacify every
+  turn), both appended to `PERK_FIGHT_VARIANTS`; then 524 and 525, the Silence and Pacify spell fights (seeds
+  2015-2016, an `always-cast` caster against `WALL_ENEMY`). Part D rides on no chance: the perk variants make
+  the perk matter at **100 of 100 seeds** each (checked over seeds 0-99), and the spell fights land the status
+  at any seed (no random draw). The Pacifier is a Wit creature with no innate spell (the Beneficiary).
+- **Digest regenerated once** (`npm run corpus:update`): 526 entries; the diff is 48 changed rows + 4 appended.
+- **Attribution, mechanical.** Before any change, every fight's materialized parties (each creature's equipped
+  spells, both sides) and event log were dumped on `main` (`e595111`); after the build, the same on the branch.
+  Of the 522 existing fights: **451 have identical parties and every one has an identical log (0 exceptions)**;
+  **71 have different parties**, differing only in a rolled gem (creature ids identical in all 71), and **48** of
+  those changed their log (the other 23 rolled a different gem that never changed an event). The brief's figure
+  was 48 changed fights with two stand-in spells: the real spells give **48**. Of the 48, 18 rolled Pacify; 30
+  changed only because the pick shifted (`floor(r * N)` over a pool one larger). Silence is rolled by none of
+  the 522 (no Violence cast-role creature in them).
+- **Result changes: 7** (the brief's stand-in measurement said 2; real spells differ). All are fights whose
+  rolled gem changed: 19, 109, 199 and 289 (player-side Resonant Chorus, Luminous Tide -> Pacify), 280 (two
+  Chorus, Luminous Tide -> Pacify) loss -> win; 220 (enemy Chorus, Pollen Cloud -> Arcane Bolt) draw -> win;
+  498 (Luminous Tide -> Pacify and Pollen Cloud -> Arcane Bolt) loss -> draw.
+
+### Golden impact (expected exports imported from `main` and from the branch, then diffed)
+
+A throwaway harness in a pristine worktree of `e595111` imported every `*.fixture.ts` from both trees and
+compared every `expected*`, `SEED` and `TURN_STEPS` export with `isDeepStrictEqual`: **97 fixtures, 97
+byte-identical, 0 changed**, 5 added. The B2.2 and scoped-suppression goldens (trait-borne locks) are
+untouched; the new ones are real-status versions.
+
+**New goldens (hand-derived; the derivation and every number are in each fixture header):**
+`golden-f3-silence-three-turns` and `golden-f3-pacify-three-turns` (each applier casts once, in round 1, then a
+non-casting rule; S1 hits the lowest-HP enemy, which acted before it, S2 the highest, which acts after; the
+target acting after its applier is locked rounds 1-3, the one before it rounds 2-4, each expiring in its own
+turn-end cleanup; run six rounds so both expiries and clean turns after them are in the log; a Silenced
+always-cast creature attacks, a Pacified always-attack creature waits, with no `TurnSkipped`),
+`golden-f3-silenced-refuses-granted-cast` (the real-status mirror of B2.2),
+`golden-f3-immunity` (the **real** Clear Mind and Aggressive perks as the player side's effects, via the
+runner: the status lands, a `has-status` rule still fires, the cast / attack goes through, a granted cast goes
+through under Silence) and `golden-f3-fight-start-wipe`.
+
+### Tests and mutations
+
+- Tests **890 -> 905 (+15)**, reconciled per file against `main`: `status-timing.test.ts` +4 (the three
+  fight-start sites and a no-wipe control), `spells/index.test.ts` +4 (the throwaway pair, the real-reskin
+  control, the append-only pin, the spell shape), `statuses.test.ts` +1, `corpus-coverage.test.ts` +1 (the
+  spell fights pinned by index), +5 new golden tests. No other file's count changed. All green.
+- **Mutations** (full suite each, files restored; the digest excluded from the naming): `SILENCED` locking
+  attack (4 failing; `statuses.test.ts`, the Silence golden, the perk coverage); `PACIFIED` locking cast (3);
+  each duration 2 (4 and 3; the statuses test and the immunity golden); Silence applying `pacified` (6) and
+  Pacify applying `silenced` (5; the coverage tests, the goldens); `ALL_SPELLS` with Pacify before Silence (1)
+  and with Silence inserted early (1; the append-only pin); the dedup key reverted (1; the throwaway pair); the
+  fight-start pass without `stopWhen` (1; "the hook pass stops at the wiping firing"), its drain without it
+  (1; "the drain stops at the wiping grant"), its check removed (4); the runner dropping `playerEffects` (1;
+  `golden-f3-immunity`); the iterator ignoring immunity (13); the spell fights not appended (1; the index
+  pin); each perk fight without its caster (1 each; "every perk matters"). **All killed.** One finding: the
+  spell fights alone are not needed for the existing coverage test (the perk fights also cast both spells);
+  the index-pinned test is what fails without them.
+- Gates: test (905) / lint / format:check / build / `tsc -b`, all green. Toolchain: Node 24.19.0, Vitest
+  5.0.3, TypeScript 6.0.3.
+
+### Spec notes (for the docs, before 4.1-G)
+
+- A Wit or Violence cast-role enemy can roll Silence or Pacify as its only gem and cast it every turn under
+  `always-cast` (ASSUMPTION 64): in the corpus 28 existing fights now roll Pacify. G's gem sets and role
+  scripts address it for every no-damage spell.
+- The brief's "2 results" for the loadout roll was measured with stand-ins; the real spells change **7**
+  results (48 fights is unchanged). The G2 text could carry the real numbers.
+- Part A also re-sides generated creatures to the player side, so a rolled Pacify can land on the player's
+  own side (cases 19, 109, 199, 280, 289).
+- Immunity is read when the lock is read (the iterator), so a creature immune to Silenced still shows
+  `has-status silenced`; the golden pins both.
+
+### Files changed
+
+- Engine: `combat.ts` (fight-start check). Data: `statuses.ts`, `spells/overgrowth.ts`, `spells/index.ts`.
+- Tests and fixtures: `test-utils/golden-runner.ts`, `__corpus__/corpus.ts`, `__corpus__/corpus-digest.fixture.ts`
+  (52 rows), `corpus-coverage.test.ts`, `status-timing.test.ts`, `data/spells/index.test.ts`,
+  `data/statuses.test.ts`, 5 new `golden-f3-*` pairs. Docs: `content/overgrowth.md`, this record.
+- Nothing needs deleting except the scratch worktrees of `e595111` and the earlier `c56ebbc` under the
+  session scratchpad: remove each `node_modules` junction first, then `git worktree remove --force`.
