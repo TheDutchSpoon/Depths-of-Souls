@@ -154,6 +154,7 @@ describe('getEffectiveStat — stat-modifier folding', () => {
       instanceId: createEffectInstanceId('fixture-status'),
       sourceTraitId: 'fixture',
       remainingDuration: 3,
+      appliedAt: 0,
       stacks: 1,
     }
     const withStatus = makeCreature({

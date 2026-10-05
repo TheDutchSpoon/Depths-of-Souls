@@ -84,6 +84,9 @@ export interface DrainGrantsOptions {
    * roll already happened at trigger time, so the RNG stream doesn't depend on the skip. Supplied
    * by `resolveTurn` from its `'all'`-lock skip read (4.1-F1); transient, never in `CombatState`. */
   readonly skippedTurnOf?: CreatureId
+  /** "The fight is over" (Phase 4.1-F2, ASSUMPTION 19): checked before each grant; once true the
+   * rest of the queue is dropped (a wipe ends the turn at once). Supplied by `resolveTurn`. */
+  readonly stopWhen?: (state: CombatState) => boolean
 }
 
 /**
@@ -112,6 +115,7 @@ export function drainGrantedActions(
   for (let i = 0; i < ctx.grants.length; i++) {
     const grant = ctx.grants[i]
     if (!grant) continue
+    if (options.stopWhen?.(working)) break // a wipe ends the turn (F2)
     if (grant.actorId === options.skippedTurnOf) continue // B2 rule 1
     const outerDepth = ctx.cascade.depth
     ctx.cascade.depth = grant.depth

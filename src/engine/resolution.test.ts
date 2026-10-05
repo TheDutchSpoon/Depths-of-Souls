@@ -414,7 +414,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
     effects: [
       {
         category: 'triggered',
-        hook: 'on-round-end',
+        hook: 'on-turn-end',
         response: {
           kind: 'deal-damage',
           target: { kind: 'self' },
@@ -530,7 +530,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
     )
     const before = events.length
     fireHook(
-      'on-round-end',
+      'on-turn-end',
       [createCreatureId('p')],
       undefined,
       state,
@@ -573,7 +573,7 @@ describe('heal response (Regen)', () => {
     effects: [
       {
         category: 'triggered',
-        hook: 'on-round-end',
+        hook: 'on-turn-end',
         response: {
           kind: 'heal',
           target: { kind: 'self' },
@@ -611,7 +611,7 @@ describe('heal response (Regen)', () => {
       createResolutionContext(events, newCascade()),
     )
     fireHook(
-      'on-round-end',
+      'on-turn-end',
       [createCreatureId('p')],
       undefined,
       state,
@@ -1704,7 +1704,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
     effects: [
       {
         category: 'triggered',
-        hook: 'on-round-end',
+        hook: 'on-turn-end',
         response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
       },
     ],

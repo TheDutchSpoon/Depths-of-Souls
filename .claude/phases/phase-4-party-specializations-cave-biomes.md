@@ -2240,7 +2240,7 @@ suite (586 tests at the time) byte-identical before its own new golden was added
    pass). Trait-sourced (non-status) triggers have no `statusId` and are never gated. The
    pre-existing decrement/expiry gate (`decrementAndExpireSnapshot`'s own snapshot-only iteration)
    was already correct and untouched — this fix only closes the analogous gap on the TICK side.
-   Golden: `golden-round-end-mid-sweep-poison`. `golden-round-end-interaction` and `golden-dot`
+   Golden: `golden-turn-end-dot-kill-burst`. `golden-round-end-interaction` and `golden-dot`
    (the two prior goldens flagged as most likely affected) re-verified byte-identical.
 3. **`triggering-source` never resolves to the firing creature itself.** A DoT tick's
    `deal-damage` response targets `{kind:'self'}` (the bearer damages itself), so
@@ -2327,10 +2327,10 @@ pass):
   floored to 1 either way and couldn't have caught a rate regression.
 - `golden-sporecloud-reaper-no-spore` (new, fix 4) — Reaper lands exactly one `DamageDealt` (its
   own attack) with zero Spored enemies on the board.
-- `golden-round-end-mid-sweep-poison` (new, fix 2) — the dedicated Myconet-Rotcore repro scenario
+- `golden-turn-end-dot-kill-burst` (new, fix 2) — the dedicated Myconet-Rotcore repro scenario
   as a full 3-round golden: Rotcore's death-Poison does not tick in its own birth sweep, then
   ticks normally starting round 2. Covers the "born mid-sweep" half of fix 2's own gate.
-- `golden-round-end-mid-sweep-poison-refresh` (new, cleanup-pass follow-up to fix 2) — the OTHER
+- `golden-turn-end-dot-kill-burst-refresh` (new, cleanup-pass follow-up to fix 2) — the OTHER
   half of the gate's AND condition: E1 already carries 1 Poison stack before the fight; Rotcore's
   death-Poison REFRESHES it to 2 stacks mid-sweep instead of newly applying it, and it still
   doesn't tick that sweep, then ticks for `2 x 3% x 100 = 6` starting round 2.

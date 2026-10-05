@@ -24,6 +24,7 @@ function makeState(playerParty: Creature[], enemyParty: Creature[]): CombatState
     scripts: new Map(),
     statuses: new Map(),
     effectInstanceCounter: 0,
+    turnClock: 0,
   }
 }
 

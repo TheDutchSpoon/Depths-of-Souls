@@ -48,6 +48,7 @@ import type { CascadeState, ResolutionContext } from './resolution-types'
 import type { CombatState, Creature, Stat } from './types'
 import type {
   ActiveEffect,
+  EffectInstanceId,
   EffectResponse,
   Hook,
   ResponseTarget,
@@ -335,15 +336,21 @@ export interface FireHookOptions {
     readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
     readonly instanceIndex: number
   }
-  /** PR #64 review fix 2: supplied ONLY by combat.ts's resolveRoundEndSweep, alongside its own
-   * 'on-round-end' call -- every other call site omits it, so this gate is inert (always fires)
-   * everywhere else. Consulted for every STATUS-sourced candidate (effect.statusId !== undefined
-   * -- trait-sourced triggers have no statusId and are never gated): a status's
-   * on-round-end trigger fires only if `(creatureId, statusId)` existed at the SWEEP'S OWN start
-   * (the snapshot) and has not been (re)applied EARLIER in this same sweep -- a status born or
-   * refreshed mid-sweep must not tick until next round's sweep. Skips silently, like a false
-   * `condition` -- no TriggerFired, no depth/truncation accounting. */
-  readonly statusTriggerGate?: (creatureId: CreatureId, statusId: string) => boolean
+  /** Phase 4.1-F2 (ASSUMPTION 52): the born-this-turn tick gate, supplied ONLY by `resolveTurn`'s
+   * `on-turn-end` call. Consulted for every STATUS-sourced candidate (trait-sourced triggers are
+   * never gated): true means the bearer's status instance (`statusInstanceId`) was applied or
+   * refreshed since this turn's action slot, so its trigger does not fire this turn. Skips
+   * silently, like a false `condition` -- no TriggerFired, no depth/truncation accounting.
+   * `fireHook` itself has no hook-specific rule. */
+  readonly skipStatusTrigger?: (
+    bearer: Creature,
+    statusInstanceId: EffectInstanceId,
+  ) => boolean
+  /** Phase 4.1-F2 (ASSUMPTION 19): "the fight is over" predicate, supplied by `resolveTurn` for
+   * its in-fight hook passes. Checked BETWEEN top-level candidates only (never inside a
+   * cascade -- nested `fireHook` calls get no options): once true the pass stops, so a later
+   * firing (e.g. a lethal tick) cannot follow the firing that wiped a side. */
+  readonly stopWhen?: (state: CombatState) => boolean
 }
 
 /**
@@ -354,10 +361,9 @@ export interface FireHookOptions {
  * and NOT executing the over-cap trigger).
  *
  * The alive-check is re-evaluated FRESH before every individual effect (not once per creature):
- * if a creature's own first on-round-end effect kills it (e.g. a lethal DoT tick), its OWN
- * remaining not-yet-reached effects in this same pass (that would otherwise affect someone else)
- * are skipped -- a creature killed mid-sweep fires only on-death, per GAME_DESIGN's round-end
- * interaction rule.
+ * if a creature's own earlier effect in this pass kills it (e.g. a lethal DoT tick in its
+ * turn-end hooks), its remaining not-yet-reached effects in this pass are skipped. A creature
+ * killed mid-pass fires only `on-death`.
  */
 export function fireHook(
   hook: Hook,
@@ -367,7 +373,7 @@ export function fireHook(
   ctx: ResolutionContext,
   options?: FireHookOptions,
 ): { state: CombatState } {
-  const { observed, statusTriggerGate } = options ?? {}
+  const { observed, skipStatusTrigger, stopWhen } = options ?? {}
   const { events, cascade } = ctx
   let working = state
   const isDeathHook = hook === 'on-death'
@@ -389,6 +395,7 @@ export function fireHook(
     const candidates = effectsForHook(initial, hook)
 
     for (const effect of candidates) {
+      if (stopWhen?.(working)) return { state: working } // a wipe ends the pass (F2)
       const self = findCreature(working, selfId)
       if (!self) continue
       // Dead creatures fire only on-death; everything else requires a living self.
@@ -405,11 +412,10 @@ export function fireHook(
 
       if (cascade.activeInstances.has(effect.instanceId)) continue // self-re-entry guard
 
-      // PR #64 review fix 2: see statusTriggerGate's own doc comment above.
+      // F2: see skipStatusTrigger's own doc comment above.
       if (
         effect.statusId !== undefined &&
-        statusTriggerGate &&
-        !statusTriggerGate(self.id, effect.statusId)
+        skipStatusTrigger?.(self, effect.sourceInstanceId)
       ) {
         continue
       }
@@ -979,7 +985,7 @@ export function executeResponse(
       // vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies" get targeting for free.
       // A no-op, no-event when the target doesn't carry the statusId (mirrors revive's
       // "target must be dead" / consume-stacks' "0 stacks" skip style) -- reuses the exact
-      // StatusExpired clear path so death-reset and the round-end sweep stay consistent.
+      // StatusExpired clear path so death-reset and the turn-end cleanup stay consistent.
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
@@ -1106,7 +1112,12 @@ export function applyStatus(
             // could type-widen to `TriggeredEffect`, whose `stacks` is a boolean, not this
             // status's numeric stack count). `existing` carries the exact same runtime value at
             // this index (that's how it was found) with a type that's actually correct.
-            { ...existing, remainingDuration: duration, stacks: newStacks }
+            {
+              ...existing,
+              remainingDuration: duration,
+              stacks: newStacks,
+              appliedAt: state.turnClock, // F2: a refresh is born this turn too
+            }
           : e,
       )
     : [
@@ -1116,6 +1127,7 @@ export function applyStatus(
           createEffectInstanceId(`eff-${counter++}`),
           duration,
           newStacks,
+          state.turnClock,
         ),
       ]
 

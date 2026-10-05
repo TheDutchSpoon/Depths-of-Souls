@@ -84,8 +84,9 @@ export const GLOWFLY_RADIANT_TRAIT: Trait = {
 
 /** Blindclaws' Setter (enabler): every turn, grants the team's hardest hitter the initiative --
  * `grant-act-first` (a `turn-order` effect, position 'first' -- see data/statuses.ts), so that ally
- * acts first starting NEXT round (re-application refreshes, same "own-turn-start, affects future
- * rounds" pattern as Overgrowth's Weaver Webbing an enemy). */
+ * acts first starting NEXT round (re-application refreshes; it affects future rounds' turn order
+ * only, like Overgrowth's Weaver Webbing an enemy -- though the Weaver now places its Web in its
+ * turn-end hooks, 4.1-F2, so its own cleanup never rolls it; this grant stays at turn start). */
 export const BLINDCLAWS_SETTER_TRAIT: Trait = {
   id: 'blindclaws-setter-mark-the-prey',
   name: 'Mark the Prey',

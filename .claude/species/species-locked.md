@@ -33,7 +33,7 @@ Makes death meaningful and revive a second chance, not a buff-preserving undo. A
 
 | Species | Affinity lean | Closed mechanic | Roles (illustrative) | Uses |
 |---|---|---|---|---|
-| **Spiders** | Wit | Trap → exploit | Weaver (`on-turn-start → apply Web to a random enemy`), Ambusher (`+% dmg to Webbed`), Broodwarden (bonus hit scaling with Webbed-enemy count) | **Web** status (break-free: Slice E2) · Ambusher exploit needs target-conditional damage (Slice E2) |
+| **Spiders** | Wit | Trap → exploit | Weaver (`on-turn-end → apply Web to a random enemy`; `on-turn-start` until 4.1-F2), Ambusher (`+% dmg to Webbed`), Broodwarden (bonus hit scaling with Webbed-enemy count) | **Web** status (break-free: Slice E2) · Ambusher exploit needs target-conditional damage (Slice E2) |
 | **Swarmhive** | Violence | Strength in numbers | Drone (cheap body), Striker (scales per hive-mate **in the team**), Queen (anchor, scales hardest) | **Count-scaling** · needs `speciesId` wired + stat-modifier `magnitudeSource` (Slice E2) |
 | **Treants** | Vitality / Endurance | Health engine (grows over time) | Sapling (`on-round-end → permanent +max-HP / Regen`), Elder (huge sustained wall — heals the line / scales off own max HP) | — |
 | **Pollinators** | Wit / Vitality | Team-buff engine (non-health buffs) | Duster (spreads permanent non-health stat-buffs — Speed/Attack/etc.), Beneficiary (capitalizes on a buffed team) | Count-scaling (reuse) |

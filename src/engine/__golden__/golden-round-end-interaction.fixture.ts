@@ -1,19 +1,21 @@
-// Golden: the round-end sweep's interaction rules (GAME_DESIGN's status lifecycle), all in one
-// fixture. P1 carries CATASTROPHIC_COLLAPSE: three effects on ONE trait --
+// Golden: the round-end TRAIT pass's interaction rules (Phase 4.1-F2: round end has no status
+// work, only `on-round-end` trait triggers, the round-level grant drain and the win check), all in
+// one fixture. P1 carries CATASTROPHIC_COLLAPSE: three effects on ONE trait --
 //   (1) on-round-end: a lethal self-hit (999 flat, no TriggerFired -- matches DoT convention).
 //   (2) on-round-end: would hit the lowest-HP ally -- MUST be skipped, since (1) already killed
 //       P1 earlier in this SAME per-creature effect pass (fireHook's fresh per-effect alive-check).
 //   (3) on-death: applies Weaken to the lowest-HP ally -- fires regardless (on-death always fires
-//       for the creature that just died), proving on-death still runs mid-sweep.
-// The Weaken it applies is BORN mid-sweep, so it must NOT be touched by THIS sweep's decrement
-// (it keeps full duration, starts counting at the NEXT round-end) -- and win/loss must be checked
-// once, after the WHOLE sweep (P1's death alone doesn't wipe the player side, since P2 survives).
+//       for the creature that just died), proving on-death still runs mid-pass.
+// The Weaken it applies (2 turns) lands BETWEEN turns, so it is not born in any turn: it covers its
+// bearer P2's next two turns (rounds 2 and 3, the 12-damage hits) -- and win/loss is
+// checked after the whole round-end pass (P1's death alone doesn't wipe the player side, since
+// P2 survives).
 //
 // Hand-derived (independent `node -e` calculator). All same affinity (neutral, x1).
 //   P2->E1, no weaken (round 1): off 20, def 5. core 15, chip 0.2 -> raw 15.2 -> final 15.
 //   P2->E1, with weaken (-20% dealt; rounds 2 & 3): raw = 15.2 * 0.8 = 12.16 -> final 12.
 //   E1 health 30: R1 30->15. R2 15->3. R3 3-12 clamped to 0 -> dies. Win, checked post-action
-//   (a normal in-turn kill, not a sweep-triggered one).
+//   (a normal in-turn kill, not a round-end-triggered one).
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -75,7 +77,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnStarted', creatureId: P1 },
   { type: 'Waited', creatureId: P1 },
   { type: 'TurnEnded', creatureId: P1 },
-  // -- round-end sweep (tie-break order: P1, P2, E1) --
+  // -- round-end trait pass (tie-break order: P1, P2, E1) --
   // P1's effect (1): lethal self-hit, no TriggerFired (matches DoT convention).
   {
     type: 'DamageDealt',
@@ -112,22 +114,21 @@ export const expectedEvents: CombatEvent[] = [
   // P1 is dead -> excluded from the round-2 queue entirely.
   { type: 'TurnStarted', creatureId: P2 },
   { type: 'AttackDeclared', attackerId: P2, targetId: E1 },
-  // Weaken (-20% dealt) is already active -- applied last sweep, in effect immediately even
-  // though its OWN duration hasn't decremented yet (it was born mid-sweep, untouched by it).
+  // Weaken (-20% dealt) is already active -- applied at the round-end pass, in effect immediately
+  // (its duration counts down in P2's own turn cleanup, below).
   p2Hit(12, 12.16, 3),
   { type: 'TurnEnded', creatureId: P2 },
   { type: 'TurnStarted', creatureId: E1 },
   { type: 'Waited', creatureId: E1 },
   { type: 'TurnEnded', creatureId: E1 },
-  // -- round-end sweep: P2's weaken (born mid-sweep last time) is NOW in the snapshot ->
-  // decremented 2 -> 1, still active, not yet expired. --
+  // -- P2's cleanup counted its Weaken down 2 -> 1 (no event): still active, not yet expired. --
   { type: 'RoundStarted', round: 3 },
   { type: 'TurnStarted', creatureId: P2 },
   { type: 'AttackDeclared', attackerId: P2, targetId: E1 },
   p2Hit(12, 12.16, 0),
   { type: 'CreatureDied', creatureId: E1 },
   { type: 'TurnEnded', creatureId: P2 },
-  // Win/loss checked after this ordinary action -- not sweep-triggered this time.
+  // Win/loss checked after this ordinary action -- not round-end-triggered this time.
   { type: 'FightEnded', result: 'win' },
 ]
 

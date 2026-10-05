@@ -1,16 +1,17 @@
 // Golden: Web's break-free roll (Phase 4 Slice E2) -- a per-GLOBAL-turn chance rolled at EVERY
-// creature's turn-start against every current Web-bearer (TurnOrderDef.breakChancePercent),
+// creature's turn-end cleanup (4.1-F2; was turn start) against every current Web-bearer (TurnOrderDef.breakChancePercent),
 // NOT the bearer's own hook. Fixture-shaped, not real Web content (that's H1's job).
 //
 // Hand-derived (independent `node -e` mulberry32 trace against rng.ts's exact algorithm). BEARER
 // applies Web to itself via an on-fight-start trait (a fixture stand-in for "starts the fight
 // webbed"); Web's act-last pole pins BEARER's turn-queue position to LAST regardless of raw
 // Speed, so the queue is [OTHER, BEARER] every round. No other mechanism in this fixture
-// consumes RNG (both scripted always-wait, no provoke/confusion), so the break-free roll at
-// OTHER's very first TurnStarted is provably the very first draw of the fight.
+// consumes RNG (both scripted always-wait, no provoke/confusion), so the break-free roll in
+// OTHER's very first turn-end cleanup is provably the very first draw of the fight. BEARER's Web
+// was applied at fight start (not born in any turn), so that cleanup rolls it.
 //
 // SEED 7's first draw is 0.0117... (< 50/100 -> the roll SUCCEEDS) -- BEARER's Web breaks free
-// at OTHER's OWN turn-start, before OTHER even acts. By the time BEARER's own turn starts, Web
+// in OTHER's OWN turn-end cleanup, after OTHER's (waiting) action. By the time BEARER's own turn starts, Web
 // is already gone, so no further roll happens for it that turn (0 further RNG draws this
 // fixture -- only ever the one roll, confirmed by the RNG-counter unit tests in combat.test.ts).
 
@@ -92,8 +93,9 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: OTHER },
-  { type: 'StatusExpired', creatureId: BEARER, statusId: WEB_STATUS_ID },
   { type: 'Waited', creatureId: OTHER },
+  // 4.1-F2: the roll is in turn-end cleanup, after OTHER's action.
+  { type: 'StatusExpired', creatureId: BEARER, statusId: WEB_STATUS_ID },
   { type: 'TurnEnded', creatureId: OTHER },
   { type: 'TurnStarted', creatureId: BEARER },
   { type: 'Waited', creatureId: BEARER },

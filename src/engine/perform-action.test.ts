@@ -198,7 +198,7 @@ describe('where each scope drains its grants (ASSUMPTION 3)', () => {
     let state = setup([grantTrigger('on-round-end', WAIT)])
     state = resolveTurn(state).state // round 1: X
     state = resolveTurn(state).state // round 1: foe
-    const { events } = resolveTurn(state) // the round-end sweep, then round 2
+    const { events } = resolveTurn(state) // round end, then round 2
     expect(types(events).slice(0, 4)).toEqual([
       'TriggerFired',
       'ActionGranted',

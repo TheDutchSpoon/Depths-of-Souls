@@ -8,7 +8,7 @@
 // on-fight-start -> apply-status(all-enemies, sleep)) -- same reasoning as Broodwarden's own
 // golden (createCombat recomputes activeEffects from innateTraitIds at fight-start, so a raw
 // activeEffects preset would be silently wiped). Unlike Web, Sleep (a status container) is never
-// scanned by rollWebBreakFree, so this fixture draws ZERO RNG anywhere -- the seed is inert.
+// scanned by rollWebBreakFree (the turn-end cleanup roll), so this fixture draws ZERO RNG anywhere -- the seed is inert.
 //
 // Hand-derived (independent `node -e` calculator, identical arithmetic to Broodwarden's own
 // golden -- same stats, same 0.25 base/2-count shape). All vitality -> neutral affinity x1.0.

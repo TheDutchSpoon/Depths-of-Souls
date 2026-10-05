@@ -13,10 +13,13 @@
 // goldens use.
 //
 // Because Web is now genuinely applied (not preset), it carries its real breakChancePercent (10)
-// -- rollWebBreakFree (Slice E2) rolls once per Web-bearer at EVERY creature's turn-start,
-// including Broodwarden's own (the very next turn after fight-start). SEED 2's mulberry32
-// sequence: draw #1 (TARGET's roll) = 0.7343, draw #2 (OTHERFOE's roll) = 0.3250 -- both >= 0.10,
-// so neither breaks, verified via an independent `node -e` trace of the exact rng.ts algorithm.
+// -- rollWebBreakFree (Slice E2; in turn-end cleanup since 4.1-F2) rolls once per LIVING
+// Web-bearer at EVERY creature's turn end, including Broodwarden's own. Both Webs were applied at
+// fight start (not born in any turn), so Broodwarden's cleanup rolls them -- but TARGET dies to
+// the attack, so only OTHERFOE rolls: draw #1 = 0.7343 (SEED 2's mulberry32 sequence: 0.7343,
+// 0.3250, ...), >= 0.10, so it doesn't break, verified via an independent `node -e` trace of the
+// exact rng.ts algorithm. (Before 4.1-F2 both rolled at turn start; draw #2 = 0.3250 was also a
+// miss, so the event log is unchanged.)
 //
 // Hand-derived (independent `node -e` calculator). All vitality -> neutral affinity x1.0.
 // BROODWARDEN attacks TARGET (lowest-HP enemy, health 30, defence 0); OTHERFOE (health 1000,
@@ -36,9 +39,9 @@ import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
 import type { Trait } from '../effect-types'
 
-export const SEED = 2 // Consumes exactly two RNG draws (Web's own break-free roll against TARGET
+export const SEED = 2 // Consumes exactly ONE RNG draw (Web's own break-free roll against OTHERFOE,
 export const TURN_STEPS = 1
-// then OTHERFOE, at Broodwarden's turn-start) -- see the header comment above for the trace.
+// in Broodwarden's turn-end cleanup; TARGET is dead by then) -- see the header comment above.
 
 const BROODWARDEN = createCreatureId('broodwarden')
 const TARGET = createCreatureId('target')
@@ -126,7 +129,6 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: BROODWARDEN },
-  // rollWebBreakFree's two draws (TARGET then OTHERFOE) both fail -- see header trace.
   { type: 'AttackDeclared', attackerId: BROODWARDEN, targetId: TARGET },
   {
     type: 'TriggerFired',

@@ -319,6 +319,7 @@ describe('round cap', () => {
       scripts: new Map(),
       statuses: new Map(),
       effectInstanceCounter: 0,
+      turnClock: 0,
     }
 
     const { state, events } = resolveTurn(atCap)
@@ -695,14 +696,12 @@ describe('Wait', () => {
     ).toBe(false)
   })
 })
-
-describe('round-end sweep: a status (re)applied during its own sweep keeps full duration', () => {
-  it('skips decrementing a (creature, statusId) pair refreshed mid-sweep, decrements everything else normally', () => {
-    // Not reachable by any current v1 content (nothing re-applies a snapshotted status
-    // mid-sweep yet) -- a synthetic correctness lock for future self-refreshing round-end
-    // content. Z seeds two statuses at fight-start (weaken-test, vulnerability-test), then
-    // re-applies weaken-test to itself every on-round-end -- refreshing the SAME instance
-    // (single-instance-per-statusId) within the very sweep that would otherwise decrement it.
+describe('born-this-turn: a status refreshed in its own bearer turn keeps full duration (Phase 4.1-F2)', () => {
+  it('does not count down a status refreshed in the bearer turn (instance and id kept), counts down the rest', () => {
+    // Replaces the Phase 3 round-end-sweep refresh test (the sweep is deleted). Z seeds two
+    // statuses at fight-start (weaken-test, vulnerability-test), then re-applies weaken-test to
+    // itself in its own on-turn-end hooks -- refreshing the SAME instance (single-instance-per-
+    // statusId) in the very turn whose cleanup would otherwise count it down.
     const REFRESH_WEAKEN: Trait = {
       id: 'refresh-weaken-test',
       name: 'Refresh Weaken (test)',
@@ -727,7 +726,7 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
         },
         {
           category: 'triggered',
-          hook: 'on-round-end',
+          hook: 'on-turn-end',
           response: {
             kind: 'apply-status',
             target: { kind: 'self' },
@@ -778,10 +777,16 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       enemy: { party: enemy },
       registries: { scripts: scripts, traits: traits, statuses: statuses },
     })
-    // Drive exactly through round 1's two turns and into round 2's boundary (round 1's sweep).
-    while (state.round < 2) {
-      state = resolveTurn(state).state
-    }
+    // Turn 1 is Z (player slot wins the speed tie): fight-start seeds both statuses, then Z's
+    // own turn end refreshes weaken-test. Remember its instance, then run the dummy's turn and
+    // Z's round-2 turn (a second refresh, a second countdown for the untouched status).
+    state = resolveTurn(state).state
+    const idBefore = [...state.playerParty, ...state.enemyParty]
+      .find((c) => c.id === createCreatureId('z'))!
+      .activeEffects.find(
+        (e) => e.category === 'status' && e.statusId === 'weaken-test',
+      )!.instanceId
+    for (let i = 0; i < 2; i++) state = resolveTurn(state).state
 
     const z = [...state.playerParty, ...state.enemyParty].find(
       (c) => c.id === createCreatureId('z'),
@@ -793,10 +798,11 @@ describe('round-end sweep: a status (re)applied during its own sweep keeps full 
       (e) => e.category === 'status' && e.statusId === 'vulnerability-test',
     )
 
-    // Refreshed THIS sweep (on-round-end re-applied it) -> NOT decremented: stays at 5, not 4.
-    expect(weaken).toMatchObject({ remainingDuration: 5 })
-    // Untouched by any re-application -> decrements normally: 3 -> 2.
-    expect(vulnerability).toMatchObject({ remainingDuration: 2 })
+    // Refreshed in Z's own turn (born this turn) -> NOT counted down: stays at 5, not 4 -- and it
+    // is the same instance (a refresh keeps its id, B4).
+    expect(weaken).toMatchObject({ remainingDuration: 5, instanceId: idBefore })
+    // Untouched by any re-application -> counts down normally: 3 -> 2 -> 1.
+    expect(vulnerability).toMatchObject({ remainingDuration: 1 })
   })
 })
 
@@ -1027,9 +1033,9 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
     expect(state.rng.position).toBe(created.rng.position)
   })
 
-  it('a Web-bearer draws exactly one roll per turn-start (count == number of TurnStarted events)', () => {
+  it('a Web-bearer draws exactly one roll per dequeued turn (count == number of TurnStarted events)', () => {
     // breakChancePercent 0 -- rng.next() (always in [0,1)) can never be < 0, so the roll NEVER
-    // succeeds and the status is never removed. This isolates "one roll per turn-start" from
+    // succeeds and the status is never removed. This isolates "one roll per turn" from
     // removal (covered separately by the golden below) -- otherwise a successful break partway
     // through would stop further rolls, making the count comparison flaky-by-design.
     const NEVER_BREAKS_STATUS: StatusDef = {

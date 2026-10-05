@@ -33,6 +33,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     effectInstanceCounter: 0,
+    turnClock: 0,
     ...overrides,
   }
 }
@@ -288,6 +289,7 @@ function lock(scope: 'all' | 'cast', id = 'lock'): ActiveEffect {
     instanceId: createEffectInstanceId('lock#' + id),
     sourceTraitId: 'lock-' + id,
     remainingDuration: 2,
+    appliedAt: 0,
     stacks: 1,
   }
 }
@@ -539,6 +541,7 @@ describe('resolveInstanceTarget -- rule 4 (B2.4, 4.1-C2c)', () => {
       instanceId: createEffectInstanceId('conf'),
       sourceTraitId: 'confusion',
       remainingDuration: 3,
+      appliedAt: 0,
       stacks: 1,
       effects: [{ category: 'friendly-fire', chancePercent: 100 }],
     }

@@ -189,6 +189,7 @@ describe("the skip: an 'all' lock", () => {
       'RoundStarted',
       'TurnStarted',
       'TurnSkipped',
+      'StatusExpired', // F2: Stun 1 counts down at the skipped turn's own cleanup (deliberate change)
       'TurnEnded',
     ])
     expect(events.find((e) => e.type === 'TurnSkipped')).toEqual({
@@ -238,6 +239,7 @@ describe("the skip: an 'all' lock", () => {
       'TriggerFired',
       'StatusApplied',
       'TurnSkipped',
+      'StatusExpired', // F2 (ASSUMPTION 49): gained before the action slot, so it counts this turn
       'TurnEnded',
     ])
   })
@@ -642,8 +644,8 @@ describe('immunity is checked once, in the effect iterator', () => {
       const state = withStatus('poison', immune)
       const x = creatureOf(state)
       expect(hasStatus(x, 'poison')).toBe(true)
-      expect(effectsForHook(x, 'on-round-end')).toHaveLength(immune ? 0 : 1)
-      // End to end: run two turns plus the round-end sweep (the third call) and look for the tick.
+      expect(effectsForHook(x, 'on-turn-end')).toHaveLength(immune ? 0 : 1)
+      // End to end: run three turns (poison ticks at its bearer's turn end, F2) and look for the tick.
       let working = state
       const events: CombatEvent[] = []
       for (let i = 0; i < 3; i++) {
@@ -688,7 +690,7 @@ describe('immunity is checked once, in the effect iterator', () => {
     expect(buildTurnQueue(webImmune.playerParty, webImmune.enemyParty)).toEqual([X, FOE])
   })
 
-  it('an immune Web bearer draws no RNG at turn start (the roll only happens for a Web that is present)', () => {
+  it('an immune Web bearer draws no RNG in turn-end cleanup (the roll only happens for a Web that is present)', () => {
     // One Web bearer, one turn: exactly one roll (0.0 break chance would still draw; Web is 10%).
     const plain = withStatus('web', false)
     const turn = resolveTurn(plain)
@@ -831,6 +833,7 @@ describe('every effect kind a status may carry is read through the one iterator'
       instanceId: createEffectInstanceId('carrier-1'),
       sourceTraitId: 'carrier',
       remainingDuration: 3,
+      appliedAt: 0,
       stacks,
     }
     const state = build({ x })
@@ -883,6 +886,7 @@ describe('every effect kind a status may carry is read through the one iterator'
           instanceId: createEffectInstanceId('carrier-2'),
           sourceTraitId: 'carrier',
           remainingDuration: 3,
+          appliedAt: 0,
           stacks: 1,
         },
       ],

@@ -209,6 +209,10 @@ export interface CombatState {
    * -- the ONLY production issuer. Ids are opaque (`eff-<n>`; never appear in events, so goldens
    * stay byte-identical regardless of the exact format). Starts at 0 in `createCombat`. */
   readonly effectInstanceCounter: number
+  /** Phase 4.1-F2 (ASSUMPTION 18): the born-this-turn clock. Bumped once per dequeued turn, at the
+   * action slot (alive, dead or skipped actor); a status instance is "born this turn" iff its
+   * `appliedAt` equals it. Plain data, never in an event. Starts at 0 in `createCombat`. */
+  readonly turnClock: number
 }
 
 // ---- Events ----

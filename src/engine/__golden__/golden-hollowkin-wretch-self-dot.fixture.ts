@@ -8,20 +8,19 @@
 // Hand-derived (independent `node -e` calculator, verified via Bash). P (speed 20) acts before
 // WRETCH (speed 10, real Hollowkin Wretch base stats) -- both `always-wait` through round 1
 // uneventfully. WRETCH starts the fight already carrying Poison (applied via a direct
-// `applyStatus` call before any turn resolves, into a throwaway events array), so its round-end
-// tick fires this same round (it's in the sweep's own start-of-sweep snapshot).
+// `applyStatus` call before any turn resolves, into a throwaway events array, at turn clock 0 --
+// so it is never born in any turn). Re-derived in 4.1-F2: the tick is no longer a round-end sweep
+// step but a trigger in the bearer's OWN turn-end hooks.
 //
-//   Round-end sweep (bundled into the 3rd `resolveTurn` call, alongside round 2's setup and P's
-//     own round-2 turn): order (tie-break: player -> slot -> id) = P, WRETCH. P has no
-//     on-round-end effect. WRETCH's Poison tick: flatAmount 3% of WRETCH's own max HP [100] * 1
+//   WRETCH's turn end (round 1): Poison's tick: flatAmount 3% of WRETCH's own max HP [100] * 1
 //     stack = 3. WRETCH 100 - 3 = 97, survives (no TriggerFired for the tick itself --
 //     emitTriggerFired: false).
 //   WRETCH survived -> on-damage-taken fires: Madness Touch's trigger fires
 //     (TriggerFired(WRETCH, on-damage-taken, madness-touch)), but `triggering-source` resolves to
 //     [] (context.source === context.self, both WRETCH) -- no StatusApplied follows. WRETCH is
-//     NOT confused by its own tick.
-//   Not wiped -> round 2 begins: queue = [P, WRETCH] -> RoundStarted{round:2} -> P's turn
-//     (always-wait) -> Waited.
+//     NOT confused by its own tick. Cleanup then counts Poison down (3 -> 2, no event); TurnEnded.
+//   Round 2 begins: queue = [P, WRETCH] -> RoundStarted{round:2} -> P's turn (always-wait) ->
+//     Waited.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -59,8 +58,7 @@ export const scripts = STOCK_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
 export const statuses = STATUS_REGISTRY
 
-export const TURN_STEPS = 3 // P/WRETCH's round-1 turns, then the round-end sweep (bundled with
-// round 2's setup and P's own round-2 turn).
+export const TURN_STEPS = 3 // P and WRETCH's round-1 turns, then round 2's setup and P's round-2 turn.
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },
@@ -70,7 +68,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: P },
   { type: 'TurnStarted', creatureId: WRETCH },
   { type: 'Waited', creatureId: WRETCH },
-  { type: 'TurnEnded', creatureId: WRETCH },
+  // 4.1-F2: the tick is in WRETCH's own turn-end hooks, inside its bracket.
   {
     type: 'DamageDealt',
     sourceId: WRETCH,
@@ -90,6 +88,7 @@ export const expectedEvents: CombatEvent[] = [
     effectId: HOLLOWKIN_WRETCH_TRAIT.id,
   },
   // No StatusApplied -- triggering-source fizzles since the DoT's source IS the bearer.
+  { type: 'TurnEnded', creatureId: WRETCH },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: P },
   { type: 'Waited', creatureId: P },

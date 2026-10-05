@@ -545,9 +545,17 @@ attack executor is correct.
   the lever is the 10%. Because it is per-global-turn and not the bearer's own hook, it is a field,
   not a triggered response: `breakChancePercent: 10` on Web's `turn-order` effect (4.1-F; built in
   E2 as `StatusDef.breakChancePercent`). **The roll happens in turn-end cleanup** (Phase 4.1-F, D6;
-  built at turn start), skips Webs applied during the current turn (born-this-turn rule), and
-  follows the `chancePercent` discipline (roll only when present; a non-Webbed board never touches
-  the RNG). The 3-turn cap is the status's duration. (Sleep's break-on-damage is separate:
+  built at turn start), right after that turn's countdown, so a Web that just expired draws
+  nothing. It skips Webs born this turn (the born-this-turn rule, the same window as every
+  status): a Web cast in an action, granted after the action, or applied by the Spiders' Weaver at
+  the end of its turn is first rolled at the next creature's cleanup (4.1-F2 plan review). A Web
+  placed by a turn-start hook was present for that turn's action slot, so that turn's own cleanup
+  rolls it (no shipped content does this; PR #80 review). It runs
+  on every dequeued turn's cleanup (a
+  dead actor's empty bracket and a turn whose actor died mid-turn included, so the rate stays "at
+  every creature's turn"), never after a mid-turn wipe, over living bearers in side → slot → id
+  order, and follows the `chancePercent` discipline (roll only when present; a non-Webbed board
+  never touches the RNG). The 3-turn cap is the status's duration. (Sleep's break-on-damage is separate:
   `on-damage-taken → remove-status(self, sleep)`, firing post-damage so the waking hit still lands
   its vs-Sleeping bonus.)
 
@@ -573,8 +581,12 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 
 ### Principles (locked)
 - **Every status has an intrinsic effect** — no inert markers.
-- **Death-reset** — on death, a creature's accumulated buffs/debuffs/statuses/stat-mods are **wiped**;
-  a revived creature returns at **battle-start baseline** (its `baselineEffects`, see "Fight
+- **Death-reset** — on death, a creature's accumulated buffs/debuffs/statuses/stat-mods stop
+  mattering: they stay on the corpse but are **inert**. A corpse's statuses don't tick, count down,
+  expire or roll, and nothing reads them, except the corpse's own `on-death` triggers, which fire
+  right after `CreatureDied` (Spore's spread). (4.1-F2 plan review: the code never removed them;
+  the Phase 3 round-end sweep counted them down and emitted `StatusExpired` for corpses, which F2
+  ends.) A revive **replaces them all**: a revived creature returns at **battle-start baseline** (its `baselineEffects`, see "Fight
   setup"). Death is meaningful; revive is a second chance, not a buff-preserving undo. Applies to
   all deaths. **Revives are bounded** (max 10 per creature per fight, see `revive`).
 - **No side doors** — every triggered behaviour is a response (see the response vocabulary).
@@ -755,9 +767,13 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   → action grants        (grants raised by the action, right after it, see A2)
   → turn-end hooks       incl. DoT / HoT ticks (status triggers on on-turn-end)
   → granted actions      (grants raised by the turn-end hooks, see A2)
-  → TURN-END CLEANUP     the bearer's own status timers count down + expire; the Web roll
+  → TURN-END CLEANUP     the bearer's own status timers count down + expire; then the Web roll
   → TurnEnded
   ```
+  - **A mid-turn wipe ends the turn there** (4.1-F2 plan review). The rest of the turn (later hook
+    firings, grants, cleanup, the Web roll) is skipped, `TurnEnded` is still emitted, so it stays
+    the turn's last event and the brackets balance, and `FightEnded` follows. See "Resolution &
+    timing" for the check points.
   - **Everything between `TurnStarted` and `TurnEnded` belongs to that turn**; anything between
     brackets (round start, round end) is round-level. `TurnEnded` is always the turn's last event
     (Phase 4 fired `on-turn-end` hooks and the bonus cast *after* it).
@@ -774,7 +790,13 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     win check.
 - **Resolution & timing**: strictly **sequential** (no simultaneity, no dying retaliation in v1) —
   each creature acts fully, damage applies immediately, death is checked immediately. **Win/loss/
-  draw is checked after every action**; the fight ends the instant a side has no living creatures
+  draw is checked after every top-level step**: each action, each granted action, and each
+  firing in a hook pass (turn-start, turn-end, round-end). It is never checked inside a step's own
+  cascade: a killing blow's `on-death`, `on-kill` and observer reactions all resolve first, like
+  the AOE rule (4.1-F2 plan review). **The fight-start pass and its drain are checked too, from
+  4.1-F3** (PR #80 review): a wipe there ends the fight before `RoundStarted`. Built in F2 without
+  it (no content can wipe a side at fight start), a fight-start wipe would run round 1's first
+  turn-start hooks before ending. The fight ends the instant a side has no living creatures
   (does not finish the round). **Result is a three-value union** (`win` / `loss` / `draw`); draw
   resolves like loss for navigation. A creature at 0 HP is **flagged `alive: false`, not removed**
   (stable slots for tie-break/event references); compaction only at fight end. **Rewards bank per
@@ -1187,7 +1209,10 @@ the same interpreter, differing only in how they attach and which hooks they use
   `stat-remap` inside a status (**no temporary stat-modifier**, GAME_DESIGN §6). Relaxing it would
   be a deliberate design decision, never a refactor side effect. The same validator rejects, inside
   a status, `status-immunity` (above) and `innate-spell` (innate spells are placed at fight setup,
-  so a status's could never take effect) (4.1-F1 plan review).
+  so a status's could never take effect) (4.1-F1 plan review), and a trigger on `on-round-end`
+  (round end has no status work; 4.1-F2 plan review). It runs over the stock statuses at import
+  **and over the status registry `createCombat` is given**, so a test fixture's status is held to
+  the same rules (4.1-F2 plan review).
 - **Player-facing treatment by category** (bright line, from Phase 3):
   1. **`stat-modifier`** — scales a stat (`stat`, `factor`); folds into effective stats
      **multiplicatively** (`base × Π(factors)`). **Always permanent-for-fight, uncapped, NOT surfaced
@@ -1400,22 +1425,38 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   `damageSource: 'attack' | 'cast' | 'dot'`** (+ status identity for `'dot'`); a DoT tick emits a
   `'dot'`-tagged `DamageDealt` (no `TriggerFired`) so the log reads "[creature] took X poison
   damage."
-- **Born-this-turn rule** (4.1-F): a status **applied or refreshed during its bearer's own turn**
-  neither ticks nor counts down in that turn's turn-end steps; it starts next turn. (Applied during
-  someone else's turn, it ticks and counts down at the bearer's next turn end as normal.) The Web
-  break-free roll likewise skips Webs applied during the current turn. This replaces Phase 3's
-  start-of-sweep snapshot rules, for the same reason: a fresh (re)application never silently loses
-  a tick or a turn to the step that applied it.
+- **Born-this-turn rule** (4.1-F; one window, settled at the 4.1-F2 plan review). **A status starts
+  at the first action slot it is present for.** A status applied or refreshed **since the current
+  turn's action slot** (by the action, its grants, the turn-end hooks or their grants) is born: it
+  neither ticks, counts down nor (a Web) rolls that turn, and starts next turn. One applied
+  earlier in the turn (turn-start hooks, turn-start cleanup, turn-start grants) was present for
+  this action slot, so it ticks, counts down and rolls this turn: a Stun 1 gained at turn start
+  skips this turn (see "Action locks") and expires at its end, **exactly one turn**. Applied during
+  someone else's turn, a status ticks and counts down at the bearer's next turn end as normal.
+  This replaces Phase 3's start-of-sweep snapshot rules, for the same reason: a fresh
+  (re)application never silently loses a tick, a turn or a roll to the step that applied it.
+  - **Authoring: pick the hook for when the status should start.** Applied before the bearer acts
+    (`on-turn-start`), it counts this turn: right for a status meant to shape this turn's action
+    (the Glowfly Charger's Glow). Applied from the action on (a spell, a granted cast, an
+    `on-[action]` or `on-turn-end` trigger), it starts next turn: right for a status whose effect
+    only matters later. Web acts on the next round's turn order, so the Spiders' Weaver applies it
+    `on-turn-end` (moved from `on-turn-start` at the 4.1-F2 plan review, so its own cleanup doesn't
+    roll a Web it has just placed). Cast Webs (Vine Snare, Disorient), granted ones included,
+    start next turn the same way.
+  - **Mechanism (ASSUMPTION 18).** A plain-data clock on `CombatState` bumps once per dequeued
+    turn, at the action slot, unconditionally (alive, dead or skipped actor). A status instance is
+    stamped with the clock when applied or refreshed (the refresh keeps the instance and its id).
+    Born is `stamp == clock`. Nothing of it appears in events.
 - **Round end has no status work.** The Phase 3 round-end sweep (snapshot → `on-round-end` ticks →
   decrement snapshot statuses → expire) is **deleted** in 4.1-F. Round end keeps round-level trait
-  triggers (`on-round-end`, e.g. Treant Sapling) and the win check.
+  triggers (`on-round-end`, e.g. Treant Sapling) and the win check. A status may not carry an
+  `on-round-end` trigger (the status validator, 4.1-F2 plan review).
 - **Cleanup is bookkeeping only** (see "Turn structure"): counting down, expiring, ending action
   states and the Web roll. Anything that deals damage, heals or fires triggers is a hook.
 - **A creature that dies fires only `on-death`**; its own not-yet-reached hooks are skipped. A DoT
   tick that kills its bearer is still followed by the status's own `on-death` trigger (each status
-  trigger is its own guard instance, below). Win/loss is checked after every action and after each
-  turn-end step that can kill (the 4.1-F plan pins the exact check points and keeps them
-  deterministic).
+  trigger is its own guard instance, below). Win/loss is checked after every top-level step,
+  including each turn-end hook firing (see "Resolution & timing").
 - **Applying a stat-modifier emits `StatModifierApplied`** (source, target, stat, factor, **and the
   concrete effective-stat delta** — a bare factor is meaningless without its base). This is the golden
   assertion surface + Phase 7 floating-combat-text source; stat-modifiers are not surfaced *as status
@@ -1436,11 +1477,13 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   guard is scoped to *one trigger*, never to the whole status. (Otherwise Spore's tick killing its
   host would block the same status's `on-death` spread.)
 - **Golden impact of 4.1-F (deliberate, listed in the PR):** every status golden changes timing;
-  the Phase-3 round-end goldens (DoT tick/countdown/expiry, the round-end interaction golden) are
-  rewritten as **hand-derived turn-end equivalents**, including a new **turn-end interaction
-  golden** (a DoT tick kills its bearer, whose `on-death` applies a status: assert `on-death` fires,
-  the new status follows the born-this-turn rule, and the win check). The stun and sleep goldens
-  gain `TurnSkipped`.
+  the Phase-3 DoT goldens (tick/countdown/expiry, and the mid-sweep Poison pair, renamed
+  `golden-turn-end-dot-kill-burst(-refresh)`) are rewritten as **hand-derived turn-end
+  equivalents**, and a new **turn-end interaction golden** covers the tick case (a DoT tick kills
+  its bearer, whose `on-death` applies a status: assert `on-death` fires, the new status follows the
+  born-this-turn rule, and the win check). `golden-round-end-interaction` keeps its name and its
+  log: it pins the round-end **trait** pass, which 4.1-F keeps, and never involved a status tick
+  (PR #80 review). The stun and sleep goldens gain `TurnSkipped`.
 - **v1 status content**: DoT (Poison, Burn, Spore), Regen (HoT), Stun, Sleep, Confusion, Web /
   Grant Act First, Glow, Silenced, Pacified, and timed **damage-modifier statuses** — Weaken (−%
   dealt) and Vulnerability (+% taken). **Raw stat buffs/debuffs are NOT statuses** — they're

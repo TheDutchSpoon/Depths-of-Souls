@@ -25,6 +25,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     effectInstanceCounter: 0,
+    turnClock: 0,
     ...overrides,
   }
 }
@@ -156,6 +157,7 @@ function confusion(chancePercent: number, id = 'confusion'): ActiveEffect {
     instanceId: createEffectInstanceId(id),
     sourceTraitId: id,
     remainingDuration: 3,
+    appliedAt: 0,
     stacks: 1,
     effects: [{ category: 'friendly-fire', chancePercent }],
   }

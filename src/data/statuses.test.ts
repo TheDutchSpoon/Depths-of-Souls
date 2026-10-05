@@ -18,23 +18,23 @@ describe('stock statuses (representative Phase 3 content)', () => {
     )
   })
 
-  it('POISON/BURN are on-round-end flat DoT ticks with no per-tick TriggerFired', () => {
+  it('POISON/BURN are on-turn-end flat DoT ticks with no per-tick TriggerFired', () => {
     for (const dot of [POISON, BURN]) {
       expect(dot.polarity).toBe('debuff')
       expect(dot.effects).toHaveLength(1)
       expect(dot.effects[0]).toMatchObject({
         category: 'triggered',
-        hook: 'on-round-end',
+        hook: 'on-turn-end',
         response: { kind: 'deal-damage', damageSource: 'dot', emitTriggerFired: false },
       })
     }
   })
 
-  it('REGEN is an on-round-end heal with no per-tick TriggerFired', () => {
+  it('REGEN is an on-turn-end heal with no per-tick TriggerFired', () => {
     expect(REGEN.polarity).toBe('buff')
     expect(REGEN.effects[0]).toMatchObject({
       category: 'triggered',
-      hook: 'on-round-end',
+      hook: 'on-turn-end',
       response: { kind: 'heal', emitTriggerFired: false },
     })
   })

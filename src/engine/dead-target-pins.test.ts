@@ -23,6 +23,7 @@ function makeState(playerParty: Creature[], enemyParty: Creature[]): CombatState
     scripts: new Map(),
     statuses: new Map([[WEAKEN.statusId, WEAKEN]]),
     effectInstanceCounter: 0,
+    turnClock: 0,
   }
 }
 
