@@ -32,18 +32,19 @@ breaks within one round (about 72% of the time). Web never lasts more than **3 t
 of whether it breaks free.
 
 **Silenced** — A Silenced creature can't **cast** (any spell, whether it chose the cast or was
-granted it by a trait). Its turn is **not** skipped: it uses its next legal option instead, so a
-creature that always casts attacks, and a creature whose script has nothing else to do waits.
-Lasts **3 of the Silenced creature's own turns**, whether it acts before or after the caster in the
-round (it counts down at the end of each of its own turns); casting Silence again on it refreshes
-the 3 turns. Applied by **Silence** (Violence). The Sorcerer perk **Clear Mind** makes a creature
-immune: Silence still lands and still counts as "Silenced" for any rule that checks for it, but the
-creature casts anyway.
+granted it by a trait). Its turn is **not** skipped: its script moves on to the next rule it can
+carry out, and if none fits it attacks, as any creature does when its script runs out. So a creature
+that always casts attacks instead. Lasts **3 of the Silenced creature's own turns**, whether it acts
+before or after the caster in the round (it counts down at the end of each of its own turns);
+casting Silence again on it refreshes the 3 turns. Applied by **Silence** (Violence). The Sorcerer
+perk **Clear Mind** makes your creatures immune: Silence still lands and still counts as "Silenced"
+for any rule that checks for it, but the creature casts anyway.
 
 **Pacified** — Silenced's mirror: the creature can't **attack** (chosen or granted), but its turn is
-not skipped. A creature that always attacks has no legal action and waits; one that can cast
-casts. Lasts **3 of its own turns**. Applied by **Pacify** (Wit). The Brute perk **Aggressive**
-makes a creature immune, the same way.
+not skipped. Its script moves on to the next rule it can carry out; if none fits it waits, because
+attacking (the usual fallback) is the locked action. So a creature that always attacks waits, and
+one whose script also has a cast rule casts. Lasts **3 of its own turns**. Applied by **Pacify**
+(Wit). The Brute perk **Aggressive** makes your creatures immune, the same way.
 
 **Sleep** — A Sleeping creature's turn is skipped entirely. The instant it takes any damage, it
 wakes up — the hit that wakes it still lands its own bonus (see Reaper below) before Sleep is
@@ -118,7 +119,7 @@ slice — this slice only authors her as content: her stats, her signature trait
 roster members accompany her, the same content/runner split the Unicorn's own scripted intro had
 in Slice F.
 
-## Spells (13 of The Overgrowth's own (11 plus Silence and Pacify, built in 4.1-F3), plus 3 shared "core" spells — all unlocked at biome 1)
+## Spells (13 of The Overgrowth's own, plus 3 shared "core" spells — all unlocked at biome 1)
 
 Damage-spell power convention: a single-target spell with no other effect deals damage around
 **100%** of the caster's Intelligence; one that also applies a status pulls back to roughly
