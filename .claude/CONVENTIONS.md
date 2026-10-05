@@ -548,7 +548,9 @@ attack executor is correct.
   built at turn start), right after that turn's countdown, so a Web that just expired draws
   nothing. It skips Webs born this turn (the born-this-turn rule, the same window as every
   status): a Web cast in an action, granted after the action, or applied by the Spiders' Weaver at
-  the end of its turn is first rolled at the next creature's cleanup (4.1-F2 plan review). It runs
+  the end of its turn is first rolled at the next creature's cleanup (4.1-F2 plan review). A Web
+  placed by a turn-start hook was present for that turn's action slot, so that turn's own cleanup
+  rolls it (no shipped content does this; PR #80 review). It runs
   on every dequeued turn's cleanup (a
   dead actor's empty bracket and a turn whose actor died mid-turn included, so the rate stays "at
   every creature's turn"), never after a mid-turn wipe, over living bearers in side → slot → id
@@ -791,7 +793,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   draw is checked after every top-level step**: each action, each granted action, and each
   firing in a hook pass (turn-start, turn-end, round-end). It is never checked inside a step's own
   cascade: a killing blow's `on-death`, `on-kill` and observer reactions all resolve first, like
-  the AOE rule (4.1-F2 plan review). The fight ends the instant a side has no living creatures
+  the AOE rule (4.1-F2 plan review). **The fight-start pass and its drain are checked too, from
+  4.1-F3** (PR #80 review): a wipe there ends the fight before `RoundStarted`. Built in F2 without
+  it (no content can wipe a side at fight start), a fight-start wipe would run round 1's first
+  turn-start hooks before ending. The fight ends the instant a side has no living creatures
   (does not finish the round). **Result is a three-value union** (`win` / `loss` / `draw`); draw
   resolves like loss for navigation. A creature at 0 HP is **flagged `alive: false`, not removed**
   (stable slots for tie-break/event references); compaction only at fight end. **Rewards bank per
@@ -1472,11 +1477,13 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   guard is scoped to *one trigger*, never to the whole status. (Otherwise Spore's tick killing its
   host would block the same status's `on-death` spread.)
 - **Golden impact of 4.1-F (deliberate, listed in the PR):** every status golden changes timing;
-  the Phase-3 round-end goldens (DoT tick/countdown/expiry, the round-end interaction golden) are
-  rewritten as **hand-derived turn-end equivalents**, including a new **turn-end interaction
-  golden** (a DoT tick kills its bearer, whose `on-death` applies a status: assert `on-death` fires,
-  the new status follows the born-this-turn rule, and the win check). The stun and sleep goldens
-  gain `TurnSkipped`.
+  the Phase-3 DoT goldens (tick/countdown/expiry, and the mid-sweep Poison pair, renamed
+  `golden-turn-end-dot-kill-burst(-refresh)`) are rewritten as **hand-derived turn-end
+  equivalents**, and a new **turn-end interaction golden** covers the tick case (a DoT tick kills
+  its bearer, whose `on-death` applies a status: assert `on-death` fires, the new status follows the
+  born-this-turn rule, and the win check). `golden-round-end-interaction` keeps its name and its
+  log: it pins the round-end **trait** pass, which 4.1-F keeps, and never involved a status tick
+  (PR #80 review). The stun and sleep goldens gain `TurnSkipped`.
 - **v1 status content**: DoT (Poison, Burn, Spore), Regen (HoT), Stun, Sleep, Confusion, Web /
   Grant Act First, Glow, Silenced, Pacified, and timed **damage-modifier statuses** — Weaken (−%
   dealt) and Vulnerability (+% taken). **Raw stat buffs/debuffs are NOT statuses** — they're

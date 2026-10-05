@@ -845,6 +845,12 @@ that adaptation along with the sweep.
   spell by its status ids. Today every status-only spell of one affinity and shape keys to
   `…|none|1`, so a second one in an affinity would be a false duplicate. Silence and Pacify are the
   first status-only spells; they differ by affinity, so they don't collide either way.
+- **The fight-start win check** (PR #80 review). F2 checks every in-fight pass and drain but
+  exempts the fight-start pass and drain. F3 passes the stop predicate to both and checks win/loss
+  right after them, before `RoundStarted`; a fight-start wipe then ends the fight there
+  (CONVENTIONS "Resolution & timing"). No content can wipe at fight start, so every golden and the
+  digest stay byte-identical; a fixture test shows a fight-start wipe ending with no
+  `RoundStarted`, and fails with either the predicate or the check removed.
 - **Adding spells must not shift existing fights.** The F3 plan checks whether any generation or
   corpus path draws from the spell registry (a new `unlockedAtBiome: 1` spell would then move
   draws); if one does, the PR's golden policy changes and the plan says so before building.
@@ -855,8 +861,9 @@ F1's changes are the stun and sleep goldens' skip shape and the two fixture lock
 `action-lock`; every other item below is F2's, except the G2 goldens (F3, new only).
 
 - **Every status golden changes timing**; the Phase-3 round-end goldens (`golden-dot`,
-  `golden-round-end-interaction`, `golden-round-end-mid-sweep-poison(-refresh)` and every golden
-  whose statuses count down or tick) are **rewritten as hand-derived turn-end equivalents**.
+  `golden-round-end-mid-sweep-poison(-refresh)` and every golden whose statuses count down or
+  tick) are **rewritten as hand-derived turn-end equivalents**. `golden-round-end-interaction` is
+  not: it pins the round-end trait pass, which F2 keeps, and its log is unchanged (PR #80 review).
 - A new **turn-end interaction golden**: a DoT tick kills its bearer, whose `on-death` applies a
   status; assert `on-death` fires, the new status follows the born-this-turn rule, and the win check.
 - The **stun and sleep goldens** gain `TurnSkipped` and lose the no-op `TriggerFired` (F1); their
@@ -864,8 +871,9 @@ F1's changes are the stun and sleep goldens' skip shape and the two fixture lock
 - The **scoped-suppression golden** and **`golden-b2-silenced-refuses-granted-cast`** are rewritten
   on `action-lock` (F1): their fixture lock's on-turn-start `TriggerFired` disappears.
 - The **Web break-free golden** moves its roll to turn-end cleanup.
-- **The Spiders' Weaver moves to `on-turn-end`** (F2, ASSUMPTION 49): its goldens
-  (`golden-overgrowth-web-exploit`, `golden-broodmother`) are re-derived, and corpus fights where
+- **The Spiders' Weaver moves to `on-turn-end`** (F2, ASSUMPTION 49): its golden
+  (`golden-overgrowth-web-exploit`) is re-derived (`golden-broodmother` uses generic adds, not the
+  Weaver, so only a comment moves), and corpus fights where
   the Weaver Webs are attributed to it (its `TriggerFired` moves from turn start to turn end, and
   its random-enemy draw now follows its action's draws).
 - Glow, Weaken, Vulnerability, Confusion goldens: only timing changes may appear; the modifier math
@@ -1205,8 +1213,11 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     `actions.test.ts`, shown failing with the filter removed.
 54. **Confirmed (4.1-F2 plan review).** `CombatState.turnClock` and `StatusEffect.appliedAt` are
     new; test files that build those shapes get shape-only edits.
-55. **Confirmed (4.1-F2 plan review).** The goldens named for the round-end sweep are renamed to
-    turn-end names (`git mv`), with an old → new map in the phase record, as in 4.1-E.
+55. **Confirmed (4.1-F2 plan review; amended at the PR #80 review).** The goldens named for the
+    round-end sweep are renamed to turn-end names (`git mv`), with an old → new map in the phase
+    record, as in 4.1-E: `golden-round-end-mid-sweep-poison(-refresh)` →
+    `golden-turn-end-dot-kill-burst(-refresh)`. `golden-round-end-interaction` keeps its name: it
+    pins the round-end trait pass, which F2 keeps.
 
 ## Sequencing summary
 
