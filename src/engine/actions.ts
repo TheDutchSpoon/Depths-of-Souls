@@ -39,7 +39,12 @@ import type {
   RunActionOptions,
 } from './resolution-types'
 import type { CreatureId } from './ids'
-import type { Intent, RuleAction, TargetSelector } from './scripting-types'
+import type {
+  CastRuleAction,
+  Intent,
+  RuleAction,
+  TargetSelector,
+} from './scripting-types'
 import type { Action, CombatEvent, CombatState, Creature, Spell } from './types'
 
 // ---- ResolutionContext factory ----
@@ -170,10 +175,17 @@ function hasValidTarget(
  * single-target spell) has a valid target on its own intended side. An AOE spell is always
  * castable -- it "happens" even against an empty side (matches executeCastAoe's own contract).
  */
-export function castableGemSlots(actor: Creature, state: CombatState): number[] {
+export function castableGemSlots(
+  actor: Creature,
+  state: CombatState,
+  side?: 'ally' | 'enemy',
+): number[] {
   const slots: number[] = []
   actor.equippedSpells.forEach((spell, slot) => {
     if (!spell) return
+    // Phase 4.1-G1 (ASSUMPTION 69): `side`, when given, keeps only the spells whose own
+    // `targetSide` is that side (the `support` role's ally-side draw); absent keeps every slot.
+    if (side !== undefined && spell.targetSide !== side) return
     if (spell.targetShape === 'aoe') {
       slots.push(slot)
       return
@@ -203,7 +215,8 @@ export function checkLegality(
       return hasValidTarget(actor, intent.targeting, 'enemy', state)
     case 'cast': {
       const gemSlot = intent.action.gemSlot
-      if (gemSlot === 'random') return castableGemSlots(actor, state).length > 0
+      if (gemSlot === 'random')
+        return castableGemSlots(actor, state, intent.action.gemSide).length > 0
       const spell = actor.equippedSpells[gemSlot]
       if (!spell) return false
       if (spell.targetShape === 'aoe') return true
@@ -289,11 +302,12 @@ function resolveSelectorTarget(
  * `castableGemSlots`, the same set `checkLegality` uses. No castable slot means no draw. */
 function resolveGemSlot(
   actor: Creature,
-  gemSlot: number | 'random',
+  action: CastRuleAction,
   state: CombatState,
 ): number | null {
+  const { gemSlot } = action
   if (gemSlot !== 'random') return gemSlot
-  const castable = castableGemSlots(actor, state)
+  const castable = castableGemSlots(actor, state, action.gemSide)
   if (castable.length === 0) return null
   const index = Math.floor(nextRandom(state.rng) * castable.length)
   return castable[index] ?? null
@@ -332,7 +346,7 @@ export function resolveIntent(
       return targetId ? { kind: 'attack', targetId } : null
     }
     case 'cast': {
-      const gemSlot = resolveGemSlot(actor, intent.action.gemSlot, state)
+      const gemSlot = resolveGemSlot(actor, intent.action, state)
       if (gemSlot === null) return null
       const spell = actor.equippedSpells[gemSlot]
       if (!spell) return null // defensive/unreachable -- a resolved numeric slot is always real

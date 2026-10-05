@@ -25,7 +25,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { TRAIT_REGISTRY, BRUTE_STARTER_TRAIT } from '../../data/traits'
 import type { CombatEvent, FightResult } from '../types'
 
@@ -57,7 +57,7 @@ export const enemyParty = makeParty('enemy', [
   },
 ])
 
-export const scripts = STOCK_SCRIPTS_BY_ID
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 // Real registry (not a fixture-scoped one) -- proving the SHIPPED trait, referenced by id.
 export const traits = TRAIT_REGISTRY
 

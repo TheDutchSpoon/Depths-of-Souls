@@ -85,7 +85,7 @@ export const SPORECLOUD_SEEDER: SpeciesCreature = {
   name: 'Sporecloud Seeder',
   affinity: 'wit',
   baseStats: { health: 14, attack: 16, intelligence: 20, defence: 10, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SPORECLOUD_SEEDER_TRAIT.id],
   rarity: 'common',
 }
@@ -95,7 +95,7 @@ export const SPORECLOUD_REAPER: SpeciesCreature = {
   name: 'Sporecloud Reaper',
   affinity: 'wit',
   baseStats: { health: 14, attack: 14, intelligence: 22, defence: 10, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SPORECLOUD_REAPER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -105,7 +105,7 @@ export const SPORECLOUD_BLOOMER: SpeciesCreature = {
   name: 'Sporecloud Bloomer',
   affinity: 'wit',
   baseStats: { health: 16, attack: 14, intelligence: 24, defence: 12, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'caster',
   innateTraitIds: [SPORECLOUD_BLOOMER_TRAIT.id],
   rarity: 'rare',
 }
@@ -125,7 +125,7 @@ export const ROTFEEDER_SCAVENGER: SpeciesCreature = {
   name: 'Rotfeeder Scavenger',
   affinity: 'violence',
   baseStats: { health: 16, attack: 20, intelligence: 10, defence: 14, speed: 16 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [ROTFEEDER_SCAVENGER_TRAIT.id],
   rarity: 'common',
 }
@@ -135,7 +135,7 @@ export const ROTFEEDER_RIPPER: SpeciesCreature = {
   name: 'Rotfeeder Ripper',
   affinity: 'violence',
   baseStats: { health: 18, attack: 22, intelligence: 10, defence: 14, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [ROTFEEDER_RIPPER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -148,7 +148,7 @@ export const ROTFEEDER_GORGEMAW: SpeciesCreature = {
   name: 'Rotfeeder Gorgemaw',
   affinity: 'vitality',
   baseStats: { health: 22, attack: 20, intelligence: 10, defence: 16, speed: 14 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [ROTFEEDER_GORGEMAW_TRAIT.id],
   rarity: 'rare',
 }
@@ -168,7 +168,7 @@ export const MYCONET_WARDER: SpeciesCreature = {
   name: 'Myconet Warder',
   affinity: 'endurance',
   baseStats: { health: 20, attack: 12, intelligence: 12, defence: 22, speed: 12 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'warden',
   innateTraitIds: [MYCONET_WARDER_TRAIT.id],
   rarity: 'common',
 }
@@ -181,7 +181,7 @@ export const MYCONET_ROTCORE: SpeciesCreature = {
   name: 'Myconet Rotcore',
   affinity: 'wit',
   baseStats: { health: 22, attack: 14, intelligence: 12, defence: 22, speed: 10 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'warden',
   innateTraitIds: [MYCONET_ROTCORE_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -191,7 +191,7 @@ export const MYCONET_GRAVEDIGGER: SpeciesCreature = {
   name: 'Myconet Gravedigger',
   affinity: 'endurance',
   baseStats: { health: 24, attack: 12, intelligence: 14, defence: 24, speed: 10 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'guardian',
   innateTraitIds: [MYCONET_GRAVEDIGGER_TRAIT.id],
   rarity: 'rare',
 }
@@ -211,7 +211,7 @@ export const NECROMOSS_WISP: SpeciesCreature = {
   name: 'Necromoss Wisp',
   affinity: 'wit',
   baseStats: { health: 18, attack: 10, intelligence: 20, defence: 12, speed: 16 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'caster',
   innateTraitIds: [NECROMOSS_WISP_TRAIT.id],
   rarity: 'common',
 }
@@ -221,12 +221,12 @@ export const NECROMOSS_THICKET: SpeciesCreature = {
   name: 'Necromoss Thicket',
   affinity: 'vitality',
   baseStats: { health: 24, attack: 10, intelligence: 16, defence: 18, speed: 10 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'warden',
   innateTraitIds: [NECROMOSS_THICKET_TRAIT.id],
   rarity: 'uncommon',
 }
 
-/** The biome's one cast-role creature (defaultScriptId 'always-cast') -- its trait fires on
+/** The biome's one cast-role creature (role `caster`) -- its trait fires on
  * on-turn-start regardless of the chosen action, so casting never blunts it; exercises
  * generateFloor's real spell-loadout roll against the cumulative-unlocked vitality-affinity pool.
  * PR #64 review revision: affinity `wit` -> `vitality` -- Hollowroot is the team healer (and the
@@ -237,7 +237,7 @@ export const NECROMOSS_HOLLOWROOT: SpeciesCreature = {
   name: 'Necromoss Hollowroot',
   affinity: 'vitality',
   baseStats: { health: 20, attack: 10, intelligence: 22, defence: 14, speed: 14 },
-  defaultScriptId: 'always-cast',
+  defaultScriptId: 'support',
   innateTraitIds: [NECROMOSS_HOLLOWROOT_TRAIT.id],
   rarity: 'rare',
 }
@@ -257,7 +257,7 @@ export const HOLLOWKIN_WRETCH: SpeciesCreature = {
   name: 'Hollowkin Wretch',
   affinity: 'endurance',
   baseStats: { health: 20, attack: 14, intelligence: 12, defence: 20, speed: 14 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'warden',
   innateTraitIds: [HOLLOWKIN_WRETCH_TRAIT.id],
   rarity: 'common',
 }
@@ -267,7 +267,7 @@ export const HOLLOWKIN_MARIONETTE: SpeciesCreature = {
   name: 'Hollowkin Marionette',
   affinity: 'instinct',
   baseStats: { health: 16, attack: 18, intelligence: 14, defence: 12, speed: 22 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [HOLLOWKIN_MARIONETTE_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -279,7 +279,7 @@ export const HOLLOWKIN_PUPPETEER: SpeciesCreature = {
   name: 'Hollowkin Puppeteer',
   affinity: 'instinct',
   baseStats: { health: 20, attack: 16, intelligence: 12, defence: 20, speed: 16 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [HOLLOWKIN_PUPPETEER_TRAIT.id],
   rarity: 'rare',
 }
@@ -299,7 +299,7 @@ export const SPORCH_IGNITER: SpeciesCreature = {
   name: 'Sporch Igniter',
   affinity: 'violence',
   baseStats: { health: 16, attack: 20, intelligence: 12, defence: 14, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SPORCH_IGNITER_TRAIT.id],
   rarity: 'common',
 }
@@ -309,7 +309,7 @@ export const SPORCH_ASHBORN: SpeciesCreature = {
   name: 'Sporch Ashborn',
   affinity: 'wit',
   baseStats: { health: 16, attack: 14, intelligence: 20, defence: 12, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'caster',
   innateTraitIds: [SPORCH_ASHBORN_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -319,7 +319,7 @@ export const SPORCH_CINDERLORD: SpeciesCreature = {
   name: 'Sporch Cinderlord',
   affinity: 'violence',
   baseStats: { health: 18, attack: 22, intelligence: 12, defence: 16, speed: 16 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'opener',
   innateTraitIds: [SPORCH_CINDERLORD_TRAIT.id],
   rarity: 'rare',
 }
@@ -363,7 +363,7 @@ export const ROT_SOVEREIGN: SpeciesCreature = {
   name: 'Rot Sovereign',
   affinity: 'endurance',
   baseStats: { health: 30, attack: 22, intelligence: 20, defence: 26, speed: 16 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'warden',
   innateTraitIds: [ROT_SOVEREIGN_TRAIT.id],
   rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, an authored boss encounter
 }

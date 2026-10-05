@@ -16,7 +16,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent, FightResult } from '../types'
 import type { Trait } from '../effect-types'
@@ -83,7 +83,7 @@ export const enemyParty = makeParty('enemy', [
   { id: 'e2', health: 100, speed: 10, scriptId: 'always-wait' },
 ])
 
-export const scripts = STOCK_SCRIPTS_BY_ID
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits: ReadonlyMap<string, Trait> = new Map([
   [POISONER_TRAIT.id, POISONER_TRAIT],
   [SELF_POISON_TRAIT.id, SELF_POISON_TRAIT],

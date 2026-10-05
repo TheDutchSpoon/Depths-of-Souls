@@ -11,7 +11,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { POLLINATOR_POLLENLORD_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import type { CombatEvent } from '../types'
 
@@ -41,7 +41,7 @@ export const enemyParty = makeParty('enemy', [
   { id: 'foe', speed: 1, affinity: 'wit', scriptId: 'always-wait' },
 ])
 
-export const scripts = STOCK_SCRIPTS_BY_ID
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
 
 export const TURN_STEPS = 4 // round 1: POLLENLORD, ALLY, FOE; round 2: POLLENLORD only.

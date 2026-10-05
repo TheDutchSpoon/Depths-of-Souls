@@ -26,7 +26,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import { PACIFY, SILENCE } from '../../data/spells'
 import { BRUTE, SORCERER, resolveSpecializationEffects } from '../../data/specializations'
@@ -157,7 +157,7 @@ export const enemyParty = makeParty('enemy', [
 ])
 
 export const scripts: ReadonlyMap<string, Script> = new Map([
-  ...STOCK_SCRIPTS_BY_ID,
+  ...FIXTURE_SCRIPTS_BY_ID,
   [MAGE_SCRIPT.id, MAGE_SCRIPT],
   [BRAWLER_SCRIPT.id, BRAWLER_SCRIPT],
   [SILENCER_SCRIPT.id, SILENCER_SCRIPT],

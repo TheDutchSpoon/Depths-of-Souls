@@ -19,7 +19,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import type { CombatEvent, FightResult } from '../types'
 
 export const SEED = 9101 // No RNG consumed; seed is inert.
@@ -37,7 +37,7 @@ export const enemyParty = makeParty('enemy', [
   { id: 'b', health: 15, defence: 0, speed: 2, scriptId: 'always-wait' },
 ])
 
-export const scripts = STOCK_SCRIPTS_BY_ID
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },

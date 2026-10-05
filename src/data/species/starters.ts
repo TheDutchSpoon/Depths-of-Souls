@@ -49,15 +49,15 @@ export const SORCERER_STARTER: SpeciesCreature = {
   name: 'Glyphmoth Seer',
   affinity: 'wit',
   baseStats: { health: 20, attack: 10, intelligence: 30, defence: 10, speed: 20 },
-  defaultScriptId: 'always-cast',
+  defaultScriptId: 'caster',
   innateTraitIds: [SORCERER_STARTER_TRAIT.id],
   rarity: 'rare',
   // Phase 4.1-B (A8): the FIXED `equippedSpells: [ARCANE_BOLT, null, null, null]` loadout is
   // deleted (`SpeciesCreature.equippedSpells` no longer exists) -- Arcane Bolt is now granted by
   // SORCERER_STARTER_TRAIT's own `innate-spell` effect, prepended by `createCombat`'s fight-setup
   // ahead of this creature's regular (default, all-null) gem slots. Materialized result is
-  // byte-identical: `[Arcane Bolt, null, null, null]` -- immediately castable by the stock
-  // `always-cast` script, which targets gemSlot 0.
+  // byte-identical: `[Arcane Bolt, null, null, null]` -- immediately castable by the `caster` role
+  // (4.1-G1), which casts a random castable gem every turn.
 }
 
 export const SORCERER_STARTER_SPECIES_ID = 'sorcerer-starter-species'
@@ -75,7 +75,7 @@ export const BRUTE_STARTER: SpeciesCreature = {
   name: 'Cragfang Mauler',
   affinity: 'violence',
   baseStats: { health: 20, attack: 30, intelligence: 10, defence: 15, speed: 15 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [BRUTE_STARTER_TRAIT.id],
   rarity: 'rare',
 }
@@ -92,7 +92,7 @@ export const SHIELDBARER_STARTER: SpeciesCreature = {
   name: 'Stonehorn Warden',
   affinity: 'endurance',
   baseStats: { health: 25, attack: 10, intelligence: 10, defence: 30, speed: 10 },
-  defaultScriptId: 'always-provoke',
+  defaultScriptId: 'taunter',
   innateTraitIds: [SHIELDBARER_STARTER_TRAIT.id],
   rarity: 'rare',
 }
@@ -112,7 +112,7 @@ export const UNICORN: SpeciesCreature = {
   name: 'Unicorn Lightbearer',
   affinity: 'vitality',
   baseStats: { health: 25, attack: 15, intelligence: 15, defence: 15, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [UNICORN_TRAIT.id],
   rarity: 'rare',
 }

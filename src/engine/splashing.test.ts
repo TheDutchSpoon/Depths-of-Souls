@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from './combat'
 import { makeParty } from './__fixtures__/creatures'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import type { CombatEvent, Spell } from './types'
 import type { Trait } from './effect-types'
 
@@ -74,7 +74,7 @@ describe('Splashing (Phase 4 Slice C)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
     })
     const { events } = resolveTurn(state)
 
@@ -116,7 +116,7 @@ describe('Splashing (Phase 4 Slice C)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
     })
     const { events } = resolveTurn(state)
 
@@ -147,7 +147,7 @@ describe('Splashing (Phase 4 Slice C)', () => {
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: registry(SPLASHING_TRAIT, ANNIHILATE_TRAIT),
       },
     })
@@ -177,7 +177,7 @@ describe('Splashing (Phase 4 Slice C)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(SPLASHING_TRAIT) },
     })
     const { events } = resolveTurn(state)
 

@@ -20,6 +20,7 @@ import {
   DISORIENT,
   EMBER_LANCE,
   HOWLING_INSTINCT,
+  LIFE_SIPHON,
   PACIFY,
   PUPPET_STRING,
   RASPING_CHANT,
@@ -33,6 +34,12 @@ import {
   WEAKENING_BITE,
   WITHERING_BOLT,
 } from '../../data/spells'
+import {
+  ALWAYS_ATTACK_SCRIPT,
+  ALWAYS_CAST_SCRIPT,
+  ALWAYS_PROVOKE_SCRIPT,
+  FIXTURE_SCRIPTS_BY_ID,
+} from '../__fixtures__/scripts'
 import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import { TRAIT_REGISTRY } from '../../data/traits'
@@ -67,6 +74,7 @@ import {
 } from '../../data/species/overgrowth'
 import { HOLLOWKIN_SPECIES_ID, HOLLOWKIN_WRETCH } from '../../data/species/rotcap-hollow'
 import type { EffectDef } from '../effect-types'
+import type { Script } from '../scripting-types'
 import type { SpeciesCreature } from '../generation'
 import type { CombatState, Creature, Spell } from '../types'
 
@@ -79,6 +87,13 @@ export interface CorpusFight {
   readonly playerEffects?: readonly EffectDef[]
 }
 
+/** Phase 4.1-G1 (ASSUMPTION 68): the shipped role scripts (Parts A and B run creatures on their
+ * roles) plus the five `always-*` fixture scripts (Part C pins them explicitly, ASSUMPTION 79). */
+const CORPUS_SCRIPTS: ReadonlyMap<string, Script> = new Map([
+  ...STOCK_SCRIPTS_BY_ID,
+  ...FIXTURE_SCRIPTS_BY_ID,
+])
+
 /** The one place a corpus fight becomes a `CombatState` (the digest and the coverage test both
  * call it, so they cannot drift on registries or side inputs). */
 export function createCorpusCombat(fight: CorpusFight): CombatState {
@@ -90,7 +105,7 @@ export function createCorpusCombat(fight: CorpusFight): CombatState {
     },
     enemy: { party: fight.enemy },
     registries: {
-      scripts: STOCK_SCRIPTS_BY_ID,
+      scripts: CORPUS_SCRIPTS,
       traits: TRAIT_REGISTRY,
       statuses: STATUS_REGISTRY,
     },
@@ -332,12 +347,14 @@ function buildSpellFight(index: number, spec: SpellFightSpec): CorpusFight {
       side: 'player',
       slot: 1,
       speciesId: BRUTE_STARTER_SPECIES_ID,
+      scriptId: ALWAYS_ATTACK_SCRIPT.id,
     }),
     materializeCreature(SHIELDBARER_STARTER, {
       level,
       side: 'player',
       slot: 2,
       speciesId: SHIELDBARER_STARTER_SPECIES_ID,
+      scriptId: ALWAYS_PROVOKE_SCRIPT.id,
     }),
   ]
   return {
@@ -378,26 +395,34 @@ function buildParty(
   )
 }
 
-const brute = (scriptId?: string): PartyMember => ({
+// Phase 4.1-G1 (ASSUMPTION 79): every Part C member pins the script it ran before roles existed, so
+// the coverage fights ride on no role's draws and stay byte-identical through G1. The defaults below
+// are those scripts (the fixture registry's), never the creature's own `defaultScriptId`.
+const brute = (scriptId: string = ALWAYS_ATTACK_SCRIPT.id): PartyMember => ({
   creature: BRUTE_STARTER,
   speciesId: BRUTE_STARTER_SPECIES_ID,
-  ...(scriptId ? { scriptId } : {}),
+  scriptId,
 })
-const shieldbarer = (scriptId?: string): PartyMember => ({
+const shieldbarer = (scriptId: string = ALWAYS_PROVOKE_SCRIPT.id): PartyMember => ({
   creature: SHIELDBARER_STARTER,
   speciesId: SHIELDBARER_STARTER_SPECIES_ID,
-  ...(scriptId ? { scriptId } : {}),
+  scriptId,
 })
-const sorcerer = (scriptId?: string): PartyMember => ({
+const sorcerer = (scriptId: string = ALWAYS_CAST_SCRIPT.id): PartyMember => ({
   creature: SORCERER_STARTER,
   speciesId: SORCERER_STARTER_SPECIES_ID,
-  ...(scriptId ? { scriptId } : {}),
+  scriptId,
 })
 const striker: PartyMember = {
   creature: SWARMHIVE_STRIKER,
   speciesId: SWARMHIVE_SPECIES_ID,
+  scriptId: ALWAYS_ATTACK_SCRIPT.id,
 }
-const jaws: PartyMember = { creature: SNAPJAW_JAWS, speciesId: SNAPJAWS_SPECIES_ID }
+const jaws: PartyMember = {
+  creature: SNAPJAW_JAWS,
+  speciesId: SNAPJAWS_SPECIES_ID,
+  scriptId: ALWAYS_ATTACK_SCRIPT.id,
+}
 const dozerCaster = (spell: Spell): PartyMember => ({
   creature: LULLPOLLEN_DOZER,
   speciesId: LULLPOLLEN_SPECIES_ID,
@@ -585,6 +610,33 @@ export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
   ),
 ]
 
+/** Phase 4.1-G1 (corpus entry 526, seed 2017), appended after the F3 spell fights: Life Siphon.
+ * Its `heal(self)` only lands (an amount above zero) on a WOUNDED caster, and the spell fights'
+ * WALL_ENEMY never attacks, so this one differs: a level-20 Unicorn (Vitality, no innate spell)
+ * casts Life Siphon every turn on the stock `always-cast` script, alone against two level-5 Brutes.
+ * The Brutes can only chip a Unicorn four times their level (every hit is the 1% floor or the
+ * 1-damage minimum), so it is wounded from round 1 and every later cast heals it; Life Siphon
+ * (about 38 damage against a Brute's 40 HP) cannot finish both in one cast, so there is a later
+ * cast. Rides on no chance: the Brutes' only target is the Unicorn. */
+function buildLifeSiphonFight(): CorpusFight {
+  return {
+    seed: 2017,
+    player: buildParty(
+      [
+        {
+          creature: UNICORN,
+          speciesId: UNICORN_SPECIES_ID,
+          scriptId: ALWAYS_CAST_SCRIPT.id,
+          gems: [LIFE_SIPHON, null, null],
+        },
+      ],
+      'player',
+      20,
+    ),
+    enemy: buildParty([brute(), brute()], 'enemy', 5),
+  }
+}
+
 /** The ordered list of fights the digest hashes -- Part A (300 generated fights), Part B (200
  * fights with the shipped player creatures), then Part C (coverage fights, Phase 4.1-D2). A and B
  * are pinned exactly per the review's own spec; C only ever appends. */
@@ -599,6 +651,8 @@ export function buildCorpus(): readonly CorpusFight[] {
     // SPELL_FIGHTS (an `always-cast` caster against WALL_ENEMY), so the status landing rides on
     // no random draw.
     ...F3_SPELL_FIGHTS.map((spec, i) => buildSpellFight(SPELL_FIGHTS.length + i, spec)),
+    // Phase 4.1-G1: Life Siphon's coverage fight, appended after entry 525 (entry 526).
+    buildLifeSiphonFight(),
   ]
   return [...partA, ...partB, ...partC]
 }

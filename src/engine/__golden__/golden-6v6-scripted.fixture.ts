@@ -1,5 +1,5 @@
 import { makeParty } from '../__fixtures__/creatures'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { EMBER_LANCE, CINDER_NOVA } from '../../data/spells'
 import { createCreatureId } from '../ids'
 import type { CreatureId } from '../ids'
@@ -15,9 +15,9 @@ import type { CombatEvent, FightResult } from '../types'
 
 export const SEED = 6006
 
-// Real shipped stock scripts (src/data/scripts.ts), not test-only scripts -- this is the
-// "mixed stock scripts both sides" integration scenario ROADMAP.md calls for.
-export const scripts = STOCK_SCRIPTS_BY_ID
+// The five `always-*` fixture scripts (__fixtures__/scripts.ts) -- this is the "mixed stock
+// scripts both sides" integration scenario ROADMAP.md calls for.
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 
 const PLAYER_BASE = {
   attack: 15,

@@ -37,7 +37,7 @@ import {
 } from './effect-types'
 import { makeParty } from './__fixtures__/creatures'
 import { countDraws } from './test-utils/rng-draw-count'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import {
   CONFUSION,
   GRANT_ACT_FIRST,
@@ -141,7 +141,10 @@ function build(options: BuildOptions = {}): CombatState {
       ]),
     },
     registries: {
-      scripts: new Map([...STOCK_SCRIPTS_BY_ID, [CAST_THEN_ATTACK.id, CAST_THEN_ATTACK]]),
+      scripts: new Map([
+        ...FIXTURE_SCRIPTS_BY_ID,
+        [CAST_THEN_ATTACK.id, CAST_THEN_ATTACK],
+      ]),
       traits: new Map([[trait.id, trait]]),
       statuses,
     },
@@ -412,7 +415,7 @@ describe("the skip: an 'all' lock", () => {
         ]),
       },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: new Map([
           ['x-trait', xTrait],
           ['y-trait', yTrait],

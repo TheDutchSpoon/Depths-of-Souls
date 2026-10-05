@@ -10,6 +10,10 @@
 // `Map<InstanceId, Instance>` (A6); every fixture pins `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` so
 // every non-XP number below stays byte-identical to Phase 4 (ASSUMPTION 3) -- only the XP
 // expectations changed, each noted inline.
+//
+// Phase 4.1-G1: the fixture creatures run the `always-*` fixture scripts (ASSUMPTION 68), so every
+// deps object below passes `scripts: FIXTURE_SCRIPTS_BY_ID` -- the shipped registry holds only the
+// role scripts. Each spawned enemy also draws a full gem set (6 stub draws per spawn, `spawn()`).
 
 import { describe, expect, test } from 'vitest'
 import { createBiomeId, type BiomeId } from '../engine/ids'
@@ -21,6 +25,8 @@ import type {
 } from '../engine/generation'
 import type { SeededRng } from '../engine/rng'
 import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
+import { FIXTURE_SCRIPTS_BY_ID } from '../engine/__fixtures__/scripts'
+import { enemyLevelRange } from '../engine/curves'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { UNICORN, UNICORN_SPECIES_ID } from '../data/species/starters'
 import type { Specialization } from '../data/specializations'
@@ -140,8 +146,9 @@ const FIXTURE_SPEC: Specialization = {
 }
 
 // ---- Stub RNG (deterministic species/creature/level draws -- Slice A's own testing technique) ----
-// generateFloor's per-slot call order (generation.ts, non-cast-role: no loadout roll): species
-// pick, creature-within-species pick, level roll. FIXTURE_SPECIES is the pool's only species, so
+// generateFloor's per-slot call order (generation.ts, `spawnEnemy`): species pick,
+// creature-within-species pick, level roll, then (Phase 4.1-G1: every enemy rolls a full gem set,
+// whatever its role) one loadout draw per gem slot -- 6 draws per spawned enemy. FIXTURE_SPECIES is the pool's only species, so
 // its pick is invariant regardless of the value supplied (a single-item weightedPick always
 // returns that item -- see rewards.test.ts's sibling reasoning in generation.test.ts). The
 // creature-within-species pick uses CFG.rarityDrawWeight (FODDER common=6, JUGGERNAUT rare=1,
@@ -161,14 +168,26 @@ function stubRngFactory(sequence: readonly number[]): (seed: number) => SeededRn
   }
 }
 
-// floor 1 -> enemyPartySize=1, fightCount(CFG)=3 -> 3 fights x 1 slot x 3 calls = 9 values.
-// Fight1 slot: [species(any), creature(<0.857 -> FODDER), level(any)]
-// Fight2 slot: [species(any), creature(>=0.857 -> JUGGERNAUT), level(any)]
-// Fight3 slot: unused (the loop stops after fight2's loss) -- filled with FODDER's values.
-const WIN_THEN_LOSS_SEQUENCE = [0, 0.1, 0, 0, 0.95, 0, 0, 0.1, 0]
+// One spawned enemy: [species(any), creature(`creatureRoll`), level(any), gem x3 (any)].
+const spawn = (creatureRoll: number): number[] => [0, creatureRoll, 0, 0, 0, 0]
+const FODDER_ROLL = 0.1 // < 6/7 -> FODDER
+const RARE_ROLL = 0.95 // >= 6/7 -> the pool's rare creature
+
+// floor 1 -> enemyPartySize=1, fightCount(CFG)=3 -> 3 fights x 1 slot x 6 draws = 18 values.
+// Fight1 slot: FODDER; fight2 slot: JUGGERNAUT; fight3 slot: unused (the loop stops after fight2's
+// loss) -- filled with FODDER's values.
+const WIN_THEN_LOSS_SEQUENCE = [
+  ...spawn(FODDER_ROLL),
+  ...spawn(RARE_ROLL),
+  ...spawn(FODDER_ROLL),
+]
 
 // All 3 fights draw FODDER -- a guaranteed clean win across the whole floor.
-const ALL_WIN_SEQUENCE = [0, 0.1, 0, 0, 0.1, 0, 0, 0.1, 0]
+const ALL_WIN_SEQUENCE = [
+  ...spawn(FODDER_ROLL),
+  ...spawn(FODDER_ROLL),
+  ...spawn(FODDER_ROLL),
+]
 
 function makeDeps(overrides: Partial<GameStoreDeps>): Partial<GameStoreDeps> {
   return {
@@ -176,6 +195,7 @@ function makeDeps(overrides: Partial<GameStoreDeps>): Partial<GameStoreDeps> {
     specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
     standaloneCreatures: [HERO_STANDALONE],
     runSeed: 99,
+    scripts: FIXTURE_SCRIPTS_BY_ID,
     balanceConfig: CFG,
     ...overrides,
   }
@@ -208,28 +228,16 @@ const FIXTURE_BIOME_MIXED: BiomeData = {
   speciesPool: [FIXTURE_SPECIES_MIXED],
 }
 
-// floor 2 -> enemyPartySize=2, fightCount(CFG)=3 -> 3 fights x 2 slots x 3 calls = 18 values. Only
-// fight 1 matters (the loop stops there); its two slots: [species,creature,level] x2, same
-// <0.857/>=0.857 FODDER/rare threshold as WIN_THEN_LOSS_SEQUENCE above.
+// floor 2 -> enemyPartySize=2, fightCount(CFG)=3 -> 3 fights x 2 slots x 6 draws = 36 values. Only
+// fight 1 matters (the loop stops there); its two slots, same <0.857/>=0.857 FODDER/rare
+// threshold as WIN_THEN_LOSS_SEQUENCE above.
 const MIXED_FIGHT_SEQUENCE = [
-  0,
-  0.1,
-  0, // fight1 slot0 -> FODDER
-  0,
-  0.95,
-  0, // fight1 slot1 -> SLOW_JUGGERNAUT
-  0,
-  0.1,
-  0,
-  0,
-  0.1,
-  0, // fight2 (unused)
-  0,
-  0.1,
-  0,
-  0,
-  0.1,
-  0, // fight3 (unused)
+  ...spawn(FODDER_ROLL), // fight1 slot0 -> FODDER
+  ...spawn(RARE_ROLL), // fight1 slot1 -> SLOW_JUGGERNAUT
+  ...spawn(FODDER_ROLL), // fight2 (unused)
+  ...spawn(FODDER_ROLL),
+  ...spawn(FODDER_ROLL), // fight3 (unused)
+  ...spawn(FODDER_ROLL),
 ]
 
 // ---- Fixtures for the perk-plumbing regression (Fix 3) ----
@@ -384,7 +392,7 @@ describe('descend()', () => {
     }
     // fight1 creature-roll 0.1 -> common; fight2 creature-roll 0.95 -> rare; fight3 creature-roll
     // 0.7 -> the overwhelming uncommon, which one-shots HERO and stops the loop.
-    const sequence = [0, 0.1, 0, 0, 0.95, 0, 0, 0.7, 0]
+    const sequence = [...spawn(0.1), ...spawn(0.95), ...spawn(0.7)]
     const store = createGameStore(
       makeDeps({
         biomes: [biome],
@@ -845,6 +853,7 @@ describe('perk effects reach combat', () => {
       specializations: new Map([[HUGE_ATTACK_PERK_SPEC.id, HUGE_ATTACK_PERK_SPEC]]),
       standaloneCreatures: [WEAK_HERO_STANDALONE],
       runSeed: 99,
+      scripts: FIXTURE_SCRIPTS_BY_ID,
       balanceConfig: CFG,
       ...overrides,
     }
@@ -927,6 +936,7 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
       specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
       standaloneCreatures: [HERO_STANDALONE],
       runSeed: 99,
+      scripts: FIXTURE_SCRIPTS_BY_ID,
       balanceConfig: CFG,
     }
   }
@@ -944,20 +954,27 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.fightResults).toEqual(['win'])
     expect(outcome.cleared).toBe(true)
     expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId)
-    expect(outcome.soulGained.get(BOSS_ADD_WIN.id)).toBe(10)
+    // 6v6 (4.1-G1): the boss, her one authored add, and FOUR fill creatures drawn from the biome's
+    // pool (BOSS_SPECIES_WIN holds only this add's kind) -- 5 add-kind kills at 10% each.
+    expect(outcome.soulGained.get(BOSS_ADD_WIN.id)).toBe(50)
     expect(outcome.soulGained.has(BOSS_CREATURE_WIN.id)).toBe(false) // bosses grant no soul%
     // Review fix F7: pinned exact, not a range -- runSeed:99 is the real seeded RNG (never
     // stubbed here), so the add's rolled level is deterministic. Generated-then-checkpoint-
-    // verified: the add rolls level 13 (enemyLevelRange(10,CFG)'s own max), so
-    // xpAwardForKill(13,CFG) + xpAwardForKill(16,CFG) [the boss's fixed level] = 13 + 16 = 29.
-    expect(outcome.xpBanked).toBe(29)
+    // verified (regenerated in 4.1-G1, the 6v6 boss floor): the five add-kind kills (the authored
+    // add and four fill creatures) roll levels summing to 53, and the boss's fixed level is 16,
+    // so xpAwardForKill summed = 53 + 16 = 69. Checkpoint: five levels each within
+    // enemyLevelRange(10, CFG) = 10..13 sum to 50..65, and 53 is inside it.
+    expect(outcome.xpBanked).toBe(69)
+    const { min, max } = enemyLevelRange(10, CFG)
+    expect(outcome.xpBanked - 16).toBeGreaterThanOrEqual(5 * min)
+    expect(outcome.xpBanked - 16).toBeLessThanOrEqual(5 * max)
     // currencyDropForKill(10, CFG) = {essence:10,ore:10,bricks:max(1,floor(10/10))=1,lifeforce:10},
-    // banked per kill -- 2 kills.
+    // banked per kill -- 6 kills (the boss and five add-kind creatures).
     expect(outcome.currencyGained).toEqual({
-      essence: 20,
-      ore: 20,
-      bricks: 2,
-      lifeforce: 20,
+      essence: 60,
+      ore: 60,
+      bricks: 6,
+      lifeforce: 60,
     })
 
     const state = store.getState()
@@ -1025,6 +1042,7 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
       specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
       standaloneCreatures: [HERO_STANDALONE],
       runSeed: 99,
+      scripts: FIXTURE_SCRIPTS_BY_ID,
       balanceConfig: CFG,
     })
     store.getState().setSpec(FIXTURE_SPEC.id)
@@ -1041,9 +1059,13 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.soulGained.get(BOSS_ADD_LOSS.id)).toBe(10)
     expect(outcome.soulGained.has(BOSS_CREATURE_LOSS.id)).toBe(false)
     // Review fix F7: pinned exact -- runSeed:99 is the real seeded RNG (never stubbed here), so
-    // the add's rolled level is deterministic. Generated-then-checkpoint-verified: the add rolls
-    // level 13 (enemyLevelRange(10,CFG)'s own max), so xpAwardForKill(13,CFG) = 13.
-    expect(outcome.xpBanked).toBe(13)
+    // the killed add's rolled level is deterministic. Generated-then-checkpoint-verified
+    // (regenerated in 4.1-G1: the run stream now also feeds four fill creatures and every loadout):
+    // the one kill rolls level 10, so xpAwardForKill(10,CFG) = 10. Checkpoint: it is inside
+    // enemyLevelRange(10, CFG) = 10..13.
+    expect(outcome.xpBanked).toBe(10)
+    expect(outcome.xpBanked).toBeGreaterThanOrEqual(enemyLevelRange(10, CFG).min)
+    expect(outcome.xpBanked).toBeLessThanOrEqual(enemyLevelRange(10, CFG).max)
     expect(outcome.currencyGained).toEqual({
       essence: 10,
       ore: 10,

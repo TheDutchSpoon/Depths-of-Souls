@@ -256,13 +256,17 @@ function weightedPick<T>(
 }
 
 /**
- * ASSUMPTION (Slice A): "cast-role" is read narrowly, per the brief's own parenthetical, as
- * `defaultScriptId === 'always-cast'`. The broader "or more generally has a Cast rule" reading
- * needs real authored scripts to test against (Slice F+ content) and isn't reachable from
- * Slice A's stock-script-shaped fixtures.
+ * Phase 4.1-G1 (ASSUMPTION 67): the role-script ids that make a creature a CAST ROLE -- one whose
+ * script casts as a main action, so it must be generated with something to cast. A creature's
+ * `defaultScriptId` is its role (CONVENTIONS "Role scripts"); `caster`, `support` and `opener` cast.
+ * The other roles (striker, guardian, warden, taunter) only cast as a fallback. Named here because
+ * the engine imports no data; a data test pins every shipped caster/support/opener against this
+ * list, so a renamed role cannot silently stop being a cast role.
  */
+export const CAST_ROLE_SCRIPT_IDS: readonly string[] = ['caster', 'support', 'opener']
+
 function isCastRole(speciesCreature: SpeciesCreature): boolean {
-  return speciesCreature.defaultScriptId === 'always-cast'
+  return CAST_ROLE_SCRIPT_IDS.includes(speciesCreature.defaultScriptId)
 }
 
 /**
@@ -277,12 +281,19 @@ export function spellsUnlockedAt(
   return allSpells.filter((spell) => (spell.unlockedAtBiome ?? 1) <= biomeIndex)
 }
 
-/** A cast-role creature is generated with >=1 castable spell (CONVENTIONS: coherence, never an
- * empty loadout); everyone else spawns with empty gem slots. Rolls exactly one spell into slot
- * 0 from the cumulative-unlocked, affinity-matched pool -- gem-slot count itself isn't rolled in
- * v1. Replaces the old per-biome `spellPool` exclusivity (Phase 4 Slice A-H2): the pool a
- * cast-role enemy draws from is no longer scoped to its own biome's authored spells, it's every
- * spell unlocked at or before the current biome. */
+/**
+ * Phase 4.1-G1 (D4, ASSUMPTION 70): every enemy rolls a FULL, DISTINCT gem set -- one spell per
+ * regular gem slot (`DEFAULT_GEM_SLOT_COUNT`), whatever its role -- from the cumulative-unlocked,
+ * affinity-matched pool (`spellsUnlockedAt` then `canEquip`). Replaces "a cast-role enemy rolls one
+ * spell into slot 0".
+ *
+ * One `weightedPick` per slot, in slot order, each over the pool minus the spells already chosen.
+ * When that runs out (a pool smaller than the slot count) the remaining slots draw from the FULL
+ * pool: duplicates only as this safety net. Exactly one draw per slot whenever the pool is
+ * non-empty. An empty pool draws nothing and leaves the slots empty, except for a cast-role
+ * creature, which throws (ASSUMPTION 71: "usable" = affinity-matched and unlocked, not castable in
+ * any given fight; a cast role with nothing to cast is an authoring mistake, never a runtime state).
+ */
 function rollLoadout(
   speciesCreature: SpeciesCreature,
   biomeIndex: number,
@@ -293,14 +304,27 @@ function rollLoadout(
     { length: DEFAULT_GEM_SLOT_COUNT },
     () => null,
   )
-  if (!isCastRole(speciesCreature)) return slots
-
   const matchingSpells = spellsUnlockedAt(biomeIndex, allSpells).filter((spell) =>
     canEquip(spell, speciesCreature.affinity),
   )
-  if (matchingSpells.length === 0) return slots // defensive; a real biome always has a match
+  if (matchingSpells.length === 0) {
+    if (isCastRole(speciesCreature)) {
+      throw new Error(
+        `generation invariant violated: cast-role creature ${speciesCreature.id} has no ` +
+          `${speciesCreature.affinity} spell unlocked at biome ${biomeIndex}`,
+      )
+    }
+    return slots
+  }
 
-  slots[0] = weightedPick(matchingSpells, () => 1, rng)
+  for (let slot = 0; slot < slots.length; slot++) {
+    const remaining = matchingSpells.filter((spell) => !slots.includes(spell))
+    slots[slot] = weightedPick(
+      remaining.length > 0 ? remaining : matchingSpells,
+      () => 1,
+      rng,
+    )
+  }
   return slots
 }
 
@@ -330,6 +354,37 @@ function resolveAddSpeciesId(biome: BiomeData, add: SpeciesCreature): string {
 }
 
 /**
+ * The ordinary spawn path, shared by an ordinary fight's slots and a boss floor's fill (Phase
+ * 4.1-G1): weighted species from `pool`, rarity-weighted creature within it, a level in range, then
+ * a loadout -- always in that draw order -- materialized at `slot`.
+ */
+function spawnEnemy(
+  pool: readonly Species[],
+  slot: number,
+  range: { readonly min: number; readonly max: number },
+  biomeIndex: number,
+  allSpells: readonly Spell[],
+  runRng: SeededRng,
+  balanceConfig: BalanceConfig,
+): Creature {
+  const species = weightedPick(pool, (s) => s.weight, runRng)
+  const speciesCreature = weightedPick(
+    species.creatures,
+    (c) => balanceConfig.rarityDrawWeight[c.rarity],
+    runRng,
+  )
+  const level = range.min + Math.floor(runRng.next() * (range.max - range.min + 1))
+  const equippedSpells = rollLoadout(speciesCreature, biomeIndex, allSpells, runRng)
+  return materializeCreature(speciesCreature, {
+    level,
+    side: 'enemy',
+    slot,
+    speciesId: species.id,
+    gems: equippedSpells,
+  })
+}
+
+/**
  * `(floor, biomeData, biomeIndex, allSpells, runRng, balanceConfig) -> Fight[]`, one entry per
  * `fightCount(floor, balanceConfig)`. Advances `runRng` (the caller's persistent run RNG stream,
  * per CONVENTIONS) -- re-descending the same floor with the stream at a different position
@@ -346,14 +401,18 @@ function resolveAddSpeciesId(biome: BiomeData, add: SpeciesCreature): string {
  * Phase 4 Slice I (PR #65 review, boss floors): when `isBossFloor(floor)` and the resolved
  * `biome` carries a `boss`, this returns exactly ONE Fight -- the boss at slot 0 (materialized at
  * `bossLevel(floor, balanceConfig)`, no per-visit LEVEL roll of her own -- an authored, elevated
- * Instance, not a spawn-pool draw -- but still rolling a loadout via `rollLoadout` like any
- * spawn, so a cast-role boss never breaks the "casters always get a spell" coherence rule; a
- * no-op RNG-wise for every currently-shipped boss, all of which are `always-attack`) followed by
- * her authored adds (each rolling a level within `enemyLevelRange(floor, balanceConfig)` and a
- * loadout via `rollLoadout`, the SAME per-slot RNG calls an ordinary spawn makes, minus the
- * species/creature draws a fixed add doesn't need). `fightCount`/`enemyPartySize` are NOT
- * consulted -- only which creatures appear is authored, per CONVENTIONS. A boss-less biome (the
- * placeholder biomes, every fixture) falls through to the ordinary path below unchanged.
+ * Instance, not a spawn-pool draw -- but rolling a loadout via `rollLoadout` like any spawn, so
+ * from 4.1-G1 she holds a full gem set whatever her role) followed by her authored adds (each
+ * rolling a level within `enemyLevelRange(floor, balanceConfig)` and a loadout, the SAME per-slot
+ * RNG calls an ordinary spawn makes, minus the species/creature draws a fixed add doesn't need).
+ * `fightCount` is NOT consulted (one fight, no trash).
+ *
+ * Phase 4.1-G1 (6v6 boss floors, PR #81 review): the side is then FILLED up to
+ * `enemyPartySize(floor)` -- 6 at every boss floor -- through the ordinary spawn path (`spawnEnemy`)
+ * over the biome's pool minus the boss's own species, drawn from `runRng` after the boss's and the
+ * adds' draws. Only which creatures the boss BRINGS is authored; the rest of her side is the biome's
+ * own. A boss-less biome (the placeholder biomes, every fixture) falls through to the ordinary
+ * path below unchanged.
  */
 export function generateFloor(
   floor: number,
@@ -389,6 +448,31 @@ export function generateFloor(
         }),
       )
     })
+    // Phase 4.1-G1 (6v6 boss floors, PR #81 review; ASSUMPTION 72): fill the rest of the side up to
+    // `enemyPartySize(floor)` through the ordinary spawn path, over the biome's pool MINUS the boss's
+    // own species (so a count-scaling signature -- the Broodmother's spiderlings -- stays her
+    // authored adds). Drawn from the run RNG after the boss's and the adds' draws, so it varies per
+    // visit. A pool left with no positive-weight species fills nothing and throws nothing.
+    const fillPool = biome.speciesPool.filter((species) => species.id !== boss.speciesId)
+    const fillCount = Math.max(
+      0,
+      enemyPartySize(floor, balanceConfig) - enemyParty.length,
+    )
+    if (biomeHasContent({ ...biome, speciesPool: fillPool })) {
+      for (let i = 0; i < fillCount; i++) {
+        enemyParty.push(
+          spawnEnemy(
+            fillPool,
+            enemyParty.length,
+            { min, max },
+            biomeIndex,
+            allSpells,
+            runRng,
+            balanceConfig,
+          ),
+        )
+      }
+    }
     return [{ enemyParty, boss: { bossId: boss.bossId, creatureId: bossCreature.id } }]
   }
 
@@ -399,22 +483,16 @@ export function generateFloor(
   for (let fightIndex = 0; fightIndex < fightCount(floor, balanceConfig); fightIndex++) {
     const enemyParty: Creature[] = []
     for (let slot = 0; slot < partySize; slot++) {
-      const species = weightedPick(biome.speciesPool, (s) => s.weight, runRng)
-      const speciesCreature = weightedPick(
-        species.creatures,
-        (c) => balanceConfig.rarityDrawWeight[c.rarity],
-        runRng,
-      )
-      const level = min + Math.floor(runRng.next() * (max - min + 1))
-      const equippedSpells = rollLoadout(speciesCreature, biomeIndex, allSpells, runRng)
       enemyParty.push(
-        materializeCreature(speciesCreature, {
-          level,
-          side: 'enemy',
+        spawnEnemy(
+          biome.speciesPool,
           slot,
-          speciesId: species.id,
-          gems: equippedSpells,
-        }),
+          { min, max },
+          biomeIndex,
+          allSpells,
+          runRng,
+          balanceConfig,
+        ),
       )
     }
     fights.push({ enemyParty })
