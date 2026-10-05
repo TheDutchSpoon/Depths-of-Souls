@@ -107,9 +107,33 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
 - **Milestone bosses**: every 10th floor (each biome transition) is a tougher **boss** fight —
   a difficulty checkpoint and reward spike, and the **sole source of perk points** (see §9).
   Bosses are unique, **cannot be soul-collected**, and grant no soul%. A boss floor is **the boss
-  encounter alone** (the boss plus a few adds from the biome's own pool; no ordinary fights). Bosses
-  still drop XP and currency like any kill. The first win grants the boss's perk points, and the
-  floor can be re-fought afterwards for ordinary rewards (no further perk points).
+  encounter alone** (no ordinary fights). Bosses still drop XP and currency like any kill. The
+  first win grants the boss's perk points, and the floor can be re-fought afterwards for ordinary
+  rewards (no further perk points).
+  - **A boss fight is 6v6, like every fight from floor 6** (decided at the PR #81 review; built
+    in 4.1-G). The boss comes first, then its **authored adds**, the creatures its fight needs
+    (the Broodmother's spiderlings). The remaining slots are **filled with random creatures from
+    the biome's own pool**, excluding the boss's own species (so the Broodmother's count-scaling
+    sees only her authored spiderlings), drawn the way an ordinary fight draws them and rerolled
+    each visit. A boss with no authored adds (the Leech Sovereign) gets five random ones. The adds
+    are ordinary kills with ordinary rewards.
+  - **A boss takes control like any enemy: no boss immunity** (PR #81 review). A boss gets a full
+    gem set and its role script like every enemy, so a lock **downgrades** its turn and never
+    empties it: a Pacified striker casts a random gem instead of attacking, and a Silenced caster
+    attacks. A lock recast every turn holds for the whole fight, and that's the intended price:
+    one of the player's creatures spends its whole turn on it every round, against one enemy of
+    six.
+  - **Why** (the PR #81 corpus). The Leech Sovereign fought alone, ran `always-attack` and held no
+    gem. So once Pacified she had nothing to do but wait, and one creature casting Pacify every
+    round switched off the whole enemy side. In all four corpus fights where the player side
+    held Pacify, she waited every turn after her first, and every one of those losses became a
+    win. A side of six, and a boss with something to fall back on, fix that through the general
+    rules. A boss-only resistance isn't needed.
+  - **Watch points.** A lock with no break condition that blocks **every** action (Stun) would
+    still empty a boss's turn. Decide how bosses meet it when content first applies Stun. If a
+    softer lock on bosses is ever wanted, a shorter duration won't help, because a recast resets
+    it each round. The fair form is a per-turn chance to act through the lock, as a general effect
+    any creature could carry. 4.1-H's simulator reports how often a boss spends its turn locked.
 - **Difficulty model**: each floor maps to an **enemy level range** (min–max), not a separate
   stat multiplier — enemies are ordinary creature instances at some level, using the **same
   linear growth formula** as the player's creatures (§5). Enemy level grows **faster than floor

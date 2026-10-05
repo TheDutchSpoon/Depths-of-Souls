@@ -913,7 +913,8 @@ F1's changes are the stun and sleep goldens' skip shape and the two fixture lock
 
 ## 4.1-G — Hub actions and enemy behaviour
 
-Items: **D2, G4, §6, D4** (including B1's "a cast-role creature with no usable spell throws").
+Items: **D2, G4, §6, D4** (including B1's "a cast-role creature with no usable spell throws"),
+and **6v6 boss floors** (decided at the PR #81 review).
 
 ### D2 — summoning and party slots
 - **`summon(creatureId)`**: requires 100% soul; free (`BalanceConfig.summonCost`, default 0);
@@ -966,6 +967,49 @@ Items: **D2, G4, §6, D4** (including B1's "a cast-role creature with no usable 
   **distinct, affinity-matched gem set and stores it** as `Instance.gems: spellId[]`
   (ASSUMPTION 7). `materializeCreature` receives it. The Seer's innate spell comes on top.
 - Content docs: fold the roles and new spells from each doc's pending section into its body.
+
+### 6v6 boss floors and boss loadouts (decided at the PR #81 review)
+- **Why.** In the F3 corpus, the Leech Sovereign fought alone, on `always-attack`, with no gem.
+  Once Pacified she could only wait, so one creature casting Pacify every round switched off the
+  entire enemy side. All four corpus fights where the player side held Pacify (19, 109, 199, 289)
+  flipped from loss to win. The fix is general rules, not a boss exception (GAME_DESIGN
+  "Milestone bosses"):
+  - a full side;
+  - a boss whose role script has something to fall back on.
+- **The fill.** A boss floor's one fight has `enemyPartySize(floor)` creatures, which is 6 at every
+  boss floor:
+  - the boss first, then its authored adds;
+  - then fill slots drawn through the ordinary spawn path: the same weighted species selection,
+    over the biome's pool **minus the boss's own `speciesId`**, with the level within
+    `enemyLevelRange(floor)` and a loadout like any spawned enemy;
+    - the exclusion keeps a count-scaling signature (the Broodmother's spiderlings) to its authored
+      adds;
+  - all drawn from the run RNG, after the boss's and the authored adds' draws, so they vary per
+    visit.
+- **What stays the same.** `BossEncounter.adds` keeps meaning "the creatures this boss's fight
+  needs": the Broodmother keeps her two, and the Leech Sovereign's stays empty. A fill creature is an
+  ordinary spawn with ordinary per-kill rewards.
+- **The boss's loadout.** The boss path already calls `rollLoadout`. With D4's full distinct gem sets,
+  that gives every boss a full set, including the non-cast-role ones, which hold no gem today. Say so
+  explicitly in the plan, and test it on a boss.
+- **No boss immunity or lock resistance.** A Pacified striker boss casts a random gem (its role's
+  rule 3). The planned "cast random gem below an Attack rule" behaviour is exactly what keeps a lock
+  from emptying a boss's turn.
+- **Tests.**
+  - Generation tests: every shipped boss floor yields 6 creatures; authored adds come first; no fill
+    creature shares the boss's species; the fill draws are deterministic per run seed; and every
+    boss holds a full gem set.
+  - A hand-derived golden: the real Leech Sovereign, with her role script and a gem, Pacified. She
+    casts instead of waiting, and her Attack-steal doesn't fire that turn.
+- **Content docs.**
+  - The Leech Sovereign's "no adds" becomes "no authored adds; the rest of her side is the biome's
+    own creatures".
+  - Each boss section states the 6v6 rule once. (`species-locked.md` already says it, from the PR
+    #81 doc-sync.)
+- **Corpus.** Every boss fight changes: adds, the fill and the boss's gems. Attribute them as their
+  own class in G's regeneration.
+- **For 4.1-H.** Boss floors get harder: 6 enemies where there were 1–3. The simulator's T4 ("no
+  wall before the floor-10 boss") is the check. Report boss lock uptime too.
 
 ### Acceptance (4.1-G)
 - Store tests for every new action and reason; `can…` agreement tests.
