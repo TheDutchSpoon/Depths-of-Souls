@@ -700,14 +700,17 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   (**its status timers count down and expire**; the Web break-free roll) → turn end. Cleanup only
   ends things; anything that deals damage, heals or triggers is a trigger.
 - **Duration counts the bearer's own turns**, not rounds. A "3-turn" Weaken covers the bearer's
-  next three turns whatever the turn order; **Stun 1 skips exactly one turn**. (Phase 3 counted
+  next three turns whatever the turn order; **Stun 1 skips exactly one turn**. A status counts a
+  turn if it was already there when the creature came to act, so one gained at the very start of
+  its turn counts that turn, and one gained during or after its action starts next turn. (Phase 3 counted
   rounds at round end, which made a status's real length depend on whether it landed before or
   after its bearer acted.)
 - **A DoT ticks at the end of its bearer's turn, *before* the countdown** — so a 1-turn DoT ticks
   exactly once, then expires ("a 1-turn poison poisons once").
-- **A status applied or refreshed during its bearer's own turn starts counting next turn**: it
-  doesn't tick or count down in the turn that applied it (so a fresh application never silently
-  loses a turn). The same goes for the Web roll.
+- **A status applied or refreshed during or after its bearer's action starts counting next turn**:
+  it doesn't tick, count down or (a Web) get its break roll in that turn, so a fresh application
+  never silently loses a turn. One applied at the start of the bearer's turn, before it acts,
+  counts that turn: it was there for the action.
 - **Stacking = a single status instance per (status-type, creature)** carrying a **stack count** +
   **remaining duration**; re-applying refreshes duration and increments intensity toward the
   status's declared cap. DoT intensity = per-stack tick damage; a damage-modifier's intensity =
@@ -867,8 +870,9 @@ damage     = MAX(1, floor(raw))
   you descend. Rewards (XP, drops) scale with depth.
 - **Rewards bank per kill-event, the instant an enemy dies** — soul%, XP, and currency are never
   held pending the fight's outcome, so a wipe after some enemies died keeps everything earned so
-  far. Win/loss/draw is checked **after every action**; the fight ends the instant one side has no
-  living creatures (it does not finish the round).
+  far. Win/loss/draw is checked **after every step** (each action, each granted action, each
+  trigger firing at turn start, turn end or round end); the fight ends the instant one side has no
+  living creatures (it does not finish the turn or the round).
 - **Fight result is a three-value union** — `win` / `loss` / `draw`. A round-cap timeout is a
   `draw`. For navigation, **draw resolves like loss** (return to hub, no floor cleared), but
   already-banked per-kill rewards stay banked.
@@ -957,8 +961,8 @@ Design constraints:
   blocks Cast, Pacified blocks Attack, Stun/Sleep block everything). A separate "**unresolvable selector → skip**" branch also exists, but with the v1
   selector set it has **no reachable trigger** (self always exists; ally-selectors include the
   acting creature so they always resolve; enemy-selectors always have a target because `decideAction`
-  never runs against an already-wiped enemy side — win/loss is checked at the end of every turn, so
-  no turn starts after one side is gone). It is kept as a **defensive/structural seam**, documented
+  never runs against an already-wiped enemy side — win/loss is checked after every step, so no
+  turn or action starts after one side is gone). It is kept as a **defensive/structural seam**, documented
   but currently unreachable, so that future selectors which *can* fail to resolve get correct
   behavior for free. This keeps scripts robust.
 - **Evaluation is side-effect-free lookahead**: walk rules top-down evaluating condition + validity

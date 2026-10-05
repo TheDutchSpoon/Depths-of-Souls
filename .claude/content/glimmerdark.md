@@ -165,5 +165,6 @@ of `EchoCastGranted`.
 **Status timing (4.1-F):** every status's duration (Glow, Grant Act First, the Regen from
 Afterglow, the Web from Disorient, the Vulnerability from Blinding Flare) counts the **bearer's own
 turns**, counted down at the end of each of its turns. Regen heals **at the end of each of its
-bearer's turns** instead of at round end. A status applied during its bearer's own turn starts
-counting the next turn.
+bearer's turns** instead of at round end. A status applied during or after its bearer's action
+starts counting the next turn; one applied at the start of the bearer's turn, before it acts (the
+Charger's Glow on itself), counts that turn.

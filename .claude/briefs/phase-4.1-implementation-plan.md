@@ -806,6 +806,23 @@ that adaptation along with the sweep.
   status part of `resolveRoundEndSweep`). Round end keeps `on-round-end` trait triggers and the win
   check.
 - Win/loss check points inside the turn: the plan pins them (ASSUMPTION 19).
+- **Decided at the 4.1-F2 plan review** (CONVENTIONS "Turn structure", "Resolution & timing",
+  "Status lifecycle", Web's roll and "Death-reset" hold the rules):
+  - Born-this-turn has one window: a status starts at the first action slot it is present for
+    (applied since the action slot → starts next turn), for ticks, countdown and the Web roll
+    alike. The Spiders' Weaver moves from `on-turn-start` to `on-turn-end`, so the Web it places
+    is born and its own cleanup doesn't roll it (ASSUMPTIONS 18, 49).
+  - Win/loss is checked after every top-level step, each hook firing included, never inside a
+    cascade; a mid-turn wipe skips the rest of the turn and still emits `TurnEnded` (ASSUMPTION 19).
+  - A corpse's statuses are inert: no countdown, no `StatusExpired`, no roll (ASSUMPTION 51).
+  - The status validator rejects `on-round-end` triggers and also runs in `createCombat`
+    (ASSUMPTION 50).
+  - The born-this-turn tick gate is passed to `fireHook` by its `on-turn-end` caller through
+    `FireHookOptions`, not a hook-name branch inside `fireHook` (ASSUMPTION 52).
+  - `golden-castable-draw` is retired; the goldens named for the round-end sweep are renamed
+    (ASSUMPTIONS 53, 55).
+  - The coding agent edits no living doc; this block and the CONVENTIONS / GAME_DESIGN changes are
+    the plan-review doc-sync.
 
 ### D5 — the Web roll
 - Keep the **global** roll: **10% per Web bearer at every creature's turn**. The chance lives on
@@ -847,6 +864,10 @@ F1's changes are the stun and sleep goldens' skip shape and the two fixture lock
 - The **scoped-suppression golden** and **`golden-b2-silenced-refuses-granted-cast`** are rewritten
   on `action-lock` (F1): their fixture lock's on-turn-start `TriggerFired` disappears.
 - The **Web break-free golden** moves its roll to turn-end cleanup.
+- **The Spiders' Weaver moves to `on-turn-end`** (F2, ASSUMPTION 49): its goldens
+  (`golden-overgrowth-web-exploit`, `golden-broodmother`) are re-derived, and corpus fights where
+  the Weaver Webs are attributed to it (its `TriggerFired` moves from turn start to turn end, and
+  its random-enemy draw now follows its action's draws).
 - Glow, Weaken, Vulnerability, Confusion goldens: only timing changes may appear; the modifier math
   must be identical.
 - **Arcane Surge shares the `on-turn-end` pass with DoT ticks** (from 4.1-E, PR #78 review). Surge
@@ -1058,21 +1079,30 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     non-empty, not locked, with at least one valid target on its intended side.
 14. **`'random'` target** = uniform over living creatures on the action's intended side (today's
     echo draw), then the override pipeline for enemy-side single targets.
-15. **C leaves the Web roll at turn start**; F2 moves it to turn-end cleanup (F1 leaves it).
-16. **C leaves the round-end status sweep in place**; F2 deletes it (F1 adapts it to containers).
+15. **Confirmed (4.1-F2 plan review).** C leaves the Web roll at turn start; F2 moves it to
+    turn-end cleanup (F1 leaves it), right after the countdown. It runs on every dequeued turn's
+    cleanup (a dead actor's bracket, a died-mid-turn turn), never after a mid-turn wipe, over
+    living bearers in side → slot → id order, only for a Web that is present, not immune and not
+    born this turn.
+16. **Confirmed (4.1-F2 plan review).** C leaves the round-end status sweep in place; F2 deletes
+    it (F1 adapts it to containers). Round end keeps `on-round-end` trait triggers, the round-level
+    grant drain and the win check.
     C's turn-end cleanup is a seam with no status work.
 17. **In C, bonus-cast and echo-cast keep their data shape and events** but run through the
     pipeline (bonus-cast in the granted-actions step); E turns them into `perform-action`.
-18. **Born-this-turn tracking** uses the minimum state that works (e.g. stamping an instance with the
-    turn it was applied or refreshed); the F2 plan pins it and shows it adds nothing to events.
-19. **Win/loss check points inside a turn** (after the action, after each turn-end hook firing that can
-    kill, after each granted action) and whether `TurnEnded` is still emitted when the fight ends
-    mid-turn: the F2 plan pins them, matching today's "the fight ends the instant a side is wiped".
-    PR #70 review data point: today `resolveTurn` checks only once, after `TurnEnded`. Adding the
-    in-turn checks is golden-neutral on the C1 suite (verified by mutation), but once DoTs tick on
-    `on-turn-end` the end-only check turns a win into a **draw** when the last living creature on
-    the winning side dies to its own tick after emptying the other side. F2's win-check golden
-    covers exactly that case.
+18. **Confirmed (4.1-F2 plan review).** Born-this-turn tracking: `CombatState.turnClock`, bumped
+    once per dequeued turn at the action slot (alive, dead or skipped actor), and a status
+    instance's `appliedAt`, stamped on apply and on refresh. Born is `appliedAt === turnClock`, for
+    the tick, the countdown and the Web roll. Plain data, invisible in events.
+19. **Confirmed (4.1-F2 plan review).** Win/loss is checked **after every top-level step**: the
+    action, each granted action, and each firing of the turn-start, turn-end and round-end hook
+    passes, never inside a cascade. A mid-turn wipe skips the rest of the turn, still emits
+    `TurnEnded`, then `FightEnded`. This matches "the fight ends the instant a side is wiped". PR
+    #70 review data point: `resolveTurn` used to check only once, after `TurnEnded`; once DoTs tick
+    on `on-turn-end`, that end-only check turns a win into a **draw** when the last living creature
+    on the winning side dies to its own tick after emptying the other side. F2's win-check goldens
+    cover that case, and a hook firing that wipes a side ahead of a later lethal firing in the same
+    pass.
 20. **New spell placeholder numbers:** Pounce 100% Speed; Stifling Weight Weaken at its default
     duration; Life Siphon 70% Intelligence damage + heal self for 35% of Intelligence. Tuned in H.
 21. **Simulator policy and home:** `src/state/balance-sim.ts` (runs in Node) plus an `npm run sim`
@@ -1155,6 +1185,28 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     and is read only from non-status carriers.
 48. **Confirmed (4.1-F1 plan review).** The status damage-modifier stays its own category; no
     fold into `conditional-damage-bonus` or `taken-reduction`.
+49. **Decided (design owner, 4.1-F2 plan review).** One born window: a status starts at the first
+    action slot it is present for. Applied or refreshed since the current turn's action slot, it
+    neither ticks, counts down nor rolls (Web) that turn; applied earlier in the turn, it does.
+    Keeps ASSUMPTION 45 and "Stun 1 skips exactly one turn". The Spiders' Weaver (`spider-weaver-
+    web-strike`) moves from `on-turn-start` to `on-turn-end`, so its Web is born and its own
+    cleanup doesn't roll it: the same rolls per round as before F2. Considered: a second, whole-turn
+    window for the Web roll only (rejected: a special window kept for one trigger whose turn-start
+    timing has no effect in play, since Web acts on the next round's turn order).
+50. **Confirmed (4.1-F2 plan review).** The status validator rejects a `triggered` effect on
+    `on-round-end`, and runs over the registry `createCombat` is given as well as at import.
+51. **Confirmed (4.1-F2 plan review).** A corpse's statuses are inert: no countdown, no
+    `StatusExpired`, no roll. Revive replaces them. No wipe-on-death is built.
+52. **Confirmed (4.1-F2 plan review).** The born-this-turn tick gate reaches `fireHook` through
+    `FireHookOptions`, passed only by `resolveTurn`'s `on-turn-end` call; `fireHook` has no
+    hook-specific rule.
+53. **Confirmed (4.1-F2 plan review).** `golden-castable-draw` is retired (its granted cast after a
+    wipe is unreachable). The castable filter stays pinned by the `resolveIntent` unit test in
+    `actions.test.ts`, shown failing with the filter removed.
+54. **Confirmed (4.1-F2 plan review).** `CombatState.turnClock` and `StatusEffect.appliedAt` are
+    new; test files that build those shapes get shape-only edits.
+55. **Confirmed (4.1-F2 plan review).** The goldens named for the round-end sweep are renamed to
+    turn-end names (`git mv`), with an old → new map in the phase record, as in 4.1-E.
 
 ## Sequencing summary
 

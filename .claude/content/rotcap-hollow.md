@@ -147,8 +147,9 @@ lands.
 
 **Status timing (4.1-F):** Spore, Confusion and every other status count down in the **bearer's own
 turns**. Spore (and every DoT) ticks **at the end of each of its bearer's turns** instead of at round
-end, before that turn's countdown. A status applied during its bearer's own turn starts counting the
-next turn. Spore's spread on death is unchanged.
+end, before that turn's countdown. A status applied during or after its bearer's action starts
+counting the next turn; one applied at the start of the bearer's turn, before it acts, counts that
+turn. Spore's spread on death is unchanged.
 
 **Casting roles (4.1-G):** Necromoss Hollowroot is no longer the biome's only spellcaster:
 Sporecloud Bloomer, Necromoss Wisp and Sporch Ashborn are casters and Sporch Cinderlord an opener.

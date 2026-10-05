@@ -39,7 +39,7 @@ removed. Lasts up to **3 turns** if the sleeper is never hit.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Weaver | Wit | Enabler | At the start of its own turn, this creature applies Web to a random living enemy. |
+| Weaver | Wit | Enabler | At the end of its own turn, this creature applies Web to a random living enemy. |
 | Ambusher | Wit | Payoff | This creature deals **40% more damage** to enemies that are Webbed. |
 | Broodwarden | Instinct | Amplifier | When this creature attacks, it also lands a separate bonus hit equal to **25% of its Attack for every enemy currently Webbed** (so 50% with two Webbed enemies, and so on) — it never applies Web itself, only benefits from what its species-mates have already done. |
 
@@ -195,8 +195,11 @@ pool's only plain AOE damage spell, with a reviewed name and numbers.
 **Status timing (4.1-F):** Web, Sleep and every other status count down in the **bearer's own
 turns**, at the end of each of its turns; damage-over-time (e.g. Venom Bolt's Poison, while it
 exists) ticks at the end of each of its bearer's turns instead of at round end. A status applied
-during its bearer's own turn starts counting the next turn. Web's break roll moves to the end of each
-creature's turn (still 10%, still at every creature's turn).
+during or after its bearer's action starts counting the next turn; one applied at the start of the
+bearer's turn, before it acts, counts that turn. Web's break roll moves to the end of each
+creature's turn (still 10%, still at every creature's turn), and a Web is first rolled at the turn
+after the one that applied it. The Weaver now Webs at the **end** of its turn (4.1-F2), so its own
+turn's roll never touches the Web it just placed.
 
 **Casting roles change the "only spellcaster" notes:** once roles land (4.1-G), Pollenlord is no
 longer the biome's only caster: Spider Weaver and Pollinator Beneficiary become casters, Pollinator
