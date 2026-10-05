@@ -33,6 +33,12 @@ export interface Instance {
    * (ASSUMPTION 6). Nothing sets this non-null before a future script-assignment phase, but the
    * plumbing through `materializeCreature` is real (Phase 4.1-A, A5/A6). */
   readonly scriptId: string | null
+  /** Phase 4.1-G2 (ASSUMPTION 83): the gem set rolled ONCE when the instance was created (starter
+   * grant, Unicorn, summon), as spell ids, slot-positional -- one entry per regular gem slot (3),
+   * `null` for an empty slot. Resolved to `Spell`s through `deps.allSpells` when the party is
+   * materialized (an unknown id throws, ASSUMPTION 84). Phase 8 replaces the roll with the
+   * player's own equipping. */
+  readonly gems: readonly (string | null)[]
 }
 
 /** Resolves an Instance's static creature id from its `source`. Throws on a `fusion` source

@@ -23,9 +23,7 @@ describe('validateSpecialization', () => {
       id: 'broken',
       name: 'Broken',
       starterCreatureId: 'nope',
-      perks: [
-        { id: 'p', name: 'P', maxLevel: 1, costPerLevel: 999, phase: 'p4', effects: [] },
-      ],
+      perks: [{ id: 'p', name: 'P', maxLevel: 1, costPerLevel: 999, effects: [] }],
     }
     expect(() => validateSpecialization(broken)).toThrow(/sum to 999/)
   })
@@ -53,22 +51,36 @@ describe('shipped spec shape', () => {
   })
 })
 
-describe('Phase tag representability (ASSUMPTION 24)', () => {
-  it('every p8 (Phase-8-inert) perk resolves to zero effects, always', () => {
-    for (const spec of SPECIALIZATIONS) {
-      for (const perk of spec.perks) {
-        if (perk.phase !== 'p8') continue
-        expect(resolvePerkEffects(perk, perk.maxLevel)).toEqual([])
-      }
+// Phase 4.1-G2 (G4): `PerkDef.phase` is deleted; the nine perks that stay inert until Phase 8 are
+// an explicit list here, each with a code comment in specializations.ts.
+const KNOWN_INERT_PERK_IDS = [
+  'wit-mastery',
+  'violence-mastery',
+  'endurance-mastery',
+  'vitality-mastery',
+  'instinct-mastery',
+  'arcane-shields',
+  'arcane-versatility',
+  'true-wit',
+  'shield-specialist',
+]
+
+describe('Known-inert perks (Phase 4.1-G2, G4)', () => {
+  const allPerks = SPECIALIZATIONS.flatMap((spec) => spec.perks)
+
+  it('the list names 9 real perks, and each resolves to zero effects at max level', () => {
+    expect(KNOWN_INERT_PERK_IDS).toHaveLength(9)
+    for (const id of KNOWN_INERT_PERK_IDS) {
+      const perk = allPerks.find((p) => p.id === id)
+      expect(perk, id).toBeDefined()
+      expect(resolvePerkEffects(perk!, perk!.maxLevel), id).toEqual([])
     }
   })
 
-  it('every p4 (Phase-4-functional) perk resolves to at least one real effect at max level', () => {
-    for (const spec of SPECIALIZATIONS) {
-      for (const perk of spec.perks) {
-        if (perk.phase !== 'p4') continue
-        expect(resolvePerkEffects(perk, perk.maxLevel).length).toBeGreaterThan(0)
-      }
+  it('every perk NOT on the list resolves to at least one effect at max level', () => {
+    for (const perk of allPerks) {
+      if (KNOWN_INERT_PERK_IDS.includes(perk.id)) continue
+      expect(resolvePerkEffects(perk, perk.maxLevel).length, perk.id).toBeGreaterThan(0)
     }
   })
 })
