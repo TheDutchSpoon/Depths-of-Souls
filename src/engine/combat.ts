@@ -300,7 +300,10 @@ export function resolveTurn(state: CombatState): {
   // affect the other's clone.
   let working: CombatState = { ...state, rng: { position: state.rng.position } }
 
-  // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start.
+  // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start. Phase
+  // 4.1-F3 (ASSUMPTION 61): like every other in-fight pass, the hook pass and its drain stop at a
+  // wipe, and win/loss is checked right after both, BEFORE RoundStarted -- a fight-start wipe
+  // ends the fight as FightStarted ... FightEnded, with no round and no turn.
   if (working.round === 0) {
     events.push({ type: 'FightStarted' })
     const fightStartCtx = createResolutionContext(events, newCascade())
@@ -310,8 +313,12 @@ export function resolveTurn(state: CombatState): {
       undefined,
       working,
       fightStartCtx,
+      { stopWhen: fightOver },
     ).state
-    working = drainGrantedActions(fightStartCtx, working) // round-level grants (A2)
+    // round-level grants (A2)
+    working = drainGrantedActions(fightStartCtx, working, { stopWhen: fightOver })
+    const fightStartResult = checkWinLoss(working)
+    if (fightStartResult) return finalize(working, events, fightStartResult)
   }
 
   // Round boundary: the queue is exhausted (or this is the very first call).

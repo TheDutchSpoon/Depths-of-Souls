@@ -20,9 +20,11 @@ import {
   DISORIENT,
   EMBER_LANCE,
   HOWLING_INSTINCT,
+  PACIFY,
   PUPPET_STRING,
   RASPING_CHANT,
   ROOT_GRASP,
+  SILENCE,
   SPORE_CYST,
   STINGER_SWARM,
   THORN_LASH,
@@ -303,6 +305,17 @@ const SPELL_FIGHTS: readonly SpellFightSpec[] = [
   },
 ]
 
+/** Phase 4.1-F3: Silence (a Brute caster, Violence) and Pacify (a Pollinator Beneficiary, Wit, no
+ * innate spell). */
+const F3_SPELL_FIGHTS: readonly SpellFightSpec[] = [
+  { spell: SILENCE, caster: BRUTE_STARTER, speciesId: BRUTE_STARTER_SPECIES_ID },
+  {
+    spell: PACIFY,
+    caster: POLLINATOR_BENEFICIARY,
+    speciesId: POLLINATORS_SPECIES_ID,
+  },
+]
+
 function buildSpellFight(index: number, spec: SpellFightSpec): CorpusFight {
   const level = SPELL_FIGHT_LEVEL
   const player: Creature[] = [
@@ -399,6 +412,15 @@ const beneficiaryCaster = (spell: Spell): PartyMember => ({
 })
 
 const SPELL_FIGHT_LEVEL = 20
+
+/** Phase 4.1-F3: a Violence caster whose only gem is `spell` (the Brute starter has no innate
+ * spell, so the gem sits in slot 0 for the stock `always-cast` script). */
+const bruteCaster = (spell: Spell): PartyMember => ({
+  creature: BRUTE_STARTER,
+  speciesId: BRUTE_STARTER_SPECIES_ID,
+  scriptId: 'always-cast',
+  gems: [spell, null, null],
+})
 
 /** Never attacks, never controls: a Provoking Shieldbarer and two Defending ones. Player damage
  * against it is mostly the 1% chip floor, so it outlasts a fight of many rounds. */
@@ -536,6 +558,31 @@ export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
     brute(),
     sorcerer(),
   ]),
+  // Phase 4.1-F3 (ASSUMPTION 59), appended last (corpus entries 522-523, seeds 2107-2108): Clear
+  // Mind and Aggressive only matter against a Silenced / Pacified bearer that would otherwise
+  // use the locked action. Rides on no chance: the enemy caster is `always-cast` and four times
+  // the player's level (it outlives the early swings), its target is the player's lowest-HP
+  // creature, and every player creature is a user of the locked action -- an all-Seer party
+  // (Seers cast every turn) against Silence, an all-Brute party (Brutes attack every turn)
+  // against Pacify. With the perk the creature still casts / attacks; without it, the script
+  // falls through (a Seer attacks, a Brute waits), so the log differs. The Pacifier is a
+  // Pollinator Beneficiary (Wit, no innate spell, so Pacify sits in slot 0).
+  perkVariant(
+    'sorcerer-silenced',
+    SORCERER,
+    7,
+    { player: 20, enemy: 80 },
+    [sorcerer(), sorcerer(), sorcerer(), sorcerer()],
+    [shieldbarer(), bruteCaster(SILENCE)],
+  ),
+  perkVariant(
+    'brute-pacified',
+    BRUTE,
+    8,
+    { player: 20, enemy: 80 },
+    [brute(), brute(), brute(), brute()],
+    [shieldbarer(), beneficiaryCaster(PACIFY)],
+  ),
 ]
 
 /** The ordered list of fights the digest hashes -- Part A (300 generated fights), Part B (200
@@ -547,6 +594,11 @@ export function buildCorpus(): readonly CorpusFight[] {
   const partC = [
     ...SPELL_FIGHTS.map((spec, i) => buildSpellFight(i, spec)),
     ...PERK_FIGHT_VARIANTS.map((v) => v.build()),
+    // Phase 4.1-F3 (ASSUMPTION 58): the Silence and Pacify spell fights, after the perk fights
+    // (entries 524-525, seeds 2015-2016): appended, never interleaved. Same shape as
+    // SPELL_FIGHTS (an `always-cast` caster against WALL_ENEMY), so the status landing rides on
+    // no random draw.
+    ...F3_SPELL_FIGHTS.map((spec, i) => buildSpellFight(SPELL_FIGHTS.length + i, spec)),
   ]
   return [...partA, ...partB, ...partC]
 }

@@ -247,6 +247,29 @@ export const CONFUSION: StatusDef = {
   defaultDuration: 3,
 }
 
+/** Phase 4.1-F3 (G2): a scoped passive `action-lock` -- the bearer cannot Cast. A scoped lock never
+ * skips the turn: the script falls through to its next legal rule, then to the implicit fallback
+ * (Attack if legal, else Wait). Refuses a granted cast too (every action source goes through
+ * `checkLegality`). Clear Mind (Sorcerer perk) is immunity to it: the status still lands and
+ * `has-status` stays true, but the lock is ignored. Counts the bearer's own turns, cap 1. */
+export const SILENCED: StatusDef = {
+  statusId: 'silenced',
+  cap: 1,
+  effects: [{ category: 'action-lock', scope: 'cast' }],
+  polarity: 'debuff',
+  defaultDuration: 3,
+}
+
+/** Phase 4.1-F3 (G2): Silenced's mirror -- the bearer cannot Attack (`action-lock { scope:
+ * 'attack' }`). Aggressive (Brute perk) is immunity to it. Same rules as Silenced. */
+export const PACIFIED: StatusDef = {
+  statusId: 'pacified',
+  cap: 1,
+  effects: [{ category: 'action-lock', scope: 'attack' }],
+  polarity: 'debuff',
+  defaultDuration: 3,
+}
+
 export const STOCK_STATUSES: readonly StatusDef[] = [
   POISON,
   BURN,
@@ -264,6 +287,9 @@ export const STOCK_STATUSES: readonly StatusDef[] = [
   // Phase 4 Slice H3: real per-species Rotcap Hollow statuses (additive, same guardrail).
   SPORE,
   CONFUSION,
+  // Phase 4.1-F3 (G2): the two scoped locks (appended).
+  SILENCED,
+  PACIFIED,
 ]
 
 /** Ready to pass directly as createCombat's `statuses` argument. */

@@ -7,6 +7,8 @@ import {
   STUN,
   WEAKEN,
   VULNERABILITY,
+  SILENCED,
+  PACIFIED,
   STOCK_STATUSES,
   STATUS_REGISTRY,
 } from './statuses'
@@ -59,6 +61,17 @@ describe('stock statuses (representative Phase 3 content)', () => {
   it('every stock status carries only effects a status may carry (the load-time validator already ran)', () => {
     for (const status of STOCK_STATUSES) {
       expect(() => validateStatusDef(status)).not.toThrow()
+    }
+  })
+
+  it("SILENCED is a passive 'cast' action-lock and PACIFIED a passive 'attack' one (cap 1, 3 turns, debuffs)", () => {
+    expect(SILENCED.effects).toEqual([{ category: 'action-lock', scope: 'cast' }])
+    expect(PACIFIED.effects).toEqual([{ category: 'action-lock', scope: 'attack' }])
+    for (const lock of [SILENCED, PACIFIED]) {
+      expect(lock.cap).toBe(1)
+      expect(lock.defaultDuration).toBe(3)
+      expect(lock.polarity).toBe('debuff')
+      expect(STATUS_REGISTRY.get(lock.statusId)).toBe(lock)
     }
   })
 })

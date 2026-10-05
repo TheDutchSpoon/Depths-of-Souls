@@ -229,3 +229,40 @@ export const HOWLING_INSTINCT: Spell = {
     },
   ],
 }
+
+/** Phase 4.1-F3 (G2): Silence -- a pure status spell (no damage): the target cannot Cast for its
+ * next 3 turns (Silenced's own `defaultDuration`, inherited: the effect omits a duration).
+ * Violence's control spell. No tuned numbers (H's job). */
+export const SILENCE: Spell = {
+  id: 'silence',
+  name: 'Silence',
+  targetShape: 'single',
+  affinity: 'violence',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'silenced' },
+    },
+  ],
+}
+
+/** Phase 4.1-F3 (G2): Pacify -- Silence's Wit mirror: the target cannot Attack for its next 3
+ * turns. A pure status spell, duration inherited from Pacified's `defaultDuration`. */
+export const PACIFY: Spell = {
+  id: 'pacify',
+  name: 'Pacify',
+  targetShape: 'single',
+  affinity: 'wit',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'pacified' },
+    },
+  ],
+}
