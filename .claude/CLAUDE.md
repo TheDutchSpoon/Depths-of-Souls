@@ -34,7 +34,7 @@ Vision → Provoke) (4.1).
 creature's ordered rules, first valid match wins (invalid action → skip); `Condition`/`TargetSelector`
 are discriminated unions; rule targeting is optional (default = lowest-HP creature on the action's
 intended side; explicit always wins, cross-side allowed); HP% via integer cross-multiplication;
-enemies run the same system (six **role scripts**: striker/guardian/warden/caster/support/opener,
+enemies run the same system (seven **role scripts**: striker/guardian/warden/caster/support/opener/taunter,
 4.1). Affinities (behavioral drive, soft-mapped to HP/Atk/Int/Def/Spd resp.): **Vitality, Violence, Wit,
 Endurance, Instinct**, cycle **Vitality > Violence > Wit > Endurance > Instinct > Vitality**. Incremental power lives
 in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
