@@ -242,7 +242,9 @@ finding labels B1, A4, … are a separate scheme.)
     floors.
   - **G2** hub and store: `summon`, `setPartySlot`; `setPerkLevel` / `refundAllPerks` and no
     `PerkDef.phase`; `newGame({ seed })`; stored player gem sets.
-- **4.1-H — balance:** the deterministic balance simulator and a first tuning pass.
+- **4.1-H — balance**, in two PRs:
+  - **H1** the deterministic balance simulator and its report (byte-identical);
+  - **H2** the first tuning pass, with the CI thresholds asserted.
 - **No demo of its own** (a fix phase): the Phase 4.5 demo covers Phase 4 and 4.1 together
   (CONVENTIONS "Every feature phase ships a demo").
 

@@ -64,7 +64,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: goldens byte-identical; the digest is regenerated once, existing entries changing only through the cast-role loadout roll (attributed mechanically), plus any appended coverage fights |
 | **4.1-G** | Hub actions + enemy behaviour, shipped as **G1** (enemy behaviour) and **G2** (hub and store) | G1: deliberate, listed; mechanism goldens byte-identical, content goldens and the digest change (attributed stage by stage); G2: engine goldens and the digest **byte-identical**, store tests change |
-| **4.1-H** | Balance simulator + first tuning pass | Content numbers change; mechanism goldens untouched |
+| **4.1-H** | Balance simulator + first tuning pass, shipped as **H1** (the simulator and its report) and **H2** (the first tuning pass) | H1: **byte-identical** (new files only; every golden, store test and the digest unchanged); H2: content numbers change, deliberate and listed; mechanism goldens untouched |
 
 The split keeps each PR under one golden policy: a PR that must be byte-identical never also
 carries deliberate changes, so "any diff is a regression" stays checkable.
@@ -1052,6 +1052,25 @@ and **6v6 boss floors** (decided at the PR #81 review).
 
 Item: **D1** (simulator, bands, CI thresholds, tuning).
 
+### The split: H1, H2 (decided before the H kickoff)
+
+| PR | Items | Golden policy |
+|---|---|---|
+| **4.1-H1** | The simulator (ASSUMPTION 21's policy), `npm run sim`, the full report including every watch point's metrics, and the determinism test. ASSUMPTION 22's thresholds are computed and shown in the report, not asserted. | **Byte-identical**: new files and a `package.json` script only. Every golden export, every existing test and the corpus digest unchanged. |
+| **4.1-H2** | The first tuning pass, the CI threshold test (ASSUMPTION 22) asserted, and the before/after report. | **Deliberate, listed**: content goldens, store and integration tests and the digest change, each attributed to a listed tuning change. Mechanism goldens untouched. |
+
+**Why two, and this order.**
+- A tuning plan's ASSUMPTIONS name what changes and by how much. That needs the report first, so
+  one plan-first PR can't hold both.
+- The watch points end in decisions: whether draws get a band, whether a boss lock needs a
+  break-through chance, and how far the early floors are from their targets. They're decided on
+  H1's report, before H2's plan.
+- Floor 1 is far below ASSUMPTION 22's 80% today. Measured on 4.1-G2 (40 seeds, the real store,
+  retrying a lost floor, first-try floor-1 clears): Brute 27 of 40, Shieldbarer 3, Sorcerer 2. A
+  threshold test can't be green before tuning.
+- After H1 merges, its report goes to a design pass. If a fix would change a decided value (the
+  fight count, the level range, the XP curve), that's a grill, not a tuning edit (WORKFLOWS).
+
 - A **deterministic balance simulator**: drives the **real store** (`newGame`, the intro, `setSpec`,
   `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with a **documented simple player policy**
   (ASSUMPTION 21) over a fixed set of seeds, and reports:
@@ -1084,8 +1103,8 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     the factor, or how often it can fire (for example once per turn, or a trigger condition), and
     never a global stack cap.
   - The report adds, per spec: the **round-cap draw rate**, and the **largest stack of one trait's
-    stat-modifier** seen on a creature. Whether draws get a target band is decided at the 4.1-H plan
-    review.
+    stat-modifier** seen on a creature. Whether draws get a target band is decided on H1's report,
+    before H2's plan.
 - **Watch point: boss floors in 6v6** (PR #82 review, measured on the corpus after 4.1-G1).
   - **Lock uptime needs a script that aims at the boss.** Role scripts aim a spell at the lowest-HP
     enemy, so the simple policy never locks a boss. In the G1 corpus, 19 boss fights have a
@@ -1104,10 +1123,12 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     runs away.
 
 ### Acceptance (4.1-H)
-- The simulator is deterministic (same seeds → identical report, asserted).
-- CI threshold test green; the report in the PR shows where each target band landed.
-- Mechanism goldens untouched; content goldens re-derived/regenerated and listed where numbers
-  changed.
+- **H1:** the simulator is deterministic (same seeds → identical report, asserted); the report
+  shows where each target band and each ASSUMPTION 22 threshold lands; every golden export, every
+  existing test and the digest are unchanged.
+- **H2:** the CI threshold test is green; the before/after report is in the PR and the phase
+  record; mechanism goldens untouched; content goldens re-derived or regenerated and listed where
+  numbers changed.
 
 ---
 
@@ -1222,7 +1243,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     reaches 100% and keep the six highest-level instances in the party; spend perk points greedily in
     spec-doc order on functional perks. The policy is documented in the file header.
 22. **CI thresholds:** fail only if floor-1 clear rate < 80%, the first soul takes > 30 clears, or no
-    seed reaches floor 5 within the first session. Everything else is reported.
+    seed reaches floor 5 within the first session. Everything else is reported. H1 reports them;
+    the CI test asserts them from H2 (see "The split: H1, H2").
 23. **Reachable floors** = `1 .. min(deepestFloor + 1, contentFrontier)`, inclusive. When a floor
     fails both checks, **`beyond-content-frontier` wins** (it is the more specific reason, and the
     UI can say "no content yet" instead of "too deep"); `floor-out-of-reach` covers floors < 1 and
@@ -1455,5 +1477,6 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 (action pipeline + turn skeleton) → `4.1-D` (spells carry responses, byte-identical) → `4.1-D2`
 (the corpus covers all real content, test-only) → `4.1-E` (`perform-action`) → `4.1-F1` (status
 containers) → `4.1-F2` (status timing + Web roll) → `4.1-F3` (Silence/Pacify) → `4.1-G1` (enemy
-behaviour) → `4.1-G2` (hub and store) → `4.1-H` (simulator + tuning) → then the Phase 4.5 demo
-brief. Each PR branches from `main` after the previous merge.
+behaviour) → `4.1-G2` (hub and store) → `4.1-H1` (simulator and report, byte-identical) →
+`4.1-H2` (tuning) → then the Phase 4.5 demo brief. Each PR branches from `main` after the previous
+merge.
