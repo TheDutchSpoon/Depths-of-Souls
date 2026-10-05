@@ -31,6 +31,21 @@ only the Webbed one), the Web has a **10% chance** to break — so in a full 6v6
 breaks within one round (about 72% of the time). Web never lasts more than **3 turns**, regardless
 of whether it breaks free.
 
+**Silenced** — A Silenced creature can't **cast** (any spell, whether it chose the cast or was
+granted it by a trait). Its turn is **not** skipped: its script moves on to the next rule it can
+carry out, and if none fits it attacks, as any creature does when its script runs out. So a creature
+that always casts attacks instead. Lasts **3 of the Silenced creature's own turns**, whether it acts
+before or after the caster in the round (it counts down at the end of each of its own turns);
+casting Silence again on it refreshes the 3 turns. Applied by **Silence** (Violence). The Sorcerer
+perk **Clear Mind** makes your creatures immune: Silence still lands and still counts as "Silenced"
+for any rule that checks for it, but the creature casts anyway.
+
+**Pacified** — Silenced's mirror: the creature can't **attack** (chosen or granted), but its turn is
+not skipped. Its script moves on to the next rule it can carry out; if none fits it waits, because
+attacking (the usual fallback) is the locked action. So a creature that always attacks waits, and
+one whose script also has a cast rule casts. Lasts **3 of its own turns**. Applied by **Pacify**
+(Wit). The Brute perk **Aggressive** makes your creatures immune, the same way.
+
 **Sleep** — A Sleeping creature's turn is skipped entirely. The instant it takes any damage, it
 wakes up — the hit that wakes it still lands its own bonus (see Reaper below) before Sleep is
 removed. Lasts up to **3 turns** if the sleeper is never hit.
@@ -104,7 +119,7 @@ slice — this slice only authors her as content: her stats, her signature trait
 roster members accompany her, the same content/runner split the Unicorn's own scripted intro had
 in Slice F.
 
-## Spells (11 of The Overgrowth's own, plus 3 shared "core" spells — all unlocked at biome 1)
+## Spells (13 of The Overgrowth's own, plus 3 shared "core" spells — all unlocked at biome 1)
 
 Damage-spell power convention: a single-target spell with no other effect deals damage around
 **100%** of the caster's Intelligence; one that also applies a status pulls back to roughly
@@ -126,6 +141,8 @@ third, plain-damage entry: Arcane Bolt).
 | Wild Vigor | Vitality | Permanently raises a single ally's Attack by **15%** for the rest of the fight. |
 | Stinger Swarm | Instinct | A single-target hit dealing damage equal to **100% of the caster's Intelligence**. |
 | Howling Instinct | Instinct | Permanently raises the whole team's Speed by **10%** for the rest of the fight. |
+| Silence | Violence | Silences a single enemy for **3 turns**: it can't cast. No damage. |
+| Pacify | Wit | Pacifies a single enemy for **3 turns**: it can't attack. No damage. |
 
 "Damage equal to X% of the caster's Intelligence (or Defence, for Root Grasp)" always goes through
 the normal damage formula (the target's Defence, affinity, all the usual modifiers) — the
@@ -179,8 +196,6 @@ lands, the same way numbers are kept in sync.
 
 | Spell | Affinity | Slice | Description (numbers set in the 4.1-H tuning pass) |
 |---|---|---|---|
-| Silence | Violence | 4.1-F | Silences a single enemy (it can't cast) for 3 turns. No damage. |
-| Pacify | Wit | 4.1-F | Pacifies a single enemy (it can't attack) for 3 turns. No damage. |
 | Pounce | Instinct | 4.1-G | A single-target hit whose damage scales off the caster's **Speed**. |
 | Stifling Weight | Endurance | 4.1-G | Weakens a single enemy. No damage. |
 | Life Siphon | Vitality | 4.1-G | A single-target hit that also heals the caster. |

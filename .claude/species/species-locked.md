@@ -181,11 +181,18 @@ race-fights). **Zero new engine cost — all recombinations of already-locked pr
 | Boss | Floor / biome | Fight shape | Signature (locked primitives) |
 |---|---|---|---|
 | **Broodmother** *(giant spider)* | 10 — The Overgrowth | Target-priority | **Count-scales** off living spiderling adds + periodically **Webs** the party (act-last). Kill adds to weaken her. Adds: spiderlings (Spider pool). |
-| **Leech Sovereign** | 20 — Glimmerdark | Fast steal-race | Every hit **steals a stat** (permanent −you / +it, same as Sparkeaters); you hollow out over time — answer is raw burst. Lean identity (no heavy add layer). |
+| **Leech Sovereign** | 20 — Glimmerdark | Fast steal-race | Every hit **steals a stat** (permanent −you / +it, same as Sparkeaters); you hollow out over time — answer is raw burst. Lean identity: no authored adds (her five fill adds are random biome creatures). |
 | **Rot Sovereign** | 30 — Rotcap Hollow | Attrition-management (finale) | Grows with **every death**: a flat, permanent Attack rise **per death, the same rate whichever side died** (her adds or your creatures — any creature that dies feeds it; each death counted once) + blankets the party in spreading **Spore**. Puzzle = don't-feed-it + out-manage the rot, not pure DPS. |
 
 Power seam: elevated **level** (a few above the floor's range, via the curve) + signature traits +
 adds. Exact stats/numbers are parked balance.
+
+**Every boss fight is 6v6** (PR #81 review, built in 4.1-G). The boss comes first, then its
+authored adds, then random creatures from the biome's pool to fill the side. The fill **excludes
+the boss's own species**, so a count-scaling signature (the Broodmother's spiderlings) counts only
+the adds that were authored for it. Fill adds still die, so they still feed the Rot Sovereign. A boss
+gets a full gem set and its role script like any enemy, so a lock downgrades its turn instead of
+emptying it (GAME_DESIGN "Milestone bosses").
 
 ## Cumulative new mechanics (for the Phase-4 systems manifest)
 - **Response vocab 4 → 8:** add **`heal`** (restore HP to a living target; caps at max; no

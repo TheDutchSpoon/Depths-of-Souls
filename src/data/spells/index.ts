@@ -5,9 +5,11 @@ import {
   ARCANE_BOLT,
   BRAMBLE_WARD,
   HOWLING_INSTINCT,
+  PACIFY,
   POLLEN_CLOUD,
   REGROWTH,
   ROOT_GRASP,
+  SILENCE,
   STINGER_SWARM,
   THORN_LASH,
   VINE_SNARE,
@@ -74,6 +76,9 @@ export const ALL_SPELLS: readonly Spell[] = [
   PUPPET_STRING,
   CHARNEL_FEAST,
   WITHERING_BOLT,
+  // Phase 4.1-F3 (G2): appended LAST (append-only; order maps RNG rolls to spells).
+  SILENCE,
+  PACIFY,
 ]
 
 // Phase 4.1-D (A4): load-time check that every spell's effect list holds only what a spell may

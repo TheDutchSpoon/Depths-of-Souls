@@ -154,7 +154,7 @@ const applyStatusTo = (
 })
 
 const lethalHit = (
-  hook: 'on-turn-start' | 'on-turn-end' | 'on-round-end',
+  hook: 'on-fight-start' | 'on-turn-start' | 'on-turn-end' | 'on-round-end',
 ): EffectDef => ({
   category: 'triggered',
   hook,
@@ -420,7 +420,7 @@ const marker = (hook: 'on-turn-end'): EffectDef => ({
   response: { kind: 'grant-action-state', target: { kind: 'self' } },
 })
 const grant = (
-  hook: 'on-turn-start' | 'on-turn-end' | 'on-attack' | 'on-round-end',
+  hook: 'on-fight-start' | 'on-turn-start' | 'on-turn-end' | 'on-attack' | 'on-round-end',
   action: 'lethal-cast' | 'defend',
 ): EffectDef => ({
   category: 'triggered',
@@ -641,6 +641,61 @@ describe('a grant drain stops at the grant that wipes', () => {
       expect(types(events).slice(-1)).toEqual(['FightEnded'])
     },
   )
+})
+
+// ---- The fight-start win check (Phase 4.1-F3, ASSUMPTION 61) ----
+
+describe('a fight-start wipe ends the fight before round 1', () => {
+  const noRound = (events: readonly CombatEvent[]) => {
+    expect(has(events, 'RoundStarted')).toBe(false)
+    expect(has(events, 'TurnStarted')).toBe(false)
+    expect(types(events).slice(-1)).toEqual(['FightEnded'])
+    expect(events[events.length - 1]).toEqual({ type: 'FightEnded', result: 'win' })
+  }
+
+  it('the check after the pass and drain: a wipe ends the fight with no RoundStarted', () => {
+    const { events, state } = run(duel({ effects: [lethalHit('on-fight-start')] }), 1)
+    noRound(events)
+    expect(state.result).toBe('win')
+  })
+
+  it('the hook pass stops at the wiping firing: a later fight-start firing does not follow it', () => {
+    const { events } = run(
+      duel({
+        effects: [
+          lethalHit('on-fight-start'),
+          applyStatusTo('on-fight-start', 'self', 'weaken', 3),
+        ],
+      }),
+      1,
+    )
+    expect(has(events, 'StatusApplied')).toBe(false)
+    noRound(events)
+  })
+
+  it('the drain stops at the wiping grant: the grant after it never runs', () => {
+    const { events } = run(
+      duel({
+        script: 'always-wait',
+        effects: [
+          grant('on-fight-start', 'lethal-cast'),
+          grant('on-fight-start', 'defend'),
+        ],
+      }),
+      1,
+    )
+    expect(has(events, 'SpellCast')).toBe(true)
+    expect(has(events, 'Defended')).toBe(false)
+    noRound(events)
+  })
+
+  it('a fight that nobody wipes at fight start still begins round 1', () => {
+    const { events } = run(
+      duel({ effects: [applyStatusTo('on-fight-start', 'self', 'weaken', 3)] }),
+      1,
+    )
+    expect(has(events, 'RoundStarted')).toBe(true)
+  })
 })
 
 // ---- Round end has no status work (ASSUMPTION 50) ----

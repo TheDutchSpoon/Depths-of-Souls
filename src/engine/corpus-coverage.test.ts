@@ -29,19 +29,10 @@ const STATUS_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
   ],
 ])
 
-/** Perks whose effect cannot show in any fight yet, each with its reason. */
-const PERK_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
-  [
-    'clear-mind',
-    "immunity to 'silenced', which is not authored until 4.1-F: nothing to be immune to, so " +
-      'removing the perk changes nothing. 4.1-F must drop this entry',
-  ],
-  [
-    'aggressive',
-    "immunity to 'pacified', which is not authored until 4.1-F (Clear Mind's mirror): nothing " +
-      'to be immune to. 4.1-F must drop this entry',
-  ],
-])
+/** Perks whose effect cannot show in any fight yet, each with its reason. Empty since 4.1-F3:
+ * Clear Mind and Aggressive had nothing to be immune to until Silenced and Pacified existed, and
+ * now matter in the two appended perk fights (corpus entries 522-523). */
+const PERK_EXEMPTIONS: ReadonlyMap<string, string> = new Map()
 
 interface ResolvedFight {
   readonly fight: CorpusFight
@@ -170,6 +161,29 @@ describe('corpus coverage (Phase 4.1-D2)', () => {
     }
     const missing = ALL_SPELLS.filter((s) => !landed.has(s.id)).map((s) => s.id)
     expect(missing, 'spells never cast with all their effects landing').toEqual([])
+  })
+
+  it('the Silence and Pacify spell fights (entries 524-525) cast their spell with the status landing, riding on no draw', () => {
+    // Appended in 4.1-F3 (ASSUMPTION 58): an always-cast caster against a wall, so the status
+    // lands whatever the seed. Pinned by index because the perk fights also happen to cast them.
+    const expected = [
+      ['silence', 'silenced'],
+      ['pacify', 'pacified'],
+    ] as const
+    expect(resolved.length).toBeGreaterThanOrEqual(526)
+    expected.forEach(([spellId, statusId], k) => {
+      const { events, spellsByCaster } = resolved[524 + k]!
+      const casts = events.filter(
+        (e) =>
+          e.type === 'SpellCast' &&
+          spellsByCaster.get(e.casterId)?.[e.gemSlot]?.id === spellId,
+      )
+      expect(casts.length, `entry ${524 + k} casts ${spellId}`).toBeGreaterThan(0)
+      expect(
+        events.some((e) => e.type === 'StatusApplied' && e.statusId === statusId),
+        `entry ${524 + k} lands ${statusId}`,
+      ).toBe(true)
+    })
   })
 
   it('every status in STATUS_REGISTRY is applied, except the reasoned exemptions', () => {

@@ -7,6 +7,8 @@
 //   SEED                   the starting seed (a two-seed golden passes `{ seed }` instead)
 //   playerParty/enemyParty the two sides (fresh creatures; `createCombat` sets them up)
 //   scripts/traits/statuses  optional registries
+//   playerEffects/enemyEffects  optional (4.1-F3): a side's effects (specialization perks, ...),
+//                          passed straight to `createCombat`'s per-side `effects` input
 //   TURN_STEPS             optional: run exactly N turns; absent = run until the fight has a result
 //   setup                  optional: a post-`createCombat` step (e.g. `updateCreature` wounds, since
 //                          `createCombat` resets HP); it runs BEFORE the first frozen turn
@@ -17,7 +19,7 @@ import { createCombat, resolveTurn } from '../combat'
 import { deepFreeze } from './deep-freeze'
 import type { CombatEvent, CombatState, Creature } from '../types'
 import type { Script } from '../scripting-types'
-import type { StatusDef, Trait } from '../effect-types'
+import type { EffectDef, StatusDef, Trait } from '../effect-types'
 
 export interface GoldenFixture {
   readonly SEED?: number
@@ -26,6 +28,9 @@ export interface GoldenFixture {
   readonly scripts?: ReadonlyMap<string, Script>
   readonly traits?: ReadonlyMap<string, Trait>
   readonly statuses?: ReadonlyMap<string, StatusDef>
+  /** Phase 4.1-F3: per-side effects, absent for every pre-F3 fixture. */
+  readonly playerEffects?: readonly EffectDef[]
+  readonly enemyEffects?: readonly EffectDef[]
   readonly TURN_STEPS?: number
   readonly setup?: (state: CombatState) => CombatState
 }
@@ -45,8 +50,14 @@ export function createGoldenState(fixture: GoldenFixture, seed?: number): Combat
   }
   const created = createCombat({
     seed: resolvedSeed,
-    player: { party: fixture.playerParty },
-    enemy: { party: fixture.enemyParty },
+    player: {
+      party: fixture.playerParty,
+      ...(fixture.playerEffects ? { effects: fixture.playerEffects } : {}),
+    },
+    enemy: {
+      party: fixture.enemyParty,
+      ...(fixture.enemyEffects ? { effects: fixture.enemyEffects } : {}),
+    },
     registries: {
       scripts: fixture.scripts,
       traits: fixture.traits,

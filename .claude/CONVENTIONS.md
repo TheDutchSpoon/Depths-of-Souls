@@ -83,10 +83,14 @@ floor's contents.
   depth: floor 101+ included (a drawn or pinned biome brings its own boss), and a biome with no
   authored boss (placeholder biomes 4–10, test fixtures) simply generates ordinary floors. A boss
   floor is **boss-only**: exactly **one** fight — the boss at slot 0, then its authored adds — with
-  no trash fights (`fightCount` is not consulted). Only *which* creatures appear is authored;
+  no trash fights (`fightCount` is not consulted). **From 4.1-G** (PR #81 review) the fight is
+  `enemyPartySize(floor)` creatures like any other: after the authored adds, the remaining slots
+  are filled through the ordinary spawn path (weighted species selection from the biome's pool
+  **minus the boss's own `speciesId`**, run RNG, so they vary per visit). Only *which* creatures the boss brings is authored;
   everything else is the ordinary spawn path: adds roll their level within `enemyLevelRange(floor)`
   and their loadout like any spawned enemy, and the boss sits at **`bossLevel(floor)`** (a curve —
-  a few levels above the range max; the offset is parked balance). Every add must be a member of
+  a few levels above the range max; the offset is parked balance). The boss rolls its loadout
+  like any enemy too (a full gem set from 4.1-G), so no boss holds an empty kit. Every add must be a member of
   the biome's own `speciesPool`, and its `speciesId` is resolved from that pool (invariant-checked,
   never re-typed). The boss's `speciesId` is explicit data (the Broodmother carries the Spiders
   species, so `living-allies-of-species` counts her together with her spiderlings). `Fight.boss?`
