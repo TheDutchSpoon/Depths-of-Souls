@@ -2746,7 +2746,7 @@ doc comment, plus the `summonCost` comment; no behaviour.
   the Unicorn, Pacified by the Pollinator Beneficiary in round 2, `Waited` on `main` and now casts its
   slot-0 gem, Life Siphon (15 damage, 30 healed); everything after follows from that turn. The Brute
   party is two strikers, whose gems matter only on a turn the Attack is illegal, so Pacified is the only
-  trigger. Both outcomes are wins. Two new tests pin the cause (generated-then-checkpoint-verified; the
+  trigger. Both outcomes are wins. Two new tests pin the cause (generated-then-checkpoint-verified;
   the Unicorn's set must equal the biome-1 Vitality spells, and the Mauler's must be three distinct
   biome-1 Violence spells, both allowed sets derived from the spell registry, not from the run).
 - **`specializations.test.ts`:** the two `p4`/`p8` tests became the two known-inert-list tests (12 tests
