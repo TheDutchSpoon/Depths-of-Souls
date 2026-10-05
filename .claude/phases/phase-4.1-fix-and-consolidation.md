@@ -2449,3 +2449,205 @@ goes through, a granted cast goes through under Silence) and `golden-f3-fight-st
   `status-timing.test.ts`, `data/spells/index.test.ts`, `data/statuses.test.ts`, 5 new `golden-f3-*`
   pairs. Docs: `content/overgrowth.md`, this record.
 - Nothing needs deleting.
+
+## 4.1-G1 -- Enemy behaviour: role scripts, full gem sets, 6v6 boss floors
+
+Golden policy: **mechanism goldens byte-identical; the digest regenerated once, with stage-wise
+attribution.** Branch `phase-4.1-slice-g`, on top of the plan-check doc-sync (`3126dab`; ASSUMPTIONS
+66-80 are the plan-review rulings). G1 is half of the brief's 4.1-G; G2 (hub and store) follows.
+
+### What was built
+
+- **Stage 0 (ASSUMPTION 68): the `always-*` scripts become fixtures.** The five scripts moved
+  **unchanged** (same ids, same rules) to `engine/__fixtures__/scripts.ts`, with
+  `FIXTURE_SCRIPTS_BY_ID` holding exactly those five. The 91 golden fixtures that used them, 9 engine
+  unit tests and the corpus builder import it (101 files, each changed only in that import); `app/demoFight.ts` declares its five locally (it may not import fixtures). The
+  old `data/scripts.test.ts` tests moved to `engine/fixture-scripts.test.ts` with only their imports
+  changed.
+- **Part C pins its scripts (ASSUMPTION 79).** Every Part C member (`brute()`, `sorcerer()`,
+  `shieldbarer()`, the Swarmhive Striker, Snapjaw Jaws, and the two starters in the spell fights)
+  now names the script it ran before roles existed, so entries 500-525 stay byte-identical.
+- **Stage 1: three spells,** appended last to `ALL_SPELLS` in this order: **Pounce** (Instinct,
+  `scalingStat: 'speed'`, 1.0, `damageSource: 'cast'`), **Stifling Weight** (Endurance, status-only
+  `weaken`), **Life Siphon** (Vitality, `deal-damage` cast 0.7 plus `heal(self)` Intelligence 0.35).
+  They sit in `data/spells/overgrowth.ts` and `OVERGROWTH_SPELLS`. The dedup test's key now reads the
+  stat a damage or heal effect scales from (ASSUMPTION 74): Pounce and Stinger Swarm are both Instinct
+  single-target plain damage at 1.0 and collided before.
+- **Stage 2: full distinct gem sets (ASSUMPTION 70),** in `generation.ts`'s `rollLoadout`: one
+  `weightedPick` per regular slot, each over the affinity-matched unlocked pool minus the spells
+  already chosen; when that runs out the remaining slots draw from the full pool (the safety net).
+  **Every enemy draws, whatever its role**, bosses included, so a spawn costs 6 draws instead of 3.
+  An empty pool draws nothing, and a cast-role creature with an empty pool throws. `spawnEnemy` is the
+  one spawn path for an ordinary slot and for a boss-floor fill.
+- **Stage 3: roles.** Seven role scripts in `data/scripts.ts` (striker, guardian, warden, caster,
+  support, opener, taunter); the registry (`STOCK_SCRIPTS_BY_ID`) holds only those seven. Every
+  creature's `defaultScriptId` is its role (54 creatures, 3 bosses and the four starters; a data test
+  pins each id, the counts 27/10/2/10/3/4/1, and that none is an `always-*` script). Snapjaw Lure and
+  the Stonehorn Warden are `taunter`. `isCastRole` reads `CAST_ROLE_SCRIPT_IDS` (`caster`, `support`,
+  `opener`; a named constant in `generation.ts`, ASSUMPTION 67); a cast-role creature with no
+  affinity-matched unlocked spell throws at generation. The **support side filter (ASSUMPTION 69):**
+  `CastRuleAction` is now `{ gemSlot: number } | { gemSlot: 'random', gemSide?: 'ally' | 'enemy' }`;
+  `castableGemSlots` takes an optional side and filters on `spell.targetSide`; it is read at
+  `checkLegality` and at `resolveGemSlot`. With `gemSide` absent the draw is unchanged.
+- **Stage 4: the 6v6 boss fill (ASSUMPTION 72).** After the boss and her authored adds, the side is
+  filled to `enemyPartySize(floor)` (6 at every boss floor) through `spawnEnemy` over the biome's pool
+  minus the boss's own species, drawn from the run RNG after the boss's and the adds' draws; slot
+  indices continue after the adds. A pool with no positive-weight species left fills nothing and does
+  not throw. Fill creatures are ordinary spawns with ordinary kill rewards, soul% included
+  (ASSUMPTION 80).
+- **Corpus entry 526 (appended after 525):** Life Siphon's coverage fight. Its `heal(self)` only lands
+  on a wounded caster, and the spell fights' wall never attacks, so a level-20 Unicorn casts it every
+  turn (stock `always-cast`) alone against two level-5 Brutes. Pounce and Stifling Weight are covered
+  by generated fights.
+- **Content docs:** the roles, the three spells and the casting-role notes folded from each biome
+  doc's pending section into its body, each boss section updated for 6v6, and a new
+  `content/enemy-behaviour.md` (the designed content in plain language).
+
+### Digest attribution (regenerated once, `npm run corpus:update`)
+
+Method: the finished tree was built in the plan's order, and a scratch copy was snapshotted after
+each stage; per stage, every fight's `createCombat` parties (every field of every creature, both
+sides, `scriptId` and gems included) and event log were dumped and compared with the previous
+stage's. **At every stage, an identical party gave an identical log and every changed log had a
+changed party (0 exceptions).** `main` has 526 entries; the branch 527 (one appended).
+
+| Stage | Mechanism | Changed parties | Changed logs | Fights first changed here | Result flips |
+|---|---|---|---|---|---|
+| 0 | the fixture move, Part C pins | 0 | 0 | 0 | 0 |
+| 1 | three spells appended (a longer affinity-filtered pool shifts the pick of Instinct, Endurance and Vitality cast-role enemies) | 20 (A 15, B 5) | 20 | 20 | 0 |
+| 2 | full gem sets: three loadout draws per enemy shift every later draw of the run stream | 493 (A 300, B 193) | 480 (A 299, B 181) | 460 | 77 |
+| 3 | role scripts and roles (random-enemy attacks, random gem casts, the starters' roles) | 500 (A 300, B 200) | 480 (A 287, B 193) | 15 | 57 |
+| 4 | the 6v6 boss fill (the boss-floor class: floors 10, 20 and 30) | 80 (A 60, B 20) | 80 | 0 | 12 |
+
+Fights attributed to the first stage that changes their log: **20 + 460 + 15 = 495 of 526**, which
+is exactly the number of rows that differ between `main`'s digest and the regenerated one (A 300, B
+195). The stage-4 digest equals the committed one for entries 0-525; the only other difference is the
+appended entry 526. **Part C (entries 500-525) is identical to `main` at every stage.** Unchanged
+Part B entries: 360, 361, 390, 420, 481. Stage 4's 80 fights are the boss class; each was already
+changed by stage 2's draw shift, so none is _first_ attributed to stage 4, and 12 of them flip.
+
+Result flips, by stage and fight number:
+
+- Stage 2 (77): 5 loss->win, 9 draw->loss, 19 win->loss, 20 loss->win, 35 win->draw, 40 win->loss, 45
+  loss->win, 70 loss->win, 75 loss->win, 79 loss->win, 83 draw->loss, 85 draw->win, 89 win->loss, 110
+  win->draw, 113 loss->win, 139 win->loss, 145 win->loss, 155 loss->draw, 160 loss->win, 170 win->draw,
+  185 loss->win, 190 win->loss, 199 win->loss, 204 loss->draw, 205 draw->win, 215 loss->draw, 219
+  win->draw, 230 loss->draw, 234 loss->draw, 235 draw->loss, 245 win->draw, 255 loss->win, 260
+  loss->draw, 264 loss->win, 265 draw->win, 275 loss->win, 285 loss->win, 289 win->loss, 294
+  loss->draw, 298 win->loss, 305 draw->win, 306 loss->draw, 310 draw->loss, 311 win->loss, 312
+  draw->loss, 315 win->loss, 316 loss->draw, 322 draw->loss, 323 win->draw, 342 win->loss, 368
+  loss->win, 374 draw->loss, 411 draw->loss, 418 draw->loss, 427 win->loss, 433 draw->loss, 435
+  loss->draw, 437 loss->win, 442 loss->draw, 443 draw->win, 446 draw->loss, 447 draw->loss, 454
+  loss->draw, 456 draw->loss, 457 draw->win, 458 draw->loss, 460 loss->draw, 462 draw->loss, 465
+  win->draw, 470 draw->loss, 473 win->draw, 484 win->loss, 485 win->draw, 486 win->draw, 490
+  loss->draw, 497 loss->win, 498 draw->loss.
+- Stage 3 (57): 14 loss->win, 29 loss->draw, 53 loss->win, 64 draw->loss, 75 win->loss, 104 loss->win,
+  144 loss->draw, 155 draw->win, 174 loss->win, 194 loss->win, 209 loss->draw, 215 draw->win, 219
+  draw->loss, 229 loss->win, 230 draw->loss, 234 draw->loss, 235 loss->win, 239 loss->win, 245
+  draw->win, 250 win->loss, 260 draw->win, 289 loss->win, 290 draw->loss, 294 draw->loss, 295
+  win->draw, 304 win->loss, 306 draw->loss, 309 win->loss, 313 win->loss, 316 draw->loss, 321
+  win->loss, 336 win->draw, 340 win->loss, 344 draw->loss, 346 loss->draw, 347 win->loss, 372
+  loss->win, 412 loss->draw, 435 draw->loss, 437 win->loss, 441 draw->loss, 442 draw->loss, 445
+  draw->loss, 454 draw->loss, 457 win->loss, 458 loss->draw, 460 draw->loss, 465 draw->loss, 472
+  draw->loss, 484 loss->draw, 485 draw->win, 491 win->loss, 493 win->loss, 494 draw->loss, 495
+  win->loss, 496 draw->loss, 498 loss->draw.
+- Stage 4 (12): 28 loss->win, 29 draw->loss, 79 win->loss, 88 loss->win, 109 win->loss, 208 loss->win,
+  229 win->loss, 239 win->loss, 268 loss->win, 289 win->loss, 298 loss->win, 499 win->loss.
+- Stage 1 and stage 0: none.
+
+`main` -> branch, same 526 fights: wins 227 -> 224, losses 245 -> 262, draws 54 -> 40. **The four
+fights the F3 record named (19, 109, 199, 289: a player-side Leech Sovereign alone, with Pacify)**
+were wins on `main` and are losses on the branch: her side is now a full six, she is on `striker`
+with three gems, and a Pacified Sovereign casts instead of waiting.
+
+### Golden impact (expected exports imported from `main` and from the branch, then diffed)
+
+A throwaway harness in a pristine copy of `main` and in the finished tree imported every
+`__golden__/*.fixture.ts` and every `__fixtures__/*.ts` and compared **every export** with
+`assert.deepStrictEqual` (functions by source text, Maps and Sets by entries): **946 exports
+identical, 0 golden exports changed**, 2 modules added (`__fixtures__/scripts.ts`, the new golden).
+The four differing exports are all in `__fixtures__/biomes.ts` and all derived from
+`FIXTURE_CASTER`'s role (`always-cast` -> `caster`, ASSUMPTION 76): `FIXTURE_CASTER`,
+`FIXTURE_SPECIES_CASTERS`, `FIXTURE_BIOME` and `FIXTURE_BIOME_WITH_BOSS`. No golden imports that
+file; only `generation.test.ts` does. **Changed content goldens: none.** The 11 goldens named for real
+species build their creatures with `makeParty` and a `scriptId` of their own, and never call
+`materializeCreature`, so no role or gem-set change reaches them (they import species ids and real
+traits, not generated creatures). At stage 0 the same comparison gave 950 identical exports and one added module.
+
+**New golden (hand-derived):** `golden-g1-leech-sovereign-pacified`. The real Leech Sovereign at
+level 1, on her real role script (`striker`) with one gem (Stinger Swarm), is Pacified by a real
+Pacify cast. She casts instead of waiting: Stinger Swarm for 20 (off 20, def 0, chip 0.2, raw 20.2),
+and Vital Siphon does not fire because she cast and did not attack. The header lists every draw:
+rule 2 (`attack random enemy`) is illegal under Pacified and draws nothing because `checkLegality` is
+pure; rule 3's `cast random gem` draws once, over her one castable slot, so the fight consumes
+exactly one draw, which the test asserts from the RNG bookmark.
+
+**Regenerated, labeled generated-then-checkpoint-verified:** the three real-content tests in
+`state/integration.test.ts` (floor 1, floor 10, the default-config floor 1) and the two boss tests
+in `state/store.test.ts` (their pinned XP). Each pins what the run returned and adds an independent
+checkpoint (levels inside `enemyLevelRange`, kill counts, the species of the fill). The store
+fixtures' stub RNG sequences changed from 3 to 6 draws per spawn (a `spawn()` helper), and every
+store deps object passes `scripts: FIXTURE_SCRIPTS_BY_ID`.
+
+### Tests and mutations
+
+- Tests **905 -> 976 (+71)**, reconciled per file against `main`: `data/scripts.test.ts` +15 (its 7
+  old tests moved out; 22 new: the registry, every role rule and fallback, taunter equivalence),
+  `engine/fixture-scripts.test.ts` +7 (the moved tests), `data/biomes.test.ts` +13 (the 6v6 boss
+  floors), `data/roles.test.ts` +7 (new), `data/spells/index.test.ts` +5,
+  `engine/generation-g1.test.ts` +14 (new), `engine/actions-gem-side.test.ts` +8 (new), the new
+  golden +2. The sum of the per-file deltas is 71 and no other file's count changed (the species,
+  store, integration, generation and coverage tests were edited in place).
+- **Mutations** (a scratch copy of the finished tree; one source change at a time, file restored;
+  every one is killed). Each role without its last rule: striker, guardian, warden, caster, support,
+  opener (1 each, in `scripts.test.ts`) and taunter (its structure test). The cast-role check:
+  reading `always-cast` again (3) and the throw removed (2). Full gem sets: the old one-spell
+  cast-role rule (13), picks not distinct (7), the safety net removed (17), the boss rolling no
+  loadout (5). The support side filter, at **both** read sites: `checkLegality` ignoring `gemSide`
+  (3, including `scripts.test.ts`'s "support rule 1 is illegal with no ally-side gem"),
+  `resolveGemSlot` ignoring it (2), and `castableGemSlots` ignoring the side (5). The boss fill: no
+  fill (10), the boss's species not excluded (4), the fill drawn before the adds (1, the draw-order
+  test). The spell append: Pounce inserted before Silence (1) and Life Siphon dropped (1; the pin
+  test). The dedup key without the stat (2). A Part C member unpinned (1; the digest).
+- Gates: test (976) / lint / format:check / build / `tsc -b`, all green. Toolchain: Node 24.19.0,
+  Vitest 5.0.3, TypeScript 6.0.3, ESLint 10.11.0.
+
+### Spec notes (for the docs, before G2)
+
+- **A random-gem draw always consumes one value, even over a single castable gem.** CONVENTIONS now
+  says so. It is why a Seer on `caster` costs a draw per turn where `always-cast` cost none, and part
+  of why Part B changes at stage 3.
+- **Boss floors get harder in two ways 4.1-H should look at.** Six enemies where there were one to
+  three, and the Rot Sovereign's attack grows with **every death on either side**, so the extra
+  creatures feed her faster. The integration floor-10 fight (party level 20) still wins.
+- **Soul% from boss-floor fill creatures** is intended (ASSUMPTION 80): a boss floor now also farms
+  the biome's souls, minus the boss's own species.
+- **The Seer, Mauler and Unicorn change behaviour with their roles** (a Seer casts a random castable
+  gem every turn, a Mauler's second rule attacks a random enemy). Part B shows it; Part C is pinned.
+- **`taunter` is exactly `always-provoke`**: a test runs the same fight with the script id swapped,
+  across 20 seeds, with the real Lure and Stonehorn Warden, and the logs are identical.
+- **The pending sections** of the three biome docs still hold the Phase 4.5 clean-up and the 4.1-F
+  timing notes (not G1's); the roles, the spells and the casting-role notes are folded into the
+  bodies.
+- For G2: player gem rolls draw from `ALL_SPELLS`, which is now final, so the store tests there can
+  pin the rolls once.
+
+### Files changed
+
+- Engine: `generation.ts` (`rollLoadout`, `spawnEnemy`, the boss fill, `CAST_ROLE_SCRIPT_IDS`),
+  `actions.ts` (`castableGemSlots`, `checkLegality`, `resolveGemSlot`), `scripting-types.ts`
+  (`CastRuleAction`).
+- Data: `scripts.ts` (rewritten: seven roles), `spells/overgrowth.ts`, `spells/index.ts`,
+  `species/overgrowth.ts`, `species/glimmerdark.ts`, `species/rotcap-hollow.ts`,
+  `species/starters.ts` (roles; the spell lists).
+- App: `demoFight.ts` (its five scripts declared locally).
+- Tests and fixtures: new `__fixtures__/scripts.ts`, `fixture-scripts.test.ts`,
+  `generation-g1.test.ts`, `actions-gem-side.test.ts`, `data/roles.test.ts`, the new golden pair;
+  changed `scripts.test.ts`, `biomes.test.ts`, `spells/index.test.ts`, the three species tests,
+  `generation.test.ts`, `store.test.ts`, `integration.test.ts`, `__fixtures__/biomes.ts`,
+  `__corpus__/corpus.ts` and `corpus-digest.fixture.ts` (495 rows + 1 appended); and **101 files whose
+  only change is repointing the `always-*` registry import** (91 golden fixtures, 9 engine unit
+  tests, the corpus builder, whose other edits are listed above).
+- Docs: `content/overgrowth.md`, `content/glimmerdark.md`, `content/rotcap-hollow.md`, new
+  `content/enemy-behaviour.md`, this record.
+- Nothing needs deleting.
