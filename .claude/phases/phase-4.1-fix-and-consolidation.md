@@ -2064,3 +2064,242 @@ exactly** (so a creature holding two locks gets two old `TriggerFired` events ba
 - Nothing needs deleting from the repo. The scratch worktree of `5c84cba` (with a `node_modules`
   junction) under the session scratchpad can be removed with `git worktree remove --force` when
   convenient (remove the junction first so `node_modules` is not followed).
+
+## 4.1-F2 -- Status timing in bearer turns, the Web roll in turn-end cleanup, in-turn win checks
+
+Golden policy: **deliberate, listed** (timing). Branch `phase-4.1-slice-f2`, on top of the plan-review
+doc-sync commit (`c56ebbc`: CONVENTIONS "Turn structure", "Resolution & timing", "Status lifecycle",
+Web's roll, "Death-reset"; the brief's D6 "Decided at the 4.1-F2 plan review" block; ASSUMPTIONS 15, 16,
+18, 19, 49-55). No Silenced/Pacified, no perk-exemption change, no spell dedup key (F3); no content
+number changed (H). Durations keep their authored values and now count the bearer's own turns.
+
+### What was built
+
+- **The born-this-turn clock (ASSUMPTIONS 18, 49).** `CombatState.turnClock` (starts 0, bumped **once per
+  dequeued turn, at the action slot**, whether the actor is alive, dead or skipped) and
+  `StatusEffect.appliedAt` (`applyStatus` stamps it on a fresh application **and on a refresh**; a refresh
+  keeps the instance and its id). Born is `appliedAt === turnClock`. One window for every status-time
+  read: a status applied or refreshed **since the current turn's action slot** does not tick, count down
+  or (a Web) get rolled in that turn; applied earlier in the turn (turn-start hooks, cleanup, grants) it
+  does all three. Plain data, in no event. A status applied between turns (fight start, round end) carries
+  the previous turn's value and is never born in the next one.
+- **Durations count the bearer's turns.** Turn-end cleanup (`countDownStatuses`): the **living** actor's
+  statuses count down by one in canonical (`activeEffects`) order and expire at 0 (`StatusExpired`),
+  skipping a born one. A corpse's statuses are inert (ASSUMPTION 51): no countdown, no `StatusExpired`
+  (today's code never wiped statuses on death, only on revive; no wipe-on-death was built).
+- **Ticks are `on-turn-end` triggers.** POISON, BURN, REGEN and SPORE's tick moved from `on-round-end` to
+  `on-turn-end` (numbers unchanged). The born gate reaches `fireHook` through
+  `FireHookOptions.skipStatusTrigger(bearer, statusInstanceId)`, passed only by `resolveTurn`'s
+  `on-turn-end` call (ASSUMPTION 52); `fireHook` has no hook-specific rule.
+- **The Web roll moved to turn-end cleanup (ASSUMPTION 15)**, after the actor's countdown (a Web that
+  expires by its timer is never rolled), on **every dequeued turn's cleanup** (a dead actor's empty
+  bracket, a turn whose actor died mid-turn), never after a mid-turn wipe, over living bearers in side ->
+  slot -> id order, only for a Web that is present, not immune (the iterator yields no effect) and not
+  born this turn.
+- **A mid-turn wipe ends the turn (ASSUMPTION 19).** `FireHookOptions.stopWhen` (checked **between
+  top-level candidates**, never inside a cascade: nested `fireHook` calls get no options) and
+  `DrainGrantsOptions.stopWhen` (checked before each grant) are the stop predicate, passed at every in-fight
+  pass: the turn-start, turn-end and round-end hook passes and the turn-start, action, turn-end and
+  round-end drains. **Exempt: the fight-start pass and drain** (no check there today either; nothing in
+  the content can wipe a side at fight start, and a check would change a path F2 has no reason to touch).
+  `resolveTurn` then closes the turn at four points: after the turn-start hooks, after the turn-start
+  grants, after the action and its grants, after the turn-end drain. A wipe skips the rest of the turn
+  (later firings, grants, cleanup, the Web roll), **still emits `TurnEnded`, then `FightEnded`**. There is
+  no check after cleanup (it cannot kill). Round end keeps `on-round-end` trait triggers, the round-level
+  drain and its win check.
+- **Deleted:** `snapshotStatuses`, `decrementAndExpireSnapshot` (+ `StatusSnapshotEntry`),
+  `statusTriggerGate` and `FireHookOptions.statusTriggerGate`, `reappliedThisSweep`, the status part of
+  `resolveRoundEndSweep` (it is now `resolveRoundEnd`: the `on-round-end` hook pass and the round drain),
+  the turn-start call of `rollWebBreakFree`, the stock statuses' `on-round-end` hooks. A leftover grep over
+  `src/` finds only comments about the old design, all reworded.
+- **The status validator.** `validateStatusDef` rejects a `triggered` effect on `on-round-end`, and
+  `createCombat` now runs `validateStatusDef` over the status registry it is given (ASSUMPTION 50).
+- **Content: the Spiders' Weaver (`spider-weaver-web-strike`) trigger moved from `on-turn-start` to
+  `on-turn-end`** (same response, selector and status; ASSUMPTION 49), so the Web it places is born in its
+  turn and its own cleanup never rolls it. The Weaver's doc comment and the Blindclaws Setter's comment in
+  `traits/glimmerdark.ts` were updated.
+
+### Where the plan changed while building
+
+- **Two win-check sites were equivalent mutants, and were collapsed.** The plan had a check after the
+  action, after its grants, after the turn-end hooks and after the turn-end drain. Mutating each site away
+  showed the checks after the action *hooks* were redundant with the stop predicates (the next pass or
+  drain stops itself, emits nothing, and the next check closes the turn): they were removed and the
+  comments say so. **A check after the action and its grants is still needed** (the turn-end block is
+  alive-gated, so a wipe that also killed the actor, e.g. a lethal reaction to its attack, would skip every
+  later check and close the turn with no result). It first went missing in my collapse and the mutation run
+  found it; `status-timing.test.ts` now pins it ("the wipe also killed the actor").
+- **`golden-round-end-interaction` was not renamed and its expected log did not change.** It pins the
+  round-end *trait* pass (a lethal self-hit, a skipped later effect, an `on-death` Weaken) and never
+  involved a status tick: its `DOT(undefined)` event is a trait-borne flat hit. That mechanism still
+  exists at round end, and the Weaken it applies lands between turns, so it is born in no turn. Only its
+  comments and test title changed. (The plan listed it as re-derived; the build showed it is not.)
+- **Weaver goldens.** Only `golden-overgrowth-web-exploit` carries the real Weaver; `golden-broodmother`
+  uses generic adds (its header says so), so its events are unchanged and only a comment moved.
+
+### Golden impact (expected exports imported from `HEAD` (c56ebbc) and from the branch, then diffed)
+
+A throwaway harness in a pristine worktree of `c56ebbc` imported every `*.fixture.ts` from both trees and
+compared every `expected*`, `SEED` and `TURN_STEPS` export with `isDeepStrictEqual`: **91 fixtures, 83
+byte-identical, 8 changed**; 7 new. The set of failing goldens at build matched the plan's list (the plan
+listed `golden-round-end-interaction` and `golden-castable-draw`, and not `golden-overgrowth-web-exploit`'s
+non-Weaver siblings; see above).
+
+| Golden (old -> new name if renamed)                              | What changed (each re-derived by hand; derivation in the fixture header)                                                                                                   |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `golden-dot`                                                     | ticks at the target's own turn end (R1-R3); the killing tick ends the turn at once: `TurnEnded`, `FightEnded`, **no `StatusExpired`** on the corpse                         |
+| `golden-stun`                                                    | `StatusExpired` moves inside the victim's bracket, before `TurnEnded`                                                                                                      |
+| `golden-web-break-free`                                          | the roll moves after OTHER's `Waited` (same single draw)                                                                                                                   |
+| `golden-hollowkin-wretch-self-dot`                               | the tick and the trait's `TriggerFired` move inside the Wretch's bracket                                                                                                   |
+| `golden-spore-spread-dot-kill`                                   | tick at the host's turn end; the spread target (applied in another creature's turn) **ticks at its own turn end the same round**                                          |
+| `golden-round-end-mid-sweep-poison` -> `golden-turn-end-dot-kill-burst`         | re-derived on turn-end timing: E1 ticks 3 at its own R1 turn end (97), then 94 in R2                                                          |
+| `golden-round-end-mid-sweep-poison-refresh` -> `golden-turn-end-dot-kill-burst-refresh` | the refresh (2 stacks) ticks 6 at E1's own R1 turn end (94), then 88                                                                                  |
+| `golden-overgrowth-web-exploit`                                  | the Weaver's `TriggerFired` and `StatusApplied` move after its attack (turn-end hooks); no Web roll ever runs (born; then a wipe); one draw instead of two, seed no longer load-bearing |
+
+`golden-castable-draw` is **retired** (its granted cast after a wipe is unreachable, ASSUMPTION 53): see
+"Files to delete". Its fixture's expected export is unchanged, which is why it still counts among the 83.
+The castable filter stays pinned by `actions.test.ts` "gemSlot 'random' draws over the castable slots only"
+(shown failing with the filter removed: 1 failing test; no new case needed).
+
+**Not changed, by import comparison:** every golden not in the table, including every B2 golden, the Glow,
+Weaken, Vulnerability and Confusion goldens (modifier math is identical), `golden-sleep-wake`,
+`golden-lullpollen-dozer`, `golden-spider-broodwarden` (events identical; one Web roll instead of two,
+both misses), `golden-broodmother`, `golden-b6-provoke-stun-cleanup`, `golden-round-end-interaction` and
+`golden-6v6-scripted`. File renames (`git mv`): `golden-round-end-mid-sweep-poison.{fixture,test}.ts` ->
+`golden-turn-end-dot-kill-burst.*`, `golden-round-end-mid-sweep-poison-refresh.*` ->
+`golden-turn-end-dot-kill-burst-refresh.*`; the references in `phase-4-party-specializations-cave-biomes.md`
+were updated (file names only).
+
+**New goldens, all hand-derived** (the engine then confirmed the arithmetic; one derivation slip, a missing
+`health` input in `golden-f2-dot-one-turn`, was caught that way and fixed in the *input*, not the expected log):
+`golden-f2-stun-one-turn` (Stun 1 skips exactly one turn, before or after the applier in the queue),
+`golden-f2-turnstart-self-stun-once` (the D1 case over three rounds), `golden-f2-weaken-three-turns` (a
+Weaken 3 covers the bearer's next three turns, applied before or after its action; same -20% math),
+`golden-f2-dot-one-turn` (ticks exactly once; a self-applied Poison is born and ticks next turn),
+`golden-f2-web-turn-end-roll` (a Web applied this turn is skipped, rolled at the next creature's cleanup),
+`golden-f2-win-over-own-tick` (the PR #70 case, now a win) and `golden-f2-turn-end-interaction` (a tick
+kills the host, `on-death` spreads Spore, the spread follows the born rule, a tick-kill then wins).
+
+### Corpus-digest attribution (regenerated once, `npm run corpus:update`)
+
+522 fights: **248 byte-identical, 274 changed** (274 rows). Method: main's 522 event logs were dumped
+before any engine change; after the build the new logs were dumped and each changed fight's **first
+divergence** was classified (a throwaway script, scratchpad): a wipe followed by `TurnEnded` where the old
+log has more events -> win check; the Weaver's `TriggerFired` -> Weaver; a dot `DamageDealt` or a self
+`HealApplied` (Regen) -> tick moved; a `StatusExpired` of Web -> Web roll; any other `StatusExpired` or a
+`TurnSkipped` -> expiry moved; a fight with a Web whose first divergence is a later chance roll -> Web roll
+(draw order); a `TriggerFired` of Arcane Surge -> Surge.
+
+| Class                                        | Changed fights |
+| -------------------------------------------- | -------------: |
+| tick moved                                   |            130 |
+| expiry moved                                 |             89 |
+| Weaver moved (turn start -> turn end)        |             39 |
+| Web roll moved (a break-free event)          |              9 |
+| Web roll moved (later chance rolls shift)    |              3 |
+| win check (events after the wipe truncated)  |              4 |
+| Surge on a self-killed Seer                  |              0 |
+| unclassified                                 |              0 |
+
+- **The 96 fights with no `StatusApplied`: 92 byte-identical, 4 changed, all class win check** (a
+  `sorcerer-starter` whose `on-turn-end` Arcane Surge no longer follows the killing blow).
+- **Result changes: 4** (win 220 -> 219, loss 252 -> 251, draw 50 -> 52). None is a rule change; each is a
+  changed trajectory after its first divergence: fight 205 loss (round 24) -> draw (round cap), 220 loss
+  (round 15) -> draw (cap), 338 win (round 99) -> draw (cap, a kill that now lands one round later), 497
+  draw (cap) -> loss (round 42). Their first divergences are a moved tick, a moved expiry, the Weaver and
+  a moved expiry respectively.
+- The census of the 33 post-wipe payload events from the PR #78 review: the killing step's own cascade
+  stays (on-kill / on-death triggers, StatModifierApplied); only events from *later* steps vanish, which is
+  what the 4 class-1 fights above show.
+
+### New and changed unit tests
+
+- **`status-timing.test.ts` (new, 32 tests):** the action-slot window (turn-start vs turn-end application,
+  a round-end application), the tick gate and countdown (action-phase application, another creature's turn),
+  the corpse rule, the Web roll (born skip, the turn-start Web rolled the same turn, a dead actor's bracket,
+  countdown before roll, draws only when present), every win-check site (turn-start hooks, turn-start grants,
+  after the action, the actor-also-died case, turn-end hooks, turn-end grants, no Web roll after a wipe),
+  each hook pass and each drain stopping at the wiping firing/grant (7 sites), the PR #70 lethal-tick case,
+  the validator and `createCombat`, and Arcane Surge ahead of a lethal tick.
+- **Changed deliberately (timing):** `status-containers.test.ts` -- the "skips the turn" and "lock gained
+  during the actor's own turn-start hooks" tests gain a `StatusExpired` before `TurnEnded` (Stun 1 counts down
+  at the skipped turn's cleanup; the second is ASSUMPTION 49), and the immune-DoT test asserts
+  `effectsForHook(x, 'on-turn-end')` (Poison moved). `statuses.test.ts`: POISON/BURN/REGEN hook assertions
+  (`on-turn-end`). `combat.test.ts`: the round-end-sweep refresh test is **retired**; its coverage is the new
+  "a status refreshed in its own bearer turn keeps full duration" test (same instance and id).
+- **Inline test statuses `createCombat`'s validator now rejects, converted to `on-turn-end`:**
+  `resolution.test.ts` (`test-dot` and `test-regen` in "applyStatus + status-container content" and "heal
+  response", `test-debuff` in "remove-status response"; the `fireHook` calls follow) and the inline instances
+  in `effects.test.ts` and `conditions.test.ts` (not run through `createCombat`, converted for honesty).
+- Shape-only edits (`turnClock: 0`, `appliedAt: 0`): `scripts`, `actions`, `actor-death`, `combat`,
+  `conditions`, `confusion`, `dead-target-pins`, `effective-stats`, `effects`, `generation`, `interpreter`,
+  `spell-effects`, `status-containers`, `support-spells`, `target-selectors`, `targeting`, `turn-order`.
+- **Tests that stayed green unchanged:** every other F1 test in `status-containers.test.ts` (including "an
+  earlier grant in the turn-start drain can remove the lock"), the B2 goldens, and the skip and drain tests
+  in `perform-action.test.ts`. The two `status-containers` assertion changes above are the only timing-forced
+  ones.
+
+### Verification
+
+- Tests **852 -> 891 (+39)**, reconciled per file against `HEAD` (the script diffs all 143 files): +32
+  `status-timing.test.ts`; +7 new `golden-f2-*` test files (+1 each); the two renamed golden test files are
+  -1/+1 each; no other file's count changed (the retired `combat.test.ts` sweep test was replaced one for
+  one). **One test is red until `golden-castable-draw` is deleted** (below): 890 green + 1.
+- **Mutations** (full suite each, every file restored from an in-memory copy; `git diff --stat` verified
+  identical before and after). The corpus digest fails for almost all of them; the table names the **specific**
+  test. Every mutation is killed:
+  - countdown removed (13 failing; `combat.test.ts` refresh test, `status-containers.test.ts` skip, goldens);
+    countdown ignoring born (4; `status-timing` turn-end Weaken, `combat.test.ts`); tick gate removed (1;
+    `status-timing` "does not tick that turn"); Web roll ignoring born (3; `status-timing` born-skip and
+    dead-bracket tests); refresh not re-stamped (1; `combat.test.ts` refresh test);
+  - **clock**: no bump (31); bump at dequeue instead of the action slot (4; `status-containers` ASSUMPTION 45
+    test, `status-timing` turn-start Weaken); bump only for a living actor (1; the dead-bracket test);
+  - **Web roll**: back at turn start (8; `combat.test.ts` Web tests, `status-containers`, `golden-web-break-free`);
+    before the countdown (1); skipped for a dead actor's bracket (1);
+  - corpse countdown without the alive gate (1; `status-timing` corpse test);
+  - **win checks, each site removed**: after the turn-start hooks (1; the cleanup test, `ActionStateEnded`);
+    after the turn-start grants (1); after the action and its grants (1; the actor-also-died test); after the
+    turn-end drain (6); `TurnEnded` not emitted on a wipe (54);
+  - **stop predicate not passed at each of the 7 sites** (round-end pass, round-end drain, turn-start pass,
+    turn-start drain, action drain, turn-end pass, turn-end drain): 1 failing test each (2 for the turn-end
+    pass, incl. the PR #70 lethal-tick test); `fireHook` ignoring `stopWhen` (4); a drain ignoring it (4);
+  - `on-round-end` validator off (2); `createCombat` not validating (1); the Weaver back on `on-turn-start`
+    (1; `golden-overgrowth-web-exploit`); the castable filter removed (1; `actions.test.ts`).
+  - **Two mutations first survived** (the after-hooks and the after-action-hooks win checks), and were shown to
+    be redundant with the stop predicates and collapsed (see "Where the plan changed"). Arcane Surge's ordering
+    has no code switch (it falls out of canonical effect order); its test pins the log.
+- Gates: test (890 green + the 1 red above) / lint / format:check / build / `tsc -b` all green apart from that
+  test. Toolchain: Node 24.19.0, Vitest 5.0.3, TypeScript 6.0.3.
+
+### Spec notes (for the docs, before F3)
+
+- **CONVENTIONS "Death-reset" says a death wipes statuses; the code only wipes on revive** (a corpse keeps
+  its instances). F2 makes them inert (ASSUMPTION 51) rather than wiping; the sentence should say "wiped on
+  revive, inert on a corpse". The Web roll's and the countdown's alive gates are what make that true.
+- **With a wipe ending the turn, "a granted cast after the killing blow" cannot happen**, so the C2b
+  castable-filtered draw can no longer be shown in a golden; only `actions.test.ts` pins it (the filter is
+  still correct defensive code). A spell with no valid target mid-fight is now only an empty slot or a lock.
+- The turn-end block is alive-gated, so a wipe that also kills the actor needs the check after the action.
+  It is the one place the stop predicates cannot stand in for a check.
+- `golden-round-end-interaction` is still a round-end *trait* golden; its name is still accurate. The brief
+  and the plan-review note list it with the renamed ones; it was not renamed.
+- A Web applied in a turn-start hook is rolled the same turn (the one window); no shipped content does it.
+- Post-wipe effects removed: Arcane Surge's `TriggerFired` and grant after a killing blow, and on-turn-end
+  traits' firings after a wipe (the 4 class-1 corpus fights).
+
+### Files changed
+
+- Engine: `combat.ts` (turn skeleton, cleanup, `resolveRoundEnd`, clock), `resolution.ts` (`skipStatusTrigger`,
+  `stopWhen`, refresh stamp), `actions.ts` (drain `stopWhen`), `effects.ts` (`instantiateStatus`),
+  `effect-types.ts` (`appliedAt`, the `on-round-end` rejection), `types.ts` (`turnClock`), comments in
+  `effect-types.ts` / `resolution.ts`.
+- Data: `statuses.ts` (hooks and comments), `traits/overgrowth.ts` (the Weaver), comments in
+  `traits/glimmerdark.ts` and `traits/core.ts`.
+- Goldens: the 8 changed ones above (+ `golden-dot.test.ts`, `golden-spore-spread-dot-kill.test.ts` titles),
+  7 new `golden-f2-*` pairs, the 2 renames, comment-only edits in `golden-broodmother`, `golden-lullpollen-dozer`,
+  `golden-spider-broodwarden`, `golden-defend-count`, `golden-round-end-interaction` (+ its test title),
+  `corpus-digest.fixture.ts` (274 rows). Tests: `status-timing.test.ts` (new) and the edits above.
+- **Needs deleting by you:** `src/engine/__golden__/golden-castable-draw.fixture.ts` and
+  `src/engine/__golden__/golden-castable-draw.test.ts` (retired, ASSUMPTION 53). Also the scratch worktree of
+  `c56ebbc` (with a `node_modules` junction) under the session scratchpad: remove the junction first, then
+  `git worktree remove --force` (so `node_modules` is not followed).
