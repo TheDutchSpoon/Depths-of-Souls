@@ -95,6 +95,32 @@ describe('newGame()', () => {
     expect(data(store.getState())[field]).toEqual(fresh[field])
   })
 
+  // Every other test here compares against `createGameStore`, which builds its state with the same
+  // `freshState` as the reset, so a wrong value inside `freshState` would pass them all. This one
+  // pins the fresh state to a literal.
+  test('the fresh state is exactly this literal (initial store and after newGame)', () => {
+    const literal: GameState = {
+      deepestFloor: 0,
+      lastFloor: 0,
+      discoveredBiomes: new Set(),
+      atlasPins: new Map(),
+      collection: new Map(),
+      activeParty: [null, null, null, null, null, null],
+      soulProgress: new Map(),
+      chosenSpec: null,
+      perkSpend: new Map(),
+      bossesCleared: new Set(),
+      currencies: { essence: 0, ore: 0, bricks: 0, lifeforce: 0 },
+      runSeed: 7,
+      runCounter: 0,
+      nextInstanceOrdinal: 0,
+    }
+    expect(data(createGameStore({ runSeed: 7 }).getState())).toEqual(literal)
+    const played = playedStore()
+    played.getState().newGame({ seed: 7 })
+    expect(data(played.getState())).toEqual(literal)
+  })
+
   test('the whole state after newGame equals a fresh store seeded the same', () => {
     const store = playedStore()
     store.getState().newGame({ seed: 7 })

@@ -139,7 +139,6 @@ const FIXTURE_SPEC: Specialization = {
       name: 'Noop',
       maxLevel: 10,
       costPerLevel: 100,
-
       effects: [],
     },
   ],
@@ -297,7 +296,6 @@ const HUGE_ATTACK_PERK_SPEC: Specialization = {
       name: 'Huge Attack',
       maxLevel: 1,
       costPerLevel: 1000,
-
       effects: [{ category: 'stat-modifier', stat: 'attack', factor: 2000 }],
     },
   ],
@@ -791,7 +789,6 @@ describe('setSpec()', () => {
         name: 'Noop B',
         maxLevel: 10,
         costPerLevel: 100,
-
         effects: [],
       },
     ],

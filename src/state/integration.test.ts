@@ -398,6 +398,15 @@ describe('Phase 4.1-G2: stored player gems in the real floor-10 fight', () => {
       (spell) => spell.affinity === 'vitality' && (spell.unlockedAtBiome ?? 1) <= 1,
     ).map((spell) => spell.id)
     expect([...unicorn.gems].sort()).toEqual([...vitality].sort())
+    // Checkpoint: the Mauler's set is three distinct biome-1 Violence spells (allowed set derived
+    // from the registry, not from this run).
+    const violence = new Set(
+      ALL_SPELLS.filter(
+        (spell) => spell.affinity === 'violence' && (spell.unlockedAtBiome ?? 1) <= 1,
+      ).map((spell) => spell.id),
+    )
+    expect(new Set(mauler.gems).size).toBe(3)
+    for (const id of mauler.gems) expect(violence.has(id as string)).toBe(true)
   })
 
   test('the Pacified Unicorn casts its slot-0 gem instead of waiting', () => {

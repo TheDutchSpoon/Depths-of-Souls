@@ -2747,17 +2747,16 @@ doc comment, plus the `summonCost` comment; no behaviour.
   slot-0 gem, Life Siphon (15 damage, 30 healed); everything after follows from that turn. The Brute
   party is two strikers, whose gems matter only on a turn the Attack is illegal, so Pacified is the only
   trigger. Both outcomes are wins. Two new tests pin the cause (generated-then-checkpoint-verified; the
-  gem sets are checked against the spell registry, and the Unicorn's set must be exactly the three
-  biome-1 Vitality spells).
+  the Unicorn's set must equal the biome-1 Vitality spells, and the Mauler's must be three distinct
+  biome-1 Violence spells, both allowed sets derived from the spell registry, not from the run).
 - **`specializations.test.ts`:** the two `p4`/`p8` tests became the two known-inert-list tests (12 tests
   before and after).
 
 ### Tests and mutations
 
 - Tests **976 -> 1062 (+86)**, reconciled per file against `main`: `store-hub.test.ts` +23,
-  `store-perks.test.ts` +15, `store-gems.test.ts` +18, `store-newgame.test.ts` +22,
-  `app/newGame.test.ts` +3, `data/innate-spells.test.ts` +2, `integration.test.ts` +2 (4 -> 6), and the
-  scratch placeholder `state/zz-probe.test.ts` +1 (**delete it**; 1061 without). `store.test.ts` (28),
+  `store-perks.test.ts` +15, `store-gems.test.ts` +18, `store-newgame.test.ts` +23,
+  `app/newGame.test.ts` +3, `data/innate-spells.test.ts` +2, `integration.test.ts` +2 (4 -> 6). `store.test.ts` (28),
   `rewards.test.ts` (18) and `specializations.test.ts` (12) are unchanged in count (checked against a
   pristine `main`: 62 across those three and the integration file's 4).
 - **The hand-derived roll** (`store-gems.test.ts`): run seed 1, ordinal 0 gives seed
@@ -2765,8 +2764,8 @@ doc comment, plus the `summonCost` comment; no behaviour.
   0.5, 0.0, 0.99 pick Pollen Cloud, Vine Snare, Pacify, written out in the test. The separation tests:
   `runCounter` never moves, one `createRng` call per roll on distinct seeds, and three benched summons
   leave the next floor's whole event log equal to a run without them.
-- **Mutations** (51, a scratch copy of the finished tree, one source change at a time, file restored;
-  **51 killed, 0 survived**, each by a named non-digest test): `summon` `unknown-creature` removed,
+- **Mutations** (52, a scratch copy of the finished tree, one source change at a time, file restored;
+  **52 killed, 0 survived**, each by a named non-digest test): `summon` `unknown-creature` removed,
   `soul-incomplete` removed, the order swapped, soul reset after a summon; `setPartySlot`
   `slot-out-of-range` removed, `unknown-instance` removed, the order swapped, no swap, no vacating of the
   old slot; auto-place never placing and placing in the highest slot; emptying a slot dropping the
@@ -2780,7 +2779,9 @@ doc comment, plus the `summonCost` comment; no behaviour.
   pin, the floor-100 clamp removed, depth ignored; `scriptId ?? default` replaced (two ways); `newGame`
   seed range removed, integer check removed, upper bound off by one, the seed not stored, and **each of
   the 13 other fields left unreset** (one named `resets <field>` test each); a spawnable creature gaining
-  an innate spell (the data test).
+  an innate spell (the data test); and `lastFloor: 2` inside `freshState`, which only the literal
+  fresh-state test (`store-newgame.test.ts`, "the fresh state is exactly this literal") catches, since
+  every other `newGame` test compares against a store built from the same `freshState`.
 - Gates: test (1062) / lint / format:check / build / `tsc -b`, all green. Node 24.19.0.
 
 ### Spec notes (for the docs, before 4.1-H)
@@ -2789,10 +2790,21 @@ doc comment, plus the `summonCost` comment; no behaviour.
   which reads the creature; a spec whose `starterCreatureId` is not in `standaloneCreatures` now
   throws where it used to grant silently. Real data is fine; the simulator and any fixture must list
   its starter.
-- **A summoned creature rolls at the unlock biome of the moment** and keeps the set (Phase 8 replaces
-  this with equipping). A player who summons at floor 1 holds biome-1 gems for good.
-- **`summonCost` has no currency** until Phase 8 (ASSUMPTION 90): the CONVENTIONS "summon cost (free by
-  default)" line is accurate, the field is inert.
+- **A stored gem set never changes** (decided at the PR #83 review; CONVENTIONS "Player gem sets":
+  "A stored set never changes"). Nothing re-rolls it, so a set reflects the depth at which it was made.
+  The starters and the Unicorn are granted at floor 0 and can never be summoned again (they bank no
+  soul), so they keep biome-1 sets until Phase 8; a creature summoned again deeper can roll a deeper
+  spell. Phase 8 replaces the roll with equipping.
+- **`summonCost` has no currency** until Phase 8 (ASSUMPTION 90): CONVENTIONS now reads "summon cost (free;
+  nothing reads it until Phase 8's Soul Altar names the currency it is paid in)", which matches the
+  code: the field is inert.
+- **Phase 4.5's spell deletions move player rolls.** Ember Lance (Violence) and Venom Bolt (Instinct)
+  are biome-1 spells in `ALL_SPELLS`, so they sit in the Violence and Instinct roll pools. Deleting them
+  changes every player roll of those affinities (the integration test's Mauler set included), and
+  `store-gems.test.ts`'s stored-gem test casts `'ember-lance'` and needs another spell. Nothing persists
+  before Phase 5, so no stored set can hold a deleted id.
+- **The fresh state is pinned literally** (`store-newgame.test.ts`), so `newGame`'s reset tests can't
+  pass on a wrong `freshState`.
 - **4.1-H's simulator** must drive `summon` with a creature whose soul it set or earned; summon
   auto-places, so `setPartySlot` is only needed to reorder or bench.
 
@@ -2806,4 +2818,4 @@ doc comment, plus the `summonCost` comment; no behaviour.
   `app/newGame.test.ts`, `data/innate-spells.test.ts`; changed `specializations.test.ts`,
   `store.test.ts`, `rewards.test.ts`, `integration.test.ts`.
 - Docs: this record.
-- **Needs deleting:** `src/state/zz-probe.test.ts` (a scratch placeholder the agent could not remove).
+- Nothing needs deleting.
