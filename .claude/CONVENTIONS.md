@@ -136,7 +136,11 @@ floor's contents.
 - **Player gem sets** (Phase 4.1-G2, D4) — every new player instance (the starter grant, the
   Unicorn, a summon) rolls its gems **once, at creation**, through the **same roll** as an enemy
   (`rollLoadout`: distinct picks, the safety net, the cast-role throw), and stores them on the
-  instance. Three rules are the player side's own:
+  instance. **A stored set never changes** (PR #83 review): nothing re-rolls it, so a set reflects
+  the depth at which it was made. The starters and the Unicorn are granted at floor 0 and can never
+  be summoned (they bank no soul), so they keep a biome-1 set until Phase 8; a creature summoned
+  again deeper can roll a deeper spell. Deeper spells mostly widen the pool rather than outclass
+  biome 1, and Phase 8 replaces the roll with equipping. Three rules are the player side's own:
   - **Its own RNG.** The roll draws from `createRng(hashGemDraw(runSeed, instance ordinal))`, a
     hash with its own constants. It never reads or advances `runCounter`, so a gem roll can't
     shift a floor draw.
