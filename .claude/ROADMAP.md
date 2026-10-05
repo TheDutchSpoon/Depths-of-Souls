@@ -82,7 +82,7 @@ into `src/engine/`. Full brief: `.claude/briefs/phase-1.5-tooling-and-demo.md`.
 ## Phase 2 — Actions, spells & scripting interpreter
 *(As built. Phase 4.1 deletes `is-provoking`, makes rule targeting optional with a side-aware
 default, moves the implicit fallback's target from first-by-slot to the lowest-HP enemy, and adds
-six role scripts; see Phase 4.1.)*
+seven role scripts, which replace the five `always-*` stock scripts as shipped content; see Phase 4.1.)*
 - Flesh out the action set: **Attack, Cast, Defend, Provoke, Wait**. Spells (Cast) are data
   with **no cost and freely castable**, carry a **target shape** (single / all-enemies) and a
   **spellPower** coefficient (scales OffStat pre-Defence; Attack = 1.0). A rule's Cast references a
@@ -237,9 +237,11 @@ finding labels B1, A4, … are a separate scheme.)
   (`action-lock`, `TurnSkipped`, the no-temporary-stat-modifier validator; timing unchanged);
   **F2** status timing in bearer turns and Web's roll in turn-end cleanup; **F3** Silence and
   Pacify authored.
-- **4.1-G — hub actions & enemy behaviour:** `summon`, `setPartySlot`; `setPerkLevel` /
-  `refundAllPerks` and no `PerkDef.phase`; `newGame({ seed })`; role scripts, full enemy gem sets,
-  three new biome-1 spells, stored player gem sets.
+- **4.1-G — hub actions & enemy behaviour**, in two PRs:
+  - **G1** enemy behaviour: role scripts, full enemy gem sets, three new biome-1 spells, 6v6 boss
+    floors.
+  - **G2** hub and store: `summon`, `setPartySlot`; `setPerkLevel` / `refundAllPerks` and no
+    `PerkDef.phase`; `newGame({ seed })`; stored player gem sets.
 - **4.1-H — balance:** the deterministic balance simulator and a first tuning pass.
 - **No demo of its own** (a fix phase): the Phase 4.5 demo covers Phase 4 and 4.1 together
   (CONVENTIONS "Every feature phase ships a demo").

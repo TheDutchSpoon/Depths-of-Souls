@@ -9,7 +9,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import type { CombatEvent, FightResult } from '../types'
 import type { Trait } from '../effect-types'
 
@@ -46,7 +46,7 @@ export const enemyParty = makeParty('enemy', [
   { id: 'foe', health: 30, speed: 10, scriptId: 'always-attack' },
 ])
 
-export const scripts = STOCK_SCRIPTS_BY_ID
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits: ReadonlyMap<string, Trait> = new Map([
   [OPENING_STRIKE_TRAIT.id, OPENING_STRIKE_TRAIT],
 ])

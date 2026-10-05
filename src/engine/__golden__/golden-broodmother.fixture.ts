@@ -73,7 +73,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { BROODMOTHER_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import { SPIDERS_SPECIES_ID } from '../../data/species/overgrowth'
 import { STATUS_REGISTRY } from '../../data/statuses'
@@ -130,7 +130,7 @@ export const enemyParty = makeParty('enemy', [
   },
 ])
 
-export const scripts = STOCK_SCRIPTS_BY_ID
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
 export const statuses = STATUS_REGISTRY
 

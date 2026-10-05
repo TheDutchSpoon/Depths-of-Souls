@@ -9,7 +9,7 @@ import { updateCreature } from './creature-lookup'
 import { createCreatureId } from './ids'
 import { makeParty } from './__fixtures__/creatures'
 import { countDraws } from './test-utils/rng-draw-count'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import { STATUS_REGISTRY } from '../data/statuses'
 import { SORCERER_STARTER_TRAIT } from '../data/traits/starters'
 import type { CombatEvent, CombatState, Spell } from './types'
@@ -101,7 +101,7 @@ function fight(player: readonly Spec[], enemy: readonly Spec[], seed = 1): Comba
     player: { party: party('player', player) },
     enemy: { party: party('enemy', enemy) },
     registries: {
-      scripts: new Map([...STOCK_SCRIPTS_BY_ID, [CAST_SLOT_0.id, CAST_SLOT_0]]),
+      scripts: new Map([...FIXTURE_SCRIPTS_BY_ID, [CAST_SLOT_0.id, CAST_SLOT_0]]),
       traits,
       statuses: statusRegistry,
     },

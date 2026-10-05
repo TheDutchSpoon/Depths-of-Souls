@@ -108,9 +108,10 @@ export const BLINDCLAWS_SETTER_TRAIT: Trait = {
  * `acted-before-target` condition, made possible by E1 (conditions.ts) completing that
  * condition's non-scripting path. Action-selection (attack-or-Defend) is the scripting layer's
  * job, never a creature-identity trait -- the previous `ambush-strike` script (data/scripts.ts)
- * has been removed; Striker is back on the plain `always-attack` script
+ * has been removed; Striker runs the plain `striker` role
  * (species/glimmerdark.ts), and this is its whole identity. Scoped to `actionKind: 'attack'`
- * (species-locked.md's own wording is Attack-specific; Striker has no Cast loadout anyway). */
+ * (species-locked.md's own wording is Attack-specific; the gems it casts when Pacified get no
+ * bonus). */
 export const BLINDCLAWS_STRIKER_TRAIT: Trait = {
   id: 'blindclaws-striker-killing-instinct',
   name: 'Killing Instinct',
@@ -151,8 +152,8 @@ export const BLINDCLAWS_VANGUARD_TRAIT: Trait = {
 // the file's own "power up around casters" framing. Resonants are the ONLY locked
 // on-action-observed consumer across every species/starter/spec tree (CONVENTIONS).
 
-/** Resonant Chorus (common): the biome's one cast-role creature (defaultScriptId 'always-cast',
- * species/glimmerdark.ts) -- reinforces its own "caster synergy" identity by being a caster
+/** Resonant Chorus (common): a `caster` (species/glimmerdark.ts), one of the biome's cast roles
+ * -- reinforces its own "caster synergy" identity by being a caster
  * itself. +5% Attack whenever an ally (including itself) casts. */
 export const RESONANT_CHORUS_TRAIT: Trait = {
   id: 'resonant-chorus-harmonize',

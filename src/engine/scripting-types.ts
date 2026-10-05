@@ -172,12 +172,23 @@ export type TargetSelector =
 export interface AttackRuleAction {
   readonly kind: 'attack'
 }
-export interface CastRuleAction {
+/** A cast of one specific gem slot. */
+export interface CastSlotRuleAction {
   readonly kind: 'cast'
-  /** Phase 4.1-C2a (A1): 'random' picks uniformly among the actor's castable gems (innate slots
-   * included) at resolution time -- see actions.ts's `castableGemSlots`/`resolveIntent`. */
-  readonly gemSlot: number | 'random'
+  readonly gemSlot: number
 }
+/** Phase 4.1-C2a (A1): 'random' picks uniformly among the actor's castable gems (innate slots
+ * included) at resolution time -- see actions.ts's `castableGemSlots`/`resolveIntent`.
+ * Phase 4.1-G1 (ASSUMPTION 69): `gemSide` narrows the draw to gems whose own `targetSide` is that
+ * side (the `support` role's "cast random ally-side gem"; AOE spells count by their targetSide).
+ * Absent = every castable gem, exactly the pre-G1 draw. Read at both sites that read the castable
+ * set: `checkLegality` and `resolveGemSlot`. */
+export interface CastRandomRuleAction {
+  readonly kind: 'cast'
+  readonly gemSlot: 'random'
+  readonly gemSide?: 'ally' | 'enemy'
+}
+export type CastRuleAction = CastSlotRuleAction | CastRandomRuleAction
 export interface DefendRuleAction {
   readonly kind: 'defend'
 }

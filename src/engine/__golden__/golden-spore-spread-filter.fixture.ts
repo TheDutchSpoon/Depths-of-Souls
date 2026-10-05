@@ -26,7 +26,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
@@ -57,7 +57,7 @@ export const enemyParty = makeParty('enemy', [
   { id: 'ally-b', health: 50, defence: 0, speed: 3, scriptId: 'always-wait' },
 ])
 
-export const scripts = STOCK_SCRIPTS_BY_ID
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
 export const statuses = STATUS_REGISTRY
 

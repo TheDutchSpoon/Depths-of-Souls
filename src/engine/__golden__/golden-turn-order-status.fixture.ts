@@ -19,7 +19,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import type { CombatEvent } from '../types'
 import type { StatusDef, Trait } from '../effect-types'
 
@@ -88,7 +88,7 @@ export const enemyParty = makeParty('enemy', [
   { id: 'normal-slow', speed: 10, scriptId: 'always-wait' },
 ])
 
-export const scripts = STOCK_SCRIPTS_BY_ID
+export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits: ReadonlyMap<string, Trait> = new Map([
   [WEBBED_TRAIT.id, WEBBED_TRAIT],
   [HASTY_TRAIT.id, HASTY_TRAIT],

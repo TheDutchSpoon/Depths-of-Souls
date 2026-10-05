@@ -3,7 +3,7 @@ import { materializeCreature } from '../../engine/generation'
 import { createCombat } from '../../engine/combat'
 import { decideAction } from '../../engine/interpreter'
 import { resolveIntent } from '../../engine/actions'
-import { ALWAYS_CAST_SCRIPT } from '../scripts'
+import { ALWAYS_CAST_SCRIPT } from '../../engine/__fixtures__/scripts'
 import {
   TRAIT_REGISTRY,
   BRUTE_STARTER_TRAIT,

@@ -2,14 +2,14 @@
 
 Status: shipped — Phase 4 Slice H2, revised per PR #60 design review; spell list revised again by
 the Phase 4 interstitial slice (cumulative spell unlock, between H2 and H3); Phase 4.1 changes
-decided (see the last section). Source: creature/
+decided (see the last section); Phase 4.1-G1 added the roles and the 6v6 boss floor. Source: creature/
 species composition in `src/data/species/glimmerdark.ts`; trait definitions in
 `src/data/traits/glimmerdark.ts`; spell definitions in `src/data/spells/glimmerdark.ts`;
 Glow/grant-act-first in `src/data/statuses.ts`. Design source:
 `.claude/species/species-locked.md`'s Biome 2 table.
 
 **Spell unlock is now cumulative** (GAME_DESIGN §4): every biome-1 spell (The Overgrowth's own
-11, plus the 3 shared "core" spells) stays available to any affinity-matched caster at Glimmerdark
+16, plus the 3 shared "core" spells) stays available to any affinity-matched caster at Glimmerdark
 and every deeper biome. Glimmerdark originally shipped 10 of its own spells (two per affinity,
 mirroring Overgrowth's density); 8 turned out to be exact mechanical reskins of an Overgrowth
 spell and a 9th (Glowspark Bolt) was a near-dup of Arcane Bolt — all 9 are **deleted**. Only
@@ -59,7 +59,7 @@ All three react whenever a living ally (including themselves) casts a spell.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Chorus | Wit | — | Whenever an ally casts a spell, this creature's Attack permanently increases by **5%**. The biome's only spellcaster. |
+| Chorus | Wit | — | Whenever an ally casts a spell, this creature's Attack permanently increases by **5%**. |
 | Adept | Wit | — | Whenever an ally casts a spell, this creature's Intelligence permanently increases by **8%**. |
 | Overtone | Wit | Amplifier | Whenever an ally casts a spell, there's a **10% chance** the caster immediately casts again — a random one of its own equipped spells (possibly the same one), at a random valid target. If that echoed cast is itself observed by an ally (Chorus, Adept, even Overtone again), it reacts too, and the echo can chain into another echo. Only one Overtone-granted echo can happen per cast, no matter how many Overtones are on the field. |
 
@@ -92,10 +92,37 @@ Three distinct verbs toward the same theme, not one shared mechanic repeated at 
 | Brawler | Endurance | Payoff | This creature's Attack action reads its own **Defence** instead of Attack entirely — its armor *is* its weapon. |
 | Bulwark | Endurance | Amplifier | Whenever this creature takes damage, it strikes back for **50% of its own Defence** — the defensive mirror of Brawler's offensive trick. |
 
+## How each creature plays (roles)
+
+Every creature fights by a **role**: a short list of rules it follows in order, top first (see
+`.claude/content/enemy-behaviour.md` for what each role does). Every enemy also carries **three
+different spells** of its own affinity.
+
+| Creature | Role | Creature | Role |
+|---|---|---|---|
+| Glowfly Charger | caster | Sparkeater Leech | striker |
+| Glowfly Detonator | striker | Sparkeater Gorger | striker |
+| Glowfly Radiant | support | Sparkeater Voidmaw | striker |
+| Blindclaws Setter | opener | Gloomjaw Stalker | opener |
+| Blindclaws Striker | striker | Gloomjaw Executioner | striker |
+| Blindclaws Vanguard | striker | Gloomjaw Ravager | striker |
+| Resonant Chorus | caster | Shellback Warden | warden |
+| Resonant Adept | caster | Shellback Brawler | striker |
+| Resonant Overtone | caster | Shellback Bulwark | warden (provoking draws more hits to retaliate against) |
+| **Leech Sovereign** (boss) | striker | | |
+
+Resonant Chorus is no longer the biome's only spellcaster: the three Resonants and Glowfly Charger
+are casters, Glowfly Radiant is a support, and Blindclaws Setter and Gloomjaw Stalker are openers.
+
 ## The Leech Sovereign (floor-20 boss)
 
 Instinct affinity. A unique, non-collectable set-piece fight — not a spawn-pool creature. A lean
-fight with one mechanic, no adds.
+fight with one mechanic and **no authored adds**: **a boss fight is 6v6, like every fight from
+floor 6**, so the rest of her side is five random creatures from Glimmerdark's own pool (never
+another Sovereign), rerolled on every visit, with ordinary kill rewards. She plays as a striker and
+carries three Instinct spells, so a lock lowers her turn rather than emptying it: a Pacified
+Sovereign casts one of her spells instead of waiting (and her stat steal, which fires on attacks,
+does not fire that turn).
 
 - Every time the Sovereign attacks, it permanently steals **20% of its target's Attack** into its
   own — the target's Attack falls by 20%, the Sovereign's own rises by 20%. This stacks every hit:
@@ -105,7 +132,7 @@ fight with one mechanic, no adds.
 ## Spells (6 of Glimmerdark's own, unlocked at biome 2 — plus every biome-1 spell, inherited)
 
 Spell unlock is cumulative (GAME_DESIGN §4): a Glimmerdark caster can roll ANY biome-1 spell
-(The Overgrowth's 11 + the 3 shared "core" spells — see `.claude/content/overgrowth.md` and
+(The Overgrowth's 16 + the 3 shared "core" spells — see `.claude/content/overgrowth.md` and
 `src/data/spells/core.ts`) in addition to the 6 spells below, which unlock starting at biome 2.
 Glimmerdark deliberately does not re-author a full per-affinity kit — the inherited biome-1 base
 already covers every affinity; these are spice on top of it, not a replacement kit (per GAME_DESIGN §4's ≥4–5-own-spells-per-biome bar).
@@ -133,27 +160,7 @@ by it) now that unlock is cumulative — re-authoring them here was always redun
 ## Phase 4.1 — decided changes (pending build)
 
 Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
-lands.
-
-**Roles** (4.1-G; each creature's `defaultScriptId` becomes its role script, see CONVENTIONS
-"Role scripts"):
-
-| Creature | Role | Creature | Role |
-|---|---|---|---|
-| Glowfly Charger | caster | Sparkeater Leech | striker |
-| Glowfly Detonator | striker | Sparkeater Gorger | striker |
-| Glowfly Radiant | support | Sparkeater Voidmaw | striker |
-| Blindclaws Setter | opener | Gloomjaw Stalker | opener |
-| Blindclaws Striker | striker | Gloomjaw Executioner | striker |
-| Blindclaws Vanguard | striker | Gloomjaw Ravager | striker |
-| Resonant Chorus | caster | Shellback Warden | warden |
-| Resonant Adept | caster | Shellback Brawler | striker |
-| Resonant Overtone | caster | Shellback Bulwark | warden (provoking draws more hits to retaliate against) |
-| **Leech Sovereign** (boss) | striker | | |
-
-**Casting roles (4.1-G):** Resonant Chorus is no longer the biome's only spellcaster: the three
-Resonants and Glowfly Charger are casters, Glowfly Radiant a support, and Blindclaws Setter and
-Gloomjaw Stalker openers. Update the creature descriptions when the roles land.
+lands. (4.1-G1 folded in the roles and the casting-role notes.)
 
 **Resonant Overtone's echo timing (4.1-E):** the echo becomes an ordinary "perform an action"
 response. The chance, the random gem and the random target are unchanged, but the echoed cast now

@@ -19,7 +19,7 @@ import {
 } from './effect-types'
 import { createCreatureId } from './ids'
 import { makeParty } from './__fixtures__/creatures'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import { STUN } from '../data/statuses'
 import type { CombatEvent, CombatState, Spell } from './types'
 import type { ActiveEffect, EffectDef, StatusDef, Trait } from './effect-types'
@@ -96,7 +96,7 @@ function setup(
       ]),
     },
     registries: {
-      scripts: STOCK_SCRIPTS_BY_ID,
+      scripts: FIXTURE_SCRIPTS_BY_ID,
       traits: new Map([[trait.id, trait]]),
       statuses: new Map([[STUN.statusId, STUN]]),
     },
@@ -219,7 +219,7 @@ describe('who acts (ASSUMPTIONS 6, 9) and the skip gate', () => {
         ]),
       },
       enemy: { party: makeParty('enemy', [{ id: 'foe', health: 100 }]) },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
   }
   const BEARER = createCreatureId('bearer')

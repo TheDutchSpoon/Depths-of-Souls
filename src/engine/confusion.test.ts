@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from './combat'
 import { makeParty } from './__fixtures__/creatures'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import { createEffectInstanceId } from './effect-types'
 import type { ActiveEffect } from './effect-types'
 import type { CombatEvent, CombatState, Spell } from './types'
@@ -82,7 +82,7 @@ describe('executeCastAoe -- Confusion redirect (Phase 4 Slice C)', () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: STOCK_SCRIPTS_BY_ID },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
       }),
       'caster',
       100,
@@ -117,7 +117,7 @@ describe('executeCastAoe -- Confusion redirect (Phase 4 Slice C)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const { events } = resolveTurn(state)
 

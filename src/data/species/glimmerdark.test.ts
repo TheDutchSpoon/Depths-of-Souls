@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { LEECH_SOVEREIGN_TRAIT, TRAIT_REGISTRY } from '../traits'
 import { STATUS_REGISTRY } from '../statuses'
 import { STOCK_SCRIPTS_BY_ID } from '../scripts'
-import { canEquip } from '../../engine/generation'
+import { canEquip, CAST_ROLE_SCRIPT_IDS } from '../../engine/generation'
 import {
   GLIMMERDARK_AFFINITIES,
   GLIMMERDARK_BIOME,
@@ -70,9 +70,19 @@ describe('Glimmerdark: shape', () => {
     )
   })
 
-  it('exactly one cast-role creature, and every spell it could roll is affinity-matched', () => {
-    const casters = ALL_CREATURES.filter((c) => c.defaultScriptId === 'always-cast')
-    expect(casters).toHaveLength(1)
+  it('the cast-role creatures (caster / support / opener, 4.1-G1) are exactly the roles table ones, and each has an affinity-matched spell', () => {
+    const casters = ALL_CREATURES.filter((c) =>
+      CAST_ROLE_SCRIPT_IDS.includes(c.defaultScriptId),
+    )
+    expect(casters.map((c) => c.id)).toEqual([
+      'glowfly-charger',
+      'glowfly-radiant',
+      'blindclaws-setter',
+      'resonant-chorus',
+      'resonant-adept',
+      'resonant-overtone',
+      'gloomjaw-stalker',
+    ])
     for (const caster of casters) {
       const matching = GLIMMERDARK_SPELLS.filter((spell) =>
         canEquip(spell, caster.affinity),

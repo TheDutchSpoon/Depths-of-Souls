@@ -1,7 +1,7 @@
 # Rotcap Hollow (Biome 3, floors 21–30) — content reference
 
 Status: shipped — Phase 4 Slice H3, revised per content review and PR #64 review; Phase 4.1
-changes decided (see the last section). Source:
+changes decided (see the last section); Phase 4.1-G1 added the roles and the 6v6 boss floor. Source:
 creature/species composition in `src/data/species/rotcap-hollow.ts`; trait definitions in
 `src/data/traits/rotcap-hollow.ts`; spell definitions in `src/data/spells/rotcap-hollow.ts`;
 Spore/Confusion in `src/data/statuses.ts`. Design source: `.claude/species/species-locked.md`'s
@@ -72,7 +72,7 @@ Nothing happens until an ally has actually fallen.
 |---|---|---|---|
 | Wisp | Wit | — | At the start of its own turn, heals itself for **5% of its own maximum HP, once for every dead ally on its side** (e.g. 2 dead allies = a 10%-of-maximum-HP heal). |
 | Thicket | Vitality | — | Whenever an ally dies, this creature's Defence permanently rises by a flat **10%**. This happens once per death — a 2nd death is a separate, additional +10% rise on top of the first, not a bigger single jump. |
-| Hollowroot | Vitality | Amplifier | At the start of its own turn, heals **every living ally** for **5% of this creature's own maximum HP, once for every dead ally on its side** (e.g. 2 dead allies = every ally healed for 10% of this creature's maximum HP). The biome's one spellcaster; this heal fires regardless of what it casts. |
+| Hollowroot | Vitality | Amplifier | At the start of its own turn, heals **every living ally** for **5% of this creature's own maximum HP, once for every dead ally on its side** (e.g. 2 dead allies = every ally healed for 10% of this creature's maximum HP). This heal fires regardless of what it casts. |
 
 ## Hollowkin (Endurance/Instinct) — Puppet
 
@@ -90,6 +90,28 @@ Nothing happens until an ally has actually fallen.
 | Ashborn | Wit | Payoff | Deals **30% more damage** to any enemy currently Burning. |
 | Cinderlord | Violence | Amplifier | Every kill it personally lands applies **1 stack of Burn to every remaining enemy**. |
 
+## How each creature plays (roles)
+
+Every creature fights by a **role**: a short list of rules it follows in order, top first (see
+`.claude/content/enemy-behaviour.md` for what each role does). Every enemy also carries **three
+different spells** of its own affinity.
+
+| Creature | Role | Creature | Role |
+|---|---|---|---|
+| Sporecloud Seeder | striker | Necromoss Wisp | caster |
+| Sporecloud Reaper | striker | Necromoss Thicket | warden |
+| Sporecloud Bloomer | caster | Necromoss Hollowroot | support (casts its heals only when an ally is below 50%) |
+| Rotfeeder Scavenger | striker | Hollowkin Wretch | warden (provokes, then confuses whoever hits it) |
+| Rotfeeder Ripper | striker | Hollowkin Marionette | striker |
+| Rotfeeder Gorgemaw | striker | Hollowkin Puppeteer | striker |
+| Myconet Warder | warden | Sporch Igniter | striker |
+| Myconet Rotcore | warden (it wants to be hit) | Sporch Ashborn | caster |
+| Myconet Gravedigger | guardian (self-sustain that pays off by surviving) | Sporch Cinderlord | opener |
+| **Rot Sovereign** (boss) | warden | | |
+
+Necromoss Hollowroot is no longer the biome's only spellcaster: Sporecloud Bloomer, Necromoss Wisp
+and Sporch Ashborn are casters, and Sporch Cinderlord is an opener.
+
 ## The Rot Sovereign (floor-30 boss)
 
 Endurance affinity. A unique, non-collectable set-piece fight — not a spawn-pool creature. The
@@ -101,6 +123,13 @@ biome-3 finale; the puzzle is managing attrition, not racing pure damage.
   is a separate, additional +10% rise on top of the first, not a bigger single jump. Death on
   either side feeds her, which is exactly the "don't feed it" puzzle.
 - At the start of every one of her own turns, she blankets the entire opposing side with Spore.
+
+**A boss fight is 6v6, like every fight from floor 6.** Her authored adds are a Sporecloud Seeder
+and a Rotfeeder Scavenger; the other three slots are random creatures from Rotcap Hollow's own pool
+(never another Sovereign), rerolled on every visit, with ordinary kill rewards — and every one of
+them that dies feeds her, the same as any death. She plays as a warden and carries three Endurance spells, so a lock lowers
+her turn rather than emptying it: a Pacified Rot Sovereign casts one of her spells instead of
+waiting.
 
 ## Spells (5 of Rotcap Hollow's own, unlocked at biome 3 — plus every earlier biome's spells, inherited)
 
@@ -127,33 +156,13 @@ Charnel Feast can be cast on the caster's own side and hits every living ally at
 ## Phase 4.1 — decided changes (pending build)
 
 Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
-lands.
-
-**Roles** (4.1-G; each creature's `defaultScriptId` becomes its role script, see CONVENTIONS
-"Role scripts"):
-
-| Creature | Role | Creature | Role |
-|---|---|---|---|
-| Sporecloud Seeder | striker | Necromoss Wisp | caster |
-| Sporecloud Reaper | striker | Necromoss Thicket | warden |
-| Sporecloud Bloomer | caster | Necromoss Hollowroot | support (casts its heals only when an ally is below 50%) |
-| Rotfeeder Scavenger | striker | Hollowkin Wretch | warden (provokes, then confuses whoever hits it) |
-| Rotfeeder Ripper | striker | Hollowkin Marionette | striker |
-| Rotfeeder Gorgemaw | striker | Hollowkin Puppeteer | striker |
-| Myconet Warder | warden | Sporch Igniter | striker |
-| Myconet Rotcore | warden (it wants to be hit) | Sporch Ashborn | caster |
-| Myconet Gravedigger | guardian (self-sustain that pays off by surviving) | Sporch Cinderlord | opener |
-| **Rot Sovereign** (boss) | warden | | |
+lands. (4.1-G1 folded in the roles and the casting-role notes.)
 
 **Status timing (4.1-F):** Spore, Confusion and every other status count down in the **bearer's own
 turns**. Spore (and every DoT) ticks **at the end of each of its bearer's turns** instead of at round
 end, before that turn's countdown. A status applied during or after its bearer's action starts
 counting the next turn; one applied at the start of the bearer's turn, before it acts, counts that
 turn. Spore's spread on death is unchanged.
-
-**Casting roles (4.1-G):** Necromoss Hollowroot is no longer the biome's only spellcaster:
-Sporecloud Bloomer, Necromoss Wisp and Sporch Ashborn are casters and Sporch Cinderlord an opener.
-Update the creature descriptions when the roles land.
 
 **Enemy support casters (4.1-C):** Necromoss Hollowroot's ally spells (Regrowth, Afterglow, Wild
 Vigor, …) now land on **its own side** by default. In Phase 4 an enemy support caster targeted the

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BROODMOTHER_TRAIT, TRAIT_REGISTRY } from '../traits'
 import { STATUS_REGISTRY } from '../statuses'
-import { canEquip } from '../../engine/generation'
+import { canEquip, CAST_ROLE_SCRIPT_IDS } from '../../engine/generation'
 import {
   BROODMOTHER,
   BROODMOTHER_ADDS,
@@ -65,9 +65,17 @@ describe('The Overgrowth: shape', () => {
     )
   })
 
-  it('exactly one cast-role creature, and every spell it could roll is affinity-matched', () => {
-    const casters = ALL_CREATURES.filter((c) => c.defaultScriptId === 'always-cast')
-    expect(casters).toHaveLength(1)
+  it('the cast-role creatures (caster / support / opener, 4.1-G1) are exactly the roles table ones, and each has an affinity-matched spell', () => {
+    const casters = ALL_CREATURES.filter((c) =>
+      CAST_ROLE_SCRIPT_IDS.includes(c.defaultScriptId),
+    )
+    expect(casters.map((c) => c.id)).toEqual([
+      'spider-weaver',
+      'swarmhive-drone',
+      'pollinator-duster',
+      'pollinator-beneficiary',
+      'pollinator-pollenlord',
+    ])
     for (const caster of casters) {
       const matching = OVERGROWTH_SPELLS.filter((spell) =>
         canEquip(spell, caster.affinity),

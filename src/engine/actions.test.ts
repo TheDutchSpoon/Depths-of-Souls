@@ -14,7 +14,7 @@ import {
 import { createCombat, resolveTurn } from './combat'
 import { newCascade } from './resolution'
 import { createEffectInstanceId } from './effect-types'
-import { ALWAYS_WAIT_SCRIPT as ALWAYS_WAIT } from '../data/scripts'
+import { ALWAYS_WAIT_SCRIPT as ALWAYS_WAIT } from './__fixtures__/scripts'
 import { STUN } from '../data/statuses'
 import { makeParty } from './__fixtures__/creatures'
 import { createRngState, nextRandom } from './rng'

@@ -36,13 +36,14 @@ export const FIXTURE_BRUISER_RARE: SpeciesCreature = {
   rarity: 'rare',
 }
 
-// A cast-role creature: MUST be rolled >=1 affinity-matched (wit) spell.
+// A cast-role creature (role `caster`, 4.1-G1; was `always-cast`): generation throws if it has no
+// affinity-matched (wit) spell to roll.
 export const FIXTURE_CASTER: SpeciesCreature = {
   id: 'fixture-caster',
   name: 'Fixture Caster',
   affinity: 'wit',
   baseStats: { ...BASE_STATS, intelligence: 24 },
-  defaultScriptId: 'always-cast',
+  defaultScriptId: 'caster',
   innateTraitIds: [],
   rarity: 'common',
 }

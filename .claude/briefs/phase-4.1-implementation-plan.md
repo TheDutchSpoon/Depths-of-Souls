@@ -63,7 +63,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-D2** | The corpus covers all real content (test-only, from the PR #74 review) | **Byte-identical**: every golden and every existing digest entry unchanged; the digest only gains appended coverage entries |
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: goldens byte-identical; the digest is regenerated once, existing entries changing only through the cast-role loadout roll (attributed mechanically), plus any appended coverage fights |
-| **4.1-G** | Hub actions + enemy behaviour | Engine goldens untouched except any listed; content tests change |
+| **4.1-G** | Hub actions + enemy behaviour, shipped as **G1** (enemy behaviour) and **G2** (hub and store) | G1: deliberate, listed; mechanism goldens byte-identical, content goldens and the digest change (attributed stage by stage); G2: engine goldens and the digest **byte-identical**, store tests change |
 | **4.1-H** | Balance simulator + first tuning pass | Content numbers change; mechanism goldens untouched |
 
 The split keeps each PR under one golden policy: a PR that must be byte-identical never also
@@ -132,7 +132,7 @@ src/data/
   statuses.ts       CHANGE (F) every status re-expressed as an effect container
   traits/starters.ts CHANGE (B) Arcane Surge gains innate-spell; (E) perform-action trigger
   traits/glimmerdark.ts CHANGE (E) Overtone as a perform-action trigger
-  scripts.ts        EXTEND (G) six role scripts (the engine's cast intent gains an optional
+  scripts.ts        REPLACE (G) seven role scripts; the five always-* move to engine __fixtures__ (optional
                          side filter for `support`, ASSUMPTION 29)
   specializations.ts CHANGE (G) PerkDef.phase removed
 
@@ -194,7 +194,7 @@ Cross-reference this table when implementing. "Deleted" rows are removed outrigh
 | No-temporary-stat-modifier validator | Load-time check | F | Statuses may not carry `stat-modifier` / `stat-remap` |
 | Bearer-turn durations, ticks on `on-turn-end`, born-this-turn | Lifecycle | F | Round-end status sweep **deleted** |
 | Silence (Violence), Pacify (Wit) | Content | F | Pure status spells |
-| Six role scripts; `defaultScriptId` = role | Content | G | striker / guardian / warden / caster / support / opener |
+| Seven role scripts; `defaultScriptId` = role | Content | G | striker / guardian / warden / caster / support / opener / taunter |
 | Full distinct enemy gem sets + safety net | Generation rule | G | ≥3 spells per affinity at biome 1 (data test) |
 | Pounce, Stifling Weight, Life Siphon | Content | G | Biome-1 spells (Instinct / Endurance / Vitality) |
 | `Instance.gems: spellId[]` | State field | G | Rolled and stored at creation until Phase 8 |
@@ -916,6 +916,19 @@ F1's changes are the stun and sleep goldens' skip shape and the two fixture lock
 Items: **D2, G4, §6, D4** (including B1's "a cast-role creature with no usable spell throws"),
 and **6v6 boss floors** (decided at the PR #81 review).
 
+### The split: G1, G2 (decided at the 4.1-G plan review)
+
+| PR | Items | Golden policy |
+|---|---|---|
+| **4.1-G1** | Enemy behaviour: the `always-*` scripts moved to test fixtures (stage 0, byte-identical), the three new spells (appended), the seven role scripts and every creature's role (starters included, ASSUMPTION 8), `isCastRole` by role, the support side filter, full distinct gem sets for every enemy (bosses included), the 6v6 boss fill. | **Deliberate, listed.** Mechanism goldens byte-identical (shown by import). Content goldens built from real species change where a script or loadout changed, each listed. The digest is regenerated once, attributed **stage by stage** (ASSUMPTION 77). |
+| **4.1-G2** | Hub and store: `summon`, `setPartySlot`, `setPerkLevel` / `refundAllPerks` (`PerkDef.phase` deleted), `newGame`, player gem sets (ASSUMPTION 7), `scriptId: null` → role (ASSUMPTION 6). | Engine goldens and the digest **byte-identical**; store tests change. |
+
+**Why two, and this order.**
+- The halves have different golden policies: G1 changes the digest deliberately, and G2 must
+  leave it untouched.
+- Player gem rolls draw from `ALL_SPELLS`. Landing the spells first means G2's store tests pin
+  the final rolls once.
+
 ### D2 — summoning and party slots
 - **`summon(creatureId)`**: requires 100% soul; free (`BalanceConfig.summonCost`, default 0);
   unlimited duplicates; creates an `Instance` (level 1, rolled gems, `scriptId: null`) and
@@ -945,14 +958,20 @@ and **6v6 boss floors** (decided at the PR #81 review).
   here (Phase 5).
 
 ### D4 — role scripts, gem sets, new spells, player gems
-- **Six role scripts** in `data/scripts.ts`, exactly as CONVENTIONS "Role scripts" tabulates them
-  (`striker`, `guardian`, `warden`, `caster`, `support`, `opener`). `support`'s first rule draws only
-  among ally-side gems (the intent gains a side filter; the shape is the plan's). The five `always-*`
-  stock scripts stay.
+- **Seven role scripts** in `data/scripts.ts`, exactly as CONVENTIONS "Role scripts" tabulates them
+  (`striker`, `guardian`, `warden`, `caster`, `support`, `opener`, `taunter`). `support`'s first
+  rule draws only among ally-side gems (the intent gains a side filter; the shape is the plan's).
+- **The five `always-*` scripts become test fixtures** (decided at the 4.1-G plan review,
+  ASSUMPTION 68):
+  - they move unchanged to `src/engine/__fixtures__/scripts.ts`;
+  - `data/scripts.ts` ships only the roles;
+  - goldens, unit tests and the corpus's Part C use the fixture copies;
+  - the throwaway demo (`src/app/demoFight.ts`) declares its five scripts locally, unchanged,
+    since it may not import `__fixtures__`.
 - **Roles per creature**: set every `defaultScriptId` from the content docs' "Roles" tables. Across
   the 54 creatures and 3 bosses: 27 strikers (incl. Broodmother and Leech Sovereign), 10 wardens
   (incl. Rot Sovereign), 2 guardians (Treant Sapling, Myconet Gravedigger), 10 casters, 3 supports,
-  4 openers, and Snapjaw Lure on `always-provoke`. Starters and the Unicorn per ASSUMPTION 8.
+  4 openers, and Snapjaw Lure as a `taunter`. Starters and the Unicorn per ASSUMPTION 8.
 - **Full distinct enemy gem sets:** every enemy rolls one distinct spell per regular gem slot (3)
   from its affinity's spells with `unlockedAtBiome ≤` the current biome. Duplicates **only** as a
   safety net when the pool is smaller than the slot count. Replaces "cast-role enemies roll ≥1".
@@ -1009,7 +1028,8 @@ and **6v6 boss floors** (decided at the PR #81 review).
 - **Corpus.** Every boss fight changes: adds, the fill and the boss's gems. Attribute them as their
   own class in G's regeneration.
 - **For 4.1-H.** Boss floors get harder: 6 enemies where there were 1–3. The simulator's T4 ("no
-  wall before the floor-10 boss") is the check. Report boss lock uptime too.
+  wall before the floor-10 boss") is the check. Report boss lock uptime too, under a script that
+  aims the lock at the boss (see 4.1-H's boss-floor watch point).
 
 ### Acceptance (4.1-G)
 - Store tests for every new action and reason; `can…` agreement tests.
@@ -1062,6 +1082,22 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
   - The report adds, per spec: the **round-cap draw rate**, and the **largest stack of one trait's
     stat-modifier** seen on a creature. Whether draws get a target band is decided at the 4.1-H plan
     review.
+- **Watch point: boss floors in 6v6** (PR #82 review, measured on the corpus after 4.1-G1).
+  - **Lock uptime needs a script that aims at the boss.** Role scripts aim a spell at the lowest-HP
+    enemy, so the simple policy never locks a boss. In the G1 corpus, 19 boss fights have a
+    player-side Pacify, and it lands on the boss in none of them. The four Leech Sovereign fights
+    the F3 attribution named (19, 109, 199, 289) are rerolled fights now, not a measurement of the
+    lock.
+  - So run every boss floor twice for the same party: once on the simple policy, and once with one
+    creature on `Cast Pacify → highest-HP enemy`, the case GAME_DESIGN "Milestone bosses" accepts.
+    The store has no script action until Phase 6, so this case goes through the engine (the
+    generated boss floor, the same party, the extra script in the registry).
+  - Report the boss's locked-turn share and the clear rate both ways. A large jump in the clear rate
+    means the lock still switches a boss off, and the watch point's per-turn break-through chance
+    comes back as a decision.
+  - **The Rot Sovereign's Attrition** (+10% Attack on every death, either side) has up to 11 other
+    deaths to feed on in 6v6, where it had at most 8. T4 and the floor-30 report show whether she
+    runs away.
 
 ### Acceptance (4.1-H)
 - The simulator is deterministic (same seeds → identical report, asserted).
@@ -1133,7 +1169,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
    `(runSeed, instance ordinal)` so gem rolls never shift floor draws; duplicates only via the same
    safety net as enemies.
 8. **Confirmed.** **Starter and Unicorn roles:** Glyphmoth Seer → `caster`; Cragfang Mauler → `striker`;
-   Stonehorn Warden → `always-provoke` (like Snapjaw Lure, its trait fires on Provoke); Unicorn
+   Stonehorn Warden → `taunter` (like Snapjaw Lure, its trait fires on Provoke; was `always-provoke`
+   until the 4.1-G plan review); Unicorn
    Lightbearer → `striker` (its revive fires on attack).
 9. **Failure reasons:** `summon` → `unknown-creature`, `soul-incomplete`; `setPartySlot` →
    `slot-out-of-range`, `unknown-instance`; `setPerkLevel` → as listed in G4; `pinBiome` →
@@ -1310,12 +1347,71 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     Pacify as its only gem is not a bug in F3; no engine or generation branch (see G2).
 65. **Confirmed (4.1-F3 plan review).** The content edit is `content/overgrowth.md` only: the two
     spells join its spell table and Silenced / Pacified its statuses, with the plain-language rules.
+66. **Confirmed (4.1-G plan review).** G ships as G1 (enemy behaviour), then G2 (hub and store);
+    see "The split: G1, G2".
+67. **Confirmed (4.1-G plan review).** The cast-role ids (`caster`, `support`, `opener`) are a named
+    constant in `generation.ts`; the engine imports no data. `always-cast` is no longer a cast role.
+68. **Corrected (design owner, 4.1-G plan review).** The shipped script registry
+    (`STOCK_SCRIPTS_BY_ID` in `data/scripts.ts`) holds **only the seven role scripts**. The five
+    `always-*` scripts move unchanged to `src/engine/__fixtures__/scripts.ts`, with their own
+    registry:
+    - Every test, golden and Part C coverage fight that uses them imports that registry instead.
+    - The move is G1's **stage 0**: byte-identical, with every golden export and the digest unchanged
+      (the fixture registry holds exactly the five, so a re-exported `scripts` is deep-equal to
+      `main`'s).
+    - `always-provoke`'s two real users get the seventh role, **`taunter`** (1. Provoke · 2. Attack
+      lowest-HP enemy · 3. Cast random gem). It behaves identically, since Provoke is legal on
+      every turn that isn't skipped.
+    - The demo declares its five scripts locally.
+69. **Confirmed (4.1-G plan review).** The support filter is `gemSide?: 'ally' | 'enemy'` on the
+    `gemSlot: 'random'` cast variant, filtering on `spell.targetSide` (AOE spells included). It is
+    read at both sites, `checkLegality` and `resolveGemSlot`. With it absent, the code path and the
+    draw are unchanged.
+70. **Confirmed (4.1-G plan review).** Loadout rule: one `weightedPick` per regular slot (3), each over
+    the affinity-matched unlocked pool minus the spells already chosen; when that runs out, the
+    remaining slots draw from the full pool (the safety-net duplicates). Every enemy draws whatever
+    its role. An empty pool draws nothing, and a cast-role creature with an empty pool throws.
+71. **Confirmed (4.1-G plan review).** A "usable spell" for the cast-role check is affinity-matched
+    and unlocked at the biome, not castable in a given fight.
+72. **Confirmed (4.1-G plan review).** The boss fill takes `max(0, enemyPartySize(floor) − 1 −
+    adds)` slots. If the pool minus the boss's species has no positive-weight species, the fill is
+    empty and nothing throws; a data test pins 6 creatures at every shipped boss floor. Slot
+    indices continue after the adds.
+73. **Confirmed.** The starters take their roles in G1 (ASSUMPTION 8), which changes Part B.
+74. **Corrected (4.1-G plan review).** The spell dedup key reads the stat a damage or heal effect
+    actually scales from: `scalingStat`, else `offStat` normalized (`'cast'` → `intelligence`,
+    `'attack'` → `attack`). Pounce (Speed) and Stinger Swarm (Intelligence) then differ. A spell that
+    names the same stat both ways still collides.
+75. **Confirmed.** The new spells' numbers are ASSUMPTION 20's:
+    - Pounce: `scalingStat: 'speed'`, 1.0, `damageSource: 'cast'`.
+    - Stifling Weight: `apply-status weaken`, inherited duration.
+    - Life Siphon: `deal-damage` (cast, 0.7) plus `heal(self)`, Intelligence, 0.35.
+76. **Confirmed.** `FIXTURE_CASTER`'s role becomes `caster`; no golden imports the biome fixtures.
+77. **Corrected (4.1-G plan review).** Digest attribution, stage by stage:
+    - Stage 0 (the fixture move, ASSUMPTION 68) must leave every golden export and the digest
+      byte-identical.
+    - Apply the stages cumulatively in a scratch copy and take the digest after each: (1) spells,
+      (2) full gem sets, (3) roles, (4) boss fill. Each fight is attributed to the first stage that
+      changes it, and stage 4 equals the committed digest.
+    - At every stage, compare each fight's full materialized parties against the previous stage:
+      every field of every creature, both sides, scripts and gems included.
+    - An identical party must give an identical log; one that doesn't is a bug. Every changed log
+      must have a changed party.
+    - Report per stage: changed parties, changed logs, result flips with fight numbers.
+78. **Confirmed.** Mutation checks run in a scratch copy, never in the workspace.
+79. **Corrected (4.1-G plan review).** Part C's members pin their current scripts explicitly,
+    from the fixture registry (ASSUMPTION 68).
+    Today they take their creature's default script, which G1 changes. Pinned, every Part C entry
+    (500–525) stays byte-identical, and the coverage fights keep riding on no chance by
+    construction. Role behaviour is covered by Parts A and B.
+80. **Confirmed.** Fill creatures on a boss floor give ordinary per-kill rewards, soul% included
+    (GAME_DESIGN "Milestone bosses").
 
 ## Sequencing summary
 
 `4.1-A` (data, store, generation) → `4.1-B` (engine foundations, byte-identical) → `4.1-C`
 (action pipeline + turn skeleton) → `4.1-D` (spells carry responses, byte-identical) → `4.1-D2`
 (the corpus covers all real content, test-only) → `4.1-E` (`perform-action`) → `4.1-F1` (status
-containers) → `4.1-F2` (status timing + Web roll) → `4.1-F3` (Silence/Pacify) → `4.1-G` (hub
-actions + enemy behaviour) → `4.1-H` (simulator + tuning) → then the Phase 4.5 demo brief. Each PR
-branches from `main` after the previous merge.
+containers) → `4.1-F2` (status timing + Web roll) → `4.1-F3` (Silence/Pacify) → `4.1-G1` (enemy
+behaviour) → `4.1-G2` (hub and store) → `4.1-H` (simulator + tuning) → then the Phase 4.5 demo
+brief. Each PR branches from `main` after the previous merge.

@@ -40,9 +40,12 @@ import {
   ARCANE_BOLT,
   BRAMBLE_WARD,
   HOWLING_INSTINCT,
+  LIFE_SIPHON,
   POLLEN_CLOUD,
+  POUNCE,
   REGROWTH,
   ROOT_GRASP,
+  STIFLING_WEIGHT,
   STINGER_SWARM,
   THORN_LASH,
   VINE_SNARE,
@@ -93,6 +96,10 @@ export const OVERGROWTH_SPELLS = [
   WILD_VIGOR,
   STINGER_SWARM,
   HOWLING_INSTINCT,
+  // Phase 4.1-G1 (D4): the three spells that give every affinity a third biome-1 entry.
+  POUNCE,
+  STIFLING_WEIGHT,
+  LIFE_SIPHON,
 ]
 
 // ---- Spiders (Wit lean) -- closed mechanic: Trap -> exploit (Web) ----
@@ -102,7 +109,7 @@ export const SPIDER_WEAVER: SpeciesCreature = {
   name: 'Spider Weaver',
   affinity: 'wit',
   baseStats: { health: 14, attack: 18, intelligence: 20, defence: 12, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'caster',
   innateTraitIds: [SPIDER_WEAVER_TRAIT.id],
   rarity: 'common',
 }
@@ -112,7 +119,7 @@ export const SPIDER_AMBUSHER: SpeciesCreature = {
   name: 'Spider Ambusher',
   affinity: 'wit',
   baseStats: { health: 14, attack: 22, intelligence: 18, defence: 12, speed: 22 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SPIDER_AMBUSHER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -123,7 +130,7 @@ export const SPIDER_BROODWARDEN: SpeciesCreature = {
   name: 'Spider Broodwarden',
   affinity: 'instinct',
   baseStats: { health: 18, attack: 20, intelligence: 20, defence: 14, speed: 16 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SPIDER_BROODWARDEN_TRAIT.id],
   rarity: 'rare',
 }
@@ -143,7 +150,7 @@ export const SWARMHIVE_DRONE: SpeciesCreature = {
   name: 'Swarmhive Drone',
   affinity: 'violence',
   baseStats: { health: 16, attack: 18, intelligence: 10, defence: 14, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'opener',
   innateTraitIds: [SWARMHIVE_DRONE_TRAIT.id],
   rarity: 'common',
 }
@@ -153,7 +160,7 @@ export const SWARMHIVE_STRIKER: SpeciesCreature = {
   name: 'Swarmhive Striker',
   affinity: 'violence',
   baseStats: { health: 16, attack: 22, intelligence: 10, defence: 14, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SWARMHIVE_STRIKER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -164,7 +171,7 @@ export const SWARMHIVE_QUEEN: SpeciesCreature = {
   name: 'Swarmhive Queen',
   affinity: 'endurance',
   baseStats: { health: 22, attack: 18, intelligence: 12, defence: 22, speed: 12 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'warden',
   innateTraitIds: [SWARMHIVE_QUEEN_TRAIT.id],
   rarity: 'rare',
 }
@@ -184,7 +191,7 @@ export const TREANT_SAPLING: SpeciesCreature = {
   name: 'Treant Sapling',
   affinity: 'vitality',
   baseStats: { health: 26, attack: 12, intelligence: 14, defence: 16, speed: 10 },
-  defaultScriptId: 'always-defend',
+  defaultScriptId: 'guardian',
   innateTraitIds: [TREANT_SAPLING_TRAIT.id],
   rarity: 'common',
 }
@@ -194,7 +201,7 @@ export const TREANT_ELDER: SpeciesCreature = {
   name: 'Treant Elder',
   affinity: 'endurance',
   baseStats: { health: 28, attack: 12, intelligence: 18, defence: 20, speed: 10 },
-  defaultScriptId: 'always-defend',
+  defaultScriptId: 'warden',
   innateTraitIds: [TREANT_ELDER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -204,7 +211,7 @@ export const TREANT_GROVEKEEP: SpeciesCreature = {
   name: 'Treant Grovekeep',
   affinity: 'vitality',
   baseStats: { health: 30, attack: 14, intelligence: 16, defence: 20, speed: 10 },
-  defaultScriptId: 'always-defend',
+  defaultScriptId: 'warden',
   innateTraitIds: [TREANT_GROVEKEEP_TRAIT.id],
   rarity: 'rare',
 }
@@ -224,7 +231,7 @@ export const POLLINATOR_DUSTER: SpeciesCreature = {
   name: 'Pollinator Duster',
   affinity: 'vitality',
   baseStats: { health: 18, attack: 12, intelligence: 18, defence: 12, speed: 22 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'support',
   innateTraitIds: [POLLINATOR_DUSTER_TRAIT.id],
   rarity: 'common',
 }
@@ -234,19 +241,19 @@ export const POLLINATOR_BENEFICIARY: SpeciesCreature = {
   name: 'Pollinator Beneficiary',
   affinity: 'wit',
   baseStats: { health: 16, attack: 16, intelligence: 20, defence: 12, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'caster',
   innateTraitIds: [POLLINATOR_BENEFICIARY_TRAIT.id],
   rarity: 'uncommon',
 }
 
-/** The biome's one cast-role creature (defaultScriptId 'always-cast') -- exercises
+/** The biome's one cast-role creature (role `caster`) -- exercises
  * generateFloor's real spell-loadout roll against OVERGROWTH_SPELLS' wit-affinity entries. */
 export const POLLINATOR_POLLENLORD: SpeciesCreature = {
   id: 'pollinator-pollenlord',
   name: 'Pollinator Pollenlord',
   affinity: 'wit',
   baseStats: { health: 16, attack: 10, intelligence: 26, defence: 12, speed: 22 },
-  defaultScriptId: 'always-cast',
+  defaultScriptId: 'caster',
   innateTraitIds: [POLLINATOR_POLLENLORD_TRAIT.id],
   rarity: 'rare',
 }
@@ -266,7 +273,7 @@ export const SNAPJAW_LURE: SpeciesCreature = {
   name: 'Snapjaw Lure',
   affinity: 'endurance',
   baseStats: { health: 22, attack: 14, intelligence: 10, defence: 24, speed: 14 },
-  defaultScriptId: 'always-provoke',
+  defaultScriptId: 'taunter',
   innateTraitIds: [SNAPJAW_LURE_TRAIT.id],
   rarity: 'common',
 }
@@ -276,7 +283,7 @@ export const SNAPJAW_JAWS: SpeciesCreature = {
   name: 'Snapjaw Jaws',
   affinity: 'violence',
   baseStats: { health: 18, attack: 24, intelligence: 10, defence: 18, speed: 14 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SNAPJAW_JAWS_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -288,7 +295,7 @@ export const SNAPJAW_IRONJAW: SpeciesCreature = {
   baseStats: { health: 20, attack: 22, intelligence: 10, defence: 22, speed: 12 },
   // Its own trait fires on-turn-start regardless of chosen action (unlike the old provoke-gated
   // shape) -- attacks while it ramps, rather than tying up a turn provoking.
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SNAPJAW_IRONJAW_TRAIT.id],
   rarity: 'rare',
 }
@@ -308,7 +315,7 @@ export const LULLPOLLEN_SLEEPER: SpeciesCreature = {
   name: 'Lullpollen Sleeper',
   affinity: 'wit',
   baseStats: { health: 16, attack: 16, intelligence: 20, defence: 12, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [LULLPOLLEN_SLEEPER_TRAIT.id],
   rarity: 'common',
 }
@@ -318,7 +325,7 @@ export const LULLPOLLEN_REAPER: SpeciesCreature = {
   name: 'Lullpollen Reaper',
   affinity: 'instinct',
   baseStats: { health: 16, attack: 20, intelligence: 16, defence: 12, speed: 22 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [LULLPOLLEN_REAPER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -328,7 +335,7 @@ export const LULLPOLLEN_DOZER: SpeciesCreature = {
   name: 'Lullpollen Dozer',
   affinity: 'instinct',
   baseStats: { health: 18, attack: 18, intelligence: 18, defence: 14, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [LULLPOLLEN_DOZER_TRAIT.id],
   rarity: 'rare',
 }
@@ -372,7 +379,7 @@ export const BROODMOTHER: SpeciesCreature = {
   name: 'Broodmother',
   affinity: 'wit',
   baseStats: { health: 30, attack: 24, intelligence: 24, defence: 20, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [BROODMOTHER_TRAIT.id],
   rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, an authored boss encounter
 }

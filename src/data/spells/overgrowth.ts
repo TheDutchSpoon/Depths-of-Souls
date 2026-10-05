@@ -266,3 +266,67 @@ export const PACIFY: Spell = {
     },
   ],
 }
+
+/** Phase 4.1-G1 (D4, ASSUMPTION 75; numbers placeholders, tuned in 4.1-H): Pounce, Instinct's third
+ * biome-1 spell and its only one that scales off Speed instead of Intelligence. Single-target, no
+ * upside, so it sits in the ~100% band. */
+export const POUNCE: Spell = {
+  id: 'pounce',
+  name: 'Pounce',
+  targetShape: 'single',
+  affinity: 'instinct',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      scalingStat: 'speed',
+      spellPower: 1.0,
+      damageSource: 'cast',
+    },
+  ],
+}
+
+/** Phase 4.1-G1 (D4): Stifling Weight, Endurance's third biome-1 spell -- a pure status spell:
+ * Weakens a single enemy (-20% damage dealt) for Weaken's inherited 3 turns. No damage. */
+export const STIFLING_WEIGHT: Spell = {
+  id: 'stifling-weight',
+  name: 'Stifling Weight',
+  targetShape: 'single',
+  affinity: 'endurance',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'apply-status',
+      target: { kind: 'cast-target' },
+      status: { statusId: 'weaken' },
+    },
+  ],
+}
+
+/** Phase 4.1-G1 (D4): Life Siphon, Vitality's third biome-1 spell and its only damage spell: a
+ * single-target hit (70% Intelligence) that heals the caster for 35% of its Intelligence. */
+export const LIFE_SIPHON: Spell = {
+  id: 'life-siphon',
+  name: 'Life Siphon',
+  targetShape: 'single',
+  affinity: 'vitality',
+  targetSide: 'enemy',
+  unlockedAtBiome: 1,
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.7,
+    },
+    {
+      kind: 'heal',
+      target: { kind: 'self' },
+      scalingStat: 'intelligence',
+      spellPower: 0.35,
+    },
+  ],
+}

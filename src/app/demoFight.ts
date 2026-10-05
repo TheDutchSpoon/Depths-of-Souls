@@ -2,7 +2,6 @@ import { createCreatureId } from '../engine/ids'
 import type { Creature } from '../engine/types'
 import type { Script } from '../engine/scripting-types'
 import type { Trait } from '../engine/effect-types'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import { CINDER_NOVA, VENOM_BOLT } from '../data/spells'
 import { STATUS_REGISTRY } from '../data/statuses'
 import {
@@ -23,8 +22,40 @@ import {
 
 export const DEMO_SEED = 20260702
 
-// Real shipped stock scripts, not demo-only scripts -- see src/data/scripts.ts.
-export const demoScripts: ReadonlyMap<string, Script> = STOCK_SCRIPTS_BY_ID
+// The five one-rule scripts the demo parties run, declared here (4.1-G1, ASSUMPTION 68): the
+// shipped script registry holds only role scripts, and the demo may not import test fixtures.
+// A one-rule script is player data like any other.
+const DEMO_SCRIPTS: readonly Script[] = [
+  {
+    id: 'always-attack',
+    rules: [
+      {
+        condition: { kind: 'always' },
+        action: { kind: 'attack' },
+        targeting: { kind: 'lowest-hp-enemy' },
+      },
+    ],
+  },
+  {
+    id: 'always-cast',
+    rules: [{ condition: { kind: 'always' }, action: { kind: 'cast', gemSlot: 0 } }],
+  },
+  {
+    id: 'always-defend',
+    rules: [{ condition: { kind: 'always' }, action: { kind: 'defend' } }],
+  },
+  {
+    id: 'always-provoke',
+    rules: [{ condition: { kind: 'always' }, action: { kind: 'provoke' } }],
+  },
+  {
+    id: 'always-wait',
+    rules: [{ condition: { kind: 'always' }, action: { kind: 'wait' } }],
+  },
+]
+export const demoScripts: ReadonlyMap<string, Script> = new Map(
+  DEMO_SCRIPTS.map((script) => [script.id, script]),
+)
 
 // Real shipped statuses -- see src/data/statuses.ts. Needed so poison/stun/weaken/regen
 // resolve when a trait or spell applies them.

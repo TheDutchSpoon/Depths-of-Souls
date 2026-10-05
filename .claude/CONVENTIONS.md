@@ -837,7 +837,8 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
 - The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
   (Cast) have **no cost, freely castable**; a rule picks the **gem slot index** (not a spell ID),
   and the fired spell is whatever occupies that slot on that creature (template-reusable across
-  loadouts), or **`gemSlot: 'random'`** (uniformly among castable gems, 4.1-C). This requires
+  loadouts), or **`gemSlot: 'random'`** (uniformly among castable gems, 4.1-C; the draw always
+  consumes one RNG value, even when only one gem is castable). This requires
   **extending the Phase 1 `Creature` type** with an equipped-spells field —
   `equippedSpells: readonly (Spell | null)[]` (bare `Spell | null` slots, **not** the full
   `{ spell, level, augments }` Gem wrapper — that wrapper is Phase 8 economy; hardcode ~3 slots as a
@@ -1079,11 +1080,19 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     implicit fallback. `defaultTarget?` reserved for Phase 6 (how it interacts with the engine's
     side-aware default is a Phase 6 decision). Rule/template counts **unbounded**.
 - **Scripts are reusable templates** referenced by creatures (many may share one). The interpreter is
-  **symmetric** — player and enemy creatures use the same system. Phase 2 provides five **stock
-  scripts** in `data/` (real content, not `__fixtures__`): `always-attack` (lowest-HP enemy),
-  `always-cast` (slot 0, side-aware default target as of 4.1-C, degrades to fallback if slotless),
-  `always-defend`, `always-provoke`, `always-wait`. They stay (tests use them).
-- **Role scripts** (Phase 4.1-G, D4) — six stock scripts that give enemies readable behaviour and
+  **symmetric** — player and enemy creatures use the same system. Phase 2 provided five **stock
+  scripts** in `data/`: `always-attack` (lowest-HP enemy), `always-cast` (slot 0, side-aware
+  default target as of 4.1-C, degrades to fallback if slotless), `always-defend`,
+  `always-provoke`, `always-wait`. **From 4.1-G1 they are test fixtures**, not shipped content
+  (4.1-G plan review).
+  - They move unchanged (same ids, same rules) to `src/engine/__fixtures__/scripts.ts`.
+  - Mechanism goldens, unit tests and the corpus's coverage fights (Part C) use them: a mechanism
+    test wants the simplest deterministic actor, and a role's extra rules and random draws would
+    only blur it.
+  - Using them in the corpus is still real content: scripts are player data, and a one-rule script
+    is one a player can write.
+  - `data/scripts.ts` ships only the role scripts. No creature's role is an `always-*` script.
+- **Role scripts** (Phase 4.1-G, D4) — seven stock scripts that give enemies readable behaviour and
   give summoned creatures a sensible default. A creature's **`defaultScriptId` is its role**.
   "Random gem" = uniformly among the creature's castable gems (`gemSlot: 'random'`); each gem's target
   comes from the side-aware default. A "cast random gem" rule **below** an Attack rule only fires
@@ -1098,6 +1107,11 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   | `caster` | 1. Cast random gem · 2. Attack lowest-HP enemy |
   | `support` | 1. Lowest ally HP < 50% → Cast random **ally-side** gem · 2. Attack lowest-HP enemy · 3. Cast random gem |
   | `opener` | 1. Round = 1 → Cast random gem · 2. Attack lowest-HP enemy · 3. Cast random gem |
+  | `taunter` | 1. Provoke · 2. Attack lowest-HP enemy · 3. Cast random gem |
+
+  `taunter` is for creatures whose trait fires on Provoke (Snapjaw Lure, Stonehorn Warden). It
+  behaves exactly as `always-provoke` did, since Provoke is legal on every turn that isn't skipped.
+  Rules 2 and 3 are the same fallback every role ends with.
 
   `support`'s first rule draws only among ally-side gems (the intent carries a side filter, e.g.
   `gemSlot: { random, side: 'ally' }`; exact shape is the 4.1-G plan's); with none, the rule is illegal

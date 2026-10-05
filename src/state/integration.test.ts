@@ -24,6 +24,12 @@
 // resolves as two full-power instances), so this same run also re-proves that mechanism against
 // real content, not just Slice B's own fixture-scoped golden.
 //
+// Phase 4.1-G1 (regenerated; still generated-then-checkpoint-verified): enemy gem sets, role scripts
+// and the 6v6 boss floor changed which creatures the fixed DEFAULT_RUN_SEED spawns (every enemy now
+// draws a full gem set from the run stream, so the stream shifts) and what they do. Every pinned
+// outcome below was regenerated and then checked against an independent invariant, noted inline;
+// the species mechanics asserted are the ones the NEW draw exercises.
+//
 // Two cases: floor 1 (the original Slice I scenario, unchanged by the PR #65 review) and floor
 // 10 -- the real Broodmother boss floor, added by that review to close the "boss-encounter
 // runner" gap H1-H3 each deferred (see CONVENTIONS "Boss floors" and the Slice I phase-record
@@ -38,10 +44,11 @@ import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { BIOMES } from '../data/biomes'
 import { createInstanceId } from './ids'
 import {
-  SWARMHIVE_STRIKER_TRAIT,
+  SWARMHIVE_DRONE_TRAIT,
   TREANT_GROVEKEEP_TRAIT,
   SNAPJAW_JAWS_TRAIT,
 } from '../data/traits/overgrowth'
+import { enemyLevelRange } from '../engine/curves'
 import { UNICORN_TRAIT } from '../data/traits/starters'
 import { createGameStore, type DescendResult } from './store'
 
@@ -132,14 +139,17 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     expect([...outcome.soulGained.entries()].sort()).toEqual(
       [
         ['treant-grovekeep', 2], // rare -> CFG.soulGainPercent.rare = 2
-        ['swarmhive-striker', 5], // uncommon -> CFG.soulGainPercent.uncommon = 5
+        ['swarmhive-drone', 10], // common -> CFG.soulGainPercent.common = 10
         ['snapjaw-jaws', 5], // uncommon -> CFG.soulGainPercent.uncommon = 5
       ].sort(),
     )
     // Phase 4.1-A (ASSUMPTION 5): xpAwardForKill = the victim's own level, not 10*floor -- see
     // this file's own header comment. Generated-then-checkpoint-verified: the three victims'
-    // own rolled levels (within enemyLevelRange(1, CFG) = {min:1, max:3}) sum to 8.
-    expect(outcome.xpBanked).toBe(8)
+    // own rolled levels (within enemyLevelRange(1, CFG) = {min:1, max:3}) sum to 6. Checkpoint:
+    // three levels in 1..3 sum to 3..9.
+    expect(outcome.xpBanked).toBe(6)
+    expect(outcome.xpBanked).toBeGreaterThanOrEqual(3 * enemyLevelRange(1, CFG).min)
+    expect(outcome.xpBanked).toBeLessThanOrEqual(3 * enemyLevelRange(1, CFG).max)
     expect(outcome.currencyGained).toEqual({
       essence: 3,
       ore: 3,
@@ -158,10 +168,9 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // permanently raises the whole team's maximum Health by 15%") -- fires exactly once, on
     // fight-start, for its own single-enemy fight.
     expect(triggersFor(outcome.events, TREANT_GROVEKEEP_TRAIT.id)).toBe(1)
-    // Swarmhive Striker (content/overgrowth.md: "at fight-start, Attack permanently increases by
-    // 20% for every living Swarmhive ally, itself included") -- the count-scaling primitive
-    // (Slice D) against real content; one Swarmhive present (itself) -> fires once.
-    expect(triggersFor(outcome.events, SWARMHIVE_STRIKER_TRAIT.id)).toBe(1)
+    // Swarmhive Drone (Final Sting): a trait that fires when the drone dies -- this floor's draw has
+    // one drone, killed once in its fight, so the trigger fires exactly once.
+    expect(triggersFor(outcome.events, SWARMHIVE_DRONE_TRAIT.id)).toBe(1)
     // Snapjaw Jaws (content/overgrowth.md: "whenever this creature takes damage, it attacks back
     // for 60% of its Attack") -- an on-damage-taken retaliation trigger, fires once per hit
     // landed on it before it dies.
@@ -179,16 +188,16 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     expect(revivedCount).toBeGreaterThan(0)
     expect(revivedCount).toBeLessThanOrEqual(unicornTriggers)
 
-    // ---- StatModifierApplied: the two fight-start amplifiers landed the exact documented rates ----
+    // ---- StatModifierApplied: the fight-start amplifier landed the exact documented rate ----
+    // (Treant Grovekeep's +15% Health; the Swarmhive Striker's Attack amplifier is not in this
+    // floor's draw any more.)
     const statMods = outcome.events.filter(
       (e): e is Extract<CombatEvent, { type: 'StatModifierApplied' }> =>
         e.type === 'StatModifierApplied',
     )
-    expect(statMods).toHaveLength(2)
+    expect(statMods).toHaveLength(1)
     const grovekeepMod = statMods.find((e) => e.stat === 'health')
     expect(grovekeepMod?.factor).toBe(1.15)
-    const strikerMod = statMods.find((e) => e.stat === 'attack')
-    expect(strikerMod?.factor).toBe(1.2)
 
     // ---- Determinism: same fixed seed, same real data -> byte-identical outcome ----
     const replay = createGameStore({ balanceConfig: CFG })
@@ -200,14 +209,14 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // ---- Slice B's action instance-list model, re-proven against real content (per this
     // test's own header comment) ----
     const perTurn = attacksPerTurn(outcome.events, 'brute-starter-player-0')
-    expect(perTurn).toHaveLength(18) // 18 turns total across floor 1's 3 fights
-    expect(perTurn.filter((n) => n === 2)).toHaveLength(17) // the double-strike, ordinarily
-    // The lone exception: fight 2's SECOND turn, where instance 1 alone kills the already-
-    // wounded Swarmhive Striker (fight 2's only enemy) -- instance 2 then has no living target
-    // left (`resolveInstanceTarget` returns null, the instance loop breaks per Slice B's own
-    // "falls back to default target... unless it's already died" rule with nothing left to fall
-    // back TO), so only one AttackDeclared fires that turn.
+    expect(perTurn).toHaveLength(5) // 5 turns total across floor 1's 3 fights
+    expect(perTurn.filter((n) => n === 2)).toHaveLength(4) // the double-strike, ordinarily
+    // The lone exception is the LAST turn: instance 1 alone kills that fight's only enemy --
+    // instance 2 then has no living target left (`resolveInstanceTarget` returns null, the instance
+    // loop breaks per Slice B's own "falls back to default target... unless it's already died" rule
+    // with nothing left to fall back TO), so only one AttackDeclared fires that turn.
     expect(perTurn.filter((n) => n !== 2)).toEqual([1])
+    expect(perTurn[perTurn.length - 1]).toBe(1)
   })
 
   test('descends floor 10 -- the real Broodmother boss floor -- after leveling the party up to survive it', () => {
@@ -233,7 +242,8 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
 
     const { outcome } = expectOk(store.getState().descend(10))
 
-    // ---- One fight, the boss + her two real spiderling adds (ids confirmed from the run) ----
+    // ---- One fight, 6v6 (4.1-G1): the boss, her two real spiderling adds, and three fill
+    // creatures drawn from the biome's own pool minus the Spiders (ids confirmed from the run) ----
     expect(outcome.fightResults).toEqual(['win'])
     const died = outcome.events
       .filter(
@@ -241,9 +251,17 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
           e.type === 'CreatureDied',
       )
       .map((e) => e.creatureId)
+      .filter((id) => id.includes('-enemy-'))
       .sort()
     expect(died).toEqual(
-      ['broodmother-enemy-0', 'spider-ambusher-enemy-2', 'spider-weaver-enemy-1'].sort(),
+      [
+        'broodmother-enemy-0', // the boss
+        'spider-weaver-enemy-1', // her authored adds, first...
+        'spider-ambusher-enemy-2',
+        'treant-sapling-enemy-3', // ...then the three fill creatures, none of them Spiders
+        'swarmhive-drone-enemy-4',
+        'pollinator-beneficiary-enemy-5',
+      ].sort(),
     )
 
     // ---- Swarm Call (the count-scaling on-attack trait golden-broodmother.test.ts hand-derives
@@ -256,20 +274,32 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     expect(store.getState().bossesCleared).toEqual(new Set(['broodmother']))
     // bossesCleared.size(1) * 100 = 100 perk points (GAME_DESIGN §9), derived, never stored.
     expect(store.getState().bossesCleared.size * 100).toBe(100)
+    // (Fill creatures are ordinary spawns with ordinary per-kill rewards, soul% included --
+    // ASSUMPTION 80.)
     expect([...outcome.soulGained.keys()].sort()).toEqual(
-      ['spider-ambusher', 'spider-weaver'].sort(),
+      [
+        'spider-ambusher',
+        'spider-weaver',
+        'treant-sapling',
+        'swarmhive-drone',
+        'pollinator-beneficiary',
+      ].sort(),
     )
     expect(outcome.soulGained.has('broodmother')).toBe(false)
     // Phase 4.1-A (ASSUMPTION 5): xpAwardForKill = each victim's own level, not 10*floor.
     // Generated-then-checkpoint-verified: the boss's own level is FIXED (bossLevel(10, CFG) =
-    // 16); the two adds' rolled levels (within enemyLevelRange(10, CFG) = {min:10, max:13}) sum
-    // with it to 38.
-    expect(outcome.xpBanked).toBe(38)
+    // 16); the five other enemies' rolled levels (within enemyLevelRange(10, CFG) = {min:10,
+    // max:13}) sum with it to 73. Checkpoint: five levels in 10..13 sum to 50..65, so 73 - 16 = 57
+    // is inside it.
+    expect(outcome.xpBanked).toBe(73)
+    expect(outcome.xpBanked - 16).toBeGreaterThanOrEqual(5 * enemyLevelRange(10, CFG).min)
+    expect(outcome.xpBanked - 16).toBeLessThanOrEqual(5 * enemyLevelRange(10, CFG).max)
+    // currencyDropForKill(10, CFG) = {essence:10, ore:10, bricks:1, lifeforce:10} per kill, six kills.
     expect(outcome.currencyGained).toEqual({
-      essence: 30,
-      ore: 30,
-      bricks: 3,
-      lifeforce: 30,
+      essence: 60,
+      ore: 60,
+      bricks: 6,
+      lifeforce: 60,
     })
     expect(store.getState().deepestFloor).toBe(10)
 
@@ -308,26 +338,14 @@ describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig'
     const { outcome } = expectOk(store.getState().descend(1))
 
     // Generated-then-checkpoint-verified (this describe block's own header comment): under the
-    // real default config, floor 1 is 10 fights (not CFG's 3) -- the level-1 Brute/Unicorn party
-    // wins the first 9 draws against Overgrowth's real roster but loses the 10th, an honest
-    // instance of CONVENTIONS' documented, accepted risk ("floor success ≈ (per-fight win
-    // chance)^(fights), so a small per-fight loss rate compounds") now visible even at floor 1
-    // once fightCount rose from 3 to 10. `fightResults` stops at the first non-win per
-    // CONVENTIONS ("a floor's remaining fights are simply never attempted after a wipe").
-    expect(outcome.fightResults).toEqual([
-      'win',
-      'win',
-      'win',
-      'win',
-      'win',
-      'win',
-      'win',
-      'win',
-      'win',
-      'loss',
-    ])
-    expect(outcome.cleared).toBe(false)
-    expect(store.getState().deepestFloor).toBe(0)
+    // real default config, floor 1 is 10 fights (not CFG's 3). Before 4.1-G1 the level-1 Brute/
+    // Unicorn party lost the 10th (CONVENTIONS' accepted "per-fight loss rate compounds" risk);
+    // with this draw (roles and full gem sets shifted the stream) it wins all ten. `fightResults`
+    // stops at the first non-win per CONVENTIONS, so ten wins means a cleared floor. Checkpoint:
+    // one result per fight, ten fights.
+    expect(outcome.fightResults).toEqual(Array.from({ length: 10 }, () => 'win'))
+    expect(outcome.cleared).toBe(true)
+    expect(store.getState().deepestFloor).toBe(1)
 
     // Every soul% gain this call must be a whole multiple of one of the new rarity percentages
     // (25/20/10) -- a creature can die more than once across the 9 won fights.

@@ -9,7 +9,7 @@ import { countDraws } from './test-utils/rng-draw-count'
 import { deepFreeze } from './test-utils/deep-freeze'
 import { createCreatureId } from './ids'
 import { ROUND_CAP } from './config'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import {
   TRAIT_REGISTRY,
   SORCERER_STARTER_TRAIT,
@@ -253,7 +253,7 @@ describe('determinism', () => {
       seed: 42,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
     })
     for (let i = 0; i < 6 && state.result === null; i++) {
       state = resolveTurn(state).state
@@ -934,7 +934,7 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: STOCK_SCRIPTS_BY_ID },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
       }),
     )
     return events.find((e) => e.type === 'DamageDealt')
@@ -1022,7 +1022,7 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     let state: CombatState = created
     for (let i = 0; i < 6; i++) {
@@ -1060,7 +1060,7 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits, statuses: statuses },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits, statuses: statuses },
     })
     let state: CombatState = created
     let turnStartedCount = 0
@@ -1093,7 +1093,11 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
         seed: seed,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits, statuses: statuses },
+        registries: {
+          scripts: FIXTURE_SCRIPTS_BY_ID,
+          traits: traits,
+          statuses: statuses,
+        },
       })
       const allEvents = []
       for (let i = 0; i < 4; i++) {
@@ -1155,7 +1159,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
     })
     // Granted-cast rolls succeed (first draw < 0.5); the second draw picks equipped slot 0
     // regardless of its value (only one equipped slot).
@@ -1191,7 +1195,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
     })
     state = { ...state, rng: { position: FAILS_POSITION } } // fails, draws nothing further
     const { events } = resolveTurn(state)
@@ -1213,7 +1217,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
     })
     state = { ...state, rng: { position: SUCCEEDS_POSITION } } // succeeds, but there's nothing to cast
     const { events } = resolveTurn(state)
@@ -1235,7 +1239,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
     })
     state = { ...state, rng: { position: SUCCEEDS_POSITION } }
     const { events } = resolveTurn(state)
@@ -1268,7 +1272,7 @@ describe('turn-start cleanup (Phase 4.1-C, D6)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
     })
 
     // Round 1: LURE provokes; on-provoke grants itself Defending too. LURE now carries both
@@ -1326,7 +1330,7 @@ describe('turn-start cleanup (Phase 4.1-C, D6)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
     })
 
     const { state: after, events } = resolveTurn(state) // DOOMED, round 1
@@ -1382,7 +1386,7 @@ describe('taken-reduction passive (Phase 4 Slice F, review amendment -- real Bul
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
     })
     const { state, events } = resolveFight(initial)
 

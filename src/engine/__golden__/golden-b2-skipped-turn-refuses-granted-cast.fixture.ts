@@ -30,7 +30,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { STOCK_SCRIPTS_BY_ID } from '../../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { STUN } from '../../data/statuses'
 import type { CombatEvent, Spell } from '../types'
 import type { Script } from '../scripting-types'
@@ -133,7 +133,7 @@ export const enemyParty = makeParty('enemy', [
 ])
 
 export const scripts: ReadonlyMap<string, Script> = new Map([
-  ...STOCK_SCRIPTS_BY_ID,
+  ...FIXTURE_SCRIPTS_BY_ID,
   [RANDOM_ATTACK_SCRIPT.id, RANDOM_ATTACK_SCRIPT],
 ])
 export const traits: ReadonlyMap<string, Trait> = new Map([

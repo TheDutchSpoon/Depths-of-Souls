@@ -94,7 +94,7 @@ describe('materializeCreature', () => {
       speciesId: 'fixture-species',
     })
     expect(creature.affinity).toBe('wit')
-    expect(creature.scriptId).toBe('always-cast')
+    expect(creature.scriptId).toBe('caster')
     expect(creature.innateTraitIds).toEqual([])
   })
 
@@ -399,8 +399,10 @@ describe('generateFloor', () => {
   // total 7; roll = 0.3*7 = 2.1, < 6, so BRUISER (common) wins every time too. floor=6 (under the
   // Phase-4 placeholder config) -> enemyLevelRange = {min:6, max:8} (size 3); the level roll is
   // 6 + floor(0.3*3) = 6 + floor(0.9) = 6 + 0 = 6 -> scaleStatsToLevel factor = 1 + 0.25*5 =
-  // 2.25, so base 20 -> 45 on every stat. BRUISER is not cast-role, so every equipped-spell slot
-  // stays null.
+  // 2.25, so base 20 -> 45 on every stat. BRUISER is violence and not cast-role, but (4.1-G1) every
+  // enemy rolls a full gem set: the biome-1 violence pool is just [FIXTURE_VIOLENCE_BOLT]
+  // (FIXTURE_WIT_BOLT is off-affinity), so each of the 3 slots draws from the full pool again --
+  // the safety-net duplicates -- and the set is [VIOLENCE_BOLT, VIOLENCE_BOLT, VIOLENCE_BOLT].
   it('constant-rng trace: low roll picks the common non-caster at level 6 everywhere', () => {
     const fights = generateFloor(
       6,
@@ -422,7 +424,11 @@ describe('generateFloor', () => {
       for (const enemy of fight.enemyParty) {
         expect(enemy.baseStats).toEqual(expectedStats)
         expect(enemy.scriptId).toBe('always-attack')
-        expect(enemy.equippedSpells).toEqual([null, null, null])
+        expect(enemy.equippedSpells).toEqual([
+          FIXTURE_VIOLENCE_BOLT,
+          FIXTURE_VIOLENCE_BOLT,
+          FIXTURE_VIOLENCE_BOLT,
+        ])
       }
     }
   })
@@ -432,10 +438,10 @@ describe('generateFloor', () => {
   // going negative -- CASTERS wins. CASTERS has one creature (FIXTURE_CASTER), so the
   // within-species draw is trivial. floor=6 -> enemyLevelRange = {min:6, max:8} (size 3); the
   // level roll is 6 + floor(0.9*3) = 6 + floor(2.7) = 6 + 2 = 8 -> scaleStatsToLevel factor =
-  // 1 + 0.25*7 = 2.75, so base 20 -> 55 and intelligence 24 -> 66. FIXTURE_CASTER is cast-role:
-  // of the 2-spell pool, only FIXTURE_WIT_BOLT matches its wit affinity
-  // (FIXTURE_VIOLENCE_BOLT is filtered out before the roll), so slot 0 is WIT_BOLT regardless
-  // of the (single-item) roll.
+  // 1 + 0.25*7 = 2.75, so base 20 -> 55 and intelligence 24 -> 66. FIXTURE_CASTER (role `caster`) is
+  // cast-role: of the biome-1 pool, only FIXTURE_WIT_BOLT matches its wit affinity
+  // (FIXTURE_VIOLENCE_BOLT is filtered out before the roll; the tier-2 bolt is still locked), so
+  // all 3 slots are WIT_BOLT (one spell, so the safety-net duplicates fill slots 1 and 2).
   it('constant-rng trace: high roll picks the caster at level 8, loaded with its affinity-matched spell', () => {
     const fights = generateFloor(
       6,
@@ -456,10 +462,12 @@ describe('generateFloor', () => {
       expect(fight.enemyParty).toHaveLength(enemyPartySize(6, CFG))
       for (const enemy of fight.enemyParty) {
         expect(enemy.baseStats).toEqual(expectedStats)
-        expect(enemy.scriptId).toBe('always-cast')
-        expect(enemy.equippedSpells[0]).toEqual(FIXTURE_WIT_BOLT)
-        expect(enemy.equippedSpells[1]).toBeNull()
-        expect(enemy.equippedSpells[2]).toBeNull()
+        expect(enemy.scriptId).toBe('caster')
+        expect(enemy.equippedSpells).toEqual([
+          FIXTURE_WIT_BOLT,
+          FIXTURE_WIT_BOLT,
+          FIXTURE_WIT_BOLT,
+        ])
       }
     }
   })
@@ -520,9 +528,10 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
     )
     expect(fights).toHaveLength(1)
     const fight = fights[0]!
-    // fightCount/enemyPartySize are NOT consulted -- the roster size is boss + adds.length, not
-    // fightCount(10)*enemyPartySize(10).
-    expect(fight.enemyParty).toHaveLength(1 + FIXTURE_BOSS.adds.length)
+    // fightCount is NOT consulted: one fight. From 4.1-G1 the side is a full `enemyPartySize(10)` = 6:
+    // the boss, her one authored add, then four fill creatures (the boss-fill describe below).
+    expect(fight.enemyParty).toHaveLength(enemyPartySize(10, CFG))
+    expect(fight.enemyParty).toHaveLength(6)
 
     const boss = fight.enemyParty[0]!
     expect(boss.baseStats).toEqual(
@@ -636,8 +645,12 @@ describe('generateFloor: cumulative spell unlock', () => {
     )
     for (const fight of fights) {
       for (const enemy of fight.enemyParty) {
-        if (enemy.scriptId === 'always-cast') {
-          expect(enemy.equippedSpells[0]).toEqual(FIXTURE_WIT_BOLT)
+        if (enemy.scriptId === 'caster') {
+          expect(enemy.equippedSpells).toEqual([
+            FIXTURE_WIT_BOLT,
+            FIXTURE_WIT_BOLT,
+            FIXTURE_WIT_BOLT,
+          ])
         }
       }
     }
@@ -658,23 +671,31 @@ describe('generateFloor: cumulative spell unlock', () => {
     )
     const casters = fights
       .flatMap((f) => f.enemyParty)
-      .filter((enemy) => enemy.scriptId === 'always-cast')
+      .filter((enemy) => enemy.scriptId === 'caster')
     expect(casters.length).toBeGreaterThan(0)
+    // Slot 0 draws over [WIT_BOLT, TIER2] (roll 1.8 -> TIER2); slot 1 over what is left, [WIT_BOLT];
+    // slot 2 over nothing, so the safety net draws the full pool again (roll 1.8 -> TIER2).
     for (const caster of casters) {
-      expect(caster.equippedSpells[0]).toEqual(FIXTURE_WIT_BOLT_TIER2)
+      expect(caster.equippedSpells).toEqual([
+        FIXTURE_WIT_BOLT_TIER2,
+        FIXTURE_WIT_BOLT,
+        FIXTURE_WIT_BOLT_TIER2,
+      ])
     }
 
     // A lower LOADOUT roll at the same biomeIndex still reaches the biome-1 spell -- proves
     // inheritance, not a switch-over. Needs a sequence rng (not a single constant): floor 1 ->
     // enemyPartySize=1, fightCount=3 -> 3 slots, each drawing [species, within-species creature,
-    // level, loadout] (loadout is only drawn for a cast-role creature, per rollLoadout's own
-    // early return). species=0.9 -> weightedPick roll=0.9*2=1.8, clears BRAWLERS' weight(1)
+    // level, then one loadout draw per gem slot] (4.1-G1: every enemy rolls all 3). species=0.9 -> weightedPick roll=0.9*2=1.8, clears BRAWLERS' weight(1)
     // leaving 0.8 (>=0, continue), then goes negative on CASTERS -- CASTERS wins (same math as
     // the "high roll picks the caster" trace above). CASTERS' one creature and the level roll
     // are both value-irrelevant (any roll resolves the same single-item pool). loadout=0.1 ->
-    // roll=0.1*2=0.2, < FIXTURE_WIT_BOLT's weight(1) -> FIXTURE_WIT_BOLT wins over TIER2.
+    // roll=0.1*2=0.2, < FIXTURE_WIT_BOLT's weight(1) -> FIXTURE_WIT_BOLT wins over TIER2 in slot 0;
+    // slot 1 draws over what is left, [TIER2] (roll 0.1 -> TIER2); slot 2 over nothing, so the safety
+    // net draws the full pool again (roll 0.2 -> WIT_BOLT). The set is [WIT_BOLT, TIER2, WIT_BOLT].
     let cursor = 0
-    const sequence = [0.9, 0, 0, 0.1, 0.9, 0, 0, 0.1, 0.9, 0, 0, 0.1]
+    const slotDraws = [0.9, 0, 0, 0.1, 0.1, 0.1]
+    const sequence = [...slotDraws, ...slotDraws, ...slotDraws]
     const sequenceRng: SeededRng = { next: () => sequence[cursor++] ?? 0 }
     const lowRollFights = generateFloor(
       1,
@@ -686,10 +707,14 @@ describe('generateFloor: cumulative spell unlock', () => {
     )
     const lowRollCasters = lowRollFights
       .flatMap((f) => f.enemyParty)
-      .filter((enemy) => enemy.scriptId === 'always-cast')
+      .filter((enemy) => enemy.scriptId === 'caster')
     expect(lowRollCasters.length).toBeGreaterThan(0)
     for (const caster of lowRollCasters) {
-      expect(caster.equippedSpells[0]).toEqual(FIXTURE_WIT_BOLT)
+      expect(caster.equippedSpells).toEqual([
+        FIXTURE_WIT_BOLT,
+        FIXTURE_WIT_BOLT_TIER2,
+        FIXTURE_WIT_BOLT,
+      ])
     }
   })
 })

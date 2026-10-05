@@ -12,7 +12,7 @@ import { getEffectiveStat } from './effective-stats'
 import { updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
 import { createCreatureId } from './ids'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
 import { countDraws } from './test-utils/rng-draw-count'
@@ -68,7 +68,7 @@ function firstTurnEventsHitting(
     seed: 1,
     player: { party: player },
     enemy: { party: enemy },
-    registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+    registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(trait) },
   })
   return resolveTurn(initial).events
 }
@@ -98,7 +98,7 @@ describe("'all' action-lock (a trait-borne passive; 4.1-F1)", () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(STUN_SELF) },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(STUN_SELF) },
       }),
     )
 
@@ -222,7 +222,7 @@ describe('loop safety', () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
       }),
     )
 
@@ -243,7 +243,7 @@ describe('loop safety', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
     })
 
     const events: CombatEvent[] = []
@@ -328,7 +328,7 @@ describe('triggered condition (self-scoped)', () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(COND_RETALIATE) },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(COND_RETALIATE) },
       }),
     ).events
   }
@@ -374,7 +374,7 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
     })
     const events: CombatEvent[] = []
     const bearerId = createCreatureId('bearer')
@@ -437,7 +437,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: TRAIT_REGISTRY,
         statuses: statuses,
       },
@@ -555,7 +555,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: STOCK_SCRIPTS_BY_ID },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
       }),
     )
     const attackHit = events.find(
@@ -595,7 +595,7 @@ describe('heal response (Regen)', () => {
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: TRAIT_REGISTRY,
         statuses: statuses,
       },
@@ -661,7 +661,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     state = updateCreature(state, createCreatureId('ally'), { currentHp: 10 })
     const events: CombatEvent[] = []
@@ -693,7 +693,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     state = updateCreature(state, createCreatureId('necromoss'), { currentHp: 50 })
     const events: CombatEvent[] = []
@@ -782,7 +782,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     state = updateCreature(state, createCreatureId('p'), { currentHp: 90 })
     const events: CombatEvent[] = []
@@ -811,7 +811,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     state = updateCreature(state, createCreatureId('p'), { currentHp: 97 })
     const events: CombatEvent[] = []
@@ -839,7 +839,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     executeResponse(
@@ -866,7 +866,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     executeResponse(
@@ -897,7 +897,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     state = updateCreature(state, createCreatureId('victim'), {
       activeEffects: [
@@ -937,7 +937,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     executeResponse(
@@ -973,7 +973,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: TRAIT_REGISTRY,
         statuses: statuses,
       },
@@ -1022,7 +1022,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: TRAIT_REGISTRY,
         statuses: statuses,
       },
@@ -1063,7 +1063,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     executeResponse(
@@ -1094,7 +1094,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     executeResponse(
@@ -1145,7 +1145,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     executeResponse(
@@ -1248,7 +1248,7 @@ describe('chancePercent probabilistic gate (Phase 4 Slice E2)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(trait) },
     })
     const { state: finalState } = resolveTurn(created)
     return countDraws(created.rng, finalState.rng)
@@ -1315,7 +1315,7 @@ describe('conditional-damage-bonus (Phase 4 Slice E2, Cull the Weak / Ambusher-s
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: registry(CULL_THE_WEAK_FIXTURE),
       },
     })
@@ -1383,7 +1383,7 @@ describe('conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review a
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(trait) },
     })
     const events: CombatEvent[] = []
     dealDamage(
@@ -1463,7 +1463,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
     })
     const events: CombatEvent[] = []
     const result = executeResponse(
@@ -1506,7 +1506,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
     })
     const events: CombatEvent[] = []
     const revived = executeResponse(
@@ -1548,7 +1548,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     const result = executeResponse(
@@ -1574,7 +1574,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       player: { party: player, effects: perks },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: registry(REVIVE_FIXTURE),
         statuses: new Map(),
       },
@@ -1618,7 +1618,7 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: TRAIT_REGISTRY,
         statuses: statuses,
       },
@@ -1674,7 +1674,7 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     const result = executeResponse(
@@ -1727,7 +1727,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: TRAIT_REGISTRY,
         statuses: statuses,
       },
@@ -1798,7 +1798,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: TRAIT_REGISTRY,
         statuses: statuses,
       },
@@ -1845,7 +1845,7 @@ describe('all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbare
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     const result = executeResponse(
@@ -1888,7 +1888,7 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     const result = executeResponse(
@@ -1931,7 +1931,7 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     const result = executeResponse(
@@ -1969,7 +1969,7 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: traits },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
     })
   }
 
@@ -2066,7 +2066,7 @@ describe('on-action-observed filter (Phase 4 Slice E2, general action-observatio
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(trait) },
     })
   }
 
@@ -2174,7 +2174,7 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
         player: { party: player },
         enemy: { party: enemy },
         registries: {
-          scripts: STOCK_SCRIPTS_BY_ID,
+          scripts: FIXTURE_SCRIPTS_BY_ID,
           traits: registry(ACTOR_SELF_ON_ATTACK),
         },
       }),
@@ -2225,7 +2225,7 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(OBSERVER_AT_CAP) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(OBSERVER_AT_CAP) },
     })
 
     const events: CombatEvent[] = []
@@ -2311,7 +2311,7 @@ describe('echo = perform-action(triggering-source) (Phase 4.1-E, A2 -- Resonant 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(trait) },
     })
     const selfIds = [createCreatureId('observer'), createCreatureId('caster')]
 
@@ -2390,7 +2390,7 @@ describe('echo = perform-action(triggering-source) (Phase 4.1-E, A2 -- Resonant 
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: registry(trait) },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(trait) },
     })
 
     const events: CombatEvent[] = []
@@ -2426,7 +2426,7 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const events: CombatEvent[] = []
     const result = executeResponse(
@@ -2476,7 +2476,7 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     const result = executeResponse(
       {
@@ -2546,7 +2546,7 @@ describe('exact-instance rule (Phase 4.1-B, B4)', () => {
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: registry(CLEANSER_TRAIT),
         statuses,
       },
@@ -2616,7 +2616,7 @@ describe('exact-instance rule (Phase 4.1-B, B4)', () => {
       player: { party: player },
       enemy: { party: enemy },
       registries: {
-        scripts: STOCK_SCRIPTS_BY_ID,
+        scripts: FIXTURE_SCRIPTS_BY_ID,
         traits: registry(REAPPLY_TRAIT),
         statuses,
       },

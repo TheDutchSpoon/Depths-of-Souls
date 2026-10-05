@@ -11,7 +11,7 @@ import { createCombat, resolveTurn } from './combat'
 import { makeParty } from './__fixtures__/creatures'
 import { createRngState } from './rng'
 import { createEffectInstanceId } from './effect-types'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import type { CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
 import type { ActiveEffect } from './effect-types'
@@ -130,7 +130,7 @@ describe('executeCastAoe -- ally-targeting AOE Cast (Phase 4 Slice E)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: STOCK_SCRIPTS_BY_ID },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
     // A 100%-chance Confusion status would, for an ENEMY-targeting AOE, ALWAYS redirect (and
     // always draw the roll -- see confusion.test.ts). Here the spell is already ally-targeting,
@@ -204,7 +204,7 @@ describe('ally-targeting Cast end-to-end -- highest-attack-ally (Phase 4 Slice E
       { id: 'strong', attack: 30, defence: 10, speed: 1 },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', speed: 1, scriptId: 'always-wait' }])
-    const scripts = new Map([...STOCK_SCRIPTS_BY_ID, [script.id, script] as const])
+    const scripts = new Map([...FIXTURE_SCRIPTS_BY_ID, [script.id, script] as const])
     const state = createCombat({
       seed: 1,
       player: { party: player },

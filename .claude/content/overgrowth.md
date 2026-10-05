@@ -1,6 +1,7 @@
 # The Overgrowth (Biome 1, floors 1–10) — content reference
 
-Status: shipped — Phase 4 Slice H1; Phase 4.1 changes decided (see the last section). Source:
+Status: shipped — Phase 4 Slice H1; Phase 4.1-G1 added the roles, the three new spells and the
+6v6 boss floor; the rest of Phase 4.1 is decided (see the last section). Source:
 creature/species composition in `src/data/species/overgrowth.ts`; trait definitions in
 `src/data/traits/overgrowth.ts`; spell definitions in `src/data/spells/overgrowth.ts` (shared core
 spells in `src/data/spells/core.ts`); Web/Sleep in `src/data/statuses.ts`. Design source:
@@ -84,7 +85,7 @@ the fight goes on, and it buffs the whole team, not just herself.
 |---|---|---|---|
 | Duster | Vitality | Enabler | At the start of the fight, this creature permanently raises its whole team's Speed by **25%**. |
 | Beneficiary | Wit | Payoff | This creature's attacks deal additional damage equal to **30% of its own effective Speed** — so a team sped up by Duster hits harder through Beneficiary specifically. |
-| Pollenlord | Wit | Amplifier | Every time this creature's own turn starts, it permanently raises its whole team's Speed by **10%** — a smaller amount than Duster's, but it repeats every round Pollenlord acts. This is the biome's only spellcaster. |
+| Pollenlord | Wit | Amplifier | Every time this creature's own turn starts, it permanently raises its whole team's Speed by **10%** — a smaller amount than Duster's, but it repeats every round Pollenlord acts. |
 
 ## Snapjaws (Violence/Endurance) — Bait & Punish
 
@@ -102,6 +103,30 @@ the fight goes on, and it buffs the whole team, not just herself.
 | Reaper | Instinct | Payoff | This creature deals **50% more damage** to Sleeping enemies. |
 | Dozer | Instinct | Amplifier | When this creature attacks, it also lands a separate bonus hit equal to **25% of its Attack for every enemy currently Sleeping** (so 50% with two Sleeping enemies, and so on) — it never puts anything to Sleep itself, only benefits from what its species-mates have already done. |
 
+## How each creature plays (roles)
+
+Every creature fights by a **role**: a short list of rules it follows in order, top first (the
+same scripts the player writes for their own creatures — see `.claude/content/enemy-behaviour.md`
+for what each role does). Every enemy also carries **three different spells** of its own affinity,
+so a caster always has something to cast and any creature has something to fall back on.
+
+| Creature | Role | Creature | Role |
+|---|---|---|---|
+| Spider Weaver | caster | Pollinator Duster | support |
+| Spider Ambusher | striker | Pollinator Beneficiary | caster |
+| Spider Broodwarden | striker | Pollinator Pollenlord | caster |
+| Swarmhive Drone | opener | Snapjaw Lure | taunter (its trait fires on Provoke) |
+| Swarmhive Striker | striker | Snapjaw Jaws | striker |
+| Swarmhive Queen | warden | Snapjaw Ironjaw | striker |
+| Treant Sapling | guardian (self-ramping: wants to survive, not draw fire) | Lullpollen Sleeper | striker |
+| Treant Elder | warden | Lullpollen Reaper | striker |
+| Treant Grovekeep | warden | Lullpollen Dozer | striker |
+| **Broodmother** (boss) | striker | | |
+
+Pollenlord is no longer the biome's only caster: Spider Weaver and Pollinator Beneficiary are
+casters too, Pollinator Duster is a support (it casts its heals and buffs on a wounded ally) and
+Swarmhive Drone is an opener (it casts on the first round, then attacks).
+
 ## The Broodmother (floor-10 boss)
 
 Wit affinity. A unique, non-collectable set-piece fight — not a spawn-pool creature.
@@ -113,13 +138,15 @@ Wit affinity. A unique, non-collectable set-piece fight — not a spawn-pool cre
 - At the end of every round, she has a **40% chance** to apply Web to the entire enemy party at
   once.
 
-Her adds are two real Spider-roster members (Weaver and Ambusher). Actually *running* her fight
-(assembling the encounter, awarding perk points on first clear) is deliberately left for a later
-slice — this slice only authors her as content: her stats, her signature trait, and which real
-roster members accompany her, the same content/runner split the Unicorn's own scripted intro had
-in Slice F.
+Her authored adds are two real Spider-roster members (Weaver and Ambusher), and the boss floor is
+one fight (no trash). **A boss fight is 6v6, like every fight from floor 6:** after her two
+spiderlings, the other three slots are filled with random creatures from The Overgrowth's own
+pool, **never Spiders** (so her bonus counts only her own two spiderlings), rerolled on every
+visit. The three fill creatures are ordinary enemies and give ordinary kill rewards. She plays as
+a striker and carries three Wit spells like any enemy; a lock lowers her turn instead of emptying
+it (a Pacified Broodmother casts a gem rather than waiting).
 
-## Spells (13 of The Overgrowth's own, plus 3 shared "core" spells — all unlocked at biome 1)
+## Spells (16 of The Overgrowth's own, plus 3 shared "core" spells — all unlocked at biome 1)
 
 Damage-spell power convention: a single-target spell with no other effect deals damage around
 **100%** of the caster's Intelligence; one that also applies a status pulls back to roughly
@@ -143,8 +170,15 @@ third, plain-damage entry: Arcane Bolt).
 | Howling Instinct | Instinct | Permanently raises the whole team's Speed by **10%** for the rest of the fight. |
 | Silence | Violence | Silences a single enemy for **3 turns**: it can't cast. No damage. |
 | Pacify | Wit | Pacifies a single enemy for **3 turns**: it can't attack. No damage. |
+| Pounce | Instinct | A single-target hit dealing damage equal to **100% of the caster's own Speed** (instead of Intelligence). |
+| Stifling Weight | Endurance | Weakens a single enemy (**-20% damage dealt**) for **3 turns**. No damage. |
+| Life Siphon | Vitality | A single-target hit dealing **70% of the caster's Intelligence**, and heals the caster for **35% of its Intelligence**. |
 
-"Damage equal to X% of the caster's Intelligence (or Defence, for Root Grasp)" always goes through
+With these, **every affinity has at least three biome-1 spells**, so every enemy can roll a full set
+of three different spells (a data test guards it). The numbers are placeholders until the 4.1-H
+tuning pass.
+
+"Damage equal to X% of the caster's Intelligence (or Defence for Root Grasp, Speed for Pounce)" always goes through
 the normal damage formula (the target's Defence, affinity, all the usual modifiers) — the
 percentage is the spell's own power coefficient, not a flat number. Every ally-targeting entry
 above (Bramble Ward, Regrowth, Wild Vigor, Howling Instinct) can be cast on any living ally,
@@ -174,34 +208,8 @@ on top.
 ## Phase 4.1 — decided changes (pending build)
 
 Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
-lands, the same way numbers are kept in sync.
-
-**Roles** (4.1-G; each creature's `defaultScriptId` becomes its role script, see CONVENTIONS
-"Role scripts"):
-
-| Creature | Role | Creature | Role |
-|---|---|---|---|
-| Spider Weaver | caster | Pollinator Duster | support |
-| Spider Ambusher | striker | Pollinator Beneficiary | caster |
-| Spider Broodwarden | striker | Pollinator Pollenlord | caster |
-| Swarmhive Drone | opener | Snapjaw Lure | `always-provoke` (its trait fires on Provoke) |
-| Swarmhive Striker | striker | Snapjaw Jaws | striker |
-| Swarmhive Queen | warden | Snapjaw Ironjaw | striker |
-| Treant Sapling | guardian (self-ramping: wants to survive, not draw fire) | Lullpollen Sleeper | striker |
-| Treant Elder | warden | Lullpollen Reaper | striker |
-| Treant Grovekeep | warden | Lullpollen Dozer | striker |
-| **Broodmother** (boss) | striker | | |
-
-**New biome-1 spells:**
-
-| Spell | Affinity | Slice | Description (numbers set in the 4.1-H tuning pass) |
-|---|---|---|---|
-| Pounce | Instinct | 4.1-G | A single-target hit whose damage scales off the caster's **Speed**. |
-| Stifling Weight | Endurance | 4.1-G | Weakens a single enemy. No damage. |
-| Life Siphon | Vitality | 4.1-G | A single-target hit that also heals the caster. |
-
-With these, every affinity has at least three biome-1 spells, so every enemy can roll a full set of
-three distinct gems (a data test guards it).
+lands, the same way numbers are kept in sync. (4.1-G1 folded in the roles, the three new spells and
+the casting-role notes.)
 
 **Phase 4.5 clean-up (decided):** Ember Lance and Venom Bolt are deleted (no niche: Venom Bolt
 overlaps Stinger Swarm). **Cinder Nova is kept and promoted** to real Overgrowth content, as the
@@ -215,11 +223,6 @@ bearer's turn, before it acts, counts that turn. Web's break roll moves to the e
 creature's turn (still 10%, still at every creature's turn), and a Web is first rolled at the turn
 after the one that applied it. The Weaver now Webs at the **end** of its turn (4.1-F2), so its own
 turn's roll never touches the Web it just placed.
-
-**Casting roles change the "only spellcaster" notes:** once roles land (4.1-G), Pollenlord is no
-longer the biome's only caster: Spider Weaver and Pollinator Beneficiary become casters, Pollinator
-Duster a support and Swarmhive Drone an opener, and every enemy carries a full gem set. Update the
-creature descriptions when the roles land.
 
 **Stun has no real source** in the seed content for now (no trait or spell applies it); it stays in
 the status vocabulary.

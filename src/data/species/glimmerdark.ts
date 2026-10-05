@@ -81,7 +81,7 @@ export const GLOWFLY_CHARGER: SpeciesCreature = {
   name: 'Glowfly Charger',
   affinity: 'wit',
   baseStats: { health: 14, attack: 14, intelligence: 20, defence: 10, speed: 22 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'caster',
   innateTraitIds: [GLOWFLY_CHARGER_TRAIT.id],
   rarity: 'common',
 }
@@ -91,7 +91,7 @@ export const GLOWFLY_DETONATOR: SpeciesCreature = {
   name: 'Glowfly Detonator',
   affinity: 'instinct',
   baseStats: { health: 14, attack: 16, intelligence: 22, defence: 10, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [GLOWFLY_DETONATOR_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -102,7 +102,7 @@ export const GLOWFLY_RADIANT: SpeciesCreature = {
   name: 'Glowfly Radiant',
   affinity: 'vitality',
   baseStats: { health: 18, attack: 12, intelligence: 22, defence: 12, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'support',
   innateTraitIds: [GLOWFLY_RADIANT_TRAIT.id],
   rarity: 'rare',
 }
@@ -122,7 +122,7 @@ export const BLINDCLAWS_SETTER: SpeciesCreature = {
   name: 'Blindclaws Setter',
   affinity: 'instinct',
   baseStats: { health: 16, attack: 18, intelligence: 10, defence: 12, speed: 24 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'opener',
   innateTraitIds: [BLINDCLAWS_SETTER_TRAIT.id],
   rarity: 'common',
 }
@@ -132,7 +132,7 @@ export const BLINDCLAWS_STRIKER: SpeciesCreature = {
   name: 'Blindclaws Striker',
   affinity: 'instinct',
   baseStats: { health: 14, attack: 24, intelligence: 10, defence: 10, speed: 26 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [BLINDCLAWS_STRIKER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -142,7 +142,7 @@ export const BLINDCLAWS_VANGUARD: SpeciesCreature = {
   name: 'Blindclaws Vanguard',
   affinity: 'instinct',
   baseStats: { health: 16, attack: 22, intelligence: 10, defence: 14, speed: 24 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [BLINDCLAWS_VANGUARD_TRAIT.id],
   rarity: 'rare',
 }
@@ -157,7 +157,7 @@ export const BLINDCLAWS: Species = {
 
 // ---- Resonants (Wit lean) -- closed mechanic: caster synergy (on-action-observed) ----
 
-/** The biome's one cast-role creature (defaultScriptId 'always-cast') -- exercises
+/** The biome's one cast-role creature (role `caster`) -- exercises
  * generateFloor's real spell-loadout roll against the cumulative-unlocked wit-affinity pool
  * (every biome-1 wit spell plus GLIMMERDARK_SPELLS' own wit entries -- see
  * engine/generation.ts's spellsUnlockedAt). */
@@ -166,7 +166,7 @@ export const RESONANT_CHORUS: SpeciesCreature = {
   name: 'Resonant Chorus',
   affinity: 'wit',
   baseStats: { health: 16, attack: 10, intelligence: 24, defence: 12, speed: 18 },
-  defaultScriptId: 'always-cast',
+  defaultScriptId: 'caster',
   innateTraitIds: [RESONANT_CHORUS_TRAIT.id],
   rarity: 'common',
 }
@@ -176,7 +176,7 @@ export const RESONANT_ADEPT: SpeciesCreature = {
   name: 'Resonant Adept',
   affinity: 'wit',
   baseStats: { health: 16, attack: 10, intelligence: 26, defence: 12, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'caster',
   innateTraitIds: [RESONANT_ADEPT_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -186,7 +186,7 @@ export const RESONANT_OVERTONE: SpeciesCreature = {
   name: 'Resonant Overtone',
   affinity: 'wit',
   baseStats: { health: 18, attack: 12, intelligence: 26, defence: 12, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'caster',
   innateTraitIds: [RESONANT_OVERTONE_TRAIT.id],
   rarity: 'rare',
 }
@@ -210,7 +210,7 @@ export const SPARKEATER_LEECH: SpeciesCreature = {
   // soft-mapping) -- Attack -> violence.
   affinity: 'violence',
   baseStats: { health: 16, attack: 18, intelligence: 16, defence: 12, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SPARKEATER_LEECH_TRAIT.id],
   rarity: 'common',
 }
@@ -221,7 +221,7 @@ export const SPARKEATER_GORGER: SpeciesCreature = {
   // PR #60 review (C2): Defence -> endurance.
   affinity: 'endurance',
   baseStats: { health: 18, attack: 20, intelligence: 12, defence: 16, speed: 14 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SPARKEATER_GORGER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -232,7 +232,7 @@ export const SPARKEATER_VOIDMAW: SpeciesCreature = {
   name: 'Sparkeater Voidmaw',
   affinity: 'vitality',
   baseStats: { health: 20, attack: 20, intelligence: 14, defence: 16, speed: 16 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SPARKEATER_VOIDMAW_TRAIT.id],
   rarity: 'rare',
 }
@@ -253,7 +253,7 @@ export const GLOOMJAW_STALKER: SpeciesCreature = {
   name: 'Gloomjaw Stalker',
   affinity: 'violence',
   baseStats: { health: 16, attack: 22, intelligence: 10, defence: 14, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'opener',
   innateTraitIds: [GLOOMJAW_STALKER_TRAIT.id],
   rarity: 'common',
 }
@@ -263,7 +263,7 @@ export const GLOOMJAW_EXECUTIONER: SpeciesCreature = {
   name: 'Gloomjaw Executioner',
   affinity: 'violence',
   baseStats: { health: 16, attack: 24, intelligence: 10, defence: 14, speed: 20 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [GLOOMJAW_EXECUTIONER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -273,7 +273,7 @@ export const GLOOMJAW_RAVAGER: SpeciesCreature = {
   name: 'Gloomjaw Ravager',
   affinity: 'violence',
   baseStats: { health: 18, attack: 26, intelligence: 10, defence: 14, speed: 18 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [GLOOMJAW_RAVAGER_TRAIT.id],
   rarity: 'rare',
 }
@@ -293,7 +293,7 @@ export const SHELLBACK_WARDEN: SpeciesCreature = {
   name: 'Shellback Warden',
   affinity: 'endurance',
   baseStats: { health: 22, attack: 12, intelligence: 12, defence: 24, speed: 10 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'warden',
   innateTraitIds: [SHELLBACK_WARDEN_TRAIT.id],
   rarity: 'common',
 }
@@ -305,7 +305,7 @@ export const SHELLBACK_BRAWLER: SpeciesCreature = {
   name: 'Shellback Brawler',
   affinity: 'endurance',
   baseStats: { health: 20, attack: 10, intelligence: 10, defence: 28, speed: 12 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [SHELLBACK_BRAWLER_TRAIT.id],
   rarity: 'uncommon',
 }
@@ -315,7 +315,7 @@ export const SHELLBACK_BULWARK: SpeciesCreature = {
   name: 'Shellback Bulwark',
   affinity: 'endurance',
   baseStats: { health: 24, attack: 12, intelligence: 12, defence: 26, speed: 10 },
-  defaultScriptId: 'always-defend',
+  defaultScriptId: 'warden',
   innateTraitIds: [SHELLBACK_BULWARK_TRAIT.id],
   rarity: 'rare',
 }
@@ -356,7 +356,7 @@ export const LEECH_SOVEREIGN: SpeciesCreature = {
   name: 'Leech Sovereign',
   affinity: 'instinct',
   baseStats: { health: 30, attack: 26, intelligence: 20, defence: 20, speed: 22 },
-  defaultScriptId: 'always-attack',
+  defaultScriptId: 'striker',
   innateTraitIds: [LEECH_SOVEREIGN_TRAIT.id],
   rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, an authored boss encounter
 }
