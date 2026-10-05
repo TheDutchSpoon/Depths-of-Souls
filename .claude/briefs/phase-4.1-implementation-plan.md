@@ -1028,7 +1028,8 @@ and **6v6 boss floors** (decided at the PR #81 review).
 - **Corpus.** Every boss fight changes: adds, the fill and the boss's gems. Attribute them as their
   own class in G's regeneration.
 - **For 4.1-H.** Boss floors get harder: 6 enemies where there were 1–3. The simulator's T4 ("no
-  wall before the floor-10 boss") is the check. Report boss lock uptime too.
+  wall before the floor-10 boss") is the check. Report boss lock uptime too, under a script that
+  aims the lock at the boss (see 4.1-H's boss-floor watch point).
 
 ### Acceptance (4.1-G)
 - Store tests for every new action and reason; `can…` agreement tests.
@@ -1081,6 +1082,22 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
   - The report adds, per spec: the **round-cap draw rate**, and the **largest stack of one trait's
     stat-modifier** seen on a creature. Whether draws get a target band is decided at the 4.1-H plan
     review.
+- **Watch point: boss floors in 6v6** (PR #82 review, measured on the corpus after 4.1-G1).
+  - **Lock uptime needs a script that aims at the boss.** Role scripts aim a spell at the lowest-HP
+    enemy, so the simple policy never locks a boss. In the G1 corpus, 19 boss fights have a
+    player-side Pacify, and it lands on the boss in none of them. The four Leech Sovereign fights
+    the F3 attribution named (19, 109, 199, 289) are rerolled fights now, not a measurement of the
+    lock.
+  - So run every boss floor twice for the same party: once on the simple policy, and once with one
+    creature on `Cast Pacify → highest-HP enemy`, the case GAME_DESIGN "Milestone bosses" accepts.
+    The store has no script action until Phase 6, so this case goes through the engine (the
+    generated boss floor, the same party, the extra script in the registry).
+  - Report the boss's locked-turn share and the clear rate both ways. A large jump in the clear rate
+    means the lock still switches a boss off, and the watch point's per-turn break-through chance
+    comes back as a decision.
+  - **The Rot Sovereign's Attrition** (+10% Attack on every death, either side) has up to 11 other
+    deaths to feed on in 6v6, where it had at most 8. T4 and the floor-30 report show whether she
+    runs away.
 
 ### Acceptance (4.1-H)
 - The simulator is deterministic (same seeds → identical report, asserted).

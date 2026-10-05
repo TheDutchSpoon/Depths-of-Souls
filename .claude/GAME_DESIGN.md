@@ -133,7 +133,12 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
     still empty a boss's turn. Decide how bosses meet it when content first applies Stun. If a
     softer lock on bosses is ever wanted, a shorter duration won't help, because a recast resets
     it each round. The fair form is a per-turn chance to act through the lock, as a general effect
-    any creature could carry. 4.1-H's simulator reports how often a boss spends its turn locked.
+    any creature could carry.
+  - **Measuring it** (PR #82 review). Role scripts aim a spell at the lowest-HP enemy, which is
+    almost never the boss, so the 4.1-G1 corpus never locks one: 19 boss fights have a player-side
+    Pacify, and it lands on the boss in none of them. The case this rule accepts is a player script
+    that aims the lock at the boss. 4.1-H's simulator runs that case on every boss floor and reports
+    how often the boss spends its turn locked, and the clear rate with and without the lock.
 - **Difficulty model**: each floor maps to an **enemy level range** (min–max), not a separate
   stat multiplier — enemies are ordinary creature instances at some level, using the **same
   linear growth formula** as the player's creatures (§5). Enemy level grows **faster than floor
