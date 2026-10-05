@@ -62,7 +62,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-D** | Spells carry responses | **Byte-identical, all goldens (hard requirement)** |
 | **4.1-D2** | The corpus covers all real content (test-only, from the PR #74 review) | **Byte-identical**: every golden and every existing digest entry unchanged; the digest only gains appended coverage entries |
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
-| **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: existing goldens and digest entries byte-identical, the digest gains appended coverage fights |
+| **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: goldens byte-identical; the digest is regenerated once, existing entries changing only through the cast-role loadout roll (attributed mechanically), plus any appended coverage fights |
 | **4.1-G** | Hub actions + enemy behaviour | Engine goldens untouched except any listed; content tests change |
 | **4.1-H** | Balance simulator + first tuning pass | Content numbers change; mechanism goldens untouched |
 
@@ -747,7 +747,7 @@ F ships as three PRs, in this order, each under one golden policy:
 |---|---|---|
 | **4.1-F1** | A3: statuses as effect containers, `action-lock` + `TurnSkipped`, `suppress-action` deleted, immunity in the iterator, the status load-time validator. **Timing unchanged:** ticks stay on the round-end sweep and the Web roll stays at turn start. | **Deliberate, narrow.** The only allowed changes are the turn-skip shape (a skipped turn shows `TurnSkipped` instead of the lock's on-turn-start `TriggerFired`) and the two goldens whose fixture traits lock with `suppress-action` (`golden-scoped-suppression`, `golden-b2-silenced-refuses-granted-cast`) re-expressed on `action-lock`, so the lock's own `TriggerFired` disappears. Every other golden is byte-identical. Every changed corpus fight contains a `TurnSkipped`, and mapping each one back to the old shape reproduces `main`'s log. |
 | **4.1-F2** | D6 status timing (durations count the bearer's turns, ticks on `on-turn-end`, born-this-turn, the round-end sweep deleted, in-turn win checks) and D5 (the Web roll in turn-end cleanup). | **Deliberate, listed:** timing. The plan lists every affected golden with its fate. |
-| **4.1-F3** | G2: Silenced/Pacified, Silence/Pacify, the perk exemptions dropped, the spell dedup key. | Existing goldens and existing digest entries **byte-identical** (shown mechanically); new hand-derived goldens; the digest only gains appended coverage fights. |
+| **4.1-F3** | G2: Silenced/Pacified, Silence/Pacify, the perk exemptions dropped, the spell dedup key. | Goldens **byte-identical** (shown by import); new hand-derived goldens. The digest is regenerated **once**: existing entries change **only** through the cast-role loadout roll (Silence and Pacify join two affinity pools), shown mechanically, plus any appended coverage fights (decided at the F3 kickoff, below). |
 
 **Why three, not one.** F re-expresses every status. With timing unchanged, F1's refactor can be
 proven behaviour-neutral mechanically: by importing every golden and by mapping the corpus digest
@@ -851,10 +851,28 @@ that adaptation along with the sweep.
   (CONVENTIONS "Resolution & timing"). No content can wipe at fight start, so every golden and the
   digest stay byte-identical; a fixture test shows a fight-start wipe ending with no
   `RoundStarted`, and fails with either the predicate or the check removed.
-- **Adding spells must not shift existing fights.** The F3 plan checks whether any generation or
-  corpus path draws from the spell registry (a new `unlockedAtBiome: 1` spell would then move
-  draws); if one does, the PR's golden policy changes and the plan says so before building.
-
+- **Adding spells shifts the cast-role loadout roll (decided at the F3 kickoff).** `generateFloor`'s
+  `rollLoadout` picks a cast-role enemy's one gem from `ALL_SPELLS` filtered by `unlockedAtBiome`
+  and affinity, with uniform weights. Appending a biome-1 Violence spell and a biome-1 Wit spell
+  changes the pick for every Violence or Wit cast-role roll, so corpus fights built through
+  `gen()` change. Measured with two stand-in spells: **48 of 522 fights, 2 results**; no golden
+  changes (they use fixture biomes). So F3's golden policy is: goldens byte-identical; the digest
+  is regenerated once, and an existing entry may change **only** through that roll. The PR proves
+  it per fight: it compares each fight's materialized parties (every creature's equipped spells) on
+  `main` and on the branch. Every fight whose parties are identical has an identical log, and every
+  changed fight has a differing rolled gem. Appended coverage fights, if needed, are new entries.
+  - `ALL_SPELLS` stays **append-only**: Silence and Pacify go at the end.
+  - **Not a new oddity.** Today's one-gem roll already includes spells that deal no damage
+    (Weakening Bite, Howling Instinct, Bramble Ward, Wild Vigor), so a cast-role enemy can already
+    spend every turn on one under `always-cast`. Silence and Pacify join that existing pattern. G's
+    full gem sets and role scripts (D4) address it for all of them; F3 adds no engine or generation
+    branch.
+  - **Order doesn't save the churn.** Any appended spell reshuffles a uniform roll, so landing
+    Silence and Pacify after G re-churns G's corpus the same way. Only folding them into G's own
+    PR would save one attributed regeneration. Rejected: it would load G, the largest remaining
+    slice, with the statuses, the perk exemptions and their coverage, which belong with F's
+    status work. Also rejected: filtering no-damage spells out of today's roll (an engine branch
+    G deletes, and it would hide Silence and Pacify from generated fights).
 ### Deliberate golden changes (4.1-F)
 
 F1's changes are the stun and sleep goldens' skip shape and the two fixture locks re-expressed on
