@@ -6,8 +6,8 @@
 //       P1 earlier in this SAME per-creature effect pass (fireHook's fresh per-effect alive-check).
 //   (3) on-death: applies Weaken to the lowest-HP ally -- fires regardless (on-death always fires
 //       for the creature that just died), proving on-death still runs mid-pass.
-// The Weaken it applies lands BETWEEN turns, so it is not born in any turn: it counts down in its
-// bearer P2's own turns (F2; it used to wait for the next round-end sweep) -- and win/loss is
+// The Weaken it applies (2 turns) lands BETWEEN turns, so it is not born in any turn: it covers its
+// bearer P2's next two turns (rounds 2 and 3, the 12-damage hits) -- and win/loss is
 // checked after the whole round-end pass (P1's death alone doesn't wipe the player side, since
 // P2 survives).
 //
@@ -15,7 +15,7 @@
 //   P2->E1, no weaken (round 1): off 20, def 5. core 15, chip 0.2 -> raw 15.2 -> final 15.
 //   P2->E1, with weaken (-20% dealt; rounds 2 & 3): raw = 15.2 * 0.8 = 12.16 -> final 12.
 //   E1 health 30: R1 30->15. R2 15->3. R3 3-12 clamped to 0 -> dies. Win, checked post-action
-//   (a normal in-turn kill, not a sweep-triggered one).
+//   (a normal in-turn kill, not a round-end-triggered one).
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -128,7 +128,7 @@ export const expectedEvents: CombatEvent[] = [
   p2Hit(12, 12.16, 0),
   { type: 'CreatureDied', creatureId: E1 },
   { type: 'TurnEnded', creatureId: P2 },
-  // Win/loss checked after this ordinary action -- not sweep-triggered this time.
+  // Win/loss checked after this ordinary action -- not round-end-triggered this time.
   { type: 'FightEnded', result: 'win' },
 ]
 

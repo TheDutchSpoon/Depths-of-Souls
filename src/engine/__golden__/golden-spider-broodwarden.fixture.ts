@@ -39,9 +39,9 @@ import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent } from '../types'
 import type { Trait } from '../effect-types'
 
-export const SEED = 2 // Consumes exactly two RNG draws (Web's own break-free roll against TARGET
+export const SEED = 2 // Consumes exactly ONE RNG draw (Web's own break-free roll against OTHERFOE,
 export const TURN_STEPS = 1
-// then OTHERFOE, at Broodwarden's turn-start) -- see the header comment above for the trace.
+// in Broodwarden's turn-end cleanup; TARGET is dead by then) -- see the header comment above.
 
 const BROODWARDEN = createCreatureId('broodwarden')
 const TARGET = createCreatureId('target')

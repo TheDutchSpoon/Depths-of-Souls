@@ -2111,7 +2111,11 @@ number changed (H). Durations keep their authored values and now count the beare
   `statusTriggerGate` and `FireHookOptions.statusTriggerGate`, `reappliedThisSweep`, the status part of
   `resolveRoundEndSweep` (it is now `resolveRoundEnd`: the `on-round-end` hook pass and the round drain),
   the turn-start call of `rollWebBreakFree`, the stock statuses' `on-round-end` hooks. A leftover grep over
-  `src/` finds only comments about the old design, all reworded.
+  `src/` for `sweep`, `statusTriggerGate` and turn-start Web rolls finds only comments that describe the old design
+  in the past tense. The pre-merge comment pass reworded the rest: `fireHook`'s doc comment (`resolution.ts`),
+  `perform-action.test.ts`, the Web test title and comment in `combat.test.ts`, the immune-Web title in
+  `status-containers.test.ts`, and the comments in `golden-spider-broodwarden`, `golden-broodmother`,
+  `golden-round-end-interaction` (+ its test title), `golden-heal-scaling-count` and `golden-heal-scaling-stat`.
 - **The status validator.** `validateStatusDef` rejects a `triggered` effect on `on-round-end`, and
   `createCombat` now runs `validateStatusDef` over the status registry it is given (ASSUMPTION 50).
 - **Content: the Spiders' Weaver (`spider-weaver-web-strike`) trigger moved from `on-turn-start` to
@@ -2156,8 +2160,9 @@ non-Weaver siblings; see above).
 | `golden-round-end-mid-sweep-poison-refresh` -> `golden-turn-end-dot-kill-burst-refresh` | the refresh (2 stacks) ticks 6 at E1's own R1 turn end (94), then 88                                                                                  |
 | `golden-overgrowth-web-exploit`                                  | the Weaver's `TriggerFired` and `StatusApplied` move after its attack (turn-end hooks); no Web roll ever runs (born; then a wipe); one draw instead of two, seed no longer load-bearing |
 
-`golden-castable-draw` is **retired** (its granted cast after a wipe is unreachable, ASSUMPTION 53): see
-"Files to delete". Its fixture's expected export is unchanged, which is why it still counts among the 83.
+`golden-castable-draw` is **retired** (its granted cast after a wipe is unreachable, ASSUMPTION 53): both
+files were deleted before the PR. Its fixture's expected export was unchanged when the 83 was measured, with the file
+present, which is why it counts among the 83.
 The castable filter stays pinned by `actions.test.ts` "gemSlot 'random' draws over the castable slots only"
 (shown failing with the filter removed: 1 failing test; no new case needed).
 
@@ -2241,10 +2246,10 @@ log has more events -> win check; the Weaver's `TriggerFired` -> Weaver; a dot `
 
 ### Verification
 
-- Tests **852 -> 891 (+39)**, reconciled per file against `HEAD` (the script diffs all 143 files): +32
+- Tests **852 -> 890 (+38)**, reconciled per file against `HEAD` (the script diffs all files): +32
   `status-timing.test.ts`; +7 new `golden-f2-*` test files (+1 each); the two renamed golden test files are
-  -1/+1 each; no other file's count changed (the retired `combat.test.ts` sweep test was replaced one for
-  one). **One test is red until `golden-castable-draw` is deleted** (below): 890 green + 1.
+  -1/+1 each (net zero); -1 `golden-castable-draw.test.ts` (deleted); no other file's count changed (the
+  retired `combat.test.ts` sweep test was replaced one for one). All green.
 - **Mutations** (full suite each, every file restored from an in-memory copy; `git diff --stat` verified
   identical before and after). The corpus digest fails for almost all of them; the table names the **specific**
   test. Every mutation is killed:
@@ -2268,24 +2273,30 @@ log has more events -> win check; the Weaver's `TriggerFired` -> Weaver; a dot `
   - **Two mutations first survived** (the after-hooks and the after-action-hooks win checks), and were shown to
     be redundant with the stop predicates and collapsed (see "Where the plan changed"). Arcane Surge's ordering
     has no code switch (it falls out of canonical effect order); its test pins the log.
-- Gates: test (890 green + the 1 red above) / lint / format:check / build / `tsc -b` all green apart from that
-  test. Toolchain: Node 24.19.0, Vitest 5.0.3, TypeScript 6.0.3.
+- Gates: test (890) / lint / format:check / build / `tsc -b`, all green. Toolchain: Node 24.19.0, Vitest 5.0.3, TypeScript 6.0.3.
 
-### Spec notes (for the docs, before F3)
+### Spec notes (resolved at the PR #80 review)
 
-- **CONVENTIONS "Death-reset" says a death wipes statuses; the code only wipes on revive** (a corpse keeps
-  its instances). F2 makes them inert (ASSUMPTION 51) rather than wiping; the sentence should say "wiped on
-  revive, inert on a corpse". The Web roll's and the countdown's alive gates are what make that true.
-- **With a wipe ending the turn, "a granted cast after the killing blow" cannot happen**, so the C2b
-  castable-filtered draw can no longer be shown in a golden; only `actions.test.ts` pins it (the filter is
-  still correct defensive code). A spell with no valid target mid-fight is now only an empty slot or a lock.
-- The turn-end block is alive-gated, so a wipe that also kills the actor needs the check after the action.
-  It is the one place the stop predicates cannot stand in for a check.
-- `golden-round-end-interaction` is still a round-end *trait* golden; its name is still accurate. The brief
-  and the plan-review note list it with the renamed ones; it was not renamed.
-- A Web applied in a turn-start hook is rolled the same turn (the one window); no shipped content does it.
-- Post-wipe effects removed: Arcane Surge's `TriggerFired` and grant after a killing blow, and on-turn-end
+- **Death-reset.** CONVENTIONS "Death-reset" already says a corpse's statuses are inert and revive replaces
+  them. It was rewritten in the plan-review doc-sync (`c56ebbc`) on this branch, so this note's premise
+  ("CONVENTIONS says death wipes statuses") was stale. The code matches: the Web roll's and the countdown's
+  alive gates are what make a corpse inert.
+- **Castable draw.** Decided at the plan review (ASSUMPTION 53). With a wipe ending the turn, "a granted cast
+  after the killing blow" cannot happen, so the C2b castable-filtered draw can no longer be shown in a golden;
+  only `actions.test.ts` pins it (the filter is still correct defensive code). Observation: a spell with no
+  valid target mid-fight is now only an empty slot or a lock.
+- **The check after the action.** The turn-end block is alive-gated, so a wipe that also kills the actor needs
+  the check after the action; it is the one place the stop predicates cannot stand in for a check. Correct as
+  built, and recorded under "Where the plan changed".
+- **`golden-round-end-interaction`.** It is a round-end *trait* golden and keeps its name and log;
+  CONVENTIONS "Golden impact of 4.1-F" and brief ASSUMPTION 55 / "Deliberate golden changes" now say so.
+- **A turn-start Web is rolled the same turn.** CONVENTIONS' Web paragraph now states it explicitly. The corpus
+  has no Web applied before an action slot.
+- **Post-wipe effects removed:** Arcane Surge's `TriggerFired` and grant after a killing blow, and on-turn-end
   traits' firings after a wipe (the 4 class-1 corpus fights).
+- **The fight-start pass and drain are not checked.** This is the one remaining gap in "a wipe ends at once": a
+  fight-start wipe would run round 1's first turn-start hooks before ending. 4.1-F3 adds the check (the brief's
+  G2 section).
 
 ### Files changed
 
@@ -2299,7 +2310,4 @@ log has more events -> win check; the Weaver's `TriggerFired` -> Weaver; a dot `
   7 new `golden-f2-*` pairs, the 2 renames, comment-only edits in `golden-broodmother`, `golden-lullpollen-dozer`,
   `golden-spider-broodwarden`, `golden-defend-count`, `golden-round-end-interaction` (+ its test title),
   `corpus-digest.fixture.ts` (274 rows). Tests: `status-timing.test.ts` (new) and the edits above.
-- **Needs deleting by you:** `src/engine/__golden__/golden-castable-draw.fixture.ts` and
-  `src/engine/__golden__/golden-castable-draw.test.ts` (retired, ASSUMPTION 53). Also the scratch worktree of
-  `c56ebbc` (with a `node_modules` junction) under the session scratchpad: remove the junction first, then
-  `git worktree remove --force` (so `node_modules` is not followed).
+- `golden-castable-draw.fixture.ts` and `golden-castable-draw.test.ts` were deleted (retired, ASSUMPTION 53).

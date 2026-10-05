@@ -3,7 +3,7 @@
 // deal-damage's own scalingStat/spellPower pairing exactly, clamped to effective max HP AFTER
 // scaling (the overheal rule already existed; this proves it composes correctly with the new
 // scaling mode). ELDER self-heals via `on-turn-end` (its own turn's aftermath, no round-end
-// sweep needed) -- fixture-shaped, not real Elder content (H1's job).
+// pass needed) -- fixture-shaped, not real Elder content (H1's job).
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // FOE (speed 20) acts before ELDER (speed 10) in round 1.

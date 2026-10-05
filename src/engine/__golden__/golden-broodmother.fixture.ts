@@ -39,7 +39,7 @@
 //   ADD2's turn -> alive, scripted always-wait -> Waited. No damage, no RNG (no random selector
 //     used by 'wait').
 //
-//   ROUND-END SWEEP (fires as part of the NEXT resolveTurn call, before Round 2 starts):
+//   ROUND END (the on-round-end trait pass; fires as part of the NEXT resolveTurn call, before Round 2 starts):
 //   Swarm Call's OWN second trigger (on-round-end, chancePercent 40, apply Web to all-enemies =
 //   STRIKER) rolls ONE `state.rng.next()` -- the fixture's only RNG draw anywhere. At SEED=7070,
 //   an independent mulberry32 replica (below) gives the first draw as 0.854109511943534 (verified

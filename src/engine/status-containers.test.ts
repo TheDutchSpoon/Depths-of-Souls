@@ -690,7 +690,7 @@ describe('immunity is checked once, in the effect iterator', () => {
     expect(buildTurnQueue(webImmune.playerParty, webImmune.enemyParty)).toEqual([X, FOE])
   })
 
-  it('an immune Web bearer draws no RNG at turn start (the roll only happens for a Web that is present)', () => {
+  it('an immune Web bearer draws no RNG in turn-end cleanup (the roll only happens for a Web that is present)', () => {
     // One Web bearer, one turn: exactly one roll (0.0 break chance would still draw; Web is 10%).
     const plain = withStatus('web', false)
     const turn = resolveTurn(plain)

@@ -361,10 +361,9 @@ export interface FireHookOptions {
  * and NOT executing the over-cap trigger).
  *
  * The alive-check is re-evaluated FRESH before every individual effect (not once per creature):
- * if a creature's own first on-round-end effect kills it (e.g. a lethal DoT tick), its OWN
- * remaining not-yet-reached effects in this same pass (that would otherwise affect someone else)
- * are skipped -- a creature killed mid-sweep fires only on-death, per GAME_DESIGN's round-end
- * interaction rule.
+ * if a creature's own earlier effect in this pass kills it (e.g. a lethal DoT tick in its
+ * turn-end hooks), its remaining not-yet-reached effects in this pass are skipped. A creature
+ * killed mid-pass fires only `on-death`.
  */
 export function fireHook(
   hook: Hook,

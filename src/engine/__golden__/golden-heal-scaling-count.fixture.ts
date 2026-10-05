@@ -1,7 +1,7 @@
 // Golden: the triggered `heal` response's `magnitudeSource` mode (Phase 4 Slice E2, Necromoss-
 // shaped) -- a flat per-unit `amountPerStack` scaled by a LIVE count (dead-allies) instead of
 // the firing status's own `stacks`, mirroring deal-damage's own magnitudeSource composition
-// exactly. NECROMOSS self-heals via `on-turn-end` (no round-end sweep needed) -- fixture-shaped,
+// exactly. NECROMOSS self-heals via `on-turn-end` (no round end needed) -- fixture-shaped,
 // not real Necromoss content (H3's job).
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
