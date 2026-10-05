@@ -133,6 +133,19 @@ floor's contents.
   **cast-role** creature (`caster`/`support`/`opener`) with no usable spell is an invariant
   violation and **throws**, backed by a data test that every cast-role creature has a matching
   spell at its biome.
+- **Player gem sets** (Phase 4.1-G2, D4) — every new player instance (the starter grant, the
+  Unicorn, a summon) rolls its gems **once, at creation**, through the **same roll** as an enemy
+  (`rollLoadout`: distinct picks, the safety net, the cast-role throw), and stores them on the
+  instance. Three rules are the player side's own:
+  - **Its own RNG.** The roll draws from `createRng(hashGemDraw(runSeed, instance ordinal))`, a
+    hash with its own constants. It never reads or advances `runCounter`, so a gem roll can't
+    shift a floor draw.
+  - **The unlock biome** is the biome of `min(100, max(1, deepestFloor))` with atlas pins
+    ignored: the pool follows depth, never a farming pin, and stops growing at floor 100.
+  - **No innate duplicates.** A creature never rolls a spell it already holds innately: the pool
+    excludes the spells of its `innate-spell` effects (the Seer's Arcane Bolt). The exclusion
+    lives in the store, which has the trait registry; no spawnable enemy carries an innate spell,
+    and a data test pins that, so enemies need no copy of the rule.
 - **Rewards** (XP / soul% / currency) are a **run-layer consumer of the event log**
   (`CreatureDied.creatureId` joined against the generated enemy roster via each creature's
   `origin`), never engine state. XP goes
@@ -1529,8 +1542,11 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   - `source` is `{ kind: 'creature', creatureId }` or `{ kind: 'fusion', identityParent,
     affinityParent }` (the recipe),
   - `level`/`xp` (level **uncapped**), `scriptId: string | null` (the assigned script template),
-  - `gems: spellId[]` (Phase 4.1-G, D4: a random gem set rolled and **stored** when the instance
-    is created, until Phase 8 migrates it into real level-1 inventory gems).
+  - `gems: (spellId | null)[]` (Phase 4.1-G, D4: a random gem set rolled and **stored** when the
+    instance is created, until Phase 8 migrates it into real level-1 inventory gems). It is
+    slot-positional, one entry per regular gem slot, with `null` only for a slot a pool couldn't
+    fill. Materialization resolves each id through the spell registry, and an unknown id
+    **throws** (data drift fails loudly).
 
   Affinity, traits, base stats and `hasFused` are **derived** from `source`, never stored. Gems
   as inventory items and equipment arrive with a Phase 8 migration (defining them now would pre-empt
@@ -1639,8 +1655,8 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
     multiplier curve), fight count, enemy party size, boss level offset, rarity spawn weights,
     soul gain, the XP curve (default `20 × level²`, quadratic because XP per floor clear grows with
     floor² — kills ∝ floor at victim levels ∝ floor — so party level can track the floor at every
-    depth), XP per kill (**1 × the victim's level**), currency drops, summon cost (free by
-    default).
+    depth), XP per kill (**1 × the victim's level**), currency drops, summon cost (free; nothing
+    reads it until Phase 8's Soul Altar names the currency it is paid in).
   - **Curves are parameters, not functions** (e.g. `{ fightCountBase: 10, fightCountPerFloor: 1 }`,
     not a closure), so the config is plain data a simulator can sweep and a save can ignore.
     Generation and the store **receive the config as an argument**; tests pin their own config
