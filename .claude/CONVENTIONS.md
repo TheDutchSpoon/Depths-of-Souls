@@ -1669,7 +1669,9 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   **real store** with a documented simple player policy over many seeds and reports the design
   targets as **bands**, not hard rules: T1 floor 1 cleared on ≥95% of seeds; T2 first soul within
   ~10 clears; T3 a full party of 6 within the first session (the first 10 floor runs); T4 no hard
-  wall before the floor-10 boss; T5 the level curve above (party ≈ floor). CI checks only loose
+  wall before the floor-10 boss (a **hard wall** is 5 failed pushes in a row at one floor; the
+  simulator records it and keeps going, decided at the 4.1-H1 plan review); T5 the level curve
+  above (party ≈ floor). CI checks only loose
   "badly broken" thresholds; the bands guide tuning passes (the first one lands before the Phase 4.5
   demo).
 

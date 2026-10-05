@@ -1113,8 +1113,10 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     lock.
   - So run every boss floor twice for the same party: once on the simple policy, and once with one
     creature on `Cast Pacify → highest-HP enemy`, the case GAME_DESIGN "Milestone bosses" accepts.
-    The store has no script action until Phase 6, so this case goes through the engine (the
-    generated boss floor, the same party, the extra script in the registry).
+    The store has no script action until Phase 6, but it already materializes an instance's
+    `scriptId` against its script registry, so this case runs through the real store (decided at
+    the 4.1-H1 plan review, ASSUMPTION 101): the extra script registered, set on one instance from
+    a state snapshot, and the snapshot restored after.
   - Report the boss's locked-turn share and the clear rate both ways. A large jump in the clear rate
     means the lock still switches a boss off, and the watch point's per-turn break-through chance
     comes back as a decision.
@@ -1470,6 +1472,55 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     same path as a summon, at grant time, with the grant's ordinal.
 95. **Confirmed (4.1-G2 plan review).** The only engine edit is exporting `rollLoadout`, body
     unchanged.
+96. **Confirmed (4.1-H1 plan review).** The simulator summons each creature id once, the first time
+    its soul reaches 100%, tracking summoned ids itself (a summon leaves soul at 100%). Ids already
+    owned (the starter, the Unicorn) start in the set; a pass summons in `soulProgress` key order.
+97. **Confirmed (4.1-H1 plan review).** After a clear the next run pushes to `deepestFloor + 1`;
+    after a failed push the next run re-farms `deepestFloor`, or retries floor 1 while
+    `deepestFloor` is 0.
+98. **Decided (4.1-H1 plan review).** A **hard wall** is 5 failed pushes in a row at one floor
+    (re-farm runs between them don't reset the count). A seed doesn't stop at a wall: the
+    simulator records the first wall floor and keeps going until it clears floor 30 (the content
+    frontier) or reaches its run cap (400 floor runs, a named constant). The report shows the
+    first-wall floor per seed, the failed-push counts per floor, the stop reason and how many seeds
+    reached each floor.
+99. **Confirmed (4.1-H1 plan review).** Before each descent the party is the six highest-level
+    instances, ordered level descending then instance ordinal ascending, set into slots 0–5
+    through `setPartySlot`.
+100. **Confirmed (4.1-H1 plan review).** A perk is functional when `resolvePerkEffects(perk,
+     maxLevel)` is non-empty. Before each descent the simulator refunds and re-buys from scratch:
+     each functional perk in data order (the spec docs' order) takes the most levels the
+     remaining budget (`perkPointsFor`) allows, then the next.
+101. **Decided (4.1-H1 plan review).** The boss-aimed lock run goes through the real store, not a
+     re-implementation of its party materialization:
+     - one store, built with the stock scripts plus the probe script (a registered script nothing
+       references is inert: the registry is only looked up by id);
+     - the probe creature is the active-party instance with the highest level (ties: ordinal) whose
+       **stored** gems already hold Pacify. Its gems are never edited, and with no such creature
+       the run is reported `n/a`. The Seer always qualifies;
+     - the probe script is the creature's own script with `Cast <Pacify's cast slot> →
+       highest-hp-enemy` added as the first rule. A cast slot counts the creature's innate spells
+       first;
+     - the state is snapshotted before the probe descent and restored after it, so the policy run
+       fights the identical floor and only the policy run advances the seed.
+102. **Confirmed (4.1-H1 plan review).** A boss's **locked turn** is a turn it starts while holding
+     any status whose effects include an `action-lock`, read from the status registry (today Stun,
+     Sleep, Silenced and Pacified), reported by scope. The report also counts how often the probe's
+     Pacify lands on the boss, and separates a boss floor's first visit from all visits.
+103. **Confirmed (4.1-H1 plan review).** A `StatModifierApplied` is attributed to the latest
+     `TriggerFired` effect id or `SpellCast` from its source in the current turn, else to
+     `(unattributed)`, whose count is reported. A stack is the number of such applications per
+     (target, attribution) within a fight.
+104. **Confirmed (4.1-H1 plan review).** T5's enemy column is the curve (`enemyLevelRange`,
+     `bossLevel` on boss floors) under the active config; the party column is the active party's
+     mean level at the start of each floor run.
+105. **Confirmed (4.1-H1 plan review).** `npm run sim` is `vitest run <file> --mode sim`, the corpus
+     pattern, with no new dependency. The full report runs 40 seeds (1–40) per spec, only in sim
+     mode; the normal suite runs determinism on 3 seeds over the first 10 floor runs plus the
+     mechanism tests.
+106. **Confirmed (4.1-H1 plan review).** H1's tests assert determinism, report shape and the policy
+     mechanics, never a balance value, so H2's tuning doesn't rewrite them. T1 is the first-try
+     floor-1 clear rate, the reading ASSUMPTION 22's floor-1 threshold uses too.
 
 ## Sequencing summary
 
