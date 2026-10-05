@@ -2555,10 +2555,14 @@ Result flips, by stage and fight number:
   229 win->loss, 239 win->loss, 268 loss->win, 289 win->loss, 298 loss->win, 499 win->loss.
 - Stage 1 and stage 0: none.
 
-`main` -> branch, same 526 fights: wins 227 -> 224, losses 245 -> 262, draws 54 -> 40. **The four
-fights the F3 record named (19, 109, 199, 289: a player-side Leech Sovereign alone, with Pacify)**
-were wins on `main` and are losses on the branch: her side is now a full six, she is on `striker`
-with three gems, and a Pacified Sovereign casts instead of waiting.
+`main` -> branch, same 526 fights: wins 227 -> 224, losses 245 -> 262, draws 54 -> 40. **The four fights the F3 record named (19, 109, 199, 289)** are wins on `main` and
+losses on the branch, but the boss's new fallback is not what decided them. In F3 they were the
+enemy-side Leech Sovereign fights where the player side held Pacify. Stage 2's draw shift rerolled
+both sides: fights 199 and 289 no longer have Pacify on the player side, and in fights 19 and 109
+the one Pacify holder aims at the lowest-HP enemy, one of her five companions, and never Pacifies
+her. Across the branch corpus, 19 boss fights have a player-side Pacify and none of them Pacifies
+the boss. A Pacified boss's fallback is pinned by `golden-g1-leech-sovereign-pacified`, not by the
+corpus.
 
 ### Golden impact (expected exports imported from `main` and from the branch, then diffed)
 
@@ -2629,6 +2633,18 @@ store deps object passes `scripts: FIXTURE_SCRIPTS_BY_ID`.
 - **The pending sections** of the three biome docs still hold the Phase 4.5 clean-up and the 4.1-F
   timing notes (not G1's); the roles, the spells and the casting-role notes are folded into the
   bodies.
+- **No boss is locked in the corpus.** Role scripts aim a spell at the lowest-HP enemy, which is
+  almost never a boss: 19 boss fights hold a player-side Pacify, and Pacify is applied to a boss 0
+  times. 4.1-H measures boss lock uptime with a script that aims the lock at the boss (brief,
+  4.1-H, "Watch point: boss floors in 6v6").
+- **Life Siphon is effectively a player spell.** Every Vitality enemy is a `support`. Rule 1 draws
+  only ally-side gems, and rule 3 runs only when it can't attack, so Parts A and B cast Life Siphon
+  0 times. That is why entry 526 exists: without it, the coverage test's "every spell is cast with
+  its effects landing" fails.
+- **`scriptId: null` already resolves to the role.** `materializeCreature` takes
+  `scriptId ?? speciesCreature.defaultScriptId`, and the store has passed `instance.scriptId`
+  (null for a new instance) to it since 4.1-A. G2's ASSUMPTION 6 item needs a store test, not new
+  code.
 - For G2: player gem rolls draw from `ALL_SPELLS`, which is now final, so the store tests there can
   pin the rolls once.
 

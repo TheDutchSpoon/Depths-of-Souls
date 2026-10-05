@@ -262,8 +262,8 @@ export const NECROMOSS_THICKET_TRAIT: Trait = {
 
 /** Necromoss Hollowroot (rare, amplifier): every turn, heals the WHOLE living team, each member
  * scaled by the LIVE count of the team's own dead allies (breadth over Wisp's self-only heal, per
- * Glowfly Radiant/Swarmhive Queen's own "breadth for the rare tier" precedent). The biome's one
- * cast-role creature (`defaultScriptId: 'always-cast'`, species/rotcap-hollow.ts): its trait fires
+ * Glowfly Radiant/Swarmhive Queen's own "breadth for the rare tier" precedent). A `support`
+ * (species/rotcap-hollow.ts): its trait fires
  * on `on-turn-start` regardless of the chosen action, so casting doesn't blunt it. */
 export const NECROMOSS_HOLLOWROOT_TRAIT: Trait = {
   id: 'necromoss-hollowroot-communal-reclaim',

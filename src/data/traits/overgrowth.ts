@@ -254,8 +254,8 @@ export const POLLINATOR_POLLENLORD_TRAIT: Trait = {
 }
 
 /** Snapjaws' Lure (enabler): Provoking also grants itself Defending -- pulls aggro AND tanks the
- * redirected hits (grant-action-state, reusing Defend's existing math verbatim). Needs an
- * always-provoke script to actually fire on-provoke each turn. */
+ * redirected hits (grant-action-state, reusing Defend's existing math verbatim). It runs the
+ * `taunter` role, which Provokes every turn, so this fires every turn. */
 export const SNAPJAW_LURE_TRAIT: Trait = {
   id: 'snapjaw-lure-maw-of-thorns',
   name: 'Maw of Thorns',

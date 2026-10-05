@@ -14,8 +14,7 @@ number or rule here disagrees with the source, the source is correct and this do
 Every creature fights by a **role**, a short list of rules it checks **in order, top first**; the
 first rule it can actually carry out wins. These are the same kind of script a player writes for a
 creature of their own, so enemies are readable and their patterns can be learned. Your own
-creatures default to their role too until you give them a script (summoning and the default-script
-rule arrive in 4.1-G2).
+creatures run their role too, unless they're given a script of their own.
 
 | Role | What it does, top rule first |
 |---|---|
@@ -63,6 +62,8 @@ Every enemy rolls a **full set of three different spells** of its own affinity, 
 unlocked at its biome or earlier, whatever its role: a striker's gems are what it casts when it is
 Pacified. The three are picked one at a time, each from what is left, so they never repeat. Only a
 pool smaller than three (none exists today) can repeat a spell. Bosses roll a full set too.
+Every Vitality enemy is a support, so an enemy casts Life Siphon (Vitality's only damage spell)
+only on a turn it can't attack while no ally is below 50% HP.
 
 Every affinity has **at least three biome-1 spells**, so any enemy can fill its set from the first
 biome on.
@@ -89,6 +90,9 @@ A boss has **no immunity to control**: it runs its role and holds a full gem set
 a lock lowers its turn rather than emptying it. A lock recast every turn still holds for the whole
 fight, and that is the intended price: one of your creatures spends its whole turn on it every
 round, against one enemy of six.
+
+Roles aim their spells at the weakest enemy, so a lock reaches a boss only when she is the
+weakest, or when a script aims it at her (at the highest-HP enemy, for example).
 
 | Boss | Role | Authored adds | Fill |
 |---|---|---|---|
