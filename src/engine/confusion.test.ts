@@ -21,6 +21,7 @@ function confusionFixture(chancePercent: number): ActiveEffect {
     instanceId: createEffectInstanceId('confusion-fixture'),
     sourceTraitId: 'confusion-fixture',
     remainingDuration: 3,
+    appliedAt: 0,
     stacks: 1,
     effects: [{ category: 'friendly-fire', chancePercent }],
   }

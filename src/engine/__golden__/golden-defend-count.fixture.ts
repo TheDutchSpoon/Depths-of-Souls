@@ -27,7 +27,7 @@
 //     takenFactors: 0.65 * bulwark(0.95**2 = 0.9025) = 0.586625.
 //     raw = 25.4 * 0.586625 = 14.900274999999999 -> final 14.
 //     BEARER health 14 - 14 -> 0 -> dies. Fight ends mid-round (before round 2's own
-//     round-end sweep) -- STRIKER's side wins.
+//     round-end pass) -- STRIKER's side wins.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'

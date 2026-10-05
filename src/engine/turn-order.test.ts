@@ -69,6 +69,7 @@ function turnOrderStatus(position: 'first' | 'last', id: string): ActiveEffect {
     instanceId: createEffectInstanceId(id),
     sourceTraitId: id,
     remainingDuration: 3,
+    appliedAt: 0,
     stacks: 1,
     effects: [{ category: 'turn-order', position }],
   }

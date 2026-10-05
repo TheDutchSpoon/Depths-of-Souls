@@ -6,16 +6,18 @@ import type { Trait } from '../../engine/effect-types'
 // here explain the trait's own shape. Player-facing plain-language descriptions with exact
 // numbers live in .claude/content/overgrowth.md -- kept in sync with the numbers below.
 
-/** Spiders' Weaver (enabler): at the start of its own turn, Webs a random living enemy --
+/** Spiders' Weaver (enabler): at the END of its own turn, Webs a random living enemy --
  * unconditional, decoupled from whatever action it then takes (unlike Lullpollen's Sleeper,
- * which is attack-triggered). Fires on-turn-start -> apply-status(random-enemy selector). */
+ * which is attack-triggered). Fires on-turn-end -> apply-status(random-enemy selector). Moved from
+ * on-turn-start in 4.1-F2 (ASSUMPTION 49): the Web is then born this turn, so the Weaver's own
+ * cleanup does not roll it (its first roll is at the next creature's cleanup). */
 export const SPIDER_WEAVER_TRAIT: Trait = {
   id: 'spider-weaver-web-strike',
   name: 'Web Strike',
   effects: [
     {
       category: 'triggered',
-      hook: 'on-turn-start',
+      hook: 'on-turn-end',
       response: {
         kind: 'apply-status',
         target: { kind: 'selector', selector: { kind: 'random-enemy' } },

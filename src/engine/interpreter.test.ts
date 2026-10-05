@@ -21,6 +21,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     effectInstanceCounter: 0,
+    turnClock: 0,
     ...overrides,
   }
 }
@@ -512,6 +513,7 @@ describe('decideAction -- status-immunity vs scoped action-lock (Phase 4 Slice C
     instanceId: createEffectInstanceId('me#status#silenced'),
     sourceTraitId: 'silenced',
     remainingDuration: 2,
+    appliedAt: 0,
     stacks: 1,
   }
   const CLEAR_MIND: ActiveEffect = {

@@ -37,6 +37,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     effectInstanceCounter: 0,
+    turnClock: 0,
     ...overrides,
   }
 }
@@ -202,6 +203,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     instanceId: createEffectInstanceId('w'),
     sourceTraitId: 'weaken',
     remainingDuration: 2,
+    appliedAt: 0,
     stacks: 1,
     effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.2 }],
   }
@@ -214,6 +216,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     instanceId: createEffectInstanceId('v'),
     sourceTraitId: 'vulnerability',
     remainingDuration: 2,
+    appliedAt: 0,
     stacks: 2,
     effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.5 }],
   }
@@ -245,6 +248,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
       instanceId: createEffectInstanceId('b'),
       sourceTraitId: 'bulwark-fixture',
       remainingDuration: 999,
+      appliedAt: 0,
       stacks: 1,
       // ignored -- magnitudeSource overrides it with the live defendCount below,
       effects: [
@@ -273,6 +277,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
         instanceId: createEffectInstanceId('bulwark-additive'),
         sourceTraitId: 'bulwark-additive-fixture',
         remainingDuration: 999,
+        appliedAt: 0,
         stacks: 1,
         effects: [
           {
@@ -316,6 +321,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
         instanceId: createEffectInstanceId('b2'),
         sourceTraitId: 'bulwark-fixture',
         remainingDuration: 999,
+        appliedAt: 0,
         stacks: 1,
         effects: [
           {
@@ -344,7 +350,7 @@ describe('hasStatus', () => {
       effects: [
         {
           category: 'triggered',
-          hook: 'on-round-end',
+          hook: 'on-turn-end',
           response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
         },
       ],
@@ -353,6 +359,7 @@ describe('hasStatus', () => {
       instanceId: createEffectInstanceId('p'),
       sourceTraitId: 'poison',
       remainingDuration: 2,
+      appliedAt: 0,
       stacks: 1,
     }
     const c = makeCreature({ activeEffects: [dot] })
@@ -529,6 +536,7 @@ describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
     instanceId: createEffectInstanceId('confusion'),
     sourceTraitId: 'confusion',
     remainingDuration: 3,
+    appliedAt: 0,
     stacks: 1,
     effects: [{ category: 'friendly-fire', chancePercent: 50 }],
   }
@@ -613,7 +621,7 @@ describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
       effects: [
         {
           category: 'triggered',
-          hook: 'on-round-end',
+          hook: 'on-turn-end',
           response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
         },
       ],
@@ -622,6 +630,7 @@ describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
       instanceId: createEffectInstanceId('p'),
       sourceTraitId: 'poison',
       remainingDuration: 2,
+      appliedAt: 0,
       stacks: 1,
     }
     const player = makeParty('player', [{ id: 'a' }])

@@ -388,6 +388,7 @@ export function instantiateStatus(
   instanceId: EffectInstanceId,
   remainingDuration: number,
   stacks: number,
+  appliedAt: number,
 ): ActiveEffect {
   return {
     ...def,
@@ -396,6 +397,7 @@ export function instantiateStatus(
     sourceTraitId: def.statusId,
     remainingDuration,
     stacks,
+    appliedAt,
   }
 }
 

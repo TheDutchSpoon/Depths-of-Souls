@@ -6,7 +6,7 @@ import type { StatusDef } from '../engine/effect-types'
 // ones a trait carries), read through the engine's one effect iterator -- no per-status
 // special-casing in the engine, and no bespoke status categories.
 
-/** DoT: 3% of the bearer's own effective max HP per stack per round (percent-hp-condition-ticks
+/** DoT: 3% of the bearer's own effective max HP per stack per bearer turn (on-turn-end) (percent-hp-condition-ticks
  * brief -- the same fraction of max HP at every level, unlike a flat number), bypassing
  * Defence/affinity/pools entirely (GAME_DESIGN: "own value from the source"). Deliberately flat
  * mode with a stat-derived amount, not `scalingStat` -- `scalingStat` would route the victim
@@ -19,7 +19,7 @@ export const POISON: StatusDef = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-round-end',
+      hook: 'on-turn-end',
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
@@ -36,7 +36,7 @@ export const POISON: StatusDef = {
   defaultDuration: 3,
 }
 
-/** DoT: 5% of the bearer's own effective max HP per stack per round. Same stat-derived flat
+/** DoT: 5% of the bearer's own effective max HP per stack per bearer turn (on-turn-end). Same stat-derived flat
  * mode as POISON -- see its doc comment for why this isn't `scalingStat`. */
 export const BURN: StatusDef = {
   statusId: 'burn',
@@ -44,7 +44,7 @@ export const BURN: StatusDef = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-round-end',
+      hook: 'on-turn-end',
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
@@ -60,7 +60,7 @@ export const BURN: StatusDef = {
   defaultDuration: 3,
 }
 
-/** HoT: 5% of the bearer's (the healed creature's) own effective max HP per stack per round,
+/** HoT: 5% of the bearer's (the healed creature's) own effective max HP per stack per bearer turn (on-turn-end),
  * clamped to effective max Health (no auto-heal past it). Same stat-derived flat mode as
  * POISON/BURN's own deal-damage, mirrored onto heal. */
 export const REGEN: StatusDef = {
@@ -69,7 +69,7 @@ export const REGEN: StatusDef = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-round-end',
+      hook: 'on-turn-end',
       response: {
         kind: 'heal',
         target: { kind: 'self' },
@@ -123,7 +123,7 @@ export const VULNERABILITY: StatusDef = {
  * will be the SAME primitive at the opposite pole -- "same tool, opposite pole" per
  * species-locked.md). Deliberately light per the design doc: a 10%/turn break-free roll
  * (`breakChancePercent`, Slice E2's already-built mechanism -- rolled at every creature's
- * turn-start against every Web-bearer, ~72% free within one round) with a 3-turn cap as a
+ * turn-end cleanup against every Web-bearer, ~72% free within one round) with a 3-turn cap as a
  * bad-luck backstop (`defaultDuration`/`cap`) -- the reward lives in Spiders' Ambusher exploit
  * (+% damage to Webbed), not in the status itself lasting long. Single-instance (cap 1):
  * re-applying Web to an already-Webbed target just refreshes it, never stacks. */
@@ -191,7 +191,7 @@ export const GRANT_ACT_FIRST: StatusDef = {
 
 /** Phase 4 Slice H3 (Rotcap Hollow, Sporecloud): a DoT status with TWO triggers (the
  * Sleep-established pattern for a status needing more than one hook) -- 4% of the bearer's own
- * effective max HP per stack per round (same stat-derived flat mode as POISON/BURN), PLUS an
+ * effective max HP per stack per bearer turn (on-turn-end) (same stat-derived flat mode as POISON/BURN), PLUS an
  * `on-death -> apply-status({kind:'random-ally-without-status', statusId:'spore'}, spore)` --
  * this trigger lives on the STATUS itself (not a species trait), so any Spore bearer spreads it
  * on death regardless of which creature/spell originally applied it. When the bearer dies, the
@@ -212,7 +212,7 @@ export const SPORE: StatusDef = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-round-end',
+      hook: 'on-turn-end',
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },

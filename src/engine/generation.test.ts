@@ -492,6 +492,7 @@ describe('generateFloor', () => {
       scripts: new Map(),
       statuses: new Map(),
       effectInstanceCounter: 0,
+      turnClock: 0,
     }
     expect(resolveCount(enemyParty[0]!, 'living-allies-of-species', state)).toBe(
       enemyParty.length,

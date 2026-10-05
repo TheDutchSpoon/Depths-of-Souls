@@ -274,7 +274,7 @@ export type EffectResponse =
     }
   // Phase 4 Slice E2. The 9th and (per CONVENTIONS' "hold the line at nine") final response
   // verb: clear a status from a target, reusing the existing StatusExpired path (death-reset and
-  // the round-end sweep stay consistent) -- a no-op, no-event when the target doesn't carry it
+  // turn-end cleanup stay consistent) -- a no-op, no-event when the target doesn't carry it
   // (mirrors revive's "target must be dead" / consume-stacks' "0 stacks" skip style). `target`
   // reuses the full ResponseTarget vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies"
   // get targeting for free. `filter` is a plain statusId for now -- a polarity-based filter
@@ -470,6 +470,14 @@ export function validateStatusDef(def: StatusDef): void {
         )
       default:
         break
+    }
+    // Phase 4.1-F2 (ASSUMPTION 50): round end has no status work. A status trigger on
+    // `on-round-end` would be exactly that (and would tick outside the bearer's own turn), so
+    // ticks live on `on-turn-end`.
+    if (effect.category === 'triggered' && effect.hook === 'on-round-end') {
+      throw new Error(
+        `effect invariant violated: status "${def.statusId}" carries an 'on-round-end' trigger; round end has no status work (use 'on-turn-end')`,
+      )
     }
   }
   validateStatusNoRandomSelectorInResponseTargets(def)
@@ -740,7 +748,7 @@ export type ActionLockDef = {
 }
 
 /** Web (act-last) / Grant Act First (act-first): read by `buildTurnQueue` (turn-order.ts).
- * `breakChancePercent` is the global per-turn break-free roll (combat.ts's `rollWebBreakFree`):
+ * `breakChancePercent` is the global per-turn break-free roll (combat.ts's `rollWebBreakFree`, in turn-end cleanup):
  * status-only, since breaking free removes the status instance
  * (`validateNoBreakChanceOutsideStatus`). A bearer carrying both poles resolves to 'first'
  * (ASSUMPTION 9). */
@@ -840,6 +848,10 @@ interface InstanceIdentity {
 interface StatusInstanceState {
   readonly remainingDuration: number
   readonly stacks: number
+  /** Phase 4.1-F2 (ASSUMPTION 18): `CombatState.turnClock` when this instance was applied or last
+   * refreshed. Born this turn iff it equals the current clock (no tick, no countdown, no Web roll
+   * this turn). Invisible in events. */
+  readonly appliedAt: number
 }
 
 export type StatModifierEffect = StatModifierDef & InstanceIdentity

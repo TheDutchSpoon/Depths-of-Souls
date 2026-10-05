@@ -19,6 +19,7 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
     scripts: new Map(),
     statuses: new Map(),
     effectInstanceCounter: 0,
+    turnClock: 0,
     ...overrides,
   }
 }
@@ -256,7 +257,7 @@ describe('evaluateCondition -- has-status', () => {
     effects: [
       {
         category: 'triggered',
-        hook: 'on-round-end',
+        hook: 'on-turn-end',
         response: { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 1 },
       },
     ],
@@ -265,6 +266,7 @@ describe('evaluateCondition -- has-status', () => {
     instanceId: createEffectInstanceId('p'),
     sourceTraitId: 'poison',
     remainingDuration: 2,
+    appliedAt: 0,
     stacks: 1,
   }
 
@@ -302,6 +304,7 @@ describe('evaluateCondition -- has-status', () => {
       instanceId: createEffectInstanceId('s'),
       sourceTraitId: 'stun',
       remainingDuration: 1,
+      appliedAt: 0,
       stacks: 1,
     }
     const stunned = makeCreature({ activeEffects: [stunEffect] })

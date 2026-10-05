@@ -8,6 +8,7 @@
 //   STRIKER->VICTIM (off 20, def 5): core 15, chip 0.01*20=0.2 -> raw 15.2 -> final 15.
 //   VICTIM (health 25): R1 25->10 (survives, stunned for its own R1 turn). R2 10->10-15 clamped
 //   to 0 (dies) -- death pre-empts on-damage-taken, so no re-stun this time.
+//   4.1-F2: Stun 1 skips exactly VICTIM's R1 turn and expires in that turn's cleanup.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -79,8 +80,11 @@ export const expectedEvents: CombatEvent[] = [
   // 4.1-F1: the lock is passive -- the skipped turn shows TurnSkipped (no TriggerFired).
   { type: 'TurnSkipped', creatureId: VICTIM, effectId: 'stun' },
   // No AttackDeclared here -- the skip fills the action slot.
-  { type: 'TurnEnded', creatureId: VICTIM },
+  // 4.1-F2: durations count the BEARER's own turns -- Stun 1 (applied in STRIKER's turn, so not
+  // born in VICTIM's) counts down in VICTIM's own turn-end cleanup, inside its bracket (it used
+  // to expire at the round-end sweep, after TurnEnded).
   { type: 'StatusExpired', creatureId: VICTIM, statusId: 'stun' },
+  { type: 'TurnEnded', creatureId: VICTIM },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: STRIKER },
   { type: 'AttackDeclared', attackerId: STRIKER, targetId: VICTIM },

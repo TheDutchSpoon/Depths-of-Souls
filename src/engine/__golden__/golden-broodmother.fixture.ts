@@ -46,7 +46,7 @@
 //   via `node -e`), which is >= 0.4 -> the roll FAILS. Per resolution.ts: "a failed roll skips
 //   silently, exactly like a false condition (no TriggerFired, no depth/truncation accounting)"
 //   -- no event at all, Web never applies, nothing is ever Webbed in this whole fixture (so
-//   rollWebBreakFree's own per-turn global check is a silent no-op at every turn-start,
+//   rollWebBreakFree's own per-turn global check is a silent no-op at every turn-end cleanup,
 //   "a board with no such bearer draws nothing").
 //
 //     node -e verification of the mulberry32 sequence at seed 7070 (rng.ts's own algorithm,
@@ -135,7 +135,7 @@ export const traits = TRAIT_REGISTRY
 export const statuses = STATUS_REGISTRY
 
 export const TURN_STEPS = 5 // Round 1's 4 turns (Broodmother/Striker/Add1-empty/Add2-wait) + the
-// resolveTurn call that runs Round 1's end-sweep and then Round 2's Broodmother turn.
+// resolveTurn call that runs Round 1's round-end pass and then Round 2's Broodmother turn.
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },
@@ -197,7 +197,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'Waited', creatureId: ADD2 },
   { type: 'TurnEnded', creatureId: ADD2 },
 
-  // Round-end sweep: Swarm Call's 40% Web roll fails silently (no event at all -- see header).
+  // Round-end pass: Swarm Call's 40% Web roll fails silently (no event at all -- see header).
   { type: 'RoundStarted', round: 2 },
 
   { type: 'TurnStarted', creatureId: BROODMOTHER },
