@@ -1236,6 +1236,36 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     record, as in 4.1-E: `golden-round-end-mid-sweep-poison(-refresh)` →
     `golden-turn-end-dot-kill-burst(-refresh)`. `golden-round-end-interaction` keeps its name: it
     pins the round-end trait pass, which F2 keeps.
+56. **Confirmed (4.1-F3 plan review).** Silence and Pacify carry no numbers beyond the inherited
+    3-turn duration; ids `silence` / `pacify`, statuses `silenced` / `pacified`. Tuning is H's.
+57. **Confirmed (4.1-F3 plan review).** `ALL_SPELLS` gets Silence, then Pacify, appended last; a
+    test pins the existing 25 ids in order, so the registry stays append-only.
+58. **Confirmed (4.1-F3 plan review).** The new corpus fights are appended after the current last
+    entry: the two perk variants at the end of `PERK_FIGHT_VARIANTS` (entries 522–523, seeds
+    2107–2108), then the Silence and Pacify spell fights (entries 524–525, seeds 2015–2016). The
+    Pacify caster is a Wit creature with no innate spell (the Sorcerer starter's Arcane Bolt would
+    take slot 0).
+59. **Confirmed (4.1-F3 plan review).** The perk coverage fights ride on no chance:
+    `always-cast` casters on the higher-level side, an all-caster party against Silence and an
+    all-attacker party against Pacify.
+60. **Confirmed (4.1-F3 plan review).** A spell is status-only when every effect is
+    `apply-status`; it keys by `affinity|shape|status:<sorted status ids>`.
+61. **Confirmed (4.1-F3 plan review).** The fight-start check reuses `fightOver`: on the hook
+    pass, on its drain, and as a win/loss check after both, before `RoundStarted`. A probe at the
+    plan review showed it changes no existing test or digest entry.
+62. **Confirmed (4.1-F3 plan review).** Digest attribution compares each fight's materialized
+    parties (every creature's equipped spells, both sides) on `main` and the branch. Identical
+    parties must give an identical log; a fight with identical parties and a different log is a
+    bug, reported, never accepted.
+63. **Corrected (4.1-F3 plan review).** The immunity golden uses the **real** perks (Clear Mind,
+    Aggressive), not trait-borne fixture immunity. The golden runner gains optional per-side
+    effects, passed straight to `createCombat`'s existing `effects` input; existing fixtures are
+    unaffected. Shipped content is what the golden pins; the carrier-agnostic iterator is already
+    pinned by F1's tests.
+64. **Confirmed (4.1-F3 plan review).** A Violence or Wit cast-role enemy rolling Silence or
+    Pacify as its only gem is not a bug in F3; no engine or generation branch (see G2).
+65. **Confirmed (4.1-F3 plan review).** The content edit is `content/overgrowth.md` only: the two
+    spells join its spell table and Silenced / Pacified its statuses, with the plain-language rules.
 
 ## Sequencing summary
 
