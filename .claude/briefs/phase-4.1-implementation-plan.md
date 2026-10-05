@@ -253,7 +253,9 @@ engine goldens are untouched.
 
 ### A6 — save-v1 `Instance` and the collection
 - `Instance = { id: InstanceId, source: { kind: 'creature', creatureId } | { kind: 'fusion',
-  identityParent, affinityParent }, level, xp, scriptId: string | null }`.
+  identityParent, affinityParent }, level, xp, scriptId: string | null, gems }`.
+  - `gems: (spellId | null)[]` arrives in 4.1-G2 (ASSUMPTION 83). Nothing persists before Phase 5,
+    so adding it needs no migration (ASSUMPTION 85).
   - `id` is **opaque** (`inst-<n>` from the existing ordinal counter), never embedding a creature id.
   - Only `kind: 'creature'` is produced before Phase 8; the `fusion` variant exists in the type so
     save v1 never needs reshaping for it. Deriving a fused creature is Phase 8 (throw on `fusion` in
@@ -921,7 +923,7 @@ and **6v6 boss floors** (decided at the PR #81 review).
 | PR | Items | Golden policy |
 |---|---|---|
 | **4.1-G1** | Enemy behaviour: the `always-*` scripts moved to test fixtures (stage 0, byte-identical), the three new spells (appended), the seven role scripts and every creature's role (starters included, ASSUMPTION 8), `isCastRole` by role, the support side filter, full distinct gem sets for every enemy (bosses included), the 6v6 boss fill. | **Deliberate, listed.** Mechanism goldens byte-identical (shown by import). Content goldens built from real species change where a script or loadout changed, each listed. The digest is regenerated once, attributed **stage by stage** (ASSUMPTION 77). |
-| **4.1-G2** | Hub and store: `summon`, `setPartySlot`, `setPerkLevel` / `refundAllPerks` (`PerkDef.phase` deleted), `newGame`, player gem sets (ASSUMPTION 7), `scriptId: null` → role (ASSUMPTION 6). | Engine goldens and the digest **byte-identical**; store tests change. |
+| **4.1-G2** | Hub and store: `summon`, `setPartySlot`, `setPerkLevel` / `refundAllPerks` (`PerkDef.phase` deleted), `newGame`, player gem sets (ASSUMPTION 7), `scriptId: null` → role (ASSUMPTION 6; already live, G2 adds the store test, ASSUMPTION 86). | Engine goldens and the digest **byte-identical**; store tests change. |
 
 **Why two, and this order.**
 - The halves have different golden policies: G1 changes the digest deliberately, and G2 must
@@ -983,8 +985,10 @@ and **6v6 boss floors** (decided at the PR #81 review).
   - **Stifling Weight** (Endurance): single enemy, `apply-status(weaken)` only.
   - **Life Siphon** (Vitality): single enemy, `deal-damage` + `heal(self)`.
 - **Player gem sets:** every newly created player instance (starter grant, Unicorn, summon) rolls a
-  **distinct, affinity-matched gem set and stores it** as `Instance.gems: spellId[]`
-  (ASSUMPTION 7). `materializeCreature` receives it. The Seer's innate spell comes on top.
+  **distinct, affinity-matched gem set and stores it** as `Instance.gems: (spellId | null)[]`
+  (ASSUMPTIONS 7, 83). `materializeCreature` receives it. The Seer's innate spell comes on top,
+  and her roll never draws it again (ASSUMPTION 81). The roll is generation's own `rollLoadout`,
+  exported, with its own RNG (CONVENTIONS "Player gem sets").
 - Content docs: fold the roles and new spells from each doc's pending section into its body.
 
 ### 6v6 boss floors and boss loadouts (decided at the PR #81 review)
@@ -1406,6 +1410,44 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     construction. Role behaviour is covered by Parts A and B.
 80. **Confirmed.** Fill creatures on a boss floor give ordinary per-kill rewards, soul% included
     (GAME_DESIGN "Milestone bosses").
+81. **Confirmed (4.1-G2 plan review).** A player instance's roll pool excludes the spells it holds
+    innately, read from its traits' `innate-spell` effects, so the Seer rolls 3 distinct Wit gems
+    and holds Arcane Bolt on top. The rule is general, not a Seer branch. It lives in the store
+    (which has the trait registry); a data test pins that no spawnable creature or boss carries an
+    innate spell, and that every starter's and the Unicorn's pool minus its innate spells holds ≥3
+    spells at biome 1.
+82. **Confirmed (4.1-G2 plan review).** The unlock biome is the biome of `min(100, max(1,
+    deepestFloor))`, through `biomeForFloor` with empty pins: atlas pins never change a roll, and
+    the pool stops growing at floor 100.
+83. **Confirmed (4.1-G2 plan review).** `Instance.gems` is `(spellId | null)[]`, slot-positional,
+    one entry per regular gem slot. Tests build instances in that shape (never `[]`, which would
+    materialize with no gem slots at all).
+84. **Confirmed (4.1-G2 plan review).** An unknown stored spell id throws when the party is
+    resolved.
+85. **Confirmed (4.1-G2 plan review).** No save migration: nothing persists before Phase 5, and
+    save v1 is defined with `gems`.
+86. **Confirmed (4.1-G2 plan review).** `scriptId: null` already resolves to the role through
+    `materializeCreature`'s `scriptId ?? defaultScriptId`; G2 adds the store test.
+87. **Corrected (4.1-G2 plan review).** `newGame({ seed })` requires an integer in `0 ..
+    2^32 − 1` and throws otherwise (the RNG takes `seed >>> 0`, so a wider seed would alias).
+    `state.runSeed` is the source of truth; `deps.runSeed` only seeds a fresh store.
+88. **Confirmed (4.1-G2 plan review).** `refundAllPerks` can't fail and has no `can…` query.
+89. **Confirmed (4.1-G2 plan review).** `summon` leaves `soulProgress` at 100: summoning is free
+    and unlimited.
+90. **Confirmed (4.1-G2 plan review).** `summon` doesn't read `BalanceConfig.summonCost`. Summoning
+    is free (GAME_DESIGN), and the cost has no currency until Phase 8's Soul Altar; the field's
+    comment says so.
+91. **Confirmed (4.1-G2 plan review).** A creature `findStaticCreature` can't resolve is
+    `unknown-creature`. The starters and the Unicorn resolve but never bank soul, so they fail with
+    `soul-incomplete`.
+92. **Confirmed (4.1-G2 plan review).** Failure reasons are checked in the listed order; a
+    non-integer slot is `slot-out-of-range`; every `can…` query calls the action's own check.
+93. **Confirmed (4.1-G2 plan review).** The perk budget is `Σ level × costPerLevel` with the
+    change applied, against `bossesCleared.size × 100`; lowering a level never fails on budget.
+94. **Confirmed (4.1-G2 plan review).** The starters and the Unicorn roll their gems through the
+    same path as a summon, at grant time, with the grant's ordinal.
+95. **Confirmed (4.1-G2 plan review).** The only engine edit is exporting `rollLoadout`, body
+    unchanged.
 
 ## Sequencing summary
 

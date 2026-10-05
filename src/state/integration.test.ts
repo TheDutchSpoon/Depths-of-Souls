@@ -42,6 +42,7 @@ import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures_
 import { OVERGROWTH_BIOME_ID } from '../data/species/overgrowth'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { BIOMES } from '../data/biomes'
+import { ALL_SPELLS } from '../data/spells'
 import { createInstanceId } from './ids'
 import {
   SWARMHIVE_DRONE_TRAIT,
@@ -353,5 +354,89 @@ describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig'
     for (const gain of outcome.soulGained.values()) {
       expect(allowedGains.some((per) => gain % per === 0)).toBe(true)
     }
+  })
+})
+
+// Phase 4.1-G2 (D4, ASSUMPTION 81-83): player creatures now hold a stored, rolled gem set, which a
+// striker uses only on a turn it cannot Attack (rule 3: "Attack illegal (Pacified) -> cast a random
+// gem"). The three tests above are the Brute party (the Cragfang Mauler and the Unicorn, both
+// strikers) and every value they pin is UNCHANGED by G2. What does move is the floor-10 event log
+// (137 events on main, 212 now), and exactly one thing moves it, from event 66 on: in round 3 the
+// Unicorn, Pacified by the Pollinator Beneficiary in round 2, Waited on main (no gem to cast) and
+// now casts its slot-0 gem, Life Siphon (15 damage to the Beneficiary, 30 healed), and every later
+// event follows from that turn. Floor 1 (both stores) and the second floor-10 visit are identical
+// to main, event for event: no party member is Pacified in them.
+//
+// Generated-then-checkpoint-verified: the pinned gem sets are what the roll returned for the
+// default run seed; the independent checkpoints are (a) the Unicorn's set is exactly the three
+// biome-1 Vitality spells, in any order, and (b) the Mauler's are three distinct biome-1 Violence
+// spells, both from the spell registry rather than from this run.
+describe('Phase 4.1-G2: stored player gems in the real floor-10 fight', () => {
+  function floor10() {
+    const store = createGameStore({ balanceConfig: CFG })
+    store.getState().setSpec('brute')
+    store.getState().runScriptedIntro()
+    expectOk(store.getState().descend(1))
+    store.setState((s) => {
+      const collection = new Map(s.collection)
+      for (const [instanceId, instance] of collection) {
+        collection.set(instanceId, { ...instance, level: 20 })
+      }
+      return { collection, deepestFloor: 9 }
+    })
+    return { store, outcome: expectOk(store.getState().descend(10)).outcome }
+  }
+
+  test('the party holds the rolled sets, checked against the registry', () => {
+    const { store } = floor10()
+    const mauler = store.getState().collection.get(createInstanceId('inst-0'))!
+    const unicorn = store.getState().collection.get(createInstanceId('inst-1'))!
+    expect(mauler.gems).toEqual(['weakening-bite', 'cinder-nova', 'silence'])
+    expect(unicorn.gems).toEqual(['life-siphon', 'wild-vigor', 'regrowth'])
+    // Checkpoint: the Unicorn's set is exactly the biome-1 Vitality spells.
+    const vitality = ALL_SPELLS.filter(
+      (spell) => spell.affinity === 'vitality' && (spell.unlockedAtBiome ?? 1) <= 1,
+    ).map((spell) => spell.id)
+    expect([...unicorn.gems].sort()).toEqual([...vitality].sort())
+    // Checkpoint: the Mauler's set is three distinct biome-1 Violence spells (allowed set derived
+    // from the registry, not from this run).
+    const violence = new Set(
+      ALL_SPELLS.filter(
+        (spell) => spell.affinity === 'violence' && (spell.unlockedAtBiome ?? 1) <= 1,
+      ).map((spell) => spell.id),
+    )
+    expect(new Set(mauler.gems).size).toBe(3)
+    for (const id of mauler.gems) expect(violence.has(id as string)).toBe(true)
+  })
+
+  test('the Pacified Unicorn casts its slot-0 gem instead of waiting', () => {
+    const { outcome } = floor10()
+    const events = outcome.events
+    const pacifiedAt = events.findIndex(
+      (e) =>
+        e.type === 'StatusApplied' &&
+        e.statusId === 'pacified' &&
+        e.targetId === 'unicorn-player-1',
+    )
+    expect(pacifiedAt).toBeGreaterThan(-1)
+    const turnStart = events.findIndex(
+      (e, i) =>
+        i > pacifiedAt && e.type === 'TurnStarted' && e.creatureId === 'unicorn-player-1',
+    )
+    const turnEnd = events.findIndex(
+      (e, i) =>
+        i > turnStart && e.type === 'TurnEnded' && e.creatureId === 'unicorn-player-1',
+    )
+    const turn = events.slice(turnStart, turnEnd + 1)
+    expect(turn.some((e) => e.type === 'Waited')).toBe(false)
+    const cast = turn.find((e) => e.type === 'SpellCast')
+    expect(cast).toMatchObject({ casterId: 'unicorn-player-1', gemSlot: 0 })
+    // Life Siphon: damage to the target and a heal on the caster.
+    expect(turn.some((e) => e.type === 'DamageDealt' && e.damageSource === 'cast')).toBe(
+      true,
+    )
+    expect(
+      turn.some((e) => e.type === 'HealApplied' && e.targetId === 'unicorn-player-1'),
+    ).toBe(true)
   })
 })

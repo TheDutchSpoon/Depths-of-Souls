@@ -139,7 +139,6 @@ const FIXTURE_SPEC: Specialization = {
       name: 'Noop',
       maxLevel: 10,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [],
     },
   ],
@@ -297,7 +296,6 @@ const HUGE_ATTACK_PERK_SPEC: Specialization = {
       name: 'Huge Attack',
       maxLevel: 1,
       costPerLevel: 1000,
-      phase: 'p4',
       effects: [{ category: 'stat-modifier', stat: 'attack', factor: 2000 }],
     },
   ],
@@ -791,7 +789,6 @@ describe('setSpec()', () => {
         name: 'Noop B',
         maxLevel: 10,
         costPerLevel: 100,
-        phase: 'p4',
         effects: [],
       },
     ],
@@ -804,6 +801,11 @@ describe('setSpec()', () => {
           [FIXTURE_SPEC.id, FIXTURE_SPEC],
           [SPEC_B.id, SPEC_B],
         ]),
+        // 4.1-G2: a granted starter now rolls gems, so it must resolve to static data.
+        standaloneCreatures: [
+          HERO_STANDALONE,
+          { speciesCreature: SPEC_B_STARTER, speciesId: 'fixture-g-hero-b-species' },
+        ],
       }),
     )
 

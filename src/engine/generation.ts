@@ -293,8 +293,11 @@ export function spellsUnlockedAt(
  * non-empty. An empty pool draws nothing and leaves the slots empty, except for a cast-role
  * creature, which throws (ASSUMPTION 71: "usable" = affinity-matched and unlocked, not castable in
  * any given fight; a cast role with nothing to cast is an authoring mistake, never a runtime state).
+ *
+ * Exported in Phase 4.1-G2 (ASSUMPTION 95) so the store's player gem roll is this same rule, not a
+ * copy; the body is unchanged.
  */
-function rollLoadout(
+export function rollLoadout(
   speciesCreature: SpeciesCreature,
   biomeIndex: number,
   allSpells: readonly Spell[],

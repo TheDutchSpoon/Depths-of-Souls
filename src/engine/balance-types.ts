@@ -63,7 +63,7 @@ export interface BalanceConfig {
   readonly bricksPerTenFloors: number
 
   /** Soul% required to summon is always 100 (fixed); this is the CURRENCY cost of summon()
-   * itself (Phase 4.1-G). Default 0 (free), per GAME_DESIGN §9. Unused until G -- present now so
-   * the shape never needs a second edit. */
+   * itself (Phase 4.1-G). Default 0 (free), per GAME_DESIGN §9. Nothing reads it until Phase 8's
+   * Soul Altar names the currency it is paid in (ASSUMPTION 90). */
   readonly summonCost: number
 }

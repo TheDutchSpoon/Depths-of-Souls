@@ -3,6 +3,7 @@
 // for the new Instance shape and the injected BalanceConfig.
 
 import { describe, expect, test } from 'vitest'
+import { DEFAULT_GEM_SLOT_COUNT } from '../engine/config'
 import { createBiomeId } from '../engine/ids'
 import type { BiomeData, Species, SpeciesCreature } from '../engine/generation'
 import { makeCreature } from '../engine/__fixtures__/creatures'
@@ -22,6 +23,9 @@ import {
   type StaticCreatureRef,
 } from './rewards'
 
+// ASSUMPTION 83: a real instance holds one entry per regular gem slot (never `[]`).
+const EMPTY_GEM_SLOTS = Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null)
+
 // Review fix F6: the Phase-4 placeholder config reproduces the OLD linear curve
 // (xpForNextLevel = 100 * level) exactly -- these four cases are byte-identical to main's own
 // pre-4.1 applyXpGain tests, just now routed through CFG instead of an implicit module constant.
@@ -33,6 +37,7 @@ describe('applyXpGain (Phase-4 placeholder config: xpForNextLevel = 100 * level)
       level: 5,
       xp: 10,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     // xpForNextLevel(5) = 500; 10 + 50 = 60 < 500.
     expect(applyXpGain(instance, 50, CFG)).toEqual({ ...instance, level: 5, xp: 60 })
@@ -45,6 +50,7 @@ describe('applyXpGain (Phase-4 placeholder config: xpForNextLevel = 100 * level)
       level: 1,
       xp: 0,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     // xpForNextLevel(1) = 100; 0 + 250 = 250 -> level 2 (250-100=150) -> 150 <
     // xpForNextLevel(2)=200, stop.
@@ -58,6 +64,7 @@ describe('applyXpGain (Phase-4 placeholder config: xpForNextLevel = 100 * level)
       level: 1,
       xp: 0,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     // 0 + 350: L1->L2 costs 100 (250 left), L2->L3 costs 200 (50 left), L3->L4 costs 300
     // (50 < 300, stop).
@@ -71,6 +78,7 @@ describe('applyXpGain (Phase-4 placeholder config: xpForNextLevel = 100 * level)
       level: 3,
       xp: 40,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     expect(applyXpGain(instance, 0, CFG)).toEqual(instance)
   })
@@ -86,6 +94,7 @@ describe('applyXpGain (Phase 4.1-A default config: xpForNextLevel = 20 * level^2
       level: 5,
       xp: 10,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     // xpForNextLevel(5) = 20*25 = 500; 10 + 50 = 60 < 500.
     expect(applyXpGain(instance, 50, DEFAULT_BALANCE_CONFIG)).toEqual({
@@ -102,6 +111,7 @@ describe('applyXpGain (Phase 4.1-A default config: xpForNextLevel = 20 * level^2
       level: 1,
       xp: 0,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     // xpForNextLevel(1) = 20; 0 + 50 = 50 -> level 2 (50-20=30) -> xpForNextLevel(2)=80,
     // 30 < 80, stop.
@@ -119,6 +129,7 @@ describe('applyXpGain (Phase 4.1-A default config: xpForNextLevel = 20 * level^2
       level: 1,
       xp: 0,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     // 0 + 150: L1->L2 costs 20 (130 left), L2->L3 costs 80 (50 left), L3->L4 costs 180
     // (50 < 180, stop).
@@ -136,6 +147,7 @@ describe('applyXpGain (Phase 4.1-A default config: xpForNextLevel = 20 * level^2
       level: 3,
       xp: 40,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     expect(applyXpGain(instance, 0, DEFAULT_BALANCE_CONFIG)).toEqual(instance)
   })
@@ -149,6 +161,7 @@ describe('staticCreatureIdFor', () => {
       level: 1,
       xp: 0,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     expect(staticCreatureIdFor(instance)).toBe('spider-weaver')
   })
@@ -160,6 +173,7 @@ describe('staticCreatureIdFor', () => {
       level: 1,
       xp: 0,
       scriptId: null,
+      gems: EMPTY_GEM_SLOTS,
     }
     expect(() => staticCreatureIdFor(instance)).toThrow(
       /not materializable before Phase 8/,

@@ -25,10 +25,12 @@ import {
   biomeForFloor,
   biomeHasContent,
   contentFrontier,
+  FLOORS_PER_BIOME,
   generateFloor,
   materializeCreature,
+  rollLoadout,
 } from '../engine/generation'
-import type { BiomeData } from '../engine/generation'
+import type { BiomeData, SpeciesCreature } from '../engine/generation'
 import type { BiomeId } from '../engine/ids'
 import type { BalanceConfig } from '../engine/balance-types'
 import { xpAwardForKill } from '../engine/leveling'
@@ -62,6 +64,7 @@ import {
   applyXpGain,
   currencyDropForKill,
   findStaticCreature,
+  perkPointsFor,
   resolveKillReward,
   staticCreatureIdFor,
   ZERO_CURRENCIES,
@@ -193,7 +196,54 @@ export type PinBiomeFailureReason =
 export type PinBiomeResult =
   { readonly ok: true } | { readonly ok: false; readonly reason: PinBiomeFailureReason }
 
+/** Phase 4.1-G2 (ASSUMPTIONS 91, 92): `unknown-creature` (not resolvable to static data) is checked
+ * before `soul-incomplete` (soul below 100%). */
+export type SummonFailureReason = 'unknown-creature' | 'soul-incomplete'
+
+export type SummonResult =
+  | { readonly ok: true; readonly instanceId: InstanceId }
+  | { readonly ok: false; readonly reason: SummonFailureReason }
+
+export type CanSummonResult =
+  { readonly ok: true } | { readonly ok: false; readonly reason: SummonFailureReason }
+
+export type SetPartySlotFailureReason = 'slot-out-of-range' | 'unknown-instance'
+
+export type SetPartySlotResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: SetPartySlotFailureReason }
+
+/** Phase 4.1-G2 (G4): in this order, per CONVENTIONS "Specializations". */
+export type SetPerkLevelFailureReason =
+  'no-spec' | 'perk-not-in-spec' | 'invalid-level' | 'over-budget'
+
+export type SetPerkLevelResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: SetPerkLevelFailureReason }
+
 export interface GameActions {
+  /** Phase 4.1-G2 (§6, ASSUMPTION 87): resets EVERYTHING to a fresh game with the given run seed
+   * (an integer in `0 .. 2^32 - 1`; anything else throws -- the seed comes from `src/app`, so a bad
+   * one is an impossible state). The scripted intro is run separately. */
+  newGame(options: { readonly seed: number }): void
+  /** Phase 4.1-G2 (D2): needs 100% soul in `creatureId`; free and unlimited (ASSUMPTIONS 89, 90).
+   * Creates a level-1 instance with rolled gems and puts it in the lowest-index empty party slot,
+   * if any. `soulProgress` is left alone. */
+  summon(creatureId: string): SummonResult
+  /** Pure query sharing `summon`'s own check. */
+  canSummon(creatureId: string): CanSummonResult
+  /** Phase 4.1-G2 (D2): swap semantics -- placing an instance already in another slot swaps the
+   * two; `null` empties the slot. An empty party is allowed (`descend` refuses it). */
+  setPartySlot(slot: number, instanceId: InstanceId | null): SetPartySlotResult
+  /** Pure query sharing `setPartySlot`'s own check. */
+  canSetPartySlot(slot: number, instanceId: InstanceId | null): SetPartySlotResult
+  /** Phase 4.1-G2 (G4): sets a perk's ABSOLUTE level (buy and refund are one call; 0 removes the
+   * entry). Nothing is gated by the Phase 8 inert list. */
+  setPerkLevel(perkId: string, level: number): SetPerkLevelResult
+  /** Pure query sharing `setPerkLevel`'s own check. */
+  canSetPerkLevel(perkId: string, level: number): SetPerkLevelResult
+  /** Phase 4.1-G2 (G4, ASSUMPTION 88): clears all perk spend. Can't fail, so no `can…` query. */
+  refundAllPerks(): void
   /** Refunds all spent perk points (clears perkSpend -- perk points are derived from
    * bossesCleared, so "refund" just means clearing spend) and, if the new spec's starter isn't
    * already owned, grants one copy of it into the collection (and the first open party slot).
@@ -251,6 +301,17 @@ function resolvePlayerParty(state: GameState, deps: GameStoreDeps): Creature[] {
     const staticId = staticCreatureIdFor(instance)
     const staticRef = findStaticCreature(staticId, deps.standaloneCreatures, deps.biomes)
     if (!staticRef) continue // defensive; every referenced creatureId resolves to static data
+    // ASSUMPTION 84: a stored spell id that no longer resolves is data drift, not a skippable slot.
+    const gems = instance.gems.map((spellId) => {
+      if (spellId === null) return null
+      const spell = deps.allSpells.find((candidate) => candidate.id === spellId)
+      if (!spell) {
+        throw new Error(
+          `resolvePlayerParty: instance ${instance.id} holds unknown spell id ${spellId}`,
+        )
+      }
+      return spell
+    })
     creatures.push(
       materializeCreature(staticRef.speciesCreature, {
         level: instance.level,
@@ -258,6 +319,7 @@ function resolvePlayerParty(state: GameState, deps: GameStoreDeps): Creature[] {
         slot,
         speciesId: staticRef.speciesId,
         scriptId: instance.scriptId,
+        gems,
         ref: instance.id,
       }),
     )
@@ -284,11 +346,95 @@ function applyXpToParty(
   return next
 }
 
+/** Phase 4.1-G2 (ASSUMPTION 82): the unlock biome's 1-based number for a player gem roll -- the
+ * biome of `min(100, max(1, deepestFloor))` through `biomeForFloor` with EMPTY pins, so a farming
+ * pin never changes a roll and the pool stops growing at floor 100 (the fixed sequence ends there;
+ * past it `biomeForFloor` draws by seed hash and could shrink the pool). The cap is also bounded by
+ * the biome list actually supplied (a test fixture with one biome has one decade). */
+function unlockBiomeIndex(state: GameState, deps: GameStoreDeps): number {
+  const cap = Math.min(100, deps.biomes.length * FLOORS_PER_BIOME)
+  const floor = Math.min(cap, Math.max(1, state.deepestFloor))
+  const biomeId = biomeForFloor(floor, deps.biomes, new Map(), state.runSeed)
+  return deps.biomes.findIndex((b) => b.id === biomeId) + 1
+}
+
+/** Phase 4.1-G2 (ASSUMPTION 81): the spell ids a creature holds INNATELY, read from its traits'
+ * `innate-spell` effects (createCombat prepends them to the gem slots). A general rule: whatever a
+ * creature holds this way is excluded from its own roll pool. */
+function innateSpellIds(
+  creature: SpeciesCreature,
+  deps: GameStoreDeps,
+): ReadonlySet<string> {
+  const ids = new Set<string>()
+  for (const traitId of creature.innateTraitIds) {
+    const trait = deps.traits.get(traitId)
+    if (!trait) continue
+    for (const effect of trait.effects) {
+      if (effect.category === 'innate-spell') ids.add(effect.spell.id)
+    }
+  }
+  return ids
+}
+
+/** Phase 4.1-G2 (D4, ASSUMPTION 81-84, 95): a new player instance's gem set, rolled once.
+ * Its OWN stream, `createRng(hashGemDraw(runSeed, ordinal))`: never the run stream, never advances
+ * `runCounter`, so a roll can't shift a floor draw. The roll itself is generation's `rollLoadout`
+ * (the enemy rule: distinct picks, safety net, cast-role throw) over the unlocked, affinity-matched
+ * pool minus the creature's innate spells. */
+function rollPlayerGems(
+  state: GameState,
+  deps: GameStoreDeps,
+  creature: SpeciesCreature,
+  ordinal: number,
+): readonly (string | null)[] {
+  const innate = innateSpellIds(creature, deps)
+  const pool = deps.allSpells.filter((spell) => !innate.has(spell.id))
+  const rng = deps.createRng(hashGemDraw(state.runSeed, ordinal))
+  return rollLoadout(creature, unlockBiomeIndex(state, deps), pool, rng).map(
+    (spell) => spell?.id ?? null,
+  )
+}
+
+/** Adds one fresh Instance of `creatureId` (level 1, rolled gems, role script) to the collection,
+ * and into the lowest-index empty party slot if there is one (ASSUMPTION 92, brief ASSUMPTION 11).
+ * Shared by the starter grant, the Unicorn grant and `summon` (ASSUMPTION 94). */
+function addInstance(
+  state: GameState,
+  deps: GameStoreDeps,
+  creatureId: string,
+): Pick<GameState, 'collection' | 'activeParty' | 'nextInstanceOrdinal'> & {
+  readonly instanceId: InstanceId
+} {
+  const staticRef = findStaticCreature(creatureId, deps.standaloneCreatures, deps.biomes)
+  if (!staticRef) throw new Error(`addInstance: unknown creature ${creatureId}`)
+  const ordinal = state.nextInstanceOrdinal
+  const instanceId = createInstanceId(`inst-${ordinal}`)
+  const instance: Instance = {
+    id: instanceId,
+    source: { kind: 'creature', creatureId },
+    level: 1,
+    xp: 0,
+    scriptId: null,
+    gems: rollPlayerGems(state, deps, staticRef.speciesCreature, ordinal),
+  }
+  const collection = new Map(state.collection)
+  collection.set(instanceId, instance)
+  let activeParty = state.activeParty
+  const openSlot = state.activeParty.indexOf(null)
+  if (openSlot !== -1) {
+    const next = [...state.activeParty]
+    next[openSlot] = instanceId
+    activeParty = next
+  }
+  return { collection, activeParty, nextInstanceOrdinal: ordinal + 1, instanceId }
+}
+
 /** Grants one fresh Instance of `creatureId` into the collection and the first open party slot,
  * if not already owned. Shared by setSpec (the chosen spec's starter) and runScriptedIntro (the
  * Unicorn) -- both are "unconditional one-time grants," never soul-gated. */
 function grantCreatureIfUnowned(
   state: GameState,
+  deps: GameStoreDeps,
   creatureId: string,
 ): Pick<GameState, 'collection' | 'activeParty' | 'nextInstanceOrdinal'> {
   const alreadyOwned = [...state.collection.values()].some(
@@ -301,24 +447,12 @@ function grantCreatureIfUnowned(
       nextInstanceOrdinal: state.nextInstanceOrdinal,
     }
   }
-  const instanceId = createInstanceId(`inst-${state.nextInstanceOrdinal}`)
-  const instance: Instance = {
-    id: instanceId,
-    source: { kind: 'creature', creatureId },
-    level: 1,
-    xp: 0,
-    scriptId: null,
-  }
-  const collection = new Map(state.collection)
-  collection.set(instanceId, instance)
-  let activeParty = state.activeParty
-  const openSlot = state.activeParty.indexOf(null)
-  if (openSlot !== -1) {
-    const next = [...state.activeParty]
-    next[openSlot] = instanceId
-    activeParty = next
-  }
-  return { collection, activeParty, nextInstanceOrdinal: state.nextInstanceOrdinal + 1 }
+  const { collection, activeParty, nextInstanceOrdinal } = addInstance(
+    state,
+    deps,
+    creatureId,
+  )
+  return { collection, activeParty, nextInstanceOrdinal }
 }
 
 /** Idempotent add -- a boss already in `bossesCleared` returns the SAME Set reference (a no-op,
@@ -339,6 +473,16 @@ function withBossCleared(
  * the two hashes never collide by construction. */
 function hashRunDraw(runSeed: number, counter: number): number {
   return (Math.imul(runSeed | 0, 0x27d4eb2f) ^ Math.imul(counter | 0, 0x165667b1)) >>> 0
+}
+
+/** Phase 4.1-G2 (ASSUMPTION 81): the player gem roll's own hash -- its OWN constants, distinct from
+ * `hashRunDraw` above and generation's `hashFloorDraw`. Distinct constants make a coincidence with
+ * another stream's seed unlikely, not impossible; what keeps a gem roll from shifting a floor draw
+ * is that it is a separate stream that never touches `runCounter`. */
+function hashGemDraw(runSeed: number, ordinal: number): number {
+  return (
+    (Math.imul(runSeed | 0, 0x2545f491) ^ Math.imul((ordinal + 1) | 0, 0x9e3779b9)) >>> 0
+  )
 }
 
 /** Phase 4.1-A (G5, S5): the shared check behind both `descend` and `canDescend` -- a
@@ -395,12 +539,70 @@ function checkPinBiome(
   return { ok: true }
 }
 
-// ---- The store ----
+/** Phase 4.1-G2 (ASSUMPTIONS 91, 92): shared by `summon` and `canSummon`. */
+function checkSummon(
+  state: GameState,
+  deps: GameStoreDeps,
+  creatureId: string,
+): CanSummonResult {
+  if (!findStaticCreature(creatureId, deps.standaloneCreatures, deps.biomes)) {
+    return { ok: false, reason: 'unknown-creature' }
+  }
+  if ((state.soulProgress.get(creatureId) ?? 0) < 100) {
+    return { ok: false, reason: 'soul-incomplete' }
+  }
+  return { ok: true }
+}
 
-export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
-  const deps: GameStoreDeps = { ...DEFAULT_DEPS, ...overrides }
+/** Phase 4.1-G2 (ASSUMPTION 92): shared by `setPartySlot` and `canSetPartySlot`. A non-integer
+ * slot is out of range; `null` (emptying) is always valid on an in-range slot. */
+function checkSetPartySlot(
+  state: GameState,
+  slot: number,
+  instanceId: InstanceId | null,
+): SetPartySlotResult {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= PARTY_SIZE) {
+    return { ok: false, reason: 'slot-out-of-range' }
+  }
+  if (instanceId !== null && !state.collection.has(instanceId)) {
+    return { ok: false, reason: 'unknown-instance' }
+  }
+  return { ok: true }
+}
 
-  return create<GameState & GameActions>((set, get) => ({
+/** Phase 4.1-G2 (G4, ASSUMPTION 93): shared by `setPerkLevel` and `canSetPerkLevel`. The budget is
+ * `Σ level × costPerLevel` over the current spec's perks with this change applied, against
+ * `bossesCleared × 100`; lowering a level can't go over (spend only ever falls). */
+function checkSetPerkLevel(
+  state: GameState,
+  deps: GameStoreDeps,
+  perkId: string,
+  level: number,
+): SetPerkLevelResult {
+  if (!state.chosenSpec) return { ok: false, reason: 'no-spec' }
+  const spec = deps.specializations.get(state.chosenSpec)
+  if (!spec) throw new Error(`setPerkLevel: unknown specialization ${state.chosenSpec}`)
+  const perk = spec.perks.find((p) => p.id === perkId)
+  if (!perk) return { ok: false, reason: 'perk-not-in-spec' }
+  if (!Number.isInteger(level) || level < 0 || level > perk.maxLevel) {
+    return { ok: false, reason: 'invalid-level' }
+  }
+  const spent = spec.perks.reduce(
+    (sum, p) =>
+      sum + (p.id === perkId ? level : (state.perkSpend.get(p.id) ?? 0)) * p.costPerLevel,
+    0,
+  )
+  if (spent > perkPointsFor(state.bossesCleared))
+    return { ok: false, reason: 'over-budget' }
+  return { ok: true }
+}
+
+const MAX_RUN_SEED = 0xffffffff
+
+/** The state of a fresh game with run seed `seed` -- the store's initial state and what
+ * `newGame` resets to, so the two can't drift. */
+function freshState(seed: number): GameState {
+  return {
     deepestFloor: 0,
     lastFloor: 0,
     discoveredBiomes: new Set(),
@@ -412,9 +614,80 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
     perkSpend: new Map(),
     bossesCleared: new Set(),
     currencies: ZERO_CURRENCIES,
-    runSeed: deps.runSeed,
+    runSeed: seed,
     runCounter: 0,
     nextInstanceOrdinal: 0,
+  }
+}
+
+// ---- The store ----
+
+export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
+  const deps: GameStoreDeps = { ...DEFAULT_DEPS, ...overrides }
+
+  return create<GameState & GameActions>((set, get) => ({
+    ...freshState(deps.runSeed),
+
+    newGame({ seed }) {
+      if (!Number.isInteger(seed) || seed < 0 || seed > MAX_RUN_SEED) {
+        throw new Error(`newGame: seed must be an integer in 0..2^32-1, got ${seed}`)
+      }
+      set(freshState(seed))
+    },
+
+    canSummon(creatureId) {
+      return checkSummon(get(), deps, creatureId)
+    },
+
+    summon(creatureId) {
+      const state = get()
+      const check = checkSummon(state, deps, creatureId)
+      if (!check.ok) return check
+      const { instanceId, ...next } = addInstance(state, deps, creatureId)
+      set(next)
+      return { ok: true, instanceId }
+    },
+
+    canSetPartySlot(slot, instanceId) {
+      return checkSetPartySlot(get(), slot, instanceId)
+    },
+
+    setPartySlot(slot, instanceId) {
+      const state = get()
+      const check = checkSetPartySlot(state, slot, instanceId)
+      if (!check.ok) return check
+      const activeParty = [...state.activeParty]
+      if (instanceId === null) {
+        activeParty[slot] = null
+      } else {
+        const from = activeParty.indexOf(instanceId)
+        const displaced = activeParty[slot] ?? null
+        activeParty[slot] = instanceId
+        if (from !== -1 && from !== slot) activeParty[from] = displaced
+      }
+      set({ activeParty })
+      return { ok: true }
+    },
+
+    canSetPerkLevel(perkId, level) {
+      return checkSetPerkLevel(get(), deps, perkId, level)
+    },
+
+    setPerkLevel(perkId, level) {
+      const check = checkSetPerkLevel(get(), deps, perkId, level)
+      if (!check.ok) return check
+      set((s) => {
+        const perkSpend = new Map(s.perkSpend)
+        if (level === 0) perkSpend.delete(perkId)
+        else perkSpend.set(perkId, level)
+        return { perkSpend }
+      })
+      return { ok: true }
+    },
+
+    refundAllPerks() {
+      set({ perkSpend: new Map() })
+    },
 
     setSpec(specId) {
       const spec = deps.specializations.get(specId)
@@ -422,7 +695,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       set((s) => ({
         chosenSpec: specId,
         perkSpend: new Map(),
-        ...grantCreatureIfUnowned(s, spec.starterCreatureId),
+        ...grantCreatureIfUnowned(s, deps, spec.starterCreatureId),
       }))
     },
 
@@ -634,7 +907,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       const { state: finalState, events } = resolveFight(combat)
 
       set((s) => ({
-        ...grantCreatureIfUnowned(s, UNICORN.id),
+        ...grantCreatureIfUnowned(s, deps, UNICORN.id),
         runCounter: s.runCounter + 1,
       }))
 

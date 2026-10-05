@@ -2667,3 +2667,155 @@ store deps object passes `scripts: FIXTURE_SCRIPTS_BY_ID`.
 - Docs: `content/overgrowth.md`, `content/glimmerdark.md`, `content/rotcap-hollow.md`, new
   `content/enemy-behaviour.md`, this record.
 - Nothing needs deleting.
+
+---
+
+## 4.1-G2 -- Hub and store: summon, party slots, perks, newGame, player gem sets
+
+Golden policy: **engine goldens and the corpus digest byte-identical; store tests change, deliberately
+and listed.** Branch `phase-4.1-slice-g2`, on top of the plan-check doc-sync (`8f7fc9e`; ASSUMPTIONS
+81-95 are the plan-review rulings). Second half of the brief's 4.1-G.
+
+### What was built
+
+- **`summon(creatureId)` / `canSummon`** (`store.ts`). Reasons `unknown-creature` (not resolvable by
+  `findStaticCreature`) then `soul-incomplete` (< 100). Creates a level-1, xp-0, `scriptId: null`
+  instance with a rolled, stored gem set and puts it in the lowest-index empty slot, else only into the
+  collection. It leaves `soulProgress` at 100 (ASSUMPTION 89) and does not read `summonCost`
+  (ASSUMPTION 90). Returns `{ ok: true, instanceId }`.
+- **`setPartySlot(slot, instanceId | null)` / `canSetPartySlot`.** Reasons `slot-out-of-range` (not an
+  integer in `0..5`, checked first) then `unknown-instance`. Swap semantics: an instance already in
+  another slot swaps with the slot's occupant (or leaves its old slot empty); a benched instance
+  replaces the occupant, who stays owned. `null` empties. An empty party is allowed and `descend`
+  refuses it (`empty-party`). Nothing removes an instance, so the Unicorn is never removable; a test
+  benches it.
+- **`setPerkLevel(perkId, level)` / `canSetPerkLevel` / `refundAllPerks()`.** Reasons in order `no-spec`,
+  `perk-not-in-spec`, `invalid-level`, `over-budget` (`Σ level x costPerLevel` with the change applied
+  > `bossesCleared x 100`). Level 0 removes the entry. `refundAllPerks` cannot fail, so it has no query
+  (ASSUMPTION 88). **`PerkDef.phase` is deleted**; the nine inert perks carry an `// Inert until Phase 8`
+  comment each, and `specializations.test.ts` holds the explicit nine-id list (listed perks resolve to
+  zero effects at max level; every other perk to at least one).
+- **`newGame({ seed })`.** One `freshState(seed)` builds both the store's initial state and the reset, so
+  they cannot drift. It resets all 14 state fields, the instance ordinal and `runCounter` included, and
+  throws on a seed that is not an integer in `0 .. 2^32 - 1` (ASSUMPTION 87). `src/app/newGame.ts`
+  holds `generateRunSeed` (`crypto.getRandomValues`, injectable) and `startNewGame`; nothing in the UI
+  calls them yet.
+- **Player gem sets (D4).** `Instance.gems: (string | null)[]` (ASSUMPTION 83), one entry per regular
+  slot. Every new instance (starter grant, Unicorn, summon) goes through one `addInstance`, which rolls
+  with generation's own `rollLoadout` (now exported, body unchanged: ASSUMPTION 95), so players and
+  enemies follow one rule. The roll is `createRng(hashGemDraw(runSeed, ordinal))`: its own constants,
+  never `runCounter`. The pool is the spells unlocked at the biome of `min(100, max(1, deepestFloor))`
+  through `biomeForFloor` with empty pins (ASSUMPTION 82), minus the creature's innate spells
+  (ASSUMPTION 81; the Seer gets three distinct Wit gems and Arcane Bolt on top). `resolvePlayerParty`
+  resolves stored ids through `deps.allSpells` and throws on an unknown one (ASSUMPTION 84). No save
+  migration (ASSUMPTION 85).
+- **`scriptId: null` -> role** (ASSUMPTION 86): already true; the new tests pin it with a re-roled
+  probe creature, so only a player instance can ask for that role id.
+- **Comment only:** `summonCost` in `balance-types.ts` now says nothing reads it until Phase 8's Soul
+  Altar names the currency.
+
+### Deviation from ASSUMPTION 82's wording
+
+The clamp is `min(100, biomes.length x FLOORS_PER_BIOME)`, not a bare 100. With the real 10 biomes
+the two are the same number. A store test fixture with one biome has only one decade, and
+`biomeForFloor` throws past it.
+
+### Golden impact (expected exports imported from `main` and from the branch, then compared)
+
+A throwaway harness in a pristine copy of `main` (`git archive HEAD`) and in the finished tree imported
+every `__golden__/*.fixture.ts` and every `__fixtures__/*.ts` and serialised every export (functions by
+source text, Maps and Sets by entries): **966 exports across 107 modules, 966 identical, 0 changed, none
+added or removed.** `npm run corpus:update` produced **no diff** (no tracked file changed), and
+`corpus-digest.test.ts` and the coverage test pass unchanged. The corpus builds its parties with
+`materializeCreature` directly, so Part B stays gemless. Engine diff: `export` on `rollLoadout` and its
+doc comment, plus the `summonCost` comment; no behaviour.
+
+### Store and integration values that moved
+
+- **`store.test.ts`: no pinned value moved.** The fixture heroes run `always-attack`, which never casts.
+  Two changes: `phase: 'p4'` removed from three fixture perks, and the `setSpec()` swap test now lists
+  its second starter in `standaloneCreatures`, because a granted starter rolls gems and so must resolve
+  to static data (the old code granted an unresolvable creature without noticing).
+- **`rewards.test.ts`: no value moved.** Its ten hand-built Instances gain `gems` in the real stored
+  shape (three `null` slots, from `DEFAULT_GEM_SLOT_COUNT`), never `[]`.
+- **`integration.test.ts`: every pinned value in the three tests is unchanged.** A harness ran the three
+  scenarios (floor 1 with the Phase-4 config, floor 10, default config floor 1) on `main` and on the
+  branch and compared the full event logs. Floor 1 (intro and descent, both configs) and the second
+  floor-10 visit are **identical event for event** (25, 579, 25, 738 and 127 events). **Floor 10's
+  first descent moved** (137 events on `main`, 212 now), and exactly one thing moves it, from event 66:
+  the Unicorn, Pacified by the Pollinator Beneficiary in round 2, `Waited` on `main` and now casts its
+  slot-0 gem, Life Siphon (15 damage, 30 healed); everything after follows from that turn. The Brute
+  party is two strikers, whose gems matter only on a turn the Attack is illegal, so Pacified is the only
+  trigger. Both outcomes are wins. Two new tests pin the cause (generated-then-checkpoint-verified;
+  the Unicorn's set must equal the biome-1 Vitality spells, and the Mauler's must be three distinct
+  biome-1 Violence spells, both allowed sets derived from the spell registry, not from the run).
+- **`specializations.test.ts`:** the two `p4`/`p8` tests became the two known-inert-list tests (12 tests
+  before and after).
+
+### Tests and mutations
+
+- Tests **976 -> 1062 (+86)**, reconciled per file against `main`: `store-hub.test.ts` +23,
+  `store-perks.test.ts` +15, `store-gems.test.ts` +18, `store-newgame.test.ts` +23,
+  `app/newGame.test.ts` +3, `data/innate-spells.test.ts` +2, `integration.test.ts` +2 (4 -> 6). `store.test.ts` (28),
+  `rewards.test.ts` (18) and `specializations.test.ts` (12) are unchanged in count (checked against a
+  pristine `main`: 62 across those three and the integration file's 4).
+- **The hand-derived roll** (`store-gems.test.ts`): run seed 1, ordinal 0 gives seed
+  `0x2545f491 ^ 0x9e3779b9 = 0xbb728d28`; the Seer's pool is [Vine Snare, Pollen Cloud, Pacify]; draws
+  0.5, 0.0, 0.99 pick Pollen Cloud, Vine Snare, Pacify, written out in the test. The separation tests:
+  `runCounter` never moves, one `createRng` call per roll on distinct seeds, and three benched summons
+  leave the next floor's whole event log equal to a run without them.
+- **Mutations** (52, a scratch copy of the finished tree, one source change at a time, file restored;
+  **52 killed, 0 survived**, each by a named non-digest test): `summon` `unknown-creature` removed,
+  `soul-incomplete` removed, the order swapped, soul reset after a summon; `setPartySlot`
+  `slot-out-of-range` removed, `unknown-instance` removed, the order swapped, no swap, no vacating of the
+  old slot; auto-place never placing and placing in the highest slot; emptying a slot dropping the
+  instance (the Unicorn test); each of the three `can...` queries always-ok; the perk reasons `no-spec`,
+  `perk-not-in-spec`, `invalid-level`, `over-budget` each removed, the budget counting the old level,
+  level 0 keeping an entry, `refundAllPerks` doing nothing; the inert list (an effect added to
+  `wit-mastery`, a listed id removed); distinctness removed and the safety net removed (the engine rule,
+  killed on the player side by `store-gems.test.ts` too); the innate exclusion removed; the gem RNG
+  seeded with `hashRunDraw`, the hash ignoring the ordinal, a roll advancing `runCounter`; stored gems
+  ignored when the party is resolved; an unknown stored id becoming `null`; the unlock biome following a
+  pin, the floor-100 clamp removed, depth ignored; `scriptId ?? default` replaced (two ways); `newGame`
+  seed range removed, integer check removed, upper bound off by one, the seed not stored, and **each of
+  the 13 other fields left unreset** (one named `resets <field>` test each); a spawnable creature gaining
+  an innate spell (the data test); and `lastFloor: 2` inside `freshState`, which only the literal
+  fresh-state test (`store-newgame.test.ts`, "the fresh state is exactly this literal") catches, since
+  every other `newGame` test compares against a store built from the same `freshState`.
+- Gates: test (1062) / lint / format:check / build / `tsc -b`, all green. Node 24.19.0.
+
+### Spec notes (for the docs, before 4.1-H)
+
+- **Granting a creature now needs static data.** `setSpec` and `runScriptedIntro` call `rollLoadout`,
+  which reads the creature; a spec whose `starterCreatureId` is not in `standaloneCreatures` now
+  throws where it used to grant silently. Real data is fine; the simulator and any fixture must list
+  its starter.
+- **A stored gem set never changes** (decided at the PR #83 review; CONVENTIONS "Player gem sets":
+  "A stored set never changes"). Nothing re-rolls it, so a set reflects the depth at which it was made.
+  The starters and the Unicorn are granted at floor 0 and can never be summoned again (they bank no
+  soul), so they keep biome-1 sets until Phase 8; a creature summoned again deeper can roll a deeper
+  spell. Phase 8 replaces the roll with equipping.
+- **`summonCost` has no currency** until Phase 8 (ASSUMPTION 90): CONVENTIONS now reads "summon cost (free;
+  nothing reads it until Phase 8's Soul Altar names the currency it is paid in)", which matches the
+  code: the field is inert.
+- **Phase 4.5's spell deletions move player rolls.** Ember Lance (Violence) and Venom Bolt (Instinct)
+  are biome-1 spells in `ALL_SPELLS`, so they sit in the Violence and Instinct roll pools. Deleting them
+  changes every player roll of those affinities (the integration test's Mauler set included), and
+  `store-gems.test.ts`'s stored-gem test casts `'ember-lance'` and needs another spell. Nothing persists
+  before Phase 5, so no stored set can hold a deleted id.
+- **The fresh state is pinned literally** (`store-newgame.test.ts`), so `newGame`'s reset tests can't
+  pass on a wrong `freshState`.
+- **4.1-H's simulator** must drive `summon` with a creature whose soul it set or earned; summon
+  auto-places, so `setPartySlot` is only needed to reorder or bench.
+
+### Files changed
+
+- Engine: `generation.ts` (`export` on `rollLoadout`, doc comment), `balance-types.ts` (comment).
+- Data: `specializations.ts` (`phase` deleted, nine inert comments).
+- State: `store.ts` (the actions, `freshState`, gem roll, `addInstance`), `rewards.ts` (`Instance.gems`).
+- App: new `app/newGame.ts`.
+- Tests: new `store-hub.test.ts`, `store-perks.test.ts`, `store-gems.test.ts`, `store-newgame.test.ts`,
+  `app/newGame.test.ts`, `data/innate-spells.test.ts`; changed `specializations.test.ts`,
+  `store.test.ts`, `rewards.test.ts`, `integration.test.ts`.
+- Docs: this record.
+- Nothing needs deleting.

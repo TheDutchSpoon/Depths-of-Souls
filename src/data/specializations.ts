@@ -44,9 +44,6 @@ export interface PerkDef {
   readonly name: string
   readonly maxLevel: number
   readonly costPerLevel: number
-  /** 'p4' = functional now; 'p8' = authored in full but always-zero-effect until the Phase 8
-   * gem/equipment economy exists (ASSUMPTION 24). */
-  readonly phase: 'p4' | 'p8'
   readonly effects: readonly EffectDef[] | ((level: number) => readonly EffectDef[])
 }
 
@@ -117,47 +114,46 @@ export const SORCERER: Specialization = {
       name: 'Echo',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'action-instance', actionKind: 'cast', powerPercent: 100 }],
     },
     {
+      // Inert until Phase 8 (gem system) -- see sorcerer.md
       id: 'wit-mastery',
       name: 'Wit Mastery',
       maxLevel: 1,
       costPerLevel: 60,
-      phase: 'p8',
       effects: [],
     },
     {
+      // Inert until Phase 8 (gem system) -- see sorcerer.md
       id: 'violence-mastery',
       name: 'Violence Mastery',
       maxLevel: 1,
       costPerLevel: 60,
-      phase: 'p8',
       effects: [],
     },
     {
+      // Inert until Phase 8 (gem system) -- see sorcerer.md
       id: 'endurance-mastery',
       name: 'Endurance Mastery',
       maxLevel: 1,
       costPerLevel: 60,
-      phase: 'p8',
       effects: [],
     },
     {
+      // Inert until Phase 8 (gem system) -- see sorcerer.md
       id: 'vitality-mastery',
       name: 'Vitality Mastery',
       maxLevel: 1,
       costPerLevel: 60,
-      phase: 'p8',
       effects: [],
     },
     {
+      // Inert until Phase 8 (gem system) -- see sorcerer.md
       id: 'instinct-mastery',
       name: 'Instinct Mastery',
       maxLevel: 1,
       costPerLevel: 60,
-      phase: 'p8',
       effects: [],
     },
     {
@@ -168,7 +164,6 @@ export const SORCERER: Specialization = {
       name: 'Clear Mind',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'status-immunity', statusId: 'silenced' }],
     },
     {
@@ -177,33 +172,32 @@ export const SORCERER: Specialization = {
       name: 'Arcane Might',
       maxLevel: 50,
       costPerLevel: 2,
-      phase: 'p4',
       effects: (level) => [
         { category: 'stat-modifier', stat: 'intelligence', factor: 1 + 0.01 * level },
       ],
     },
     {
+      // Inert until Phase 8 (gem system) -- see sorcerer.md
       id: 'arcane-shields',
       name: 'Arcane Shields',
       maxLevel: 10,
       costPerLevel: 10,
-      phase: 'p8',
       effects: [],
     },
     {
+      // Inert until Phase 8 (gem system) -- see sorcerer.md
       id: 'arcane-versatility',
       name: 'Arcane Versatility',
       maxLevel: 10,
       costPerLevel: 10,
-      phase: 'p8',
       effects: [],
     },
     {
+      // Inert until Phase 8 (gem system) -- see sorcerer.md
       id: 'true-wit',
       name: 'True Wit',
       maxLevel: 5,
       costPerLevel: 20,
-      phase: 'p8',
       effects: [],
     },
     {
@@ -213,7 +207,6 @@ export const SORCERER: Specialization = {
       name: 'Spell Focus',
       maxLevel: 100,
       costPerLevel: 1,
-      phase: 'p4',
       effects: (level) => [
         {
           category: 'conditional-damage-bonus',
@@ -239,7 +232,6 @@ export const BRUTE: Specialization = {
       name: 'Flurry',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'action-instance', actionKind: 'attack', powerPercent: 100 }],
     },
     {
@@ -247,7 +239,6 @@ export const BRUTE: Specialization = {
       name: 'Might',
       maxLevel: 50,
       costPerLevel: 2,
-      phase: 'p4',
       effects: (level) => [
         { category: 'stat-modifier', stat: 'attack', factor: 1 + 0.01 * level },
       ],
@@ -259,7 +250,6 @@ export const BRUTE: Specialization = {
       name: 'Brute Force',
       maxLevel: 100,
       costPerLevel: 1,
-      phase: 'p4',
       effects: (level) => [
         {
           category: 'conditional-damage-bonus',
@@ -275,7 +265,6 @@ export const BRUTE: Specialization = {
       name: 'Aggressive',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'status-immunity', statusId: 'pacified' }],
     },
     {
@@ -286,7 +275,6 @@ export const BRUTE: Specialization = {
       name: 'Proficient Warrior',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'splashing' }],
     },
     {
@@ -296,7 +284,6 @@ export const BRUTE: Specialization = {
       name: 'Annihilate',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'annihilate' }],
     },
     {
@@ -307,7 +294,6 @@ export const BRUTE: Specialization = {
       name: 'Aggressive Caster',
       maxLevel: 25,
       costPerLevel: 4,
-      phase: 'p4',
       effects: (level) => [
         {
           category: 'cross-stat',
@@ -325,7 +311,6 @@ export const BRUTE: Specialization = {
       name: 'Concussive Blows',
       maxLevel: 25,
       costPerLevel: 4,
-      phase: 'p4',
       effects: (level) => [
         {
           category: 'triggered',
@@ -346,7 +331,6 @@ export const BRUTE: Specialization = {
       name: 'Cull the Weak',
       maxLevel: 50,
       costPerLevel: 2,
-      phase: 'p4',
       effects: (level) => [
         {
           category: 'conditional-damage-bonus',
@@ -361,7 +345,6 @@ export const BRUTE: Specialization = {
       name: 'Tunnel Vision',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'provoke-immunity' }],
     },
   ],
@@ -383,7 +366,6 @@ export const SHIELDBARER: Specialization = {
       name: 'Bulwark',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [
         {
           category: 'taken-reduction',
@@ -400,7 +382,6 @@ export const SHIELDBARER: Specialization = {
       name: 'Shield up',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [
         {
           category: 'triggered',
@@ -420,15 +401,14 @@ export const SHIELDBARER: Specialization = {
       name: 'Armor piercer',
       maxLevel: 25,
       costPerLevel: 4,
-      phase: 'p4',
       effects: (level) => [{ category: 'armor-penetration', percent: 0.01 * level }],
     },
     {
+      // Inert until Phase 8 (equipment system) -- see shieldbarer.md
       id: 'shield-specialist',
       name: 'Shield Specialist',
       maxLevel: 100,
       costPerLevel: 1,
-      phase: 'p8',
       effects: [],
     },
     {
@@ -439,7 +419,6 @@ export const SHIELDBARER: Specialization = {
       name: 'Thorns',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [
         {
           category: 'triggered',
@@ -460,7 +439,6 @@ export const SHIELDBARER: Specialization = {
       name: 'Shield Bash',
       maxLevel: 10,
       costPerLevel: 10,
-      phase: 'p4',
       effects: (level) => [
         {
           category: 'cross-stat',
@@ -476,7 +454,6 @@ export const SHIELDBARER: Specialization = {
       name: 'Lucidity',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'status-immunity', statusId: 'confusion' }],
     },
     {
@@ -486,7 +463,6 @@ export const SHIELDBARER: Specialization = {
       name: 'Last Stand',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [{ category: 'cheat-death', chancePercent: 50 }],
     },
     {
@@ -495,7 +471,6 @@ export const SHIELDBARER: Specialization = {
       name: 'Phalanx',
       maxLevel: 1,
       costPerLevel: 100,
-      phase: 'p4',
       effects: [
         {
           category: 'triggered',
@@ -515,7 +490,6 @@ export const SHIELDBARER: Specialization = {
       name: 'Defensive Stance',
       maxLevel: 10,
       costPerLevel: 10,
-      phase: 'p4',
       effects: (level) => [
         {
           category: 'triggered',
