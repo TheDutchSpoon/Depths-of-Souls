@@ -1075,7 +1075,8 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
   `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with a **documented simple player policy**
   (ASSUMPTION 21) over a fixed set of seeds, and reports:
   - **T1** floor-1 clear rate (target ≥95% of seeds);
-  - **T2** floor clears until the first soul completes (target ~10);
+  - **T2** floor runs until the first soul completes (target ~10; floor runs, not clears, since the
+    PR #84 review: ASSUMPTION 107);
   - **T3** party size after the first session = the first 10 floor runs (target 6);
   - **T4** the deepest floor reached before a hard wall (target: no wall before the floor-10 boss);
   - **T5** party level vs floor, and enemy level vs floor (target: party ≈ floor, enemy per the
@@ -1244,9 +1245,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     to `deepestFloor + 1`, or re-farms `deepestFloor` after a failed push; summon every creature that
     reaches 100% and keep the six highest-level instances in the party; spend perk points greedily in
     spec-doc order on functional perks. The policy is documented in the file header.
-22. **CI thresholds:** fail only if floor-1 clear rate < 80%, the first soul takes > 30 clears, or no
-    seed reaches floor 5 within the first session. Everything else is reported. H1 reports them;
-    the CI test asserts them from H2 (see "The split: H1, H2").
+22. **CI thresholds:** fail only if floor-1 clear rate < 80%, the first soul takes > 30 floor runs,
+    or no seed reaches floor 5 within the first session. Everything else is reported. H1 reports
+    them; the CI test asserts them from H2 (see "The split: H1, H2"). How each is read:
+    ASSUMPTION 107 (the first soul counted clears until the PR #84 review).
 23. **Reachable floors** = `1 .. min(deepestFloor + 1, contentFrontier)`, inclusive. When a floor
     fails both checks, **`beyond-content-frontier` wins** (it is the more specific reason, and the
     UI can say "no content yet" instead of "too deep"); `floor-out-of-reach` covers floors < 1 and
@@ -1521,6 +1523,26 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 106. **Confirmed (4.1-H1 plan review).** H1's tests assert determinism, report shape and the policy
      mechanics, never a balance value, so H2's tuning doesn't rewrite them. T1 is the first-try
      floor-1 clear rate, the reading ASSUMPTION 22's floor-1 threshold uses too.
+107. **Decided (PR #84 review).** ASSUMPTION 22's thresholds, read over the 40 seeds of one spec:
+     - **floor 1:** the first-try floor-1 clear rate (ASSUMPTION 106); fails below 80%;
+     - **first soul:** per seed, the floor runs until some soul first reaches 100% (T2's unit,
+       not clears: a kill banks soul in a lost floor too, so counting clears can't fail while
+       floors are unclearable). The threshold is the **median over seeds**, a seed that never
+       completes a soul counting as infinite; it fails when the median is above 30;
+     - **floor 5:** a seed reaches floor 5 when one of its first 10 floor runs is on floor 5 or
+       deeper (reaching a floor is fighting on it, not clearing it); fails when no seed does.
+     The report shows each threshold's value next to its verdict, and the pure function that
+     computes them is tested on hand-built seed results, so H2's CI test asserts a computation
+     that is already pinned.
+108. **Decided (PR #84 review).** T4's hard wall stays 5 failed pushes at one floor (ASSUMPTION
+     98). On H1's report every seed walls before floor 10, and the walls are real: the worst floor
+     below 10 costs a median seed 13 failed pushes (Brute), about 18 (Sorcerer) and about 35
+     (Shieldbarer), and clearing floor 10 first takes Brute 64–138 floor runs and Sorcerer 89–202,
+     while 15 Shieldbarer seeds never clear it in 400. A larger count would define the problem
+     away rather than measure it (at 10 failed pushes 34, 40 and 39 seeds still wall). The cause is
+     fight-count compounding: per-fight win rates of 0.85–0.92 over 15–20 fights. The report adds
+     the magnitude per seed (the most failed pushes on one floor below 10, and the floor runs to
+     the first floor-10 clear), so H2 tunes against a distance, not a yes/no.
 
 ## Sequencing summary
 
