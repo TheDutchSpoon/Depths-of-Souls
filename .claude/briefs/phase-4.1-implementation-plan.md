@@ -1536,11 +1536,11 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      that is already pinned.
 108. **Decided (PR #84 review).** T4's hard wall stays 5 failed pushes at one floor (ASSUMPTION
      98). On H1's report every seed walls before floor 10, and the walls are real: the worst floor
-     below 10 costs a median seed 13 failed pushes (Brute), about 18 (Sorcerer) and about 35
+     below 10 costs a median seed 13 failed pushes (Brute), about 18 (Sorcerer) and about 40
      (Shieldbarer), and clearing floor 10 first takes Brute 64–138 floor runs and Sorcerer 89–202,
      while 15 Shieldbarer seeds never clear it in 400. A larger count would define the problem
      away rather than measure it (at 10 failed pushes 34, 40 and 39 seeds still wall). The cause is
-     fight-count compounding: per-fight win rates of 0.85–0.92 over 15–20 fights. The report adds
+     fight-count compounding: per-fight win rates of 0.80–0.96 over 15–20 fights. The report adds
      the magnitude per seed (the most failed pushes on one floor below 10, and the floor runs to
      the first floor-10 clear), so H2 tunes against a distance, not a yes/no.
 
