@@ -4,10 +4,12 @@
 
 import { describe, expect, it } from 'vitest'
 import { createCreatureId } from '../engine/ids'
+import { ROUND_CAP } from '../engine/config'
 import { contentFrontier } from '../engine/generation'
 import type { StatusDef } from '../engine/effect-types'
 import type { CombatEvent } from '../engine/types'
 import { BIOMES } from '../data/biomes'
+import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import {
   resolvePerkEffects,
@@ -15,7 +17,7 @@ import {
   SPECIALIZATIONS,
   type Specialization,
 } from '../data/specializations'
-import { SORCERER_STARTER } from '../data/species/starters'
+import { SORCERER_STARTER, UNICORN } from '../data/species/starters'
 import { STATUS_REGISTRY } from '../data/statuses'
 import { createInstanceId } from './ids'
 import type { Instance } from './rewards'
@@ -26,25 +28,32 @@ import {
   applyPartyOrder,
   applyPerkPlan,
   attributeStatModifiers,
+  bossContext,
   bossLockStats,
   buildBossRows,
   buildReport,
   buildSimScripts,
+  buildSpecReport,
+  computeThresholds,
   firstRoundEnemyIds,
   formatReport,
   innateSpellCount,
   isFunctionalPerk,
   lockScopesByStatus,
+  medianOfSeeds,
   nextRun,
   noteBossVisit,
   orderedParty,
   pickProbeCreature,
   planPerkLevels,
+  playFloorRun,
   probeScriptId,
   runProbe,
   runSeed,
   SIM_SEEDS,
+  SESSION_TARGET_FLOOR,
   SMOKE_SEEDS,
+  spreadOf,
   splitFights,
   stopReason,
   summonPass,
@@ -52,6 +61,8 @@ import {
   INITIAL_PROGRESS,
   WALL_FAILED_PUSHES,
   type BossVisit,
+  type RunRecord,
+  type SeedResult,
 } from './balance-sim'
 
 const isSim = import.meta.env.MODE === 'sim'
@@ -84,6 +95,15 @@ function freshStore(seed = 1, spec = 'sorcerer') {
   store.getState().newGame({ seed })
   store.getState().setSpec(spec)
   store.getState().runScriptedIntro()
+  return store
+}
+
+/** A level-30 party at floor 9 (the Seer survives to take its first turn on the floor-10 boss). */
+function atBossFloor() {
+  const store = freshStore(7)
+  const collection = new Map(store.getState().collection)
+  for (const [id, inst] of collection) collection.set(id, { ...inst, level: 30 })
+  store.setState({ deepestFloor: 9, collection })
   return store
 }
 
@@ -127,6 +147,10 @@ describe.skipIf(isSim)('balance simulator', () => {
         expect(spec.thresholds).toHaveProperty('firstSoulPass')
         expect(spec.thresholds).toHaveProperty('floor5Pass')
         expect(spec.t3.partySizeCounts).toBeDefined()
+        expect(spec.t4).toHaveProperty('worstFailedPushesBelow10')
+        expect(spec.t4).toHaveProperty('runsToFirstFloor10Clear')
+        expect(spec).toHaveProperty('largestStackPlayer')
+        expect(spec).toHaveProperty('largestStackEnemy')
       }
       expect(formatReport(report)).toContain('ASSUMPTION 22')
     })
@@ -451,15 +475,6 @@ describe.skipIf(isSim)('balance simulator', () => {
   })
 
   describe('boss-run restore and the probe never editing gems (ASSUMPTION 101)', () => {
-    function atBossFloor() {
-      const store = freshStore(7)
-      // A level-30 party, so the Seer survives to take its first turn on the floor-10 boss.
-      const collection = new Map(store.getState().collection)
-      for (const [id, inst] of collection) collection.set(id, { ...inst, level: 30 })
-      store.setState({ deepestFloor: 9, collection })
-      return store
-    }
-
     it('restores the state exactly, so the policy run fights the identical floor', () => {
       const store = atBossFloor()
       const before = store.getState()
@@ -589,7 +604,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       ])
     })
 
-    it('analyzeFight reports the largest stack', () => {
+    it('analyzeFight reports the largest stack per side', () => {
       const ctx = {
         unicornId: null,
         bossId: null,
@@ -598,11 +613,13 @@ describe.skipIf(isSim)('balance simulator', () => {
         lockScopes: new Map(),
       }
       const metrics = analyzeFight(events, ctx)
-      expect(metrics.largestStack).toEqual({
+      // Every creature here is a player-side id, so the enemy side has no stack.
+      expect(metrics.largestStackPlayer).toEqual({
         targetId: B,
         attribution: 'rally',
         count: 2,
       })
+      expect(metrics.largestStackEnemy).toBeNull()
       expect(metrics.result).toBe('win')
     })
   })
@@ -745,6 +762,471 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(all.probeRunsWithPacifyLand).toBe(2)
       expect(all.policyLockedTurns).toBe(0)
       expect(all.policyBossTurns).toBe(30)
+    })
+  })
+
+  // ---- PR #84 fixes: pin the report computation (F1-F6) ----
+
+  describe('report computation on hand-built seed results (F1.1, F2, F4, F5)', () => {
+    const zeroUnicorn = {
+      fightsWithUnicorn: 0,
+      winsWithUnicorn: 0,
+      fightsWithoutUnicorn: 0,
+      winsWithoutUnicorn: 0,
+      revives: 0,
+      fightsWithRevive: 0,
+      maxRevivesInFight: 0,
+      fightsAtCap: 0,
+    }
+    function seedResult(o: Partial<SeedResult> = {}): SeedResult {
+      return {
+        specId: 'sorcerer',
+        seed: 1,
+        stop: 'cap',
+        runs: [],
+        deepestFloor: 0,
+        firstWallFloor: null,
+        failedPushes: {},
+        firstTryFloor1Clear: false,
+        clearsToFirstSoul: null,
+        runsToFirstSoul: null,
+        partySizeAfterSession: null,
+        deepestAfterSession: null,
+        reachedFloor5InSession: false,
+        fights: 0,
+        draws: 0,
+        capDraws: 0,
+        largestStackPlayer: null,
+        largestStackEnemy: null,
+        unattributed: 0,
+        applications: 0,
+        unicorn: zeroUnicorn,
+        bossVisits: [],
+        ...o,
+      }
+    }
+    const run = (index: number, floor: number, cleared: boolean): RunRecord => ({
+      index,
+      floor,
+      kind: 'push',
+      cleared,
+      partyLevels: [1],
+      fightsRun: 1,
+      fightsWon: cleared ? 1 : 0,
+    })
+    const report = (results: SeedResult[]) =>
+      buildSpecReport('sorcerer', results, 30, DEFAULT_BALANCE_CONFIG)
+    const many = (n: number, o: (i: number) => Partial<SeedResult>) =>
+      Array.from({ length: n }, (_, i) => seedResult({ seed: i + 1, ...o(i) }))
+
+    it('T1: counts first-try clears and reports the rate', () => {
+      const r = report(many(10, (i) => ({ firstTryFloor1Clear: i < 4 })))
+      expect(r.t1).toEqual({ firstTryClears: 4, seeds: 10 })
+      expect(r.thresholds.floor1ClearRatePct).toBe(40)
+    })
+
+    it('T2: lists the completing seeds only and counts the others', () => {
+      const r = report([
+        seedResult({ clearsToFirstSoul: 1, runsToFirstSoul: 3 }),
+        seedResult({}),
+        seedResult({ clearsToFirstSoul: 2, runsToFirstSoul: 7 }),
+      ])
+      expect(r.t2).toEqual({
+        clearsToFirstSoul: [1, 2],
+        runsToFirstSoul: [3, 7],
+        seedsWithoutSoul: 1,
+      })
+    })
+
+    it('T3: counts party sizes, skipping seeds that ended before the session', () => {
+      const r = report(
+        [6, 6, 4, null].map((n) => seedResult({ partySizeAfterSession: n })),
+      )
+      expect(r.t3.partySizeCounts).toEqual({ 6: 2, 4: 1 })
+    })
+
+    it('T4: stop reasons, first-wall floors, and a wall AT floor 10 is not before it', () => {
+      const r = report([
+        seedResult({ stop: 'frontier', firstWallFloor: 3, failedPushes: { 3: 5 } }),
+        seedResult({ stop: 'cap', firstWallFloor: 3, failedPushes: { 3: 6, 4: 1 } }),
+        seedResult({ stop: 'cap', firstWallFloor: 10, failedPushes: { 10: 5 } }),
+        seedResult({ stop: 'cap', firstWallFloor: null }),
+      ])
+      expect(r.t4.stopReasons).toEqual({ frontier: 1, cap: 3 })
+      expect(r.t4.firstWallFloors).toEqual({ 3: 2, 10: 1 })
+      expect(r.t4.seedsWalled).toBe(3)
+      // Walls at 3, 3 and 10: only the two at floor 3 are below floor 10.
+      expect(r.t4.seedsWalledBeforeFloor10).toBe(2)
+      expect(r.t4.failedPushesByFloor).toEqual({ 3: 11, 4: 1, 10: 5 })
+    })
+
+    it("F5: the walls' size, per seed, below floor 10 and to the first floor-10 clear", () => {
+      const r = report([
+        // Worst below 10: max(7 at floor 3, 2 at floor 9) = 7 (floor 10's own 20 is excluded).
+        seedResult({
+          failedPushes: { 3: 7, 9: 2, 10: 20 },
+          runs: [run(1, 1, true), run(42, 10, true)],
+        }),
+        // No failed pushes: 0. Fought floor 10 but never cleared it.
+        seedResult({ failedPushes: {}, runs: [run(1, 10, false)] }),
+        // Worst 13 at floor 5. First floor-10 clear on run 12.
+        seedResult({
+          failedPushes: { 5: 13 },
+          runs: [run(12, 10, true), run(13, 10, true)],
+        }),
+      ])
+      // Worst-below-10 per seed: 7, 0, 13 -> sorted 0, 7, 13.
+      expect(r.t4.worstFailedPushesBelow10).toEqual({ min: 0, median: 7, max: 13 })
+      // First floor-10 clears at runs 42 and 12 -> 12, 42: median 27; one seed never.
+      expect(r.t4.runsToFirstFloor10Clear).toEqual({
+        spread: { min: 12, median: 27, max: 42 },
+        neverClearing: 1,
+      })
+    })
+
+    it('F5: spreadOf', () => {
+      expect(spreadOf([])).toBeNull()
+      expect(spreadOf([5, 1, 3, 2])).toEqual({ min: 1, median: 2.5, max: 5 })
+    })
+
+    describe('ASSUMPTION 107 thresholds, both sides of each boundary', () => {
+      it('floor 1: 80% exactly passes, below fails, no seeds fail', () => {
+        const at = (clears: number) =>
+          computeThresholds(many(40, (i) => ({ firstTryFloor1Clear: i < clears })))
+        expect(at(32).floor1ClearRatePct).toBe(80)
+        expect(at(32).floor1Pass).toBe(true)
+        expect(at(31).floor1Pass).toBe(false)
+        expect(at(0).floor1Pass).toBe(false)
+        expect(computeThresholds([]).floor1Pass).toBe(false)
+      })
+
+      it('first soul: a median of 30 floor runs passes, 31 fails', () => {
+        const at = (runs: number) =>
+          computeThresholds(many(40, () => ({ runsToFirstSoul: runs })))
+        expect(at(30).medianRunsToFirstSoul).toBe(30)
+        expect(at(30).firstSoulPass).toBe(true)
+        expect(at(31).firstSoulPass).toBe(false)
+      })
+
+      it('first soul: never-completing seeds count as infinite (F2)', () => {
+        // 40 seeds: 24 complete at 1..24 floor runs, 16 never do. Sorted, the 1-based positions
+        // 20 and 21 (the two middles of 40) hold 20 and 21, so the median is 20.5. A median over
+        // the completing seeds alone would be 12.5.
+        const sixteenNever = computeThresholds(
+          many(40, (i) => ({ runsToFirstSoul: i < 24 ? i + 1 : null })),
+        )
+        expect(sixteenNever.medianRunsToFirstSoul).toBe(20.5)
+        expect(sixteenNever.seedsWithoutSoul).toBe(16)
+        expect(sixteenNever.firstSoulPass).toBe(true)
+        // 20 of 40 never complete: position 21 is infinite, so the median is infinite and fails.
+        const twentyNever = computeThresholds(
+          many(40, (i) => ({ runsToFirstSoul: i < 20 ? i + 1 : null })),
+        )
+        expect(twentyNever.medianRunsToFirstSoul).toBe(Infinity)
+        expect(twentyNever.firstSoulPass).toBe(false)
+      })
+
+      it('medianOfSeeds treats null as +Infinity, odd and even counts', () => {
+        expect(medianOfSeeds([3, null, 1])).toBe(3)
+        expect(medianOfSeeds([1, null, null])).toBe(Infinity)
+        expect(medianOfSeeds([1, 2, 3, 4])).toBe(2.5)
+        expect(medianOfSeeds([])).toBe(Infinity)
+      })
+
+      it('floor 5: one seed passes, none fails', () => {
+        const one = computeThresholds(
+          many(5, (i) => ({ reachedFloor5InSession: i === 3 })),
+        )
+        expect(one.seedsReachingFloor5InSession).toBe(1)
+        expect(one.floor5Pass).toBe(true)
+        const none = computeThresholds(many(5, () => ({ reachedFloor5InSession: false })))
+        expect(none.floor5Pass).toBe(false)
+      })
+    })
+
+    it('the spec report carries the thresholds computed over its seeds', () => {
+      const results = many(4, (i) => ({
+        firstTryFloor1Clear: i < 3,
+        runsToFirstSoul: 5,
+        reachedFloor5InSession: i === 0,
+      }))
+      expect(report(results).thresholds).toEqual(computeThresholds(results))
+    })
+
+    it('the text report prints "never" for an infinite median, and the walls and per-side stacks', () => {
+      const text = formatReport({
+        seeds: [1],
+        runCap: 400,
+        frontier: 30,
+        specs: [report([seedResult({})])],
+      })
+      expect(text).toContain('never')
+      expect(text).toContain("T4 walls' size")
+      expect(text).toContain('on a player creature')
+      expect(text).toContain('on an enemy creature')
+    })
+  })
+
+  describe('per-seed derivations hold on real runs (F1.2)', () => {
+    for (const specId of SPECIALIZATIONS.map((s) => s.id)) {
+      for (const seed of SMOKE_SEEDS) {
+        it(`${specId} seed ${seed}: the session readings match the run records`, () => {
+          const r = runSeed(specId, seed, {
+            seeds: [seed],
+            runCap: FIRST_SESSION_RUNS + 1,
+          })
+          expect(r.runs).toHaveLength(FIRST_SESSION_RUNS + 1)
+          const session = r.runs.slice(0, FIRST_SESSION_RUNS)
+          expect(r.runs[0]!.floor).toBe(1)
+          expect(r.firstTryFloor1Clear).toBe(r.runs[0]!.cleared)
+          if (r.runsToFirstSoul !== null) {
+            const firstRuns = r.runs.slice(0, r.runsToFirstSoul)
+            expect(r.clearsToFirstSoul).toBe(firstRuns.filter((x) => x.cleared).length)
+          } else {
+            expect(r.clearsToFirstSoul).toBeNull()
+          }
+          expect(r.deepestAfterSession).toBe(
+            Math.max(0, ...session.filter((x) => x.cleared).map((x) => x.floor)),
+          )
+          // Run 11's party is the party after run 10's summon and re-order.
+          expect(r.partySizeAfterSession).toBe(
+            r.runs[FIRST_SESSION_RUNS]!.partyLevels.length,
+          )
+          expect(r.reachedFloor5InSession).toBe(
+            session.some((x) => x.floor >= SESSION_TARGET_FLOOR),
+          )
+        })
+      }
+    }
+  })
+
+  describe('analyzeFight on hand-built events (F1.3, F6)', () => {
+    const noCtx = {
+      unicornId: null,
+      bossId: null,
+      bossTemplateId: null,
+      bossTraitIds: [],
+      lockScopes: new Map(),
+    }
+    const round = (n: number): CombatEvent => ({ type: 'RoundStarted', round: n })
+    const ended = (result: 'win' | 'loss' | 'draw'): CombatEvent => ({
+      type: 'FightEnded',
+      result,
+    })
+
+    it('capDraw: a draw whose last round is ROUND_CAP, not a draw before it or a loss at it', () => {
+      const atCap = analyzeFight([round(ROUND_CAP), ended('draw')], noCtx)
+      expect(atCap.capDraw).toBe(true)
+      expect(atCap.maxRound).toBe(ROUND_CAP)
+      expect(analyzeFight([round(ROUND_CAP - 1), ended('draw')], noCtx).capDraw).toBe(
+        false,
+      )
+      expect(analyzeFight([round(ROUND_CAP), ended('loss')], noCtx).capDraw).toBe(false)
+    })
+
+    it('Unicorn revives count only its own, and maxRevivesOnOne is per target', () => {
+      const U = 'unicorn-player-1'
+      const revive = (source: string, target: string): CombatEvent => ({
+        type: 'Revived',
+        sourceId: cid(source),
+        targetId: cid(target),
+        currentHp: 5,
+      })
+      const events = [
+        revive(U, 'x-player-0'),
+        revive(U, 'x-player-0'),
+        revive(U, 'y-player-2'),
+        revive('other-player-3', 'x-player-0'),
+      ]
+      const m = analyzeFight(events, { ...noCtx, unicornId: U })
+      // The Unicorn revived twice + once; the other source's revive doesn't count.
+      expect(m.unicornRevives).toBe(3)
+      // x was revived 3 times in all (2 + 1), y once.
+      expect(m.maxRevivesOnOne).toBe(3)
+      expect(analyzeFight(events, noCtx).unicornRevives).toBeNull()
+    })
+
+    it("the boss's own trait: only its TriggerFired effect counts, peakAttack is the largest attack", () => {
+      const BOSS = cid('boss-enemy-0')
+      const ALLY = cid('ally-enemy-1')
+      const trig = (effectId: string): CombatEvent => ({
+        type: 'TriggerFired',
+        sourceId: BOSS,
+        hook: 'on-turn-end',
+        effectId,
+      })
+      const mod = (
+        target: typeof BOSS,
+        stat: 'attack' | 'defence',
+        after: number,
+      ): CombatEvent => ({
+        type: 'StatModifierApplied',
+        sourceId: BOSS,
+        targetId: target,
+        stat,
+        factor: 1.1,
+        effectiveBefore: 1,
+        effectiveAfter: after,
+      })
+      const events: CombatEvent[] = [
+        { type: 'TurnStarted', creatureId: BOSS },
+        trig('boss-trait'),
+        mod(BOSS, 'attack', 120), // boss-trait on the boss: counts (1)
+        mod(ALLY, 'attack', 500), // boss-trait on an ally: not on the boss, not counted
+        mod(BOSS, 'attack', 150), // boss-trait on the boss: counts (2)
+        trig('other-trait'),
+        mod(BOSS, 'attack', 90), // another trait: not counted
+        mod(BOSS, 'defence', 999), // not an attack modifier: not in peakAttack
+        { type: 'TurnEnded', creatureId: BOSS },
+      ]
+      const m = analyzeFight(events, {
+        ...noCtx,
+        bossId: 'boss-enemy-0',
+        bossTemplateId: 'boss',
+        bossTraitIds: ['boss-trait'],
+      })
+      expect(m.boss?.attributedToBossTrait).toBe(2)
+      // Largest `attack` effectiveAfter ON THE BOSS: 150 (the ally's 500 is not the boss's).
+      expect(m.boss?.peakAttack).toBe(150)
+    })
+
+    it('F6: the largest stack on a player and on an enemy creature, separately', () => {
+      const P = cid('p-player-0')
+      const E = cid('x-enemy-0')
+      const trig = (source: typeof P, effectId: string): CombatEvent => ({
+        type: 'TriggerFired',
+        sourceId: source,
+        hook: 'on-provoke',
+        effectId,
+      })
+      const mod = (source: typeof P, target: typeof P): CombatEvent => ({
+        type: 'StatModifierApplied',
+        sourceId: source,
+        targetId: target,
+        stat: 'defence',
+        factor: 1.35,
+        effectiveBefore: 1,
+        effectiveAfter: 2,
+      })
+      const events: CombatEvent[] = [
+        { type: 'TurnStarted', creatureId: P },
+        trig(P, 'rally'),
+        mod(P, P), // rally|P = 1
+        trig(P, 'rally'),
+        mod(P, P), // rally|P = 2
+        { type: 'TurnEnded', creatureId: P },
+        { type: 'TurnStarted', creatureId: E },
+        trig(E, 'harmonize'),
+        mod(E, E), // harmonize|E = 1
+        trig(E, 'harmonize'),
+        mod(E, E), // 2
+        trig(E, 'harmonize'),
+        mod(E, E), // 3
+        { type: 'TurnEnded', creatureId: E },
+      ]
+      const m = analyzeFight(events, noCtx)
+      expect(m.largestStackPlayer).toEqual({
+        targetId: P,
+        attribution: 'rally',
+        count: 2,
+      })
+      expect(m.largestStackEnemy).toEqual({
+        targetId: E,
+        attribution: 'harmonize',
+        count: 3,
+      })
+      // A fight with enemy stacks only has no player maximum.
+      expect(analyzeFight(events.slice(6), noCtx).largestStackPlayer).toBeNull()
+    })
+  })
+
+  describe('the live wiring: playFloorRun on the level-30, floor-9 store (F1.4)', () => {
+    it('the ids the analysis keys on are the ids in the fight, and the counts match the events', () => {
+      const store = atBossFloor()
+      const played = playFloorRun(
+        store,
+        { ...INITIAL_PROGRESS, deepestFloor: 9 },
+        new Set<number>(),
+      )
+      const bossId = played.context.bossId
+      const unicornId = played.context.unicornId
+      expect(bossId).not.toBeNull()
+      expect(unicornId).toBe(`${UNICORN.id}-player-1`)
+      const turnStarters = new Set(
+        played.events.flatMap((e) => (e.type === 'TurnStarted' ? [e.creatureId] : [])),
+      )
+      expect(turnStarters.has(cid(bossId!))).toBe(true)
+      expect(turnStarters.has(cid(unicornId!))).toBe(true)
+
+      const visit = played.bossVisit!
+      expect(visit.bossTemplateId).toBe(BIOMES[0]!.boss!.creature.id)
+      expect(visit.firstVisit).toBe(true)
+      expect(visit.policy.metrics!.bossTurns).toBeGreaterThan(0)
+      expect(visit.probe).not.toBeNull()
+
+      const wins = played.events.filter(
+        (e) => e.type === 'FightEnded' && e.result === 'win',
+      ).length
+      // A level-30 party beats the floor-10 boss under any sane tuning; the precondition keeps
+      // the equality below from passing on a lost fight (0 = 0).
+      expect(wins).toBeGreaterThan(0)
+      expect(played.run.fightsWon).toBe(wins)
+      expect(played.run.fightsRun).toBe(played.fights.length)
+      expect(played.run.floor).toBe(10)
+    })
+
+    it('the analysis names the boss of the biome the store fights, pins included (L2)', () => {
+      // Pin floor 10 to the second biome: the store then fights ITS boss, so the analysis must
+      // name that boss, not the one an empty-pins lookup would give.
+      const store = atBossFloor()
+      store.setState({ atlasPins: new Map([[10, BIOMES[1]!.id]]) })
+      const played = playFloorRun(
+        store,
+        { ...INITIAL_PROGRESS, deepestFloor: 9 },
+        new Set<number>(),
+      )
+      expect(played.bossVisit!.bossTemplateId).toBe(BIOMES[1]!.boss!.creature.id)
+      expect(played.bossVisit!.bossTemplateId).not.toBe(BIOMES[0]!.boss!.creature.id)
+      const turnStarters = played.events.flatMap((e) =>
+        e.type === 'TurnStarted' ? [e.creatureId] : [],
+      )
+      expect(turnStarters).toContain(played.context.bossId)
+    })
+
+    it('bossContext names the biome boss and its traits, reading the store pins', () => {
+      const ctx = bossContext(10, BIOMES, new Map(), 7, null)!
+      expect(ctx.bossId).toBe(`${BIOMES[0]!.boss!.creature.id}-enemy-0`)
+      expect(ctx.bossTraitIds).toEqual(BIOMES[0]!.boss!.creature.innateTraitIds)
+      expect(bossContext(9, BIOMES, new Map(), 7, null)).toBeNull()
+    })
+  })
+
+  describe('the probe cannot leak into the policy run, end to end (F3)', () => {
+    function plain(state: object): object {
+      return Object.fromEntries(
+        Object.entries(state).filter(([, value]) => typeof value !== 'function'),
+      )
+    }
+
+    it('probe then policy equals the policy alone: the outcome and every data field', () => {
+      const withProbe = atBossFloor()
+      const probe = runProbe(withProbe, 10)
+      expect(probe).not.toBeNull()
+      const a = withProbe.getState().descend(10)
+
+      const alone = atBossFloor()
+      const b = alone.getState().descend(10)
+
+      expect(a).toEqual(b)
+      expect(plain(withProbe.getState())).toEqual(plain(alone.getState()))
+    })
+
+    it('the probe twice from the same state gives identical events', () => {
+      const store = atBossFloor()
+      const first = runProbe(store, 10)!
+      const second = runProbe(store, 10)!
+      expect(second.events).toEqual(first.events)
+      expect(second.cleared).toBe(first.cleared)
     })
   })
 })

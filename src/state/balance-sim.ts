@@ -33,6 +33,13 @@
 //    such creature means the probe is `n/a`. The probe scripts are registered up front in the
 //    store's script registry; a script nothing references is inert, and a test proves it.
 //
+// ---- The report's thresholds (ASSUMPTIONS 22, 107, 108) ----
+// Read over the seeds of one spec: floor 1 = the first-try floor-1 clear rate (fails below 80%);
+// first soul = the median over EVERY seed of the floor runs until a soul first reaches 100%, a seed
+// that never completes one counting as infinite (fails above 30); floor 5 = some seed fought on
+// floor 5 or deeper in its first 10 floor runs. The walls' size (ASSUMPTION 108) is reported as the
+// most failed pushes on one floor below 10 and the floor runs to the first floor-10 clear.
+//
 // Nothing here is pinned to a balance value: the simulator runs the store's default config, and
 // the H2 tuning pass moves those numbers.
 
@@ -46,6 +53,7 @@ import {
   type BiomeData,
   type SpeciesCreature,
 } from '../engine/generation'
+import type { BiomeId } from '../engine/ids'
 import { bossLevel, enemyLevelRange, fightCount } from '../engine/curves'
 import type { Rule, Script } from '../engine/scripting-types'
 import type { CombatEvent } from '../engine/types'
@@ -84,6 +92,10 @@ export const RUN_CAP = 400
 export const WALL_FAILED_PUSHES = 5
 /** "The first session" = the first this many floor runs (T3, ASSUMPTION 22). */
 export const FIRST_SESSION_RUNS = 10
+/** ASSUMPTION 107: the floor the third threshold asks a seed to reach in its first session. */
+export const SESSION_TARGET_FLOOR = 5
+/** The first boss floor: T4's "no wall before the floor-10 boss" and ASSUMPTION 108's measures. */
+export const FIRST_BOSS_FLOOR = 10
 export const PACIFY_SPELL_ID = 'pacify'
 export const PACIFIED_STATUS_ID = 'pacified'
 /** Highest cast slot a probe script is registered for (3 gem slots + up to 5 innate spells). */
@@ -439,6 +451,10 @@ export function bossLockStats(
   return { bossTurns, lockedTurns, lockedByScope: byScope, pacifyLands }
 }
 
+/** A combat creature id is `<template>-<side>-<slot>` (`materializeCreature`). */
+const PLAYER_ID = /-player-\d+$/
+const ENEMY_ID = /-enemy-\d+$/
+
 /** The enemy-side creature ids that start round 1 (every living creature gets a TurnStarted). */
 export function firstRoundEnemyIds(events: readonly CombatEvent[]): readonly string[] {
   const ids: string[] = []
@@ -448,7 +464,7 @@ export function firstRoundEnemyIds(events: readonly CombatEvent[]): readonly str
     else if (
       round === 1 &&
       event.type === 'TurnStarted' &&
-      /-enemy-\d+$/.test(event.creatureId)
+      ENEMY_ID.test(event.creatureId)
     )
       ids.push(event.creatureId)
   }
@@ -461,7 +477,9 @@ export interface FightMetrics {
   /** A draw that ran the full ROUND_CAP rounds. */
   readonly capDraw: boolean
   readonly deaths: number
-  readonly largestStack: StackCount | null
+  /** The largest stack on a creature of each side (the side is read from the target's combat id). */
+  readonly largestStackPlayer: StackCount | null
+  readonly largestStackEnemy: StackCount | null
   readonly unattributed: number
   readonly applications: number
   /** Revives by the Unicorn (source = its combat id); null when it isn't in the party. */
@@ -508,9 +526,18 @@ export function analyzeFight(
     }
   }
   const attribution = attributeStatModifiers(events)
-  let largestStack: StackCount | null = null
+  let largestStackPlayer: StackCount | null = null
+  let largestStackEnemy: StackCount | null = null
   for (const stack of attribution.stacks) {
-    if (largestStack === null || stack.count > largestStack.count) largestStack = stack
+    if (PLAYER_ID.test(stack.targetId)) {
+      if (largestStackPlayer === null || stack.count > largestStackPlayer.count) {
+        largestStackPlayer = stack
+      }
+    } else if (ENEMY_ID.test(stack.targetId)) {
+      if (largestStackEnemy === null || stack.count > largestStackEnemy.count) {
+        largestStackEnemy = stack
+      }
+    }
   }
   let boss: BossFightMetrics | null = null
   if (ctx.bossId !== null && ctx.bossTemplateId !== null) {
@@ -542,7 +569,8 @@ export function analyzeFight(
     maxRound,
     capDraw: result === 'draw' && maxRound >= ROUND_CAP,
     deaths,
-    largestStack,
+    largestStackPlayer,
+    largestStackEnemy,
     unattributed: attribution.unattributed,
     applications: attribution.applications,
     unicornRevives,
@@ -610,10 +638,14 @@ export interface SeedResult {
   readonly runsToFirstSoul: number | null
   readonly partySizeAfterSession: number | null
   readonly deepestAfterSession: number | null
+  /** ASSUMPTION 107: one of the first FIRST_SESSION_RUNS floor runs was on floor
+   * SESSION_TARGET_FLOOR or deeper (fighting on it, not clearing it). */
+  readonly reachedFloor5InSession: boolean
   readonly fights: number
   readonly draws: number
   readonly capDraws: number
-  readonly largestStack: (StackCount & { readonly floor: number }) | null
+  readonly largestStackPlayer: (StackCount & { readonly floor: number }) | null
+  readonly largestStackEnemy: (StackCount & { readonly floor: number }) | null
   readonly unattributed: number
   readonly applications: number
   readonly unicorn: UnicornTotals
@@ -727,14 +759,18 @@ export function runProbe(
   return { cleared: result.outcome.cleared, events: result.outcome.events }
 }
 
-function bossContext(
+/** The analysis context for `floor`: the boss and its traits on a boss floor (the biome the store
+ * fights, so it reads the store's own `atlasPins`: L2), else boss-free. The Unicorn's combat id
+ * rides along. */
+export function bossContext(
   floor: number,
   biomes: readonly BiomeData[],
+  atlasPins: ReadonlyMap<number, BiomeId>,
   runSeed: number,
   unicornId: string | null,
 ): FightContext | null {
   if (!isBossFloor(floor)) return null
-  const biomeId = biomeForFloor(floor, biomes, new Map(), runSeed)
+  const biomeId = biomeForFloor(floor, biomes, atlasPins, runSeed)
   const biome = biomes.find((b) => b.id === biomeId)
   if (!biome?.boss) return null
   return {
@@ -753,6 +789,76 @@ function noBossContext(unicornId: string | null): FightContext {
     bossTemplateId: null,
     bossTraitIds: [],
     lockScopes: new Map(),
+  }
+}
+
+export interface FloorRunResult {
+  readonly run: RunRecord
+  /** One entry per fight actually resolved. */
+  readonly fights: readonly FightMetrics[]
+  /** The ids the analysis keyed on (boss, Unicorn), so a test can find them in `events`. */
+  readonly context: FightContext
+  readonly events: readonly CombatEvent[]
+  readonly bossVisit: BossVisit | null
+}
+
+/** One floor run of the policy against the live store: pick the floor, probe it first when it is a
+ * boss floor (rolled back), play the policy run through `descend`, analyse its events. Does not
+ * advance `progress` and does not run the between-run preparation (`runSeed` does both). */
+export function playFloorRun(
+  store: Store,
+  progress: Progress,
+  seenBossFloors: Set<number>,
+  options: { readonly probeBosses?: boolean } = {},
+): FloorRunResult {
+  const { floor, kind } = nextRun(progress)
+  const before = store.getState()
+  const levels = partyLevels(before)
+  const unicornId = unicornCombatId(before)
+  const bossCtx = bossContext(floor, BIOMES, before.atlasPins, before.runSeed, unicornId)
+
+  // The probe runs first and is rolled back, so the policy run fights the identical floor.
+  let probeRun: ReturnType<typeof runProbe> = null
+  if (bossCtx !== null && options.probeBosses !== false) probeRun = runProbe(store, floor)
+
+  const result = store.getState().descend(floor)
+  if (!result.ok)
+    throw new Error(`balance-sim: descend(${floor}) refused: ${result.reason}`)
+  const outcome = result.outcome
+  const context = bossCtx ?? noBossContext(unicornId)
+  const fights = splitFights(outcome.events).map((e) => analyzeFight(e, context))
+
+  let bossVisit: BossVisit | null = null
+  if (bossCtx !== null && bossCtx.bossTemplateId !== null) {
+    const probeMetrics =
+      probeRun === null
+        ? null
+        : analyzeFight(splitFights(probeRun.events)[0] ?? [], bossCtx).boss
+    bossVisit = {
+      floor,
+      firstVisit: noteBossVisit(seenBossFloors, floor),
+      bossTemplateId: bossCtx.bossTemplateId,
+      policy: { cleared: outcome.cleared, metrics: fights[0]?.boss ?? null },
+      probe:
+        probeRun === null ? null : { cleared: probeRun.cleared, metrics: probeMetrics },
+      policyDeaths: fights[0]?.deaths ?? 0,
+    }
+  }
+
+  return {
+    run: {
+      index: progress.runs + 1,
+      floor,
+      kind,
+      cleared: outcome.cleared,
+      partyLevels: levels,
+      fightsRun: fights.length,
+      fightsWon: fights.filter((f) => f.result === 'win').length,
+    },
+    fights,
+    context,
+    events: outcome.events,
+    bossVisit,
   }
 }
 
@@ -790,10 +896,12 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
   let runsToFirstSoul: number | null = null
   let partySizeAfterSession: number | null = null
   let deepestAfterSession: number | null = null
+  let reachedFloor5InSession = false
   let fights = 0
   let draws = 0
   let capDraws = 0
-  let largestStack: SeedResult['largestStack'] = null
+  let largestStackPlayer: SeedResult['largestStackPlayer'] = null
+  let largestStackEnemy: SeedResult['largestStackEnemy'] = null
   let unattributed = 0
   let applications = 0
   const unicorn = {
@@ -823,10 +931,12 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
         runsToFirstSoul,
         partySizeAfterSession,
         deepestAfterSession,
+        reachedFloor5InSession,
         fights,
         draws,
         capDraws,
-        largestStack,
+        largestStackPlayer,
+        largestStackEnemy,
         unattributed,
         applications,
         unicorn,
@@ -834,39 +944,27 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
       }
     }
 
-    const { floor, kind } = nextRun(progress)
-    const before = store.getState()
-    const levels = partyLevels(before)
-    const unicornId = unicornCombatId(before)
-    const bossCtx = bossContext(floor, BIOMES, before.runSeed, unicornId)
-
-    // The probe runs first and is rolled back, so the policy run fights the identical floor.
-    let probeRun: ReturnType<typeof runProbe> = null
-    if (bossCtx !== null && options.probeBosses !== false)
-      probeRun = runProbe(store, floor)
-
-    const result = store.getState().descend(floor)
-    if (!result.ok)
-      throw new Error(`balance-sim: descend(${floor}) refused: ${result.reason}`)
-    const outcome = result.outcome
-    const fightEvents = splitFights(outcome.events)
-    const metrics = fightEvents.map((e) =>
-      analyzeFight(e, bossCtx ?? noBossContext(unicornId)),
-    )
-
-    let fightsWon = 0
-    for (const m of metrics) {
+    const played = playFloorRun(store, progress, seenBossFloors, options)
+    const { run } = played
+    for (const m of played.fights) {
       fights += 1
-      if (m.result === 'win') fightsWon += 1
       if (m.result === 'draw') draws += 1
       if (m.capDraw) capDraws += 1
       unattributed += m.unattributed
       applications += m.applications
       if (
-        m.largestStack &&
-        (largestStack === null || m.largestStack.count > largestStack.count)
+        m.largestStackPlayer &&
+        (largestStackPlayer === null ||
+          m.largestStackPlayer.count > largestStackPlayer.count)
       ) {
-        largestStack = { ...m.largestStack, floor }
+        largestStackPlayer = { ...m.largestStackPlayer, floor: run.floor }
+      }
+      if (
+        m.largestStackEnemy &&
+        (largestStackEnemy === null ||
+          m.largestStackEnemy.count > largestStackEnemy.count)
+      ) {
+        largestStackEnemy = { ...m.largestStackEnemy, floor: run.floor }
       }
       if (m.unicornRevives === null) {
         unicorn.fightsWithoutUnicorn += 1
@@ -880,35 +978,11 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
       }
       if (m.maxRevivesOnOne >= MAX_REVIVES_PER_CREATURE) unicorn.fightsAtCap += 1
     }
-
-    if (bossCtx !== null && bossCtx.bossTemplateId !== null) {
-      const probeMetrics =
-        probeRun === null
-          ? null
-          : analyzeFight(splitFights(probeRun.events)[0] ?? [], bossCtx).boss
-      bossVisits.push({
-        floor,
-        firstVisit: noteBossVisit(seenBossFloors, floor),
-        bossTemplateId: bossCtx.bossTemplateId,
-        policy: { cleared: outcome.cleared, metrics: metrics[0]?.boss ?? null },
-        probe:
-          probeRun === null ? null : { cleared: probeRun.cleared, metrics: probeMetrics },
-        policyDeaths: metrics[0]?.deaths ?? 0,
-      })
-    }
-
-    runs.push({
-      index: progress.runs + 1,
-      floor,
-      kind,
-      cleared: outcome.cleared,
-      partyLevels: levels,
-      fightsRun: metrics.length,
-      fightsWon,
-    })
-    if (progress.runs === 0) firstTryFloor1Clear = floor === 1 && outcome.cleared
-    if (outcome.cleared) clears += 1
-    progress = advanceProgress(progress, floor, kind, outcome.cleared)
+    if (played.bossVisit) bossVisits.push(played.bossVisit)
+    runs.push(run)
+    if (progress.runs === 0) firstTryFloor1Clear = run.floor === 1 && run.cleared
+    if (run.cleared) clears += 1
+    progress = advanceProgress(progress, run.floor, run.kind, run.cleared)
 
     prepare()
 
@@ -924,6 +998,7 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
         .getState()
         .activeParty.filter((id) => id !== null).length
       deepestAfterSession = progress.deepestFloor
+      reachedFloor5InSession = runs.some((r) => r.floor >= SESSION_TARGET_FLOOR)
     }
   }
 }
@@ -978,17 +1053,31 @@ export interface AttritionRow {
   readonly maxPeakAttack: number
 }
 
+/** ASSUMPTION 22's loose CI thresholds, as read by ASSUMPTION 107. */
+export const FLOOR1_MIN_CLEAR_PCT = 80
+export const FIRST_SOUL_MAX_RUNS = 30
+
+/** ASSUMPTION 22 / 107, each value next to its verdict (H2's CI test asserts the verdicts). */
 export interface Thresholds {
+  /** The first-try floor-1 clear rate over seeds (ASSUMPTION 106); passes at 80% exactly. */
   readonly floor1ClearRatePct: number
   readonly floor1Pass: boolean
-  /** The median of clears-to-first-soul over seeds (a seed that never completes counts as
-   * infinity); the threshold is median <= 30 (ASSUMPTION 107). */
-  readonly medianClearsToFirstSoul: number | null
-  readonly maxClearsToFirstSoul: number | null
+  /** The median over EVERY seed of the floor runs until a soul first reaches 100%, a seed that
+   * never completes one counting as +Infinity (so it is Infinity once half or more never do);
+   * passes at 30 or fewer. */
+  readonly medianRunsToFirstSoul: number
   readonly seedsWithoutSoul: number
   readonly firstSoulPass: boolean
+  /** Seeds with one of their first FIRST_SESSION_RUNS floor runs on floor 5 or deeper; passes
+   * when at least one seed did. */
   readonly seedsReachingFloor5InSession: number
   readonly floor5Pass: boolean
+}
+
+export interface Spread {
+  readonly min: number
+  readonly median: number
+  readonly max: number
 }
 
 export interface SpecReport {
@@ -1006,14 +1095,27 @@ export interface SpecReport {
     readonly deepestFloors: readonly number[]
     readonly firstWallFloors: Readonly<Record<number, number>>
     readonly seedsWalled: number
+    /** Seeds whose first wall is on a floor below FIRST_BOSS_FLOOR (a wall AT it is not before it). */
     readonly seedsWalledBeforeFloor10: number
     readonly failedPushesByFloor: Readonly<Record<number, number>>
+    /** ASSUMPTION 108: per seed, the most failed pushes on any one floor below FIRST_BOSS_FLOOR
+     * (0 when it had none); the spread over seeds. */
+    readonly worstFailedPushesBelow10: Spread | null
+    /** ASSUMPTION 108: per seed, the floor runs until its first clear of FIRST_BOSS_FLOOR; the
+     * spread over the seeds that clear it, and how many never do. */
+    readonly runsToFirstFloor10Clear: {
+      readonly spread: Spread | null
+      readonly neverClearing: number
+    }
   }
   readonly floors: readonly FloorRow[]
   readonly fights: number
   readonly draws: number
   readonly capDraws: number
-  readonly largestStack:
+  /** The largest stack of one trait's stat-modifier on a player and on an enemy creature. */
+  readonly largestStackPlayer:
+    (StackCount & { readonly floor: number; readonly seed: number }) | null
+  readonly largestStackEnemy:
     (StackCount & { readonly floor: number; readonly seed: number }) | null
   readonly unattributed: number
   readonly applications: number
@@ -1040,11 +1142,50 @@ function sumLocks(
   }
 }
 
+/** Ascending, safe for +Infinity (`Infinity - Infinity` is NaN, so no subtraction). */
+function ascending(a: number, b: number): number {
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
 function median(values: readonly number[]): number | null {
   if (values.length === 0) return null
-  const sorted = [...values].sort((a, b) => a - b)
+  const sorted = [...values].sort(ascending)
   const mid = Math.floor(sorted.length / 2)
   return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
+}
+
+/** The median over EVERY seed, a missing value (`null`) counting as +Infinity (ASSUMPTION 107).
+ * With an even count the middle two are averaged, so one infinite middle makes it infinite. */
+export function medianOfSeeds(values: readonly (number | null)[]): number {
+  return median(values.map((v) => v ?? Infinity)) ?? Infinity
+}
+
+export function spreadOf(values: readonly number[]): Spread | null {
+  if (values.length === 0) return null
+  const sorted = [...values].sort(ascending)
+  return { min: sorted[0]!, median: median(sorted)!, max: sorted[sorted.length - 1]! }
+}
+
+/** ASSUMPTION 22 / 107, computed over the seeds of one spec. Pure. */
+export function computeThresholds(
+  results: readonly Pick<
+    SeedResult,
+    'firstTryFloor1Clear' | 'runsToFirstSoul' | 'reachedFloor5InSession'
+  >[],
+): Thresholds {
+  const seeds = results.length
+  const firstTryClears = results.filter((r) => r.firstTryFloor1Clear).length
+  const medianRuns = medianOfSeeds(results.map((r) => r.runsToFirstSoul))
+  const reachFive = results.filter((r) => r.reachedFloor5InSession).length
+  return {
+    floor1ClearRatePct: seeds === 0 ? 0 : (100 * firstTryClears) / seeds,
+    floor1Pass: seeds > 0 && firstTryClears * 100 >= FLOOR1_MIN_CLEAR_PCT * seeds,
+    medianRunsToFirstSoul: medianRuns,
+    seedsWithoutSoul: results.filter((r) => r.runsToFirstSoul === null).length,
+    firstSoulPass: medianRuns <= FIRST_SOUL_MAX_RUNS,
+    seedsReachingFloor5InSession: reachFive,
+    floor5Pass: reachFive > 0,
+  }
 }
 
 export function buildBossRows(
@@ -1128,7 +1269,8 @@ function buildFloorRows(
   return rows
 }
 
-function buildSpecReport(
+/** The per-spec aggregation over the seed results (pure; the tests feed it hand-built results). */
+export function buildSpecReport(
   specId: string,
   results: readonly SeedResult[],
   frontier: number,
@@ -1159,15 +1301,35 @@ function buildSpecReport(
         (failedPushesByFloor[Number(floor)] ?? 0) + count
     }
   }
-  let largestStack: SpecReport['largestStack'] = null
+  let largestStackPlayer: SpecReport['largestStackPlayer'] = null
+  let largestStackEnemy: SpecReport['largestStackEnemy'] = null
   for (const r of results) {
     if (
-      r.largestStack &&
-      (largestStack === null || r.largestStack.count > largestStack.count)
+      r.largestStackPlayer &&
+      (largestStackPlayer === null ||
+        r.largestStackPlayer.count > largestStackPlayer.count)
     ) {
-      largestStack = { ...r.largestStack, seed: r.seed }
+      largestStackPlayer = { ...r.largestStackPlayer, seed: r.seed }
+    }
+    if (
+      r.largestStackEnemy &&
+      (largestStackEnemy === null || r.largestStackEnemy.count > largestStackEnemy.count)
+    ) {
+      largestStackEnemy = { ...r.largestStackEnemy, seed: r.seed }
     }
   }
+  const worstBelow10 = results.map((r) =>
+    Math.max(
+      0,
+      ...Object.entries(r.failedPushes)
+        .filter(([floor]) => Number(floor) < FIRST_BOSS_FLOOR)
+        .map(([, count]) => count),
+    ),
+  )
+  const runsToFloor10 = results.flatMap((r) => {
+    const hit = r.runs.find((run) => run.floor === FIRST_BOSS_FLOOR && run.cleared)
+    return hit ? [hit.index] : []
+  })
   const sumUnicorn = (key: keyof UnicornTotals): number =>
     results.reduce((s, r) => s + r.unicorn[key], 0)
   const bosses = buildBossRows(results)
@@ -1178,10 +1340,6 @@ function buildSpecReport(
   const attritionMetrics = attritionVisits.flatMap((v) =>
     v.policy.metrics ? [v.policy.metrics] : [],
   )
-
-  const medianSoul = seedsWithoutSoul * 2 > results.length ? null : median(soulClears)
-  const floor1Rate = results.length === 0 ? 0 : (100 * firstTryClears) / results.length
-  const reachFive = results.filter((r) => (r.deepestAfterSession ?? 0) >= 5).length
 
   return {
     specId,
@@ -1198,15 +1356,21 @@ function buildSpecReport(
       firstWallFloors,
       seedsWalled: results.filter((r) => r.firstWallFloor !== null).length,
       seedsWalledBeforeFloor10: results.filter(
-        (r) => r.firstWallFloor !== null && r.firstWallFloor < 10,
+        (r) => r.firstWallFloor !== null && r.firstWallFloor < FIRST_BOSS_FLOOR,
       ).length,
       failedPushesByFloor,
+      worstFailedPushesBelow10: spreadOf(worstBelow10),
+      runsToFirstFloor10Clear: {
+        spread: spreadOf(runsToFloor10),
+        neverClearing: results.length - runsToFloor10.length,
+      },
     },
     floors: buildFloorRows(results, frontier, config),
     fights: results.reduce((s, r) => s + r.fights, 0),
     draws: results.reduce((s, r) => s + r.draws, 0),
     capDraws: results.reduce((s, r) => s + r.capDraws, 0),
-    largestStack,
+    largestStackPlayer,
+    largestStackEnemy,
     unattributed: results.reduce((s, r) => s + r.unattributed, 0),
     applications: results.reduce((s, r) => s + r.applications, 0),
     unicorn: {
@@ -1234,16 +1398,7 @@ function buildSpecReport(
       ),
       maxPeakAttack: Math.max(0, ...attritionMetrics.map((m) => m.peakAttack)),
     },
-    thresholds: {
-      floor1ClearRatePct: floor1Rate,
-      floor1Pass: floor1Rate >= 80,
-      medianClearsToFirstSoul: medianSoul,
-      maxClearsToFirstSoul: soulClears.length === 0 ? null : Math.max(...soulClears),
-      seedsWithoutSoul,
-      firstSoulPass: medianSoul !== null && medianSoul <= 30,
-      seedsReachingFloor5InSession: reachFive,
-      floor5Pass: reachFive > 0,
-    },
+    thresholds: computeThresholds(results),
   }
 }
 
@@ -1273,6 +1428,17 @@ function fmt(n: number | null, digits = 1): string {
   return n === null ? 'n/a' : n.toFixed(digits)
 }
 
+/** A median that may be +Infinity (a seed that never completes counts as infinite). */
+function fmtMedian(n: number): string {
+  return Number.isFinite(n) ? n.toFixed(1) : 'never'
+}
+
+function fmtSpread(spread: Spread | null): string {
+  return spread === null
+    ? 'n/a'
+    : `min ${spread.min} / median ${fmt(spread.median)} / max ${spread.max}`
+}
+
 function pad(value: string | number, width: number): string {
   return String(value).padStart(width)
 }
@@ -1289,7 +1455,7 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     `T1 floor-1 first-try clear: ${spec.t1.firstTryClears}/${spec.t1.seeds} = ${pct(spec.t1.firstTryClears, spec.t1.seeds)} (target >= 95%)`,
   )
   out.push(
-    `T2 clears until first soul: median ${fmt(median(spec.t2.clearsToFirstSoul))}, max ${fmt(t.maxClearsToFirstSoul, 0)}, runs median ${fmt(median(spec.t2.runsToFirstSoul))}, seeds without a soul ${spec.t2.seedsWithoutSoul} (target ~10)`,
+    `T2 first soul (target ~10): floor runs, median over all seeds ${fmtMedian(t.medianRunsToFirstSoul)} (seeds that never complete one: ${spec.t2.seedsWithoutSoul}); clears among the completing seeds: median ${fmt(median(spec.t2.clearsToFirstSoul))}, max ${fmt(spec.t2.clearsToFirstSoul.length === 0 ? null : Math.max(...spec.t2.clearsToFirstSoul), 0)}`,
   )
   const sizes = Object.entries(spec.t3.partySizeCounts)
     .map(([size, count]) => `${size}:${count}`)
@@ -1302,6 +1468,9 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     .join(' ')
   out.push(
     `T4 stop: frontier ${spec.t4.stopReasons.frontier}, cap ${spec.t4.stopReasons.cap}; walled seeds ${spec.t4.seedsWalled} (before floor 10: ${spec.t4.seedsWalledBeforeFloor10}); first-wall floors ${walls || 'none'}; deepest floor median ${fmt(median(spec.t4.deepestFloors))}`,
+  )
+  out.push(
+    `T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below ${FIRST_BOSS_FLOOR}, per seed: ${fmtSpread(spec.t4.worstFailedPushesBelow10)}; floor runs to the first floor-${FIRST_BOSS_FLOOR} clear: ${fmtSpread(spec.t4.runsToFirstFloor10Clear.spread)} over the seeds that clear it, ${spec.t4.runsToFirstFloor10Clear.neverClearing} never do`,
   )
   out.push(
     `T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):`,
@@ -1329,9 +1498,13 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
   out.push(
     `Draws: ${spec.draws}/${spec.fights} fights = ${pct(spec.draws, spec.fights)}; round-cap draws ${spec.capDraws} = ${pct(spec.capDraws, spec.fights)}`,
   )
-  const ls = spec.largestStack
+  const stackText = (ls: SpecReport['largestStackPlayer']): string =>
+    ls
+      ? `${ls.count}x ${ls.attribution} (floor ${ls.floor}, seed ${ls.seed}, ${ls.targetId})`
+      : 'none'
   out.push(
-    `Largest stack of one trait's stat-modifier on a creature: ${ls ? `${ls.count}x ${ls.attribution} (floor ${ls.floor}, seed ${ls.seed}, ${ls.targetId})` : 'none'}; unattributed ${spec.unattributed}/${spec.applications} applications`,
+    `Largest stack of one trait's stat-modifier on a player creature: ${stackText(spec.largestStackPlayer)}`,
+    `Largest stack of one trait's stat-modifier on an enemy creature: ${stackText(spec.largestStackEnemy)}; unattributed ${spec.unattributed}/${spec.applications} applications`,
   )
   out.push('Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):')
   for (const row of spec.bosses) {
@@ -1341,10 +1514,10 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
   }
   const a = spec.attrition
   out.push(
-    `Rot Sovereign's Attrition (policy runs): ${a.visits} visits, ${a.policyClears} cleared, mean deaths ${fmt(a.meanDeaths)}, max Attrition stacks ${a.maxAttritionStacks}, peak boss Attack ${a.maxPeakAttack}`,
+    `Rot Sovereign's Attrition (policy runs): ${a.visits} visits, ${a.policyClears} cleared, mean deaths ${fmt(a.meanDeaths)}, max Attrition stacks ${a.maxAttritionStacks}, peak boss Attack ${fmt(a.maxPeakAttack)}`,
   )
   out.push(
-    `ASSUMPTION 22: floor-1 clear >= 80%: ${fmt(t.floor1ClearRatePct)}% ${verdict(t.floor1Pass)}; first soul median <= 30 clears: ${fmt(t.medianClearsToFirstSoul)} ${verdict(t.firstSoulPass)}; a seed reaches floor 5 in the first session: ${t.seedsReachingFloor5InSession} seeds ${verdict(t.floor5Pass)}`,
+    `ASSUMPTION 22: floor-1 clear >= ${FLOOR1_MIN_CLEAR_PCT}%: ${fmt(t.floor1ClearRatePct)}% ${verdict(t.floor1Pass)}; first soul median <= ${FIRST_SOUL_MAX_RUNS} floor runs: ${fmtMedian(t.medianRunsToFirstSoul)} ${verdict(t.firstSoulPass)}; a seed fights on floor ${SESSION_TARGET_FLOOR}+ in its first ${FIRST_SESSION_RUNS} floor runs: ${t.seedsReachingFloor5InSession} seeds ${verdict(t.floor5Pass)}`,
   )
   return out
 }
