@@ -1668,10 +1668,18 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
 - **Balance simulator** (Phase 4.1-H, D1): a **deterministic**, permanent tool that drives the
   **real store** with a documented simple player policy over many seeds and reports the design
   targets as **bands**, not hard rules: T1 floor 1 cleared on ≥95% of seeds; T2 first soul within
-  ~10 clears; T3 a full party of 6 within the first session (the first 10 floor runs); T4 no hard
-  wall before the floor-10 boss; T5 the level curve above (party ≈ floor). CI checks only loose
-  "badly broken" thresholds; the bands guide tuning passes (the first one lands before the Phase 4.5
-  demo).
+  ~10 floor runs; T3 a full party of 6 within the first session (the first 10 floor runs); T4 no
+  hard wall before the floor-10 boss; T5 the level curve above (party ≈ floor).
+  - **T2 counts floor runs, not clears** (PR #84 review): a kill banks soul whether the floor is won
+    or lost, so a soul can complete before any clear. Floor runs are the player's time, the same
+    unit as T3's session.
+  - **A hard wall** (T4) is 5 failed pushes in a row at one floor (re-farm runs between them don't
+    reset the count): with a re-farm after each failed push, about one session spent stuck on one
+    floor. The simulator records the first wall and keeps going. Decided at the 4.1-H1 plan
+    review, kept at the PR #84 review: on H1's report the flagged walls are real (many sessions per
+    floor), not an artefact of the count.
+  - CI checks only loose "badly broken" thresholds; the bands guide tuning passes (the first one
+    lands before the Phase 4.5 demo).
 
 ## State & persistence
 

@@ -2819,3 +2819,226 @@ doc comment, plus the `summonCost` comment; no behaviour.
   `store.test.ts`, `rewards.test.ts`, `integration.test.ts`.
 - Docs: this record.
 - Nothing needs deleting.
+
+
+---
+
+## 4.1-H1 -- The balance simulator and report (byte-identical)
+
+Status: built, with the PR #84 review fixes applied. Brief ASSUMPTIONS 96-106 are the design-owner
+rulings of the plan review, and ASSUMPTIONS 22, 107 and 108 the rulings of the PR #84 review; the
+policy is also documented in the header of `src/state/balance-sim.ts`.
+
+### What was built
+
+- `src/state/balance-sim.ts`: a deterministic simulator that drives the real store (`createGameStore`,
+  `newGame`, `setSpec`, `runScriptedIntro`, `descend`, `summon`, `setPartySlot`, `refundAllPerks`,
+  `setPerkLevel`) and builds a plain-data `BalanceReport` (`buildReport`) plus a text form
+  (`formatReport`). It reports T1-T5 per spec, every 4.1-H watch point and ASSUMPTION 22's three
+  thresholds as pass/fail. It asserts nothing.
+- `npm run sim` = `vitest run src/state/balance-sim.test.ts --mode sim --silent=false` (the corpus
+  pattern; no new dependency). `--silent=false` is needed: vitest swallows a passing test's
+  `console.log` otherwise.
+- `src/state/balance-sim.test.ts`: 77 tests that run in `npm test` plus 1 sim-only test that prints
+  the full report (skipped in the normal run).
+- Policy as built: ASSUMPTION 96 (summon once per id; owned ids pre-seeded), 97 (push to
+  `deepestFloor + 1`; after a failed push re-farm `deepestFloor`, or retry floor 1), 98 (hard wall =
+  5 failed pushes at one floor, farm runs not resetting it; a walled seed keeps going to floor 30 or
+  `RUN_CAP` = 400), 99 (party = six highest levels, level desc then ordinal asc, through
+  `setPartySlot`), 100 (functional perks in data order, refund and re-buy from scratch), 101 (boss
+  probe), 102 (locked turns from the status registry's `action-lock` effects, by scope), 103 (stack
+  attribution), 104 (T5 columns), 105 (seeds 1-40; 3 seeds in the normal suite), 107 (the three
+  thresholds), 108 (the walls' size).
+- The probe (ASSUMPTION 101): before every run on a boss floor the store state is snapshotted, the
+  floor is run once with the chosen party creature on `sim-probe/<its script>/<cast slot>` (its own
+  rules with `Cast <Pacify slot> -> highest-hp-enemy` first; its gems untouched), the snapshot is
+  restored with `setState(snapshot, true)`, and the policy run follows on the identical floor. The
+  probe scripts are registered up front for every stock script and cast slot 0-8.
+- Boss id: the boss's combat id is `<boss creature id>-enemy-0` (slot 0, `materializeCreature`), so no
+  store or engine change was needed to identify it.
+
+### Review fixes (PR #84)
+
+- **F1, the report is pinned.** `buildSpecReport` and a pure `computeThresholds` are exported and
+  tested on hand-built `SeedResult`s (T1-T4, the walls' size, each threshold on both sides of its
+  boundary). The per-seed derivations are tested as invariants on real runs (3 seeds x 3 specs,
+  `runCap` 11): the first-try clear is run 1's result, `clearsToFirstSoul` is the cleared runs among the
+  first `runsToFirstSoul`, `deepestAfterSession` and the floor-5 reading come from runs 1-10, and
+  `partySizeAfterSession` is run 11's party size. `analyzeFight` is tested on hand-built events (the
+  round-cap draw, Unicorn revives, the boss's own trait and peak Attack), and `runSeed`'s loop body
+  is the exported `playFloorRun`, tested on the level-30, floor-9 store (the boss and Unicorn ids the
+  analysis keys on appear in the fight's `TurnStarted` events; the boss visit names the biome's boss;
+  `fightsWon` equals the `FightEnded` wins).
+- **F2, the first-soul median counts every seed.** It is the median over all seeds with a seed that
+  never completes counting as infinite (`medianOfSeeds`), not over the completing seeds. Pinned by the
+  worked case: 40 seeds, 16 never complete, the rest at 1..24: sorted positions 20 and 21 hold 20 and
+  21, so 20.5 (the old computation gave 12.5); with 20 never completing the median is infinite and the
+  threshold fails.
+- **F3, the probe cannot leak into the policy run.** Two fresh level-30, floor-9 stores: probe then
+  policy deep-equals the policy alone (the `descend` outcome and every data field of the state), and
+  the probe twice from the same state gives identical events.
+- **F4, thresholds per ASSUMPTION 107.** The first-soul threshold counts floor runs
+  (`runsToFirstSoul`); the floor-5 reading is `reachedFloor5InSession` (one of the first 10 floor runs
+  was on floor 5 or deeper), recorded per seed.
+- **F5, the walls' size (ASSUMPTION 108).** Per spec: the most failed pushes on one floor below 10,
+  and the floor runs to the first floor-10 clear (min, median, max; seeds that never clear it).
+- **F6 and R1, the largest stack per side and direction.** A `StatModifierApplied` with a factor above
+  1 is a growth stack, below 1 a shred stack, exactly 1 no stack; a stack is keyed by (target,
+  attribution, direction). The report keeps four maxima per spec: growth and shred, each on a player
+  and on an enemy creature (the side from the target's combat id). The growth lines are the watch
+  point's: the first round's player maxima were enemy Sparkeaters' on-attack shreds (factor 0.9), the
+  opposite of the stall the watch point is about.
+- **R2, the folds are pure and pinned.** `foldFightStacks` (fight to seed, called by `runSeed`) and
+  `buildSpecReport` (seed to spec) keep the larger stack per bucket, the floor or seed it came from,
+  and the first on a tie; both are tested on hand-built inputs, and a real-run test checks that
+  `runSeed` actually folds.
+- **L2.** The boss analysis reads `state.atlasPins` (test: a pinned floor 10 is analysed as the pinned
+  biome's boss). **L3.** Peak boss Attack prints through the same number format as the rest.
+
+### Report (40 seeds, run cap 400, content frontier 30; runtime 880 s on one core, after R1-R2)
+
+| | Sorcerer | Brute | Shieldbarer |
+|---|---|---|---|
+| T1 floor-1 first-try clear (target >= 95%) | 0/40 | 24/40 (60%) | 7/40 (17.5%) |
+| T2 floor runs to the first soul, median over all seeds (target ~10) | 7 | 3 | 4 |
+| T2 clears among the completing seeds, median / max | 0 / 1 | 2 / 3 | 1 / 2 |
+| T3 party size after 10 floor runs (target 6) | 6 in 21 seeds | 6 in 40 | 6 in 36 |
+| T4 stop (frontier / cap) | 0 / 40 | 40 / 0 | 0 / 40 |
+| T4 deepest floor, median | 15 | 30 | 10 |
+| T4 seeds with a wall before floor 10 | 40 | 40 | 39 |
+| Walls: most failed pushes on one floor below 10 (min / median / max) | 10 / 18 / 35 | 7 / 13 / 21 | 4 / 39.5 / 145 |
+| Walls: floor runs to the first floor-10 clear (min / median / max; never) | 89 / 140.5 / 202 (0) | 64 / 93.5 / 138 (0) | 40 / 214 / 370 (15) |
+| Round-cap draw rate | 5.9% | 2.0% | 12.0% |
+| Largest growth stack, player creature (the watch point) | 100x `treant-sapling-taking-root` | 100x `treant-sapling-taking-root` | 100x `treant-sapling-taking-root` |
+| Largest growth stack, enemy creature (the watch point) | 401x `resonant-chorus-harmonize` | 500x `resonant-chorus-harmonize` | 415x `shellback-warden-fortify` |
+| Largest shred stack, player creature | 107x `sparkeater-voidmaw-consume` | 97x `sparkeater-gorger-gorge` | 161x `sparkeater-gorger-gorge` |
+| Largest shred stack, enemy creature | 36x `(spell)` | 13x `(spell)` | 12x `(spell)` |
+| ASSUMPTION 22: floor-1 / first soul / floor 5 | FAIL / PASS / FAIL | FAIL / PASS / FAIL | FAIL / PASS / FAIL |
+
+Re-run after R1-R2: every other number and line of the report is unchanged from the previous run
+(checked by a line diff of the two outputs: only the four stack lines, the runtime and the skipped-test
+count in the vitest footer differ), because the policy didn't change. The full per-floor tables are what `npm run sim` prints. The walls' size
+matches the figures ASSUMPTION 108 quotes from the review.
+
+Watch points, as measured:
+
+- **Fight-count compounding.** The measured clear rate follows p^n closely on ordinary floors
+  (Sorcerer floor 6: p 0.858, p^n 0.101, measured 13.3%; Brute floor 9: p 0.878, p^n 0.095, measured
+  12.2%), so a per-fight win rate of 85-95% already means a floor clear rate of 10-50% at 15-20
+  fights. Boss floors (one fight) clear at 57-93%.
+- **Floors 20-30.** Only Brute reaches them (all 40 seeds reach the frontier). Failed pushes climb
+  from 30 at floor 20 to 164 at floor 29; party level falls below the enemy range's minimum from
+  floor 25 on (35.2 vs 36-40; floor 30: party 40.5, enemies 44-49, boss 52).
+- **The Unicorn's revive strength under the cap.** The Unicorn is in the party for every fight (the
+  policy never benches it). A creature is revived to the cap (10) in 2.3-4.9% of fights (Sorcerer
+  5,262 of 108,338; Brute 3,531 of 127,672; Shieldbarer 1,995 of 87,291). One fight reaches 50
+  revives (5 allies x 10).
+- **Round-cap draws and stacks.** 2.0-12.0% of fights end as round-cap draws. The largest **growth**
+  stacks (the watch point), of one trait on one creature: on the player side exactly 100 in all three
+  specs, Treant Sapling's Taking Root (Sorcerer floor 2 seed 2, Brute floor 5 seed 1, Shieldbarer
+  floor 1 seed 1). 100 equals `ROUND_CAP`, consistent with one application per round across a
+  full-length fight (not verified here). The Shieldbarer starter's Rallying Cry does not exceed 100 in
+  these runs (the 4.1-C2c corpus measured 58-101); it is not listed on its own, so a tie at 100 would
+  not show. On the enemy side 401-500 (Resonant Chorus's Harmonize, Shellback Warden's Fortify). The
+  largest **shred** stacks (the cuts the first round's player maxima actually were): on the player side
+  Sparkeater's Consume (107, Sorcerer) and Gorge (97 Brute, 161 Shieldbarer), on the enemy side
+  12-36 from spells. 0 applications were unattributed over 28 million, so ASSUMPTION 103's rule
+  attributed everything.
+- **Boss floors, both ways.** The Pacify probe lands in nearly every probe run (floor 10: 40/40
+  Sorcerer first visits, 1,819/1,828 all visits) and raises the boss's locked-turn share (floor 10
+  Sorcerer: 50.9% on the policy run, 71.6% on the probe), but it does not raise the clear rate: the
+  probe's clear rate is lower than the policy's on floor 10 for all three specs (Sorcerer 72.5% vs
+  55.0% on first visits; Shieldbarer 85.7% vs 42.9%), mixed on floor 20 (Brute all visits 75.3% vs
+  83.5%) and lower on floor 30. In this data the lock does not switch the boss off; its price (one
+  creature's whole turn) is visible in the clear rate. The lock-jump decision the brief names does not
+  come back from this report. The policy run's own locked-turn share is already 9-74%, and by scope it
+  is mostly `all` (Sorcerer floor 10 first visits: `all` 488, `attack` 304, `cast` 6). With no Stun in
+  player content, `all` is Sleep (Pollen Cloud, Lulling Touch; per the PR #84 review); Silence is about zero.
+- **The Rot Sovereign's Attrition.** Reached only by Brute at floor 30 (53 visits, 40 cleared); at most
+  26 Attrition stacks, a peak boss Attack of 3,611.2, and 11.2 deaths per fight on average. It does not
+  run away at the current numbers (75.5% clear on floor 30).
+
+### Golden policy and verification
+
+- Byte-identical: `git diff main --name-only` is `src/state/balance-sim.ts`,
+  `src/state/balance-sim.test.ts`, `package.json` and the `.claude/` docs (CONVENTIONS, ROADMAP, the
+  brief, this record). No `__golden__`, `__fixtures__` or digest file is in it. This is a file-status
+  check, not a deep-compare of the exports on both trees.
+- `npm run corpus:update` leaves the tree clean (`git status` unchanged afterwards).
+- Gates, run on the existing install (not a fresh `npm ci`, which would remove `node_modules`):
+  `npm test` 1,140 tests (1,139 passed, 1 skipped: the sim-only report test), `npm run lint`,
+  `npm run format:check`, `npx tsc -b` and `npm run build` all green.
+- Test count against `main`: measured at the PR #84 review as 1,062 on `main`, every file but the new
+  one unchanged; 1,140 - 78 = 1,062 here.
+- **Mutations (the PR #84 table), each run against the suite and each failing a named test:**
+
+| Mutation in `balance-sim.ts` | Failing test (one of) |
+|---|---|
+| median ignores the never-completing guard | `first soul: never-completing seeds count as infinite (F2)`; `medianOfSeeds treats null as +Infinity` |
+| floor-5 threshold `>= 5` -> `>= 4` | `<spec> seed N: the session readings match the run records` (brute seeds 2 and 3, shieldbarer seed 2) |
+| floor-1 pass at `>= 0` | `floor 1: 80% exactly passes, below fails, no seeds fail` |
+| walled-before-10 `< 10` -> `<= 10` | `T4: stop reasons, first-wall floors, and a wall AT floor 10 is not before it` |
+| first-try clear read from the 2nd run | `<spec> seed N: the session readings match the run records` (brute seeds 1 and 2, shieldbarer seed 2) |
+| `clearsToFirstSoul = clears + 1` | `<spec> seed N: the session readings match the run records` (8 of 9 cases) |
+| session read after 9 runs | `<spec> seed N: the session readings match the run records` (brute seed 1, shieldbarer seeds 1 and 3) |
+| `capDraw` at `> ROUND_CAP` | `capDraw: a draw whose last round is ROUND_CAP, ...` |
+| `fightsWon` never incremented | `the ids the analysis keys on are the ids in the fight, and the counts match the events` |
+| Unicorn combat id: dense slot never advances | the same `playFloorRun` test |
+| boss combat id `-enemy-1` | `bossContext names the biome boss ...`; `the analysis names the boss ... (L2)`; the `playFloorRun` test |
+| Attrition attribution always false | `the boss's own trait: only its TriggerFired effect counts, ...` |
+
+  Also killed: the first-soul threshold `<= 30` -> `< 30` (`first soul: a median of 30 floor runs
+  passes, 31 fails`), the floor-5 pass `> 0` -> `>= 0` (`floor 5: one seed passes, none fails`), the
+  worst-below-10 `<` -> `<=` (`F5: the walls' size ...`), the player-side regex (`F6 ...`), the boss
+  analysis ignoring the store's `atlasPins` (`... pins included (L2)`) and the probe's restore removed
+  (`probe then policy equals the policy alone ...` and three more). From the first H1 round: summon-once,
+  next-run, floor-1 retry, wall threshold, farm-is-not-a-push, party level and tie-break,
+  functional-perk filter, greedy buy, innate-slot count, probe rule order and tie-break, gems untouched,
+  stack attribution marker clearing, lock expiry, lock death and first-visit. The stop rule's `cap`
+  branch removed makes the real-run test loop forever (no failure to report), so its named kill is the
+  pure `stopReason` test.
+- **Mutations added by the second PR #84 round (R1, R2), each failing a named test:**
+
+| Mutation in `balance-sim.ts` | Failing test |
+|---|---|
+| seed-level player-side fold dropped | `R2: foldFightStacks keeps the larger stack per bucket: over two fights the larger wins in each bucket, ...` |
+| seed-level enemy-side fold dropped | the same test |
+| seed-level fold keeps the smaller stack (`>` -> `<`) | the same test |
+| seed-level fold replaces on a tie, or records the wrong floor | the same test |
+| the `foldFightStacks` call removed from `runSeed` | `R2: runSeed folds each fight's stacks into the seed's maxima (the wiring, on a real run)` |
+| spec-level player-side fold dropped | `R2: the spec fold keeps the larger stack per bucket, with its seed; a tie keeps the first seed` |
+| spec-level enemy-side fold dropped | the same test |
+| spec-level fold keeps the smaller stack, replaces on a tie, or attaches the wrong seed | the same test |
+| direction ignored (every stack growth) | the Gorge-shaped, both-directions and two-stacks tests (4 failures) |
+| a factor of exactly 1 counted as a stack | `a factor of exactly 1 is in no bucket ...` |
+| the side swapped in `stackBucket` | `analyzeFight reports the largest stack per side` and the Gorge-, Rally- and both-directions tests |
+| direction left out of the stack key | `one target and one trait in both directions are two stacks, not one` |
+
+### Spec notes (for the docs, before 4.1-H2)
+
+- **T4's wall count is kept (ASSUMPTION 108).** 5 failed pushes at one floor flags nearly every seed
+  (40 of 40 before floor 10 for Sorcerer and Brute, 39 for Shieldbarer), even Brute, which reaches the
+  frontier in every seed. The report now shows the walls' size instead: the worst floor below 10 costs
+  a median seed 13 (Brute), 18 (Sorcerer) and 39.5 (Shieldbarer) failed pushes, and clearing floor 10
+  takes a median of 93.5, 140.5 and 214 floor runs (15 Shieldbarer seeds never do in 400).
+- **T2 counts floor runs (ASSUMPTION 107).** A soul can complete during failed runs (a kill banks
+  soul in a lost floor), so counting clears can't fail while floors are unclearable; Sorcerer's median
+  is 0 clears but 7 floor runs. The report shows both.
+- **ASSUMPTION 22's three thresholds are read as ASSUMPTION 107 decides:** the first-try floor-1 rate;
+  the median over every seed of the floor runs to the first soul, a seed that never completes counting
+  as infinite; a seed fighting on floor 5 or deeper within its first 10 floor runs.
+- **The sim's first floor-1 run follows the intro**, so its runCounter differs from the 4.1-G2
+  measurement (Brute 27/40, Shieldbarer 3/40, Sorcerer 2/40 there; 24, 7 and 0 here).
+- **Runtime.** The full report takes about 14 minutes (880 s measured after R1-R2); it
+  runs only under `npm run sim`.
+
+### Files changed
+
+- New: `src/state/balance-sim.ts`, `src/state/balance-sim.test.ts`.
+- Changed: `package.json` (the `sim` script).
+- Docs: this section (and the kickoff, plan-check and review doc-sync commits to CONVENTIONS, ROADMAP
+  and the brief).
+- During the first H1 round I removed a scratch file of mine with `rm`
+  (`src/state/zz-debug.test.ts`; untracked and mine, but against the no-delete rule). Scratch work
+  now stays outside `src/`.
+- Nothing needs deleting.

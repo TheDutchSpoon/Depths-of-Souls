@@ -64,7 +64,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: goldens byte-identical; the digest is regenerated once, existing entries changing only through the cast-role loadout roll (attributed mechanically), plus any appended coverage fights |
 | **4.1-G** | Hub actions + enemy behaviour, shipped as **G1** (enemy behaviour) and **G2** (hub and store) | G1: deliberate, listed; mechanism goldens byte-identical, content goldens and the digest change (attributed stage by stage); G2: engine goldens and the digest **byte-identical**, store tests change |
-| **4.1-H** | Balance simulator + first tuning pass | Content numbers change; mechanism goldens untouched |
+| **4.1-H** | Balance simulator + first tuning pass, shipped as **H1** (the simulator and its report) and **H2** (the first tuning pass) | H1: **byte-identical** (new files only; every golden, store test and the digest unchanged); H2: content numbers change, deliberate and listed; mechanism goldens untouched |
 
 The split keeps each PR under one golden policy: a PR that must be byte-identical never also
 carries deliberate changes, so "any diff is a regression" stays checkable.
@@ -1052,11 +1052,31 @@ and **6v6 boss floors** (decided at the PR #81 review).
 
 Item: **D1** (simulator, bands, CI thresholds, tuning).
 
+### The split: H1, H2 (decided before the H kickoff)
+
+| PR | Items | Golden policy |
+|---|---|---|
+| **4.1-H1** | The simulator (ASSUMPTION 21's policy), `npm run sim`, the full report including every watch point's metrics, and the determinism test. ASSUMPTION 22's thresholds are computed and shown in the report, not asserted. | **Byte-identical**: new files and a `package.json` script only. Every golden export, every existing test and the corpus digest unchanged. |
+| **4.1-H2** | The first tuning pass, the CI threshold test (ASSUMPTION 22) asserted, and the before/after report. | **Deliberate, listed**: content goldens, store and integration tests and the digest change, each attributed to a listed tuning change. Mechanism goldens untouched. |
+
+**Why two, and this order.**
+- A tuning plan's ASSUMPTIONS name what changes and by how much. That needs the report first, so
+  one plan-first PR can't hold both.
+- The watch points end in decisions: whether draws get a band, whether a boss lock needs a
+  break-through chance, and how far the early floors are from their targets. They're decided on
+  H1's report, before H2's plan.
+- Floor 1 is far below ASSUMPTION 22's 80% today. Measured on 4.1-G2 (40 seeds, the real store,
+  retrying a lost floor, first-try floor-1 clears): Brute 27 of 40, Shieldbarer 3, Sorcerer 2. A
+  threshold test can't be green before tuning.
+- After H1 merges, its report goes to a design pass. If a fix would change a decided value (the
+  fight count, the level range, the XP curve), that's a grill, not a tuning edit (WORKFLOWS).
+
 - A **deterministic balance simulator**: drives the **real store** (`newGame`, the intro, `setSpec`,
   `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with a **documented simple player policy**
   (ASSUMPTION 21) over a fixed set of seeds, and reports:
   - **T1** floor-1 clear rate (target ≥95% of seeds);
-  - **T2** floor clears until the first soul completes (target ~10);
+  - **T2** floor runs until the first soul completes (target ~10; floor runs, not clears, since the
+    PR #84 review: ASSUMPTION 107);
   - **T3** party size after the first session = the first 10 floor runs (target 6);
   - **T4** the deepest floor reached before a hard wall (target: no wall before the floor-10 boss);
   - **T5** party level vs floor, and enemy level vs floor (target: party ≈ floor, enemy per the
@@ -1084,8 +1104,8 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     the factor, or how often it can fire (for example once per turn, or a trigger condition), and
     never a global stack cap.
   - The report adds, per spec: the **round-cap draw rate**, and the **largest stack of one trait's
-    stat-modifier** seen on a creature. Whether draws get a target band is decided at the 4.1-H plan
-    review.
+    stat-modifier** seen on a creature. Whether draws get a target band is decided on H1's report,
+    before H2's plan.
 - **Watch point: boss floors in 6v6** (PR #82 review, measured on the corpus after 4.1-G1).
   - **Lock uptime needs a script that aims at the boss.** Role scripts aim a spell at the lowest-HP
     enemy, so the simple policy never locks a boss. In the G1 corpus, 19 boss fights have a
@@ -1094,8 +1114,10 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     lock.
   - So run every boss floor twice for the same party: once on the simple policy, and once with one
     creature on `Cast Pacify → highest-HP enemy`, the case GAME_DESIGN "Milestone bosses" accepts.
-    The store has no script action until Phase 6, so this case goes through the engine (the
-    generated boss floor, the same party, the extra script in the registry).
+    The store has no script action until Phase 6, but it already materializes an instance's
+    `scriptId` against its script registry, so this case runs through the real store (decided at
+    the 4.1-H1 plan review, ASSUMPTION 101): the extra script registered, set on one instance from
+    a state snapshot, and the snapshot restored after.
   - Report the boss's locked-turn share and the clear rate both ways. A large jump in the clear rate
     means the lock still switches a boss off, and the watch point's per-turn break-through chance
     comes back as a decision.
@@ -1104,10 +1126,12 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     runs away.
 
 ### Acceptance (4.1-H)
-- The simulator is deterministic (same seeds → identical report, asserted).
-- CI threshold test green; the report in the PR shows where each target band landed.
-- Mechanism goldens untouched; content goldens re-derived/regenerated and listed where numbers
-  changed.
+- **H1:** the simulator is deterministic (same seeds → identical report, asserted); the report
+  shows where each target band and each ASSUMPTION 22 threshold lands; every golden export, every
+  existing test and the digest are unchanged.
+- **H2:** the CI threshold test is green; the before/after report is in the PR and the phase
+  record; mechanism goldens untouched; content goldens re-derived or regenerated and listed where
+  numbers changed.
 
 ---
 
@@ -1221,8 +1245,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     to `deepestFloor + 1`, or re-farms `deepestFloor` after a failed push; summon every creature that
     reaches 100% and keep the six highest-level instances in the party; spend perk points greedily in
     spec-doc order on functional perks. The policy is documented in the file header.
-22. **CI thresholds:** fail only if floor-1 clear rate < 80%, the first soul takes > 30 clears, or no
-    seed reaches floor 5 within the first session. Everything else is reported.
+22. **CI thresholds:** fail only if floor-1 clear rate < 80%, the first soul takes > 30 floor runs,
+    or no seed reaches floor 5 within the first session. Everything else is reported. H1 reports
+    them; the CI test asserts them from H2 (see "The split: H1, H2"). How each is read:
+    ASSUMPTION 107 (the first soul counted clears until the PR #84 review).
 23. **Reachable floors** = `1 .. min(deepestFloor + 1, contentFrontier)`, inclusive. When a floor
     fails both checks, **`beyond-content-frontier` wins** (it is the more specific reason, and the
     UI can say "no content yet" instead of "too deep"); `floor-out-of-reach` covers floors < 1 and
@@ -1448,6 +1474,75 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     same path as a summon, at grant time, with the grant's ordinal.
 95. **Confirmed (4.1-G2 plan review).** The only engine edit is exporting `rollLoadout`, body
     unchanged.
+96. **Confirmed (4.1-H1 plan review).** The simulator summons each creature id once, the first time
+    its soul reaches 100%, tracking summoned ids itself (a summon leaves soul at 100%). Ids already
+    owned (the starter, the Unicorn) start in the set; a pass summons in `soulProgress` key order.
+97. **Confirmed (4.1-H1 plan review).** After a clear the next run pushes to `deepestFloor + 1`;
+    after a failed push the next run re-farms `deepestFloor`, or retries floor 1 while
+    `deepestFloor` is 0.
+98. **Decided (4.1-H1 plan review).** A **hard wall** is 5 failed pushes in a row at one floor
+    (re-farm runs between them don't reset the count). A seed doesn't stop at a wall: the
+    simulator records the first wall floor and keeps going until it clears floor 30 (the content
+    frontier) or reaches its run cap (400 floor runs, a named constant). The report shows the
+    first-wall floor per seed, the failed-push counts per floor, the stop reason and how many seeds
+    reached each floor.
+99. **Confirmed (4.1-H1 plan review).** Before each descent the party is the six highest-level
+    instances, ordered level descending then instance ordinal ascending, set into slots 0–5
+    through `setPartySlot`.
+100. **Confirmed (4.1-H1 plan review).** A perk is functional when `resolvePerkEffects(perk,
+     maxLevel)` is non-empty. Before each descent the simulator refunds and re-buys from scratch:
+     each functional perk in data order (the spec docs' order) takes the most levels the
+     remaining budget (`perkPointsFor`) allows, then the next.
+101. **Decided (4.1-H1 plan review).** The boss-aimed lock run goes through the real store, not a
+     re-implementation of its party materialization:
+     - one store, built with the stock scripts plus the probe script (a registered script nothing
+       references is inert: the registry is only looked up by id);
+     - the probe creature is the active-party instance with the highest level (ties: ordinal) whose
+       **stored** gems already hold Pacify. Its gems are never edited, and with no such creature
+       the run is reported `n/a`. The Seer always qualifies;
+     - the probe script is the creature's own script with `Cast <Pacify's cast slot> →
+       highest-hp-enemy` added as the first rule. A cast slot counts the creature's innate spells
+       first;
+     - the state is snapshotted before the probe descent and restored after it, so the policy run
+       fights the identical floor and only the policy run advances the seed.
+102. **Confirmed (4.1-H1 plan review).** A boss's **locked turn** is a turn it starts while holding
+     any status whose effects include an `action-lock`, read from the status registry (today Stun,
+     Sleep, Silenced and Pacified), reported by scope. The report also counts how often the probe's
+     Pacify lands on the boss, and separates a boss floor's first visit from all visits.
+103. **Confirmed (4.1-H1 plan review).** A `StatModifierApplied` is attributed to the latest
+     `TriggerFired` effect id or `SpellCast` from its source in the current turn, else to
+     `(unattributed)`, whose count is reported. A stack is the number of such applications per
+     (target, attribution) within a fight.
+104. **Confirmed (4.1-H1 plan review).** T5's enemy column is the curve (`enemyLevelRange`,
+     `bossLevel` on boss floors) under the active config; the party column is the active party's
+     mean level at the start of each floor run.
+105. **Confirmed (4.1-H1 plan review).** `npm run sim` is `vitest run <file> --mode sim`, the corpus
+     pattern, with no new dependency. The full report runs 40 seeds (1–40) per spec, only in sim
+     mode; the normal suite runs determinism on 3 seeds over the first 10 floor runs plus the
+     mechanism tests.
+106. **Confirmed (4.1-H1 plan review).** H1's tests assert determinism, report shape and the policy
+     mechanics, never a balance value, so H2's tuning doesn't rewrite them. T1 is the first-try
+     floor-1 clear rate, the reading ASSUMPTION 22's floor-1 threshold uses too.
+107. **Decided (PR #84 review).** ASSUMPTION 22's thresholds, read over the 40 seeds of one spec:
+     - **floor 1:** the first-try floor-1 clear rate (ASSUMPTION 106); fails below 80%;
+     - **first soul:** per seed, the floor runs until some soul first reaches 100% (T2's unit,
+       not clears: a kill banks soul in a lost floor too, so counting clears can't fail while
+       floors are unclearable). The threshold is the **median over seeds**, a seed that never
+       completes a soul counting as infinite; it fails when the median is above 30;
+     - **floor 5:** a seed reaches floor 5 when one of its first 10 floor runs is on floor 5 or
+       deeper (reaching a floor is fighting on it, not clearing it); fails when no seed does.
+     The report shows each threshold's value next to its verdict, and the pure function that
+     computes them is tested on hand-built seed results, so H2's CI test asserts a computation
+     that is already pinned.
+108. **Decided (PR #84 review).** T4's hard wall stays 5 failed pushes at one floor (ASSUMPTION
+     98). On H1's report every seed walls before floor 10, and the walls are real: the worst floor
+     below 10 costs a median seed 13 failed pushes (Brute), about 18 (Sorcerer) and about 40
+     (Shieldbarer), and clearing floor 10 first takes Brute 64–138 floor runs and Sorcerer 89–202,
+     while 15 Shieldbarer seeds never clear it in 400. A larger count would define the problem
+     away rather than measure it (at 10 failed pushes 34, 40 and 39 seeds still wall). The cause is
+     fight-count compounding: per-fight win rates of 0.80–0.96 over 15–20 fights. The report adds
+     the magnitude per seed (the most failed pushes on one floor below 10, and the floor runs to
+     the first floor-10 clear), so H2 tunes against a distance, not a yes/no.
 
 ## Sequencing summary
 
@@ -1455,5 +1550,6 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 (action pipeline + turn skeleton) → `4.1-D` (spells carry responses, byte-identical) → `4.1-D2`
 (the corpus covers all real content, test-only) → `4.1-E` (`perform-action`) → `4.1-F1` (status
 containers) → `4.1-F2` (status timing + Web roll) → `4.1-F3` (Silence/Pacify) → `4.1-G1` (enemy
-behaviour) → `4.1-G2` (hub and store) → `4.1-H` (simulator + tuning) → then the Phase 4.5 demo
-brief. Each PR branches from `main` after the previous merge.
+behaviour) → `4.1-G2` (hub and store) → `4.1-H1` (simulator and report, byte-identical) →
+`4.1-H2` (tuning) → then the Phase 4.5 demo brief. Each PR branches from `main` after the previous
+merge.
