@@ -2839,7 +2839,7 @@ policy is also documented in the header of `src/state/balance-sim.ts`.
 - `npm run sim` = `vitest run src/state/balance-sim.test.ts --mode sim --silent=false` (the corpus
   pattern; no new dependency). `--silent=false` is needed: vitest swallows a passing test's
   `console.log` otherwise.
-- `src/state/balance-sim.test.ts`: 69 tests that run in `npm test` plus 1 sim-only test that prints
+- `src/state/balance-sim.test.ts`: 77 tests that run in `npm test` plus 1 sim-only test that prints
   the full report (skipped in the normal run).
 - Policy as built: ASSUMPTION 96 (summon once per id; owned ids pre-seeded), 97 (push to
   `deepestFloor + 1`; after a failed push re-farm `deepestFloor`, or retry floor 1), 98 (hard wall =
@@ -2882,12 +2882,20 @@ policy is also documented in the header of `src/state/balance-sim.ts`.
   was on floor 5 or deeper), recorded per seed.
 - **F5, the walls' size (ASSUMPTION 108).** Per spec: the most failed pushes on one floor below 10,
   and the floor runs to the first floor-10 clear (min, median, max; seeds that never clear it).
-- **F6, the largest stack per side.** The report keeps a player-side and an enemy-side maximum (the side
-  from the combat id).
+- **F6 and R1, the largest stack per side and direction.** A `StatModifierApplied` with a factor above
+  1 is a growth stack, below 1 a shred stack, exactly 1 no stack; a stack is keyed by (target,
+  attribution, direction). The report keeps four maxima per spec: growth and shred, each on a player
+  and on an enemy creature (the side from the target's combat id). The growth lines are the watch
+  point's: the first round's player maxima were enemy Sparkeaters' on-attack shreds (factor 0.9), the
+  opposite of the stall the watch point is about.
+- **R2, the folds are pure and pinned.** `foldFightStacks` (fight to seed, called by `runSeed`) and
+  `buildSpecReport` (seed to spec) keep the larger stack per bucket, the floor or seed it came from,
+  and the first on a tie; both are tested on hand-built inputs, and a real-run test checks that
+  `runSeed` actually folds.
 - **L2.** The boss analysis reads `state.atlasPins` (test: a pinned floor 10 is analysed as the pinned
   biome's boss). **L3.** Peak boss Attack prints through the same number format as the rest.
 
-### Report (40 seeds, run cap 400, content frontier 30; runtime 823 s on one core, after F4-F6)
+### Report (40 seeds, run cap 400, content frontier 30; runtime 880 s on one core, after R1-R2)
 
 | | Sorcerer | Brute | Shieldbarer |
 |---|---|---|---|
@@ -2901,12 +2909,15 @@ policy is also documented in the header of `src/state/balance-sim.ts`.
 | Walls: most failed pushes on one floor below 10 (min / median / max) | 10 / 18 / 35 | 7 / 13 / 21 | 4 / 39.5 / 145 |
 | Walls: floor runs to the first floor-10 clear (min / median / max; never) | 89 / 140.5 / 202 (0) | 64 / 93.5 / 138 (0) | 40 / 214 / 370 (15) |
 | Round-cap draw rate | 5.9% | 2.0% | 12.0% |
-| Largest stack, player creature | 107x `sparkeater-voidmaw-consume` | 100x `treant-sapling-taking-root` | 161x `sparkeater-gorger-gorge` |
-| Largest stack, enemy creature | 401x `resonant-chorus-harmonize` | 500x `resonant-chorus-harmonize` | 415x `shellback-warden-fortify` |
+| Largest growth stack, player creature (the watch point) | 100x `treant-sapling-taking-root` | 100x `treant-sapling-taking-root` | 100x `treant-sapling-taking-root` |
+| Largest growth stack, enemy creature (the watch point) | 401x `resonant-chorus-harmonize` | 500x `resonant-chorus-harmonize` | 415x `shellback-warden-fortify` |
+| Largest shred stack, player creature | 107x `sparkeater-voidmaw-consume` | 97x `sparkeater-gorger-gorge` | 161x `sparkeater-gorger-gorge` |
+| Largest shred stack, enemy creature | 36x `(spell)` | 13x `(spell)` | 12x `(spell)` |
 | ASSUMPTION 22: floor-1 / first soul / floor 5 | FAIL / PASS / FAIL | FAIL / PASS / FAIL | FAIL / PASS / FAIL |
 
-The T1-T5 policy numbers are unchanged from the first H1 run (the policy didn't change; only the
-reported statistics did). The full per-floor tables are what `npm run sim` prints. The walls' size
+Re-run after R1-R2: every other number and line of the report is unchanged from the previous run
+(checked by a line diff of the two outputs: only the four stack lines, the runtime and the skipped-test
+count in the vitest footer differ), because the policy didn't change. The full per-floor tables are what `npm run sim` prints. The walls' size
 matches the figures ASSUMPTION 108 quotes from the review.
 
 Watch points, as measured:
@@ -2922,11 +2933,17 @@ Watch points, as measured:
   policy never benches it). A creature is revived to the cap (10) in 2.3-4.9% of fights (Sorcerer
   5,262 of 108,338; Brute 3,531 of 127,672; Shieldbarer 1,995 of 87,291). One fight reaches 50
   revives (5 allies x 10).
-- **Round-cap draws and stacks.** 2.0-12.0% of fights end as round-cap draws. The largest enemy-side
-  stacks are 401-500 (Resonant Chorus's Harmonize, Shellback Warden's Fortify). The player-side
-  maximum is 100-161, from summoned creatures' traits (Sparkeater, Treant Sapling), not the
-  Shieldbarer starter's Rallying Cry, which the 4.1-C2c corpus review measured at 58-101. 0
-  applications were unattributed over 28 million, so ASSUMPTION 103's rule attributed everything.
+- **Round-cap draws and stacks.** 2.0-12.0% of fights end as round-cap draws. The largest **growth**
+  stacks (the watch point), of one trait on one creature: on the player side exactly 100 in all three
+  specs, Treant Sapling's Taking Root (Sorcerer floor 2 seed 2, Brute floor 5 seed 1, Shieldbarer
+  floor 1 seed 1). 100 equals `ROUND_CAP`, consistent with one application per round across a
+  full-length fight (not verified here). The Shieldbarer starter's Rallying Cry does not exceed 100 in
+  these runs (the 4.1-C2c corpus measured 58-101); it is not listed on its own, so a tie at 100 would
+  not show. On the enemy side 401-500 (Resonant Chorus's Harmonize, Shellback Warden's Fortify). The
+  largest **shred** stacks (the cuts the first round's player maxima actually were): on the player side
+  Sparkeater's Consume (107, Sorcerer) and Gorge (97 Brute, 161 Shieldbarer), on the enemy side
+  12-36 from spells. 0 applications were unattributed over 28 million, so ASSUMPTION 103's rule
+  attributed everything.
 - **Boss floors, both ways.** The Pacify probe lands in nearly every probe run (floor 10: 40/40
   Sorcerer first visits, 1,819/1,828 all visits) and raises the boss's locked-turn share (floor 10
   Sorcerer: 50.9% on the policy run, 71.6% on the probe), but it does not raise the clear rate: the
@@ -2949,10 +2966,10 @@ Watch points, as measured:
   check, not a deep-compare of the exports on both trees.
 - `npm run corpus:update` leaves the tree clean (`git status` unchanged afterwards).
 - Gates, run on the existing install (not a fresh `npm ci`, which would remove `node_modules`):
-  `npm test` 1,132 tests (1,131 passed, 1 skipped: the sim-only report test), `npm run lint`,
+  `npm test` 1,140 tests (1,139 passed, 1 skipped: the sim-only report test), `npm run lint`,
   `npm run format:check`, `npx tsc -b` and `npm run build` all green.
 - Test count against `main`: measured at the PR #84 review as 1,062 on `main`, every file but the new
-  one unchanged; 1,132 - 70 = 1,062 here.
+  one unchanged; 1,140 - 78 = 1,062 here.
 - **Mutations (the PR #84 table), each run against the suite and each failing a named test:**
 
 | Mutation in `balance-sim.ts` | Failing test (one of) |
@@ -2980,6 +2997,22 @@ Watch points, as measured:
   stack attribution marker clearing, lock expiry, lock death and first-visit. The stop rule's `cap`
   branch removed makes the real-run test loop forever (no failure to report), so its named kill is the
   pure `stopReason` test.
+- **Mutations added by the second PR #84 round (R1, R2), each failing a named test:**
+
+| Mutation in `balance-sim.ts` | Failing test |
+|---|---|
+| seed-level player-side fold dropped | `R2: foldFightStacks keeps the larger stack per bucket: over two fights the larger wins in each bucket, ...` |
+| seed-level enemy-side fold dropped | the same test |
+| seed-level fold keeps the smaller stack (`>` -> `<`) | the same test |
+| seed-level fold replaces on a tie, or records the wrong floor | the same test |
+| the `foldFightStacks` call removed from `runSeed` | `R2: runSeed folds each fight's stacks into the seed's maxima (the wiring, on a real run)` |
+| spec-level player-side fold dropped | `R2: the spec fold keeps the larger stack per bucket, with its seed; a tie keeps the first seed` |
+| spec-level enemy-side fold dropped | the same test |
+| spec-level fold keeps the smaller stack, replaces on a tie, or attaches the wrong seed | the same test |
+| direction ignored (every stack growth) | the Gorge-shaped, both-directions and two-stacks tests (4 failures) |
+| a factor of exactly 1 counted as a stack | `a factor of exactly 1 is in no bucket ...` |
+| the side swapped in `stackBucket` | `analyzeFight reports the largest stack per side` and the Gorge-, Rally- and both-directions tests |
+| direction left out of the stack key | `one target and one trait in both directions are two stacks, not one` |
 
 ### Spec notes (for the docs, before 4.1-H2)
 
@@ -2996,14 +3029,15 @@ Watch points, as measured:
   as infinite; a seed fighting on floor 5 or deeper within its first 10 floor runs.
 - **The sim's first floor-1 run follows the intro**, so its runCounter differs from the 4.1-G2
   measurement (Brute 27/40, Shieldbarer 3/40, Sorcerer 2/40 there; 24, 7 and 0 here).
-- **Runtime.** The full report takes about 14 minutes (823 s measured after the F4-F6 changes); it
+- **Runtime.** The full report takes about 14 minutes (880 s measured after R1-R2); it
   runs only under `npm run sim`.
 
 ### Files changed
 
 - New: `src/state/balance-sim.ts`, `src/state/balance-sim.test.ts`.
 - Changed: `package.json` (the `sim` script).
-- Docs: this section (and the review's doc-sync commits to CONVENTIONS, ROADMAP and the brief).
+- Docs: this section (and the kickoff, plan-check and review doc-sync commits to CONVENTIONS, ROADMAP
+  and the brief).
 - During the first H1 round I removed a scratch file of mine with `rm`
   (`src/state/zz-debug.test.ts`; untracked and mine, but against the no-delete rule). Scratch work
   now stays outside `src/`.

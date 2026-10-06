@@ -322,11 +322,36 @@ export function splitFights(events: readonly CombatEvent[]): CombatEvent[][] {
   return fights
 }
 
+/** R1: a stat-modifier with a factor above 1 is GROWTH (the watch point's stall: Defence or Health
+ * multiplied up), below 1 is SHRED (it cuts the target). A factor of exactly 1 changes nothing and
+ * is no stack. */
+export type StackDirection = 'growth' | 'shred'
+
 export interface StackCount {
   readonly targetId: string
   readonly attribution: string
+  readonly direction: StackDirection
   readonly count: number
 }
+
+/** The four maxima the report keeps: a direction on a side (the side is the target's combat id). */
+export type StackBucket =
+  'growth-player' | 'growth-enemy' | 'shred-player' | 'shred-enemy'
+export const STACK_BUCKETS: readonly StackBucket[] = [
+  'growth-player',
+  'growth-enemy',
+  'shred-player',
+  'shred-enemy',
+]
+export type StackMaxima<T> = Readonly<Record<StackBucket, T | null>>
+export const NO_STACKS: StackMaxima<never> = {
+  'growth-player': null,
+  'growth-enemy': null,
+  'shred-player': null,
+  'shred-enemy': null,
+}
+/** A seed's maxima: each stack with the floor of the fight it came from. */
+export type SeedStackMaxima = StackMaxima<StackCount & { readonly floor: number }>
 
 export interface StackAttribution {
   readonly stacks: readonly StackCount[]
@@ -341,7 +366,7 @@ export const SPELL_ATTRIBUTION = '(spell)'
 /** ASSUMPTION 103: a `StatModifierApplied` is attributed to the latest `TriggerFired` effect id or
  * `SpellCast` from its source in the current turn (markers clear at each turn and round
  * boundary), else to `(unattributed)`. A stack is the number of such applications per (target,
- * attribution). Input: ONE fight's events. */
+ * attribution, direction): growth and shred are separate stacks (R1). Input: ONE fight's events. */
 export function attributeStatModifiers(events: readonly CombatEvent[]): StackAttribution {
   const marker = new Map<string, string>()
   const counts = new Map<string, StackCount>()
@@ -365,11 +390,15 @@ export function attributeStatModifiers(events: readonly CombatEvent[]): StackAtt
         applications += 1
         const attribution = marker.get(event.sourceId) ?? UNATTRIBUTED
         if (attribution === UNATTRIBUTED) unattributed += 1
-        const key = `${event.targetId}|${attribution}`
+        const direction: StackDirection | null =
+          event.factor > 1 ? 'growth' : event.factor < 1 ? 'shred' : null
+        if (direction === null) break
+        const key = `${event.targetId}|${attribution}|${direction}`
         const prev = counts.get(key)
         counts.set(key, {
           targetId: event.targetId,
           attribution,
+          direction,
           count: (prev?.count ?? 0) + 1,
         })
         break
@@ -477,9 +506,8 @@ export interface FightMetrics {
   /** A draw that ran the full ROUND_CAP rounds. */
   readonly capDraw: boolean
   readonly deaths: number
-  /** The largest stack on a creature of each side (the side is read from the target's combat id). */
-  readonly largestStackPlayer: StackCount | null
-  readonly largestStackEnemy: StackCount | null
+  /** The largest stack in each bucket (direction x the target's side). */
+  readonly largestStacks: StackMaxima<StackCount>
   readonly unattributed: number
   readonly applications: number
   /** Revives by the Unicorn (source = its combat id); null when it isn't in the party. */
@@ -505,6 +533,31 @@ export interface FightContext {
   readonly lockScopes: ReadonlyMap<string, readonly LockScope[]>
 }
 
+/** The bucket a stack belongs to, or null for a target that is on neither side. */
+export function stackBucket(stack: StackCount): StackBucket | null {
+  if (PLAYER_ID.test(stack.targetId)) return `${stack.direction}-player`
+  if (ENEMY_ID.test(stack.targetId)) return `${stack.direction}-enemy`
+  return null
+}
+
+/** R2: folds one fight's maxima into a seed's, per bucket: the larger stack wins, the floor of the
+ * fight it came from is recorded, and on a tie the first stays. Pure. */
+export function foldFightStacks(
+  maxima: SeedStackMaxima,
+  fight: Pick<FightMetrics, 'largestStacks'>,
+  floor: number,
+): SeedStackMaxima {
+  const next: Record<StackBucket, SeedStackMaxima[StackBucket]> = { ...maxima }
+  for (const bucket of STACK_BUCKETS) {
+    const candidate = fight.largestStacks[bucket]
+    const current = next[bucket]
+    if (candidate !== null && (current === null || candidate.count > current.count)) {
+      next[bucket] = { ...candidate, floor }
+    }
+  }
+  return next
+}
+
 export function analyzeFight(
   events: readonly CombatEvent[],
   ctx: FightContext,
@@ -526,17 +579,13 @@ export function analyzeFight(
     }
   }
   const attribution = attributeStatModifiers(events)
-  let largestStackPlayer: StackCount | null = null
-  let largestStackEnemy: StackCount | null = null
+  let largestStacks: Record<StackBucket, StackCount | null> = { ...NO_STACKS }
   for (const stack of attribution.stacks) {
-    if (PLAYER_ID.test(stack.targetId)) {
-      if (largestStackPlayer === null || stack.count > largestStackPlayer.count) {
-        largestStackPlayer = stack
-      }
-    } else if (ENEMY_ID.test(stack.targetId)) {
-      if (largestStackEnemy === null || stack.count > largestStackEnemy.count) {
-        largestStackEnemy = stack
-      }
+    const bucket = stackBucket(stack)
+    if (bucket === null) continue
+    const current = largestStacks[bucket]
+    if (current === null || stack.count > current.count) {
+      largestStacks = { ...largestStacks, [bucket]: stack }
     }
   }
   let boss: BossFightMetrics | null = null
@@ -569,8 +618,7 @@ export function analyzeFight(
     maxRound,
     capDraw: result === 'draw' && maxRound >= ROUND_CAP,
     deaths,
-    largestStackPlayer,
-    largestStackEnemy,
+    largestStacks,
     unattributed: attribution.unattributed,
     applications: attribution.applications,
     unicornRevives,
@@ -644,8 +692,7 @@ export interface SeedResult {
   readonly fights: number
   readonly draws: number
   readonly capDraws: number
-  readonly largestStackPlayer: (StackCount & { readonly floor: number }) | null
-  readonly largestStackEnemy: (StackCount & { readonly floor: number }) | null
+  readonly largestStacks: SeedStackMaxima
   readonly unattributed: number
   readonly applications: number
   readonly unicorn: UnicornTotals
@@ -900,8 +947,7 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
   let fights = 0
   let draws = 0
   let capDraws = 0
-  let largestStackPlayer: SeedResult['largestStackPlayer'] = null
-  let largestStackEnemy: SeedResult['largestStackEnemy'] = null
+  let largestStacks: SeedStackMaxima = NO_STACKS
   let unattributed = 0
   let applications = 0
   const unicorn = {
@@ -935,8 +981,7 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
         fights,
         draws,
         capDraws,
-        largestStackPlayer,
-        largestStackEnemy,
+        largestStacks,
         unattributed,
         applications,
         unicorn,
@@ -952,20 +997,7 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
       if (m.capDraw) capDraws += 1
       unattributed += m.unattributed
       applications += m.applications
-      if (
-        m.largestStackPlayer &&
-        (largestStackPlayer === null ||
-          m.largestStackPlayer.count > largestStackPlayer.count)
-      ) {
-        largestStackPlayer = { ...m.largestStackPlayer, floor: run.floor }
-      }
-      if (
-        m.largestStackEnemy &&
-        (largestStackEnemy === null ||
-          m.largestStackEnemy.count > largestStackEnemy.count)
-      ) {
-        largestStackEnemy = { ...m.largestStackEnemy, floor: run.floor }
-      }
+      largestStacks = foldFightStacks(largestStacks, m, run.floor)
       if (m.unicornRevives === null) {
         unicorn.fightsWithoutUnicorn += 1
         if (m.result === 'win') unicorn.winsWithoutUnicorn += 1
@@ -1112,11 +1144,11 @@ export interface SpecReport {
   readonly fights: number
   readonly draws: number
   readonly capDraws: number
-  /** The largest stack of one trait's stat-modifier on a player and on an enemy creature. */
-  readonly largestStackPlayer:
-    (StackCount & { readonly floor: number; readonly seed: number }) | null
-  readonly largestStackEnemy:
-    (StackCount & { readonly floor: number; readonly seed: number }) | null
+  /** The largest stack of one trait's stat-modifier per bucket: growth (the watch point) and
+   * shred, each on a player and on an enemy creature. */
+  readonly largestStacks: StackMaxima<
+    StackCount & { readonly floor: number; readonly seed: number }
+  >
   readonly unattributed: number
   readonly applications: number
   readonly unicorn: UnicornTotals
@@ -1301,21 +1333,16 @@ export function buildSpecReport(
         (failedPushesByFloor[Number(floor)] ?? 0) + count
     }
   }
-  let largestStackPlayer: SpecReport['largestStackPlayer'] = null
-  let largestStackEnemy: SpecReport['largestStackEnemy'] = null
+  const largestStacks: Record<StackBucket, SpecReport['largestStacks'][StackBucket]> = {
+    ...NO_STACKS,
+  }
   for (const r of results) {
-    if (
-      r.largestStackPlayer &&
-      (largestStackPlayer === null ||
-        r.largestStackPlayer.count > largestStackPlayer.count)
-    ) {
-      largestStackPlayer = { ...r.largestStackPlayer, seed: r.seed }
-    }
-    if (
-      r.largestStackEnemy &&
-      (largestStackEnemy === null || r.largestStackEnemy.count > largestStackEnemy.count)
-    ) {
-      largestStackEnemy = { ...r.largestStackEnemy, seed: r.seed }
+    for (const bucket of STACK_BUCKETS) {
+      const candidate = r.largestStacks[bucket]
+      const current = largestStacks[bucket]
+      if (candidate !== null && (current === null || candidate.count > current.count)) {
+        largestStacks[bucket] = { ...candidate, seed: r.seed }
+      }
     }
   }
   const worstBelow10 = results.map((r) =>
@@ -1369,8 +1396,7 @@ export function buildSpecReport(
     fights: results.reduce((s, r) => s + r.fights, 0),
     draws: results.reduce((s, r) => s + r.draws, 0),
     capDraws: results.reduce((s, r) => s + r.capDraws, 0),
-    largestStackPlayer,
-    largestStackEnemy,
+    largestStacks,
     unattributed: results.reduce((s, r) => s + r.unattributed, 0),
     applications: results.reduce((s, r) => s + r.applications, 0),
     unicorn: {
@@ -1498,13 +1524,15 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
   out.push(
     `Draws: ${spec.draws}/${spec.fights} fights = ${pct(spec.draws, spec.fights)}; round-cap draws ${spec.capDraws} = ${pct(spec.capDraws, spec.fights)}`,
   )
-  const stackText = (ls: SpecReport['largestStackPlayer']): string =>
+  const stackText = (ls: SpecReport['largestStacks'][StackBucket]): string =>
     ls
       ? `${ls.count}x ${ls.attribution} (floor ${ls.floor}, seed ${ls.seed}, ${ls.targetId})`
       : 'none'
   out.push(
-    `Largest stack of one trait's stat-modifier on a player creature: ${stackText(spec.largestStackPlayer)}`,
-    `Largest stack of one trait's stat-modifier on an enemy creature: ${stackText(spec.largestStackEnemy)}; unattributed ${spec.unattributed}/${spec.applications} applications`,
+    `Largest GROWTH stack (the watch point: a stat-modifier factor above 1, stacked) of one trait, on a player creature: ${stackText(spec.largestStacks['growth-player'])}`,
+    `Largest GROWTH stack (the watch point) of one trait, on an enemy creature: ${stackText(spec.largestStacks['growth-enemy'])}`,
+    `Largest SHRED stack (a factor below 1, a cut to the target) of one trait, on a player creature: ${stackText(spec.largestStacks['shred-player'])}`,
+    `Largest SHRED stack of one trait, on an enemy creature: ${stackText(spec.largestStacks['shred-enemy'])}; unattributed ${spec.unattributed}/${spec.applications} applications`,
   )
   out.push('Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):')
   for (const row of spec.bosses) {

@@ -38,9 +38,11 @@ import {
   firstRoundEnemyIds,
   formatReport,
   innateSpellCount,
+  foldFightStacks,
   isFunctionalPerk,
   lockScopesByStatus,
   medianOfSeeds,
+  NO_STACKS,
   nextRun,
   noteBossVisit,
   orderedParty,
@@ -61,7 +63,9 @@ import {
   INITIAL_PROGRESS,
   WALL_FAILED_PUSHES,
   type BossVisit,
+  type FightMetrics,
   type RunRecord,
+  type StackCount,
   type SeedResult,
 } from './balance-sim'
 
@@ -149,8 +153,7 @@ describe.skipIf(isSim)('balance simulator', () => {
         expect(spec.t3.partySizeCounts).toBeDefined()
         expect(spec.t4).toHaveProperty('worstFailedPushesBelow10')
         expect(spec.t4).toHaveProperty('runsToFirstFloor10Clear')
-        expect(spec).toHaveProperty('largestStackPlayer')
-        expect(spec).toHaveProperty('largestStackEnemy')
+        expect(spec).toHaveProperty('largestStacks')
       }
       expect(formatReport(report)).toContain('ASSUMPTION 22')
     })
@@ -600,7 +603,7 @@ describe.skipIf(isSim)('balance simulator', () => {
         mod(A, B),
       ]
       expect(attributeStatModifiers(leak).stacks).toEqual([
-        { targetId: B, attribution: '(unattributed)', count: 1 },
+        { targetId: B, attribution: '(unattributed)', direction: 'growth', count: 1 },
       ])
     })
 
@@ -614,12 +617,13 @@ describe.skipIf(isSim)('balance simulator', () => {
       }
       const metrics = analyzeFight(events, ctx)
       // Every creature here is a player-side id, so the enemy side has no stack.
-      expect(metrics.largestStackPlayer).toEqual({
+      expect(metrics.largestStacks['growth-player']).toEqual({
         targetId: B,
         attribution: 'rally',
+        direction: 'growth',
         count: 2,
       })
-      expect(metrics.largestStackEnemy).toBeNull()
+      expect(metrics.largestStacks['growth-enemy']).toBeNull()
       expect(metrics.result).toBe('win')
     })
   })
@@ -796,8 +800,7 @@ describe.skipIf(isSim)('balance simulator', () => {
         fights: 0,
         draws: 0,
         capDraws: 0,
-        largestStackPlayer: null,
-        largestStackEnemy: null,
+        largestStacks: NO_STACKS,
         unattributed: 0,
         applications: 0,
         unicorn: zeroUnicorn,
@@ -953,6 +956,58 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(report(results).thresholds).toEqual(computeThresholds(results))
     })
 
+    it('R2: the spec fold keeps the larger stack per bucket, with its seed; a tie keeps the first seed', () => {
+      const stack = (
+        targetId: string,
+        direction: 'growth' | 'shred',
+        count: number,
+        floor: number,
+      ) => ({ targetId, attribution: 'trait', direction, count, floor })
+      const r = report([
+        seedResult({
+          seed: 3,
+          largestStacks: {
+            ...NO_STACKS,
+            'growth-player': stack('a-player-0', 'growth', 5, 2),
+            'shred-enemy': stack('x-enemy-0', 'shred', 9, 4),
+          },
+        }),
+        seedResult({
+          seed: 7,
+          largestStacks: {
+            ...NO_STACKS,
+            'growth-player': stack('b-player-1', 'growth', 8, 6),
+            'growth-enemy': stack('y-enemy-1', 'growth', 3, 1),
+            'shred-player': stack('c-player-2', 'shred', 2, 5),
+          },
+        }),
+        seedResult({
+          seed: 9,
+          largestStacks: {
+            ...NO_STACKS,
+            'growth-player': stack('d-player-3', 'growth', 8, 7), // tie with seed 7
+            'shred-enemy': stack('z-enemy-2', 'shred', 1, 3), // smaller than seed 3's
+          },
+        }),
+      ])
+      expect(r.largestStacks['growth-player']).toEqual({
+        ...stack('b-player-1', 'growth', 8, 6),
+        seed: 7,
+      })
+      expect(r.largestStacks['growth-enemy']).toEqual({
+        ...stack('y-enemy-1', 'growth', 3, 1),
+        seed: 7,
+      })
+      expect(r.largestStacks['shred-player']).toEqual({
+        ...stack('c-player-2', 'shred', 2, 5),
+        seed: 7,
+      })
+      expect(r.largestStacks['shred-enemy']).toEqual({
+        ...stack('x-enemy-0', 'shred', 9, 4),
+        seed: 3,
+      })
+    })
+
     it('the text report prints "never" for an infinite median, and the walls and per-side stacks', () => {
       const text = formatReport({
         seeds: [1],
@@ -962,9 +1017,26 @@ describe.skipIf(isSim)('balance simulator', () => {
       })
       expect(text).toContain('never')
       expect(text).toContain("T4 walls' size")
-      expect(text).toContain('on a player creature')
-      expect(text).toContain('on an enemy creature')
+      expect(text).toContain('GROWTH stack')
+      expect(text).toContain('SHRED stack')
     })
+  })
+
+  it("R2: runSeed folds each fight's stacks into the seed's maxima (the wiring, on a real run)", () => {
+    // Enemy traits stack growth (Ancient Growth, Hive Mind) from the first floors, so a few real
+    // runs hold stacks. Each bucket's stack names a floor the seed actually fought and has the
+    // direction its bucket says; every stack is on its bucket's side.
+    const r = runSeed('brute', 1, { seeds: [1], runCap: 3 })
+    const fought = new Set(r.runs.map((x) => x.floor))
+    const filled = Object.entries(r.largestStacks).filter(([, v]) => v !== null)
+    expect(filled.length).toBeGreaterThan(0)
+    for (const [bucket, stack] of filled) {
+      expect(fought.has(stack!.floor)).toBe(true)
+      expect(stack!.count).toBeGreaterThan(0)
+      const [direction, side] = bucket.split('-')
+      expect(stack!.direction).toBe(direction)
+      expect(stack!.targetId).toMatch(new RegExp(`-${side}-\\d+$`))
+    }
   })
 
   describe('per-seed derivations hold on real runs (F1.2)', () => {
@@ -1090,53 +1162,160 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(m.boss?.peakAttack).toBe(150)
     })
 
-    it('F6: the largest stack on a player and on an enemy creature, separately', () => {
+    describe('R1: growth and shred stacks are separate, per side', () => {
       const P = cid('p-player-0')
-      const E = cid('x-enemy-0')
+      const Q = cid('q-player-1')
+      const E = cid('sparkeater-enemy-0')
       const trig = (source: typeof P, effectId: string): CombatEvent => ({
         type: 'TriggerFired',
         sourceId: source,
-        hook: 'on-provoke',
+        hook: 'on-attack',
         effectId,
       })
-      const mod = (source: typeof P, target: typeof P): CombatEvent => ({
+      const mod = (source: typeof P, target: typeof P, factor: number): CombatEvent => ({
         type: 'StatModifierApplied',
         sourceId: source,
         targetId: target,
         stat: 'defence',
-        factor: 1.35,
-        effectiveBefore: 1,
-        effectiveAfter: 2,
+        factor,
+        effectiveBefore: 10,
+        effectiveAfter: 10 * factor,
       })
-      const events: CombatEvent[] = [
-        { type: 'TurnStarted', creatureId: P },
-        trig(P, 'rally'),
-        mod(P, P), // rally|P = 1
-        trig(P, 'rally'),
-        mod(P, P), // rally|P = 2
-        { type: 'TurnEnded', creatureId: P },
-        { type: 'TurnStarted', creatureId: E },
-        trig(E, 'harmonize'),
-        mod(E, E), // harmonize|E = 1
-        trig(E, 'harmonize'),
-        mod(E, E), // 2
-        trig(E, 'harmonize'),
-        mod(E, E), // 3
-        { type: 'TurnEnded', creatureId: E },
-      ]
-      const m = analyzeFight(events, noCtx)
-      expect(m.largestStackPlayer).toEqual({
-        targetId: P,
-        attribution: 'rally',
-        count: 2,
+      const stack = (
+        targetId: string,
+        attribution: string,
+        direction: 'growth' | 'shred',
+        count: number,
+      ): StackCount => ({ targetId, attribution, direction, count })
+
+      it('a Gorge-shaped case (enemy source, player target, factor 0.9) is a player shred, never a player growth stack', () => {
+        const m = analyzeFight(
+          [{ type: 'TurnStarted', creatureId: E }, trig(E, 'gorge'), mod(E, P, 0.9)],
+          noCtx,
+        )
+        expect(m.largestStacks['shred-player']).toEqual(stack(P, 'gorge', 'shred', 1))
+        expect(m.largestStacks['growth-player']).toBeNull()
+        expect(m.largestStacks['growth-enemy']).toBeNull()
+        expect(m.largestStacks['shred-enemy']).toBeNull()
       })
-      expect(m.largestStackEnemy).toEqual({
-        targetId: E,
-        attribution: 'harmonize',
-        count: 3,
+
+      it('a Rallying-Cry-shaped case (player source, player targets, factor 1.35) is a player growth stack', () => {
+        const m = analyzeFight(
+          [
+            { type: 'TurnStarted', creatureId: P },
+            trig(P, 'rally'),
+            mod(P, P, 1.35), // rally|P = 1
+            mod(P, Q, 1.35), // rally|Q = 1
+            trig(P, 'rally'),
+            mod(P, P, 1.35), // rally|P = 2
+          ],
+          noCtx,
+        )
+        expect(m.largestStacks['growth-player']).toEqual(stack(P, 'rally', 'growth', 2))
+        expect(m.largestStacks['shred-player']).toBeNull()
       })
-      // A fight with enemy stacks only has no player maximum.
-      expect(analyzeFight(events.slice(6), noCtx).largestStackPlayer).toBeNull()
+
+      it("one trait with both directions in one fight (Gorge's real shape) lands in both buckets on the two creatures", () => {
+        const events: CombatEvent[] = [
+          { type: 'TurnStarted', creatureId: E },
+          trig(E, 'gorge'),
+          mod(E, E, 1.1), // the Sparkeater itself: growth on an enemy
+          mod(E, P, 0.9), // the player creature it hit: shred on a player
+          trig(E, 'gorge'),
+          mod(E, E, 1.1),
+          mod(E, P, 0.9),
+        ]
+        const m = analyzeFight(events, noCtx)
+        expect(m.largestStacks['growth-enemy']).toEqual(stack(E, 'gorge', 'growth', 2))
+        expect(m.largestStacks['shred-player']).toEqual(stack(P, 'gorge', 'shred', 2))
+        expect(m.largestStacks['growth-player']).toBeNull()
+        expect(m.largestStacks['shred-enemy']).toBeNull()
+      })
+
+      it('one target and one trait in both directions are two stacks, not one', () => {
+        const events: CombatEvent[] = [
+          { type: 'TurnStarted', creatureId: E },
+          trig(E, 'odd'),
+          mod(E, E, 1.1),
+          mod(E, E, 0.9),
+          mod(E, E, 0.9),
+        ]
+        expect(attributeStatModifiers(events).stacks).toEqual([
+          stack(E, 'odd', 'growth', 1),
+          stack(E, 'odd', 'shred', 2),
+        ])
+      })
+
+      it('a factor of exactly 1 is in no bucket (it changes nothing), though it is an application', () => {
+        const events: CombatEvent[] = [
+          { type: 'TurnStarted', creatureId: P },
+          trig(P, 'noop'),
+          mod(P, P, 1),
+        ]
+        const attribution = attributeStatModifiers(events)
+        expect(attribution.stacks).toEqual([])
+        expect(attribution.applications).toBe(1)
+        expect(analyzeFight(events, noCtx).largestStacks).toEqual(NO_STACKS)
+      })
+    })
+
+    describe('R2: foldFightStacks keeps the larger stack per bucket', () => {
+      const stack = (
+        targetId: string,
+        direction: 'growth' | 'shred',
+        count: number,
+      ): StackCount => ({ targetId, attribution: 'trait', direction, count })
+      const fight = (
+        largestStacks: Partial<FightMetrics['largestStacks']>,
+      ): Pick<FightMetrics, 'largestStacks'> => ({
+        largestStacks: { ...NO_STACKS, ...largestStacks },
+      })
+
+      it('over two fights the larger wins in each bucket, with the floor it came from; a tie keeps the first', () => {
+        const first = fight({
+          'growth-player': stack('a-player-0', 'growth', 5),
+          'growth-enemy': stack('x-enemy-0', 'growth', 2),
+          'shred-player': stack('b-player-1', 'shred', 9),
+        })
+        const second = fight({
+          'growth-player': stack('c-player-2', 'growth', 7), // larger: replaces
+          'growth-enemy': stack('y-enemy-1', 'growth', 2), // tie: the first stays
+          'shred-player': stack('d-player-3', 'shred', 3), // smaller: ignored
+          'shred-enemy': stack('z-enemy-2', 'shred', 4), // first in its bucket
+        })
+        const folded = foldFightStacks(foldFightStacks(NO_STACKS, first, 3), second, 4)
+        expect(folded['growth-player']).toEqual({
+          ...stack('c-player-2', 'growth', 7),
+          floor: 4,
+        })
+        expect(folded['growth-enemy']).toEqual({
+          ...stack('x-enemy-0', 'growth', 2),
+          floor: 3,
+        })
+        expect(folded['shred-player']).toEqual({
+          ...stack('b-player-1', 'shred', 9),
+          floor: 3,
+        })
+        expect(folded['shred-enemy']).toEqual({
+          ...stack('z-enemy-2', 'shred', 4),
+          floor: 4,
+        })
+      })
+
+      it('does not mutate the maxima it was given', () => {
+        const start = foldFightStacks(
+          NO_STACKS,
+          fight({ 'growth-player': stack('a-player-0', 'growth', 1) }),
+          1,
+        )
+        const snapshot = structuredClone(start)
+        foldFightStacks(
+          start,
+          fight({ 'growth-player': stack('b-player-1', 'growth', 9) }),
+          2,
+        )
+        expect(start).toEqual(snapshot)
+      })
     })
   })
 
