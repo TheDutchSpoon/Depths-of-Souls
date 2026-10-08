@@ -77,7 +77,7 @@ major, no auto-merge) and a **throwaway engine demo harness** replacing the Phas
 on the live Pages site — a button that runs `createCombat`/`resolveFight` on a hardcoded fight
 and renders the real event log, proving deployed engine code actually works. Explicitly guarded
 against scope creep into Phase 7's real combat UI, and against leaking any React/DOM dependency
-into `src/engine/`. Full brief: `.claude/briefs/phase-1.5-tooling-and-demo.md`.
+into `src/engine/`. Full brief: `.claude/archive/briefs/phase-1.5-tooling-and-demo.md`.
 
 ## Phase 2 — Actions, spells & scripting interpreter
 *(As built. Phase 4.1 deletes `is-provoking`, makes rule targeting optional with a side-aware
@@ -119,7 +119,7 @@ seven role scripts, which replace the five `always-*` stock scripts as shipped c
   Phase 1 goldens stay stable. Verify scripted combat is deterministic.
 
 ## Phase 2.5 — Scripted combat demo (interlude)
-*Brief: `.claude/briefs/phase-2.5-scripted-demo.md`.* Throwaway visual harness (successor to the
+*Brief: `.claude/archive/briefs/phase-2.5-scripted-demo.md`.* Throwaway visual harness (successor to the
 Phase 1.5 demo) showing both sides run scripts through the interpreter live on Pages. Same
 guardrails: consumes the engine, engine stays pure, real content not fixtures, explicitly replaced
 by Phase 7. Separate PR after Phase 2.
@@ -166,7 +166,7 @@ passive action locks and the conditional-passive predicate with a data condition
   round, and win/loss is checked after the full sweep). Phase 1/2 goldens stay stable.
 
 ## Phase 3.5 — Traits & statuses demo (interlude)
-*Brief: `.claude/briefs/phase-3.5-traits-statuses-demo.md`.* Throwaway visual demo (per the standing
+*Brief: `.claude/archive/briefs/phase-3.5-traits-statuses-demo.md`.* Throwaway visual demo (per the standing
 "every phase ships a demo" convention) showing traits + statuses live: triggered effects firing, DoT
 ticking, stun skipping a turn, `TriggerFired`/status events in the log. Adds the **baseline demo-UX**
 inherited by all later `.5` demos — a **randomize-seed** button (+ seed shown) and **timed,
@@ -185,7 +185,7 @@ proves the systems against real content and demos the loop, it doesn't ship full
 Ships in **multiple slices + a Phase 4.5 demo** (see `.claude/WORKFLOWS.md` for the slice
 build/review loop). The systems spine is specified in GAME_DESIGN/CONVENTIONS (locked via design
 grill); the **coding agent's implementation plan owns the slice breakdown** —
-`.claude/briefs/phase-4-implementation-plan.md`.
+`.claude/archive/briefs/phase-4-implementation-plan.md`.
 
 - Full **6v6** party vs a floor's creatures; **floor-by-floor descent** with **persistent
   depth** (no run reset; a wipe returns the party to the entrance hub and keeps all progress).

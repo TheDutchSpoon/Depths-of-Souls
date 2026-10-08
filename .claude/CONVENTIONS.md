@@ -2052,7 +2052,7 @@ src/
 
 ## Implementation plans
 
-- When a phase or task is worked up as an **implementation plan** (e.g. a `briefs/` doc or a plan
+- When a phase or task is worked up as an **implementation plan** (e.g. a phase or slice `brief.md`, or a plan
   handed to the coding agent), **every assumption the plan makes must be explicitly marked** —
   inline, clearly labeled (e.g. an **`ASSUMPTION:`** tag or a dedicated "Assumptions" section) — so
   they can be reviewed together *before* implementation, not discovered later in the code.
@@ -2070,8 +2070,8 @@ src/
   **consumes** the engine (imports from `src/engine`, renders in `src/ui`/`src/app`; the engine
   never takes a UI dependency), uses **real content, not `__fixtures__`**, is **explicitly marked
   throwaway** (Phase 7's real combat UI replaces them all), and is a **separate PR** after the
-  phase's core work. It gets its own `briefs/` entry (Status: planned → shipped) and a `phases/`
-  record like any other work. **A fix phase** (e.g. Phase 4.1, which corrects and consolidates the
+  phase's core work. It gets its own phase folder (`phases/<phase>/`: brief + record)
+  like any other work. **A fix phase** (e.g. Phase 4.1, which corrects and consolidates the
   phase before it) **ships no demo of its own**: the next demo covers both (the Phase 4.5 demo covers
   Phase 4 and 4.1), and ROADMAP records it so it never reads as a skipped convention.
   - **Baseline demo-UX (from Phase 3.5 onward), inherited by every successor harness:** a

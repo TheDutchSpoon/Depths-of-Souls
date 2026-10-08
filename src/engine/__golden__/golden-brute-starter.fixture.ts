@@ -6,7 +6,7 @@
 //
 // NOTE on a brief/docs conflict, flagged rather than silently resolved (per this slice's own
 // kickoff instructions -- "docs win over anything in the brief if they disagree"):
-// `.claude/briefs/phase-4-implementation-plan.md`'s own Slice B vocabulary table and Slice F
+// `.claude/archive/briefs/phase-4-implementation-plan.md`'s own Slice B vocabulary table and Slice F
 // prose repeatedly describe the Brute starter's second instance as `[100%, 30%]` ("attack again
 // for 30%"). But BOTH content docs -- `.claude/species/species-locked.md` ("Attack executes
 // twice at 100%") and `.claude/specializations/brute.md` ("Attack executes twice at 100%") --

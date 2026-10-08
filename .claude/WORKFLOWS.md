@@ -1,11 +1,12 @@
 # Slice workflow
 
-Each slice is built and reviewed in its **own fresh chat**. The **docs are the memory**, not chat
-scrollback. Two habits keep that true:
+Each step of a slice runs in its **own fresh chat**. The **docs are the memory**, not chat
+scrollback, and every hand-off between agents is a **file in the slice's mailbox**, not a paste.
+Two habits keep that true:
 
 1. Every locked decision lives in `.claude/`, never only in a chat.
-2. When a plan review or PR review surfaces a **new** decision, it's synced into `.claude/`
-   **before** the next slice's chat opens. Otherwise a fresh build runs against a stale spec. This
+2. When a plan review or PR review surfaces a **new** decision, it's written into `.claude/`
+   **before** the next slice's kickoff. Otherwise a fresh build runs against a stale spec. This
    review → sync → next-slice rhythm is the connective tissue between slices.
 
 The failure mode to avoid: a long-lived chat where decisions live only in scrollback, so the spec
@@ -15,44 +16,95 @@ drifts and stale decisions silently outlive their correction.
 
 ## Who does what
 
-- **Human (TheDutchSpoon):** the decision-maker. Makes every decide-point call, commits, pushes,
-  merges, and deletes files. Nothing reaches `main` without the human.
-- **Coding agent (Claude Code):** writes the implementation plan, then the code, tests, and the
-  slice's phase-record section. Never commits and never deletes files; says what needs deleting.
-- **Design & review agent:** writes kickoffs, reviews plans and PRs, writes fix hand-outs and
-  doc-syncs. Never writes engine code and never commits. Re-reads the live `.claude/` docs at the
-  start of every session.
+- **Human (TheDutchSpoon):** the decision-maker. Makes every decide-point call, runs the commands
+  that move a slice from step to step, commits, pushes, merges, and deletes files. Nothing reaches
+  `main` without the human.
+- **Coding agent (Claude Code in VS Code):** writes the implementation plan, then the code, tests,
+  reports and the slice's record. Never commits and never deletes files; says what needs deleting.
+  Standing rules: `workflow/coding-rules.md`.
+- **Design & review agent (Cowork, with the local repo connected):** writes kickoffs, reviews plans
+  and PRs, writes fix hand-outs, and edits the docs in place for every decision. Never writes engine
+  or app code, never commits. Re-reads the living docs from the working tree at the start of every
+  session. Standing rules: `workflow/design-rules.md`.
+
+## Where things live
+
+```
+.claude/
+  CLAUDE.md  CONVENTIONS.md  GAME_DESIGN.md  ROADMAP.md  WORKFLOWS.md   living docs
+  content/  species/  specializations/                                   living docs
+  workflow/        the standing rules and step files both agents follow
+  skills/          the coding agent's commands (/slice-plan, /slice-build, /slice-fix)
+  phases/
+    <phase>/
+      brief.md     phase-wide: scope, architecture, vocabulary delta, assumptions, slice list
+      record.md    short outcome summary + links, written when the phase closes
+      <slice>/     the slice's mailbox:
+        brief.md        this slice's plan section (written with the phase brief)
+        kickoff.md      design agent → coding agent
+        plan.md         coding agent → design agent
+        plan-review.md  design agent → coding agent, one section per round
+        report-r1.md    coding agent's build report
+        review-r1.md    design agent's PR review of report-r1
+        handout-r1.md   design agent → coding agent, only when there are fixes
+        report-r2.md …  and so on, one round per fix batch
+        record.md       what was built; immutable once merged
+  archive/         Phases 0–4's briefs and records, untouched. History, not current truth.
+```
+
+A slice id maps to its mailbox: `4.1-H2b2` → `.claude/phases/4.1/H2b2/`.
+
+**Phase 4.1 is the transition.** Its slices from H2b2 on use the mailbox (`phases/4.1/<slice>/`),
+but its brief and record stay where they are: the brief is
+`briefs/phase-4.1-implementation-plan.md` and each slice still appends its section to
+`phases/phase-4.1-fix-and-consolidation.md`. When 4.1 closes, those two files move unchanged to
+`phases/4.1/brief.md` and `phases/4.1/record.md`. Phase 4.5's brief is the first written in the new
+shape.
+
+Mailbox files are committed on the slice branch, so the PR carries its own plan, reviews and
+reports. Once merged they're immutable, like records.
 
 ## The loop, per slice
 
+| #   | Step               | Where   | Duncan types                 | Writes                                     |
+| --- | ------------------ | ------- | ---------------------------- | ------------------------------------------ |
+| 0   | Pre-flight         | —       | creates the slice branch     | —                                          |
+| 1   | Kickoff            | Cowork  | `/slice-kickoff <id>`        | `kickoff.md` (+ doc edits)                 |
+| 2   | Plan               | VS Code | `/slice-plan <id>`           | `plan.md`                                  |
+| 3   | Plan review        | Cowork  | `/plan-review <id>`          | `plan-review.md` + doc edits               |
+| 4   | First commit       | —       | commits steps 1–3            | —                                          |
+| 5   | Build              | VS Code | `/slice-build <id>`          | code, `report-r1.md`, the slice's record   |
+| 6   | PR review          | Cowork  | `/pr-review <id> [<branch>]` | `review-r1.md` (+ `handout-r1.md`, edits)  |
+| 7   | Fix (per round)    | VS Code | `/slice-fix <id> <N>`        | code, `report-r<N+1>.md`                   |
+| 8   | Merge              | —       | merges                       | —                                          |
+
 0. **Pre-flight.** `main` has the previous slice merged and every doc-sync from its reviews
-   committed. Locally: `npm ci`, and the toolchain matches the lockfile (CONVENTIONS "Local runs
-   match CI's toolchain").
-1. **Kickoff.** The design agent writes the kickoff: the template below plus a slice-specific
-   block. The human pastes it into a **fresh** coding-agent chat.
-2. **Plan.** The coding agent posts an implementation plan with every ASSUMPTION marked inline and
-   collected in a checklist, then **stops**. No code before the plan is approved.
-3. **Plan review.** In a design chat (review kickoff below), the design agent reviews the plan
-   against the docs and the ASSUMPTION checklist. It separates plan fixes from decide-points and
-   recommends an answer for each decide-point. The human decides.
-4. **Plan-review doc-sync.** Every decision the plan review made is written into `.claude/`, as
-   complete replacement files. The human commits them as the **first commit on the slice branch**,
-   so the PR carries the spec it was built against.
-5. **Build.** The coding agent builds to the approved plan, runs every gate, appends the slice's
-   section to the phase record, and reports. Its report lists anything that surfaced a spec
-   question.
-6. **PR review.** In a review chat (review kickoff below), following `pr-review-runbook.md`. It
-   ends in a verdict: approved, or fixes. Fixes go back to the coding agent as a standalone
-   **fix hand-out**; the review then continues in the same chat, one round per fix batch, until
-   approved.
-7. **PR-review doc-sync.** Decisions the PR review made (a new rule, a changed plan for a later
-   slice, a watch point) are written into `.claude/` before the next kickoff. While the PR is open
-   they're committed on the slice branch; decisions made after approval go on `main` right after
-   the merge.
+   committed. Duncan creates the slice branch from `main`. Locally: `npm ci`, and the toolchain
+   matches the lockfile (CONVENTIONS "Local runs match CI's toolchain").
+1. **Kickoff** (`workflow/kickoff.md`). The design agent writes the slice-specific kickoff into the
+   mailbox. The standing rules aren't repeated in it: they live in `workflow/coding-rules.md`.
+2. **Plan.** The coding agent writes `plan.md` with every ASSUMPTION marked inline and collected in
+   a checklist, then **stops**. No code before the plan is approved.
+3. **Plan review** (`workflow/plan-review.md`). The design agent reviews the plan against the docs
+   and the ASSUMPTION checklist, separates plan fixes from decide-points, and recommends an answer
+   for each decide-point. Duncan decides; the design agent writes the decisions into the docs in
+   place. "Changes needed" → Duncan runs `/slice-plan` again for a revision, then another round.
+4. **First commit.** Duncan reviews the doc edits as a git diff and commits the kickoff, plan, plan
+   review and doc edits as the **first commit on the slice branch**, so the PR carries the spec it
+   was built against.
+5. **Build.** The coding agent builds to the approved plan, runs every gate, writes `report-r1.md`
+   and the slice's record. The report lists anything that surfaced a spec question.
+6. **PR review** (`workflow/pr-review.md`). Duncan pushes and opens the PR; the design agent
+   reviews it in its own sandbox and ends in a verdict: approved, or fixes. Fixes go to the coding
+   agent as a standalone `handout-r<N>.md`. Decisions the review makes go into the docs in place,
+   on the slice branch while the PR is open; decisions made after approval go on `main` right
+   after the merge.
+7. **Fix.** One round per fix batch: `/slice-fix <id> <N>` → `report-r<N+1>.md` → `/pr-review`
+   again (same review chat), until approved.
 8. **Merge**, then the next slice starts at step 0.
 
-The human can merge steps when a slice is small (for example, skip a separate plan review for a
-pure docs or tooling change), but the review → sync → next-slice order never changes.
+Duncan can merge steps when a slice is small (for example, skip a separate plan review for a pure
+docs or tooling change), but the review → sync → next-slice order never changes.
 
 ## Golden policy: one per PR
 
@@ -70,102 +122,19 @@ its mechanism removed, at **every** site the mechanism lives (CONVENTIONS "Testi
 ## When a slice is too big
 
 Split it into more slices rather than keeping the original lettering fixed: `4.1-C` shipped as
-C1, C2a, C2b and C2c. Each part keeps one golden policy, gets its own phase-record section, and
-the brief records the split when it's decided.
+C1, C2a, C2b and C2c. Each part keeps one golden policy, gets its own mailbox and record, and the
+brief records the split when it's decided.
 
-## Files the review produces
+## Docs and records
 
-- **Review notes:** one file per PR, with a section appended per round. Real fixes, scope/labeling,
-  and the 1–3 decide-points (each with a recommendation) are kept separate.
-- **Fix hand-outs:** standalone. They make sense without the review notes or any earlier hand-out,
-  since the coding agent sees only the hand-out.
-- **Doc-syncs:** complete replacement files, never patches, checked to apply onto the target commit
-  and to pass `npx prettier --check` in the repo.
-- **Phase records** are written by the coding agent and are immutable once merged. Living docs
-  (`GAME_DESIGN`, `CONVENTIONS`, `CLAUDE`, `ROADMAP`, briefs, `WORKFLOWS`) are the mutable source of
-  truth.
-
----
-
-## Coding-agent kickoff (paste at the top of each slice chat, one slice per chat)
-
-The design agent fills in the `<…>` slots and writes the **Slice-specific** block: the golden
-policy, traps in the code this slice touches, the tests it must keep green, and what the PR must
-prove.
-
-```
-Phase <X> — Slice <Y: name>. Build ONLY this slice.
-
-Before writing anything, read:
-- .claude/CLAUDE.md
-- .claude/briefs/phase-<X>-implementation-plan.md (this slice's section + the
-  architecture overview + the Assumptions checklist)
-- .claude/CONVENTIONS.md and .claude/GAME_DESIGN.md (the spec you build against —
-  docs win over anything in the brief if they disagree; flag the conflict, don't guess)
-- the current src/engine + existing goldens (build against real code, not memory)
-- for content slices: .claude/species/, .claude/specializations/ and .claude/content/
-
-Toolchain: `npm ci`; your Node and tool versions match the lockfile (CONVENTIONS
-"Local runs match CI's toolchain"). If a tool behaves unexpectedly, check its
-`--version` against the lockfile before designing around it.
-
-PLAN FIRST. Post the implementation plan, with every ASSUMPTION marked inline and
-collected in a checklist, then STOP for design review. No code until the plan is
-approved.
-
-Rules:
-- Stay in this slice's scope; if it depends on an unbuilt slice, stop and say so.
-- Every ASSUMPTION in scope: mark it inline AND in the slice's checklist.
-- Golden policy: <byte-identical | deliberate, listed> (see WORKFLOWS "Golden policy").
-- Goldens hand-derived (setup, arithmetic and random draws in comments) for focused
-  cases; big integration goldens labeled generated-then-checkpoint-verified. No
-  run-then-pasted goldens. New goldens replay through the shared golden runner.
-- Every new or changed mechanism has a test that fails with it removed, at every site
-  the mechanism lives.
-- Engine stays pure (no UI/store/data imports in src/engine).
-- Green all gates before done: test / lint / format:check / build / tsc -b.
-- Leave main green + deployable; the demo (if this slice ships one) consumes the
-  engine, doesn't leak into it.
-- Don't commit and don't delete files; say what needs deleting.
-
-Slice-specific:
-<written by the design agent for this slice>
-
-Output (after the plan is approved and the slice is built):
-- the work on the slice branch, ready for a PR against `main`;
-- a report that states how each claim was checked: gates, the test count
-  reconciled file by file against main, the golden policy (expected values compared
-  by importing the fixtures, not by reading diffs), the corpus digest (unchanged, or
-  regenerated once with every changed fight attributed), and for each mechanism the
-  test that fails with it removed;
-- a short note of anything that surfaced a spec question, so the docs get updated
-  before the next slice;
-- the slice's section in the phase record. For content slices, also a doc in
-  .claude/content/ with the designed content and a plain-language explanation of how
-  it works.
-```
-
-## Plan-review kickoff (paste at the top of a design chat, with the plan)
-
-```
-Review the implementation plan for Phase <X> — Slice <Y>. Re-read the live .claude/
-docs on `main` first. Check the plan against the docs and the brief, and go through
-its ASSUMPTION checklist item by item: confirm, correct, or flag as a decide-point
-with your recommendation. Say what the docs need before building starts, and deliver
-those as complete replacement files.
-```
-
-## PR-review kickoff (paste at the top of a review chat, one PR per chat)
-
-```
-Review PR: <link or branch name>. Follow pr-review-runbook.md.
-It's a slice of the phase-<X> plan — review against the docs on `main`, not the PR's
-own claims. Separate real fixes from scope/labeling; flag the things needing my
-decision vs. what you'll action. If it surfaced a new decision, say what the docs need.
-```
-
-Later rounds continue in the same chat: paste the coding agent's report after each fix
-hand-out.
+- **Doc edits are made in place**, in Duncan's working tree, by the design agent: the exact lines
+  that change, never a regenerated whole file. Duncan reviews them as a git diff and commits them.
+  Each step's file ends with the list of docs it edited.
+- **Records** are written by the coding agent and are immutable once merged. Living docs
+  (`GAME_DESIGN`, `CONVENTIONS`, `CLAUDE`, `ROADMAP`, briefs, `WORKFLOWS`, `workflow/`) are the
+  mutable source of truth.
+- **Changing the process** is a normal doc change: edit `WORKFLOWS.md`, `workflow/` or
+  `skills/`, in its own commit.
 
 ---
 
@@ -175,4 +144,5 @@ When a slice surfaces a spec question, decide: resolve it inline, or pull it bac
 (a grill). Radar: the brief's **Assumptions checklist**. Anything tagged there that a slice wants
 to **change** (not merely **confirm**) is a "bring it back" signal. The same holds for a spec
 question a review finds live in the corpus: if real content already hits it, it isn't
-hypothetical, and it gets decided before the slice merges.
+hypothetical, and it gets decided before the slice merges. A plan that needs a third review round
+is the same signal.

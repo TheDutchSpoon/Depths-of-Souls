@@ -131,13 +131,15 @@ src/
 
 Detailed conventions: `.claude/CONVENTIONS.md`.
 Roadmap & what to build first: `.claude/ROADMAP.md`.
-How slices get built & reviewed (fresh chat per slice; docs-are-the-memory; kickoff templates): `.claude/WORKFLOWS.md` — read before starting or reviewing any slice.
-`.claude/phases/` = records of what was **built** (written after the fact, one per phase).
-`.claude/briefs/` = forward-looking task **briefs** — the plan/reasoning/guardrails handed to the
-coding agent *before* work starts. Briefs are **kept** as historical artifacts (intent), not
-deleted; each carries a `Status:` line (`planned` → `shipped — see phases/<record>.md`) so a past
-plan is never mistaken for current truth. Together: `briefs/` = what we intended, `phases/` = what
-we built.
+How slices get built & reviewed (fresh chat per step; docs-are-the-memory; the per-slice
+mailbox and its commands): `.claude/WORKFLOWS.md` — read before starting or reviewing any slice.
+`.claude/phases/<phase>/` = one folder per phase: `brief.md` (what we **intend**, written before
+work starts) and `record.md` (what was **built**), plus one folder per slice holding its brief,
+kickoff, plan, reviews, reports and record. Briefs are kept as historical artifacts, never deleted;
+a slice's `record.md` existing is what marks it shipped. Phase 4.1 is the transition: its brief and
+record are still `briefs/phase-4.1-implementation-plan.md` and
+`phases/phase-4.1-fix-and-consolidation.md` until 4.1 closes. Phases 0–4 live untouched in
+`.claude/archive/` — history, never current truth.
 
 ## Working agreement
 

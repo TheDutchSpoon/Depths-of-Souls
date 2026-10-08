@@ -198,7 +198,7 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
     of an existing spell does NOT count toward the bar) — layered as *spice* on top of the large
     inherited base, never a re-authored full kit per affinity. Two failure modes bracket the bar:
     re-authoring a full kit caused Phase 4 Slice H2's own near-duplicate spells (since deleted; see
-    `.claude/phases/` for the record); under-authoring (shipping only 2–3) leaves later biomes thin.
+    `.claude/archive/phases/` for the record); under-authoring (shipping only 2–3) leaves later biomes thin.
     H3 (Rotcap Hollow) and every biome after author to this same ≥4–5 bar.
   - **Seed biomes (Phase 4):** the first three authored biomes are **The Overgrowth** (lush,
     sunlit entrance), **Glimmerdark** (light thins, life adapts, bioluminescence), and **Rotcap

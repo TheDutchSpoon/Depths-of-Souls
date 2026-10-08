@@ -1,6 +1,6 @@
 # Phase 2 — Actions, Spells & Scripting Interpreter: Implementation Plan
 
-Status: code-complete, verified, not yet merged — see phases/phase-2-actions-spells-scripting.md
+Status: shipped — see phases/phase-2-actions-spells-scripting.md
 
 ## Context
 
