@@ -5,6 +5,36 @@ Slice id `4.1-H2b1`, mailbox `.claude/phases/4.1/H2b1/`. Built against the code 
 decided; the numbered items marked **ASSUMPTION A<n>** below are this plan's own choices, collected
 in the checklist at the end.
 
+## Revision 1: what changed
+
+Addresses `plan-review.md` Round 1 (fixes 1–11 and the decisions). Where this section and the body
+disagree, the body below is the revised text; this list says what moved.
+
+- **Fix 1** `store-gems.test.ts`: constant draw **0.6**, picks biome 1 `arcane-bolt`, biome 2
+  `beacon-charge`, biome 3+ `kindred-light` (changed-tests table, A21).
+- **Fix 2** filter matrix gains an enemy-hits-ally row pinning `relationship` to the **damaged**
+  creature; new mutation row "relationship read against the dealer".
+- **Fix 3** `validateObservationFilters` runs over **traits, perks and the status registry**; the stale
+  `ResolvedHookEffect.observationFilter` comment is fixed.
+- **Fix 4** `on-action-observed` also **fails closed** (candidate skipped when `observed` is absent);
+  byte-identical because all five call sites pass it. New test row and mutation row.
+- **Fix 5** Digest predictions rewritten: the generation stream does **not** shift
+  (`rollLoadout` = one draw per gem slot whenever the pool is non-empty); the predicted sets per rung
+  are checkable and a fight outside its rung's set is a stop-and-say.
+- **Fix 6** Spell-coverage fallback: an appended `SPELL_FIGHTS` entry at the end of Part C if the pool
+  shift stops a Wit spell being cast.
+- **Fix 7** New loop-safety mechanism test on the damage → observer → damage route, plus a mutation row.
+- **Fix 8** `golden-h2b1-observed-silent` split: the tick case is its own
+  `golden-h2b1-observed-tick` (eight new goldens, not seven).
+- **Fix 9** Comment sweep scope excludes the consume-stacks fixtures/tests.
+- **Fix 10** Range test states the Flickerlings' non-Health stats stay 10–30.
+- **Fix 11** A21's "verified at build" caveat removed.
+- **Decisions** A8 is confirmed as (a) trigger-only (brief ASSUMPTION 141); the damage-observation shape
+  (A1–A7 with fixes 2–4) is brief ASSUMPTION 142. **CONVENTIONS is already written** by the review, so
+  the "Proposed CONVENTIONS text" section is replaced by a pointer and A26 is reworded.
+- **Spec question carried to H2c**: the Flare's Speed bonus compounds per cost (×1.15 per burn, ×1.32
+  with two Flares); not changed here.
+
 ## Approach in one paragraph
 
 Damage observation is a **sibling hook, `on-damage-observed`**, fired from the one place every
@@ -35,7 +65,13 @@ for Glowflies, Beacon Charge's second effect, Overcharge out, Luminous Tide rena
   - New load-time `validateObservationFilters(defs)` (beside `validateStatModifierConditions`):
     throws if `actionKind`/`excludeActor` sit on a non-`on-action-observed` trigger, or
     `selfInflicted` on a non-`on-damage-observed` trigger, or an `observationFilter` sits on any
-    other hook. Called from `data/traits/index.ts` over every trait's effects, as the S2 validator is.
+    other hook. Called over **every trigger carrier** (review fix 3): every trait's effects
+    (`data/traits/index.ts`), every perk's effects (`data/specializations.ts`, where the S2 validator is
+    already called) and every status in the registry (`data/statuses.ts`; statuses carry
+    `TriggeredDef`s since 4.1-F1 and `flatEffects` spreads their `observationFilter` into
+    `effectsForHook`).
+  - The `ResolvedHookEffect.observationFilter` doc comment ("always undefined when the source was a
+    status trigger") is stale and is corrected.
 - **`targeting.ts`**: `injuredOtherAlliesOf(creature, state)` =
   `livingAlliesOf(creature, state).filter(c => c.id !== creature.id && c.currentHp < effectiveMaxHp(c))`.
   The one pool. "Hurt" is `currentHp` below `effectiveMaxHp` (the floor of effective Health), an
@@ -64,7 +100,10 @@ for Glowflies, Beacon Charge's second effect, Overcharge out, Luminous Tide rena
     Implementation detail, no behaviour.)
   - `FireHookOptions` gains `observedDamage?: { readonly selfInflicted: boolean }`.
   - `fireHook`'s filter block branches on the **hook**, not on which option is present:
-    - `on-action-observed`: unchanged (`observed` present → `actionKind`/`excludeActor`/`relationship`).
+    - `on-action-observed`: `observed` present → `actionKind`/`excludeActor`/`relationship` as today;
+      **`observed` absent → skip the candidate (fails closed, review fix 4)**. Today the filter is
+      silently skipped in that case, the kickoff's trap. All five `actions.ts` call sites pass
+      `observed`, so this is byte-identical, and it makes the two observation hooks one model.
     - `on-damage-observed`: if `observedDamage` is absent, **skip the candidate** (fail closed: a
       call site that forgets the option can never make every Flare fire on every hit). Otherwise
       apply `relationship` against the damaged creature (`self`/`ally` incl. self/`enemy`/`any`) and
@@ -99,7 +138,8 @@ for Glowflies, Beacon Charge's second effect, Overcharge out, Luminous Tide rena
     `factor: 1.2`.
   - Header and Resonant/Sparkeater comments that cite Glow or the affinity spread are fixed.
 - **`traits/index.ts`**: swap the three exports in the import list and `TRAIT_REGISTRY`; call
-  `validateObservationFilters`.
+  `validateObservationFilters`. **`specializations.ts`** (perks) and **`statuses.ts`** (registry) call
+  it too, beside their existing load-time validators.
 - **`species/glimmerdark.ts`**: `GLOWFLIES` → `FLICKERLINGS` **in the same slot** of
   `GLIMMERDARK_SPECIES_POOL` (index 0), weight 1, id `flickerlings`. Creatures in rarity order, so
   the RNG maps one-for-one:
@@ -170,10 +210,10 @@ the engine step, with the **old content**: every golden byte-identical, the dige
 | Test file | Change | Reason |
 |---|---|---|
 | `engine/status-containers.test.ts` | Borrowed `glow` import replaced by a local `StatusDef` of the same shape (id `fixture-damage-boost`, a dealt `damage-modifier` 0.08, buff, 4 turns); the status id in its events/derivations moves, nothing else | `GLOW` is deleted (A22) |
-| `state/store-gems.test.ts` | The "unlock biome" block: the derivation comment and three expectations. Biome 2: 6 wit spells (Vine Snare, Pollen Cloud, Arcane Bolt, Beacon Charge, Kindred Light, Pacify), `0.7 × 6 = 4.2` → index 4 = **`kindred-light`** (was `overcharge`). Biome 3+: 7 (adds Spore Cyst before Pacify), `0.7 × 7 = 4.9` → index 4 = **`kindred-light`** (was `luminous-tide`). The pin-on-floor-11 and floor-150 cases follow the same two | Overcharge deleted; Luminous Tide renamed |
+| `state/store-gems.test.ts` | The "unlock biome" block: the constant draw changes to **0.6** (review fix 1: with 0.7 biome 2 and biome 3 both give `kindred-light`, so the test could no longer tell them apart), and the derivation comment and expectations are rewritten. `rollLoadout` does one `weightedPick` per slot at weight 1, so the pick is index `floor(0.6 × poolSize)` in registry order. Biome 1 (Vine Snare, Pollen Cloud, Arcane Bolt, Pacify): `0.6 × 4 = 2.4` → **`arcane-bolt`** (unchanged). Biome 2 (+ Beacon Charge, Kindred Light): `0.6 × 6 = 3.6` → index 3 = **`beacon-charge`**. Biome 3+ (+ Spore Cyst): `0.6 × 7 = 4.2` → index 4 = **`kindred-light`**. Expectations: floors 0 and 1 `arcane-bolt`; floor 11 `beacon-charge`; floor 21 `kindred-light`; floor 11 pinned to biome 1 `beacon-charge` (comment: a pin-following roll would draw Arcane Bolt); floor 150 `kindred-light` | Overcharge deleted; Luminous Tide renamed; three distinct picks keep the biome 2 / 3 distinction |
 | `data/spells/index.test.ts` | The append-only pin: the first 24 ids lose `overcharge` and `luminous-tide` becomes `kindred-light`; the "first 27" slice becomes the first 26, then Silence, Pacify, then the G1 three | Overcharge deleted shifts later indices (deliberate), rename in place |
 | `data/roles.test.ts` | Three ids: `flickerling-wick: support`, `flickerling-flare: caster`, `flickerling-last-gleam: striker` | Species swap |
-| `data/species/glimmerdark.test.ts` | Cast-role id list (`flickerling-wick`, `flickerling-flare`, `blindclaws-setter`, the three Resonants, `gloomjaw-stalker`, in pool order); the stat-range test (Health 20–45 for the three Flickerlings, 10–30 for every other creature and stat); new affinity-spread assertion 4/3/5/4/2; new Flickerling shape assertions (ids, scripts, rarity order, Health 38/25/28) | Species swap, new Health scale |
+| `data/species/glimmerdark.test.ts` | Cast-role id list (`flickerling-wick`, `flickerling-flare`, `blindclaws-setter`, the three Resonants, `gloomjaw-stalker`, in pool order); the stat-range test (Health 20–45 for the three Flickerlings; 10–30 for every other creature and stat, **including the Flickerlings' own Attack, Intelligence, Defence and Speed**, which are 10–24 and still asserted 10–30); new affinity-spread assertion 4/3/5/4/2; new Flickerling shape assertions (ids, scripts, rarity order, Health 38/25/28) | Species swap, new Health scale |
 | `engine/perform-action.test.ts` | Expected **unchanged**: its two `consume-stacks` fixtures use the literal string `'glow'`, which the test's own registry supplies. Verified at build; reported if wrong (A23) | n/a |
 
 Other tests that count registries or the Glimmerdark spells (for example a statuses or traits
@@ -183,12 +223,20 @@ before the digest step. None is predicted.
 ### Tests that are new
 
 - `engine/damage-observation.test.ts` (mechanism tests): the filter matrix (relationship ×
-  selfInflicted), the fail-closed rule, the Resonant never sees a damage event and a Flare never
-  sees an action event, hook order (including a lethal cost and a Last Stand save), zero cost,
-  `selfInflicted` is true only from the cost branch (a tick on a bearer whose source falls back to the
-  bearer, a direct action on its own actor via a spell effect, a flat hit on another creature), a
-  forgotten-option call (the hook fired without `observedDamage`) skips every candidate, and the
-  validator rejects misplaced filter fields.
+  selfInflicted), **including an ordinary hit where an enemy hits an ally** (review fix 2: an observer
+  with `relationship: 'ally'` and no `selfInflicted` fires, one with `relationship: 'enemy'` does not;
+  every cost has dealer = damaged, so only this row separates "relationship vs the damaged creature"
+  from "vs the dealer"), the fail-closed rule **for both observation hooks** (`on-damage-observed`
+  without `observedDamage`, `on-action-observed` without `observed`: every candidate skipped), the
+  Resonant never sees a damage event and a Flare never sees an action event, hook order (including a
+  lethal cost and a Last Stand save), zero cost, `selfInflicted` is true only from the cost branch (a
+  tick on a bearer whose source falls back to the bearer, a direct action on its own actor via a spell
+  effect, a flat hit on another creature), the validator rejects misplaced filter fields **on a trait,
+  a perk and a status**, and a **loop-safety row** (review fix 7): two fixture creatures, each "on an
+  ally's self-inflicted damage, pay a cost", where one starting cost begins the chain; the hand-derived
+  log shows where the instance-level self-re-entry guard ends it (an observer instance still on the
+  stack is skipped; "ally" includes self, so each also observes its own cost) without reaching
+  `CascadeTruncated`.
 - `engine/injured-allies.test.ts`: the **one pool** test. A table over board states (self hurt only;
   one hurt other; hurt other dead; others full with a lower-current-HP full ally; nobody else alive;
   Voidmaw-style ceiling raise making a full-looking ally hurt) asserting
@@ -197,7 +245,7 @@ before the digest step. None is predicted.
   standard order. Plus a type test: `// @ts-expect-error` assigning `{ kind: 'other-ally-injured' }`
   to a `Rule['condition']` (checked by `npx tsc -b`), and a data test that no stock script contains
   the kind.
-- Seven goldens (below).
+- Eight goldens (below).
 - `data/traits/glimmerdark.test.ts` (or the existing trait data test, whichever already hosts
   per-trait shape checks): the three Flickerling traits' shape (hooks, filter, the Wick's two
   effects both gated and in burn-then-heal order, the burn on the cost path: self-target flat
@@ -215,12 +263,15 @@ and `expectedEvents` is written by hand from it.
    ally observer, in the order `DamageDealt` → (taken) → `TriggerFired` observer → `StatModifierApplied`
    …, and **not** by the enemy-side `ally` observer (relationship) while the `enemy`-relationship one
    fires. The observer observing its **own** cost (ally includes self) is one row.
-2. **`golden-h2b1-observed-silent`** (fixture traits; the same Flare-shaped observer; four things that
-   must produce **no** `TriggerFired` from it, in one fight over three turns): an ordinary direct hit
-   on an ally; a DoT tick on an ally (a mini-poison like `golden-h2a-cost`'s, bearer is both source
-   and target); a direct spell effect landing on its own caster (the `golden-h2a-spell-on-caster`
-   pattern: same ids, direct, not a cost); a **zero cost** (flat 1% of 30 Health floors to 0: the
-   response's `TriggerFired` shows, nothing after it).
+2. **`golden-h2b1-observed-silent`** (fixture traits; the same Flare-shaped observer; three things that
+   must produce **no** `TriggerFired` from it): an ordinary direct hit on an ally; a direct spell
+   effect landing on its own caster (the `golden-h2a-spell-on-caster` pattern: same ids, direct, not a
+   cost); a **zero cost** (flat 1% of 30 Health floors to 0: the response's `TriggerFired` shows,
+   nothing after it). The tick is **not** here (review fix 8): H2b2 moves the tick's source and makes
+   ticks indirect, so that case changes then, while these three stay byte-identical through H2b2.
+2b. **`golden-h2b1-observed-tick`** (fixture traits; the same Flare-shaped observer): a DoT tick on an
+   ally (a mini-poison like `golden-h2a-cost`'s; bearer is both source and target) produces no
+   observer `TriggerFired`. Its own golden so it can change alone in H2b2.
 3. **`golden-h2b1-observed-lethal`** (real Wick, Flare, Last Gleam + a fixture ally). The Wick is
    wounded to 3 HP by `setup`; another ally is hurt so the gate passes. Burn = `floor(38 × 10 / 100)`
    = 3 = lethal. Expected: the burn's `DamageDealt` (remainingHp 0), then the **Flare's** reaction
@@ -251,13 +302,17 @@ and `expectedEvents` is written by hand from it.
 | Mutation (the mechanism removed or broken) | Killed by | Site covered |
 |---|---|---|
 | Damage observation removed (no `fireHook('on-damage-observed')` in `applyDamageAndEmit`) | `golden-h2b1-observed-cost`, `golden-h2b1-wick-burn-heal`, `damage-observation.test.ts` "fires on an ally's cost" | resolver |
-| `selfInflicted` filter dropped (observer ignores the flag) | `golden-h2b1-observed-silent` (ordinary hit and tick fire the Flare-shaped observer), filter-matrix test | filter |
-| Self-inflicted read as `source === target` | `golden-h2b1-observed-silent` (the tick and the spell-on-caster have equal ids and must stay silent); `damage-observation.test.ts` "tick / redirect are not self-inflicted" | classification |
-| The tick path passes `selfInflicted: true` | `golden-h2b1-observed-silent` tick row | tick site |
+| `selfInflicted` filter dropped (observer ignores the flag) | `golden-h2b1-observed-silent` (ordinary hit fires the Flare-shaped observer), `golden-h2b1-observed-tick`, filter-matrix test | filter |
+| Self-inflicted read as `source === target` | `golden-h2b1-observed-tick` and `golden-h2b1-observed-silent` (the tick and the spell-on-caster have equal ids and must stay silent); `damage-observation.test.ts` "tick / redirect are not self-inflicted" | classification |
+| The tick path passes `selfInflicted: true` | `golden-h2b1-observed-tick` | tick site |
 | A direct action on its own actor passes `true` | `golden-h2b1-observed-silent` spell-on-caster row | direct site |
 | Relationship filter dropped (an enemy's cost is observed by an `ally` observer) | `golden-h2b1-observed-cost` (enemy-side cost row), filter-matrix test | filter |
 | Resonants reached by a damage event (damage fired on `on-action-observed`, or the action hook fired for damage) | `damage-observation.test.ts` "a Resonant-shaped observer never fires on a damage event; a Flare-shaped one never on an action"; `golden-resonant-harmonize` and `-overtone` stay byte-identical as the regression pin | routing |
+| Relationship read against the damage dealer instead of the damaged creature | `damage-observation.test.ts` filter matrix, enemy-hits-ally row (review fix 2) | filter |
 | Fail-closed removed (a damage-hook candidate fires when `observedDamage` is absent) | `damage-observation.test.ts` "a call without observedDamage fires nothing" | filter |
+| Fail-closed removed on `on-action-observed` (a candidate fires when `observed` is absent) | `damage-observation.test.ts` "a call without observed fires nothing" (review fix 4) | filter |
+| Self-re-entry check skipped for `on-damage-observed` candidates (the chain runs to `CascadeTruncated`) | `damage-observation.test.ts` loop-safety row (review fix 7) | loop safety |
+| Validator not run over perks / statuses, or a misplaced field allowed on one | `damage-observation.test.ts` validator rows for a trait, a perk and a status (review fix 3) | validator |
 | Observation moved after the death block, or only when the victim survived | `golden-h2b1-observed-lethal` (the Flare's reaction must sit between `DamageDealt` and `CreatureDied`) | order |
 | Zero cost reaches `applyDamageAndEmit` | `golden-h2b1-observed-silent` zero-cost row | cost site |
 | The Wick's gate removed | `golden-h2b1-wick-gates` | trait data |
@@ -286,16 +341,20 @@ and `expectedEvents` is written by hand from it.
   Kindred Light change. A changed fight is attributed to the **first rung at which its hash differs
   from the committed digest**; a fight that changes at a rung and again later is listed with both
   (an interaction), never silently merged.
-- **Predictions before running** (the fights each cause can touch):
-  - *Species swap*: every fight with a Glowfly on either side of Part A (generated Glimmerdark
-    floors, and Part A's re-sided parties), Part B, and any Glimmerdark floor whose generation reaches
-    the species (the swap keeps weights and rarity order, so the **draws are identical** and only the
-    creature stats/traits differ).
-  - *Spell-pool change*: only pools that held Overcharge: the Wit pool at biome 2 and deeper (Glimmerdark
-    and Rotcap Hollow floors). The picked spell can differ for any wit loadout draw; if a distinctness
-    retry changes the draw **count**, the generation RNG shifts for the rest of that floor, so the
-    prediction is "every generated Biome 2+ floor with a wit-affinity creature", not just those
-    holding the deleted spell.
+- **Predictions before running** (the fights each cause can touch). `rollLoadout` makes exactly one
+  draw per gem slot whenever the affinity's pool is non-empty, and every affinity has a spell unlocked
+  at biome 1, so neither Overcharge's deletion nor the Flickerlings' different affinities change a
+  draw **count**: the generation stream does not shift (review fix 5). Only *which* spell/creature a
+  fixed draw lands on, and what the creature does, changes.
+  - *Species swap*: only fights **containing a Flickerling** change: its stats, its trait, and its own
+    gem picks, since the rarity slots change affinity (Charger Wit → Wick Vitality, Detonator
+    Instinct → Flare Wit, Radiant Vitality → Last Gleam Violence). That is Part A/B fights that
+    include a Glowfly and generated Glimmerdark floors that spawn the species; draws are identical
+    because weights and rarity order are kept.
+  - *Spell-pool change*: only fights containing a **Wit creature whose loadout was rolled at biome 2
+    or deeper** (the only pools that held Overcharge: Glimmerdark and Rotcap Hollow floors).
+  - A fight **outside its rung's predicted set that changes at that rung is a stop-and-say**, not an
+    attribution.
   - *Beacon Charge*: fights where a creature holding Beacon Charge casts it (Glow events become Grant
     Act First events, and the turn order of the next round can change).
   - *Kindred Light*: fights where a creature holding it casts it (no status event, a plain team heal).
@@ -303,6 +362,11 @@ and `expectedEvents` is written by hand from it.
 - `corpus-coverage.test.ts` stays green: Beacon Charge's `grant-act-first` still counts as an applied
   status; `GLOW`, being deleted, cannot be stale-exempt; a Kindred Light cast still "lands" (a
   `HealApplied` event is emitted even for a 0 heal; confirmed against `castLanded` at build).
+- **Spell coverage after the pool shift** (review fix 6): Overcharge's deletion moves which Wit spell
+  each draw lands on, so a Wit spell that Parts A/B cast today (Beacon Charge, Kindred Light, Pacify,
+  …) may stop being cast and `corpus-coverage.test.ts` then fails. If it does, append a `SPELL_FIGHTS`
+  entry for that spell at the **end** of Part C (as A24 does for the Flare), attributed "appended
+  coverage fight", in the same single regeneration.
 - **Flare observing a Wick cost**: after rung 4, I check whether any generated fight has a Flickerling
   Flare observing a Wick's cost (a scan of the events for a Flare `TriggerFired` with
   `hook: 'on-damage-observed'` right after a Wick-sourced self `DamageDealt`). If none, I append one
@@ -316,7 +380,7 @@ and `expectedEvents` is written by hand from it.
 
 1. **Engine**: types, `injuredOtherAlliesOf`, resolver target, `evaluateTriggerCondition`,
    `applyDamageAndEmit` restructure and required parameter, `fireHook` branch, validators. Mechanism
-   tests and goldens 1–2 with fixture traits only. Gates; every golden and the digest unchanged
+   tests and goldens 1, 2 and 2b with fixture traits only. Gates; every golden and the digest unchanged
    (rung 0).
 2. **Content, additive**: the three Flickerling traits and the species swap in place; Beacon Charge and
    Kindred Light edits; Overcharge out of `ALL_SPELLS`. The Glowfly **traits and `GLOW` stay for now**
@@ -327,24 +391,22 @@ and `expectedEvents` is written by hand from it.
    into its body (the Flickerlings section replacing the Glowflies, the statuses section losing Glow,
    the roles table, the spells table with Overcharge removed and Kindred Light, the intro paragraph's
    spell list, the "five Glimmerdark spells" count, the affinity spread) and delete them from the
-   pending section; the single-instance and Health items stay pending. Grep `src` for Glow,
-   Glowfly, Overcharge and Luminous Tide and fix every comment.
+   pending section; the single-instance and Health items stay pending. Grep `src/data` and the
+   engine sources for Glow, Glowfly, Overcharge and Luminous Tide and fix every comment. **Out of
+   scope (review fix 9):** `golden-consume-stacks.fixture.ts`/`.test.ts` and the consume-stacks block
+   in `resolution.test.ts`: their local `GLOW` fixtures and Glowfly comments belong to the mechanism
+   H2b2 retires, and the kickoff pins `golden-consume-stacks` untouched. The report's grep shows those
+   hits as the expected remainder.
 5. **Digest ladder and regeneration**, the grep shown in the report, the phase-record section
    (appended to `phase-4.1-fix-and-consolidation.md`, the 4.1 rule, since no
    `phases/4.1/brief.md` exists), `report-r1.md` in the mailbox.
 
-## Proposed CONVENTIONS text (for the review to write; I do not edit CONVENTIONS in this slice)
+## CONVENTIONS
 
-- **Hook order**: "`on-damage-dealt` (source, unconditional) → `on-damage-taken` (self, survived only)
-  → `on-damage-observed` (living observers, unconditional, even on a lethal hit) → if it died:
-  `CreatureDied` → `on-death` → `on-kill` → `on-ally-death`/`on-enemy-death`."
-- **Vocabulary**: 17 hooks; `on-damage-observed` is the damage mirror of `on-action-observed`, same
-  `relationship` filter plus `selfInflicted`; context source = the damaged creature.
-- **Trigger conditions**: `TriggerCondition = Condition | other-ally-injured`; the extra kind is not
-  valid in a script rule and the type keeps it out.
-- **Response targets**: `lowest-hp-injured-other-ally`; "injured" = `currentHp < effectiveMaxHp`.
-- **Damage-observation classification**: self-inflicted is carried from the branch that chose the cost
-  path, never inferred from the ids.
+Already written by the plan review (hook order with `on-damage-observed`, the 17-hook vocabulary,
+"Damage observation", trigger-only conditions and the paired target). This slice builds against that
+text and edits no CONVENTIONS section; a contradiction found in the build goes in the report as a
+spec question.
 
 ## Assumptions checklist
 
@@ -355,11 +417,12 @@ choice itself).
   kind on `on-action-observed`. Why: the Resonants' routing can't be crossed by construction, and the
   hook name carries the context shape. CONVENTIONS allowed either.
 - [ ] **A2** `ObservationFilter` is reused with a new `selfInflicted?: boolean`; each field is valid
-  on one hook only, enforced by a load-time `validateObservationFilters`; absent fields stay
+  on one hook only, enforced by a load-time `validateObservationFilters` over traits, perks and statuses; absent fields stay
   permissive, as for `on-action-observed`.
-- [ ] **A3** The damage hook **fails closed**: a candidate on `on-damage-observed` is skipped when
-  `observedDamage` is absent (the kickoff's skipped-filter trap), and the validator also keeps
-  `observationFilter` off every other hook.
+- [ ] **A3** Both observation hooks **fail closed**: a candidate on `on-damage-observed` is skipped
+  when `observedDamage` is absent, and one on `on-action-observed` when `observed` is absent (the
+  kickoff's skipped-filter trap; review fix 4). The validator also keeps `observationFilter` off every
+  other hook.
 - [ ] **A4** `relationship` compares the observer with the **damaged creature**; `ally` includes the
   observer itself; the hook's `source` is the damaged creature. A Flare therefore reacts to a cost on
   itself too (it has none today).
@@ -371,7 +434,7 @@ choice itself).
 - [ ] **A7** `applyDamageAndEmit` takes a **required** `selfInflicted: boolean`; only
   `applyCostDamage` passes `true` (the tick and direct paths pass `false`). It fires on every damage
   event, so ticks and retaliation are observable, just never self-inflicted.
-- [ ] **A8** The gate is a **trigger-only** condition (`TriggerCondition`), not a `Condition`
+- [ ] **A8** (confirmed: brief ASSUMPTION 141) The gate is a **trigger-only** condition (`TriggerCondition`), not a `Condition`
   variant: not valid in a script rule, kept out by the type (a `@ts-expect-error` test) and a stock-
   script data test; there is **no runtime guard** because no authored scripts exist before Phase 6
   (spec question: Phase 6's editor/validator derives from `Condition` and must not list it).
@@ -402,18 +465,20 @@ choice itself).
 - [ ] **A20** Kindred Light is heal-only at spellPower 0.2, constant `KINDRED_LIGHT`, replacing
   Luminous Tide at its position relative to the neighbouring spells.
 - [ ] **A21** Overcharge's deletion shifts later indices in `ALL_SPELLS` (deliberate, per the kickoff);
-  `store-gems.test.ts` picks derive to `kindred-light` at biome 2 and 3+ (arithmetic in the changed-
-  tests table, assuming the roll is `floor(draw × poolSize)` over the affinity-matched pool in registry
-  order, as the existing comment states; verified at build).
+  `store-gems.test.ts` uses a constant draw of 0.6 and picks `arcane-bolt` / `beacon-charge` /
+  `kindred-light` for biome 1 / 2 / 3+ (arithmetic in the changed-tests table; the pick is
+  `weightedPick` at weight 1 over the affinity-matched slice in registry order, per `generation.ts`).
 - [ ] **A22** `status-containers.test.ts` borrows a local fixture status with id
   `fixture-damage-boost` in place of the real `glow`.
 - [ ] **A23** `perform-action.test.ts` needs no change (its `'glow'` is a fixture-supplied literal).
 - [ ] **A24** If no generated fight has the Flare observing a Wick cost, one Part C fight is appended
-  at the end of Part C (existing indices untouched).
+  at the end of Part C (existing indices untouched); the same holds for any Wit spell the pool shift
+  leaves uncast (review fix 6).
 - [ ] **A25** Digest attribution is a cumulative ladder (observer alone, species swap, spell pool,
-  Beacon Charge, Kindred Light); a fight is attributed to the first rung at which it differs.
-- [ ] **A26** CONVENTIONS is written by the review; this slice proposes the text above and edits only
-  the content docs named in the kickoff.
+  Beacon Charge, Kindred Light); a fight is attributed to the first rung at which it differs, and a
+  fight changing outside that rung's predicted set is a stop-and-say.
+- [ ] **A26** CONVENTIONS was written by the plan review (brief ASSUMPTION 142); this slice builds
+  against it and edits only the content docs named in the kickoff.
 - [ ] **A27** No hook-type index (CONVENTIONS defers it): the fan-out scans every living creature on
   each damage event; measured by the corpus's wall time, reported.
 - [ ] **A28** Any existing test that enumerates the `Hook` vocabulary gains `on-damage-observed`
