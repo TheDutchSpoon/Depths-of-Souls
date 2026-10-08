@@ -303,6 +303,12 @@ and numbers). Same guardrails as every demo; own brief + phase record.
   store's `can…` queries and the engine's `checkLegality`; candidate conditions "target lacks status X" (casters currently refresh statuses they
   already applied) and a `last-action` condition (script memory); whether a script-level default
   target overrides the engine's side-aware default.
+- **Input recorded at the 4.1-H2b1 plan review (brief ASSUMPTION 141):** triggers can use
+  **trigger-only conditions** (`TriggerCondition`; the first is `other-ally-injured`, "another ally
+  is hurt") that scripts can't. The editor builds its condition list from the scripting
+  `Condition` and must not offer them. If players should get "another ally is hurt", add it
+  together with a matching "lowest-HP hurt ally other than me" selector, never the condition
+  alone (today's `lowest-hp-ally` includes the caster and ignores full Health).
 
 ## Phase 7 — Combat UI & feedback
 - Render combat from the event log: turn-by-turn playback, fast-forward, speed control.

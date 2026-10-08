@@ -1956,6 +1956,28 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      bearer), so H2b1's plan proposes one. Rejected: "no other ally alive" (the Wick would burn on
      round 1 for a heal that restores nothing); the lowest HP % (a new kind of target ranking).
 
+141. **Decided (H2b1 plan review, 2026-10-08; design owner).** **The Wick's gate is a trigger-only
+     condition.** A trigger's condition is a `TriggerCondition`: the scripting `Condition` plus
+     `other-ally-injured` (a living ally other than the bearer is below its effective max Health),
+     which script rules can't use; the type keeps it out. Its target, a new `ResponseTarget`
+     `lowest-hp-injured-other-ally`, reads the same pool function, so gate and target can't
+     disagree. Why: a general `other-ally` HP subject in the shared `Condition` would give
+     players a condition with no matching target (`lowest-hp-ally` includes the caster and ignores
+     full Health), so Phase 6 would inherit half a feature already saved in scripts. Precedent:
+     `SelfCondition` (S2). **Phase 6 must know** (design owner): the editor derives its condition
+     list from `Condition` and must not offer trigger-only kinds; if players want "another ally is
+     hurt", Phase 6 promotes the kind together with a matching selector (ROADMAP Phase 6 inputs).
+     Rejected: an `other-ally` `HpSubject` (`hp-percent` any `< 100`), valid in scripts.
+
+142. **Decided (H2b1 plan review).** **Damage observation's shape** (refines ASSUMPTION 115): a
+     sibling hook `on-damage-observed`, fired from `applyDamageAndEmit` on every living creature
+     after `on-damage-taken` and before the death chain, even on a lethal hit; the same
+     `ObservationFilter` with `relationship` read against the damaged creature plus
+     `selfInflicted`; the hook's source is the damaged creature; `selfInflicted` is a required
+     flag that only the cost path sets; both observation hooks fail closed when called without
+     their details; a load-time validator keeps each filter field on its own hook, over traits,
+     perks and statuses. CONVENTIONS "Damage observation" carries the detail.
+
 ## Sequencing summary
 
 `4.1-A` (data, store, generation) → `4.1-B` (engine foundations, byte-identical) → `4.1-C`

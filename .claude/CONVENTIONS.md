@@ -1425,16 +1425,22 @@ the same interpreter, differing only in how they attach and which hooks they use
   a dead creature either**, except `revive` (see the response vocabulary).
   **Damage-path hook order** (after `DamageDealt` lands): `on-damage-dealt` (source) fires
   **unconditionally, even on a lethal hit** → `on-damage-taken` (self) fires **only if the target
-  survived** → then if it died: `CreatureDied` → `on-death` (self) → `on-kill` (source) →
-  `on-ally-death`/`on-enemy-death` (observers). I.e. hit-reactions (dealt always, taken if-survived)
-  resolve **before** death-reactions (died/kill/observers). **Applying a status emits `StatusApplied`
+  survived** → `on-damage-observed` (every living creature) fires **unconditionally, even on a
+  lethal hit** (from 4.1-H2b1; on a lethal hit the victim is not among the observers, because
+  `alive` flips before `DamageDealt`) → then if it died: `CreatureDied` →
+  `on-death` (self) → `on-kill` (source) → `on-ally-death`/`on-enemy-death` (observers). I.e.
+  hit-reactions (dealt always, taken if-survived, observed always) resolve **before**
+  death-reactions (died/kill/observers). A lethal Wick burn: the Flare's reaction precedes
+  `CreatureDied`, the Last Gleam's follows it. **Applying a status emits `StatusApplied`
   then fires `on-status-applied`** (event-before-hook). **Conditional-passive conditions** read
   effective stats but must not depend on the stat they gate (no `getEffectiveStat` read-cycle;
   enforced by the S2 validator).
 - **v1 hook vocabulary (16 at Phase 4 close — Phase 3's 13, +4 `on-[action]` in Slice B = 17, then
-  −1 net in Slice E2 when `on-action-observed` replaced the never-wired pair below):**
+  −1 net in Slice E2 when `on-action-observed` replaced the never-wired pair below; 17 from
+  4.1-H2b1, which adds `on-damage-observed`):**
   `on-fight-start`, `on-turn-start`, `on-turn-end`, `on-round-end`, `on-damage-dealt`,
-  `on-damage-taken`, `on-kill`, `on-death`, `on-ally-death`, `on-enemy-death`, `on-status-applied`,
+  `on-damage-taken`, `on-damage-observed`, `on-kill`, `on-death`, `on-ally-death`,
+  `on-enemy-death`, `on-status-applied`, `on-action-observed`,
   plus the Phase 4 `on-[action]` family (`on-attack`, `on-cast`, `on-defend`, `on-provoke` — see
   above). The originally-listed `on-ally-action` / `on-enemy-action` pair was **never wired** and is
   **superseded in Slice E2 by a single general `on-action-observed`** (see the action-reactions
@@ -1468,14 +1474,34 @@ creature's **`relationship`** (as above) and by whether the damage was **self-in
 own trait, status or perk response damaging that same creature. **A DoT tick is never
 self-inflicted**, whoever applied it and whether or not the applier is alive (doc-sync ruling,
 2026-10-08: ticks neither draw retaliation nor count as self-damage). It extends the one observer;
-it is not a new side channel. H2b's plan proposes the exact shape (a second observable event kind on
-the same hook, or a sibling hook with the same filter model). First consumer: the Flickerling Flare
-("whenever an ally damages itself").
+it is not a new side channel. First consumer: the Flickerling Flare ("whenever an ally damages
+itself"). **The shape** (decided at the 4.1-H2b1 plan review, brief ASSUMPTION 142):
+- A **sibling hook, `on-damage-observed`**, fired from `applyDamageAndEmit` (every damage event
+  passes there) on every living creature, at the place in the damage-path hook order above. A
+  sibling rather than a second event kind on `on-action-observed`, so an action observer (the
+  Resonants) can't see a damage event, nor a damage observer an action, by construction.
+- The **same `ObservationFilter`**: `relationship` compares the observer with the **damaged
+  creature** (`ally` includes the observer itself), plus **`selfInflicted?: boolean`** (absent =
+  either). `actionKind`/`excludeActor` belong to `on-action-observed` only, `selfInflicted` to
+  `on-damage-observed` only, and a filter on any other hook is invalid: a load-time validator over
+  every trigger carrier (traits, perks, statuses) enforces it.
+- Hook context: `source` is the **damaged creature** (so `triggering-source` and the `'target'`
+  condition subject resolve to it); the channel is indirect, as for every hook.
+- **Self-inflicted is carried, never inferred:** `applyDamageAndEmit` takes a required
+  `selfInflicted` flag, `true` only from the cost path (`applyCostDamage`), `false` from the direct
+  path and the tick path. Never `source === target`: a DoT tick and a direct action landing on its
+  own actor have equal ids and are not self-inflicted. A zero cost emits nothing, so there is
+  nothing to observe.
+- **Both observation hooks fail closed:** a candidate on `on-action-observed` fired without the
+  action details, or on `on-damage-observed` without the damage details, is skipped, never fired
+  unfiltered.
+- No hook-type index: the fan-out scans every living creature per damage event, as
+  `on-action-observed` does per action instance (measured, see the hook execution model).
 
 **Classification of all locked content** (the routing map — misfiling a trait here is a real bug):
 - **Observation** (`on-action-observed`): **Resonants** (`relationship: ally`, `actionKind: cast`)
   — the *only* action-observation consumer across every species, starter, and all three spec
-  trees. From 4.1-H2b the Flickerling Flare observes damage (above).
+  trees. From 4.1-H2b1 the Flickerling Flare observes damage (`on-damage-observed`, above).
 - **Actor-self** (own action hook): Weaver, Lure, Sleeper, Charger (until 4.1-H2b), Setter,
   Sparkeaters' Drainer, Seeder, Hollowkin, Shieldbarer starter, Unicorn
   (`on-attack`/`on-cast`/`on-provoke`); Shield up, Defensive Stance, Concussive Blows, Aggressive
@@ -1534,6 +1560,15 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   condition skips the effect **silently**, before the depth-cap and `TriggerFired` accounting).
   **Source-relative conditions are expressible** since Slice E2: the `'target'` subject resolves to
   the trigger's source in `fireHook` (and to the damage target in `calculateDamage`).
+  **Trigger-only conditions** (4.1-H2b1, brief ASSUMPTION 141): a trigger's condition is a
+  `TriggerCondition`, the scripting `Condition` plus kinds scripts may not use. The first is
+  `other-ally-injured` (a living ally other than the bearer below its effective max Health,
+  `currentHp < effectiveMaxHp`, in integers). The type keeps it out of script rules (Phase 6's
+  editor derives from `Condition` and must not list it; see ROADMAP Phase 6). Its paired
+  `ResponseTarget`, `lowest-hp-injured-other-ally` (the lowest current HP among those allies,
+  standard tie-break, no RNG), reads the **same pool function**, so the gate never passes with the
+  target empty or fails with it non-empty. First user: the Flickerling Wick, whose burn and heal
+  both carry the condition (burn first; a lethal burn skips the heal).
 - **No keywords, no implicit targets** — a trait is an explicit
   event→condition→response→target→magnitude sentence; the hook **context** supplies reference actors
   (`{self, source}`, etc.); the response names its target (`self`, `triggering-source`,
