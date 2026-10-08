@@ -176,7 +176,7 @@ player's lowest-HP creature, healing and buffing the player.
   applies). Placeholders, tuned in 4.1-H2c: **Spore 15% of the applier's Speed, Burn 25% of its
   Intelligence, Poison 20% of its Attack**. Re-applying refreshes the timer and keeps the stronger
   one. While the applier lives it is the damage's source (its kill and damage traits fire);
-  after it dies, the bearer is.
+  after it dies, the bearer is. A tick is never struck back at: retaliation doesn't answer it.
 - **Spore's spread keeps its strength:** the spores that burst from a dying host carry that host's
   infection (its applier's strength), not the dying host's own stats.
 - **Myconet Rotcore's Poison** is applied as it dies, so its ticks have each bearer as their

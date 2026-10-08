@@ -6,11 +6,11 @@ content stays reachable by every spec.
 
 **Starter:** *Stonehorn Warden* (placeholder name), Endurance affinity, high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide).
 *(Permanent-for-fight, so repeated provokes stack — a ramping team-Defence engine. Balance parked.)*
-**From 4.1-H2c** (brief ASSUMPTION 123): Attack **15** (was 10; a 90 stat total like the other
-starters), and its role script is **`warden`** (provoke when an ally drops below 50%, else attack)
-instead of `taunter` (always provoke). Under `taunter` it never attacked, so its Attack, Shield
-Bash and Armor piercer were never read and the trait fired every turn. The trait is unchanged; its
-damage after floor 10 comes from perks.
+**From 4.1-H2c** (brief ASSUMPTION 123): Attack **15** (was 10; a 90 stat total on the old Health
+scale, like the other starters), and its role script is **`warden`** (provoke when an ally drops
+below 50%, else attack) instead of `taunter` (always provoke). Under `taunter` it never attacked, so
+its Attack, Shield Bash and Armor piercer were never read and the trait fired every turn. The trait
+is unchanged; its damage after floor 10 comes from perks.
 
 **Perk rules:** effect-framework effect-carriers, combat-only; flat pool; spec valid iff
 Σ(maxLevel × costPerLevel) === **1000**.

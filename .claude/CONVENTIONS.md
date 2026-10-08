@@ -113,9 +113,9 @@ floor's contents.
   width parameters are proposed in the Phase 4.1 brief (ASSUMPTION 4) and confirmed in the 4.1-A
   plan review. **From 4.1-H2c** (brief ASSUMPTION 118): the width starts at **0** (`max = min +
   floor(floor / 10)`), and the minimum is **rounded down** (`floor` instead of `round`), so an early
-  floor's enemies sit at exactly `floor(floor × multiplier)` and never above it. Floors 1–10
-  spawn at 1, 2, 3, 5, 6, 7, 9, 10, 11 and 13; floor 30 stays at 44. A width of 2 put level-3
-  enemies (+50% stats) against the level-1 starters on floor 1.
+  floor's minimum is exactly `floor(floor × multiplier)`. Floors 1–9 spawn at exactly 1, 2, 3, 5,
+  6, 7, 9, 10 and 11; floor 10's enemies at 13–14 (its width is 1); floor 30 stays at 44 (44–47). A
+  width of 2 put level-3 enemies (+50% stats) against the level-1 starters on floor 1.
 - **`materializeCreature(template, { level, side, slot, speciesId, gems, ref? })`** (Phase 4.1-A,
   A5; exact field names are the 4.1-A plan's) —
   pure and **RNG-free** (generation already spent the randomness), taking a **named options
@@ -241,7 +241,7 @@ data.
   pure-utility spell (status only, a cleanse) simply has no `deal-damage` / `heal` effect. The old
   `scalingStat: 'none'` is gone (4.1-D plan review: no content used it). See GAME_DESIGN §5.
 
-### Response vocabulary — nine verbs, and "no side doors"
+### Response vocabulary — nine verbs (eight from 4.1-H2b), and "no side doors"
 History: four in Phase 3; `heal` + `revive` joined as the two justified new verbs, `grant-action-state`
 + `consume-stacks` were counted as responses too, and **Phase 4 Slice E2 added `remove-status`**
 (spell-driven cleanse/dispel is a near-term certainty, so a general removal verb invoked on *other*
@@ -356,7 +356,9 @@ attack executor is correct.
   - a **damage tick is indirect damage** (see "Damage channels"): `potency × affinity(snapshot vs
     bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective Defence`, `MAX(1, floor(...))`.
     The **damage source is the applier** while it is alive, else the bearer, so the applier's
-    `on-damage-dealt`/`on-kill` fire and a retaliation hits the applier;
+    `on-damage-dealt`/`on-kill` fire. A tick still offers **no `triggering-source`** to the
+    bearer's responses, so retaliation never fires back at a tick (see "`triggering-source` never
+    resolves to the firing creature itself");
   - a **Regen tick heals** the potency (no Defence, no minimum).
   - A status applied by a creature that **already carries it** passes its own snapshot on (Spore
     spreading on death keeps the original strength).
@@ -616,8 +618,9 @@ attack executor is correct.
 ### New statuses (data — several ride the mechanisms above)
 Web (act-last + a global 10% break-free roll per bearer at every creature's turn, see turn-order
 status above; **built E2**), Sleep (breaks on damage; 3-turn), Glow (stacking resource; +%dmg/stack;
-consumable), turn-order (act first *or* last — two-way, **built C**), Spore (DoT +
-spread-on-death to the host's own side, **built H3**), Confusion (3-turn; 50% harmful-action friendly-fire, **built C**), Silenced
+consumable; deleted in 4.1-H2b), turn-order (act first *or* last — two-way, **built C**), Spore (DoT
++ spread-on-death to the host's own side, **built H3**), Confusion (3-turn; 50% harmful-action
+friendly-fire, **built C**), Silenced
 (`action-lock` cast; applied by the Violence spell **Silence**) and Pacified (`action-lock` attack;
 applied by the Wit spell **Pacify**) — both **pure status spells** (no damage, cap 1,
 `defaultDuration: 3`, unlocked at biome 1), authored in **Phase 4.1-F**, after A4 (4.1-D) and
@@ -775,8 +778,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   `magnitudeSource` count, and `consume-stacks` with 0 stacks. Docs must never describe these as
   "no event."
 - **Sporch Cinderlord's kill-burst is creature-level and applies exactly 1 Burn stack per enemy
-  (decided).** `on-kill → apply-status(all-enemies, burn, stacks: 1)` — `stacks: 1` is written
-  explicitly in the data, not left to the `StatusSpec` default. On an enemy already Burning it adds
+  (decided; from 4.1-H2b statuses don't stack, so it applies Burn, `stacks` is deleted, and an
+  enemy already Burning keeps the stronger Burn and has its timer refreshed).**
+  `on-kill → apply-status(all-enemies, burn, stacks: 1)` — `stacks: 1` is written explicitly in the
+  data, not left to the `StatusSpec` default. On an enemy already Burning it adds
   1 stack (up to Burn's cap of 3) and refreshes duration, same as any re-application. The Burn
   **status** carries no spread trigger; "non-spreading Burn" refers to the status.
 
@@ -908,11 +913,16 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     (Defend's ×0.65 is in the taken pool as usual). **No chip, no Additional.** Indirect damage is
     the counter to Defence: it meets only a fifth of it.
   - **Heals are neither.**
-  - **Self-inflicted response damage is a cost** (4.1-H2b, brief ASSUMPTION 116): damage a
+  - **Self-inflicted response damage is a cost** (4.1-H2a, brief ASSUMPTION 116): damage a
     creature's own trait, status or perk response deals to that same creature is the exact amount,
-    with no Defence, pools, affinity or Additional. It is still a damage event with the creature
-    as its source (damage observers see it; `on-damage-taken` fires) and it can kill. Not a DoT
-    tick on its own applier (that comes from the snapshot). First user: the Flickerling Wick.
+    with no Defence, pools, affinity or Additional. It is still a damage event with the creature as
+    its source (damage observers see it; `on-damage-taken` fires) and it can kill. Not a DoT tick,
+    ever: a tick is never self-inflicted (see "Damage observation"). Lands in **4.1-H2a** with the
+    other channel rules. Users: the `RECKLESS` core fixture trait (`golden-loop-safety`), the
+    `CATASTROPHIC_COLLAPSE` fixture, and from 4.1-H2b the Flickerling Wick.
+  - **Flat-mode response damage** (`deal-damage.flatAmount`, a literal or a `StatPercent`) on
+    another creature is indirect from 4.1-H2a like any other response: the flat amount is the
+    magnitude. There is no opt-in Defence bypass and no true-damage channel.
   - Why: early fights at low levels were walls of 1-damage hits (offence below Defence, and stats
     scale together, so the gap holds at every level); the Additional removes the early stalls. The
     split gives Defence-based creatures a counter and makes reactive traits matter against tanks.
@@ -1435,10 +1445,14 @@ re-entry guard. `defend`+`provoke` can co-occur in one action → two observatio
 
 **Damage observation** (Phase 4.1-H2b, brief ASSUMPTION 115): the observation system also observes
 **damage events**. An observer can react to damage dealt to a creature, filtered by the damaged
-creature's **`relationship`** (as above) and by whether the damage was **self-inflicted** (source
-= target). It extends the one observer; it is not a new side channel. H2b's plan proposes the exact
-shape (a second observable event kind on the same hook, or a sibling hook with the same filter
-model). First consumer: the Flickerling Flare ("whenever an ally damages itself").
+creature's **`relationship`** (as above) and by whether the damage was **self-inflicted**.
+**Self-inflicted means exactly the cost case** in "Damage channels and the Additional": a creature's
+own trait, status or perk response damaging that same creature. **A DoT tick is never
+self-inflicted**, whoever applied it and whether or not the applier is alive (doc-sync ruling,
+2026-10-08: ticks neither draw retaliation nor count as self-damage). It extends the one observer;
+it is not a new side channel. H2b's plan proposes the exact shape (a second observable event kind on
+the same hook, or a sibling hook with the same filter model). First consumer: the Flickerling Flare
+("whenever an ally damages itself").
 
 **Classification of all locked content** (the routing map — misfiling a trait here is a real bug):
 - **Observation** (`on-action-observed`): **Resonants** (`relationship: ally`, `actionKind: cast`)
@@ -1494,7 +1508,8 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
 - **Triggered traits** = `{ hook, condition?, chancePercent?, response }`. **Response vocabulary
   (each parameterized by target + magnitude): deal-damage, apply-status, apply-stat-modifier, heal,
   revive, grant-action-state, consume-stacks, remove-status, perform-action** (nine after 4.1-F,
-  which adds `perform-action` and removes `suppress-action`; see "Response vocabulary" above).
+  which adds `perform-action` and removes `suppress-action`; eight from 4.1-H2b, which deletes
+  `consume-stacks`; see "Response vocabulary" above).
   Breadth = hook × condition × parameter cross-product, not more response types.
   The optional `condition?` **reuses the scripting `Condition` union** (declarative data, like
   every condition since S2), evaluated **against live state at fire time** (pure, no RNG; a false
@@ -1510,13 +1525,20 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   whoever hit me" response would otherwise target itself (Snapjaws Jaws hitting itself on Poison;
   Hollowkin Wretch Confusing itself). `triggering-source` resolves to **no target** when the source
   is `self`; the hook itself still fires (Sleep must still wake on DoT), and the fizzle emits
-  `TriggerFired` only. This rule is about response targets. `perform-action`'s
+  `TriggerFired` only. **From 4.1-H2b** a tick's source is its applier (brief ASSUMPTION 113), and
+  `triggering-source` on a tick **still resolves to no target** (doc-sync ruling, 2026-10-08):
+  retaliation never answers a tick. DoT is the counter to Defence tanks, and most retaliators are
+  those tanks. This rule is about response targets. `perform-action`'s
   `actor: 'triggering-source'` is not a target: it resolves to the source even when that is the
   bearer (4.1-E plan review).
 - **"attack" / "cast" in a trait or spell = the real actions** — same damage formula, OffStat,
   affinity, Defence, pools, min-1 floor; the trait/spell supplies only the spellPower coefficient +
-  target. No separate trigger-damage formula. **DoT is the lone Defence-bypass exception**; a
-  response may opt into bypass explicitly.
+  target, and from 4.1-H2a it is **direct** damage with the Additional. Every other damage a
+  trait, status or perk deals (a `deal-damage` response, a DoT tick) is **indirect** from 4.1-H2a
+  (DoT ticks from 4.1-H2b), and a creature's own response damaging itself is a cost: see "Damage
+  channels and the Additional". *Until then: DoT is the lone Defence-bypass exception, and a
+  response may opt into the bypass explicitly (flat mode); from 4.1-H2a nothing bypasses Defence
+  except a self-inflicted cost.*
 - **Behavioral responses, current line.** Granting an extra action is **in** as the
   `perform-action` response (4.1-E): it always runs after the granting action, inside the same
   turn, through the one action pipeline. Turn-order control is in as the `turn-order` status
@@ -1603,8 +1625,9 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   log: it pins the round-end **trait** pass, which 4.1-F keeps, and never involved a status tick
   (PR #80 review). The stun and sleep goldens gain `TurnSkipped`.
 - **v1 status content**: DoT (Poison, Burn, Spore), Regen (HoT), Stun, Sleep, Confusion, Web /
-  Grant Act First, Glow, Silenced, Pacified, and timed **damage-modifier statuses** — Weaken (−%
-  dealt) and Vulnerability (+% taken). **Raw stat buffs/debuffs are NOT statuses** — they're
+  Grant Act First, Glow (until 4.1-H2b), Silenced, Pacified, and timed **damage-modifier statuses**
+  — Weaken (−% dealt) and Vulnerability (+% taken). **Raw stat buffs/debuffs are NOT statuses** —
+  they're
   permanent-for-fight multiplicative `stat-modifier` effects (invisible-as-status; the player sees
   the effective stat), enforced by the no-temporary-stat-modifier validator. All are data
   instances of the built primitives; more addable later as pure data.

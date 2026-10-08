@@ -25,8 +25,9 @@ stat not as a status). That is **direct** damage (an Attack or Cast action from 
 which adds a fading **Additional** after the floor, `min(floor(0.2×target maxHP), max(0, 10 −
 (attackerLevel − 1)))`, modified by nothing; every other damage (trait/status/perk responses, DoT
 ticks) is **indirect**: `MAX(1, floor(magnitude × Affinity × (1+Σdealt) × Π(taken) − 0.2×Def))`,
-no chip (4.1). **No variance, no baseline crits**, fully deterministic. One round = each living
-creature acts once in Speed order (frozen round-start queue; ties: player→slot→id). Actions:
+no chip, no dealt pool on a DoT tick; a creature's own response damaging itself is an exact
+**cost** instead (4.1). **No variance, no baseline crits**, fully deterministic. One round = each
+living creature acts once in Speed order (frozen round-start queue; ties: player→slot→id). Actions:
 **Attack, Cast, Defend, Provoke, Wait** (Defend = Defence×1.5 + ×0.65 in taken pool; Provoke until
 next turn; Cast picks a gem *slot index* or a random castable gem, no cost; a spell carries
 target shape + intended side + a list of ordinary responses (4.1)). **Every action, from any

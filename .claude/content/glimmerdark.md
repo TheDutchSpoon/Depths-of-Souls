@@ -176,7 +176,8 @@ bearer's turns** instead of at round end. A status applied during or after its b
 starts counting the next turn; one applied at the start of the bearer's turn, before it acts (the
 Charger's Glow on itself), counts that turn.
 
-**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 114–116; builds in 4.1-H2b):
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; mostly 4.1-H2b, each item names its
+PR where it differs):
 
 - **Flickerlings replace the Glowflies, and Glow is deleted.** Once statuses stopped stacking,
   Glow was just another "+% damage" status beside Weaken and Vulnerability. The Flickerlings are
@@ -193,10 +194,10 @@ Charger's Glow on itself), counts that turn.
   observation").
 - **Beacon Charge** keeps its heal and grants **Grant Act First** instead of a Glow stack.
   **Overcharge is deleted**, leaving five Glimmerdark spells.
-- **Luminous Tide becomes Pale Mending** (placeholder name): it keeps its team heal (**20% of the
+- **Luminous Tide becomes Kindred Light**: it keeps its team heal (**20% of the
   caster's effective Health** to every ally) and loses the Glow.
 - **The Wick's burn is a cost:** it loses exactly 10% of its maximum HP, whatever its Defence (a
-  creature's own trait damaging itself ignores Defence and modifiers).
+  creature's own trait, status or perk response damaging itself ignores Defence and modifiers).
 - **Affinity spread:** Glimmerdark's creatures go from 4 Wit, 4 Instinct, 4 Violence, 4 Endurance
   and 2 Vitality to **4 / 3 / 5 / 4 / 2**.
 - **Single-instance statuses:** Blinding Flare's Vulnerability is ×1.5 once (re-casting refreshes

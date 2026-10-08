@@ -1152,6 +1152,13 @@ carry the changed rules and values.
 - **Direct and indirect damage** (ASSUMPTION 112): one classification in the resolver, the
   indirect formula beside the direct one in `damage.ts`. DoT ticks keep today's path in H2a (H2b
   moves them).
+- **Self-inflicted response damage is a cost** (ASSUMPTION 116): a creature's own response
+  damaging itself is the exact amount, no Defence or modifiers, still a damage event. It is a
+  channel rule, so it lands here, not with the Wick in H2b: the `RECKLESS` fixture
+  (`golden-loop-safety`) and `CATASTROPHIC_COLLAPSE` are self-targeted today.
+- **Flat-mode response damage on another creature becomes indirect** (ASSUMPTIONS 112, 113: no
+  true-damage channel): the flat amount is the magnitude; the opt-in Defence bypass goes. The
+  `golden-b5-*` fixtures' flat hits change with it.
 - **Goldens:** every changed golden is listed with which of the three rules changed it. A
   hand-derived focused golden per rule (a direct hit with the Additional at two attacker levels; a
   trait response as indirect damage against Defence and against Defend; a granted Attack staying
@@ -1167,16 +1174,18 @@ carry the changed rules and values.
 - **The observer watches damage events** (ASSUMPTION 115).
 - **Content:** Flickerlings replace Glowflies; Glow is deleted; Beacon Charge swaps Glow for Grant
   Act First; Overcharge is deleted; Vulnerability is ×1.5 once; Sporch Igniter applies one Burn;
-  Spore's spread inherits the snapshot (ASSUMPTION 116; `content/glimmerdark.md` and
-  `content/rotcap-hollow.md`, "Phase 4.1 — decided changes"); Luminous Tide becomes Pale Mending,
+  Spore's spread inherits the snapshot (ASSUMPTIONS 113, 114, 116; `content/glimmerdark.md` and
+  `content/rotcap-hollow.md`, "Phase 4.1 — decided changes"); Luminous Tide becomes Kindred Light,
   a plain team heal (ASSUMPTION 116).
-- **Self-inflicted trait damage is a cost** (ASSUMPTION 116): exact, no Defence or modifiers, still
-  a damage event; first user, the Flickerling Wick.
+- **The Wick's "no one else to heal → no burn" gate:** a condition or an empty-selector skip; the
+  plan proposes which, alongside the selector that excludes the bearer.
 - **Goldens:** `golden-glowfly-detonator` is retired (its mechanism is deleted); every other changed
   golden is listed with its reason. Hand-derived focused goldens for: a re-application keeping the
   stronger snapshot and refreshing the timer; a DoT tick as indirect damage from the applier's
-  snapshot, with the applier dead (the bearer is the source); Spore spreading with the dying
-  bearer's snapshot; the observer firing on a self-inflicted hit and not on an ordinary one.
+  snapshot, with the applier dead (the bearer is the source); a retaliator taking a tick from a
+  living applier and not striking back; Spore spreading with the dying bearer's snapshot; the
+  observer firing on a self-inflicted hit and not on an ordinary one, nor on a DoT tick whose
+  applier is dead (its source falls back to the bearer).
 
 ### 4.1-H2c — the first tuning pass (deliberate)
 
@@ -1714,12 +1723,14 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      balance. It made enemy retaliation much stronger too (ASSUMPTION 124, Snapback).
 113. **Decided (H2 grill).** **DoT and Regen scale off the applier, not the bearer.** At
      application the status instance records a **snapshot**: the applier's id, its affinity, and
-     the potency `floor(applier's effective stat) × percent / 100`. A tick is that potency:
+     the potency `floor(floor(applier's effective stat) × percent / 100)`. A tick is that potency:
      - **damage ticks are indirect damage** (ASSUMPTION 112) with the applier's snapshotted
        affinity, the bearer's live taken pool and Defence, and no dealt pool (the applier's build
        is already in the snapshotted stat); the damage source is the applier while it lives, else
-       the bearer (so its on-kill and on-damage-dealt hooks fire, and retaliation hits the
-       applier);
+       the bearer (so its on-kill and on-damage-dealt hooks fire). **A tick offers no
+       `triggering-source` to the bearer's responses**, as today, so Snapback, Thorns, Bulwark,
+       Retaliate and the Wretch's Confusion never answer a tick (decided at the doc-sync,
+       2026-10-08: DoT is the counter to Defence tanks, and most retaliators are those tanks);
      - **Regen heals** the potency (no Defence).
      Placeholder numbers (H2c tunes them, ASSUMPTION 129): **Poison 20% of Attack, Burn 25% of
      Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** A status applied by a
@@ -1742,9 +1753,13 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      Overtone's `stacks: false` is a different field, on its observer trigger, and stays.)
 115. **Decided (H2 grill).** **The action-observation system also observes damage events.** An
      observer can react to damage dealt to a creature, filtered by the damaged creature's
-     relationship (self, ally, enemy, any) and by whether the damage was **self-inflicted**
-     (source = target). An extension of the existing observer, not a new side channel; H2b's plan
-     proposes its exact shape. First user: the Flickerling Flare.
+     relationship (self, ally, enemy, any) and by whether the damage was **self-inflicted**.
+     Self-inflicted means exactly ASSUMPTION 116's cost case (a creature's own trait, status or perk
+     response damaging itself); **a DoT tick is never self-inflicted**, whoever applied it and
+     whether the applier lives (decided at the doc-sync, 2026-10-08: with the dead-applier fallback
+     a tick's source can be its bearer, and the Flare must not read that as a sacrifice; ticks also
+     never draw retaliation, ASSUMPTION 113). An extension of the existing observer, not a new side
+     channel; H2b's plan proposes its exact shape. First user: the Flickerling Flare.
 116. **Decided (H2 grill).** **Flickerlings replace Glowflies** in Glimmerdark (Glow was the mirror
      of Weaken and Vulnerability once its stacks were gone). Mood: pale cave-dwellers whose glow is
      their life.
@@ -1761,9 +1776,9 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      of Glow; **Overcharge** is deleted. Glimmerdark's affinity spread moves from 4 Wit, 4 Instinct,
      4 Violence, 4 Endurance and 2 Vitality to 4 / 3 / 5 / 4 / 2.
      **Two items the grill missed, decided at the doc-sync (2026-10-08):**
-     - **Luminous Tide becomes Pale Mending** (placeholder name; id `pale-mending`). It keeps its
-       team heal (20% of the caster's Health to every ally) and loses the Glow; a plain AOE heal
-       needed a plainer name. Why not Grant Act First instead: on the whole side it would make the
+     - **Luminous Tide becomes Kindred Light** (id `kindred-light`). It keeps its team heal (20%
+       of the caster's Health to every ally) and loses the Glow; the old name described the Glow
+       wave, not a team heal. Why not Grant Act First instead: on the whole side it would make the
        first AOE support spell a team-wide tempo swing, and a team heal is already distinct. The
        id changes with the name, so H2b's plan lists what reads it (the spell registry, the store's
        gem-set test, the digest).
@@ -1773,9 +1788,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        heal). So, as a general rule rather than a Wick exception: **damage a creature's own trait,
        status or perk response deals to that same creature is a cost**: the exact amount, with no
        Defence, pools, affinity or Additional. It is still a damage event with the creature as its
-       source (so the Flare observes it and `on-damage-taken` fires), and it can kill. A DoT tick
-       on its own applier is not covered (it comes from a status snapshot, ASSUMPTION 113). H2b's
-       plan pins the shape (likely the existing flat-mode `deal-damage` aimed at `self`).
+       source (so the Flare observes it and `on-damage-taken` fires), and it can kill. A DoT tick is
+       never covered: it is never self-inflicted (ASSUMPTION 115). It lands in H2a with the other
+       channel rules; H2a's plan pins the shape (likely the existing flat-mode `deal-damage` aimed
+       at `self`).
 117. **Decided (H2 grill).** **The fight count stays `10 + (floor − 1)`, and the XP curve stays
      `20 × level²`.** CONVENTIONS' revisit trigger was evaluated: floor clears do follow p^n, and a
      flat 10 (with the XP curve re-fitted) was measured faster (Brute's floor-10 first clear 93.5 →

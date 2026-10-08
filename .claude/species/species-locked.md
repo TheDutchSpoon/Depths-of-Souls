@@ -80,9 +80,10 @@ at creature-stamping (affinity is per-creature).
   *(Deleted in 4.1-H2b with the Glowflies, stacking and `consume-stacks`: once statuses stopped
   stacking, Glow was another "+% damage" status beside Weaken and Vulnerability. Brief ASSUMPTIONS
   114, 116.)*
-- **Damage observation** (4.1-H2b) — the action observer also watches **damage events**, filtered
-  by the damaged creature's relationship and by whether the damage was self-inflicted (the
-  Flickerling Flare). See CONVENTIONS "Damage observation".
+- **Damage observation** (4.1-H2b) — the action observer also watches **damage events**, filtered by
+  the damaged creature's relationship and by whether the damage was self-inflicted, i.e. a
+  creature's own trait, status or perk hitting itself; never a DoT tick (the Flickerling Flare). See
+  CONVENTIONS "Damage observation".
 - **Turn-order status** — timed status forcing the target to act **first or last** for N turns; a
   genuine **two-way primitive** now used by both Blindclaws (act-first) and Web (act-last). Needs the
   turn-order step to read it (position override; precedent: Stun suppresses a turn). Intrinsic effect
@@ -95,7 +96,9 @@ at creature-stamping (affinity is per-creature).
   scripting-rule context, so Striker is a numeric TRAIT — never a bespoke script (action-selection
   is the scripting layer's job, not a creature-identity trait).
 
-**Coverage:** leans Wit ×2 / Instinct ×2 / Violence ×2 / Endurance ×2 / Vitality ×1 (Sparkeaters now
+**Coverage:** leans Wit ×2 / Instinct ×2 / Violence ×2 / Endurance ×2 / Vitality ×1 (from 4.1-H2b,
+with the Flickerlings' Vitality / Wit / Violence lean replacing the Glowflies' Wit / Instinct:
+Wit ×2 / Instinct ×1 / Violence ×3 / Endurance ×2 / Vitality ×2) (Sparkeaters now
 span Violence/Endurance/Vitality via the stat-aligned drainer affinities, so Vitality is carried at
 species level by Voidmaw; Glowfly Radiant remains the extra sprinkle). **From 4.1-H2b** the
 Flickerlings (Vitality / Wit / Violence) replace the Glowflies (Wit / Instinct): the creature
@@ -151,7 +154,7 @@ win-or-lose** (the "meant to lose" is narrative, not enforced). Un-parks the §1
 | **Myconet** | Endurance | Death-network | `on-ally-death → survivors +Defence`; `on-death → Poison all-enemies` | free (`all-enemies` exists) |
 | **Necromoss** | Wit / Vitality | Reclaim (grim sustain) | heal/buff **scaling off dead-ally count**: heals read the live dead-ally count each firing; the buff is a flat rise **per ally death** (each death counted once — never a count on a per-death trigger, see CONVENTIONS) | count-scaling + heal |
 | **Hollowkin** | Endurance / Instinct | Puppet | one applies **Confusion** `on-damage-taken`, one `on-attack` | **Confusion** status |
-| **Sporch** | Violence / Wit | Strong non-spreading Burn | Igniter (potent Burn — data, no spread), Reaper (`+% to Burning`), Cinderlord (`on-kill → 1 Burn stack on every enemy` — a creature-level kill-burst, exactly 1 stack; the Burn *status* never spreads) | Burn exists, but `+% to Burning` **needs target-conditional damage-modifier (Slice E2)** — *not free* |
+| **Sporch** | Violence / Wit | Strong non-spreading Burn | Igniter (potent Burn — data, no spread), Reaper (`+% to Burning`), Cinderlord (`on-kill → 1 Burn stack on every enemy` — a creature-level kill-burst, exactly 1 stack; from 4.1-H2b one Burn, no stacks; the Burn *status* never spreads) | Burn exists, but `+% to Burning` **needs target-conditional damage-modifier (Slice E2)** — *not free* |
 
 **New this biome:**
 - **Spore** — a DoT condition-status that, `on-death` of its host, **spreads to one random

@@ -158,9 +158,9 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   wins the gap by **tactics and trait synergies**, not by out-levelling. These are targets a
   deterministic balance simulator reports as bands, not hard rules.
   **Early floors (decided at the 4.1-H2 grill, from 4.1-H2c):** the range's width starts at **0**
-  and grows one level per ten floors, and its minimum is **rounded down**, so an early floor's
-  enemies sit at `floor(floor × multiplier)` and never above it (floors 1–10 spawn at 1, 2, 3, 5,
-  6, 7, 9, 10, 11 and 13). The boss sits **5** levels above the range's top (was 3), so the
+  and grows one level per ten floors, and its minimum is **rounded down**, so floors 1–9 spawn at
+  exactly `floor(floor × multiplier)`: levels 1, 2, 3, 5, 6, 7, 9, 10 and 11 (floor 10's enemies
+  at 13–14). The boss sits **5** levels above the range's top (was 3), so the
   narrower range doesn't make bosses easier. The early floors are balanced through this range;
   the fight count and the XP curve stay (brief ASSUMPTIONS 117–119).
 - **Generation is deterministic-per-seed, fresh-per-visit**: which **biome** sits on a floor is
@@ -506,9 +506,10 @@ bright line, locked Phase 3):
    dealt pool** (`1 + Σ`) or the defender's **multiplicative taken pool** (`Π`). **These ARE surfaced
    as timed statuses.** Weaken ("−X% damage dealt", one instance + duration),
    Defend's ×0.65, a Vulnerability ("+X% damage taken") debuff, trait-granted crits all live here.
-   Pools stay additive-dealt / multiplicative-taken (unchanged — these are capped/timed, so no
-   runaway-to-zero concern). Distinct from `stat-modifier` — a "−Attack" stat change and a "−damage
-   dealt" Weaken are different categories with different treatment and never double-count.
+   Pools stay additive-dealt / multiplicative-taken (unchanged — these are timed and, from
+   4.1-H2b, single-instance, so no runaway-to-zero concern). Distinct from `stat-modifier` — a
+   "−Attack" stat change and a "−damage dealt" Weaken are different categories with different
+   treatment and never double-count.
 4. **Statuses** — tagged timed conditions like Poison (DoT), Regen, Stun (skip turn), Web (act
    last), Confusion. Timed, surfaced as status icons. This is what scripting's `has-status`
    condition scopes to (not the invisible stat-modifiers).
@@ -668,15 +669,19 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   target via a vocabulary (`self`, `triggering-source`, `triggering-ally`, `all-enemies`, a full
   `TargetSelector`, …). **`triggering-source` is never the creature itself**: a damage-over-time
   tick's source is its own bearer, so "retaliate against whoever hit me" simply has no target on a
-  tick (the hook still fires — a DoT still wakes a sleeper).
+  tick (the hook still fires — a DoT still wakes a sleeper). From 4.1-H2b a tick's source is its
+  applier, and retaliation **still** has no target on a tick: DoT is the answer to Defence tanks,
+  and most retaliators are those tanks.
 - **"attack" / "cast" in a trait or spell mean the real actions** — same damage formula, OffStat
   (Attack / Intelligence), affinity, Defence interaction, pools, and min-1 floor as a creature
-  choosing that action; the trait/spell supplies only the spellPower coefficient and target. There
-  is no separate "trigger damage" formula. A trait-granted Attack or Cast is **direct** damage
-  like a chosen one; every other damage a trait, status or perk deals (a retaliation, an on-death
-  burst, a DoT tick) is **indirect** damage, which meets only a fifth of Defence (from 4.1-H2a/b;
-  §7 "Damage channels"). *(Until 4.1-H2b DoT bypasses Defence entirely; a response may opt into
-  that bypass explicitly for armour-ignoring damage.)*
+  choosing that action; the trait/spell supplies only the spellPower coefficient and target. A
+  trait-granted Attack or Cast is **direct** damage like a chosen one. Every other damage a
+  trait, status or perk deals (a retaliation, an on-death burst, a DoT tick) is **not** an action:
+  it uses the **indirect** formula, which meets only a fifth of Defence (from 4.1-H2a; DoT ticks
+  from 4.1-H2b; §7 "Damage channels"), and a creature's own response damaging itself is an exact
+  cost. *(Until then the action formula serves trait damage too, DoT bypasses Defence entirely,
+  and a response may opt into that bypass explicitly; from 4.1-H2a nothing bypasses Defence
+  except a self-inflicted cost.)*
 - Traits are **data, not code branches**. Definitions live in `src/data/`; a creature references
   them via **`innateTraitIds`** (1 base / 2 fused), resolved from a registry at combat start, with
   effects instantiated onto the active-effects list at fight start.
@@ -710,16 +715,16 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   in the log/UI rather than silently inferred. All are **data instances of the built primitives** — no
   per-stat/per-status special-casing.
 - **DoT damage comes from its applier (decided at the 4.1-H2 grill, from 4.1-H2b; brief ASSUMPTION
-  113).** At application the status records a **snapshot** of its applier: who it is, its
-  affinity, and a potency, a percentage of one of its stats. Each tick deals that potency as
-  **indirect damage** (§7): the applier's affinity, the bearer's taken pool, and a fifth of the
-  bearer's Defence. That still makes DoT a distinct answer to high-Defence enemies. The applier is
-  the damage source while it lives (its on-kill and on-damage-dealt traits fire; a retaliation hits
-  it), else the bearer. **Regen** heals its snapshot potency. Placeholder numbers, tuned in
-  4.1-H2c: **Poison 20% of Attack, Burn 25% of Intelligence, Regen 10% of the healer's Health,
-  Spore 15% of Speed**. A creature passing on a status it carries passes its snapshot (Spore
-  spreading on death keeps the original strength). *(Until 4.1-H2b a DoT is a percentage of the
-  bearer's own max HP per stack, bypassing Defence, affinity and pools, and Regen the same.)*
+  113).** At application the status records a **snapshot** of its applier: who it is, its affinity,
+  and a potency, a percentage of one of its stats. Each tick deals that potency as **indirect
+  damage** (§7): the applier's affinity, the bearer's taken pool, and a fifth of the bearer's
+  Defence. That still makes DoT a distinct answer to high-Defence enemies. The applier is the damage
+  source while it lives (its on-kill and on-damage-dealt traits fire; retaliation never answers a
+  tick, §6), else the bearer. **Regen** heals its snapshot potency. Placeholder numbers, tuned in
+  4.1-H2c: **Poison 20% of Attack, Burn 25% of Intelligence, Regen 10% of the healer's Health, Spore
+  15% of Speed**. A creature passing on a status it carries passes its snapshot (Spore spreading on
+  death keeps the original strength). *(Until 4.1-H2b a DoT is a percentage of the bearer's own max
+  HP per stack, bypassing Defence, affinity and pools, and Regen the same.)*
 - **Stun** is **just a status**, not a special mechanic — it carries a passive **"can't act"
   lock**, so when the creature's turn comes up it is skipped: `TurnStarted`, a `TurnSkipped` event
   naming the status, `TurnEnded`. Sleep carries the same lock; **Silenced** locks only casting and
@@ -928,8 +933,8 @@ damage     = MAX(1, floor(raw))
   with no chip. Indirect damage meets only **a fifth of Defence**, so Defence-based creatures have
   a counter and reactive traits matter against tanks. Heals are neither. (From 4.1-H2a; DoT ticks
   from 4.1-H2b, with no dealt pool: the applier's build is in its snapshot, §6.) **Damage a
-  creature's own trait deals to itself is a cost** (from 4.1-H2b): the exact amount, no Defence or
-  modifiers, still a damage event, able to kill.
+  creature's own trait, status or perk response deals to itself is a cost** (from 4.1-H2a): the
+  exact amount, no Defence or modifiers, still a damage event, able to kill.
 - **The Additional (from 4.1-H2a; brief ASSUMPTION 110):** a fading flat bonus on **direct** hits,
   added after the floor: `min(floor(0.2 × target's max HP), max(0, 10 − (attacker level − 1)))`.
   It is 20% of the target's max HP, capped at 10 at level 1, the cap falling by 1 per attacker
@@ -1127,8 +1132,9 @@ and both words may change once the deep biome is designed):
 - **Stonehorn Warden** (Shieldbarer) — **Endurance**, high Defence. **Whenever it provokes, your
   whole team gains +35% Defence** for the fight (repeated provokes stack). *(The earlier
   "on-provoke → grant self defending" became the Shieldbarer's **Shield up** perk.)* **From
-  4.1-H2c** (brief ASSUMPTION 123) it has Attack 15 (was 10; a 90 stat total like the other
-  starters) and runs the **warden** script: provoke when an ally drops below 50%, else attack.
+  4.1-H2c** (brief ASSUMPTION 123) it has Attack 15 (was 10; a 90 stat total on the old scale, like
+  the other starters) and runs the **warden** script: provoke when an ally drops below 50%, else
+  attack.
   Under **taunter** it never attacked, so its Attack was never read. Its damage after floor 10
   comes from perks.
 
