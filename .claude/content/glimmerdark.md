@@ -186,7 +186,7 @@ PR where it differs):
 
   | Creature | Affinity | Role, script | Health / Atk / Int / Def / Spd | Description |
   |---|---|---|---|---|
-  | Flickerling Wick | Vitality | Enabler, support | 38 / 10 / 16 / 14 / 16 | At the start of its turn, burns **10% of its own maximum HP** to heal its lowest-HP ally **other than itself** for **20% of its own maximum HP**. With no one else to heal, it doesn't burn. |
+  | Flickerling Wick | Vitality | Enabler, support | 38 / 10 / 16 / 14 / 16 | At the start of its turn, burns **10% of its own maximum HP** to heal its lowest-HP **injured** ally **other than itself** for **20% of its own maximum HP**. When every other ally is at full health (or none is left), it doesn't burn. |
   | Flickerling Flare | Wit | Payoff, caster | 25 / 14 / 22 / 10 / 22 | Whenever an ally damages itself, **every ally** permanently gains **15% Speed**. |
   | Flickerling Last Gleam | Violence | Amplifier, striker | 28 / 24 / 10 / 14 / 18 | Whenever an ally dies, **every ally** permanently gains **20% Attack**. |
 
