@@ -4,8 +4,10 @@
 //   final = MAX(1, floor(raw)). It keeps affinity, the dealt pool (including
 //   `conditional-damage-bonus`), the taken pool, Defend and armor penetration; it has NO Additional
 //   (a direct-only bonus) and NO chip floor, and cross-stat is direct-only.
-// `golden-h2a-indirect` pins the Defence term, Defend and cross-stat; this golden isolates ONE kept
-// term per hit, so each wrong wiring changes exactly one hit.
+// `golden-h2a-indirect` pins the Defence term, Defend and cross-stat; this golden gives each kept
+// term its own hit. Each wrong wiring below moves the hits named in its [M] tag: M2, M4, M5 and M6
+// move exactly one hit; M3 moves hits 3 and 4 (the conditional bonus sits inside the dealt pool); M1
+// moves all six (every bearer is level 1, so each direct-only Additional would show on every hit).
 //
 // Setup. Six enemy bearers B1..B6 (speeds 60 down to 10, always-wait, ALL LEVEL 1 so a wrongly
 // added Additional shows: its cap is 10 and every target's 20% bound is >= 35), each with an
@@ -16,11 +18,13 @@
 // above 0 (20, except T6 = 40) and no Defend.
 //
 //   Hit 1, B1 -> T1 (nothing special): 60 x 1 x 1 x 1 - 0.2 x 20 = 56.   T1 200 -> 144.
-//       wrong: + the Additional (min(floor(200 x 20 / 100) = 40, 10) = 10) -> 66.     [M1]
+//       wrong: + the Additional (min(floor(200 x 20 / 100) = 40, 10) = 10) -> 66; every hit
+//       gains its own +10 the same way (all six bearers are level 1).                   [M1]
 //   Hit 2, B2 (Violence) -> T2 (Vitality): Vitality beats Violence, so B2 is at a disadvantage,
 //       x0.75: 60 x 0.75 - 4 = 41.   T2 195 -> 154.     wrong: neutral affinity -> 56.   [M2]
 //   Hit 3, B3 has a +50% `damage-modifier` (dealt): 60 x (1 + 0.5) - 4 = 86.   T3 190 -> 104.
-//       wrong: the dealt pool dropped -> 56.                                              [M3]
+//       wrong: the dealt pool dropped -> 56 (and hit 4, whose conditional bonus is part
+//       of the dealt pool, falls from 71 to 56 too).                                      [M3]
 //   Hit 4, B4 has a `conditional-damage-bonus` +25% (condition always, actionKind 'attack': a
 //       formula response is Attack-flavoured): 60 x (1 + 0.25) - 4 = 71.   T4 185 -> 114.
 //       wrong: the conditional bonus dropped (the plain dealt pool kept) -> 56.           [M4]

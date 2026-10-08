@@ -3237,7 +3237,7 @@ keeps its `TriggerFired`, already pinned by `golden-h2a-cost`) are the new rulin
 New tests (hand-derived; the numbers were written before the first run and passed on it):
 
 - `golden-h2a-indirect-keeps`: six level-1 bearers, six targets (health 175-200, Defence above 0),
-  one kept term per hit: 56 (none; a wrongly added Additional would be 66), 41 (affinity x0.75), 86
+  one kept term per hit (M2, M4, M5 and M6 each move exactly one hit; M3 moves two, M1 all six): 56 (none; a wrongly added Additional would be 66), 41 (affinity x0.75), 86
   (a +50% dealt `damage-modifier`), 71 (a +25% `conditional-damage-bonus`, `actionKind 'attack'`), 26
   (a x0.5 `taken-reduction`, not Defend's), 58 (75% armor penetration against Defence 40).
 - `golden-h2a-spell-on-caster`: a level-1 caster's `deal-damage` effect with `target: self` deals the
@@ -3251,9 +3251,9 @@ the full suite run; the corpus digest does not count:
 
 | # | Mutation | Killed by | Digest |
 |---|---|---|---|
-| M1 | indirect also adds the Additional | `golden-h2a-indirect-keeps` | also fails |
+| M1 | indirect also adds the Additional (moves all six hits: every bearer is level 1) | `golden-h2a-indirect-keeps` | also fails |
 | M2 | indirect uses a neutral affinity (the target's for the attacker) | `golden-h2a-indirect-keeps` | also fails |
-| M3 | indirect drops the dealt pool | `golden-h2a-indirect-keeps` | also fails |
+| M3 | indirect drops the dealt pool (moves hits 3 and 4: the conditional bonus sits inside it) | `golden-h2a-indirect-keeps` | also fails |
 | M4 | indirect drops `conditional-damage-bonus` | `golden-h2a-indirect-keeps` | **passes** |
 | M5 | indirect keeps only Defend's taken factor | `golden-h2a-indirect-keeps` | also fails |
 | M6 | indirect passes armor penetration 0 | `golden-h2a-indirect-keeps` | also fails |
