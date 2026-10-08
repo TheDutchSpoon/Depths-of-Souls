@@ -64,7 +64,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: goldens byte-identical; the digest is regenerated once, existing entries changing only through the cast-role loadout roll (attributed mechanically), plus any appended coverage fights |
 | **4.1-G** | Hub actions + enemy behaviour, shipped as **G1** (enemy behaviour) and **G2** (hub and store) | G1: deliberate, listed; mechanism goldens byte-identical, content goldens and the digest change (attributed stage by stage); G2: engine goldens and the digest **byte-identical**, store tests change |
-| **4.1-H** | Balance simulator + first tuning pass, shipped as **H1** (the simulator and its report) and **H2** (the first tuning pass) | H1: **byte-identical** (new files only; every golden, store test and the digest unchanged); H2: content numbers change, deliberate and listed; mechanism goldens untouched |
+| **4.1-H** | Balance simulator, combat-rule changes from the H2 grill, and the first tuning pass, shipped as **H1** (the simulator and its report), **H2a** (damage rules), **H2b** (status rules and the content they need) and **H2c** (the first tuning pass) | H1: **byte-identical** (new files only; every golden, store test and the digest unchanged); H2a, H2b: deliberate, listed (each rule's own goldens); H2c: content numbers change, deliberate and listed; mechanism goldens untouched |
 
 The split keeps each PR under one golden policy: a PR that must be byte-identical never also
 carries deliberate changes, so "any diff is a regression" stays checkable.
@@ -1052,24 +1052,146 @@ and **6v6 boss floors** (decided at the PR #81 review).
 
 Item: **D1** (simulator, bands, CI thresholds, tuning).
 
-### The split: H1, H2 (decided before the H kickoff)
+### The split: H1, H2a, H2b, H2c (H1/H2 decided before the H kickoff; H2 split at the H2 grill)
 
 | PR | Items | Golden policy |
 |---|---|---|
 | **4.1-H1** | The simulator (ASSUMPTION 21's policy), `npm run sim`, the full report including every watch point's metrics, and the determinism test. ASSUMPTION 22's thresholds are computed and shown in the report, not asserted. | **Byte-identical**: new files and a `package.json` script only. Every golden export, every existing test and the corpus digest unchanged. |
-| **4.1-H2** | The first tuning pass, the CI threshold test (ASSUMPTION 22) asserted, and the before/after report. | **Deliberate, listed**: content goldens, store and integration tests and the digest change, each attributed to a listed tuning change. Mechanism goldens untouched. |
+| **4.1-H2a** | Damage rules: an engine-visible creature `level`, the fading **Additional** on direct hits, and the **direct/indirect** damage split (ASSUMPTIONS 110–112). | **Deliberate, listed**: every golden that has a hit changes; each change attributed to one of the three rules. |
+| **4.1-H2b** | Status rules: **single-instance statuses** (no stacks), **DoT and Regen from the applier's snapshot** as indirect damage, the observer watching **damage events**, and the content those rules need: **Flickerlings replace Glowflies**, Glow deleted, Beacon Charge and Overcharge, Vulnerability, Spore and Sporch (ASSUMPTIONS 113–116). | **Deliberate, listed**: status and DoT goldens and the content goldens change; `golden-glowfly-detonator` is retired; the digest is regenerated once. |
+| **4.1-H2c** | The first tuning pass on the final rules: Health 20–45, the early-floor level range, the boss level offset, the Shieldbarer starter, Snapback, Arcane Bolt, the floor-1 per-item fixes, the DoT numbers, the report's additions, the CI threshold test asserted, and the before/after report (ASSUMPTIONS 117–129). | **Deliberate, listed**: content goldens, store and integration tests and the digest change, each attributed to a listed tuning change. Mechanism goldens untouched. |
 
-**Why two, and this order.**
+**Why this split, and this order.**
 - A tuning plan's ASSUMPTIONS name what changes and by how much. That needs the report first, so
-  one plan-first PR can't hold both.
-- The watch points end in decisions: whether draws get a band, whether a boss lock needs a
-  break-through chance, and how far the early floors are from their targets. They're decided on
-  H1's report, before H2's plan.
-- Floor 1 is far below ASSUMPTION 22's 80% today. Measured on 4.1-G2 (40 seeds, the real store,
-  retrying a lost floor, first-try floor-1 clears): Brute 27 of 40, Shieldbarer 3, Sorcerer 2. A
-  threshold test can't be green before tuning.
-- After H1 merges, its report goes to a design pass. If a fix would change a decided value (the
-  fight count, the level range, the XP curve), that's a grill, not a tuning edit (WORKFLOWS).
+  one plan-first PR couldn't hold H1 and the tuning.
+- The watch points ended in decisions (whether draws get a band, whether a boss lock needs a
+  break-through chance, how far the early floors are from their targets), decided on H1's report
+  before H2's plan: see "The H2 grill" below.
+- That grill also changed combat rules. Tuning has to land on the final rules, so the rules come
+  first, in two PRs that each change a different set of goldens for one reason (damage, then
+  statuses), and the tuning comes last.
+- Floor 1 was far below ASSUMPTION 22's 80% on H1's report (first try: Sorcerer 0 of 40, Brute
+  24, Shieldbarer 7). A threshold test can't be green before tuning.
+
+### The H2 grill (decided on H1's report, 2026-10-06/07)
+
+The design owner grilled H1's report before H2's plan. **Evidence:** H1's report, plus
+counterfactual runs of the same simulator in scratch clones (40 seeds per spec, the lock probe off,
+nothing committed): config variants (fight count, XP curve, level-range width and rounding),
+engine variants (chip floor 5%, diminishing returns on stat stacking, a fading Additional, the
+direct/indirect split, applier-based DoT), and content variants (Arcane Bolt, Snapback, the
+Shieldbarer starter, the top draw traits). The rulings are ASSUMPTIONS 109–129; the living docs
+carry the changed rules and values.
+
+**What the evidence said.**
+- **Most early losses are low offence against Defence at low levels.** With subtractive damage,
+  an attacker whose offence is below the target's Defence does the 1-damage minimum, and stats
+  scale together, so the gap holds at every level. A level-1 Treant Elder (Defence 20, healing
+  itself every round) beat the Sorcerer pair 75 of 78 times and the Shieldbarer pair 125 of 125.
+- **A bigger chip floor (5%) halved the draw rates and sped up the deep game**, but changes every
+  hit and Defence's worth everywhere, and it can't touch the level-1 regime (5% of 10–15 offence
+  is under 1). Not taken (ASSUMPTION 109).
+- **Diminishing returns on stacked stats (Siralim's fix) changed nothing measurable:** once
+  Defence passes the attacker's offence every hit is the chip, however far past it.
+- **A fading Additional removed the early stalls** (round-cap draws on floors 2–5, on the
+  flat-fight-count config it was measured on: Sorcerer 4.7–7.1% to 0–0.2%, Brute 0.8–3.5% to 0%)
+  and shortened floor-1 fights against the tanky creatures from 10–40 rounds to 3–6.
+- **The direct/indirect split and applier-based DoT are roughly neutral on balance** (Sorcerer
+  floor-10 first clear 68 vs 76.5 median floor runs; Brute 52 vs 56; Shieldbarer 162.5 vs 153.5
+  on the flat-fight-count config they were measured on). Doubling the DoT percentages changed
+  nothing measurable: biomes 1–2 apply few DoTs.
+- **The early-floor level range is the strongest early lever.** With the new combat rules and the
+  original fight count, a range width of 0 plus a rounded-down minimum (candidate B) takes
+  first-try floor 1 from 15 / 30 / 10 seeds of 40 (Sorcerer / Brute / Shieldbarer) to 34 / 32 /
+  15, and the floor-10 first clear from 144 / 89.5 / 223 median floor runs to 107 / 60 / 173.5.
+- **The Shieldbarer starter never attacked.** Its `taunter` role script is one rule, "always:
+  Provoke", so its Attack stat was never read and its Rallying Cry fired every turn.
+- **The indirect split made the Snapjaw Jaws' Snapback lethal at floor 1:** it beat the
+  Shieldbarer pair 144 of 144 times (the counterattack now meets 20% of Defence, not all of it).
+  At 30% of Attack, the Shieldbarer's first-try floor 1 went from 17 to 28 of 40.
+- **Arcane Bolt at spell power 1.0** (from 0.5) cut the Sorcerer's floor-10 first clear from 140.5
+  to 108.5 median runs and took the seeds reaching floor 20 from 3 to 32 of 40 (today's rules).
+- **The boss is the easiest floor of its biome** (one fight against 10–19): Brute clears floor 10
+  on 85% of first visits against 0–8% of first pushes on floors 2–9. Accepted as a breather.
+- **On H1's report, and in every configuration measured before the full decided set, no seed of
+  any spec reached floor 5 in its first 10 floor runs**; in 20 runs most do (25 / 31 / 9 seeds of
+  40 with the new combat rules on today's config).
+- **The full decided set** (every ruling below, measured together at the end of the grill; the
+  Glowflies still in, Glow at one instance; single-instance statuses approximated as a cap of 1),
+  against the same set without the Health remap, per spec (Sorcerer / Brute / Shieldbarer):
+  first-try floor 1: **40 / 35 / 26** of 40 (without the remap 33 / 32 / 28); floor-10 first clear,
+  median floor runs: **86 / 72 / 213** (78.5 / 61 / 145), with **13** Shieldbarer seeds never
+  clearing it in 400 runs (3); round-cap draws: **4.3 / 2.3 / 10.4%** (4.0 / 1.9 / 8.0%); seeds
+  fighting on floor 5 within 10 floor runs: **4 / 12 / 0** (1 / 5 / 1), within 20: **40 / 40 /
+  26** (39 / 36 / 31). The remap lifts the Sorcerer's and Brute's floor 1 and slows the mid-game
+  (beefier enemies take longer to kill), and costs the Shieldbarer most. This is H2c's baseline.
+
+**The rulings, by area:**
+- **Combat rules (H2a, H2b):** chip floor stays 1% (109); a fading Additional on direct hits (110);
+  an engine-visible creature level (111); direct and indirect damage (112); DoT and Regen from the
+  applier's snapshot, indirect (113); single-instance statuses, the stronger value staying (114);
+  the observer watching damage events (115); Flickerlings replace Glowflies (116).
+- **Run structure (H2c):** the fight count and XP curve stay (117); the early-floor level range
+  (118); the boss level offset (119).
+- **Watch points:** no per-turn break-through chance on locks (120); no draw band (121); bosses
+  stay one fight (122).
+- **Content (H2c):** the Shieldbarer starter (123); Snapback and Arcane Bolt (124); Health 20–45
+  (125); the remaining floor-1 fixes and the DoT numbers (129).
+- **The report and CI (H2c):** the floor-5 threshold within 20 floor runs (126); two report
+  additions (127).
+- **Order:** H2a → H2b → H2c (128).
+- **Framing (design owner):** balance doesn't have to be perfect yet. Player-written scripts
+  (Phase 6) and equipment (Phase 8) will strengthen the starting team, so H2c aims at the bands
+  and the CI thresholds, not at perfection.
+
+### 4.1-H2a — damage rules (deliberate)
+
+- **`Creature.level`** (ASSUMPTION 111): the combat creature carries its level, set by
+  `materializeCreature`; `origin` stays engine-inert.
+- **The Additional** (ASSUMPTION 110), with its constants in `engine/config.ts`.
+- **Direct and indirect damage** (ASSUMPTION 112): one classification in the resolver, the
+  indirect formula beside the direct one in `damage.ts`. DoT ticks keep today's path in H2a (H2b
+  moves them).
+- **Goldens:** every changed golden is listed with which of the three rules changed it. A
+  hand-derived focused golden per rule (a direct hit with the Additional at two attacker levels; a
+  trait response as indirect damage against Defence and against Defend; a granted Attack staying
+  direct). The digest is regenerated once, every changed fight attributed.
+
+### 4.1-H2b — status rules and the content they need (deliberate)
+
+- **Single-instance statuses** (ASSUMPTION 114): `cap`, `StatusSpec.stacks`, stack increments, the
+  `consume-stacks` response and the `consumed-stacks` magnitude source are deleted; re-application
+  keeps the stronger value and refreshes the timer.
+- **DoT and Regen from the applier's snapshot** (ASSUMPTION 113), DoT ticks as indirect damage
+  with the applier as the damage source.
+- **The observer watches damage events** (ASSUMPTION 115).
+- **Content:** Flickerlings replace Glowflies; Glow is deleted; Beacon Charge swaps Glow for Grant
+  Act First; Overcharge is deleted; Vulnerability is ×1.5 once; Sporch Igniter applies one Burn;
+  Spore's spread inherits the snapshot (ASSUMPTION 116; `content/glimmerdark.md` and
+  `content/rotcap-hollow.md`, "Phase 4.1 — decided changes"); Luminous Tide becomes Pale Mending,
+  a plain team heal (ASSUMPTION 116).
+- **Self-inflicted trait damage is a cost** (ASSUMPTION 116): exact, no Defence or modifiers, still
+  a damage event; first user, the Flickerling Wick.
+- **Goldens:** `golden-glowfly-detonator` is retired (its mechanism is deleted); every other changed
+  golden is listed with its reason. Hand-derived focused goldens for: a re-application keeping the
+  stronger snapshot and refreshing the timer; a DoT tick as indirect damage from the applier's
+  snapshot, with the applier dead (the bearer is the source); Spore spreading with the dying
+  bearer's snapshot; the observer firing on a self-inflicted hit and not on an ordinary one.
+
+### 4.1-H2c — the first tuning pass (deliberate)
+
+- **Config:** level-range width base 2 → 0 and a rounded-down minimum (ASSUMPTION 118);
+  `bossLevelOffset` 3 → 5 (ASSUMPTION 119).
+- **Content data:** Health remapped to 20–45 for every creature (ASSUMPTION 125); the Shieldbarer
+  starter's Attack 15 and `warden` role (ASSUMPTION 123); Snapback 0.3; Arcane Bolt 1.0 (ASSUMPTION
+  124).
+- **Per-item tuning toward the bands and the CI thresholds** (ASSUMPTION 129): the floor-1
+  problem creatures the floor 1–5 matchup table shows, and the DoT percentages.
+- **The report additions** (ASSUMPTION 127) and the **floor-5 threshold change** (ASSUMPTION 126);
+  then the CI threshold test asserted.
+- **Before/after report** in the PR and the phase record: the report on `main` before H2c (with
+  H2a and H2b merged) and after it.
+- Content-doc numbers follow the data in the same PR.
 
 - A **deterministic balance simulator**: drives the **real store** (`newGame`, the intro, `setSpec`,
   `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with a **documented simple player policy**
@@ -1083,9 +1205,10 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     multiplier curve).
 - Output is a readable report (a table per spec). **CI asserts only loose "badly broken"
   thresholds** (ASSUMPTION 22); bands are reported, not asserted.
-- **First tuning pass**: adjust `BalanceConfig` values and the numbers of the three new spells (and
-  any creature/spell numbers the report shows as outliers) toward the bands. Record the before/after
-  report in the PR and in the phase record. Content-doc numbers follow the data in the same PR.
+- **First tuning pass** (H2c, scoped by the H2 grill above): adjust `BalanceConfig` values and the
+  numbers of the three new spells (and any creature/spell numbers the report shows as outliers)
+  toward the bands. Record the before/after report in the PR and in the phase record. Content-doc
+  numbers follow the data in the same PR.
 - Watch points to report explicitly: fight-count compounding (floor success vs per-fight win rate),
   floors 20–30, and the Unicorn's revive strength under the cap.
 - **Watch point: uncapped stat stacking stalls fights** (PR #73 review, measured on the corpus
@@ -1105,7 +1228,8 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     never a global stack cap.
   - The report adds, per spec: the **round-cap draw rate**, and the **largest stack of one trait's
     stat-modifier** seen on a creature. Whether draws get a target band is decided on H1's report,
-    before H2's plan.
+    before H2's plan. **Decided at the H2 grill: no band for now** (ASSUMPTION 121); the draw rate
+    stays in the report.
 - **Watch point: boss floors in 6v6** (PR #82 review, measured on the corpus after 4.1-G1).
   - **Lock uptime needs a script that aims at the boss.** Role scripts aim a spell at the lowest-HP
     enemy, so the simple policy never locks a boss. In the G1 corpus, 19 boss fights have a
@@ -1120,7 +1244,9 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
     a state snapshot, and the snapshot restored after.
   - Report the boss's locked-turn share and the clear rate both ways. A large jump in the clear rate
     means the lock still switches a boss off, and the watch point's per-turn break-through chance
-    comes back as a decision.
+    comes back as a decision. **Measured on H1's report: no jump** (the clear rate falls or holds
+    on every boss floor but the Leech Sovereign's, where it rises 4–8 points over all visits), so
+    **no break-through chance** (ASSUMPTION 120).
   - **The Rot Sovereign's Attrition** (+10% Attack on every death, either side) has up to 11 other
     deaths to feed on in 6v6, where it had at most 8. T4 and the floor-30 report show whether she
     runs away.
@@ -1129,9 +1255,15 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
 - **H1:** the simulator is deterministic (same seeds → identical report, asserted); the report
   shows where each target band and each ASSUMPTION 22 threshold lands; every golden export, every
   existing test and the digest are unchanged.
-- **H2:** the CI threshold test is green; the before/after report is in the PR and the phase
-  record; mechanism goldens untouched; content goldens re-derived or regenerated and listed where
-  numbers changed.
+- **H2a:** each of the three damage rules has a hand-derived focused golden that fails with the
+  rule removed; every changed golden and every changed digest fight is attributed to one rule.
+- **H2b:** each status rule (single instance, stronger stays, applier snapshot, damage observation)
+  has a hand-derived focused golden that fails with it removed; no `cap`, `stacks` or
+  `consume-stacks` remains in engine or data; the Flickerlings and spell changes match the content
+  docs; every changed golden is attributed.
+- **H2c:** the CI threshold test is green; the before/after report is in the PR and the phase
+  record, every band (T1–T5) shown before and after; mechanism goldens untouched; content goldens
+  re-derived or regenerated and listed where numbers changed.
 
 ---
 
@@ -1179,7 +1311,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 4. **Enemy level range:** `min = round(floor × m(floor))`, `max = min + 2 + floor(floor / 10)` (the
    Phase 4 width rule, shifted), with `m(floor) = 1.25 + 0.75 × (floor − 1) / 99` for floors 1–100
    and `2.0 + 0.01 × (floor − 100)` after; boss level = `max + 3`. Rounded half-up; the plan shows
-   the computation is float-safe (e.g. done in hundredths).
+   the computation is float-safe (e.g. done in hundredths). *(Changed at the H2 grill: the width
+   starts at 0, the minimum is rounded down, and the boss sits at `max + 5`: ASSUMPTIONS 118–119.)*
 5. **XP per kill = the victim's level** (`1 × origin.level`; decided by the design owner; was
    `10 × floor`), awarded to every party member as today. **The XP curve becomes quadratic:
    `xpForNextLevel(level) = 20 × level²`** (was `100 × level`). Reasoning: one clear of floor *f*
@@ -1189,7 +1322,7 @@ ASSUMPTION-tagged, and this list is what the design review checks.
    outrun the floor more and more with depth; a quadratic one keeps **party level ≈ floor** at every
    depth. The coefficient 20 means roughly one level per 1–1.5 clears at the matching depth, leaving
    room for re-farming. Coefficient and exponent are `BalanceConfig` parameters; H tunes them.
-   Currency drops stay floor-based.
+   Currency drops stay floor-based. *(Kept at the H2 grill with the fight count: ASSUMPTION 117.)*
 6. **`Instance.scriptId: null` means "the creature's default (role) script"**, resolved at
    materialization, so a role change in data flows to instances that never had a custom script.
 7. **Player gem roll:** distinct spells matching the creature's affinity, from spells unlocked at the
@@ -1246,9 +1379,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
     reaches 100% and keep the six highest-level instances in the party; spend perk points greedily in
     spec-doc order on functional perks. The policy is documented in the file header.
 22. **CI thresholds:** fail only if floor-1 clear rate < 80%, the first soul takes > 30 floor runs,
-    or no seed reaches floor 5 within the first session. Everything else is reported. H1 reports
-    them; the CI test asserts them from H2 (see "The split: H1, H2"). How each is read:
-    ASSUMPTION 107 (the first soul counted clears until the PR #84 review).
+    or no seed reaches floor 5 within the first 20 floor runs (the first session until the H2
+    grill: ASSUMPTION 126). Everything else is reported. H1 reports them; the CI test asserts them
+    from H2c (see "The split"). How each is read: ASSUMPTIONS 107 and 126 (the first soul counted
+    clears until the PR #84 review).
 23. **Reachable floors** = `1 .. min(deepestFloor + 1, contentFrontier)`, inclusive. When a floor
     fails both checks, **`beyond-content-frontier` wins** (it is the more specific reason, and the
     UI can say "no content yet" instead of "too deep"); `floor-out-of-reach` covers floors < 1 and
@@ -1529,8 +1663,9 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        not clears: a kill banks soul in a lost floor too, so counting clears can't fail while
        floors are unclearable). The threshold is the **median over seeds**, a seed that never
        completes a soul counting as infinite; it fails when the median is above 30;
-     - **floor 5:** a seed reaches floor 5 when one of its first 10 floor runs is on floor 5 or
+     - **floor 5:** a seed reaches floor 5 when one of its first 20 floor runs is on floor 5 or
        deeper (reaching a floor is fighting on it, not clearing it); fails when no seed does.
+       *(First 10 floor runs until the H2 grill: ASSUMPTION 126.)*
      The report shows each threshold's value next to its verdict, and the pure function that
      computes them is tested on hand-built seed results, so H2's CI test asserts a computation
      that is already pinned.
@@ -1543,6 +1678,170 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      fight-count compounding: per-fight win rates of 0.80–0.96 over 15–20 fights. The report adds
      the magnitude per seed (the most failed pushes on one floor below 10, and the floor runs to
      the first floor-10 clear), so H2 tunes against a distance, not a yes/no.
+109. **Decided (H2 grill).** **The chip floor stays 1%** (`CHIP_FLOOR_RATE`). Measured at 5%: the
+     round-cap draw rate roughly halved (Brute 2.0% → 0.8%, Sorcerer 5.9% → 2.9%, Shieldbarer 12.0%
+     → 7.1%) and the deep game sped up, but it changes every hit, lowers Defence's worth everywhere
+     and can't reach the level-1 regime (5% of 10–15 offence is under 1). Diminishing returns on
+     stacked stats (gains past 5× base worth less) was also measured and changed nothing: past the
+     attacker's offence every hit is the chip, however far past.
+110. **Decided (H2 grill).** **The Additional: a fading flat bonus on direct hits** that speeds up
+     early fights. Per direct hit (ASSUMPTION 112), after the formula's `MAX(1, floor(...))`:
+     `additional = min(floor(0.2 × target's effective max HP), max(0, 10 − (attacker level − 1)))`,
+     so 20% of the target's max HP, capped at 10, the cap falling by 1 per attacker level and gone
+     from level 11. **Nothing modifies it:** not Defence, affinity, either pool or Defend. Both
+     sides get it (one general model). Indirect damage, DoT ticks and heals never get it. The 0.2
+     and the 10 are combat rule constants in `engine/config.ts`. Measured: round-cap draws on
+     floors 2–5 fall to about 0, and floor-1 fights against the tanky creatures shorten from 10–40
+     rounds to 3–6; it costs Brute and the Shieldbarer some first-try floor-1 clears, since enemies
+     get it too. Rejected: player-side only (breaks one general model); Defend softening it
+     (measured, no difference).
+111. **Decided (H2 grill).** **The combat creature carries an engine-visible `level`**, set by
+     `materializeCreature` from the level it bakes in; the Additional reads it. `origin` stays
+     engine-inert (CONVENTIONS); the `makeCreature` test helper supplies a default.
+112. **Decided (H2 grill).** **Two damage channels.**
+     - **Direct:** an Attack or Cast **action** from any source (script, fallback, a trait-granted
+       `perform-action`), including every effect of the cast spell. The existing formula, plus the
+       Additional.
+     - **Indirect:** every other damage: a trait, status or perk response (retaliation, on-death
+       bursts, on-attack bonus hits) and DoT ticks (ASSUMPTION 113).
+       `raw = magnitude × affinity × (1 + Σ dealtMods) × Π(takenFactors) − 0.2 × effective Defence`,
+       then `MAX(1, floor(raw))`. The magnitude is the response's own (`offStat`/`scalingStat` ×
+       spellPower × count). Armor penetration reduces the Defence term and Defend's ×1.5 Defence
+       and ×0.65 taken factor apply as they do today. No chip, no Additional.
+     - Heals are neither.
+     Why: Defence-based creatures get a counter (indirect damage meets only 20% of their Defence),
+     and reactive traits stop being cosmetic against tanks. The split measured roughly neutral on
+     balance. It made enemy retaliation much stronger too (ASSUMPTION 124, Snapback).
+113. **Decided (H2 grill).** **DoT and Regen scale off the applier, not the bearer.** At
+     application the status instance records a **snapshot**: the applier's id, its affinity, and
+     the potency `floor(applier's effective stat) × percent / 100`. A tick is that potency:
+     - **damage ticks are indirect damage** (ASSUMPTION 112) with the applier's snapshotted
+       affinity, the bearer's live taken pool and Defence, and no dealt pool (the applier's build
+       is already in the snapshotted stat); the damage source is the applier while it lives, else
+       the bearer (so its on-kill and on-damage-dealt hooks fire, and retaliation hits the
+       applier);
+     - **Regen heals** the potency (no Defence).
+     Placeholder numbers (H2c tunes them, ASSUMPTION 129): **Poison 20% of Attack, Burn 25% of
+     Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** A status applied by a
+     creature that already carries it passes its own snapshot on (Spore spreading on death keeps
+     the original strength). Integer percent, one floor (the percent-hp brief's float rule). This
+     reverses the Phase 4 percent-of-max-HP model (`phase-4-percent-hp-condition-ticks.md`), whose
+     only objection to stat-scaling was reading the victim's stats; the snapshot reads the
+     applier's. Rejected: DoT as a third "true damage" channel (measured indistinguishable for the
+     Sorcerer; a bigger percentage answers Defence instead).
+114. **Decided (H2 grill).** **Statuses never stack: one instance per status per creature.** On
+     re-application **the stronger value stays and the timer refreshes** ("stronger" is the
+     snapshot potency for DoT and Regen; a fixed-magnitude status just refreshes; a tie keeps the
+     current one). Deleted: `StatusDef.cap`, `StatusSpec.stacks`, stack increments, the
+     `consume-stacks` response and the `consumed-stacks` magnitude source, the ×stacks count on
+     ticks and `magnitude ** stacks` on damage-modifiers, and stack counts in status events.
+     Content: Vulnerability is ×1.5 once (its ceiling was ×2.25); Sporch Igniter applies one Burn
+     (its "potent" Burn now comes from the numbers, H2c); Glow is deleted with Glowflies
+     (ASSUMPTION 116). Why: Glow was the only real stack resource, and without it stacking only
+     added a counter; a single instance makes the applier snapshot unambiguous. (The Resonant
+     Overtone's `stacks: false` is a different field, on its observer trigger, and stays.)
+115. **Decided (H2 grill).** **The action-observation system also observes damage events.** An
+     observer can react to damage dealt to a creature, filtered by the damaged creature's
+     relationship (self, ally, enemy, any) and by whether the damage was **self-inflicted**
+     (source = target). An extension of the existing observer, not a new side channel; H2b's plan
+     proposes its exact shape. First user: the Flickerling Flare.
+116. **Decided (H2 grill).** **Flickerlings replace Glowflies** in Glimmerdark (Glow was the mirror
+     of Weaken and Vulnerability once its stacks were gone). Mood: pale cave-dwellers whose glow is
+     their life.
+
+     | Creature | Rarity, role | Affinity | Script | Health / Atk / Int / Def / Spd | Trait |
+     |---|---|---|---|---|---|
+     | Flickerling Wick | common, enabler | Vitality | `support` | 38 / 10 / 16 / 14 / 16 | At the start of its turn, burns 10% of its own max HP to heal its lowest-HP ally **other than itself** for 20% of its own max HP; no burn when there is no one else to heal |
+     | Flickerling Flare | uncommon, payoff | Wit | `caster` | 25 / 14 / 22 / 10 / 22 | Whenever an ally damages itself, every ally permanently gains +15% Speed |
+     | Flickerling Last Gleam | rare, amplifier | Violence | `striker` | 28 / 24 / 10 / 14 / 18 | Whenever an ally dies, every ally permanently gains +20% Attack |
+
+     Health is on the new 20–45 scale (ASSUMPTION 125); the totals on the old scale (80 / 82 / 82)
+     match the Glowflies. Names are placeholders. If the ally selector can't exclude the bearer,
+     H2b adds that. Spells: **Beacon Charge** keeps its heal and applies **Grant Act First** instead
+     of Glow; **Overcharge** is deleted. Glimmerdark's affinity spread moves from 4 Wit, 4 Instinct,
+     4 Violence, 4 Endurance and 2 Vitality to 4 / 3 / 5 / 4 / 2.
+     **Two items the grill missed, decided at the doc-sync (2026-10-08):**
+     - **Luminous Tide becomes Pale Mending** (placeholder name; id `pale-mending`). It keeps its
+       team heal (20% of the caster's Health to every ally) and loses the Glow; a plain AOE heal
+       needed a plainer name. Why not Grant Act First instead: on the whole side it would make the
+       first AOE support spell a team-wide tempo swing, and a team heal is already distinct. The
+       id changes with the name, so H2b's plan lists what reads it (the spell registry, the store's
+       gem-set test, the digest).
+     - **Self-inflicted trait damage is a cost.** As an ordinary trait response the Wick's burn
+       would be indirect damage (ASSUMPTION 112), and a fifth of the Wick's own Defence would eat
+       most of it (at level 1, 10% of 38 is 3.8 against 2.8 of Defence: a 1-HP cost for a 7-HP
+       heal). So, as a general rule rather than a Wick exception: **damage a creature's own trait,
+       status or perk response deals to that same creature is a cost**: the exact amount, with no
+       Defence, pools, affinity or Additional. It is still a damage event with the creature as its
+       source (so the Flare observes it and `on-damage-taken` fires), and it can kill. A DoT tick
+       on its own applier is not covered (it comes from a status snapshot, ASSUMPTION 113). H2b's
+       plan pins the shape (likely the existing flat-mode `deal-damage` aimed at `self`).
+117. **Decided (H2 grill).** **The fight count stays `10 + (floor − 1)`, and the XP curve stays
+     `20 × level²`.** CONVENTIONS' revisit trigger was evaluated: floor clears do follow p^n, and a
+     flat 10 (with the XP curve re-fitted) was measured faster (Brute's floor-10 first clear 93.5 →
+     56 median floor runs), but the design owner keeps the growing count and balances the early
+     floors through the level range (ASSUMPTION 118). Watch point: the per-fight win rate a floor
+     needs rises with depth (about 0.89 at 10 fights, 0.94 at 19, 0.97 at 39 for a 30% floor
+     clear); T4 shows whether the curve keeps up.
+118. **Decided (H2 grill).** **The early-floor level range:** `levelRangeWidth.base` 2 → 0, so
+     `max = min + floor(floor / 10)`, and the minimum is **rounded down** (`floor` instead of
+     `round`, in both branches of the curve) so it never exceeds `floor × multiplier`. Floors 1–10
+     spawn at 1, 2, 3, 5, 6, 7, 9, 10, 11 and 13; floor 30 stays at 44. The multiplier curve (1.25
+     → 2.0) is unchanged. Measured with the new combat rules (first-try floor 1 / floor-10 first
+     clear): Sorcerer 15 → 34 of 40 / 144 → 107; Brute 30 → 32 / 89.5 → 60; Shieldbarer 10 → 15 /
+     223 → 173.5. Rejected: width 0 with rounding (floor 2 stays at level 3); a multiplier starting
+     at 1.0 (stronger, but changes every floor, not the early ones).
+119. **Decided (H2 grill).** **`bossLevelOffset` 3 → 5**, so the narrower range doesn't make bosses
+     easier: boss levels 19 / 34 / 52 on floors 10 / 20 / 30, against 19 / 35 / 52 before. Bosses
+     stay one fight (ASSUMPTION 122).
+120. **Decided (H2 grill).** **No per-turn break-through chance on locks.** H1's probe raised the
+     boss's locked-turn share on every boss floor and the clear rate on none but the Leech
+     Sovereign's (+4 to +8 points over all visits): Pacify costs a turn and buys a turn. Measure
+     again when content first applies Stun, and when Phase 6 adds a "target lacks status" condition.
+121. **Decided (H2 grill).** **No target band for round-cap draws, for now.** The draw rate stays in
+     the report. (Measured with the new rules: Sorcerer about 4–5%, Brute about 2%, Shieldbarer
+     about 10–12% of fights; the stalls come from stacked growth traits, mostly the player side's
+     Rallying Cry and Taking Root.)
+122. **Decided (H2 grill).** **Bosses stay one fight**, and are accepted as the breather after the
+     hardest stretch of a biome (Brute clears floor 10 on 85% of first visits, against 0–8% of
+     first pushes on floors 2–9). Their level is held (ASSUMPTION 119).
+123. **Decided (H2 grill).** **The Shieldbarer starter: Attack 10 → 15, and its role script
+     `taunter` → `warden`.** Its stat total becomes 90 like the other starters. Under `taunter`
+     ("always: Provoke") it never attacked, so Attack was never read and Rallying Cry fired every
+     turn; under `warden` it Provokes only when an ally is below 50% HP and attacks otherwise, so
+     its Attack, Shield Bash and Armor Piercer matter. **Rallying Cry is unchanged**; perks carry
+     its damage after floor 10.
+124. **Decided (H2 grill).** **Snapback (Snapjaw Jaws) 60% → 30% of Attack**, the generic
+     Retaliate's number: as indirect damage it beat the Shieldbarer pair in every floor-1 fight at
+     60%. **Arcane Bolt spell power 0.5 → 1.0.**
+125. **Decided (H2 grill).** **Health's base range is 20–45; the other four stats stay 10–30.**
+     Every creature's Health is remapped linearly: `new = floor(20 + (old − 10) × 1.25 + 0.5)` (14 →
+     25, 18 → 30, 20 → 33, 24 → 38, 25 → 39, 30 → 45). Max HP is still the Health stat; creatures
+     are beefier and less flimsy, and each keeps its place in the range. Rarity still isn't power.
+     Measured on the full decided set ("What the evidence said"): it lifts first-try floor 1 for the
+     Sorcerer (33 → 40 of 40) and Brute (32 → 35), and slows the mid-game for all three; the
+     Shieldbarer pays most (floor 1 28 → 26; floor-10 first clear 145 → 213 median floor runs, 13
+     seeds of 40 never clearing it in 400 runs). H2c tunes against that (ASSUMPTION 129).
+126. **Decided (H2 grill).** **ASSUMPTION 22's floor-5 threshold reads the first 20 floor runs**
+     (was 10). On H1's report, and in every configuration measured before the full decided set, no
+     seed of any spec reached floor 5 in 10 runs; in 20, most do. On the full decided set 4 / 12 /
+     0 seeds (Sorcerer / Brute / Shieldbarer) do within 10 and 40 / 40 / 26 within 20, so 20 stays
+     the right window: at 10 the Shieldbarer would fail. The floor-1 (80%) and first-soul (≤ 30
+     floor runs) thresholds are unchanged.
+127. **Decided (H2 grill).** **The report adds, in H2c:** a floor 1–5 matchup table (per enemy
+     creature: fights, wins, losses and round-cap draws, per spec) and the **first-try clear rate
+     per floor** (each seed's first run on that floor). No draw attribution by trait (no draw band,
+     ASSUMPTION 121).
+128. **Decided (H2 grill).** **H2 ships as H2a (damage rules), H2b (status rules and the content
+     they need), H2c (tuning)**, in that order: tuning on the final rules, and each rules PR
+     changing its own goldens for one reason. Before H2b's plan the Glowflies replacement was
+     designed (ASSUMPTION 116).
+129. **Decided (H2 grill).** **H2c's plan proposes the remaining per-item fixes** from the floor 1–5
+     matchup table, aimed at the floor-1 threshold (80%) for every spec, and tunes the DoT
+     percentages. On the full decided set only the **Shieldbarer** misses the floor-1 threshold (26
+     of 40, 65%; Brute 35, Sorcerer 40), and it is also the spec the Health remap slowed most
+     (ASSUMPTION 125). Measured before the remap, its remaining floor-1 losses were to Wit casters
+     (Spider Weaver, Pollinator Beneficiary and Pollenlord; Wit beats its Endurance).
 
 ## Sequencing summary
 
@@ -1551,5 +1850,5 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 (the corpus covers all real content, test-only) → `4.1-E` (`perform-action`) → `4.1-F1` (status
 containers) → `4.1-F2` (status timing + Web roll) → `4.1-F3` (Silence/Pacify) → `4.1-G1` (enemy
 behaviour) → `4.1-G2` (hub and store) → `4.1-H1` (simulator and report, byte-identical) →
-`4.1-H2` (tuning) → then the Phase 4.5 demo brief. Each PR branches from `main` after the previous
-merge.
+`4.1-H2a` (damage rules) → `4.1-H2b` (status rules and Flickerlings) → `4.1-H2c` (tuning) → then
+the Phase 4.5 demo brief. Each PR branches from `main` after the previous merge.

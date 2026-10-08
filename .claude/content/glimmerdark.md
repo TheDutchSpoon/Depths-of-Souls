@@ -159,8 +159,8 @@ by it) now that unlock is cumulative — re-authoring them here was always redun
 
 ## Phase 4.1 — decided changes (pending build)
 
-Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
-lands. (4.1-G1 folded in the roles and the casting-role notes.)
+Decided at the Phase 4 close review and the 4.1-H2 grill (the last items). Each slice PR folds its
+part into the sections above when it lands. (4.1-G1 folded in the roles and the casting-role notes.)
 
 **Resonant Overtone's echo timing (4.1-E):** the echo becomes an ordinary "perform an action"
 response. The chance, the random gem and the random target are unchanged, but the echoed cast now
@@ -175,3 +175,32 @@ turns**, counted down at the end of each of its turns. Regen heals **at the end 
 bearer's turns** instead of at round end. A status applied during or after its bearer's action
 starts counting the next turn; one applied at the start of the bearer's turn, before it acts (the
 Charger's Glow on itself), counts that turn.
+
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 114–116; builds in 4.1-H2b):
+
+- **Flickerlings replace the Glowflies, and Glow is deleted.** Once statuses stopped stacking,
+  Glow was just another "+% damage" status beside Weaken and Vulnerability. The Flickerlings are
+  pale cave-dwellers whose glow is their life (names are placeholders). Stats are on the new
+  20–45 Health scale.
+
+  | Creature | Affinity | Role, script | Health / Atk / Int / Def / Spd | Description |
+  |---|---|---|---|---|
+  | Flickerling Wick | Vitality | Enabler, support | 38 / 10 / 16 / 14 / 16 | At the start of its turn, burns **10% of its own maximum HP** to heal its lowest-HP ally **other than itself** for **20% of its own maximum HP**. With no one else to heal, it doesn't burn. |
+  | Flickerling Flare | Wit | Payoff, caster | 25 / 14 / 22 / 10 / 22 | Whenever an ally damages itself, **every ally** permanently gains **15% Speed**. |
+  | Flickerling Last Gleam | Violence | Amplifier, striker | 28 / 24 / 10 / 14 / 18 | Whenever an ally dies, **every ally** permanently gains **20% Attack**. |
+
+  The Flare is the first trait to watch **damage** rather than actions (CONVENTIONS, "Damage
+  observation").
+- **Beacon Charge** keeps its heal and grants **Grant Act First** instead of a Glow stack.
+  **Overcharge is deleted**, leaving five Glimmerdark spells.
+- **Luminous Tide becomes Pale Mending** (placeholder name): it keeps its team heal (**20% of the
+  caster's effective Health** to every ally) and loses the Glow.
+- **The Wick's burn is a cost:** it loses exactly 10% of its maximum HP, whatever its Defence (a
+  creature's own trait damaging itself ignores Defence and modifiers).
+- **Affinity spread:** Glimmerdark's creatures go from 4 Wit, 4 Instinct, 4 Violence, 4 Endurance
+  and 2 Vitality to **4 / 3 / 5 / 4 / 2**.
+- **Single-instance statuses:** Blinding Flare's Vulnerability is ×1.5 once (re-casting refreshes
+  it). Afterglow's Regen heals **10% of the caster's Health** per tick (placeholder, tuned in
+  4.1-H2c) instead of a share of the target's max HP.
+- **Indirect damage (4.1-H2a):** the Shellback Bulwark's strike-back is indirect damage.
+- **Health (4.1-H2c):** every other creature's Health moves to the 20–45 range, as in every biome.

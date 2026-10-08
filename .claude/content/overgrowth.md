@@ -207,9 +207,9 @@ on top.
 
 ## Phase 4.1 — decided changes (pending build)
 
-Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
-lands, the same way numbers are kept in sync. (4.1-G1 folded in the roles, the three new spells and
-the casting-role notes.)
+Decided at the Phase 4 close review and the 4.1-H2 grill (the last items). Each slice PR folds its
+part into the sections above when it lands, the same way numbers are kept in sync. (4.1-G1 folded
+in the roles, the three new spells and the casting-role notes.)
 
 **Phase 4.5 clean-up (decided):** Ember Lance and Venom Bolt are deleted (no niche: Venom Bolt
 overlaps Stinger Swarm). **Cinder Nova is kept and promoted** to real Overgrowth content, as the
@@ -226,3 +226,20 @@ turn's roll never touches the Web it just placed.
 
 **Stun has no real source** in the seed content for now (no trait or spell applies it); it stays in
 the status vocabulary.
+
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129):
+
+- **Indirect damage (4.1-H2a).** The damage these traits deal becomes **indirect**: it meets only
+  a fifth of the target's Defence, with no chip and no Additional. That is the Spider
+  Broodwarden's and Lullpollen Dozer's bonus hits, the Swarmhive Drone's death hit, the Snapjaw
+  Jaws' Snapback and the Broodmother's Swarm Call hit. Spells and attacks stay **direct** and gain
+  the fading Additional at low levels.
+- **Snapback (4.1-H2c):** the Jaws strike back for **30% of their Attack** (was 60%). As indirect
+  damage the 60% beat the Shieldbarer pair in every floor-1 fight.
+- **Arcane Bolt (4.1-H2c):** deals **100% of the caster's Intelligence** (was 50%).
+- **Poison (4.1-H2b):** a tick comes from its applier: Venom Bolt's Poison (while it exists)
+  deals **20% of the caster's Attack** per tick as indirect damage (a placeholder, tuned in
+  4.1-H2c). Statuses no longer stack: re-applying one refreshes its timer and keeps the stronger
+  value.
+- **Health (4.1-H2c):** every creature's Health moves to the 20–45 range (`floor(20 + (old − 10) ×
+  1.25 + 0.5)`), so a 10 becomes 20 and a 30 becomes 45.

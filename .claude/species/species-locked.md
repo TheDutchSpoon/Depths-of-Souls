@@ -65,7 +65,7 @@ at creature-stamping (affinity is per-creature).
 
 | Species | Affinity lean | Closed mechanic | Roles (illustrative) | Uses |
 |---|---|---|---|---|
-| **Glowflies** | Wit / Instinct | Charge & release | Charger (`stacks Glow on an ally`), Detonator (`consume all Glow → burst`) | **Glow** status + consume-response |
+| **Flickerlings** *(from 4.1-H2b; replaced the Glowflies)* | Vitality / Wit / Violence | Glow is their life (spend HP, the team grows) | Wick (`on-turn-start → burn 10% own max HP → heal the lowest-HP other ally 20% of own max HP`), Flare (`an ally damages itself → every ally +15% Speed`), Last Gleam (`an ally dies → every ally +20% Attack`) | the observer watching **damage events** (self-inflicted filter, 4.1-H2b) + existing responses |
 | **Blindclaws** | Instinct | Ambush via turn order | Setter (`grant act-first` to an ally), Striker (`+% while acting before its target`) | **Turn-order status** + acted-before condition |
 | **Resonants** | Wit | Caster synergy | Chorus/Adept `on-ally-action (cast) → gain Attack / Int`; **Overtone** (rare payoff) `on-ally-action (cast) → 10% the caster echo-casts a random one of its own spells` (non-stacking; echoes are themselves observable) | `on-action-observed` (built) + a **`perform-action(triggering-source, cast a random gem at a random target)`** response (4.1-E; built in H2 as an echo-cast flag), bounded by cascade depth — see CONVENTIONS |
 | **Sparkeaters** | Violence / Endurance / Vitality (each drainer's affinity = the stat it steals, per CLAUDE.md soft-mapping) | Stat-parasites | Leech (`on-attack → −Attack enemy + same +Attack self`, Violence), Gorger (same shape on Defence, Endurance), **Voidmaw** (rare, Vitality — genuinely distinct: `on-attack → steal max-HP from target + feed that max-HP to the WHOLE team`, apex parasite) | ~free (apply-stat-modifier pairs; Voidmaw uses the `health` stat + `all-allies`, precedent: Treant Grovekeep) |
@@ -77,6 +77,12 @@ at creature-stamping (affinity is per-creature).
   stack** while held (charging up); the Detonator's **consume-all-stacks → burst** is the payoff.
   A new primitive class: *accumulate-and-spend resource* (distinct from Web/Sleep markers and from
   count-scaling's live-board read). Needs a **consume-stacks response** (read count → effect → clear).
+  *(Deleted in 4.1-H2b with the Glowflies, stacking and `consume-stacks`: once statuses stopped
+  stacking, Glow was another "+% damage" status beside Weaken and Vulnerability. Brief ASSUMPTIONS
+  114, 116.)*
+- **Damage observation** (4.1-H2b) — the action observer also watches **damage events**, filtered
+  by the damaged creature's relationship and by whether the damage was self-inflicted (the
+  Flickerling Flare). See CONVENTIONS "Damage observation".
 - **Turn-order status** — timed status forcing the target to act **first or last** for N turns; a
   genuine **two-way primitive** now used by both Blindclaws (act-first) and Web (act-last). Needs the
   turn-order step to read it (position override; precedent: Stun suppresses a turn). Intrinsic effect
@@ -91,9 +97,12 @@ at creature-stamping (affinity is per-creature).
 
 **Coverage:** leans Wit ×2 / Instinct ×2 / Violence ×2 / Endurance ×2 / Vitality ×1 (Sparkeaters now
 span Violence/Endurance/Vitality via the stat-aligned drainer affinities, so Vitality is carried at
-species level by Voidmaw; Glowfly Radiant remains the extra sprinkle). *(Superseded: earlier this read
-"Vitality absent at species level — resolved by sprinkling Vitality creatures in at stamping"; the
-stat-aligned Sparkeater affinities now carry Vitality at species level directly.)*
+species level by Voidmaw; Glowfly Radiant remains the extra sprinkle). **From 4.1-H2b** the
+Flickerlings (Vitality / Wit / Violence) replace the Glowflies (Wit / Instinct): the creature
+spread moves from 4 Wit / 4 Instinct / 4 Violence / 4 Endurance / 2 Vitality to 4 / 3 / 5 / 4 / 2,
+with the Flickerling Wick as the Vitality sprinkle (brief ASSUMPTION 116). *(Superseded: earlier
+this read "Vitality absent at species level — resolved by sprinkling Vitality creatures in at
+stamping"; the stat-aligned Sparkeater affinities now carry Vitality at species level directly.)*
 
 ---
 
@@ -112,7 +121,7 @@ required `name` field, with a code comment marking them as placeholders (no data
   player-equippable in Phase 8), materialized through the same path as any creature's loadout —
   distinct from the generator rolling *enemy* spells from a biome pool.
 - **Brute starter — *Cragfang Mauler*** (placeholder name) — **Violence** affinity, high Attack. Trait: **Attack resolves one additional instance** (Attack executes twice at 100% — each a *real attack* firing `on-attack`; same target as the first, default-target fallback if it died). An **instance-list** modifier, not an on-attack trigger.
-- **Shieldbarer starter — *Stonehorn Warden*** (placeholder name) — **Endurance** affinity, high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide; permanent-for-fight, so repeated provokes stack). *(The old `on-provoke → grant self defending` trait became the Shieldbarer's **Shield up** perk.)*
+- **Shieldbarer starter — *Stonehorn Warden*** (placeholder name) — **Endurance** affinity, high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide; permanent-for-fight, so repeated provokes stack). *(The old `on-provoke → grant self defending` trait became the Shieldbarer's **Shield up** perk.)* **From 4.1-H2c:** Attack 15 (was 10) and the `warden` role script instead of `taunter`, so it attacks when no ally is below 50% (brief ASSUMPTION 123).
 
 *(Starter affinities **ratified** (grill follow-up, PR #56 review): Sorcerer = **Wit**, Brute =
 **Violence**, Shieldbarer = **Endurance**, Unicorn = **Vitality** — four distinct, each matching
@@ -200,7 +209,8 @@ emptying it (GAME_DESIGN "Milestone bosses").
   death-reset rule), and — already-present-but-now-counted — **`grant-action-state`** and
   **`consume-stacks`**. Eight top-level response kinds at seed-content lock. *(Slice E2 later
   added a ninth, **`remove-status`**; the line is now held at nine — see CONVENTIONS "Response
-  vocabulary — now NINE".)*
+  vocabulary — now NINE".)* *(4.1-H2b deletes `consume-stacks` and Glow with stacking, leaving
+  eight.)*
 - **Flow:** **scripted-intro encounter** (a rigged fight with a story outcome instead of wipe→hub).
 - Statuses: **Sleep** (breaks-on-damage suppress), **Glow** (stacking resource), **turn-order**
   (act first *or* last — two-way primitive; **Web** = act-last consumer + 10%/turn break-free),

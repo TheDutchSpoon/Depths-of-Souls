@@ -6,6 +6,11 @@ content stays reachable by every spec.
 
 **Starter:** *Stonehorn Warden* (placeholder name), Endurance affinity, high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide).
 *(Permanent-for-fight, so repeated provokes stack — a ramping team-Defence engine. Balance parked.)*
+**From 4.1-H2c** (brief ASSUMPTION 123): Attack **15** (was 10; a 90 stat total like the other
+starters), and its role script is **`warden`** (provoke when an ally drops below 50%, else attack)
+instead of `taunter` (always provoke). Under `taunter` it never attacked, so its Attack, Shield
+Bash and Armor piercer were never read and the trait fired every turn. The trait is unchanged; its
+damage after floor 10 comes from perks.
 
 **Perk rules:** effect-framework effect-carriers, combat-only; flat pool; spec valid iff
 Σ(maxLevel × costPerLevel) === **1000**.
@@ -18,7 +23,7 @@ content stays reachable by every spec.
 | **Shield up** | 1 | 100 | 100 | On provoke, the creature also defends. | P4 ✓ |
 | **Armor piercer** | 25 | 4 | 100 | Attacks and spells ignore 1% of the enemy's Defence per level. | P4 ✓ |
 | **Shield Specialist** | 100 | 1 | 100 | +1% benefit per level from equipment Stat Slots that increase Defence. | P8 |
-| **Thorns** | 1 | 100 | 100 | After taking damage from an attack or spell, deal damage to that enemy equal to 15% of the creature's Defence. | P4 ✓ |
+| **Thorns** | 1 | 100 | 100 | After taking damage from an attack or spell, deal damage to that enemy equal to 15% of the creature's Defence (indirect damage from 4.1-H2a: a fifth of the enemy's Defence applies). | P4 ✓ |
 | **Shield Bash** | 10 | 10 | 100 | Attacks and spells deal additional damage equal to 3% of the creature's Defence per level. | P4 ✓ |
 | **Lucidity** | 1 | 100 | 100 | Immune to the *effect* of Confused (still applied; suppress-effect principle). | P4 ✓ |
 | **Last Stand** | 1 | 100 | 100 | When taking >1 damage that would kill the creature, 50% chance to be left at 1 HP. | P4 ✓ |
@@ -45,7 +50,7 @@ demo labels them "inactive until Phase 8". Inert perks are still buyable.*
 - **Cheat-death (Last Stand)** — lethal-hit interception → RNG roll → survive at 1 HP. New, bespoke;
   consumes combat RNG.
 - **Defend-count tracker (Bulwark)** — per-creature "times Defended this fight" counter its
-  mitigation reads (same class as Glow/Momentum stacks).
+  mitigation reads (same class as Momentum stacks; Glow until 4.1-H2b).
 - **Lucidity** — Confused immunity, via the **suppress-effect-not-application** principle (Confused
   still lands + still counts for "target is Confused" payoffs; the creature just ignores the chaos).
 - Reuses: Defence/Health stat-mods, grant-action-state (Shield up, Phalanx), `on-defend`,

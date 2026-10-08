@@ -7,7 +7,8 @@ Defence/provoke.) All content stays reachable by every spec; a spec changes *how
 **Starter:** *Glyphmoth Seer* (placeholder name), Wit affinity, high Intelligence. Trait (*Arcane
 Surge*): an **innate spell**, Arcane Bolt (not a gem: un-upgradeable, no affinity gate, an extra slot
 before the gem slots, kept through fusion) + 50% chance on-turn-end to cast a random equipped spell
-(a `perform-action` grant from Phase 4.1-E).
+(a `perform-action` grant from Phase 4.1-E). **From 4.1-H2c** Arcane Bolt deals 100% of the
+caster's Intelligence (spell power 1.0, was 0.5; brief ASSUMPTION 124).
 
 **Perk rules (locked, Grill 1):** perks are effect-framework effect-carriers, **combat-only**; flat
 pool (no prerequisites); pour points freely; spec valid iff Σ(maxLevel × costPerLevel) === **1000**;

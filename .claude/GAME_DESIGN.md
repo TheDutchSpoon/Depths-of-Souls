@@ -133,7 +133,11 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
     still empty a boss's turn. Decide how bosses meet it when content first applies Stun. If a
     softer lock on bosses is ever wanted, a shorter duration won't help, because a recast resets
     it each round. The fair form is a per-turn chance to act through the lock, as a general effect
-    any creature could carry.
+    any creature could carry. **Decided at the 4.1-H2 grill: no break-through chance for now**
+    (brief ASSUMPTION 120). H1's probe raised the boss's locked-turn share on every boss floor
+    and the clear rate on none but the Leech Sovereign's (+4 to +8 points): Pacify costs a turn
+    and buys a turn. Measure again when content first applies Stun, and when Phase 6 adds a
+    "target lacks status" condition.
   - **Measuring it** (PR #82 review). Role scripts aim a spell at the lowest-HP enemy, which is
     almost never the boss, so the 4.1-G1 corpus never locks one: 19 boss fights have a player-side
     Pacify, and it lands on the boss in none of them. The case this rule accepts is a player script
@@ -153,6 +157,12 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   count ramps **+1 per floor over floors 1–6**, so fights are full **6v6 from floor 6**. The player
   wins the gap by **tactics and trait synergies**, not by out-levelling. These are targets a
   deterministic balance simulator reports as bands, not hard rules.
+  **Early floors (decided at the 4.1-H2 grill, from 4.1-H2c):** the range's width starts at **0**
+  and grows one level per ten floors, and its minimum is **rounded down**, so an early floor's
+  enemies sit at `floor(floor × multiplier)` and never above it (floors 1–10 spawn at 1, 2, 3, 5,
+  6, 7, 9, 10, 11 and 13). The boss sits **5** levels above the range's top (was 3), so the
+  narrower range doesn't make bosses easier. The early floors are balanced through this range;
+  the fight count and the XP curve stay (brief ASSUMPTIONS 117–119).
 - **Generation is deterministic-per-seed, fresh-per-visit**: which **biome** sits on a floor is
   fixed (the 1–100 sequence, a seeded draw for 101+, or an Atlas pin), but the **specific creatures
   a floor spawns re-roll on every descent** — re-running a floor yields different draws. This is the
@@ -292,9 +302,12 @@ Each creature (the unit) has:
 - **Core stats**: **Health, Attack, Intelligence, Defence, Speed.** Attack drives physical
   damage (Attack action), Intelligence drives spell power (Cast action), Defence mitigates,
   Speed drives turn order within a round.
-  - **Scale**: base stats are **fixed per creature** in the design range **10–30** per stat
-    (the design range, not a per-capture roll — all instances of a creature share the same base
-    stats; no individual IV-style rolls in v1).
+  - **Scale**: base stats are **fixed per creature** in the design range **10–30** per stat,
+    except **Health, 20–45** (the design range, not a per-capture roll — all instances of a
+    creature share the same base stats; no individual IV-style rolls in v1). Health's wider range
+    is from 4.1-H2c (brief ASSUMPTION 125): every creature's Health was remapped linearly from
+    10–30, `floor(20 + (old − 10) × 1.25 + 0.5)`, so creatures are beefier and each keeps its
+    place in the range.
 - **Trait slots**: a base creature has **1 innate trait**; a fused creature carries **both
   parents' innate traits** (2). Equipment can carry additional trait(s) via infusion (third
   trait source). See §6.
@@ -460,8 +473,9 @@ An **effect** is the mechanical unit: either a **passive** (always on while atta
 Attack", "ignores 30% of Defence", "acts last") or a **trigger** (a hook, an optional condition or
 chance, and a response). A **carrier** attaches a list of effects to a creature:
 - a **trait** carries effects permanently for the fight;
-- a **status** is a **timed, stacking container of the same kinds of effects** (it owns duration,
-  stacking and "has status X"; its effects own what it does). Poison is a status carrying a
+- a **status** is a **timed container of the same kinds of effects**, one instance per creature
+  (it owns duration, re-application and "has status X"; its effects own what it does; statuses
+  stack until 4.1-H2b, see "Status effects"). Poison is a status carrying a
   damage trigger; Weaken carries a damage-dealt reduction; Web carries "act last"; Stun carries
   "can't act";
 - gem augments and equipment infusions (Phase 8) are carriers of the same effects.
@@ -490,7 +504,7 @@ bright line, locked Phase 3):
    remap-aware lookup so this needs no formula changes.
 3. **`damage-modifier`** — folds into the damage formula's mod pools: the attacker's **additive
    dealt pool** (`1 + Σ`) or the defender's **multiplicative taken pool** (`Π`). **These ARE surfaced
-   as timed statuses and may be capped.** Weaken ("−X% damage dealt", e.g. 1 stack + duration),
+   as timed statuses.** Weaken ("−X% damage dealt", one instance + duration),
    Defend's ×0.65, a Vulnerability ("+X% damage taken") debuff, trait-granted crits all live here.
    Pools stay additive-dealt / multiplicative-taken (unchanged — these are capped/timed, so no
    runaway-to-zero concern). Distinct from `stat-modifier` — a "−Attack" stat change and a "−damage
@@ -640,9 +654,10 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
 - **Triggered traits** = `{ hook, condition?, chance?, response }`. The **v1 response vocabulary**
   (each fully parameterized by **target** and **magnitude**) after Phase 4.1: **deal damage, apply
   a status, apply a stat-modifier, heal, revive, grant an action state (defending/provoking),
-  consume stacks, remove a status, perform an action** — nine. (*perform an action* — "that creature
-  casts a random spell" — joined in Phase 4.1 and replaced two special mechanisms; *suppress-action*
-  left, because skipping a turn is now a status effect.) The governing rule is **no side doors**:
+  remove a status, perform an action** — eight. (*perform an action* — "that creature casts a
+  random spell" — joined in Phase 4.1 and replaced two special mechanisms; *suppress-action* left,
+  because skipping a turn is now a status effect; *consume stacks* leaves in 4.1-H2b with stacking
+  and Glow.) The governing rule is **no side doors**:
   every triggered behaviour goes through this one response vocabulary, never a special-case
   mechanism (CONVENTIONS). Design-space breadth comes from the **hook × condition × parameter
   cross-product**, not from more response types.
@@ -657,8 +672,11 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
 - **"attack" / "cast" in a trait or spell mean the real actions** — same damage formula, OffStat
   (Attack / Intelligence), affinity, Defence interaction, pools, and min-1 floor as a creature
   choosing that action; the trait/spell supplies only the spellPower coefficient and target. There
-  is no separate "trigger damage" formula. **DoT is the one deliberate Defence-bypass exception**;
-  a response may *opt into* that bypass explicitly for armour-ignoring damage.
+  is no separate "trigger damage" formula. A trait-granted Attack or Cast is **direct** damage
+  like a chosen one; every other damage a trait, status or perk deals (a retaliation, an on-death
+  burst, a DoT tick) is **indirect** damage, which meets only a fifth of Defence (from 4.1-H2a/b;
+  §7 "Damage channels"). *(Until 4.1-H2b DoT bypasses Defence entirely; a response may opt into
+  that bypass explicitly for armour-ignoring damage.)*
 - Traits are **data, not code branches**. Definitions live in `src/data/`; a creature references
   them via **`innateTraitIds`** (1 base / 2 fused), resolved from a registry at combat start, with
   effects instantiated onto the active-effects list at fight start.
@@ -666,12 +684,15 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
 ### Status effects
 - Statuses are **applied effects** (from spells, augments, traits) with a **fixed duration in
   the bearer's own turns**.
-- **Stacking**: re-applying refreshes duration **and** stacks intensity, up to a per-status
-  cap — **each status declares its own cap explicitly; there is no shared global default.**
+- **No stacking (decided at the 4.1-H2 grill, from 4.1-H2b; brief ASSUMPTION 114):** one instance
+  per status per creature. Re-applying **refreshes the timer** and keeps the **stronger** value
+  (a DoT's or Regen's snapshot potency; a fixed-magnitude status just refreshes). Glow, the only
+  status whose stacks were a resource, leaves with the Glowflies. *(Until then re-applying also
+  stacks intensity up to the status's own declared cap.)*
 - **v1 content**: a flexible, easily-addable **DoT category** (parameterized: damage value,
   duration, flavor; start with Poison/Burn), **Regen** (heal-over-time), **Stun**, and a set of
-  **timed `damage-modifier` statuses** — **Weaken** ("−X% damage dealt", capped ~1 stack + duration)
-  and **Vulnerability** ("+X% damage taken") — all surfaced as status icons with durations. **Raw
+  **timed `damage-modifier` statuses** — **Weaken** ("−X% damage dealt", + duration) and
+  **Vulnerability** ("+X% damage taken") — all surfaced as status icons with durations. **Raw
   stat buffs/debuffs (raising/lowering Attack/Defence/Intelligence/Speed) are NOT statuses** — they
   are permanent-for-fight `stat-modifier` effects (multiplicative, uncapped, invisible-as-status;
   the player sees the effective stat). So "make them weaker" has two distinct tools: a **permanent
@@ -688,11 +709,17 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   `StatModifierApplied` that caused it) so the currentHp drop — neither damage nor heal — is explicit
   in the log/UI rather than silently inferred. All are **data instances of the built primitives** — no
   per-stat/per-status special-casing.
-- **DoT damage** uses its **own value from the source** and **bypasses Defence** (not the
-  Attack/Defence formula) — making DoT a distinct answer to high-Defence enemies. That own value
-  is a percentage of the bearer's own effective max HP per stack (Poison, Burn), so a DoT is the
-  same fraction of max HP at every level, still bypassing Defence/affinity/pools entirely. Regen
-  (heal-over-time) uses the same stat-derived per-stack rule.
+- **DoT damage comes from its applier (decided at the 4.1-H2 grill, from 4.1-H2b; brief ASSUMPTION
+  113).** At application the status records a **snapshot** of its applier: who it is, its
+  affinity, and a potency, a percentage of one of its stats. Each tick deals that potency as
+  **indirect damage** (§7): the applier's affinity, the bearer's taken pool, and a fifth of the
+  bearer's Defence. That still makes DoT a distinct answer to high-Defence enemies. The applier is
+  the damage source while it lives (its on-kill and on-damage-dealt traits fire; a retaliation hits
+  it), else the bearer. **Regen** heals its snapshot potency. Placeholder numbers, tuned in
+  4.1-H2c: **Poison 20% of Attack, Burn 25% of Intelligence, Regen 10% of the healer's Health,
+  Spore 15% of Speed**. A creature passing on a status it carries passes its snapshot (Spore
+  spreading on death keeps the original strength). *(Until 4.1-H2b a DoT is a percentage of the
+  bearer's own max HP per stack, bypassing Defence, affinity and pools, and Regen the same.)*
 - **Stun** is **just a status**, not a special mechanic — it carries a passive **"can't act"
   lock**, so when the creature's turn comes up it is skipped: `TurnStarted`, a `TurnSkipped` event
   naming the status, `TurnEnded`. Sleep carries the same lock; **Silenced** locks only casting and
@@ -740,10 +767,10 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   it doesn't tick, count down or (a Web) get its break roll in that turn, so a fresh application
   never silently loses a turn. One applied at the start of the bearer's turn, before it acts,
   counts that turn: it was there for the action.
-- **Stacking = a single status instance per (status-type, creature)** carrying a **stack count** +
-  **remaining duration**; re-applying refreshes duration and increments intensity toward the
-  status's declared cap. DoT intensity = per-stack tick damage; a damage-modifier's intensity =
-  magnitude per stack. (Not N separate instances.)
+- **A single status instance per (status-type, creature)** carrying a **remaining duration** (and,
+  for a DoT or Regen, its applier snapshot); re-applying refreshes duration and keeps the stronger
+  value. (Not N separate instances; until 4.1-H2b the instance also carries a stack count that
+  re-applying increments toward the status's declared cap.)
 - **Round end does no status work** — it only fires round-level triggers (e.g. a Treant's
   end-of-round growth) and checks for a winner.
 - **A creature that dies fires only its death reactions**; its own pending triggers are skipped. If
@@ -860,7 +887,9 @@ damage     = MAX(1, floor(raw))
 - **Subtractive core**, `MAX(effOffStat − Defence, 0)`, clamped at 0 — Defence can fully cancel it.
 - **+1% chip floor**, `0.01 × effOffStat`, added **unconditionally** (even when the core is fully
   absorbed) — and it scales with spellPower too (a weak spell has a proportionally small chip), so
-  affinity/mods still have something to act on against a wall.
+  affinity/mods still have something to act on against a wall. *(Kept at 1% at the 4.1-H2 grill: a
+  5% chip halved the round-cap draws but changes every hit and can't reach the level-1 walls;
+  brief ASSUMPTION 109.)*
 - **Rounding**: HP and damage are **integers**; `raw` is computed in full precision, then
   **floored once at the end**, with a hard **minimum of 1** — every hit removes at least 1 HP
   (no stalemates; the round cap is thus only a pathological backstop). Floor once, not per-term
@@ -888,10 +917,26 @@ damage     = MAX(1, floor(raw))
   status *could* deliberately be a damage-modifier — that's a distinct effect category, §6.)
 - **Defend** contributes its ×0.65 to the defender's **taken pool** and its ×1.5 to the
   defender's effective Defence (inside the core), both until the creature's next turn.
-- **No "Additional" (flat true-damage) channel** in v1. **No damage variance/rolls** — fully
-  deterministic. **No baseline crits** — "crit" is a trait-granted dealt-mod.
-- **DoT damage** does **not** use this formula — DoTs carry their own value from their source and
-  bypass Defence (see status framework, §6 / CONVENTIONS).
+- **No damage variance/rolls** — fully deterministic. **No baseline crits** — "crit" is a
+  trait-granted dealt-mod.
+- **Damage channels (decided at the 4.1-H2 grill; brief ASSUMPTIONS 110–113).** The formula above
+  is **direct** damage: an **Attack or Cast action** from any source (a script, the fallback, a
+  trait-granted action), including every effect of the cast spell. Everything else that deals
+  damage, a trait, status or perk response (a retaliation, an on-death burst, an on-attack bonus
+  hit) and DoT ticks, is **indirect** damage:
+  `MAX(1, floor(magnitude × Affinity × (1 + Σ dealtMods) × Π(takenFactors) − 0.2 × Defence))`,
+  with no chip. Indirect damage meets only **a fifth of Defence**, so Defence-based creatures have
+  a counter and reactive traits matter against tanks. Heals are neither. (From 4.1-H2a; DoT ticks
+  from 4.1-H2b, with no dealt pool: the applier's build is in its snapshot, §6.) **Damage a
+  creature's own trait deals to itself is a cost** (from 4.1-H2b): the exact amount, no Defence or
+  modifiers, still a damage event, able to kill.
+- **The Additional (from 4.1-H2a; brief ASSUMPTION 110):** a fading flat bonus on **direct** hits,
+  added after the floor: `min(floor(0.2 × target's max HP), max(0, 10 − (attacker level − 1)))`.
+  It is 20% of the target's max HP, capped at 10 at level 1, the cap falling by 1 per attacker
+  level and gone from level 11. **Nothing modifies it** (Defence, affinity, the pools, Defend).
+  Both sides get it. It exists to speed up early fights: at low levels offence often sits below
+  Defence, and stats scale together, so without it early fights were walls of 1-damage hits.
+  *(Until 4.1-H2a there is no Additional and no indirect channel, and DoT bypasses Defence.)*
 
 ### Encounters, rewards & wipes
 - **Encounters** are **cave floors**: descending pits your party against that floor's creatures
@@ -1020,8 +1065,8 @@ Design constraints:
   - **caster** — cast a random gem, else attack;
   - **support** — when an ally drops below 50%, cast a random support gem, else attack;
   - **opener** — cast a random gem in round 1, then attack;
-  - **taunter** — provoke every turn (for creatures whose trait fires on Provoke: Snapjaw Lure,
-    Stonehorn Warden).
+  - **taunter** — provoke every turn, so it never attacks (for creatures whose trait fires on
+    Provoke: Snapjaw Lure; Stonehorn Warden until 4.1-H2c, which moves it to **warden**).
   Every attacking role falls back to casting a random gem when it can't attack (Pacified). A
   summoned creature starts with its role's script. Scripted enemies (rather than an enemy AI) keep
   the game symmetric and give the player readable enemy patterns to script against.
@@ -1074,14 +1119,18 @@ The three starter creatures (locked; names are **placeholders** in the "Species 
 and both words may change once the deep biome is designed):
 - **Glyphmoth Seer** (Sorcerer) — **Wit**, high Intelligence. Trait *Arcane Surge*: an **innate
   spell** (Arcane Bolt, in an extra slot before its gem slots — not a gem, un-upgradeable, keeps
-  working after fusion; §5) plus a **50% chance at the end of its turn to cast a random equipped
-  spell** (a granted action, §6).
+  working after fusion; §5; spell power 1.0 from 4.1-H2c, was 0.5) plus a **50% chance at the end
+  of its turn to cast a random equipped spell** (a granted action, §6).
 - **Cragfang Mauler** (Brute) — **Violence**, high Attack. Its **Attack resolves one additional
   instance**: it attacks twice at 100%, each a real attack (same target as the first; if that target
   died, the second hit picks a new default target).
 - **Stonehorn Warden** (Shieldbarer) — **Endurance**, high Defence. **Whenever it provokes, your
   whole team gains +35% Defence** for the fight (repeated provokes stack). *(The earlier
-  "on-provoke → grant self defending" became the Shieldbarer's **Shield up** perk.)*
+  "on-provoke → grant self defending" became the Shieldbarer's **Shield up** perk.)* **From
+  4.1-H2c** (brief ASSUMPTION 123) it has Attack 15 (was 10; a 90 stat total like the other
+  starters) and runs the **warden** script: provoke when an ally drops below 50%, else attack.
+  Under **taunter** it never attacked, so its Attack was never read. Its damage after floor 10
+  comes from perks.
 
 The **Unicorn Lightbearer** (**Vitality**, the intro helper) joins in the scripted intro and is
 **permanently owned**, though it can be benched like any creature. Each starter belongs to a
@@ -1231,24 +1280,27 @@ the hot autosave path.
   the balance simulator.* Watch points: floors 20–30 before Phase 8 (about +40% enemy stats,
   answered only by perks and traits) and the steep climb past floor 100.
 - **Fight count** (default 10 + (floor − 1), uncapped): floor success compounds per-fight win
-  chance over many fights; revisit with a cap or per-biome ramp if the simulator shows it
-  dominating.
+  chance over many fights. **Revisited at the 4.1-H2 grill and kept** (brief ASSUMPTION 117): the
+  compounding is real and a flat 10 measured faster, but the early floors are balanced through the
+  level range instead (§4). Watch point: the per-fight win rate a floor needs rises with depth.
 - **The Unicorn's revive strength** (up to 10 revives per ally per fight under the revive cap);
   the lever, if needed, is a chance on its trait.
 - Drop weights/rates for Essence, Ore, Bricks, Lifeforce, and recipes.
 - Costs: gem craft/augment/level (Essence), equipment craft/infuse/level (Ore), facility
   build/upgrade (Bricks), fusion + catch-up leveling (Lifeforce).
 - Soul-per-kill % per rarity tier (default 25 / 20 / 10 from Phase 4.1-A); status magnitudes/durations/
-  per-status stack caps; affinity already fixed (±25%).
+  DoT and Regen percentages (placeholders from the 4.1-H2 grill, tuned in 4.1-H2c); affinity
+  already fixed (±25%).
 - Facility upgrade-tier counts and exact cap values (Gem Forge, Equipment Forge, Fusion Chamber
   only — structure is decided in §4, numbers are not).
 - Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
   round-cap value (structure decided in §7, number TBD).
-- **Percent-of-max-HP condition ticks** (Regen 5% / Poison 3% / Burn 5% per stack): these match
-  the old flat values only at about 100 max HP (80 for Regen), so at current content levels they
-  are a net reduction. Single-stack Poison sits on the min-1 floor through the early levels.
-  Compare against attacks, which land about 40% of max HP per hit. A fully stacked DoT kills
-  anything, bosses included, in about 7 rounds.
+- **Percent-of-max-HP condition ticks** (Regen 5% / Poison 3% / Burn 5% per stack), **replaced in
+  4.1-H2b** by ticks from the applier's snapshot (§6). Until then: these match the old flat values
+  only at about 100 max HP (80 for Regen), so at current content levels they are a net reduction.
+  Single-stack Poison sits on the min-1 floor through the early levels. Compare against attacks,
+  which land about 40% of max HP per hit. A fully stacked DoT kills anything, bosses included, in
+  about 7 rounds.
 
 **Design items parked (decided to defer, not undecided):**
 - **Behavioral traits** (scripting-altering / extra-action traits) — post-v1.
