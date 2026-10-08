@@ -3225,3 +3225,41 @@ Files 159 -> 169; tests 1140 (1139 passed, 1 skipped) -> 1162 (1161 passed, 1 sk
   no-delete rule, as in H1). I also reverted one of my own uncommitted files (`actions.ts`) with `git
   checkout` after my mutation script truncated it, and re-applied its three edits. Nothing in the repo
   needs deleting.
+
+### Fix round (PR #86 review): pinning the indirect channel's wiring (test-only)
+
+No engine code, golden or digest changed: `git diff` against `dc4a649` is empty for every file under
+`src/engine` except test files, and the corpus digest test passes untouched. The engine was already
+right; eight wirings were pinned only by the digest or by nothing (M1-M8 below). ASSUMPTIONS 137 (a
+direct action that lands on its own actor stays direct, with the Additional) and 138 (a zero cost
+keeps its `TriggerFired`, already pinned by `golden-h2a-cost`) are the new rulings.
+
+New tests (hand-derived; the numbers were written before the first run and passed on it):
+
+- `golden-h2a-indirect-keeps`: six level-1 bearers, six targets (health 175-200, Defence above 0),
+  one kept term per hit: 56 (none; a wrongly added Additional would be 66), 41 (affinity x0.75), 86
+  (a +50% dealt `damage-modifier`), 71 (a +25% `conditional-damage-bonus`, `actionKind 'attack'`), 26
+  (a x0.5 `taken-reduction`, not Defend's), 58 (75% armor penetration against Defence 40).
+- `golden-h2a-spell-on-caster`: a level-1 caster's `deal-damage` effect with `target: self` deals the
+  direct 22 (formula 12 + Additional 10, read from the caster's own level and max Health), not the
+  indirect 18 or the cost 20 (ASSUMPTION 137).
+- `resolution.test.ts`, two cases: a status-sourced flat hit on another creature is indirect (16, the
+  `statusId` carried on the event), and the same with no `statusId` (ASSUMPTION 131).
+
+Mutations, each applied in a scratch copy under the OS temp directory (never the working tree) with
+the full suite run; the corpus digest does not count:
+
+| # | Mutation | Killed by | Digest |
+|---|---|---|---|
+| M1 | indirect also adds the Additional | `golden-h2a-indirect-keeps` | also fails |
+| M2 | indirect uses a neutral affinity (the target's for the attacker) | `golden-h2a-indirect-keeps` | also fails |
+| M3 | indirect drops the dealt pool | `golden-h2a-indirect-keeps` | also fails |
+| M4 | indirect drops `conditional-damage-bonus` | `golden-h2a-indirect-keeps` | **passes** |
+| M5 | indirect keeps only Defend's taken factor | `golden-h2a-indirect-keeps` | also fails |
+| M6 | indirect passes armor penetration 0 | `golden-h2a-indirect-keeps` | also fails |
+| M7 | every self-hit is a cost, whatever the channel | `golden-h2a-spell-on-caster` | also fails |
+| M8 | the tick test drops `targetId === context.self` | `resolution.test.ts` (the status-sourced flat hit on another creature) | **passes** |
+
+Test count against `dc4a649` (169 files, 1162 tests: 1161 passed, 1 skipped) -> 171 files, 1166 tests
+(1165 passed, 1 skipped): two new `golden-h2a-*` test files (1 each) and `resolution.test.ts` 81 -> 83.
+No other file's count changed. Nothing needs deleting; scratch work stayed outside the repo.

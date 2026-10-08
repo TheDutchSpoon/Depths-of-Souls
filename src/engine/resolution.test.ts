@@ -2943,3 +2943,51 @@ describe('a cost goes through applyDamageAndEmit (4.1-H2a, ASSUMPTION 132)', () 
     expect({ hp, alive }).toEqual({ hp: 1, alive: true })
   })
 })
+
+describe('a status-sourced flat hit on ANOTHER creature is indirect, not a tick (4.1-H2a, ASSUMPTION 131)', () => {
+  function flatHit(statusId: string | undefined) {
+    // Bearer 'bearer' (the firing creature, Defence 20); 'foe' has Defence 20 too. A flat 20 from a
+    // status-sourced context: on the bearer itself it is a tick; on the foe it is a response.
+    const player = makeParty('player', [{ id: 'bearer', defence: 20 }])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 100, defence: 20 }])
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
+    })
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'selector', selector: { kind: 'lowest-hp-enemy' } },
+        flatAmount: 20,
+        damageSource: 'dot',
+      },
+      'fixture',
+      {
+        channel: 'indirect',
+        ...(statusId ? { statusId } : {}),
+        self: createCreatureId('bearer'),
+      },
+      state,
+      createResolutionContext(events, newCascade()),
+    )
+    return events.find((e) => e.type === 'DamageDealt')
+  }
+
+  it('meets a fifth of the target Defence: 20 - 0.2 x 20 = 16, with the statusId carried on the event', () => {
+    expect(flatHit('some-status')).toMatchObject({
+      sourceId: 'bearer',
+      targetId: 'foe',
+      rawDamage: 16,
+      finalDamage: 16,
+      statusId: 'some-status',
+      remainingHp: 84,
+    })
+  })
+
+  it('is the same with no statusId (a plain trait response), so the statusId alone does not make a tick', () => {
+    expect(flatHit(undefined)).toMatchObject({ rawDamage: 16, finalDamage: 16 })
+  })
+})
