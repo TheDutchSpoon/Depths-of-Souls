@@ -242,12 +242,13 @@ finding labels B1, A4, … are a separate scheme.)
     floors.
   - **G2** hub and store: `summon`, `setPartySlot`; `setPerkLevel` / `refundAllPerks` and no
     `PerkDef.phase`; `newGame({ seed })`; stored player gem sets.
-- **4.1-H — balance**, in four PRs (H2 split at the H2 grill on H1's report):
+- **4.1-H — balance**, in five PRs (H2 split at the H2 grill on H1's report, H2b before its
+  kickoff):
   - **H1** the deterministic balance simulator and its report (byte-identical);
   - **H2a** damage rules: the creature's level, the fading Additional on direct hits, direct and
     indirect damage;
-  - **H2b** status rules: single-instance statuses, DoT and Regen from the applier's snapshot, the
-    observer watching damage events, and Flickerlings replacing Glowflies;
+  - **H2b1** Flickerlings replacing Glowflies, and the observer watching damage events;
+  - **H2b2** status rules: single-instance statuses, DoT and Regen from the applier's snapshot;
   - **H2c** the first tuning pass on the final rules, with the CI thresholds asserted.
 - **No demo of its own** (a fix phase): the Phase 4.5 demo covers Phase 4 and 4.1 together
   (CONVENTIONS "Every feature phase ships a demo").
