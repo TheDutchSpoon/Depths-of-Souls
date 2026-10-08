@@ -76,6 +76,21 @@ describe('materializeCreature', () => {
     expect(creature.baseStats).toEqual(scaleStatsToLevel(FIXTURE_BRUISER.baseStats, 5))
   })
 
+  it('sets the engine-visible level (4.1-H2a, ASSUMPTION 111), always equal to origin.level', () => {
+    // The Additional reads `Creature.level`; `origin.level` stays engine-inert. Both come from the
+    // one `level` option, at several levels (including past the Additional's level-11 cutoff).
+    for (const level of [1, 2, 7, 11, 40]) {
+      const creature = materializeCreature(FIXTURE_BRUISER, {
+        level,
+        side: 'enemy',
+        slot: 0,
+        speciesId: 'fixture-species',
+      })
+      expect(creature.level).toBe(level)
+      expect(creature.origin.level).toBe(level)
+    }
+  })
+
   it('derives a deterministic id from speciesCreature id + side + slot', () => {
     const creature = materializeCreature(FIXTURE_BRUISER, {
       level: 1,

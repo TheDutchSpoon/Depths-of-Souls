@@ -1,6 +1,12 @@
 import type { Affinity } from './types'
 import { getAffinityMultiplier } from './affinity'
-import { CHIP_FLOOR_RATE } from './config'
+import {
+  ADDITIONAL_BASE_CAP,
+  ADDITIONAL_CAP_FADE_PER_LEVEL,
+  ADDITIONAL_MAX_HP_PERCENT,
+  CHIP_FLOOR_RATE,
+  INDIRECT_DEFENCE_RATE,
+} from './config'
 
 export interface DamageInput {
   readonly offStat: number
@@ -53,4 +59,77 @@ export function calculateDamage(input: DamageInput): DamageResult {
   const finalDamage = Math.max(1, Math.floor(rawDamage))
 
   return { rawDamage, finalDamage, affinityMultiplier, wasChipOnly: core === 0 }
+}
+
+/**
+ * Phase 4.1-H2a (ASSUMPTIONS 110, 135): the Additional, a fading flat bonus added to a DIRECT hit
+ * after its `MAX(1, floor(...))`. 20% of the target's effective max Health (the integer-percent
+ * float rule), capped at `ADDITIONAL_BASE_CAP` at level 1 with the cap falling by
+ * `ADDITIONAL_CAP_FADE_PER_LEVEL` per attacker level (gone from level 11). Nothing modifies it.
+ */
+export function calculateAdditional(attackerLevel: number, targetMaxHp: number): number {
+  const hpBound = Math.floor((targetMaxHp * ADDITIONAL_MAX_HP_PERCENT) / 100)
+  const levelCap = Math.max(
+    0,
+    ADDITIONAL_BASE_CAP - ADDITIONAL_CAP_FADE_PER_LEVEL * (attackerLevel - 1),
+  )
+  return Math.min(hpBound, levelCap)
+}
+
+/** A direct hit's result with the Additional added to the integer damage (`rawDamage` stays the
+ * formula's pre-clamp value, ASSUMPTION 136). */
+export function withAdditional(result: DamageResult, additional: number): DamageResult {
+  return { ...result, finalDamage: result.finalDamage + additional }
+}
+
+export interface IndirectDamageInput {
+  /** The response's own magnitude (`offStat`/`scalingStat` x spellPower x count, or the flat amount). */
+  readonly magnitude: number
+  /** The target's effective Defence, already including Defend's x1.5. */
+  readonly defence: number
+  readonly attackerAffinity: Affinity
+  readonly defenderAffinity: Affinity
+  readonly dealtMods: readonly number[]
+  readonly takenFactors: readonly number[]
+  /** Fraction of the TARGET's Defence ignored, applied to the Defence term (ASSUMPTION 134). */
+  readonly armorPenetrationPercent?: number
+}
+
+/**
+ * Phase 4.1-H2a (ASSUMPTION 112): INDIRECT damage -- every damage that is not an Attack or Cast
+ * action (a trait/status/perk response). `magnitude x affinity x (1 + sum dealt) x prod(taken) -
+ * 0.2 x Defence`, then `MAX(1, floor(...))` once. No chip, no Additional: it meets a fifth of
+ * the target's Defence. `wasChipOnly` is always false.
+ */
+export function calculateIndirectDamage(input: IndirectDamageInput): DamageResult {
+  const effectiveDefence = input.defence * (1 - (input.armorPenetrationPercent ?? 0))
+  const affinityMultiplier = getAffinityMultiplier(
+    input.attackerAffinity,
+    input.defenderAffinity,
+  )
+  const dealtMultiplier = 1 + input.dealtMods.reduce((total, m) => total + m, 0)
+  const takenMultiplier = input.takenFactors.reduce((total, f) => total * f, 1)
+  const rawDamage =
+    input.magnitude * affinityMultiplier * dealtMultiplier * takenMultiplier -
+    INDIRECT_DEFENCE_RATE * effectiveDefence
+  return {
+    rawDamage,
+    finalDamage: Math.max(1, Math.floor(rawDamage)),
+    affinityMultiplier,
+    wasChipOnly: false,
+  }
+}
+
+/**
+ * Phase 4.1-H2a (ASSUMPTION 116/132): a COST -- a creature's own response damaging itself. The
+ * exact magnitude, floored once, minimum 0 (no Defence, pools, affinity or Additional). The caller
+ * treats a 0 result as a full no-op.
+ */
+export function calculateCost(magnitude: number): DamageResult {
+  return {
+    rawDamage: magnitude,
+    finalDamage: Math.max(0, Math.floor(magnitude)),
+    affinityMultiplier: 1,
+    wasChipOnly: false,
+  }
 }

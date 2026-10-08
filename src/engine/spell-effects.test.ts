@@ -202,6 +202,7 @@ function legacyPayload(
               'cast',
               spell.spellPower * (powerPercent / 100),
               'cast',
+              'direct',
               state,
               ctx,
             )
@@ -211,6 +212,7 @@ function legacyPayload(
               spell.scalingStat,
               spell.spellPower * (powerPercent / 100),
               'cast',
+              'direct',
               state,
               ctx,
             )
@@ -814,7 +816,7 @@ describe('cast-target resolves to the landed target at BOTH sites', () => {
       executeResponse(
         { kind: 'apply-status', target: { kind: 'cast-target' }, status: MARK },
         'fixture',
-        { self: player[0]!.id },
+        { channel: 'indirect', self: player[0]!.id },
         makeState(player, enemy),
         createResolutionContext(events, newCascade()),
       ),
@@ -1032,7 +1034,7 @@ describe('heal.offStat (plan review F2)', () => {
       executeResponse(
         { kind: 'heal', target: { kind: 'self' }, ...heal } as EffectResponse,
         'fixture',
-        { self: player[0]!.id },
+        { channel: 'indirect', self: player[0]!.id },
         makeState(player, enemy),
         createResolutionContext([], newCascade()),
       )
@@ -1269,7 +1271,7 @@ describe('heal scalingStat mode: stat x (spellPower x multiplier), for a trait t
         magnitudeSource: { kind: 'count', of: 'dead-allies' },
       },
       'fixture-trait',
-      { self: player[0]!.id },
+      { channel: 'indirect', self: player[0]!.id },
       makeState(player, makeParty('enemy', [{ id: 'e0' }])),
       createResolutionContext(events, newCascade()),
     )

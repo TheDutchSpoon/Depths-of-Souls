@@ -230,6 +230,9 @@ export function materializeCreature(
       level,
       ...(ref !== undefined ? { ref } : {}),
     },
+    // Phase 4.1-H2a (ASSUMPTION 111): the engine-visible level, from the SAME variable as
+    // `origin.level` so the two can never disagree.
+    level,
   }
 }
 

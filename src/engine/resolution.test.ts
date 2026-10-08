@@ -639,7 +639,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
           scalingStat: 'health',
         },
         'fixture',
-        { self: createCreatureId('a') },
+        { channel: 'indirect', self: createCreatureId('a') },
         state,
         createResolutionContext([], newCascade()),
       ),
@@ -673,7 +673,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
         spellPower: 1.0,
       },
       'elder-fixture',
-      { self: createCreatureId('elder') },
+      { channel: 'indirect', self: createCreatureId('elder') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -705,7 +705,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
         magnitudeSource: { kind: 'count', of: 'dead-allies' },
       },
       'necromoss-fixture',
-      { self: createCreatureId('necromoss') },
+      { channel: 'indirect', self: createCreatureId('necromoss') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -764,7 +764,7 @@ describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
           scalingStat: 'defence',
         },
         'fixture',
-        { self: createCreatureId('a') },
+        { channel: 'indirect', self: createCreatureId('a') },
         state,
         createResolutionContext([], newCascade()),
       ),
@@ -793,7 +793,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         amountPerStack: { ofStat: 'health', percent: 5 },
       },
       'fixture',
-      { self: createCreatureId('p') },
+      { channel: 'indirect', self: createCreatureId('p') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -822,7 +822,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         amountPerStack: { ofStat: 'health', percent: 5 },
       },
       'fixture',
-      { self: createCreatureId('p'), stacks: 3 },
+      { channel: 'indirect', self: createCreatureId('p'), stacks: 3 },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -850,7 +850,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim') },
+      { channel: 'indirect', statusId: 'poison', self: createCreatureId('victim') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -877,7 +877,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim'), stacks: 5 },
+      {
+        channel: 'indirect',
+        statusId: 'poison',
+        self: createCreatureId('victim'),
+        stacks: 5,
+      },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -920,7 +925,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim'), stacks: 5 },
+      {
+        channel: 'indirect',
+        statusId: 'poison',
+        self: createCreatureId('victim'),
+        stacks: 5,
+      },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -948,7 +958,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim') },
+      { channel: 'indirect', statusId: 'poison', self: createCreatureId('victim') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -995,7 +1005,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim') },
+      { channel: 'indirect', statusId: 'poison', self: createCreatureId('victim') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1044,7 +1054,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim') },
+      { channel: 'indirect', statusId: 'poison', self: createCreatureId('victim') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1074,7 +1084,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim'), stacks: 3 },
+      {
+        channel: 'indirect',
+        statusId: 'poison',
+        self: createCreatureId('victim'),
+        stacks: 3,
+      },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1105,7 +1120,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim'), stacks: 5 },
+      {
+        channel: 'indirect',
+        statusId: 'poison',
+        self: createCreatureId('victim'),
+        stacks: 5,
+      },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1128,7 +1148,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
             flatAmount: { ofStat: 'health', percent },
           },
           'fixture',
-          { self: createCreatureId('a') },
+          { channel: 'indirect', statusId: 'poison', self: createCreatureId('a') },
           state,
           createResolutionContext([], newCascade()),
         ),
@@ -1156,7 +1176,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         damageSource: 'dot',
       },
       'fixture',
-      { self: createCreatureId('victim'), stacks: 2 },
+      {
+        channel: 'indirect',
+        statusId: 'poison',
+        self: createCreatureId('victim'),
+        stacks: 2,
+      },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1392,6 +1417,7 @@ describe('conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review a
       hitAs,
       1.0,
       hitAs,
+      'direct',
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1428,7 +1454,7 @@ describe('grant-action-state response (Phase 4 Slice B)', () => {
     const result = executeResponse(
       { kind: 'grant-action-state', target: { kind: 'self' }, defending: true },
       'fixture',
-      { self: createCreatureId('a') },
+      { channel: 'indirect', self: createCreatureId('a') },
       state,
       createResolutionContext([], newCascade()),
     )
@@ -1469,7 +1495,7 @@ describe('revive response (Phase 4 Slice B)', () => {
     const result = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
       'revive-fixture',
-      { self: createCreatureId('reviver') },
+      { channel: 'indirect', self: createCreatureId('reviver') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1512,7 +1538,7 @@ describe('revive response (Phase 4 Slice B)', () => {
     const revived = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
       'revive-fixture',
-      { self: createCreatureId('reviver') },
+      { channel: 'indirect', self: createCreatureId('reviver') },
       state,
       createResolutionContext(events, newCascade()),
     ).state
@@ -1532,6 +1558,7 @@ describe('revive response (Phase 4 Slice B)', () => {
       'attack',
       1.0,
       'attack',
+      'direct',
       revived,
       createResolutionContext(hitEvents, newCascade()),
     )
@@ -1554,7 +1581,7 @@ describe('revive response (Phase 4 Slice B)', () => {
     const result = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
       'revive-fixture',
-      { self: createCreatureId('reviver') },
+      { channel: 'indirect', self: createCreatureId('reviver') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1583,7 +1610,7 @@ describe('revive response (Phase 4 Slice B)', () => {
     const result = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
       'revive-fixture',
-      { self: createCreatureId('reviver') },
+      { channel: 'indirect', self: createCreatureId('reviver') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1649,7 +1676,11 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
         },
       },
       'detonator-fixture',
-      { self: createCreatureId('detonator'), source: createCreatureId('foe') },
+      {
+        channel: 'indirect',
+        self: createCreatureId('detonator'),
+        source: createCreatureId('foe'),
+      },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1688,7 +1719,11 @@ describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', ()
         },
       },
       'detonator-fixture',
-      { self: createCreatureId('detonator'), source: createCreatureId('foe') },
+      {
+        channel: 'indirect',
+        self: createCreatureId('detonator'),
+        source: createCreatureId('foe'),
+      },
       bareState,
       createResolutionContext(events, newCascade()),
     )
@@ -1753,7 +1788,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
         filter: { statusId: 'test-debuff' },
       },
       'cleanse-fixture',
-      { self: createCreatureId('healer') },
+      { channel: 'indirect', self: createCreatureId('healer') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1781,7 +1816,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
         filter: { statusId: 'test-debuff' }, // 'healer' (self) never had it applied
       },
       'cleanse-fixture',
-      { self: createCreatureId('healer') },
+      { channel: 'indirect', self: createCreatureId('healer') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1821,7 +1856,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
         filter: { statusId: 'test-debuff' },
       },
       'dispel-fixture',
-      { self: createCreatureId('healer') },
+      { channel: 'indirect', self: createCreatureId('healer') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1856,7 +1891,7 @@ describe('all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbare
         factor: 1.35,
       },
       'shieldbarer-starter-rally',
-      { self: createCreatureId('provoker') },
+      { channel: 'indirect', self: createCreatureId('provoker') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1899,7 +1934,7 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
         factor: 1.1,
       },
       'swarmhive-queen-fixture',
-      { self: createCreatureId('queen') },
+      { channel: 'indirect', self: createCreatureId('queen') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1942,7 +1977,7 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
         factor: 1.1,
       },
       'swarmhive-queen-fixture',
-      { self: createCreatureId('bearer') },
+      { channel: 'indirect', self: createCreatureId('bearer') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -1991,6 +2026,7 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
       'attack',
       1.0,
       'attack',
+      'direct',
       rigged,
       createResolutionContext(events, newCascade()),
     )
@@ -2438,7 +2474,7 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
         magnitudeSource: { kind: 'count', of: 'living-allies-of-species' },
       },
       'striker-fixture',
-      { self: createCreatureId('striker') },
+      { channel: 'indirect', self: createCreatureId('striker') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -2486,7 +2522,7 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
         factor: 1.5,
       },
       'fixture',
-      { self: createCreatureId('a') },
+      { channel: 'indirect', self: createCreatureId('a') },
       state,
       createResolutionContext([], newCascade()),
     )
@@ -2676,7 +2712,7 @@ describe('revive cap (Phase 4.1-B, D3)', () => {
       const result = executeResponse(
         REVIVE_RESPONSE,
         'fixture',
-        { self: createCreatureId('reviver') },
+        { channel: 'indirect', self: createCreatureId('reviver') },
         state,
         createResolutionContext(events, newCascade()),
       )
@@ -2833,5 +2869,125 @@ describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", ()
       ],
     }
     expect(() => validateStatusNoRandomSelectorInResponseTargets(status)).not.toThrow()
+  })
+})
+
+describe('a cost goes through applyDamageAndEmit (4.1-H2a, ASSUMPTION 132)', () => {
+  const LAST_STAND_FIXTURE: Trait = {
+    id: 'cost-last-stand-fixture',
+    name: 'Last Stand (fixture)',
+    effects: [{ category: 'cheat-death', chancePercent: 100 }],
+  }
+
+  function costHitOnSelf(withLastStand: boolean): {
+    events: CombatEvent[]
+    hp: number
+    alive: boolean
+  } {
+    // Bearer: health 5, Attack 20. The cost is floor(20 x 0.5) = 10: lethal on its own.
+    const player = makeParty('player', [
+      {
+        id: 'bearer',
+        health: 5,
+        attack: 20,
+        innateTraitIds: withLastStand ? [LAST_STAND_FIXTURE.id] : [],
+      },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'foe' }])
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: {
+        scripts: FIXTURE_SCRIPTS_BY_ID,
+        traits: new Map([[LAST_STAND_FIXTURE.id, LAST_STAND_FIXTURE]]),
+      },
+    })
+    const events: CombatEvent[] = []
+    const result = executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        offStat: 'attack',
+        spellPower: 0.5,
+      },
+      'fixture',
+      { channel: 'indirect', self: createCreatureId('bearer') },
+      state,
+      createResolutionContext(events, newCascade()),
+    )
+    const bearer = result.state.playerParty.find((c) => c.id === 'bearer')
+    return { events, hp: bearer?.currentHp ?? -1, alive: bearer?.alive ?? false }
+  }
+
+  it('can kill: a lethal cost is a damage event followed by the death', () => {
+    const { events, hp, alive } = costHitOnSelf(false)
+    expect(events.find((e) => e.type === 'DamageDealt')).toMatchObject({
+      rawDamage: 10,
+      finalDamage: 10,
+      remainingHp: 0,
+      sourceId: 'bearer',
+      targetId: 'bearer',
+    })
+    expect(events.some((e) => e.type === 'CreatureDied')).toBe(true)
+    expect({ hp, alive }).toEqual({ hp: 0, alive: false })
+  })
+
+  it('Last Stand can save a lethal cost: the bearer survives at exactly 1 HP', () => {
+    const { events, hp, alive } = costHitOnSelf(true)
+    expect(events.find((e) => e.type === 'DamageDealt')).toMatchObject({
+      finalDamage: 10,
+      remainingHp: 1,
+    })
+    expect(events.some((e) => e.type === 'CreatureDied')).toBe(false)
+    expect({ hp, alive }).toEqual({ hp: 1, alive: true })
+  })
+})
+
+describe('a status-sourced flat hit on ANOTHER creature is indirect, not a tick (4.1-H2a, ASSUMPTION 131)', () => {
+  function flatHit(statusId: string | undefined) {
+    // Bearer 'bearer' (the firing creature, Defence 20); 'foe' has Defence 20 too. A flat 20 from a
+    // status-sourced context: on the bearer itself it is a tick; on the foe it is a response.
+    const player = makeParty('player', [{ id: 'bearer', defence: 20 }])
+    const enemy = makeParty('enemy', [{ id: 'foe', health: 100, defence: 20 }])
+    const state = createCombat({
+      seed: 1,
+      player: { party: player },
+      enemy: { party: enemy },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
+    })
+    const events: CombatEvent[] = []
+    executeResponse(
+      {
+        kind: 'deal-damage',
+        target: { kind: 'selector', selector: { kind: 'lowest-hp-enemy' } },
+        flatAmount: 20,
+        damageSource: 'dot',
+      },
+      'fixture',
+      {
+        channel: 'indirect',
+        ...(statusId ? { statusId } : {}),
+        self: createCreatureId('bearer'),
+      },
+      state,
+      createResolutionContext(events, newCascade()),
+    )
+    return events.find((e) => e.type === 'DamageDealt')
+  }
+
+  it('meets a fifth of the target Defence: 20 - 0.2 x 20 = 16, with the statusId carried on the event', () => {
+    expect(flatHit('some-status')).toMatchObject({
+      sourceId: 'bearer',
+      targetId: 'foe',
+      rawDamage: 16,
+      finalDamage: 16,
+      statusId: 'some-status',
+      remainingHp: 84,
+    })
+  })
+
+  it('is the same with no statusId (a plain trait response), so the statusId alone does not make a tick', () => {
+    expect(flatHit(undefined)).toMatchObject({ rawDamage: 16, finalDamage: 16 })
   })
 })

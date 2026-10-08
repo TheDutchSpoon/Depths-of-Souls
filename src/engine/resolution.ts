@@ -14,7 +14,13 @@
 // drains it (actions.ts `drainGrantedActions`). `newCascade` stays here (a plain factory, not a type) since `actions.ts` and
 // `combat.ts` both need to call it to build a fresh `ResolutionContext`.
 
-import { calculateDamage } from './damage'
+import {
+  calculateAdditional,
+  calculateCost,
+  calculateDamage,
+  calculateIndirectDamage,
+  withAdditional,
+} from './damage'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
@@ -44,7 +50,7 @@ import {
 import { nextRandom } from './rng'
 import type { DamageResult } from './damage'
 import type { CreatureId } from './ids'
-import type { CascadeState, ResolutionContext } from './resolution-types'
+import type { CascadeState, DamageChannel, ResolutionContext } from './resolution-types'
 import type { CombatState, Creature, Stat } from './types'
 import type {
   ActiveEffect,
@@ -57,13 +63,17 @@ import type {
   StatusSpec,
 } from './effect-types'
 
-export type { CascadeState, ResolutionContext } from './resolution-types'
+export type { CascadeState, DamageChannel, ResolutionContext } from './resolution-types'
 
 export function newCascade(): CascadeState {
   return { depth: 0, activeInstances: new Set() }
 }
 
 interface HookContext {
+  /** Phase 4.1-H2a (ASSUMPTION 130): REQUIRED -- the channel this context's damage runs in.
+   * `fireHook` builds `'indirect'` (a trait/status/perk response); a spell's own effect loop
+   * (`actions.ts` `executeSpellEffects`) builds `'direct'`. */
+  readonly channel: DamageChannel
   readonly self: CreatureId
   /** The other creature involved in the trigger (attacker for on-damage-taken, victim for
    * on-damage-dealt/on-kill, dead ally for on-ally-death, ...). */
@@ -117,6 +127,7 @@ export function dealDamage(
   offStatKind: 'attack' | 'cast',
   spellPower: number,
   damageSource: 'attack' | 'cast' | 'dot',
+  channel: DamageChannel,
   state: CombatState,
   ctx: ResolutionContext,
   statusId?: string,
@@ -129,6 +140,7 @@ export function dealDamage(
     offStat,
     offStatKind,
     damageSource,
+    channel,
     state,
     ctx,
     statusId,
@@ -147,6 +159,7 @@ export function dealDamageWithScalingStat(
   stat: Stat,
   spellPower: number,
   damageSource: 'attack' | 'cast' | 'dot',
+  channel: DamageChannel,
   state: CombatState,
   ctx: ResolutionContext,
   statusId?: string,
@@ -163,6 +176,7 @@ export function dealDamageWithScalingStat(
     offStat,
     damageSource === 'cast' ? 'cast' : 'attack',
     damageSource,
+    channel,
     state,
     ctx,
     statusId,
@@ -206,6 +220,7 @@ function dealDamageCore(
   offStat: number,
   actionKind: 'attack' | 'cast',
   damageSource: 'attack' | 'cast' | 'dot',
+  channel: DamageChannel,
   state: CombatState,
   ctx: ResolutionContext,
   statusId?: string,
@@ -213,19 +228,40 @@ function dealDamageCore(
   const attacker = getCreature(state, attackerId)
   const target = getCreature(state, targetId)
   const { defence, takenFactors: defendFactors } = resolveDefenceAndTakenFactors(target)
-  const damage = calculateDamage({
-    offStat,
-    defence,
-    armorPenetrationPercent: gatherArmorPenetration(attacker),
-    crossStatBonus: gatherCrossStatContribution(attacker, actionKind),
-    attackerAffinity: attacker.affinity,
-    defenderAffinity: target.affinity,
-    dealtMods: [
-      ...gatherDealtMods(attacker, state),
-      ...gatherConditionalDamageBonus(attacker, target, actionKind, state),
-    ],
-    takenFactors: [...defendFactors, ...gatherTakenFactors(target, state)],
-  })
+  const dealtMods = [
+    ...gatherDealtMods(attacker, state),
+    ...gatherConditionalDamageBonus(attacker, target, actionKind, state),
+  ]
+  const takenFactors = [...defendFactors, ...gatherTakenFactors(target, state)]
+  let damage: DamageResult
+  if (channel === 'direct') {
+    // The Additional is folded into finalDamage HERE, before applyDamageAndEmit, so Last Stand's
+    // lethal check, remainingHp and every hook see one number (ASSUMPTION 135).
+    damage = withAdditional(
+      calculateDamage({
+        offStat,
+        defence,
+        armorPenetrationPercent: gatherArmorPenetration(attacker),
+        crossStatBonus: gatherCrossStatContribution(attacker, actionKind),
+        attackerAffinity: attacker.affinity,
+        defenderAffinity: target.affinity,
+        dealtMods,
+        takenFactors,
+      }),
+      calculateAdditional(attacker.level, effectiveMaxHp(target)),
+    )
+  } else {
+    // Indirect: cross-stat contribution is direct-only (ASSUMPTION 134).
+    damage = calculateIndirectDamage({
+      magnitude: offStat,
+      defence,
+      armorPenetrationPercent: gatherArmorPenetration(attacker),
+      attackerAffinity: attacker.affinity,
+      defenderAffinity: target.affinity,
+      dealtMods,
+      takenFactors,
+    })
+  }
   return applyDamageAndEmit(
     attackerId,
     target,
@@ -518,7 +554,7 @@ export function fireHook(
       const result = executeResponse(
         effect.response,
         effect.sourceTraitId,
-        { self: self.id, source, stacks, statusId },
+        { channel: 'indirect', self: self.id, source, stacks, statusId },
         working,
         ctx,
       )
@@ -706,44 +742,97 @@ export function executeResponse(
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const t = findCreature(working, targetId)
         if (!t || !t.alive) continue // never strike a corpse
+        const damageSource = response.damageSource ?? 'dot'
         if (response.flatAmount !== undefined) {
-          // Flat mode (DoT): own value from the source, bypassing the whole OffStat/Defence/
-          // affinity/pools formula. Scales by the firing status's current stacks (or, with
-          // magnitudeSource, the live count that replaces them).
-          working = applyFlatDamage(
-            context.self,
-            targetId,
-            resolveFlatTotal(bearer, response.flatAmount, flatCount),
-            response.damageSource ?? 'dot',
-            working,
-            ctx,
-            context.statusId,
-          )
+          const amount = resolveFlatTotal(bearer, response.flatAmount, flatCount)
+          if (context.statusId !== undefined && targetId === context.self) {
+            // A DoT tick (ASSUMPTION 131): a status-sourced flat hit on its own bearer. Stays on
+            // today's path in H2a (floor, minimum 1); H2b moves it. Judged on `statusId`, never on
+            // the 'dot' label (CATASTROPHIC_COLLAPSE carries that label and is a cost).
+            working = applyFlatDamage(
+              context.self,
+              targetId,
+              amount,
+              damageSource,
+              working,
+              ctx,
+              context.statusId,
+            )
+          } else if (context.channel === 'indirect' && targetId === context.self) {
+            working = applyCostDamage(
+              context.self,
+              amount,
+              damageSource,
+              working,
+              ctx,
+              context.statusId,
+            )
+          } else {
+            // Flat mode is always indirect (no true-damage channel, ASSUMPTION 112): the flat
+            // amount is the magnitude, Attack-flavoured unless tagged 'cast'.
+            working = dealDamageCore(
+              context.self,
+              targetId,
+              amount,
+              damageSource === 'cast' ? 'cast' : 'attack',
+              damageSource,
+              'indirect',
+              working,
+              ctx,
+              context.statusId,
+            )
+          }
         } else if (response.scalingStat !== undefined) {
           const spellPower = (response.spellPower ?? 1.0) * formulaMultiplier
-          working = dealDamageWithScalingStat(
-            context.self,
-            targetId,
-            response.scalingStat,
-            spellPower,
-            response.damageSource ?? 'attack',
-            working,
-            ctx,
-            context.statusId,
-          )
+          const scalingSource = response.damageSource ?? 'attack'
+          if (context.channel === 'indirect' && targetId === context.self) {
+            working = applyCostDamage(
+              context.self,
+              getEffectiveStat(bearer, response.scalingStat) * spellPower,
+              scalingSource,
+              working,
+              ctx,
+              context.statusId,
+            )
+          } else {
+            working = dealDamageWithScalingStat(
+              context.self,
+              targetId,
+              response.scalingStat,
+              spellPower,
+              scalingSource,
+              context.channel,
+              working,
+              ctx,
+              context.statusId,
+            )
+          }
         } else {
           const offStat = response.offStat ?? 'attack'
           const spellPower = (response.spellPower ?? 1.0) * formulaMultiplier
-          working = dealDamage(
-            context.self,
-            targetId,
-            offStat,
-            spellPower,
-            response.damageSource ?? offStat,
-            working,
-            ctx,
-            context.statusId,
-          )
+          const offSource = response.damageSource ?? offStat
+          if (context.channel === 'indirect' && targetId === context.self) {
+            working = applyCostDamage(
+              context.self,
+              getOffensiveStat(bearer, offStat, spellPower),
+              offSource,
+              working,
+              ctx,
+              context.statusId,
+            )
+          } else {
+            working = dealDamage(
+              context.self,
+              targetId,
+              offStat,
+              spellPower,
+              offSource,
+              context.channel,
+              working,
+              ctx,
+              context.statusId,
+            )
+          }
         }
       }
       return { state: working }
@@ -1037,6 +1126,34 @@ function applyFlatDamage(
     wasChipOnly: false,
   }
   return applyDamageAndEmit(sourceId, target, damage, damageSource, state, ctx, statusId)
+}
+
+/**
+ * Phase 4.1-H2a (ASSUMPTIONS 116, 132): a COST -- a creature's own trait/status/perk response
+ * damaging itself. The exact magnitude, floored once, no Defence/pools/affinity/Additional. A cost
+ * of 0 is a full no-op (no event, no hooks): the minimum of 1 exists so a hit always lands, and a
+ * cost isn't a hit. Still a damage event with the creature as its own source, through
+ * `applyDamageAndEmit` (Last Stand, `on-damage-taken` and death all apply).
+ */
+function applyCostDamage(
+  selfId: CreatureId,
+  magnitude: number,
+  damageSource: 'attack' | 'cast' | 'dot',
+  state: CombatState,
+  ctx: ResolutionContext,
+  statusId?: string,
+): CombatState {
+  const damage = calculateCost(magnitude)
+  if (damage.finalDamage === 0) return state
+  return applyDamageAndEmit(
+    selfId,
+    getCreature(state, selfId),
+    damage,
+    damageSource,
+    state,
+    ctx,
+    statusId,
+  )
 }
 
 /** Regen / spell heal: a flat or stat-scaled heal, clamped to effective max Health -- no

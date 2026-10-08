@@ -18,8 +18,8 @@
 //   CHARGER->TARGET (off 14, def 0): core 14, chip 0.14 -> raw 14.14 -> final 14. TARGET 100-14=86.
 //   DETONATOR's on-attack fires before its own base hit: consume-stacks(glow) reads 1 stack (from
 //     Charger), removes it (StatusExpired), then bursts: scalingStat 'intelligence' (22) x
-//     spellPower (1.0 default x 1 consumed stack) = 22; vs def 0: core 22, chip 0.22 -> raw 22.22
-//     -> final 22. TARGET 86-22=64.
+//     spellPower (1.0 default x 1 consumed stack) = 22; a trait response, so INDIRECT (4.1-H2a):
+//     22 x 1 x 1 x 1 - 0.2 x def 0 = 22, no chip -> raw 22 -> final 22. TARGET 86-22=64.
 //   DETONATOR's own base attack (off 16, def 0; Glow already consumed -> no dealt-mod contributes
 //     to this hit either): core 16, chip 0.16 -> raw 16.16 -> final 16. TARGET 64-16=48, alive.
 
@@ -126,7 +126,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: DETONATOR,
     targetId: TARGET,
-    rawDamage: 22.22,
+    rawDamage: 22,
     finalDamage: 22,
     affinityMultiplier: 1,
     wasChipOnly: false,

@@ -5,7 +5,9 @@
 // on the lowest-HP enemy (no TriggerFired suppression, so one TriggerFired). FOE (enemy, 30 HP) is
 // the only enemy: the hit kills it, the enemy side is empty, and the fight ends at once. A flat
 // deal-damage is tagged 'dot' (default for flatAmount) and carries no statusId; remainingHp
-// clamps at 0. The win check runs right after the hook pass and its drain, before the round starts.
+// clamps at 0. Flat mode on another creature is INDIRECT damage (4.1-H2a): the flat 999 is the
+// magnitude, so 999 x 1 x 1 x 1 - 0.2 x FOE's defence 20 (the fixture default) = 995, no chip:
+// raw 995 -> final 995 (still far above FOE's 30 HP). The win check runs right after the hook pass and its drain, before the round starts.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -63,8 +65,8 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: HERO,
     targetId: FOE,
-    rawDamage: 999,
-    finalDamage: 999,
+    rawDamage: 995,
+    finalDamage: 995,
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 0,

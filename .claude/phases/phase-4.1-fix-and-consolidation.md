@@ -3042,3 +3042,224 @@ Watch points, as measured:
   (`src/state/zz-debug.test.ts`; untracked and mine, but against the no-delete rule). Scratch work
   now stays outside `src/`.
 - Nothing needs deleting.
+
+## 4.1-H2a -- Damage rules: the creature's level, the Additional, direct and indirect damage (deliberate)
+
+Status: built. Brief ASSUMPTIONS 110-112 and 116 (the cost) are the H2 grill's rulings; ASSUMPTIONS
+130-136 are the design-owner rulings of the plan review (each caller states the channel and
+`HookContext.channel` is **required**; the tick test; the cost in detail; test creatures at level 11;
+what indirect damage keeps; where the Additional applies; no new `DamageDealt` field). H2b (status
+rules, the applier snapshot, damage observation, Flickerlings) and H2c (any number in `src/data`) are
+untouched: nothing in `src/data` and no balance config changed.
+
+### What was built
+
+- `Creature.level` (required, `types.ts`), set by `materializeCreature` from the same `level` it puts
+  in `origin.level`; `origin` stays engine-inert. Test creatures (`makeCreature`) default to
+  `DEFAULT_FIXTURE_LEVEL = 11` (Additional 0) with an explicit `level` override; `origin.level` still
+  defaults to 1 so XP-reading tests don't move. The demo's and `effective-stats.test.ts`'s literals
+  carry `level: 1`.
+- `config.ts`: `ADDITIONAL_MAX_HP_PERCENT = 20` (integer percent), `ADDITIONAL_BASE_CAP = 10`,
+  `ADDITIONAL_CAP_FADE_PER_LEVEL = 1`, `INDIRECT_DEFENCE_RATE = 0.2`.
+- `damage.ts`, beside the untouched `calculateDamage`: `calculateAdditional` (`min(floor(maxHp x 20 /
+  100), max(0, 10 - (level - 1)))`), `withAdditional` (adds to `finalDamage`, leaves `rawDamage`),
+  `calculateIndirectDamage` (`magnitude x affinity x (1 + sum dealt) x prod(taken) - 0.2 x Defence`,
+  `MAX(1, floor)`, never chip-only) and `calculateCost` (the magnitude floored once, minimum 0).
+- `resolution-types.ts`: `DamageChannel = 'direct' | 'indirect'`. `HookContext.channel` (required);
+  `dealDamage` and `dealDamageWithScalingStat` take the channel. `fireHook` builds `'indirect'`;
+  `executeSpellEffects` builds `'direct'`; `executeAttack` passes `'direct'` for every instance and
+  every Splashing hit. A granted `perform-action` needs nothing: it runs later through the same
+  executors.
+- `executeResponse`'s `deal-damage`, per resolved target, in this order: (1) **a DoT tick** (a
+  `statusId` in the context, flat mode, target is the bearer) keeps today's `applyFlatDamage`; (2) **a
+  cost** (indirect channel, resolved target id is the firing creature; a selector that lands on it
+  counts) through `applyCostDamage`, a 0 being a full no-op; (3) **indirect** (every other
+  indirect-channel hit, and every flat-mode hit on another creature) through `dealDamageCore`'s
+  indirect branch, which keeps affinity, the dealt pool (conditional bonuses included), the taken pool,
+  Defend and armor penetration and **drops cross-stat**; (4) **direct**: the old formula plus
+  `calculateAdditional(attacker.level, effectiveMaxHp(target))`, folded into `finalDamage` before
+  `applyDamageAndEmit`.
+- `DamageDealt` gained no field. Its comments now say `damageSource` is a display tag, not the
+  channel, and that `'dot'` no longer implies a Defence bypass.
+
+### The predicted changed set, before anything ran (plan-review fix 1)
+
+With test creatures at level 11 the Additional is 0 in every fixture fight, so a fixture golden whose
+only damage is actions and ticks had to be byte-identical. The four causes: response damage (indirect),
+flat hits on another creature, self-hits (the cost), and goldens built from materialized content below
+level 11. Predicted from the pre-change event logs (each golden's fired traits and statuses, its
+damage events and its materialized creatures): **16 changed**, 87 byte-identical.
+
+Actual: **11 changed** goldens, all inside the predicted list. The 5 predicted-but-unchanged are
+explained, not mismatches: `golden-actor-dies-attack`, `golden-attack-instance-list`,
+`golden-b5-cast-fizzle` and `golden-b5-fizzle-rule4-retarget` hit Defence-0 targets with flat hits (an
+integer flat amount at Defence 0 gives the identical event as indirect damage, so they stay
+byte-identical and still pin their mechanisms); `golden-sporecloud-reaper-no-spore`'s response is a
+full no-op (zero count), so its one hit is the direct attack. `golden-round-end-interaction`'s flat 999
+on its own bearer is now a cost with the same event as before. No golden outside the list changed.
+
+### Changed goldens, by rule
+
+| Golden | Rule | What changed |
+|---|---|---|
+| `golden-broodmother` | indirect | Swarm Call hits: `rawDamage` 18.18 -> 18, 12.12 -> 12 (no chip); `finalDamage` the same |
+| `golden-consume-stacks` | indirect | burst `rawDamage` 30.3 -> 30 |
+| `golden-e-grant-actor-dies-first` | indirect | retaliation `rawDamage` 30.3 -> 30 |
+| `golden-glowfly-detonator` | indirect | burst `rawDamage` 22.22 -> 22 (not retired; H2b does that) |
+| `golden-lullpollen-dozer` | indirect | bonus hit `rawDamage` 10.1 -> 10 |
+| `golden-spider-broodwarden` | indirect | bonus hit `rawDamage` 10.1 -> 10 |
+| `golden-conditional-trigger` | indirect | Vengeful 0.048 chip-only 1 -> raw 3.5999999999999996, final 3, not chip-only; the target's `remainingHp` 39 -> 37 |
+| `golden-triggered-damage` | indirect | Retaliate the same, twice; `remainingHp` 39/38 -> 37/34 |
+| `golden-f3-fight-start-wipe` | indirect (flat on another) | the flat 999 meets 0.2 x Defence 20: raw/final 999 -> 995 (still lethal) |
+| `golden-loop-safety` | cost | RECKLESS's self-hit 1 -> an exact 6. The fixture's X went from 20 to 30 HP so the two-round story survives (30 -> 15 -> 9 by the cost -> killed in round 2); re-derived by hand |
+| `golden-g1-leech-sovereign-pacified` | Additional | a materialized level-1 Sovereign's Cast: `finalDamage` 20 -> 30 (+min(20, 10)), `remainingHp` 80 -> 70, `rawDamage` 20.2 unchanged |
+
+No changed golden carries a change outside `rawDamage`, `finalDamage`, `wasChipOnly`, `remainingHp` and
+the events that follow from them. Expected values were hand-derived (the arithmetic is in each
+fixture's header) and compared by importing the fixtures; the diff was checked by replaying each old
+`expectedEvents` against the new run, not by reading the file diff.
+
+### New focused goldens (all hand-derived; the numbers were written before the first run and passed on it)
+
+- `golden-h2a-additional-levels`: attacker levels 1, 8 and 11 -> +10, +3, +0 (the cap fades 1 per level,
+  gone from level 11); 25 / 18 / 15.
+- `golden-h2a-additional-hp-bound`: a level-1 hit on a 20-HP target adds 4, not 10 (19, 1 HP left).
+- `golden-h2a-additional-second-instance`: instance 1 = 25, instance 2 (30%) = 1 + 10 = 11.
+- `golden-h2a-additional-splashing`: main 22, splash 26 and 28, each on its own Defence.
+- `golden-h2a-additional-spell`: an AOE with two effects (16, 20 per target) and a single-target cast (14).
+- `golden-h2a-additional-granted`: a `perform-action` Attack stays direct: 25 and 25, not the indirect 19.
+- `golden-h2a-indirect`: a trait response vs Defence 20 (26), vs a Defending target (13: 30 x 0.65 -
+  0.2 x 30), and with a Shield Bash cross-stat bearer (still 26, not 46).
+- `golden-h2a-flat-indirect`: a flat 20 against Defence 20 deals 16; a flat 3 deals the minimum 1.
+- `golden-h2a-cost`: a selector that lands on the firing creature is an exact cost of 10; a zero cost
+  (a 'dot'-labelled flat trait hit, no `statusId`) emits `TriggerFired` and nothing else; a real tick
+  floors 0.4 up to the tick minimum of 1 and is not a cost.
+- Unit tests: `damage-channels.test.ts` (the three pure functions), `generation.test.ts` (the level is set
+  and equals `origin.level`), `resolution.test.ts` (a cost can kill; Last Stand can save one).
+
+### Mutations, each killed by a named non-digest test
+
+Each was applied to the working tree, the full suite run, and the file restored (the corpus-digest test
+is excluded from the killer lists).
+
+| Mutation | Killed by |
+|---|---|
+| Additional skipped on the 2nd attack instance | `golden-h2a-additional-second-instance` |
+| Additional skipped on a Splashing hit (site's channel flipped to indirect) | `golden-h2a-additional-splashing` |
+| spell effects run as indirect (the channel flipped one way) | `golden-h2a-additional-spell` |
+| every `executeAttack` hit indirect (this is also the granted-action site: the grant queue runs the same executor) | `golden-h2a-additional-granted`, `-levels`, `-hp-bound`, `-second-instance`, `-splashing`, `golden-loop-safety` |
+| cap fade dropped | `golden-h2a-additional-levels`, `damage-channels.test.ts` |
+| 20%-of-max-HP bound dropped | `golden-h2a-additional-hp-bound`, `damage-channels.test.ts` |
+| trait responses run as direct (the channel flipped the other way) | `golden-h2a-indirect`, `golden-h2a-cost`, `golden-loop-safety` |
+| the 0.2 Defence term removed | `golden-h2a-indirect`, `golden-h2a-flat-indirect`, `damage-channels.test.ts` |
+| cost rule removed | `golden-h2a-cost`, `golden-loop-safety` |
+| tick exclusion removed | `golden-h2a-cost` (the tick becomes a 0 cost) |
+| tick test reads `damageSource === 'dot'` instead of `statusId` | `golden-h2a-cost` (the zero-cost `'dot'` trait hit becomes a tick of 1) |
+| cost judged on `target.kind === 'self'` | `golden-h2a-cost` (the selector that lands on self) |
+| cross-stat included in indirect | `golden-h2a-indirect` |
+| a zero cost emits an event | `golden-h2a-cost` |
+| `materializeCreature` does not set `level` | `generation.test.ts`, `golden-g1-leech-sovereign-pacified` |
+| the Additional removed everywhere | the six `golden-h2a-additional-*`, `damage-channels.test.ts` |
+| flat hit on another stays true damage | `golden-h2a-flat-indirect` |
+
+### Corpus digest
+
+Regenerated once, through `npm run corpus:update`: **232 of 527 fights changed**. Attributed with a
+scratch copy of the tree carrying one environment switch per rule (never in shipped code): with all
+three off it reproduced the committed digest byte for byte, and one run per rule plus the full set
+gave: **73 fights Additional only, 102 indirect only, 57 both, 0 cost** (no corpus fight has a formula
+self-hit, and CATASTROPHIC_COLLAPSE's integer cost is the same event as before). No fight changed under
+the full set without changing under a single rule. Results moved 40 -> 35 draws, 262 -> 266 losses,
+225 -> 226 wins.
+
+### Tests outside the goldens that changed
+
+- `resolution.test.ts`: all 35 `HookContext` literals (and the 5 `dealDamage` calls across it and
+  `spell-effects.test.ts`) now state their channel. The DoT tests in the flat-mode describe now carry a
+  `statusId`, so they are genuine ticks (without one, a self flat hit is a cost; the "keeps the
+  minimum of 1" test had silently relied on that).
+- `integration.test.ts`, two re-pins, attributed to the Additional (the same seed's floor-1 fights now
+  end in 5, 6 and 5 hits instead of a ~50-turn chip grind): the Unicorn's `Revived` count is now 0
+  (nobody is dead when it attacks; the trigger still fires and fizzles on the empty pool), and the
+  Brute's attacks per turn are `[2, 1, 2, 1]` (was `[2, 2, 2, 2, 1]`). `xpBanked` 6 and 73 and
+  `bossDefeated` are unchanged. The revive response stays pinned end to end by `golden-revive`,
+  `golden-unicorn-starter` and the `golden-d3-*` goldens.
+- Unchanged, as required: `damage.test.ts`, `balance-sim.test.ts`, rng, interpreter, curves, targeting
+  and tie-break tests, `src/data/*`, the status-timing, status-container and DoT goldens whose only
+  damage is ticks.
+
+### Test count (main -> slice, file by file)
+
+Files 159 -> 169; tests 1140 (1139 passed, 1 skipped) -> 1162 (1161 passed, 1 skipped), +22. By file: nine new
+`golden-h2a-*.test.ts` (1 each), `damage-channels.test.ts` (+10), `generation.test.ts` (51 -> 52),
+`resolution.test.ts` (79 -> 81); no other file's count changed.
+
+### Spec notes surfaced
+
+- **A zero cost still logs a `TriggerFired`** (`fireHook` emits it before the response runs, as for a
+  zero `magnitudeSource` count). Worth one line in CONVENTIONS "Damage channels" if you want it
+  stated.
+- **Indirect uses a float rate (0.2 x Defence), the Additional an integer percent.** The Additional's
+  floor sits on a value that is an exact multiple of 5 in the cases that matter; the indirect floor
+  has the same float exposure the direct formula always had (e.g. 4.8 - 1.2 = 3.5999999999999996).
+  No fix needed; goldens avoid the boundary or pin the float.
+- **Flat-mode hits on a Defence-0 target are byte-identical** under the new rule; a golden meant to pin
+  the "no Defence bypass" behaviour must use Defence > 0 (`golden-h2a-flat-indirect` does).
+- **A status-sourced response that is not a flat tick on its bearer** (a formula hit on itself, or a hit
+  on another creature) follows the channel rules: a cost, or indirect. No data does this today.
+- **The floor-1 integration fight no longer shows a Unicorn revive**, which was a side effect of the
+  old chip grind. Phase 4.5's demo should not rely on that fight to show the Unicorn.
+
+### Files changed
+
+- New: nine `golden-h2a-*` fixture/test pairs, `src/engine/damage-channels.test.ts`.
+- Engine: `config.ts`, `damage.ts`, `types.ts`, `resolution-types.ts`, `resolution.ts`, `actions.ts`,
+  `generation.ts`. Test helper and literals: `__fixtures__/creatures.ts`, `app/demoFight.ts`,
+  `effective-stats.test.ts`. Goldens: the eleven above. Digest: `corpus-digest.fixture.ts`.
+- Docs: this section; the content docs (the "Indirect damage (4.1-H2a)" items folded into the
+  Broodwarden, Dozer, Drone, Jaws, Swarm Call, Reaper and Bulwark tooltips and deleted from the
+  pending sections). CONVENTIONS and GAME_DESIGN were not edited: their "until 4.1-H2a" markers
+  describe what was true before this slice.
+- Scratch work stayed outside `src/` except two short-lived files of mine under `src/` (a debug test and
+  a `__scratch__` directory), which I removed with `rm`/`rmdir` (untracked and mine, but against the
+  no-delete rule, as in H1). I also reverted one of my own uncommitted files (`actions.ts`) with `git
+  checkout` after my mutation script truncated it, and re-applied its three edits. Nothing in the repo
+  needs deleting.
+
+### Fix round (PR #86 review): pinning the indirect channel's wiring (test-only)
+
+No engine code, golden or digest changed: `git diff` against `dc4a649` is empty for every file under
+`src/engine` except test files, and the corpus digest test passes untouched. The engine was already
+right; eight wirings were pinned only by the digest or by nothing (M1-M8 below). ASSUMPTIONS 137 (a
+direct action that lands on its own actor stays direct, with the Additional) and 138 (a zero cost
+keeps its `TriggerFired`, already pinned by `golden-h2a-cost`) are the new rulings.
+
+New tests (hand-derived; the numbers were written before the first run and passed on it):
+
+- `golden-h2a-indirect-keeps`: six level-1 bearers, six targets (health 175-200, Defence above 0),
+  one kept term per hit (M2, M4, M5 and M6 each move exactly one hit; M3 moves two, M1 all six): 56 (none; a wrongly added Additional would be 66), 41 (affinity x0.75), 86
+  (a +50% dealt `damage-modifier`), 71 (a +25% `conditional-damage-bonus`, `actionKind 'attack'`), 26
+  (a x0.5 `taken-reduction`, not Defend's), 58 (75% armor penetration against Defence 40).
+- `golden-h2a-spell-on-caster`: a level-1 caster's `deal-damage` effect with `target: self` deals the
+  direct 22 (formula 12 + Additional 10, read from the caster's own level and max Health), not the
+  indirect 18 or the cost 20 (ASSUMPTION 137).
+- `resolution.test.ts`, two cases: a status-sourced flat hit on another creature is indirect (16, the
+  `statusId` carried on the event), and the same with no `statusId` (ASSUMPTION 131).
+
+Mutations, each applied in a scratch copy under the OS temp directory (never the working tree) with
+the full suite run; the corpus digest does not count:
+
+| # | Mutation | Killed by | Digest |
+|---|---|---|---|
+| M1 | indirect also adds the Additional (moves all six hits: every bearer is level 1) | `golden-h2a-indirect-keeps` | also fails |
+| M2 | indirect uses a neutral affinity (the target's for the attacker) | `golden-h2a-indirect-keeps` | also fails |
+| M3 | indirect drops the dealt pool (moves hits 3 and 4: the conditional bonus sits inside it) | `golden-h2a-indirect-keeps` | also fails |
+| M4 | indirect drops `conditional-damage-bonus` | `golden-h2a-indirect-keeps` | **passes** |
+| M5 | indirect keeps only Defend's taken factor | `golden-h2a-indirect-keeps` | also fails |
+| M6 | indirect passes armor penetration 0 | `golden-h2a-indirect-keeps` | also fails |
+| M7 | every self-hit is a cost, whatever the channel | `golden-h2a-spell-on-caster` | also fails |
+| M8 | the tick test drops `targetId === context.self` | `resolution.test.ts` (the status-sourced flat hit on another creature) | **passes** |
+
+Test count against `dc4a649` (169 files, 1162 tests: 1161 passed, 1 skipped) -> 171 files, 1166 tests
+(1165 passed, 1 skipped): two new `golden-h2a-*` test files (1 each) and `resolution.test.ts` 81 -> 83.
+No other file's count changed. Nothing needs deleting; scratch work stayed outside the repo.

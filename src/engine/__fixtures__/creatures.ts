@@ -30,6 +30,12 @@ export interface CreatureOverrides {
    * existing golden/fixture files that build creatures through this helper don't need to churn
    * now that Creature.origin is required. */
   origin?: CreatureOrigin
+  /** Phase 4.1-H2a (ASSUMPTION 133): the engine-visible level the Additional reads. Defaults to
+   * `DEFAULT_FIXTURE_LEVEL` (11), where the Additional is 0 for every target, so a fixture fight
+   * keeps its direct-formula numbers unless it sets a level. Deliberately NOT tied to
+   * `origin.level` (which keeps defaulting to 1 so XP-reading tests don't move); production keeps
+   * the two equal via `materializeCreature`. */
+  level?: number
   /** Phase 4.1-B (S1): defaults to `[]` -- most fixtures pass creatures through `createCombat`,
    * which ALWAYS recomputes this from `innateTraitIds` (never trusts the input), so an explicit
    * override is only useful for a test constructing a post-fight-setup `Creature` directly. */
@@ -37,6 +43,9 @@ export interface CreatureOverrides {
   /** Phase 4.1-B (D3): defaults to `0`, matching `createCombat`'s own always-reset-to-0 rule. */
   revivesUsed?: number
 }
+
+/** The level at which the Additional is 0 (the cap falls to 0 from level 11, config). */
+export const DEFAULT_FIXTURE_LEVEL = 11
 
 /** A flat, unremarkable baseline creature (all stats 20) for tests that don't care about specifics. */
 export function makeCreature(overrides: CreatureOverrides = {}): Creature {
@@ -67,6 +76,7 @@ export function makeCreature(overrides: CreatureOverrides = {}): Creature {
     defendCount: overrides.defendCount ?? 0,
     speciesId: overrides.speciesId,
     origin: overrides.origin ?? { templateId: id, level: 1 },
+    level: overrides.level ?? DEFAULT_FIXTURE_LEVEL,
     baselineEffects: overrides.baselineEffects ?? [],
     revivesUsed: overrides.revivesUsed ?? 0,
   }

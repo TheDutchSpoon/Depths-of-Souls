@@ -26,7 +26,7 @@
 // never chosen) stays alive and Webbed throughout, keeping the count at 2 for the whole hit.
 //
 //   Bonus hit first (on-attack fires BEFORE the main hit): off = 20(attack) * spellPower
-//     (0.25 base * 2 count = 0.5) = 10, def 0 -> core 10, chip 0.01*10=0.1 -> raw 10.1 -> final 10.
+//     (0.25 base * 2 count = 0.5) = 10, INDIRECT (a trait response, 4.1-H2a): 10 - 0.2 x def 0 = 10, no chip -> raw 10 -> final 10.
 //     TARGET 30 - 10 -> 20.
 //   Main hit (off 20, def 0): core 20, chip 0.2 -> raw 20.2 -> final 20. TARGET 20 - 20 -> 0 ->
 //     dies. OTHERFOE (1000 HP) survives, so the fight is NOT over (state.result stays null).
@@ -140,7 +140,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: BROODWARDEN,
     targetId: TARGET,
-    rawDamage: 10.1,
+    rawDamage: 10,
     finalDamage: 10,
     affinityMultiplier: 1,
     wasChipOnly: false,

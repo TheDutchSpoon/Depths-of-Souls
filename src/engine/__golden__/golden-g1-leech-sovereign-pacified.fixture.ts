@@ -33,8 +33,10 @@
 // Damage. Stinger Swarm: `offStat 'cast'` reads Intelligence, spellPower 1.0: off = 20 * 1.0 = 20.
 // PACIFIER's Defence is 0: core = max(20 - 0, 0) = 20, chip = 0.01 * 20 = 0.2, raw = 20.2.
 // Affinity: Instinct vs Wit are not adjacent on the cycle (Vitality > Violence > Wit > Endurance >
-// Instinct > Vitality), so x1.0. No dealt or taken modifiers. final = floor(20.2) = 20; PACIFIER
-// 100 - 20 = 80.
+// Instinct > Vitality), so x1.0. No dealt or taken modifiers. final = floor(20.2) = 20.
+// A Cast is DIRECT damage, so the Additional (4.1-H2a) follows the floor: SOVEREIGN is a
+// materialized level-1 creature, so the cap is 10 - (1 - 1) = 10; 20% of PACIFIER's max Health 100
+// is 20; min(20, 10) = 10. finalDamage = 20 + 10 = 30 (rawDamage stays 20.2); PACIFIER 100 - 30 = 70.
 //
 // Vital Siphon (her trait, `on-attack`) does not fire: she cast, she did not attack, so no
 // `AttackDeclared`, no `TriggerFired`, no steal. Her turn's end counts Pacified down from 3 to 2;
@@ -126,10 +128,10 @@ export const expectedEvents: CombatEvent[] = [
     sourceId: SOVEREIGN,
     targetId: PACIFIER,
     rawDamage: 20.2,
-    finalDamage: 20,
+    finalDamage: 30,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 80,
+    remainingHp: 70,
     damageSource: 'cast',
     statusId: undefined,
   },
