@@ -188,3 +188,144 @@ kind together with a matching selector.
   design owner, with the Phase 6 consequence) and 142 (damage observation's shape).
 - `.claude/ROADMAP.md`, Phase 6 inputs: trigger-only conditions stay out of the editor; "another
   ally is hurt" only ever ships to scripts with its matching selector.
+
+## Round 2
+
+Reviewed the revised `plan.md` ("Revision 1", commit `1bf09ce`) against Round 1, the living docs
+as Round 1 left them (CONVENTIONS "Hook execution model" and "Damage observation", brief
+ASSUMPTIONS 141 and 142), and the code: `resolution.ts` (`fireHook`, the `deal-damage` branch,
+`applyCostDamage`), `__corpus__/corpus.ts` (`buildCorpus`, `SPELL_FIGHTS`, `F3_SPELL_FIGHTS`,
+`buildSpellFight`), `data/spells/index.ts`, `data/spells/glimmerdark.ts` and
+`state/store-gems.test.ts`.
+
+All eleven Round 1 fixes and both decisions are in the plan. Checked against the code:
+
+- Fix 1's picks hold. The Wit slice in registry order is Vine Snare, Pollen Cloud, Arcane Bolt,
+  Beacon Charge, Kindred Light, Spore Cyst (biome 3), Pacify. At 0.6 the picks are index 2, 3 and
+  4: Arcane Bolt, Beacon Charge, Kindred Light. `firstPick` feeds the constant draw only to the
+  summon roll.
+- The Wick's burn takes the cost branch. An indirect, self-targeted flat amount with no `statusId`
+  goes to `applyCostDamage`. All three cost call sites go through that function, so "only
+  `applyCostDamage` passes `true`" covers them.
+- Fix 7's guard exists as described: `cascade.activeInstances.has(effect.instanceId)` is the
+  instance-level self-re-entry check.
+- Corpus fights are built independently (`gen(floor, seed)` per entry), so a change can't leak
+  from one fight into later ones. Fix 5's per-rung sets are sound.
+- No status is orphaned. Overcharge and Luminous Tide applied only `glow`, which is deleted.
+  `grant-act-first` is already applied by Blindclaws.
+
+### Verdict
+
+**Approved, with four plan fixes folded in before the first run** (see decide-point 1). The
+design and the shape are settled. What's left are four places where the plan's text is
+underspecified or wrong. Each one changes the mutation table or the digest procedure, so it must
+be in `plan.md` before anything runs, but none of them needs a new design call.
+
+### Plan fixes
+
+**Real fixes**
+
+1. **Appended corpus fights go after Life Siphon's, never into `SPELL_FIGHTS`.** The plan says
+   "append a `SPELL_FIGHTS` entry at the end of Part C". Those are two different places.
+   `buildCorpus` builds Part C as `SPELL_FIGHTS` (entries 500–514, seeds 2000–2014), then
+   `PERK_FIGHT_VARIANTS` (seeds 2100+), then `F3_SPELL_FIGHTS` (entries 524–525, seeded
+   `2000 + SPELL_FIGHTS.length + i` = 2015–2016), then `buildLifeSiphonFight()` (entry 526, seed
+   2017). Adding an entry to `SPELL_FIGHTS` would move every perk fight down one index, and it
+   would re-seed both F3 fights to 2016–2017, the second colliding with Life Siphon's seed. The
+   digest would then change in fights no rung predicts. The rule, for both fallbacks (fix 6's
+   spell coverage and A24's Flare fight): add a new list (for example `H2B1_FIGHTS`) **after**
+   `buildLifeSiphonFight()`, at entries 527+, with explicit seeds 2018+ (below the perk range).
+   `corpus-coverage.test.ts` names the new indices. A spell-coverage fight may reuse
+   `buildSpellFight`'s shape, but it must pass the explicit seed, not
+   `2000 + SPELL_FIGHTS.length + i`.
+2. **The Flare coverage fight needs something that hurts an ally.** A `CorpusFight` has no HP
+   setup (`seed`, `player`, `enemy`, `playerEffects`), and `WALL_ENEMY` never attacks. Against a
+   wall, nobody but the Wick is ever hurt, so the Wick never burns and the Flare has nothing to
+   observe. Specify the fight: the Wick and the Flare on the player side (via
+   `materializeCreature`, scripts pinned explicitly per ASSUMPTION 79) against an attacking enemy
+   party (the perk fights' `buildParty([brute(), brute()], 'enemy', 5)` shape is enough). Then
+   check the event scan from "Digest" on that fight, not just assume it.
+3. **Pin `golden-h2b1-observed-cost`'s cast.** As written it mentions "an observer… and a second,
+   `relationship: enemy` observer", then a third ("the enemy-side `ally` observer"). The
+   relationship-dropped mutation is killed only if an `ally`-relationship observer sits on the
+   **other** side and stays silent, so name every creature. Player side: payer P (an
+   `on-turn-start` flat self cost) and observer O1 (`ally`, `selfInflicted: true`). Enemy side: O2
+   (`ally`, `selfInflicted: true`), which must stay silent on P's cost, and O3 (`enemy`,
+   `selfInflicted: true`), which must fire. The "observer observes its own cost" row is O1 paying a
+   cost (or a second fixture in the file). The expected order for P's cost is `DamageDealt` → O1
+   → O3, in `livingIds` order.
+4. **Two missing mutation rows.**
+   - *Observation fired before `on-damage-taken`* (CONVENTIONS pins dealt → taken → observed).
+     The plan lists a hook-order test, but no row says it kills this. Name the row: a damaged
+     creature with an `on-damage-taken` response and an observer of its damage. The response's
+     `TriggerFired` must come before the observer's. Killed by `damage-observation.test.ts`'s
+     hook-order row.
+   - *The pool counts dead allies* (`injuredOtherAlliesOf` built on all allies instead of
+     `livingAlliesOf`). A dead ally has `currentHp` 0, below its max, so it looks hurt. Killed by
+     `injured-allies.test.ts` "hurt other dead" and by `golden-h2b1-wick-gates` case 2, **provided
+     case 2 is written as**: the Wick hurt, the only living creature on its side, every ally dead.
+     The plan's "real Wick + Flare" cast for that file contradicts "no one else alive": in case 2
+     the Flare must be absent or dead too. With the Wick hurt, case 2 also re-checks the
+     bearer-counting mutation.
+
+**Scope and labeling**
+
+5. **Loop-safety row:** "the chain runs to `CascadeTruncated`" holds only if the costs are small
+   enough that nobody dies before the depth cap. Size the fixture (for example a 1 HP cost on a
+   large Health pool) and show in the derivation that the mutated run reaches the cap. Otherwise
+   the mutation is still killed (the log differs), but the row describes the wrong failure.
+6. **The damage branch of the filter fails closed on a missing damaged creature.** Today's action
+   branch skips the relationship check when the actor isn't found (`relationship !== 'any' &&
+   actor`). The damage branch should treat "damaged creature not found" as no match, the same rule
+   as A3. It can't happen with today's call site (`target.id` always exists). Write it so it can't
+   fall through.
+
+### Assumptions
+
+Every item stays as Round 1 called it, re-checked against the revised text. Changes only:
+
+| Item | Call | Note |
+|---|---|---|
+| A2, A3 | **Confirm** | Fixes 3 and 4 are applied; plus fix 6 above for the damage branch. |
+| A5 | **Confirm** | Needs the dealt → taken → observed mutation row (fix 4). |
+| A9 | **Confirm** | Needs the dead-ally mutation row (fix 4). |
+| A21 | **Confirm** | Picks verified against the registry order (above). |
+| A24 | **Correct** | Placement after `buildLifeSiphonFight()` with explicit seeds 2018+ (fix 1); the Flare fight against an attacking party (fix 2). |
+| A1, A4, A6–A8, A10–A20, A22, A23, A25–A29 | **Confirm** | Unchanged from Round 1; A8 is ASSUMPTION 141, A1–A7 are ASSUMPTION 142. |
+
+Nothing in the brief's Assumptions checklist is changed by the revision, so there is nothing to
+bring back to design.
+
+### Decide-points
+
+**1. Fold Round 2's fixes into the plan as a step before the build, or run a third plan round?**
+
+- **(a) Approve now.** The coding agent's first step in `/slice-build` is to add "Revision 2" to
+  `plan.md`'s top, with fixes 1–6 written into the body (the mutation table, golden 1's and
+  golden 6's casts, the Part C placement). That happens before any code or run. The PR review
+  checks the revision against this round.
+- **(b) Changes needed.** `/slice-plan` again, then a Round 3 review.
+
+**Recommendation: (a).** `workflow/plan-review.md` treats a third round as the signal to pull the slice back into
+design. These fixes are not design problems: they are text the plan got wrong or left loose, and
+each one has an exact answer above. "Written before the first run" is kept either way, because
+the revision lands in `plan.md` before step 1. (b) costs a round trip and sends a false "design
+is unsettled" signal. Choose (b) if you want to see the corrected mutation table before code
+starts.
+
+### Decisions
+
+- **Decide-point 1: (a), approve now** (Duncan, 2026-10-08). Verdict: **approved.**
+  `/slice-build`'s first step, before any code or run, is to add a "Revision 2: what changed"
+  section to the top of `plan.md` and write Round 2's fixes 1–6 into the plan body:
+  - the Part C placement and seeds (fixes 1–2, in "Digest" and A24);
+  - golden 1's and golden 6's casts (fixes 3–4, in "New goldens");
+  - the two new mutation rows and the loop-safety sizing (fixes 4–5, in "Mechanism → the test");
+  - the damage branch's fail-closed rule (fix 6, in `resolution.ts`'s filter block).
+
+  Then build against that text. The PR review checks Revision 2 against this round.
+
+### Docs edited
+
+None this round. No decision changes a living doc. The order fix 4 tests is already in
+CONVENTIONS.
