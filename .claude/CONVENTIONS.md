@@ -900,7 +900,9 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     ```
     The cap is 10 at level 1 and falls by 1 per attacker level (gone from level 11), so it only
     speeds up early fights. **Nothing modifies it**: not Defence, affinity, either pool or Defend.
-    Both sides get it. The 0.2 and the 10 are combat rule constants in `engine/config.ts`.
+    Both sides get it. The 0.2 and the 10 are combat rule constants in `engine/config.ts`. It
+    applies to **every direct `DamageDealt`**: each attack instance, each Splashing hit, each AOE
+    target, each `deal-damage` in a spell's list and granted actions (brief ASSUMPTION 135).
   - **Indirect damage:** every other damage, i.e. a trait, status or perk **response**
     (retaliation, on-death bursts, on-attack bonus hits) and DoT ticks (4.1-H2b):
     ```
@@ -911,13 +913,24 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     tick's snapshot potency, which has no dealt pool (the applier's build is already in its
     snapshotted stat); `Defence` is effective, after armor penetration, and includes Defend's ×1.5
     (Defend's ×0.65 is in the taken pool as usual). **No chip, no Additional.** Indirect damage is
-    the counter to Defence: it meets only a fifth of it.
+    the counter to Defence: it meets only a fifth of it. The dealt pool includes
+    `conditional-damage-bonus`; **cross-stat contribution is direct only** (brief ASSUMPTION 134).
+  - **Who decides the channel** (brief ASSUMPTIONS 130, 131): the caller. Actions (`executeAttack`,
+    `executeSpellEffects`) pass direct; `fireHook` passes indirect. `HookContext.channel` is
+    **required**, so no caller can leave it out. `damageSource` stays a display label. A DoT tick
+    (a flat `deal-damage` with a `statusId`, on its bearer) is recognised by that test, never by its
+    'dot' label.
   - **Heals are neither.**
+  - **`DamageDealt`** gains no field (brief ASSUMPTION 136): `finalDamage` includes the Additional,
+    `rawDamage` is the formula's pre-clamp value (negative is possible for indirect damage), and
+    `wasChipOnly` is false for indirect damage and a cost.
   - **Self-inflicted response damage is a cost** (4.1-H2a, brief ASSUMPTION 116): damage a
     creature's own trait, status or perk response deals to that same creature is the exact amount,
     with no Defence, pools, affinity or Additional. It is still a damage event with the creature as
     its source (damage observers see it; `on-damage-taken` fires) and it can kill. Not a DoT tick,
-    ever: a tick is never self-inflicted (see "Damage observation"). Lands in **4.1-H2a** with the
+    ever: a tick is never self-inflicted (see "Damage observation"). It is judged on the
+    **resolved** target id; it floors once with **no minimum**, and a cost of 0 is a full no-op (no
+    event, no hooks) (brief ASSUMPTION 132). Lands in **4.1-H2a** with the
     other channel rules. Users: the `RECKLESS` core fixture trait (`golden-loop-safety`), the
     `CATASTROPHIC_COLLAPSE` fixture, and from 4.1-H2b the Flickerling Wick.
   - **Flat-mode response damage** (`deal-damage.flatAmount`, a literal or a `StatPercent`) on

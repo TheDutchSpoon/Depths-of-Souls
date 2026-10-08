@@ -1159,10 +1159,14 @@ carry the changed rules and values.
 - **Flat-mode response damage on another creature becomes indirect** (ASSUMPTIONS 112, 113: no
   true-damage channel): the flat amount is the magnitude; the opt-in Defence bypass goes. The
   `golden-b5-*` fixtures' flat hits change with it.
+- **Content docs:** the PR folds each "Indirect damage (4.1-H2a)" item from the content docs'
+  "Phase 4.1 — decided changes" sections into their bodies (the "Content docs stay in sync" rule
+  above).
 - **Goldens:** every changed golden is listed with which of the three rules changed it. A
   hand-derived focused golden per rule (a direct hit with the Additional at two attacker levels; a
   trait response as indirect damage against Defence and against Defend; a granted Attack staying
-  direct). The digest is regenerated once, every changed fight attributed.
+  direct). The digest is regenerated once, every changed fight attributed. The plan's rulings are
+  ASSUMPTIONS 130–136.
 
 ### 4.1-H2b — status rules and the content they need (deliberate)
 
@@ -1858,6 +1862,51 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      of 40, 65%; Brute 35, Sorcerer 40), and it is also the spec the Health remap slowed most
      (ASSUMPTION 125). Measured before the remap, its remaining floor-1 losses were to Wit casters
      (Spider Weaver, Pollinator Beneficiary and Pollenlord; Wit beats its Endurance).
+130. **Decided (H2a plan review).** **Each caller states the damage channel.** `executeAttack`
+     (every instance and every Splashing hit) and `executeSpellEffects` pass `'direct'`; `fireHook`
+     passes `'indirect'`. A granted `perform-action` needs nothing: it runs later through
+     `executeAttack` or the cast path. **`HookContext.channel` is required** (design owner, H2a
+     plan review), so the compiler catches any caller that doesn't state it; every context built in
+     tests states it too. The `damageSource` label stays a display tag (Snapback keeps 'attack' and
+     is indirect).
+131. **Decided (H2a plan review).** **The tick test.** A `deal-damage` with `context.statusId`
+     defined, in flat mode, targeting its bearer is a DoT tick: in H2a it stays on today's
+     `applyFlatDamage` path (floor, minimum 1). It is never a cost, and H2b reuses the same test
+     for "a tick is never self-inflicted" (ASSUMPTION 115). It does not read `damageSource: 'dot'`:
+     `CATASTROPHIC_COLLAPSE` carries that label with no `statusId` and is a cost.
+132. **Decided (H2a plan review).** **The cost (ASSUMPTION 116) in detail.**
+     - A cost is a `deal-damage` on the indirect channel whose **resolved** target id is the firing
+       creature (a selector landing on itself counts). A spell effect on its own caster is direct.
+     - Amount: the magnitude, floored once, **minimum 0**. A cost of 0 is a full no-op (no event, no
+       hooks), like a zero `magnitudeSource` count (PR #64 fix 4): the minimum of 1 exists so a hit
+       always lands, and a cost isn't a hit.
+     - It goes through `applyDamageAndEmit`, so Last Stand can save a lethal cost and
+       `on-damage-taken` fires. `DamageDealt`: `rawDamage` = the magnitude, `finalDamage` = the
+       floor, `affinityMultiplier` 1, `wasChipOnly` false, the label as tagged.
+133. **Decided (H2a plan review).** **Test creatures default to level 11.** `makeCreature` sets
+     `Creature.level` to 11 unless overridden, where the Additional is 0, so mechanism goldens keep
+     their direct numbers and the Additional is tested only where a golden sets a level.
+     `origin.level` keeps its default of 1, so XP-reading tests don't move. In production both come
+     from one variable in `materializeCreature`, and a test asserts `level === origin.level` for
+     materialized creatures. The demo's and `effective-stats.test.ts`'s literal creatures get
+     `level: 1`, matching their `origin.level`.
+134. **Decided (H2a plan review).** **What indirect damage keeps.** Affinity, the dealt pool
+     (including `conditional-damage-bonus`, with today's `actionKind` gating; a flat or
+     `scalingStat` response is Attack-flavoured unless tagged 'cast'), the taken pool, Defend
+     (×1.5 Defence, ×0.65 taken) and armor penetration on the Defence term. **Cross-stat
+     contribution is direct only** (Shield Bash, Aggressive Caster: the perks say "attacks and
+     spells"), so Thorns no longer gets Shield Bash's bonus. (The H2c baseline's scratch build
+     included it; only Thorns is affected.)
+135. **Decided (H2a plan review).** **The Additional applies to every direct `DamageDealt`**: each
+     attack instance (the Brute's second hit), each Splashing hit, each AOE target, each
+     `deal-damage` in a spell's list, and granted actions. It reads the target's effective max
+     Health; the 20% is stored as the integer percent 20 and computed as `floor(maxHp × 20 / 100)`
+     (the float rule), the same value as the docs' 0.2. It is added before `applyDamageAndEmit`, so
+     Last Stand, `remainingHp` and every hook see one number.
+136. **Decided (H2a plan review).** **`DamageDealt` gains no field.** `finalDamage` includes the
+     Additional; `rawDamage` stays the formula's pre-clamp value (for indirect damage it can be
+     below 1 or negative); `wasChipOnly` is false for indirect damage and a cost. The channel is
+     not in the log; the PR attributes changes from tests and scratch runs.
 
 ## Sequencing summary
 
