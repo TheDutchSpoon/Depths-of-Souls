@@ -252,6 +252,17 @@ finding labels B1, A4, … are a separate scheme.)
 - **No demo of its own** (a fix phase): the Phase 4.5 demo covers Phase 4 and 4.1 together
   (CONVENTIONS "Every feature phase ships a demo").
 
+## Docs pass — the context diet (between 4.1 and 4.5)
+*Brief: to be written after 4.1 closes. Docs only: no code, no goldens.* Every fresh agent chat
+reads the living docs, and CONVENTIONS (~175 KB) and GAME_DESIGN (~104 KB) are most of that weight.
+Split CONVENTIONS into `.claude/conventions/<area>.md` files, with `CONVENTIONS.md` kept as an index
+of one line per rule heading, so a kickoff names the areas a slice must read. Fold the "Phase 4
+systems addenda" section (~53 KB of decisions that accreted during content design) into the
+sections it amends. Proof of the move: every content line of the old file appears exactly once in
+the new files, checked mechanically, and anything reworded is listed with its reason. GAME_DESIGN
+gets the same treatment later; it's smaller, and its largest section is a fraction of CONVENTIONS'
+biggest. Lands **before** the 4.5 brief, so that brief is written against the split docs.
+
 ## Phase 4.5 — Run-loop demo (interlude)
 *Brief: to be written after 4.1-H merges.* The throwaway visual demo for Phase 4 **and** 4.1,
 replacing the 3.5 demo on the live site. It comes **after the fixes and before Phase 5**

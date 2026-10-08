@@ -57,9 +57,11 @@ A slice id maps to its mailbox: `4.1-H2b2` → `.claude/phases/4.1/H2b2/`.
 **Phase 4.1 is the transition.** Its slices from H2b1 on use the mailbox (`phases/4.1/<slice>/`),
 but its brief and record stay where they are: the brief is
 `briefs/phase-4.1-implementation-plan.md` and each slice still appends its section to
-`phases/phase-4.1-fix-and-consolidation.md`. When 4.1 closes, those two files move unchanged to
-`phases/4.1/brief.md` and `phases/4.1/record.md`. Phase 4.5's brief is the first written in the new
-shape.
+`phases/phase-4.1-fix-and-consolidation.md`. One exception: at each remaining slice's kickoff, that
+slice's section moves out of the 4.1 brief into its mailbox `brief.md`, leaving a pointer behind
+(`workflow/kickoff.md`), so the coding agent never has to read the whole brief. When 4.1 closes,
+the two files move unchanged to `phases/4.1/brief.md` and `phases/4.1/record.md`. Phase 4.5's brief
+is the first written in the new shape.
 
 Mailbox files are committed on the slice branch, so the PR carries its own plan, reviews and
 reports. Once merged they're immutable, like records.
