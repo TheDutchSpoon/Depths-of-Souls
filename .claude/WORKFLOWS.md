@@ -54,7 +54,7 @@ drifts and stale decisions silently outlive their correction.
 
 A slice id maps to its mailbox: `4.1-H2b2` → `.claude/phases/4.1/H2b2/`.
 
-**Phase 4.1 is the transition.** Its slices from H2b2 on use the mailbox (`phases/4.1/<slice>/`),
+**Phase 4.1 is the transition.** Its slices from H2b1 on use the mailbox (`phases/4.1/<slice>/`),
 but its brief and record stay where they are: the brief is
 `briefs/phase-4.1-implementation-plan.md` and each slice still appends its section to
 `phases/phase-4.1-fix-and-consolidation.md`. When 4.1 closes, those two files move unchanged to
