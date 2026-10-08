@@ -1907,6 +1907,17 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      Additional; `rawDamage` stays the formula's pre-clamp value (for indirect damage it can be
      below 1 or negative); `wasChipOnly` is false for indirect damage and a cost. The channel is
      not in the log; the PR attributes changes from tests and scratch runs.
+137. **Decided (PR #86 review).** **A direct action that lands on its own actor stays direct.**
+     Confusion redirects to the actor's own side, which includes the actor, and an AOE redirect
+     lands a spell's effects on its caster. That hit is direct: the full formula plus the
+     Additional, read from the actor's own level and max Health. It is never a cost (a cost is an
+     indirect-channel rule, ASSUMPTION 132). Why: the channel follows the action, not the target
+     (one general model); the effect fades out by level 11, and both sides use Confusion.
+     Rejected: no Additional when the target is the actor (a target-based special case in the
+     direct path). Measured on the PR #86 corpus: 598 such self-hits, 30 by actors below level 11.
+138. **Confirmed (PR #86 review).** **A zero cost still logs its `TriggerFired`.** `fireHook` emits
+     it before the response runs; only the response's consequence is a no-op, as for a zero
+     `magnitudeSource` count (PR #64 fix 4).
 
 ## Sequencing summary
 

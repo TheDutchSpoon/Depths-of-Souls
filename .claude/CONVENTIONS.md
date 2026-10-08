@@ -920,6 +920,10 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     **required**, so no caller can leave it out. `damageSource` stays a display label. A DoT tick
     (a flat `deal-damage` with a `statusId`, on its bearer) is recognised by that test, never by its
     'dot' label.
+    The channel follows the **action, not the target**: a direct action that lands on its own
+    actor (a Confusion redirect, a spell effect on its caster) stays direct, with the Additional
+    read from the actor's own level and max Health. It is never a cost; a cost is an
+    indirect-channel rule (brief ASSUMPTIONS 132, 137).
   - **Heals are neither.**
   - **`DamageDealt`** gains no field (brief ASSUMPTION 136): `finalDamage` includes the Additional,
     `rawDamage` is the formula's pre-clamp value (negative is possible for indirect damage), and
@@ -930,7 +934,8 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
     its source (damage observers see it; `on-damage-taken` fires) and it can kill. Not a DoT tick,
     ever: a tick is never self-inflicted (see "Damage observation"). It is judged on the
     **resolved** target id; it floors once with **no minimum**, and a cost of 0 is a full no-op (no
-    event, no hooks) (brief ASSUMPTION 132). Lands in **4.1-H2a** with the
+    event, no hooks), though the `TriggerFired` that `fireHook` emitted first still stands (brief
+    ASSUMPTIONS 132, 138). Lands in **4.1-H2a** with the
     other channel rules. Users: the `RECKLESS` core fixture trait (`golden-loop-safety`), the
     `CATASTROPHIC_COLLAPSE` fixture, and from 4.1-H2b the Flickerling Wick.
   - **Flat-mode response damage** (`deal-damage.flatAmount`, a literal or a `StatPercent`) on
