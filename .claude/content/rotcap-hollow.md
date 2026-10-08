@@ -155,8 +155,8 @@ Charnel Feast can be cast on the caster's own side and hits every living ally at
 
 ## Phase 4.1 — decided changes (pending build)
 
-Decided at the Phase 4 close review. Each slice PR folds its part into the sections above when it
-lands. (4.1-G1 folded in the roles and the casting-role notes.)
+Decided at the Phase 4 close review and the 4.1-H2 grill (the last items). Each slice PR folds its
+part into the sections above when it lands. (4.1-G1 folded in the roles and the casting-role notes.)
 
 **Status timing (4.1-F):** Spore, Confusion and every other status count down in the **bearer's own
 turns**. Spore (and every DoT) ticks **at the end of each of its bearer's turns** instead of at round
@@ -167,3 +167,22 @@ turn. Spore's spread on death is unchanged.
 **Enemy support casters (4.1-C):** Necromoss Hollowroot's ally spells (Regrowth, Afterglow, Wild
 Vigor, …) now land on **its own side** by default. In Phase 4 an enemy support caster targeted the
 player's lowest-HP creature, healing and buffing the player.
+
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129):
+
+- **DoTs come from their applier (4.1-H2b).** Spore and Burn no longer stack, and a tick is no
+  longer a share of the bearer's max HP: at application the status records its applier's
+  strength, and each tick deals that as **indirect damage** (a fifth of the bearer's Defence
+  applies). Placeholders, tuned in 4.1-H2c: **Spore 15% of the applier's Speed, Burn 25% of its
+  Intelligence, Poison 20% of its Attack**. Re-applying refreshes the timer and keeps the stronger
+  one. While the applier lives it is the damage's source (its kill and damage traits fire);
+  after it dies, the bearer is. A tick is never struck back at: retaliation doesn't answer it.
+- **Spore's spread keeps its strength:** the spores that burst from a dying host carry that host's
+  infection (its applier's strength), not the dying host's own stats.
+- **Myconet Rotcore's Poison** is applied as it dies, so its ticks have each bearer as their
+  source.
+- **Sporch Igniter** brands its target with **one** Burn (no "2-stack"); its potency comes from the
+  numbers H2c sets. **Sporch Cinderlord** applies Burn to every remaining enemy on each kill (no
+  stack count; an enemy already Burning keeps the stronger Burn and has its timer refreshed).
+- **Indirect damage (4.1-H2a):** the Sporecloud Reaper's bonus hit is indirect damage.
+- **Health (4.1-H2c):** every creature's Health moves to the 20–45 range, as in every biome.
