@@ -7,6 +7,17 @@ export const AFFINITY_NEUTRAL_MULTIPLIER = 1.0
 
 export const CHIP_FLOOR_RATE = 0.01
 
+// The Additional (Phase 4.1-H2a, brief ASSUMPTION 110/135): a fading flat bonus on DIRECT hits,
+// `min(floor(maxHp * PERCENT / 100), max(0, BASE_CAP - FADE_PER_LEVEL * (attackerLevel - 1)))`.
+// The 20% is an integer percent (the float rule: floor(maxHp * 20 / 100), never maxHp * 0.2).
+export const ADDITIONAL_MAX_HP_PERCENT = 20
+export const ADDITIONAL_BASE_CAP = 10
+export const ADDITIONAL_CAP_FADE_PER_LEVEL = 1
+
+// Indirect damage (Phase 4.1-H2a, brief ASSUMPTION 112): meets only this fraction of the target's
+// effective Defence, instead of the direct formula's whole Defence.
+export const INDIRECT_DEFENCE_RATE = 0.2
+
 // Defend: +50% effective Defence (inside the core) and a x0.65 factor in the defender's
 // taken pool, both until the creature's next turn.
 export const DEFEND_DEFENCE_MULTIPLIER = 1.5

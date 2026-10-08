@@ -12,6 +12,16 @@ import type { Intent } from './scripting-types'
 import type { CombatEvent, CombatState } from './types'
 import type { EffectInstanceId } from './effect-types'
 
+/**
+ * Phase 4.1-H2a (ASSUMPTIONS 112, 130): which damage channel a `deal-damage` response runs in.
+ * `'direct'` = an Attack or Cast action (a spell's own effect list; a granted action runs through
+ * the same executors) -- the chip-floor formula plus the Additional. `'indirect'` = any other
+ * damage (a trait, status or perk response) -- the magnitude formula against a fifth of Defence.
+ * Stated explicitly by every caller; it is never inferred from `damageSource` (a display tag) or
+ * from `castTarget`.
+ */
+export type DamageChannel = 'direct' | 'indirect'
+
 /** Trigger-cascade bookkeeping for one top-level action: chain depth (bounds
  * `MAX_TRIGGER_CASCADE_DEPTH`) and the self-re-entry guard (an effect instance already unwinding
  * on the stack is skipped). Lives on the call stack only -- never in `CombatState`, never

@@ -43,6 +43,7 @@ const creature: Creature = {
   activeEffects: [],
   defendCount: 0,
   origin: { templateId: 'test', level: 1 },
+  level: 1,
   baselineEffects: [],
   revivesUsed: 0,
 }

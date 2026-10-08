@@ -7,9 +7,10 @@
 // (speed 10) acts before FOE (speed 5, scripted always-wait — it only ever reacts, never attacks).
 //
 //   HERO→FOE (off 20, def 8):        core 12, chip 0.20 → raw 12.20 → 12.
-//   FOE retaliate→HERO (off 16×0.3=4.8, def 6): core 0 (chip-only), chip 0.048 → raw 0.048 → 1.
+//   FOE retaliate→HERO (magnitude 16×0.3=4.8, def 6): a trait response is INDIRECT (4.1-H2a):
+//     4.8×1×1×1 − 0.2×6 = 3.6 → floor 3 (float: 3.5999999999999996), no chip, not chip-only.
 //
-// FOE 30 → 18 → 6 → 0 over three HERO hits; it retaliates after the first two (1 dmg each) but
+// FOE 30 → 18 → 6 → 0 over three HERO hits; it retaliates after the first two (3 dmg each: HERO 40 → 37 → 34) but
 // NOT the third (that hit kills it). HERO wins in round 3 before FOE's turn.
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -77,10 +78,10 @@ function retaliation(remainingHp: number): readonly CombatEvent[] {
       type: 'DamageDealt',
       sourceId: FOE,
       targetId: HERO,
-      rawDamage: 0.048,
-      finalDamage: 1,
+      rawDamage: 3.5999999999999996, // 4.8 − 0.2×6 in floating point
+      finalDamage: 3,
       affinityMultiplier: 1,
-      wasChipOnly: true,
+      wasChipOnly: false,
       remainingHp,
       damageSource: 'attack',
     },
@@ -93,7 +94,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnStarted', creatureId: HERO },
   { type: 'AttackDeclared', attackerId: HERO, targetId: FOE },
   heroHit(18),
-  ...retaliation(39),
+  ...retaliation(37),
   { type: 'TurnEnded', creatureId: HERO },
   { type: 'TurnStarted', creatureId: FOE },
   { type: 'Waited', creatureId: FOE },
@@ -102,7 +103,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnStarted', creatureId: HERO },
   { type: 'AttackDeclared', attackerId: HERO, targetId: FOE },
   heroHit(6),
-  ...retaliation(38),
+  ...retaliation(34),
   { type: 'TurnEnded', creatureId: HERO },
   { type: 'TurnStarted', creatureId: FOE },
   { type: 'Waited', creatureId: FOE },

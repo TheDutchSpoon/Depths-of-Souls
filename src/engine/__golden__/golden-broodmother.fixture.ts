@@ -26,8 +26,8 @@
 //   BROODMOTHER's turn -> attacks STRIKER (lowest/only-HP player creature).
 //     on-attack fires Swarm Call: living-allies-of-species(BROODMOTHER) = 3 (herself + ADD1 +
 //     ADD2, all alive) -> spellPower = 0.25*3 = 0.75. offStat = getEffectiveStat(atk 24)*0.75 =
-//     18. STRIKER def 0 -> core 18, chip 0.01*18=0.18, raw 18.18, affinity x1 -> final floor(18.18)
-//     = 18. STRIKER 100-18 = 82.
+//     18. Swarm Call is a trait response, so it is INDIRECT damage (4.1-H2a): 18 x affinity 1 x dealt 1 x
+//     taken 1 - 0.2 x STRIKER def 0 = 18, no chip -> raw 18, final floor(18) = 18. STRIKER 100-18 = 82.
 //     Main attack: offStat = 24*1.0 = 24. core 24, chip 0.24, raw 24.24, final 24. STRIKER
 //     82-24 = 58.
 //   STRIKER's turn -> attacks lowest-HP enemy = ADD1 (health 10, lowest of {100,10,20}). offStat
@@ -65,8 +65,8 @@
 //   ROUND 2
 //   BROODMOTHER's turn -> attacks STRIKER again (still her only living enemy).
 //     on-attack fires Swarm Call again: living-allies-of-species(BROODMOTHER) = 2 now (herself +
-//     ADD2 -- ADD1 died in round 1) -> spellPower = 0.25*2 = 0.5. offStat = 24*0.5 = 12. core 12,
-//     chip 0.12, raw 12.12, final floor(12.12)=12. STRIKER 58-12 = 46.
+//     ADD2 -- ADD1 died in round 1) -> spellPower = 0.25*2 = 0.5. offStat = 24*0.5 = 12. Indirect:
+//     12 x 1 x 1 x 1 - 0.2 x 0 = 12, no chip -> raw 12, final 12. STRIKER 58-12 = 46.
 //     Main attack: same as round 1 (no stat changes) -> offStat 24, core 24, chip 0.24, raw
 //     24.24, final 24. STRIKER 46-24 = 22 (survives -- the golden stops here, mid-round-2, per
 //     "keep it to the first couple of rounds").
@@ -153,7 +153,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: BROODMOTHER,
     targetId: STRIKER,
-    rawDamage: 18.18,
+    rawDamage: 18,
     finalDamage: 18,
     affinityMultiplier: 1,
     wasChipOnly: false,
@@ -212,7 +212,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: BROODMOTHER,
     targetId: STRIKER,
-    rawDamage: 12.12,
+    rawDamage: 12,
     finalDamage: 12,
     affinityMultiplier: 1,
     wasChipOnly: false,

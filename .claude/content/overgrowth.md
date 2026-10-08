@@ -57,13 +57,13 @@ removed. Lasts up to **3 turns** if the sleeper is never hit.
 |---|---|---|---|
 | Weaver | Wit | Enabler | At the end of its own turn, this creature applies Web to a random living enemy. |
 | Ambusher | Wit | Payoff | This creature deals **40% more damage** to enemies that are Webbed. |
-| Broodwarden | Instinct | Amplifier | When this creature attacks, it also lands a separate bonus hit equal to **25% of its Attack for every enemy currently Webbed** (so 50% with two Webbed enemies, and so on) — it never applies Web itself, only benefits from what its species-mates have already done. |
+| Broodwarden | Instinct | Amplifier | When this creature attacks, it also lands a separate bonus hit equal to **25% of its Attack for every enemy currently Webbed** (so 50% with two Webbed enemies, and so on) — it never applies Web itself, only benefits from what its species-mates have already done. This is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
 
 ## Swarmhive (Violence) — Strength in Numbers
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Drone | Violence | Enabler | When this creature dies, it attacks a random living enemy for damage equal to **30% of its Attack**. |
+| Drone | Violence | Enabler | When this creature dies, it attacks a random living enemy for damage equal to **30% of its Attack**. This is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
 | Striker | Violence | Payoff | At the start of the fight, this creature's Attack permanently increases by **20% for every living Swarmhive ally, itself included**. |
 | Queen | Endurance | Amplifier | Every time this creature's own turn starts, it permanently raises the Attack of **every living Swarmhive ally (itself included) by 10%** — this repeats every round she acts, compounding over time. |
 
@@ -92,7 +92,7 @@ the fight goes on, and it buffs the whole team, not just herself.
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Lure | Endurance | Enabler | Whenever this creature Provokes, it also Defends. |
-| Jaws | Violence | Payoff | Whenever this creature takes damage, it attacks back for **60% of its Attack**. |
+| Jaws | Violence | Payoff | Whenever this creature takes damage, it attacks back for **60% of its Attack**. This is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
 | Ironjaw | Violence | Amplifier | Every time this creature's own turn starts, its Defence permanently increases by **20%** — a self-ramping wall, distinct from both Lure's provoke-and-Defend and Jaws' retaliation. |
 
 ## Lullpollen (Wit/Instinct) — Sleep & Punish
@@ -101,7 +101,7 @@ the fight goes on, and it buffs the whole team, not just herself.
 |---|---|---|---|
 | Sleeper | Wit | Enabler | When this creature attacks, it has a **40% chance** to put its target to Sleep. |
 | Reaper | Instinct | Payoff | This creature deals **50% more damage** to Sleeping enemies. |
-| Dozer | Instinct | Amplifier | When this creature attacks, it also lands a separate bonus hit equal to **25% of its Attack for every enemy currently Sleeping** (so 50% with two Sleeping enemies, and so on) — it never puts anything to Sleep itself, only benefits from what its species-mates have already done. |
+| Dozer | Instinct | Amplifier | When this creature attacks, it also lands a separate bonus hit equal to **25% of its Attack for every enemy currently Sleeping** (so 50% with two Sleeping enemies, and so on) — it never puts anything to Sleep itself, only benefits from what its species-mates have already done. This is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
 
 ## How each creature plays (roles)
 
@@ -134,7 +134,8 @@ Wit affinity. A unique, non-collectable set-piece fight — not a spawn-pool cre
 - Whenever the Broodmother attacks, she also deals bonus damage equal to **25% of her Attack for
   every living spiderling still fighting alongside her, herself included**. Kill her adds and this
   bonus visibly shrinks — it's read fresh on every attack, not locked in at fight-start (unlike
-  Swarmhive's Striker above).
+  Swarmhive's Striker above). This bonus is **indirect damage**: only a fifth of the target's
+  Defence applies to it, and it gets no chip floor and no Additional.
 - At the end of every round, she has a **40% chance** to apply Web to the entire enemy party at
   once.
 
@@ -229,11 +230,6 @@ the status vocabulary.
 
 **Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129):
 
-- **Indirect damage (4.1-H2a).** The damage these traits deal becomes **indirect**: it meets only
-  a fifth of the target's Defence, with no chip and no Additional. That is the Spider
-  Broodwarden's and Lullpollen Dozer's bonus hits, the Swarmhive Drone's death hit, the Snapjaw
-  Jaws' Snapback and the Broodmother's Swarm Call hit. Spells and attacks stay **direct** and gain
-  the fading Additional at low levels.
 - **Snapback (4.1-H2c):** the Jaws strike back for **30% of their Attack** (was 60%). As indirect
   damage the 60% beat the Shieldbarer pair in every floor-1 fight.
 - **Arcane Bolt (4.1-H2c):** deals **100% of the caster's Intelligence** (was 50%).

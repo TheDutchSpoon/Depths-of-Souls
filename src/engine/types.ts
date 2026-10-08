@@ -138,6 +138,10 @@ export interface Creature {
    * comment. Rewards read this (soul bar keyed by origin.templateId; XP per kill = the victim's
    * origin.level) instead of parsing the per-fight CreatureId's `-side-slot` suffix. */
   readonly origin: CreatureOrigin
+  /** Phase 4.1-H2a (ASSUMPTION 111): the creature's level, engine-visible -- the Additional reads
+   * the ATTACKER's. Set by `materializeCreature` from the same value as `origin.level` (which stays
+   * engine-inert); the baked-in stats already reflect it. */
+  readonly level: number
 }
 
 // ---- Actions ----
@@ -308,14 +312,17 @@ export interface DamageDealtEvent {
   readonly type: 'DamageDealt'
   readonly sourceId: CreatureId
   readonly targetId: CreatureId
-  /** Full-precision value before the final MAX(1, floor(...)) clamp. */
+  /** Full-precision value before the final MAX(1, floor(...)) clamp (excludes the Additional). */
   readonly rawDamage: number
-  /** The actual integer HP removed. */
+  /** The actual integer HP removed (includes the Additional on a direct hit). */
   readonly finalDamage: number
   readonly affinityMultiplier: number
   readonly wasChipOnly: boolean
   readonly remainingHp: number
-  /** What produced this damage. 'dot' bypasses Defence and carries no TriggerFired (Slice C). */
+  /** What produced this damage: a display tag, NOT the damage channel (a trait response tagged
+   * 'attack' is still indirect, 4.1-H2a). 'dot' is the default tag of a flat-mode response; it
+   * no longer implies a Defence bypass (only a self-inflicted cost and a status tick skip
+   * Defence). */
   readonly damageSource: 'attack' | 'cast' | 'dot'
   /** The causing status, when a status produced this damage (DoT ticks). Absent for attack/cast
    * and for a trait's own dot-tagged flat hit. Lets the log render "[creature] took X poison

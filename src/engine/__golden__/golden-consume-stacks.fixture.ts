@@ -10,7 +10,8 @@
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 //
 //   Burst: scalingStat 'intelligence' (10) x spellPower(1.0 * 3 consumed stacks = 3.0) = 30;
-//     vs def 0: core 30, chip 0.3 -> raw 30.3 -> final 30. TARGET health 35 - 30 -> 5, alive.
+//     a trait response, so INDIRECT (4.1-H2a): 30 x 1 x 1 x 1 - 0.2 x def 0 = 30, no chip -> raw
+//     30 -> final 30. TARGET health 35 - 30 -> 5, alive.
 //   Base attack (off Attack 5, def 0): core 5, chip 0.05 -> raw 5.05 -> final 5.
 //     TARGET health 5 - 5 -> 0 -> dies. Glow is already consumed by this point, so its own
 //     dealt-mod (+10%/stack) never contributes to either hit -- confirmed by both raw values
@@ -128,7 +129,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: DETONATOR,
     targetId: TARGET,
-    rawDamage: 30.3,
+    rawDamage: 30,
     finalDamage: 30,
     affinityMultiplier: 1,
     wasChipOnly: false,

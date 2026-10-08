@@ -181,13 +181,16 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // response/on-attack hook against real content, firing per attack instance across the floor.
     const unicornTriggers = triggersFor(outcome.events, UNICORN_TRAIT.id)
     expect(unicornTriggers).toBeGreaterThan(0)
-    // Not every attack instance finds a dead ally to revive (the response's `random-dead-ally`
-    // pool can be empty -- a targeting fizzle, per CONVENTIONS, not a suppressed trigger: the
-    // TriggerFired above still fires either way). At least some of these DID resolve into a real
-    // Revived consequence, proving the response executes end to end, not just that the hook fires.
+    // 4.1-H2a re-pin (the Additional, ASSUMPTION 110): this used to assert `revivedCount > 0`.
+    // Before the Additional, the Treant Grovekeep fight was a ~50-turn grind of 1-damage chip hits
+    // in which the Brute kept dying and the Unicorn kept reviving it; with the Additional the same
+    // seed's fights end in 5, 6 and 5 hits and nobody is ever dead when the Unicorn attacks (the
+    // fight-2 Unicorn dies, and a dead Unicorn revives no one). So the trigger still fires on
+    // every Unicorn attack but its `random-dead-ally` pool is empty: a targeting fizzle (CONVENTIONS),
+    // not a suppressed trigger, and no Revived event. The revive response itself stays pinned
+    // end to end by golden-revive, golden-unicorn-starter and the golden-d3-revive-cap-* goldens.
     const revivedCount = outcome.events.filter((e) => e.type === 'Revived').length
-    expect(revivedCount).toBeGreaterThan(0)
-    expect(revivedCount).toBeLessThanOrEqual(unicornTriggers)
+    expect(revivedCount).toBe(0)
 
     // ---- StatModifierApplied: the fight-start amplifier landed the exact documented rate ----
     // (Treant Grovekeep's +15% Health; the Swarmhive Striker's Attack amplifier is not in this
@@ -210,13 +213,15 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // ---- Slice B's action instance-list model, re-proven against real content (per this
     // test's own header comment) ----
     const perTurn = attacksPerTurn(outcome.events, 'brute-starter-player-0')
-    expect(perTurn).toHaveLength(5) // 5 turns total across floor 1's 3 fights
-    expect(perTurn.filter((n) => n === 2)).toHaveLength(4) // the double-strike, ordinarily
-    // The lone exception is the LAST turn: instance 1 alone kills that fight's only enemy --
+    // 4.1-H2a re-pin (the Additional shortens every fight): the Brute now takes 4 turns across
+    // floor 1's 3 fights (was 5), [2, 1, 2, 1] (was [2, 2, 2, 2, 1]): the double-strike still
+    // fires ordinarily, and a turn is a single attack whenever instance 1 alone kills the lone
+    // enemy (fight 1's second turn, and the whole of fight 3's one turn).
+    expect(perTurn).toEqual([2, 1, 2, 1])
+    // A turn is a single attack when instance 1 alone kills that fight's only enemy --
     // instance 2 then has no living target left (`resolveInstanceTarget` returns null, the instance
     // loop breaks per Slice B's own "falls back to default target... unless it's already died" rule
     // with nothing left to fall back TO), so only one AttackDeclared fires that turn.
-    expect(perTurn.filter((n) => n !== 2)).toEqual([1])
     expect(perTurn[perTurn.length - 1]).toBe(1)
   })
 

@@ -9,9 +9,12 @@
 // is no second one, and the round-2 killing hit produces no reckless at all.
 //
 // Hand-derived (independent `node -e` calculator). Both bodies → neutral ×1.0. A (speed 10) first.
-//   A→X (off 20, def 5):            core 15, chip 0.20 → raw 15.20 → 15.
-//   X reckless→X (off 20×0.3=6, def 5): core 1, chip 0.06 → raw 1.06 → 1.
-// X 20 → 5 (−15) → 4 (−1 self) in round 1; killed by A's round-2 hit (4 − 15).
+//   A→X (off 20, def 5):            core 15, chip 0.20 → raw 15.20 → 15. (A's level is the fixture
+//     default 11, so the direct hit's Additional is 0.)
+//   X reckless→X: X's own response damaging ITSELF is a COST (4.1-H2a): the exact magnitude
+//     20×0.3 = 6, floored once, no Defence/pools/chip → 6. (Before 4.1-H2a this was a formula hit
+//     of 1; the cost is six times that, so X is 30 HP, not 20, to survive round 1.)
+// X 30 → 15 (−15) → 9 (−6 self) in round 1; killed by A's round-2 hit (9 − 15 → 0).
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -39,7 +42,7 @@ export const playerParty = makeParty('player', [
 export const enemyParty = makeParty('enemy', [
   {
     id: 'reckless-one',
-    health: 20,
+    health: 30,
     attack: 20,
     defence: 5,
     speed: 5,
@@ -71,18 +74,18 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: A },
   { type: 'AttackDeclared', attackerId: A, targetId: X },
-  aHit(5),
+  aHit(15),
   // Reckless fires ONCE; its self-hit's own on-damage-taken re-entry is blocked by the guard.
   { type: 'TriggerFired', sourceId: X, hook: 'on-damage-taken', effectId: 'reckless' },
   {
     type: 'DamageDealt',
     sourceId: X,
     targetId: X,
-    rawDamage: 1.06,
-    finalDamage: 1,
+    rawDamage: 6,
+    finalDamage: 6,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 4,
+    remainingHp: 9,
     damageSource: 'attack',
   },
   { type: 'TurnEnded', creatureId: A },

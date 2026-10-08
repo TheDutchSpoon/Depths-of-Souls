@@ -44,7 +44,7 @@ attack or cast something harmful, there's a **50% chance** it strikes its own si
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Seeder | Wit | Enabler | Every attack infects its target with Spore. |
-| Reaper | Wit | Payoff | Every attack also lands a bonus hit — **20% of this creature's Intelligence, for each enemy currently infected with Spore** (e.g. 3 Spored enemies = a bonus hit worth 60% Intelligence). With no infected enemies, this creature lands no bonus hit at all — just its ordinary attack. |
+| Reaper | Wit | Payoff | Every attack also lands a bonus hit — **20% of this creature's Intelligence, for each enemy currently infected with Spore** (e.g. 3 Spored enemies = a bonus hit worth 60% Intelligence). With no infected enemies, this creature lands no bonus hit at all — just its ordinary attack. The bonus hit is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
 | Bloomer | Wit | Amplifier | At the start of the fight, infects the entire enemy side with Spore. |
 
 ## Rotfeeders (Violence/Vitality) — Carrion Snowball
@@ -184,5 +184,4 @@ player's lowest-HP creature, healing and buffing the player.
 - **Sporch Igniter** brands its target with **one** Burn (no "2-stack"); its potency comes from the
   numbers H2c sets. **Sporch Cinderlord** applies Burn to every remaining enemy on each kill (no
   stack count; an enemy already Burning keeps the stronger Burn and has its timer refreshed).
-- **Indirect damage (4.1-H2a):** the Sporecloud Reaper's bonus hit is indirect damage.
 - **Health (4.1-H2c):** every creature's Health moves to the 20–45 range, as in every biome.

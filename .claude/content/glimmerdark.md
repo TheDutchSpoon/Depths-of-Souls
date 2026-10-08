@@ -90,7 +90,7 @@ Three distinct verbs toward the same theme, not one shared mechanic repeated at 
 |---|---|---|---|
 | Warden | Endurance | Enabler | Every time this creature's own turn starts, it permanently raises the whole team's Defence by **10%** — this repeats every round it acts, compounding over time. |
 | Brawler | Endurance | Payoff | This creature's Attack action reads its own **Defence** instead of Attack entirely — its armor *is* its weapon. |
-| Bulwark | Endurance | Amplifier | Whenever this creature takes damage, it strikes back for **50% of its own Defence** — the defensive mirror of Brawler's offensive trick. |
+| Bulwark | Endurance | Amplifier | Whenever this creature takes damage, it strikes back for **50% of its own Defence** — the defensive mirror of Brawler's offensive trick. The strike-back is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
 
 ## How each creature plays (roles)
 
@@ -203,5 +203,4 @@ PR where it differs):
 - **Single-instance statuses:** Blinding Flare's Vulnerability is ×1.5 once (re-casting refreshes
   it). Afterglow's Regen heals **10% of the caster's Health** per tick (placeholder, tuned in
   4.1-H2c) instead of a share of the target's max HP.
-- **Indirect damage (4.1-H2a):** the Shellback Bulwark's strike-back is indirect damage.
 - **Health (4.1-H2c):** every other creature's Health moves to the 20–45 range, as in every biome.

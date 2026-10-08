@@ -8,10 +8,11 @@
 // currentHp < 15 (integer cross-multiply: currentHp*100 < 50*30 = 1500).
 //
 //   A→X (off 20, def 8):                    core 12, chip 0.20 → raw 12.20 → 12.
-//   X retaliate→A (off 16×0.3=4.8, def 6):  core 0 (chip-only), chip 0.048 → raw 0.048 → 1.
+//   X retaliate→A (magnitude 16×0.3=4.8, def 6): a trait response is INDIRECT (4.1-H2a):
+//     4.8×1×1×1 − 0.2×6 = 4.8 − 1.2 = 3.6 → floor 3 (float: 3.5999999999999996), no chip, not chip-only.
 //
 //   R1: X 30 → 18. 18 ≥ 15 → condition FALSE → no retaliation.
-//   R2: X 18 →  6.  6 < 15 → condition TRUE  → retaliation (1 dmg to A).
+//   R2: X 18 →  6.  6 < 15 → condition TRUE  → retaliation (3 dmg to A: 40 → 37).
 //   R3: X  6 →  0. killed → on-damage-taken pre-empted by death → no retaliation.
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -88,11 +89,11 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: X,
     targetId: A,
-    rawDamage: 0.048,
-    finalDamage: 1,
+    rawDamage: 3.5999999999999996, // 4.8 − 0.2×6 in floating point
+    finalDamage: 3,
     affinityMultiplier: 1,
-    wasChipOnly: true,
-    remainingHp: 39,
+    wasChipOnly: false,
+    remainingHp: 37,
     damageSource: 'attack',
   },
   { type: 'TurnEnded', creatureId: A },

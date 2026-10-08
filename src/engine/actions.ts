@@ -521,6 +521,7 @@ function executeAttack(
       'attack',
       powerPercent / 100,
       'attack',
+      'direct',
       working,
       ctx,
     )
@@ -538,6 +539,7 @@ function executeAttack(
         'attack',
         powerPercent / 100,
         'attack',
+        'direct',
         working,
         ctx,
       )
@@ -576,7 +578,12 @@ function executeSpellEffects(
     working = executeResponse(
       effect,
       spell.id,
-      { self: actor.id, castTarget: targetId, castPowerFraction: powerPercent / 100 },
+      {
+        channel: 'direct',
+        self: actor.id,
+        castTarget: targetId,
+        castPowerFraction: powerPercent / 100,
+      },
       working,
       ctx,
     ).state
