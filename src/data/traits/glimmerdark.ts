@@ -11,70 +11,89 @@ import type { Trait } from '../../engine/effect-types'
 // by rarity, per that file's own "members ... " / "self-contained" phrasing (no separate
 // enabler exists to chain off).
 
-// ---- Glowflies (Wit/Instinct lean) -- closed mechanic: Charge & release (Glow + consume-stacks) ----
+// ---- Flickerlings (Vitality/Wit/Violence) -- closed mechanic: the flame that feeds on itself
+// (Phase 4.1-H2b1, ASSUMPTION 116). They replaced the Glowflies once Glow was deleted. Names are
+// placeholders; every number below is parked balance (H2c). ----
 
-/** Glowflies' Charger (enabler): every turn, charges the team's hardest hitter with a stack of
- * Glow (a `damage-modifier` status, +8% dealt per stack -- see data/statuses.ts's GLOW) --
- * `highest-attack-ally` is a deterministic, RNG-free selector (no lookahead-purity concern),
- * and "ally" includes the Charger itself, so a lone Charger just charges itself. */
-export const GLOWFLY_CHARGER_TRAIT: Trait = {
-  id: 'glowfly-charger-charge-up',
-  name: 'Charge Up',
+/** Flickerlings' Wick (enabler, Vitality): at the start of its turn it BURNS 10% of its own max
+ * Health to heal the lowest-HP injured ally other than itself for 20% of its own max Health --
+ * but only while some other ally is below max Health (ASSUMPTION 140). Both effects carry the
+ * trigger-only gate `other-ally-injured`, so with every other ally at full Health (or none alive)
+ * it neither burns nor heals, and no stray `TriggerFired` is logged. Order matters: burn, then
+ * heal (the burn can't change whether another ally is hurt; a lethal burn skips the heal because
+ * `fireHook` re-checks `alive` per effect, and Last Stand can still save it).
+ *
+ * The burn is a COST (ASSUMPTION 116): a self-targeted flat `StatPercent` with no `statusId`, so
+ * it takes the cost path -- exact, ignoring Defence and modifiers -- and carries the default
+ * `'dot'` label (nothing reads the label for the cost test, ASSUMPTION 131). The heal's target is
+ * the engine's `lowest-hp-injured-other-ally`, reading the same pool as the gate. Its amount reads
+ * the Wick's OWN effective Health (`resolveFlatTotal` reads the firer). */
+export const FLICKERLING_WICK_TRAIT: Trait = {
+  id: 'flickerling-wick-burn-bright',
+  name: 'Burn Bright',
   effects: [
     {
       category: 'triggered',
       hook: 'on-turn-start',
+      condition: { kind: 'other-ally-injured' },
       response: {
-        kind: 'apply-status',
-        target: { kind: 'selector', selector: { kind: 'highest-attack-ally' } },
-        status: { statusId: 'glow' },
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { ofStat: 'health', percent: 10 },
+      },
+    },
+    {
+      category: 'triggered',
+      hook: 'on-turn-start',
+      condition: { kind: 'other-ally-injured' },
+      response: {
+        kind: 'heal',
+        target: { kind: 'lowest-hp-injured-other-ally' },
+        amountPerStack: { ofStat: 'health', percent: 20 },
       },
     },
   ],
 }
 
-/** Glowflies' Detonator (payoff): the canonical consume-stacks consumer (effect-types.ts's own
- * doc-comment example) -- reads and clears its OWN Glow stacks on its very next attack, bursting
- * Intelligence-scaled damage scaled by the consumed count. A no-op (0 stacks) until a Charger
- * (or the shared Wit spell, Beacon Charge) has actually charged it. */
-export const GLOWFLY_DETONATOR_TRAIT: Trait = {
-  id: 'glowfly-detonator-overload',
-  name: 'Overload',
+/** Flickerlings' Flare (payoff, Wit): the first trait to watch DAMAGE rather than actions. Whenever
+ * an ally damages ITSELF -- a cost, the Wick's burn being the cost it exists for -- every living
+ * ally permanently gains 15% Speed. `relationship: 'ally'` includes the Flare itself;
+ * `selfInflicted` is the cost classification (never `source === target`), so an ordinary hit or a
+ * DoT tick on an ally does not trigger it. Two Flares both fire (no `stacks: false`), so their
+ * bonuses multiply (flagged for H2c's tuning pass). */
+export const FLICKERLING_FLARE_TRAIT: Trait = {
+  id: 'flickerling-flare-kindle',
+  name: 'Kindle',
   effects: [
     {
       category: 'triggered',
-      hook: 'on-attack',
+      hook: 'on-damage-observed',
+      observationFilter: { relationship: 'ally', selfInflicted: true },
       response: {
-        kind: 'consume-stacks',
-        statusId: 'glow',
-        effect: {
-          kind: 'deal-damage',
-          target: { kind: 'triggering-source' },
-          scalingStat: 'intelligence',
-          magnitudeSource: { kind: 'consumed-stacks' },
-        },
-      },
-    },
-  ],
-}
-
-/** Glowflies' Radiant (amplifier, Vitality coverage sprinkle -- species-locked.md: "Vitality
- * absent at species level ... sprinkling Vitality creatures into these species at stamping"): a
- * genuinely distinct mechanic from BOTH Charger and Detonator -- it never single-target-charges
- * (Charger's job alone) and never consumes-to-burst (Detonator's job alone). Instead, once at
- * fight-start, it charges the WHOLE team with 2 Glow stacks at once -- breadth over depth, a
- * one-time team-wide jolt vs. Charger's repeating single-target trickle. */
-export const GLOWFLY_RADIANT_TRAIT: Trait = {
-  id: 'glowfly-radiant-swarm-glow',
-  name: 'Swarm Glow',
-  effects: [
-    {
-      category: 'triggered',
-      hook: 'on-fight-start',
-      response: {
-        kind: 'apply-status',
+        kind: 'apply-stat-modifier',
         target: { kind: 'all-allies' },
-        status: { statusId: 'glow', stacks: 2 },
+        stat: 'speed',
+        factor: 1.15,
+      },
+    },
+  ],
+}
+
+/** Flickerlings' Last Gleam (amplifier, Violence): whenever an ally dies, every living ally
+ * permanently gains 20% Attack. `on-ally-death` already excludes the dying creature, so a Last
+ * Gleam never reacts to its own death; two Gleams both fire and multiply. */
+export const FLICKERLING_LAST_GLEAM_TRAIT: Trait = {
+  id: 'flickerling-last-gleam-last-light',
+  name: 'Last Light',
+  effects: [
+    {
+      category: 'triggered',
+      hook: 'on-ally-death',
+      response: {
+        kind: 'apply-stat-modifier',
+        target: { kind: 'all-allies' },
+        stat: 'attack',
+        factor: 1.2,
       },
     },
   ],

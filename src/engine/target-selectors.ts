@@ -1,5 +1,5 @@
 import { pickExtremum } from './tie-break'
-import { livingAlliesOf, livingEnemiesOf } from './targeting'
+import { injuredOtherAlliesOf, livingAlliesOf, livingEnemiesOf } from './targeting'
 import { getEffectiveStat } from './effective-stats'
 import { nextRandom } from './rng'
 import type { CombatState, Creature } from './types'
@@ -142,6 +142,22 @@ export function resolveTargetSelector(
       throw new Error(`Unhandled target selector kind: ${String(exhaustive)}`)
     }
   }
+}
+
+/**
+ * Phase 4.1-H2b1 (ASSUMPTION 140): the `lowest-hp-injured-other-ally` response target -- the lowest
+ * current HP among the living allies other than `creature` that are below max Health
+ * (`injuredOtherAlliesOf`). RNG-free; ties by the standard order. Deliberately not a
+ * `TargetSelector` variant: the player-facing vocabulary is unchanged.
+ */
+export function resolveLowestHpInjuredOtherAlly(
+  creature: Creature,
+  state: CombatState,
+): CreatureId | null {
+  return (
+    pickExtremum(injuredOtherAlliesOf(creature, state), (c) => c.currentHp, 'asc')?.id ??
+    null
+  )
 }
 
 /**

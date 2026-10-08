@@ -3263,3 +3263,81 @@ the full suite run; the corpus digest does not count:
 Test count against `dc4a649` (169 files, 1162 tests: 1161 passed, 1 skipped) -> 171 files, 1166 tests
 (1165 passed, 1 skipped): two new `golden-h2a-*` test files (1 each) and `resolution.test.ts` 81 -> 83.
 No other file's count changed. Nothing needs deleting; scratch work stayed outside the repo.
+
+## 4.1-H2b1 -- Flickerlings and damage observation (deliberate)
+
+Mailbox: `.claude/phases/4.1/H2b1/` (kickoff, plan with Revisions 1 and 2, plan review rounds 1-2, `report-r1.md`).
+Built against ASSUMPTIONS 115, 116, 130-132, 137, 138, 140, 141 and 142.
+
+### What was built
+
+- **Damage observation** (ASSUMPTION 142): a sibling hook `on-damage-observed` (the 17th), fired from
+  `applyDamageAndEmit` after `on-damage-taken` and before the death chain, on every damage event, even a
+  lethal one (the killed creature does not observe its own death blow). The hook's source is the DAMAGED
+  creature. `ObservationFilter` gains `selfInflicted`; `relationship` is shared. `applyDamageAndEmit` takes a
+  REQUIRED `selfInflicted` argument: only `applyCostDamage` passes true, the tick and direct paths pass
+  false. Both observation hooks FAIL CLOSED (no option, no firing). `validateObservationFilters` runs over
+  traits, perks and the status registry.
+- **The Wick's gate and target** (ASSUMPTIONS 140, 141): a trigger-only `TriggerCondition`
+  (`other-ally-injured`, evaluated by `evaluateTriggerCondition`, not part of the scripting `Condition`) and a
+  `ResponseTarget` `lowest-hp-injured-other-ally`, both reading `injuredOtherAlliesOf` (targeting.ts).
+- **Content:** Flickerlings (Wick 38/10/16/14/16, Flare 25/14/22/10/22, Last Gleam 28/24/10/14/18) take the
+  Glowflies' pool slot 0 in rarity order; Glow, the three Glowfly traits and Overcharge are deleted; Beacon
+  Charge grants Grant Act First; Luminous Tide is Kindred Light in place; affinity spread 4/3/5/4/2.
+  `glimmerdark.md` folded.
+
+### Predicted changed set (written in the plan before the first run) against what changed
+
+Engine alone (old content): every golden and the digest byte-identical (held: the digest test passed, and a
+scratch copy reproduced the committed digest byte for byte). Retired: `golden-glowfly-detonator`. Changed
+tests: `status-containers` (a local `fixture-damage-boost`), `store-gems` (draw 0.6: biome 1 `arcane-bolt`, 2
+`beacon-charge`, 3+ `kindred-light`), `spells/index` (24-id pin), `roles`, `species/glimmerdark`. No test
+outside this list changed. Every other golden is byte-identical (no fixture file under `__golden__` other than
+the deleted pair was modified; all pass).
+
+### Corpus digest (regenerated once)
+
+262 of 527 fights changed; Part C unchanged; results win 226 -> 222, loss 266 -> 266, draw 35 -> 39.
+Cumulative ladder in a scratch copy (each rung adds one cause): species swap 151 (all inside the predicted
+"contains a Glowfly" set; the two predicted-but-unchanged fights, 61 and 271, never involve their Glowfly in
+an event), Overcharge deleted 175 more (all with a changed Wit loadout), Beacon Charge 110 (all hold it),
+Kindred Light 119 (all hold it). First-changed attribution 151 / 91 / 9 / 11; 171 fights change at more than
+one rung. The final digest equals the ladder's last rung for all 527 fights. 20 generated fights already have
+a Flare observing a Wick cost, so no appended corpus fight was needed.
+
+### Mutations (a scratch copy of the finished tree, one change at a time, full suite; the digest does not count)
+
+All 31 killed by a non-digest test: damage observation removed; `selfInflicted` filter dropped; read as
+`source === target`; tick path passes true; direct path passes true; relationship filter dropped;
+relationship read against the dealer; Resonants reached by a damage event; either hook not fail-closed;
+re-entry guard skipped for the damage hook; observation only on survivors; observation before
+`on-damage-taken`; zero cost reaches the resolver; lethal burn does not skip the heal; validator not run over
+statuses / traits / perks, or allowing `selfInflicted` on the wrong hook; pool counts the bearer (pool, and
+gate alone); target bearer exclusion removed; target hurt filter removed; pool counts dead allies; Wick gate
+removed; Wick heal ungated; Last Gleam on the wrong hook; Beacon Charge status changed; Kindred Light keeps a
+status; species swap not in place; `other-ally-injured` allowed in a script (killed by `tsc -b` on the
+`@ts-expect-error`). Details in `report-r1.md`.
+
+### Test count (main -> slice, file by file)
+
+Files 171 -> 182; tests 1166 (1165 passed, 1 skipped) -> 1266 (1265 passed, 1 skipped), +100:
+`damage-observation.test.ts` +64, `injured-allies.test.ts` +14, `traits/glimmerdark.test.ts`
++7, `spells/glimmerdark.test.ts` +4, `species/glimmerdark.test.ts` 13 -> 15, eight new `golden-h2b1-*` test
+files (+10: `wick-gates` and `last-gleam` hold two cases each), `golden-glowfly-detonator.test.ts` -1.
+
+### Deviations and spec notes
+
+- The loop-safety row uses an enemy-relationship ping-pong (A and B each "on an enemy's cost, pay 1"), not the
+  review's "ally" pair: with "ally" the mutated run branches twice per level and never reaches the depth cap.
+- The Flare's Speed bonus compounds per cost (x1.15 per burn, x1.32 with two Flares): for H2c's tuning.
+- `species-locked.md`'s Glow note is stale (A29; the design agent folds it).
+- `glimmerdark.md`'s "Status timing (4.1-F)" paragraph named Glow; those two mentions were removed.
+
+### Files changed
+
+Engine: `effect-types.ts`, `resolution.ts`, `targeting.ts`, `target-selectors.ts`, `conditions.ts`. Data:
+`traits/glimmerdark.ts`, `traits/index.ts`, `species/glimmerdark.ts`, `spells/glimmerdark.ts`,
+`spells/index.ts`, `statuses.ts`, `specializations.ts` (validator call), comments in the Rotcap Hollow trait
+and spell files. Tests, goldens, `__fixtures__/flickerlings.ts`, `corpus-digest.fixture.ts`. Docs:
+`content/glimmerdark.md`, the plan's Revision 2. Deleted by Duncan: `golden-glowfly-detonator.fixture.ts` and
+`.test.ts`.

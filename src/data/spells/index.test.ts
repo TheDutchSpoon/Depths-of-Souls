@@ -126,8 +126,10 @@ describe('dedupKey for status-only spells (Phase 4.1-F3)', () => {
 
 describe('Silence and Pacify (Phase 4.1-F3, G2)', () => {
   // Append-only: the registry order maps RNG rolls to spells (CONVENTIONS "determinism is
-  // sacred"), so the first 25 ids are pinned in order and the two new spells come last.
-  const FIRST_25 = [
+  // sacred"), so the first ids are pinned in order and the two new spells come last. Phase 4.1-H2b1
+  // deliberately deleted Overcharge (index 15) and renamed Luminous Tide to Kindred Light in place, so
+  // the pin is now 24 ids.
+  const FIRST_24 = [
     'ember-lance',
     'cinder-nova',
     'venom-bolt',
@@ -143,11 +145,10 @@ describe('Silence and Pacify (Phase 4.1-F3, G2)', () => {
     'stinger-swarm',
     'howling-instinct',
     'beacon-charge',
-    'overcharge',
     'disorient',
     'blinding-flare',
     'afterglow',
-    'luminous-tide',
+    'kindred-light',
     'spore-cyst',
     'rasping-chant',
     'puppet-string',
@@ -155,14 +156,14 @@ describe('Silence and Pacify (Phase 4.1-F3, G2)', () => {
     'withering-bolt',
   ]
 
-  it('ALL_SPELLS is append-only: the original 25 ids in order, then Silence, then Pacify, then the 4.1-G1 three', () => {
-    // Phase 4.1-G1: the pin is the first 27 ids, then exactly Pounce, Stifling Weight, Life Siphon.
-    expect(ALL_SPELLS.slice(0, 27).map((s) => s.id)).toEqual([
-      ...FIRST_25,
+  it('ALL_SPELLS is append-only: the original 24 ids in order, then Silence, then Pacify, then the 4.1-G1 three', () => {
+    // Phase 4.1-G1: the pin is the first 26 ids, then exactly Pounce, Stifling Weight, Life Siphon.
+    expect(ALL_SPELLS.slice(0, 26).map((s) => s.id)).toEqual([
+      ...FIRST_24,
       'silence',
       'pacify',
     ])
-    expect(ALL_SPELLS.slice(27).map((s) => s.id)).toEqual([
+    expect(ALL_SPELLS.slice(26).map((s) => s.id)).toEqual([
       'pounce',
       'stifling-weight',
       'life-siphon',

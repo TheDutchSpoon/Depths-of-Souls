@@ -24,8 +24,7 @@ import {
   BEACON_CHARGE,
   BLINDING_FLARE,
   DISORIENT,
-  LUMINOUS_TIDE,
-  OVERCHARGE,
+  KINDRED_LIGHT,
 } from './glimmerdark'
 import {
   CHARNEL_FEAST,
@@ -51,7 +50,10 @@ export * from './rotcap-hollow'
  * determinism-relevant: `weightedPick` (generation.ts) walks the affinity-filtered slice of this
  * list in order, subtracting weights, so registry order maps each RNG roll to a spell -- the
  * generation tests rely on exactly that. Keep this list APPEND-ONLY; reordering it would silently
- * change which spell a given seed rolls in real playthroughs (determinism is sacred).
+ * change which spell a given seed rolls in real playthroughs (determinism is sacred). The one
+ * deliberate exception so far: Phase 4.1-H2b1 deleted Overcharge (its Glow was deleted), which
+ * shifts the indices after it -- visible only in pools that held it (Wit, biome 2 and deeper) --
+ * and renamed Luminous Tide to Kindred Light in place.
  */
 export const ALL_SPELLS: readonly Spell[] = [
   EMBER_LANCE,
@@ -69,11 +71,10 @@ export const ALL_SPELLS: readonly Spell[] = [
   STINGER_SWARM,
   HOWLING_INSTINCT,
   BEACON_CHARGE,
-  OVERCHARGE,
   DISORIENT,
   BLINDING_FLARE,
   AFTERGLOW,
-  LUMINOUS_TIDE,
+  KINDRED_LIGHT,
   SPORE_CYST,
   RASPING_CHANT,
   PUPPET_STRING,

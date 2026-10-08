@@ -182,11 +182,15 @@ describe('every new player instance rolls and stores a distinct, affinity-matche
 })
 
 describe('the unlock biome (ASSUMPTION 82)', () => {
-  // A constant draw of 0.7 over the affinity-matched pool of a non-innate Wit creature picks:
-  //   biome 1  (4 spells: Vine Snare, Pollen Cloud, Arcane Bolt, Pacify):   2.8 -> Arcane Bolt
-  //   biome 2  (7: + Beacon Charge, Overcharge, Luminous Tide):             4.9 -> Overcharge
-  //   biome 3+ (8: + Spore Cyst):                                           5.6 -> Luminous Tide
-  // (registry order: Vine, Pollen, Arcane, Beacon, Overcharge, Luminous, Spore Cyst, Pacify).
+  // A constant draw of 0.6 over the affinity-matched pool of a non-innate Wit creature picks index
+  // floor(0.6 x poolSize) in registry order (rollLoadout = one weightedPick per slot at weight 1):
+  //   biome 1  (4 spells: Vine Snare, Pollen Cloud, Arcane Bolt, Pacify):            2.4 -> index 2, Arcane Bolt
+  //   biome 2  (6: + Beacon Charge, Kindred Light):                                  3.6 -> index 3, Beacon Charge
+  //   biome 3+ (7: + Spore Cyst):                                                    4.2 -> index 4, Kindred Light
+  // (registry order: Vine, Pollen, Arcane, Beacon, Kindred, Spore Cyst, Pacify). The three biomes
+  // give three different picks, so the test can tell the pools apart (4.1-H2b1: Overcharge is gone
+  // and Luminous Tide is now Kindred Light; the draw moved from 0.7 to 0.6 to keep biomes 2 and 3
+  // distinguishable).
   const wit = BIOMES.flatMap((b) => b.speciesPool)
     .flatMap((s) => s.creatures)
     .find((c) => c.affinity === 'wit')!
@@ -198,7 +202,7 @@ describe('the unlock biome (ASSUMPTION 82)', () => {
   }): string {
     const store = createGameStore({
       runSeed: options.runSeed ?? 5,
-      createRng: () => sequenceRng([0.7]),
+      createRng: () => sequenceRng([0.6]),
     })
     store.getState().setSpec('brute')
     store.setState({
@@ -221,20 +225,20 @@ describe('the unlock biome (ASSUMPTION 82)', () => {
   })
 
   test('the pool follows depth: biome 2 at floor 11, biome 3 at floor 21', () => {
-    expect(firstPick({ deepestFloor: 11 })).toBe('overcharge')
-    expect(firstPick({ deepestFloor: 21 })).toBe('luminous-tide')
+    expect(firstPick({ deepestFloor: 11 })).toBe('beacon-charge')
+    expect(firstPick({ deepestFloor: 21 })).toBe('kindred-light')
   })
 
   test('an atlas pin on the deepest floor does not change the pool', () => {
     // Pinned to biome 1, floor 11 would draw Arcane Bolt if the roll followed the pin.
-    expect(firstPick({ deepestFloor: 11, pinFloor: 11 })).toBe('overcharge')
+    expect(firstPick({ deepestFloor: 11, pinFloor: 11 })).toBe('beacon-charge')
   })
 
   test('past floor 100 the floor clamps to 100, never the seed-hashed biome', () => {
     // Find a seed whose floor-150 hash would pick biome 1 (a smaller pool) if it were read.
     let seed = 0
     while (biomeForFloor(150, BIOMES, new Map(), seed) !== BIOMES[0]!.id) seed++
-    expect(firstPick({ deepestFloor: 150, runSeed: seed })).toBe('luminous-tide')
+    expect(firstPick({ deepestFloor: 150, runSeed: seed })).toBe('kindred-light')
   })
 })
 

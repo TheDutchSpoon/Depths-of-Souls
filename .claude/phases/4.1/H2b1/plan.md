@@ -35,6 +35,39 @@ disagree, the body below is the revised text; this list says what moved.
 - **Spec question carried to H2c**: the Flare's Speed bonus compounds per cost (×1.15 per burn, ×1.32
   with two Flares); not changed here.
 
+## Revision 2: what changed
+
+Addresses `plan-review.md` Round 2 (fixes 1–6; decide-point 1 (a), approved). Written before any code
+or run. Where this section and the body disagree, **this section wins**.
+
+- **Fix 1 (Part C placement).** Appended corpus fights (the Flare/Wick fight, any spell-coverage
+  fight) never go into `SPELL_FIGHTS`: that would move every perk fight down one index and re-seed
+  both F3 fights. They go in a **new list `H2B1_FIGHTS` built after `buildLifeSiphonFight()`**, at
+  entries 527+, with **explicit seeds 2018+** (below the perk range). A spell-coverage fight may reuse
+  `buildSpellFight`'s shape but passes the explicit seed. `corpus-coverage.test.ts` names the new
+  indices. (Replaces "append at the end of Part C" in "Digest" and A24.)
+- **Fix 2 (Flare fight needs an attacker).** The Wick and the Flare on the player side via
+  `materializeCreature` (scripts pinned explicitly, ASSUMPTION 79) against an attacking enemy party
+  (the perk fights' `buildParty([brute(), brute()], 'enemy', 5)` shape). I check the event scan on
+  that fight instead of assuming it.
+- **Fix 3 (golden 1's cast).** Player side: payer **P** (`on-turn-start` flat self cost) and observer
+  **O1** (`ally`, `selfInflicted: true`). Enemy side: **O2** (`ally`, `selfInflicted: true`, must stay
+  silent on P's cost) and **O3** (`enemy`, `selfInflicted: true`, must fire). The "observes its own
+  cost" row is O1 paying a cost (second fixture in the file). Expected order for P's cost:
+  `DamageDealt` → O1 → O3, in `livingIds` order.
+- **Fix 4 (two mutation rows).** *Observation fired before `on-damage-taken`*: killed by the hook-order
+  row of `damage-observation.test.ts` (a damaged creature with an `on-damage-taken` response and an
+  observer; the response's `TriggerFired` precedes the observer's). *The pool counts dead allies*:
+  killed by `injured-allies.test.ts` "hurt other dead" and `golden-h2b1-wick-gates` case 2, written as:
+  the Wick hurt, the only living creature on its side, every ally dead (no Flare, or a dead one).
+  Case 2 also re-checks the bearer-counting mutation. (The "real Wick + Flare" cast applies to case 1
+  only.)
+- **Fix 5 (loop-safety sizing).** The fixture uses a 1 HP cost on a large Health pool so nobody dies
+  before the cascade cap; the derivation shows the mutated run reaches `CascadeTruncated`.
+- **Fix 6 (damage branch fails closed on a missing damaged creature).** In `fireHook`'s
+  `on-damage-observed` branch, "damaged creature not found" is **no match** (candidate skipped), written
+  so it cannot fall through (`if (!damaged) continue` before the relationship check).
+
 ## Approach in one paragraph
 
 Damage observation is a **sibling hook, `on-damage-observed`**, fired from the one place every

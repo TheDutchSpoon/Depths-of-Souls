@@ -37,9 +37,9 @@ const ROLES: Readonly<Record<string, string>> = {
   'lullpollen-dozer': 'striker',
   broodmother: 'striker',
   // Glimmerdark
-  'glowfly-charger': 'caster',
-  'glowfly-detonator': 'striker',
-  'glowfly-radiant': 'support',
+  'flickerling-wick': 'support',
+  'flickerling-flare': 'caster',
+  'flickerling-last-gleam': 'striker',
   'blindclaws-setter': 'opener',
   'blindclaws-striker': 'striker',
   'blindclaws-vanguard': 'striker',

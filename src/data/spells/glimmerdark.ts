@@ -12,18 +12,22 @@ import type { Spell } from '../../engine/types'
 // redundant. Deleted: Crystal Shard (=Thorn Lash), Fracture Strike (=Weakening Bite), Glowspark
 // Bolt (near-dup of Arcane Bolt), Stoneshell Bash (=Root Grasp), Bastion Chant (=Bramble Ward),
 // Echo Fang (=Stinger Swarm), Pack Howl (=Howling Instinct), Bioglow Mend (=Regrowth), Luminous
-// Vigor (=Wild Vigor). Only Beacon Charge was genuinely Glimmerdark's own (heal + Glow, no
+// Vigor (=Wild Vigor). Only Beacon Charge was genuinely Glimmerdark's own (a heal plus a status, no
 // Overgrowth equivalent) -- kept, retagged `unlockedAtBiome: 2`. Five new spells (Overcharge,
-// Disorient, Blinding Flare, Afterglow, Luminous Tide -- all ASSUMPTION-tagged below) join it,
+// Disorient, Blinding Flare, Afterglow, Luminous Tide -- all ASSUMPTION-tagged below) joined it,
 // for 6 Glimmerdark-own spells total, meeting the design owner's >=4-5-own-spells-per-biome bar
 // (GAME_DESIGN §4) as spice on top of the inherited biome-1 base, not a re-authored kit -- each
 // on a mechanic no biome-1 spell already uses.
+//
+// Phase 4.1-H2b1 (ASSUMPTION 116): Glow is deleted, so Overcharge (its only reason to exist) is
+// deleted, Beacon Charge grants Grant Act First instead, and Luminous Tide becomes Kindred Light
+// (a plain team heal) -- 5 Glimmerdark-own spells.
 
-/** Beacon Charge: a small heal that ALSO charges the
- * target with a stack of Glow (a `heal` effect, then an `apply-status` effect) -- ties the
- * Glowflies' resource into the shared spell pool, per species-locked.md's own "a spell may apply
- * any status, including another species' signature one" rule. Single-target + upside -> ~80-90%
- * band. */
+/** Beacon Charge: a small heal that ALSO grants the target Grant Act First (a `heal` effect, then an
+ * `apply-status` effect, at the status's own default duration) -- the support spell that lets an
+ * ally open the next round, per species-locked.md's own "a spell may apply any status, including
+ * another species' signature one" rule (Blindclaws' Setter grants the same status). Single-target
+ * + upside -> ~80-90% band. */
 export const BEACON_CHARGE: Spell = {
   id: 'beacon-charge',
   name: 'Beacon Charge',
@@ -41,38 +45,7 @@ export const BEACON_CHARGE: Spell = {
     {
       kind: 'apply-status',
       target: { kind: 'cast-target' },
-      status: { statusId: 'glow' },
-    },
-  ],
-}
-
-/**
- * ASSUMPTION (interstitial slice, NEW CONTENT -- surfaced for sign-off, not guessed): Overcharge,
- * suggested by the brief as "apply 2 Glow to an ally." A `heal` effect plus an `apply-status`
- * effect -- same shape as Beacon Charge, but the trade is inverted: a SMALLER heal (spellPower 0.15, half Beacon Charge's 0.3) buys TWO Glow stacks at
- * once (`stacks: 2`, mirroring Radiant's own `{ statusId: 'glow', stacks: 2 }` -- see
- * traits/glimmerdark.ts) instead of Beacon Charge's one. Distinguishable from Beacon Charge under
- * the dedup guard (data/spells/index.test.ts) by spellPower (0.15 vs 0.3). Exact numbers (0.15
- * heal factor, 2 stacks) are this slice's own pick, not a locked design number -- flag for
- * design-owner sign-off same as any other new balance figure. */
-export const OVERCHARGE: Spell = {
-  id: 'overcharge',
-  name: 'Overcharge',
-  targetShape: 'single',
-  affinity: 'wit',
-  targetSide: 'ally',
-  unlockedAtBiome: 2,
-  effects: [
-    {
-      kind: 'heal',
-      target: { kind: 'cast-target' },
-      scalingStat: 'health',
-      spellPower: 0.15,
-    },
-    {
-      kind: 'apply-status',
-      target: { kind: 'cast-target' },
-      status: { statusId: 'glow', stacks: 2 },
+      status: { statusId: 'grant-act-first' },
     },
   ],
 }
@@ -171,12 +144,13 @@ export const AFTERGLOW: Spell = {
 
 /**
  * ASSUMPTION (interstitial slice expansion, NEW CONTENT -- design-agent proposal, numbers deferred):
- * Luminous Tide -- small AOE ally heal + team-wide Glow. First AOE support spell and first team
- * Glow application -- a new SHAPE, not another single-target heal+status. Unique under the dedup
+ * Kindred Light (formerly Luminous Tide, renamed in place in 4.1-H2b1 when Glow was deleted) -- a
+ * small AOE ally heal: every ally for 20% of the caster's effective Health, no status. The first
+ * AOE support spell -- a new SHAPE, not another single-target heal+status. Unique under the dedup
  * guard: no other wit|aoe|heal exists (Pollen Cloud is wit|aoe|damage). */
-export const LUMINOUS_TIDE: Spell = {
-  id: 'luminous-tide',
-  name: 'Luminous Tide',
+export const KINDRED_LIGHT: Spell = {
+  id: 'kindred-light',
+  name: 'Kindred Light',
   targetShape: 'aoe',
   affinity: 'wit',
   targetSide: 'ally',
@@ -187,11 +161,6 @@ export const LUMINOUS_TIDE: Spell = {
       target: { kind: 'cast-target' },
       scalingStat: 'health',
       spellPower: 0.2,
-    },
-    {
-      kind: 'apply-status',
-      target: { kind: 'cast-target' },
-      status: { statusId: 'glow' },
     },
   ],
 }

@@ -303,14 +303,14 @@ describe("the skip: an 'all' lock", () => {
   it("an earlier grant in the turn-start drain can remove the lock: the first read still skips the turn and its gate still refuses the actor's grant", () => {
     // Setup (no RNG anywhere). X (player slot 0, speed 20) carries x-trait, effects in order:
     //   1 on-fight-start apply-status(self, stun, 5)
-    //   2 on-turn-start  apply-status(all-allies, glow)
+    //   2 on-turn-start  apply-status(all-allies, fixture-damage-boost)
     //   3 on-turn-start  perform-action(self, attack)
     // Y (player slot 1, speed 5) carries y-trait: on-status-applied (stacks: false) ->
     // perform-action(self, cast slot 0); slot 0 = an ally-side AOE whose only effect is
     // remove-status(cast-target, stun). FOE (enemy, speed 1, HP 500) only waits.
     //
     // Fight start: effect 1 -> TriggerFired + StatusApplied(x, stun, stacks 1, duration 5).
-    // X's turn: TurnStarted. Turn-start hooks, in effect order: effect 2 -> TriggerFired, glow lands
+    // X's turn: TurnStarted. Turn-start hooks, in effect order: effect 2 -> TriggerFired, the boost lands
     // on x then y (default duration 4); Y's on-status-applied fires for y only -> TriggerFired(y),
     // queueing Y's cast FIRST. Effect 3 -> TriggerFired(x), queueing X's attack SECOND.
     // First read (right after the hook pass): X holds stun -> the turn is skipped, 'stun'.
@@ -324,6 +324,15 @@ describe("the skip: an 'all' lock", () => {
     // decide (no Waited) and TurnSkipped names the first read's lock: effectId 'stun'.
     const FIXTURE_X = createCreatureId('x')
     const FIXTURE_Y = createCreatureId('y')
+    // 4.1-H2b1: stands in for the real Glow this test used to borrow (deleted): the same shape, a
+    // buff with a dealt damage-modifier of 0.08 per stack, cap 5, default duration 4.
+    const FIXTURE_DAMAGE_BOOST: StatusDef = {
+      statusId: 'fixture-damage-boost',
+      effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: 0.08 }],
+      cap: 5,
+      polarity: 'buff',
+      defaultDuration: 4,
+    }
     const REMOVE_STUN_AOE: Spell = {
       id: 'remove-stun-aoe-fixture',
       name: 'Remove Stun AOE (fixture)',
@@ -358,7 +367,7 @@ describe("the skip: an 'all' lock", () => {
           response: {
             kind: 'apply-status',
             target: { kind: 'all-allies' },
-            status: { statusId: 'glow' },
+            status: { statusId: FIXTURE_DAMAGE_BOOST.statusId },
           },
         },
         {
@@ -420,7 +429,10 @@ describe("the skip: an 'all' lock", () => {
           ['x-trait', xTrait],
           ['y-trait', yTrait],
         ]),
-        statuses: STATUS_REGISTRY,
+        statuses: new Map([
+          ...STATUS_REGISTRY,
+          [FIXTURE_DAMAGE_BOOST.statusId, FIXTURE_DAMAGE_BOOST],
+        ]),
       },
     })
     const { events } = resolveTurn(state)
@@ -451,7 +463,7 @@ describe("the skip: an 'all' lock", () => {
       {
         type: 'StatusApplied',
         targetId: FIXTURE_X,
-        statusId: 'glow',
+        statusId: FIXTURE_DAMAGE_BOOST.statusId,
         stacks: 1,
         duration: 4,
         sourceId: FIXTURE_X,
@@ -459,7 +471,7 @@ describe("the skip: an 'all' lock", () => {
       {
         type: 'StatusApplied',
         targetId: FIXTURE_Y,
-        statusId: 'glow',
+        statusId: FIXTURE_DAMAGE_BOOST.statusId,
         stacks: 1,
         duration: 4,
         sourceId: FIXTURE_X,

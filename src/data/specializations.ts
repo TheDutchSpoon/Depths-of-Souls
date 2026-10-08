@@ -35,6 +35,7 @@ import type { EffectDef } from '../engine/effect-types'
 import {
   validateNoBreakChanceOutsideStatus,
   validateNoRandomSelectorInResponseTargets,
+  validateObservationFilters,
   validateStatModifierConditions,
 } from '../engine/effect-types'
 import { BRUTE_STARTER, SHIELDBARER_STARTER, SORCERER_STARTER } from './species/starters'
@@ -75,6 +76,8 @@ export function validateSpecialization(spec: Specialization): void {
     validateStatModifierConditions(effects)
     validateNoBreakChanceOutsideStatus(effects)
     validateNoRandomSelectorInResponseTargets(effects)
+    // Phase 4.1-H2b1: a perk is a trigger carrier too.
+    validateObservationFilters(effects, `perk "${perk.id}"`)
   }
 }
 

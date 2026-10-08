@@ -16,6 +16,11 @@ import {
 // exists in a registry.
 
 const ALL_CREATURES = GLIMMERDARK_SPECIES_POOL.flatMap((s) => s.creatures)
+const FLICKERLING_IDS = [
+  'flickerling-wick',
+  'flickerling-flare',
+  'flickerling-last-gleam',
+]
 
 describe('Glimmerdark: shape', () => {
   it('ships exactly 6 species x 3 creatures (18 total)', () => {
@@ -54,13 +59,50 @@ describe('Glimmerdark: shape', () => {
     }
   })
 
-  it("base stats fall within GAME_DESIGN's 10-30 range for every stat", () => {
+  it("base stats fall within GAME_DESIGN's ranges: Health 20-45 for the three Flickerlings (the new scale, 4.1-H2b1), 10-30 for every other creature's stats and for the Flickerlings' own Attack, Intelligence, Defence and Speed", () => {
     for (const creature of ALL_CREATURES) {
-      for (const value of Object.values(creature.baseStats)) {
-        expect(value).toBeGreaterThanOrEqual(10)
-        expect(value).toBeLessThanOrEqual(30)
+      const onNewHealthScale = FLICKERLING_IDS.includes(creature.id)
+      for (const [stat, value] of Object.entries(creature.baseStats)) {
+        if (stat === 'health' && onNewHealthScale) {
+          expect(value).toBeGreaterThanOrEqual(20)
+          expect(value).toBeLessThanOrEqual(45)
+        } else {
+          expect(value).toBeGreaterThanOrEqual(10)
+          expect(value).toBeLessThanOrEqual(30)
+        }
       }
     }
+  })
+
+  it('the Flickerlings take the old first slot (pool index 0), in rarity order, with the content doc Health and scripts (4.1-H2b1)', () => {
+    const flickerlings = GLIMMERDARK_SPECIES_POOL[0]!
+    expect(flickerlings.id).toBe('flickerlings')
+    expect(flickerlings.weight).toBe(1)
+    expect(
+      flickerlings.creatures.map((c) => [c.id, c.rarity, c.affinity, c.defaultScriptId]),
+    ).toEqual([
+      ['flickerling-wick', 'common', 'vitality', 'support'],
+      ['flickerling-flare', 'uncommon', 'wit', 'caster'],
+      ['flickerling-last-gleam', 'rare', 'violence', 'striker'],
+    ])
+    expect(flickerlings.creatures.map((c) => c.baseStats.health)).toEqual([38, 25, 28])
+    expect(flickerlings.creatures.map((c) => c.baseStats)).toEqual([
+      { health: 38, attack: 10, intelligence: 16, defence: 14, speed: 16 },
+      { health: 25, attack: 14, intelligence: 22, defence: 10, speed: 22 },
+      { health: 28, attack: 24, intelligence: 10, defence: 14, speed: 18 },
+    ])
+  })
+
+  it('the affinity spread is 4 Wit / 3 Instinct / 5 Violence / 4 Endurance / 2 Vitality (4.1-H2b1)', () => {
+    const count = (affinity: string) =>
+      GLIMMERDARK_AFFINITIES.filter((a) => a === affinity).length
+    expect([
+      count('wit'),
+      count('instinct'),
+      count('violence'),
+      count('endurance'),
+      count('vitality'),
+    ]).toEqual([4, 3, 5, 4, 2])
   })
 
   it('is affinity-complete (all 5 affinities present, "Coverage" note)', () => {
@@ -75,8 +117,8 @@ describe('Glimmerdark: shape', () => {
       CAST_ROLE_SCRIPT_IDS.includes(c.defaultScriptId),
     )
     expect(casters.map((c) => c.id)).toEqual([
-      'glowfly-charger',
-      'glowfly-radiant',
+      'flickerling-wick',
+      'flickerling-flare',
       'blindclaws-setter',
       'resonant-chorus',
       'resonant-adept',
