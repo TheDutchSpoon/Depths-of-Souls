@@ -6,8 +6,8 @@ Build ONLY this slice. Standing rules: .claude/workflow/coding-rules.md.
 
 - `.claude/phases/4.1/H2c/brief.md`: this slice's brief. Its second half is 4.1-H's simulator
   description and watch points (uncapped stat stacking with the Rallying Cry and Flare data, boss
-  floors in 6v6, the Rot Sovereign's Attrition). It moved with the H2c section, and it is the
-  input your per-item fixes answer.
+  floors in 6v6, the Rot Sovereign's Attrition). It moved with the H2c section. Your report
+  measures it; the H2d grill decides what to change (ASSUMPTION 149).
 - `.claude/briefs/phase-4.1-implementation-plan.md`, these headings only:
   - "Slice plan and sequencing rules" (the golden rules and "Content docs stay in sync");
   - "The split: H1, H2a, H2b1, H2b2, H2c" (the H2c row);
@@ -18,7 +18,8 @@ Build ONLY this slice. Standing rules: .claude/workflow/coding-rules.md.
     read), 113 (the DoT and Regen potencies), 117–129 (the H2 grill rulings), 140, 141 (the Wick,
     if a Flare fix touches it), 144 (a tick is declared in data) and **147, 148** (decided at this
     kickoff: tuning never changes a mechanism golden; the CI threshold test runs in the normal
-    suite).
+    suite, from H2d) and **149** (decided at the plan review: this slice chooses no balance
+    number; H2d does, after a grill).
 - `.claude/phases/phase-4.1-fix-and-consolidation.md`, the "4.1-H1" section (the report's shape,
   its runtime, the walls) and the "4.1-H2b2" section (the digest attribution in layers, and the
   ticks landing on the minimum of 1, which is your DoT input).
@@ -46,11 +47,12 @@ Build ONLY this slice. Standing rules: .claude/workflow/coding-rules.md.
     `data/traits/glimmerdark.ts` (the Flare, the Wick's Health-percent heals);
   - `engine/__corpus__/corpus.ts` (it generates with `DEFAULT_BALANCE_CONFIG`) and
     `corpus-digest.test.ts`;
-  - the 26 goldens that read a number this slice tunes: `golden-dot`, `golden-f2-dot-one-turn`,
-    `golden-f2-turn-end-interaction`, `golden-f2-win-over-own-tick`, every `golden-h2b2-*`,
-    `golden-hollowkin-wretch-self-dot`, `golden-resonant-harmonize`, `golden-resonant-overtone`,
-    `golden-rot-sovereign`, `golden-sorcerer-starter`, `golden-sporch-cinderlord-burn-refresh`,
-    every `golden-spore-spread*`, `golden-turn-end-dot-kill-burst` and `-refresh`.
+  - the goldens that read a number this slice changes: `golden-sorcerer-starter`,
+    `golden-resonant-harmonize` and `-overtone` (Arcane Bolt), `golden-g1-leech-sovereign-pacified`
+    (the real Leech Sovereign's Health), and `golden-h2b2-tick-no-retaliation` (it holds Snapback,
+    which never fires there). The four content goldens whose headers say "real base stats"
+    (`golden-rot-sovereign`, `golden-spore-spread`, `golden-sporch-cinderlord-burn-refresh`,
+    `golden-hollowkin-wretch-self-dot`) copy the old Health.
 
 ## Scope
 
@@ -60,16 +62,25 @@ This slice is the first tuning pass, on the final rules.
 - **Content data:**
   - Health remapped to 20–45 for every creature except the three Flickerlings (ASSUMPTION 125);
   - the Stonehorn Warden at Attack 15 with the `warden` role (ASSUMPTION 123);
-  - Snapback at 30% of Attack, and Arcane Bolt at spell power 1.0 (ASSUMPTION 124);
-  - the DoT and Regen percentages, and the per-item floor-1 fixes the plan proposes from the
-    report (ASSUMPTION 129).
+  - Snapback at 30% of Attack, and Arcane Bolt at spell power 1.0 (ASSUMPTION 124).
+- **No balance number is chosen in this slice** (ASSUMPTION 149, decided at the plan review). The
+  DoT and Regen percentages stay at today's placeholders, and there are no per-item floor-1 fixes:
+  the design owner decides both in 4.1-H2d's grill, on this slice's report.
 - **The simulator:**
   - the floor 1–5 matchup table and the first-try clear rate per floor (ASSUMPTION 127);
   - the floor-5 threshold reading the first 20 floor runs (ASSUMPTION 126);
-  - the CI threshold test asserted in the normal suite (ASSUMPTION 148);
-  - the before/after report.
+  - the before/after report, with the three threshold verdicts reported, not asserted;
+  - the DoT measurements for the H2d grill (ASSUMPTION 149): the full report (cap 400, probe off)
+    on the "after" data in a scratch clone, nothing committed, for three DoT sets: today's
+    placeholders (Poison 20 / Burn 25 / Spore 15), 35 / 30 / 30, and 50 / 40 / 45, Regen at 10. Per
+    set: first-try clear on floors 21–30, T4, the Rot Sovereign's row, the round-cap draws, the three
+    verdicts, and the minimum-of-1 share of DoT ticks on corpus Parts A and B (Part C apart).
+    Evidence only: no recommendation.
+- The CI threshold test (ASSUMPTION 148) lands in 4.1-H2d, where it can be green.
 
-The 14 mechanism goldens that read a tuned number get pinned (ASSUMPTION 147).
+The mechanism goldens that read a number this slice changes get pinned (ASSUMPTION 147): today only
+`golden-g1-leech-sovereign-pacified` (the real Leech Sovereign's Health). The DoT goldens wait for
+H2d.
 
 **Not in scope:**
 - any combat or status rule, and any new engine mechanism;
@@ -86,32 +97,39 @@ golden").
 - **Mechanism goldens: expected values byte-identical.** A golden whose subject is a rule pins
   each tuned number it reads in its own fixture: the real def spread, with only that number held
   at today's value. The edit is setup-only.
-  - My split of the 26, which the plan confirms or corrects with a reason per file: `golden-dot`,
-    the three `golden-f2-*` above, the ten `golden-h2b2-*`, and `golden-spore-spread-filter`,
-    `-fizzle` and `-dot-kill`.
+  - This slice moves no DoT percentage, so the DoT goldens are untouched (H2d pins them).
+  - The one pin is `golden-g1-leech-sovereign-pacified`: the real Leech Sovereign, with
+    `baseStats.health` held at 30. Its subject is a rule (a Pacified striker casts).
+  - `golden-h2b2-tick-no-retaliation` holds Snapback but never evaluates it: no pin.
   - Show it by importing `main`'s and the branch's fixtures and deep-comparing every `expected*`
-    export: all equal. Every mechanism golden outside the 26 stays byte-identical as a file.
+    export: all equal. Every other mechanism golden stays byte-identical as a file. Show that the
+    pin is needed: with it removed, the golden fails.
 - **Content goldens: follow the data, re-derived by hand.** `golden-sorcerer-starter`,
-  `golden-resonant-overtone` and `-harmonize`, `golden-sporch-cinderlord-burn-refresh`,
-  `golden-hollowkin-wretch-self-dot`, `golden-rot-sovereign`, `golden-spore-spread` and
-  `golden-turn-end-dot-kill-burst(-refresh)`.
-  - Each is listed with the tuning change that moved it, with the new arithmetic in its comments.
+  `golden-resonant-overtone` and `-harmonize` (Arcane Bolt 1.0).
+  - Each is listed with the change that moved it, with the new arithmetic in its comments, and
+    fails with Arcane Bolt at 0.5.
   - None is regenerated by running.
-- **New content goldens:** each effect number this slice changes (each DoT and Regen potency,
-  Arcane Bolt, Snapback, every per-item fix's number) is shown in a hand-derived content golden on
-  real data. It is either new, or one of the re-derived goldens above. The plan says which, per
-  number.
-- **Store and integration tests** change only through content (the Health remap, the starter);
-  never through the curve, because the placeholder config they pin is unaffected (see Traps). Each
-  changed expectation is listed with its cause.
+  - The four content goldens that say "real base stats" but copy the old Health
+    (`golden-rot-sovereign`, `golden-spore-spread`, `golden-sporch-cinderlord-burn-refresh`,
+    `golden-hollowkin-wretch-self-dot`) get a header correction naming the copied stats that are
+    real and saying Health is the pre-H2c value. No setup or expected change.
+- **New content golden:** Snapback at 30% (`golden-h2c-snapback`), hand-derived on the real Snapjaw
+  Jaws trait, with the counter above the minimum of 1, failing at 60%.
+- **Store and integration tests** change through content (the Health remap, the starter, Snapback,
+  Arcane Bolt) and, in one place, through the curve: `state/integration.test.ts`'s "Phase 4.1-A
+  defaults" block runs the real default config, so floor 1's new level range moves it. Regenerate
+  it once (generated-then-checkpoint-verified) and keep its checkpoints. Every other store test
+  pins the Phase 4 placeholder config, which the curve change doesn't move. Each changed
+  expectation is listed with its cause.
 - **The corpus digest** is regenerated **once**, through `npm run corpus:update`. Nearly every
-  fight changes, so attribute in stages with scratch switches outside the repo, in this order:
+  fight changes, so attribute in stages. Build each stage in a scratch clone outside the repo as a
+  cumulative patch on the one before (`starters.ts` carries both stage 2 and stage 3), in this
+  order:
   1. the curve (range width, rounding, boss offset);
   2. the Health remap;
   3. the Stonehorn Warden;
-  4. Snapback and Arcane Bolt;
-  5. the DoT and Regen percentages;
-  6. each per-item fix.
+  4. Snapback and Arcane Bolt (Arcane Bolt is also a biome-1 Wit gem, so enemy Wit casters move
+     here too).
 
   Each changed fight is attributed to the first stage that changes its log. The report counts
   fights per stage.
@@ -149,70 +167,57 @@ golden").
   - The plan lists every Health reader in data and engine, so the stage-2 attribution and the
     content goldens know what moved.
 
-**The simulator and the CI test**
+**The simulator**
 
 - **The floor-5 window is not the session.** `reachedFloor5InSession` is read at
   `FIRST_SESSION_RUNS` (10). ASSUMPTION 126 moves the threshold to 20 floor runs, but T3's session
   stays 10.
   - Add a separate named constant for the window, and don't change `FIRST_SESSION_RUNS`.
   - Rename the field and fix the header comment and the `Thresholds` doc comment that say 10.
-- **The CI threshold test (ASSUMPTION 148).**
-  - It runs in `npm run test` over the full 40 seeds per spec, with the run cap at 30 and the boss
-    probe off. It asserts the three verdicts, never a value (ASSUMPTION 106 stays true for every
-    other test).
-  - The cap must change nothing about runs 1–30: show it with a test that the capped run's first
-    30 floor runs equal an uncapped run's, on the smoke seeds.
-  - Measure the suite's runtime with and without the test, and **stop and ask** if the test adds
-    more than about 2 minutes.
 - **The report additions are new report code**: the floor 1–5 matchup table, and the first-try
-  clear rate per floor. Test them like H1's report, on hand-built seed results.
+  clear rate per floor. Test them like H1's report, on hand-built seed results. Key the matchup
+  rows by floor and enemy template, and print floor 1 on its own: a floor-1 fight has one enemy,
+  so its rows attribute each fight exactly.
+- **No CI threshold test here.** It lands in H2d (ASSUMPTIONS 148, 149). The report still shows the
+  three verdicts and their values, before and after.
 
-**Tuning**
+**Measurement, not tuning** (ASSUMPTION 149)
 
-- **The DoT percentages and level scaling.** A tick is `potency − 0.2 × Defence`, with a minimum of
-  1.
-  - The applier's stat and the bearer's Defence scale by the same level factor, so a percentage
-    that clears `0.2 × Defence` at equal levels clears it at every equal level.
-  - The gap that matters is the level difference (enemies sit above the party), and stats that
-    differ by role.
-  - The plan shows the arithmetic for its proposed percentages: a typical applier stat against a
-    typical Defence, at the floor 1, 5, 10 and 30 levels, on both sides. Then it shows the
-    minimum-1 share of corpus ticks before and after.
-- **Per-item fixes are content numbers, chosen from the report.**
-  - Each fix names the matchup-table row it answers.
-  - A fix changes one content item's number (a factor, a percentage), or how often it fires
-    through an existing trigger condition.
-  - **Stop and ask** before:
-    - any new engine mechanism, rule change or global cap;
-    - changing any number ASSUMPTIONS 117–125 decided;
-    - giving up on the 80% floor-1 threshold for a spec.
-
-    Each is a "bring it back to design" signal.
-- **Rallying Cry and the Flare: measure first.**
-  - Under `warden` the Stonehorn Warden Provokes only when an ally is below 50% HP, so Rallying
-    Cry should stack far less than under `taunter`. Measure before you propose anything; ASSUMPTION
-    123 keeps Rallying Cry unchanged unless the report shows otherwise.
-  - The Flare's compounding Speed (×1.15 per Wick burn) is the same case: report its largest stack
-    before you propose a per-item fix.
+- **You choose no balance number.** The DoT and Regen percentages stay at today's placeholders,
+  and there are no per-item fixes. If anything in this slice seems to need a balance number, stop
+  and ask: it is a "bring it back to design" signal.
+- **The DoT measurements for the H2d grill.** In a scratch clone with nothing committed, run the
+  full report (cap 400, probe off) on the "after" data for each of three DoT sets: today's
+  placeholders (Poison 20 / Burn 25 / Spore 15), 35 / 30 / 30, and 50 / 40 / 45, with Regen at 10.
+  - Almost every DoT applier is Rotcap Hollow content (floors 21–30); Poison also comes from Venom
+    Bolt, a biome-1 Instinct gem. So report, per set: first-try clear on floors 21–30, T4, the Rot
+    Sovereign's row, the round-cap draws and the three verdicts.
+  - Also report the share of DoT ticks that land on the minimum of 1, on the corpus's generated
+    fights (Parts A and B), with Part C's coverage fights apart: their stacked Defence ticks 1 at
+    any percent.
+  - Present the numbers as evidence. Don't recommend a set.
+- **Rallying Cry and the Flare: measure and report.** Under `warden` the Stonehorn Warden Provokes
+  only when an ally is below 50% HP, so Rallying Cry should stack far less than under `taunter`.
+  Report its largest stack before and after, and the Flare's (×1.15 Speed per Wick burn). Propose
+  no change.
 
 **Pinning and the docs**
 
-- **Pinning holds today's number, not the tuned one**, and only the number. Spread the real def
-  (`{ ...POISON, potency: { ...POISON.potency, percent: 20 } }`) under the same id in the
-  golden's own registry, so the status's shape and effects are still the real ones.
-  - Where a golden reads a tuned number that never fires in its fight (Snapback in
-    `golden-h2b2-tick-no-retaliation`), say whether it needs a pin.
+- **Pinning holds today's number, not the tuned one**, and only the number. For the Leech
+  Sovereign, spread the real creature with only `baseStats.health` held at 30, so its shape,
+  traits and other stats are still the real ones. Only a number the golden actually reads gets a
+  pin.
 - **The content docs are the design agent's.** List every content change under the report's
-  **Content changes**: the Health table, the starter, Snapback, Arcane Bolt, each potency, and each
-  per-item fix with its old and new number. The design agent folds the "(4.1-H2c)" items and
+  **Content changes**: the Health table, the starter, Snapback and Arcane Bolt, each with its old
+  and new number. The design agent folds the "(4.1-H2c)" items and
   GAME_DESIGN's open numbers from the code at the PR review.
 
 ## Must stay green
 
-- All five gates: `npm run test` (now including the threshold test), `npm run lint`,
+- All five gates: `npm run test`, `npm run lint`,
   `npm run format:check`, `npm run build`, `npx tsc -b`.
-- Every mechanism golden's expected values, compared by importing the fixtures, including the 14
-  that get pinned.
+- Every mechanism golden's expected values, compared by importing the fixtures, including the
+  pinned Leech Sovereign golden.
 - The frozen double-resolve determinism test, the deep-frozen golden runner, and the simulator's
   determinism test.
 - `corpus-coverage.test.ts`: every spell cast with its effects landing and every status applied,
@@ -227,12 +232,8 @@ golden").
   - the round-cap draw rates and the largest stacks;
   - the boss rows, the matchup table and the first-try clear per floor;
   - "before" captured on the unchanged tree.
-- **The threshold test:**
-  - it is green;
-  - it fails on the "before" data (on H1's report the Shieldbarer's first-try floor 1 was far
-    below 80%), shown by running it against the pre-H2c numbers;
-  - the capped/uncapped prefix test;
-  - its measured runtime.
+- **The DoT measurements** for the H2d grill: the three sets, each with the figures listed under
+  "Measurement, not tuning", and the largest Rallying Cry and Flare stacks before and after.
 - **The curve:** a test pinning `enemyLevelRange` for floors 1–10, 20 and 30, and `bossLevel` for
   floors 10, 20 and 30 against ASSUMPTIONS 118 and 119. It fails with `Math.round` restored and
   with the offset at 3.
@@ -242,14 +243,22 @@ golden").
   - the mechanism goldens' expected exports equal to `main`'s by import comparison, and each
     pinned file's diff shown to be setup-only;
   - each re-derived content golden listed with its cause and its new arithmetic;
-  - each new content golden failing with its number reverted.
+  - `golden-h2c-snapback` failing with Snapback at 60%;
+  - the pinned Leech Sovereign golden failing with its pin removed.
 - **The digest:** regenerated once, every changed fight attributed to its first stage, counts per
   stage.
-- **Per-item fixes:** each with the matchup-table row it answers, before and after.
 - **Housekeeping:**
   - the test count reconciled file by file against `main`;
   - **Spec questions** and **Content changes**;
   - anything to delete.
+
+## Amended at the plan review (2026-10-10)
+
+The design owner moved every balance choice out of this slice (ASSUMPTION 149): no DoT percentage,
+no per-item fix, and no CI threshold test here. All three go to 4.1-H2d, which opens with a grill
+on this slice's report. This kickoff was edited in place to match: Scope, the golden policy, the
+Traps ("The simulator", "Measurement, not tuning", pinning), Must stay green and The PR must prove.
+Round 1 of `plan-review.md` lists the plan fixes that still apply.
 
 ## Docs edited
 

@@ -196,7 +196,7 @@ tagged `unlockedAtBiome: 1` and reachable at The Overgrowth and every deeper bio
 |---|---|---|
 | Ember Lance | Violence | A single-target hit dealing damage equal to **50% of the caster's Intelligence**. |
 | Cinder Nova | Violence | Hits every enemy for **30% of the caster's Intelligence** each. |
-| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns: each tick deals **20% of the caster's Attack** (measured when cast; a placeholder until 4.1-H2c) as indirect damage, only a fifth of the target's Defence applying. Re-poisoning refreshes the timer and keeps the stronger Poison. |
+| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns: each tick deals **20% of the caster's Attack** (measured when cast; a placeholder until 4.1-H2d) as indirect damage, only a fifth of the target's Defence applying. Re-poisoning refreshes the timer and keeps the stronger Poison. |
 
 ### Cumulative unlock
 

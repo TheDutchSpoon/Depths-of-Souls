@@ -7,13 +7,15 @@
   starter's Attack 15 and `warden` role (ASSUMPTION 123); Snapback 0.3; Arcane Bolt 1.0 (ASSUMPTION
   124).
 - **Per-item tuning toward the bands and the CI thresholds** (ASSUMPTION 129): the floor-1
-  problem creatures the floor 1–5 matchup table shows, and the DoT percentages.
+  problem creatures the floor 1–5 matchup table shows, and the DoT percentages. *(Moved to 4.1-H2d
+  at the H2c plan review, ASSUMPTION 149: the design owner decides them in a grill on H2c's report.
+  H2c measures three DoT sets for that grill and chooses no balance number.)*
   - **Input from the H2b2 PR review:** with the placeholders, 4,971 of the corpus's 5,318 ticks
     (93%) land on the minimum of 1 (a potency of 4–5 from a stat near 20, against a fifth of a
     Defence near 20); corpus draws rose 39 → 52 with H2b2. Tuning the percentages has to lift a
     tick's potency clear of `0.2 × Defence` across the level range, or DoT stays inert.
-- **The report additions** (ASSUMPTION 127) and the **floor-5 threshold change** (ASSUMPTION 126);
-  then the CI threshold test asserted.
+- **The report additions** (ASSUMPTION 127) and the **floor-5 threshold change** (ASSUMPTION 126).
+  The CI threshold test is asserted in 4.1-H2d (ASSUMPTIONS 148, 149).
 - **Before/after report** in the PR and the phase record: the report on `main` before H2c (with
   H2a and H2b merged) and after it.
 - Content-doc numbers follow the data in the same PR.

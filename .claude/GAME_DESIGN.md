@@ -722,7 +722,7 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   Defence. That still makes DoT a distinct answer to high-Defence enemies. The applier is the damage
   source while it lives (its on-kill and on-damage-dealt traits fire; retaliation never answers a
   tick, §6), else the bearer, which then fires no dealer traits. **Regen** heals its snapshot
-  potency, credited the same way. Placeholder numbers, tuned in 4.1-H2c: **Poison 20% of Attack,
+  potency, credited the same way. Placeholder numbers, tuned in 4.1-H2d: **Poison 20% of Attack,
   Burn 25% of Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed**. A status that
   applies itself through its own effect passes its snapshot on (Spore spreading on death keeps the
   original strength); a creature that merely carries a status and applies it is an ordinary
@@ -1298,13 +1298,13 @@ the hot autosave path.
 - Costs: gem craft/augment/level (Essence), equipment craft/infuse/level (Ore), facility
   build/upgrade (Bricks), fusion + catch-up leveling (Lifeforce).
 - Soul-per-kill % per rarity tier (default 25 / 20 / 10 from Phase 4.1-A); status magnitudes/durations/
-  DoT and Regen percentages (placeholders from the 4.1-H2 grill, tuned in 4.1-H2c); affinity
+  DoT and Regen percentages (placeholders from the 4.1-H2 grill, tuned in 4.1-H2d); affinity
   already fixed (±25%).
 - Facility upgrade-tier counts and exact cap values (Gem Forge, Equipment Forge, Fusion Chamber
   only — structure is decided in §4, numbers are not).
 - Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
   round-cap value (structure decided in §7, number TBD).
-- **DoT and Regen potencies** (placeholders since 4.1-H2b2, tuned in 4.1-H2c: Poison 20% of
+- **DoT and Regen potencies** (placeholders since 4.1-H2b2, tuned in 4.1-H2d: Poison 20% of
   Attack, Burn 25% of Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed; §6).
   Measured at the H2b2 PR review on the corpus: **93% of ticks land on the minimum of 1** (a
   potency of 4–5 from a stat near 20, against a fifth of a Defence near 20). *(They replaced the

@@ -172,8 +172,66 @@ appears. Three of these trace back to errors in my kickoff; each is marked.
 
 ### Decisions
 
-_(pending Duncan's calls)_
+Duncan, 2026-10-10: **choosing balance numbers is design work, not the coding agent's.** H2c ships
+only the numbers the H2 grill already decided (ASSUMPTIONS 118, 119, 123–125), the report
+additions (126, 127) and the before/after report. A balancing slice, **4.1-H2d**, follows. It opens
+with a grill of Duncan on H2c's report about which levers move each spec toward the CI thresholds,
+then implements the rulings and asserts the CI threshold test (ASSUMPTION 148). For that grill, H2c
+measures three DoT sets on the full report, with nothing committed: today's placeholders, 35 / 30 /
+30 and 50 / 40 / 45 (option B). Recorded as ASSUMPTION 149. The kickoff is amended in place to
+match.
+
+What that does to this round, for the plan's revision:
+
+- **Withdrawn:**
+  - decide-points 1 and 2;
+  - fixes 5, 7 and 9 (no DoT stage, no per-item fixes, no threshold test);
+  - the stage-5 and stage-6 attribution;
+  - P15 (the capped-prefix test goes to H2d with the threshold test);
+  - P17 and P18 (no per-item fixes).
+- **Changed:**
+  - **Fix 1.** No DoT percentage moves, so no DoT golden changes in H2c. The DoT content goldens and
+    the DoT pins (including the three goldens fix 1 reclassified as mechanism) belong to H2d, and
+    the reclassification stands for it. In H2c:
+    - re-derive the three Arcane Bolt goldens;
+    - add `golden-h2c-snapback`;
+    - pin only `golden-g1-leech-sovereign-pacified`;
+    - correct the four "real base stats" headers.
+  - **P3.** One pin in H2c.
+  - **P9.** Regen stays a placeholder (H2d decides), not "final".
+  - **P14.** Show that the one pin is needed.
+  - **P16.** The minimum-of-1 share is now one of the DoT measurements, read on Parts A and B.
+  - **P19.** Measure and report only; propose nothing.
+  - **P24.** The full report (cap 400, probe off) is run for the three DoT sets.
+- **Stand as written:**
+  - fixes 2, 3, 4 (stages 1–4), 6, 8, 10, 11, 12;
+  - P1, P2, P4–P8, P10, P12, P13, P20–P23.
+
+Next: Duncan runs `/slice-plan 4.1-h2c`. The coding agent revises `plan.md` against the amended
+kickoff and this round, and lists what changed at its top. Round 2 reviews that.
 
 ### Docs edited
 
-_(none yet: decisions and the CONVENTIONS "or creature" wording are written in once Duncan answers)_
+- `.claude/briefs/phase-4.1-implementation-plan.md`:
+  - new **ASSUMPTION 149** (H2c chooses no balance number; H2d's grill does; the three DoT
+    measurement sets);
+  - the H-split tables and the "Slice plan" row add **4.1-H2d**, with H2c's row narrowed;
+  - a new "4.1-H2d — the balancing pass" section; the Acceptance bullets for H2c and H2d;
+  - the sequencing summary adds H2d;
+  - ASSUMPTIONS 22, 113 (placeholder line), 125, 129 and 148 point at H2d;
+  - ASSUMPTION 147: H2c pins only the Leech Sovereign golden, and the DoT pin list for H2d is
+    corrected to add the `turn-end-dot-kill-burst` pair and `golden-hollowkin-wretch-self-dot`
+    (fix 1, P11). The wrong "26" count is removed.
+  - ASSUMPTIONS 149 and 150 written from the first answers were withdrawn the same evening.
+- `.claude/phases/4.1/H2c/kickoff.md`: amended in place to the new scope, with an "Amended at the
+  plan review" note above its Docs edited list.
+- `.claude/phases/4.1/H2c/brief.md`: the per-item tuning and CI-test bullets point at H2d.
+- `.claude/CONVENTIONS.md`:
+  - "Tuning never changes a mechanism golden": a mechanism golden that borrows a real
+    **creature** also pins the base stat it reads (P1);
+  - the DoT placeholder numbers and the CI threshold test now say H2d.
+- `.claude/GAME_DESIGN.md`: the three "tuned in 4.1-H2c" mentions of the DoT and Regen numbers
+  now say H2d.
+- `.claude/ROADMAP.md`: H2c's line is narrowed, and H2d is added.
+- `.claude/content/overgrowth.md`, `glimmerdark.md`, `rotcap-hollow.md`: "a placeholder until
+  4.1-H2c" for Poison, Regen, Spore and Burn now says H2d.

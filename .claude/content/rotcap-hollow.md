@@ -31,7 +31,7 @@ the end of each of the bearer's turns (see the last section).
 
 **Spore** — A festering infection. While active, the bearer takes damage every round worth **15%
 of the Speed of the creature that infected it**, measured at the moment of infection (a placeholder
-until 4.1-H2c). If the bearer *dies* while infected, the spores burst and infect one living,
+until 4.1-H2d). If the bearer *dies* while infected, the spores burst and infect one living,
 still-healthy member of the bearer's own side, **carrying the same infection**: the new host takes
 the original infector's damage, not a share of the dying host's own Speed. The contagion keeps
 spreading through a population as it's whittled down, rather than clinging to whoever already has
@@ -98,7 +98,7 @@ Nothing happens until an ally has actually fallen.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Igniter | Violence | Enabler | Every attack brands its target with Burn: each round, damage worth **25% of the Igniter's Intelligence**, measured when branded (a placeholder until 4.1-H2c). Re-branding refreshes the Burn and keeps the stronger one. |
+| Igniter | Violence | Enabler | Every attack brands its target with Burn: each round, damage worth **25% of the Igniter's Intelligence**, measured when branded (a placeholder until 4.1-H2d). Re-branding refreshes the Burn and keeps the stronger one. |
 | Ashborn | Wit | Payoff | Deals **30% more damage** to any enemy currently Burning. |
 | Cinderlord | Violence | Amplifier | Every kill it personally lands applies **Burn to every remaining enemy**, measured from the Cinderlord's own Intelligence; an enemy already Burning keeps the stronger Burn and has its timer refreshed. |
 

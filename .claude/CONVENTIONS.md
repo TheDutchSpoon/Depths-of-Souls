@@ -372,7 +372,7 @@ attack executor is correct.
     one tick response (`deal-damage` or `heal`, on `self`) takes the magnitude `{ kind:
     'snapshot-potency' }`. That marker is what makes it a tick; any other damage a status deals
     its bearer is a cost, and any other heal an ordinary heal from the bearer. An instance holds `snapshot` iff its status declares a potency.
-  - Placeholder numbers (tuned in 4.1-H2c): Poison 20% of Attack, Burn 25% of Intelligence, Regen
+  - Placeholder numbers (tuned in 4.1-H2d): Poison 20% of Attack, Burn 25% of Intelligence, Regen
     10% of the healer's Health, Spore 15% of Speed.
   - Why: the percent-hp brief rejected stat-scaling only because a DoT's `context.self` is the
     victim; the snapshot reads the applier, and a DoT now belongs to its applier's build.
@@ -1856,9 +1856,9 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   - CI checks only loose "badly broken" thresholds (brief ASSUMPTIONS 22, 107, 126): first-try floor
     1 ≥ 80%; the median floor runs to the first soul ≤ 30; some seed fights on floor 5 or deeper
     within its first **20** floor runs (10 until the 4.1-H2 grill: on H1's report no seed of any
-    spec reached it in 10). From 4.1-H2c a test in the normal suite asserts the three verdicts
+    spec reached it in 10). From 4.1-H2d a test in the normal suite asserts the three verdicts
     over the full 40 seeds per spec, capped at 30 floor runs with the boss probe off; the cap
-    changes no verdict (brief ASSUMPTION 148). The bands guide tuning passes (the first one lands before
+    changes no verdict (brief ASSUMPTIONS 148, 149). The bands guide tuning passes (the first one lands before
     the Phase 4.5 demo). Framing (design owner, H2 grill): balance needn't be perfect yet; Phase 6
     player scripts and Phase 8 equipment will strengthen the starting team.
 
@@ -1981,10 +1981,10 @@ production registries: the Phase-3 placeholder traits move to test-only fixtures
 demo slice (their goldens stay byte-identical).
 
 **Tuning never changes a mechanism golden** (4.1-H2c kickoff, brief ASSUMPTION 147):
-- A golden whose subject is a **rule** is a mechanism golden. When it borrows a real status, spell
-  or trait, it pins every tuned number it reads in its own fixture (the real def with only that
-  number held), so a tuning PR leaves its expected values byte-identical. That byte-identity is
-  the PR's proof that only numbers moved.
+- A golden whose subject is a **rule** is a mechanism golden. When it borrows a real status, spell,
+  trait or creature, it pins every tuned number it reads in its own fixture (the real def with only
+  that number held; for a creature, a base stat), so a tuning PR leaves its expected values
+  byte-identical. That byte-identity is the PR's proof that only numbers moved.
 - A golden whose subject is a **named content item** (a creature, trait or spell) is a content
   golden: it reads real data and is re-derived by hand when a tuning PR moves a number it reads.
 - A tuning PR shows each effect number it changes (a status potency, a spell's power, a trait's
