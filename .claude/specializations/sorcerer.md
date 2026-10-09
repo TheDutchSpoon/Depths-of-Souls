@@ -50,7 +50,7 @@ demo labels them "inactive until Phase 8". Inert perks are still buyable.*
 - **Silenced** — a status whose effect is **`action-lock { scope: 'cast' }`**: casting is illegal
   for every action source, chosen or granted (vs Stun's lock on everything). Applied by the
   **Violence spell Silence**, a pure status spell (`effects: [apply-status(silenced)]`, no damage,
-  cap 1, default duration 3, unlocked at biome 1). *Missed in Phase 4 (Clear Mind was buyable and
+  default duration 3, unlocked at biome 1). *Missed in Phase 4 (Clear Mind was buyable and
   inert); authored in Phase 4.1-F, once spells carry response lists (4.1-D) and statuses carry action locks.* Intrinsic effect = the
   cast-lock.
 - **Status-effect immunity (Clear Mind)** — immunity **suppresses the status's *effect*, not its

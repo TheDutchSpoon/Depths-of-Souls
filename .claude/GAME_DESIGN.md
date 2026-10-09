@@ -475,7 +475,7 @@ chance, and a response). A **carrier** attaches a list of effects to a creature:
 - a **trait** carries effects permanently for the fight;
 - a **status** is a **timed container of the same kinds of effects**, one instance per creature
   (it owns duration, re-application and "has status X"; its effects own what it does; statuses
-  stack until 4.1-H2b, see "Status effects"). Poison is a status carrying a
+  never stack, see "Status effects"). Poison is a status carrying a
   damage trigger; Weaken carries a damage-dealt reduction; Web carries "act last"; Stun carries
   "can't act";
 - gem augments and equipment infusions (Phase 8) are carriers of the same effects.
@@ -657,7 +657,7 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   a status, apply a stat-modifier, heal, revive, grant an action state (defending/provoking),
   remove a status, perform an action** — eight. (*perform an action* — "that creature casts a
   random spell" — joined in Phase 4.1 and replaced two special mechanisms; *suppress-action* left,
-  because skipping a turn is now a status effect; *consume stacks* leaves in 4.1-H2b with stacking
+  because skipping a turn is now a status effect; *consume stacks* left in 4.1-H2b with stacking
   and Glow.) The governing rule is **no side doors**:
   every triggered behaviour goes through this one response vocabulary, never a special-case
   mechanism (CONVENTIONS). Design-space breadth comes from the **hook × condition × parameter
@@ -691,9 +691,10 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   the bearer's own turns**.
 - **No stacking (decided at the 4.1-H2 grill, from 4.1-H2b; brief ASSUMPTION 114):** one instance
   per status per creature. Re-applying **refreshes the timer** and keeps the **stronger** value
-  (a DoT's or Regen's snapshot potency; a fixed-magnitude status just refreshes). Glow, the only
-  status whose stacks were a resource, leaves with the Glowflies. *(Until then re-applying also
-  stacks intensity up to the status's own declared cap.)*
+  (a DoT's or Regen's snapshot potency; a fixed-magnitude status just refreshes; a tie keeps the
+  current one). The timer becomes the new application's even when that is shorter. Glow, the only
+  status whose stacks were a resource, left with the Glowflies. *(Until 4.1-H2b2 re-applying also
+  stacked intensity up to the status's own declared cap.)*
 - **v1 content**: a flexible, easily-addable **DoT category** (parameterized: damage value,
   duration, flavor; start with Poison/Burn), **Regen** (heal-over-time), **Stun**, and a set of
   **timed `damage-modifier` statuses** — **Weaken** ("−X% damage dealt", + duration) and
@@ -720,11 +721,13 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   damage** (§7): the applier's affinity, the bearer's taken pool, and a fifth of the bearer's
   Defence. That still makes DoT a distinct answer to high-Defence enemies. The applier is the damage
   source while it lives (its on-kill and on-damage-dealt traits fire; retaliation never answers a
-  tick, §6), else the bearer. **Regen** heals its snapshot potency. Placeholder numbers, tuned in
-  4.1-H2c: **Poison 20% of Attack, Burn 25% of Intelligence, Regen 10% of the healer's Health, Spore
-  15% of Speed**. A creature passing on a status it carries passes its snapshot (Spore spreading on
-  death keeps the original strength). *(Until 4.1-H2b a DoT is a percentage of the bearer's own max
-  HP per stack, bypassing Defence, affinity and pools, and Regen the same.)*
+  tick, §6), else the bearer, which then fires no dealer traits. **Regen** heals its snapshot
+  potency, credited the same way. Placeholder numbers, tuned in 4.1-H2c: **Poison 20% of Attack,
+  Burn 25% of Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed**. A status that
+  applies itself through its own effect passes its snapshot on (Spore spreading on death keeps the
+  original strength); a creature that merely carries a status and applies it is an ordinary
+  applier and snapshots itself. *(Until 4.1-H2b2 a DoT was a percentage of the bearer's own max HP
+  per stack, bypassing Defence, affinity and pools, and Regen the same.)*
 - **Stun** is **just a status**, not a special mechanic — it carries a passive **"can't act"
   lock**, so when the creature's turn comes up it is skipped: `TurnStarted`, a `TurnSkipped` event
   naming the status, `TurnEnded`. Sleep carries the same lock; **Silenced** locks only casting and
@@ -774,8 +777,8 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   counts that turn: it was there for the action.
 - **A single status instance per (status-type, creature)** carrying a **remaining duration** (and,
   for a DoT or Regen, its applier snapshot); re-applying refreshes duration and keeps the stronger
-  value. (Not N separate instances; until 4.1-H2b the instance also carries a stack count that
-  re-applying increments toward the status's declared cap.)
+  value. (Not N separate instances; until 4.1-H2b2 the instance also carried a stack count that
+  re-applying incremented toward the status's declared cap.)
 - **Round end does no status work** — it only fires round-level triggers (e.g. a Treant's
   end-of-round growth) and checks for a winner.
 - **A creature that dies fires only its death reactions**; its own pending triggers are skipped. If
@@ -1301,12 +1304,11 @@ the hot autosave path.
   only — structure is decided in §4, numbers are not).
 - Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
   round-cap value (structure decided in §7, number TBD).
-- **Percent-of-max-HP condition ticks** (Regen 5% / Poison 3% / Burn 5% per stack), **replaced in
-  4.1-H2b** by ticks from the applier's snapshot (§6). Until then: these match the old flat values
-  only at about 100 max HP (80 for Regen), so at current content levels they are a net reduction.
-  Single-stack Poison sits on the min-1 floor through the early levels. Compare against attacks,
-  which land about 40% of max HP per hit. A fully stacked DoT kills anything, bosses included, in
-  about 7 rounds.
+- **DoT and Regen potencies** (placeholders since 4.1-H2b2, tuned in 4.1-H2c: Poison 20% of
+  Attack, Burn 25% of Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed; §6).
+  Measured at the H2b2 PR review on the corpus: **93% of ticks land on the minimum of 1** (a
+  potency of 4–5 from a stat near 20, against a fifth of a Defence near 20). *(They replaced the
+  Phase 4 percent-of-max-HP ticks, Regen 5% / Poison 3% / Burn 5% per stack.)*
 
 **Design items parked (decided to defer, not undecided):**
 - **Behavioral traits** (scripting-altering / extra-action traits) — post-v1.

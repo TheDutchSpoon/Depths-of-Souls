@@ -77,7 +77,7 @@ at creature-stamping (affinity is per-creature).
   stack** while held (charging up); the Detonator's **consume-all-stacks → burst** is the payoff.
   A new primitive class: *accumulate-and-spend resource* (distinct from Web/Sleep markers and from
   count-scaling's live-board read). Needs a **consume-stacks response** (read count → effect → clear).
-  *(Glow was deleted in 4.1-H2b1 with the Glowflies; stacking and `consume-stacks` go in 4.1-H2b2. Once statuses stopped
+  *(Glow was deleted in 4.1-H2b1 with the Glowflies; stacking and `consume-stacks` went in 4.1-H2b2. Once statuses stopped
   stacking, Glow was another "+% damage" status beside Weaken and Vulnerability. Brief ASSUMPTIONS
   114, 116.)*
 - **Damage observation** (4.1-H2b) — the action observer also watches **damage events**, filtered by
@@ -154,7 +154,7 @@ win-or-lose** (the "meant to lose" is narrative, not enforced). Un-parks the §1
 | **Myconet** | Endurance | Death-network | `on-ally-death → survivors +Defence`; `on-death → Poison all-enemies` | free (`all-enemies` exists) |
 | **Necromoss** | Wit / Vitality | Reclaim (grim sustain) | heal/buff **scaling off dead-ally count**: heals read the live dead-ally count each firing; the buff is a flat rise **per ally death** (each death counted once — never a count on a per-death trigger, see CONVENTIONS) | count-scaling + heal |
 | **Hollowkin** | Endurance / Instinct | Puppet | one applies **Confusion** `on-damage-taken`, one `on-attack` | **Confusion** status |
-| **Sporch** | Violence / Wit | Strong non-spreading Burn | Igniter (potent Burn — data, no spread), Reaper (`+% to Burning`), Cinderlord (`on-kill → 1 Burn stack on every enemy` — a creature-level kill-burst, exactly 1 stack; from 4.1-H2b one Burn, no stacks; the Burn *status* never spreads) | Burn exists, but `+% to Burning` **needs target-conditional damage-modifier (Slice E2)** — *not free* |
+| **Sporch** | Violence / Wit | Strong non-spreading Burn | Igniter (potent Burn — data, no spread), Reaper (`+% to Burning`), Cinderlord (`on-kill → Burn on every enemy` — a creature-level kill-burst, one Burn each; an enemy already Burning keeps the stronger one, 4.1-H2b2; the Burn *status* never spreads) | Burn exists, but `+% to Burning` **needs target-conditional damage-modifier (Slice E2)** — *not free* |
 
 **New this biome:**
 - **Spore** — a DoT condition-status that, `on-death` of its host, **spreads to one random
@@ -212,7 +212,7 @@ emptying it (GAME_DESIGN "Milestone bosses").
   death-reset rule), and — already-present-but-now-counted — **`grant-action-state`** and
   **`consume-stacks`**. Eight top-level response kinds at seed-content lock. *(Slice E2 later
   added a ninth, **`remove-status`**; the line is now held at nine — see CONVENTIONS "Response
-  vocabulary — now NINE".)* *(4.1-H2b1 deleted Glow; 4.1-H2b2 deletes `consume-stacks` with stacking, leaving
+  vocabulary — now NINE".)* *(4.1-H2b1 deleted Glow; 4.1-H2b2 deleted `consume-stacks` with stacking, leaving
   eight.)*
 - **Flow:** **scripted-intro encounter** (a rigged fight with a story outcome instead of wipe→hub).
 - Statuses: **Sleep** (breaks-on-damage suppress), **Glow** (stacking resource; deleted in 4.1-H2b1), **turn-order**
@@ -221,7 +221,7 @@ emptying it (GAME_DESIGN "Milestone bosses").
 - Targets: **`random-ally-without-status`** `ResponseTarget` (H3, Spore's spread — a random living
   ally of the firing creature lacking a given status; the one vocabulary addition H3 needed).
 - Primitives/responses: **count-scaling** modifier (reads live-board *or* dead-ally counts),
-  **consume-stacks** response, **grant-action-state** response, **acted-before-target** condition,
+  **consume-stacks** response (deleted in 4.1-H2b2), **grant-action-state** response, **acted-before-target** condition,
   **targeting-override** (Provoke=narrow, Confusion=randomize-to-allies), **stat-remap** (existing,
   first roster use).
 - Principle: **every status has an intrinsic effect** (no inert markers).

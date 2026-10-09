@@ -196,7 +196,7 @@ tagged `unlockedAtBiome: 1` and reachable at The Overgrowth and every deeper bio
 |---|---|---|
 | Ember Lance | Violence | A single-target hit dealing damage equal to **50% of the caster's Intelligence**. |
 | Cinder Nova | Violence | Hits every enemy for **30% of the caster's Intelligence** each. |
-| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns. |
+| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns: each tick deals **20% of the caster's Attack** (measured when cast; a placeholder until 4.1-H2c) as indirect damage, only a fifth of the target's Defence applying. Re-poisoning refreshes the timer and keeps the stronger Poison. |
 
 ### Cumulative unlock
 
@@ -228,14 +228,11 @@ turn's roll never touches the Web it just placed.
 **Stun has no real source** in the seed content for now (no trait or spell applies it); it stays in
 the status vocabulary.
 
-**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129):
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; Poison from its applier landed in
+4.1-H2b2 and is folded into the Venom Bolt row above):
 
 - **Snapback (4.1-H2c):** the Jaws strike back for **30% of their Attack** (was 60%). As indirect
   damage the 60% beat the Shieldbarer pair in every floor-1 fight.
 - **Arcane Bolt (4.1-H2c):** deals **100% of the caster's Intelligence** (was 50%).
-- **Poison (4.1-H2b):** a tick comes from its applier: Venom Bolt's Poison (while it exists)
-  deals **20% of the caster's Attack** per tick as indirect damage (a placeholder, tuned in
-  4.1-H2c). Statuses no longer stack: re-applying one refreshes its timer and keeps the stronger
-  value.
 - **Health (4.1-H2c):** every creature's Health moves to the 20–45 range (`floor(20 + (old − 10) ×
   1.25 + 0.5)`), so a 10 becomes 20 and a 30 becomes 45.

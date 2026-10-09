@@ -29,12 +29,24 @@ the end of each of the bearer's turns (see the last section).
 
 ## Statuses
 
-**Spore** — A festering infection. While active, the bearer takes damage equal to **4% of its own
-maximum HP** every round (up to 3 stacks). If the bearer *dies* while infected, the spores burst
-and infect one living, still-healthy member of the bearer's own side — the contagion keeps
+**Spore** — A festering infection. While active, the bearer takes damage every round worth **15%
+of the Speed of the creature that infected it**, measured at the moment of infection (a placeholder
+until 4.1-H2c). If the bearer *dies* while infected, the spores burst and infect one living,
+still-healthy member of the bearer's own side, **carrying the same infection**: the new host takes
+the original infector's damage, not a share of the dying host's own Speed. The contagion keeps
 spreading through a population as it's whittled down, rather than clinging to whoever already has
 it. If every living member of that side is already infected, the spread simply fizzles. Lasts up
 to **3 rounds** per infection.
+
+**Damage over time (Spore, Burn, Poison)** — Each tick is **indirect damage**: the infector's
+affinity against the bearer applies, then the bearer's damage-taken effects (Vulnerability,
+Defending), and only a fifth of the bearer's Defence is subtracted; a tick always deals at least 1.
+None of the infector's damage bonuses (Weaken, a bonus against Burning targets, armour penetration)
+touch a tick: its strength was fixed when the status landed. While the infector is alive the damage
+counts as its own, so its kill and damage-dealt traits fire; once it is dead the damage is only
+logged against the bearer, and nothing reacts as its dealer. Retaliation never answers a tick. A
+status never stacks: re-applying it refreshes the timer and keeps the stronger of the two (a tie
+keeps the one already there).
 
 **Confusion** — A puppet's madness. For **3 rounds**, every time the confused creature tries to
 attack or cast something harmful, there's a **50% chance** it strikes its own side instead.
@@ -60,7 +72,7 @@ attack or cast something harmful, there's a **50% chance** it strikes its own si
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Warder | Endurance | Enabler | Whenever an ally of this creature dies, every surviving ally's Defence permanently rises by **15%**. |
-| Rotcore | Wit | Payoff | When this creature itself dies, it bursts a cloud of Poison across the entire enemy side. |
+| Rotcore | Wit | Payoff | When this creature itself dies, it bursts a cloud of Poison across the entire enemy side. The Poison is measured from the Rotcore as it dies (20% of its Attack), and since it is already dead, every tick is logged as each bearer's own damage. |
 | Gravedigger | Endurance | Amplifier | Whenever an ally of this creature dies, it heals itself for **20% of its own maximum HP**. |
 
 ## Necromoss (Wit/Vitality) — Reclaim
@@ -86,9 +98,9 @@ Nothing happens until an ally has actually fallen.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Igniter | Violence | Enabler | Every attack brands its target with a potent, **2-stack** Burn. |
+| Igniter | Violence | Enabler | Every attack brands its target with Burn: each round, damage worth **25% of the Igniter's Intelligence**, measured when branded (a placeholder until 4.1-H2c). Re-branding refreshes the Burn and keeps the stronger one. |
 | Ashborn | Wit | Payoff | Deals **30% more damage** to any enemy currently Burning. |
-| Cinderlord | Violence | Amplifier | Every kill it personally lands applies **1 stack of Burn to every remaining enemy**. |
+| Cinderlord | Violence | Amplifier | Every kill it personally lands applies **Burn to every remaining enemy**, measured from the Cinderlord's own Intelligence; an enemy already Burning keeps the stronger Burn and has its timer refreshed. |
 
 ## How each creature plays (roles)
 
@@ -168,20 +180,7 @@ turn. Spore's spread on death is unchanged.
 Vigor, …) now land on **its own side** by default. In Phase 4 an enemy support caster targeted the
 player's lowest-HP creature, healing and buffing the player.
 
-**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129):
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; the DoT, Spore-spread, Rotcore and
+Sporch items landed in 4.1-H2b2 and are folded into the sections above):
 
-- **DoTs come from their applier (4.1-H2b).** Spore and Burn no longer stack, and a tick is no
-  longer a share of the bearer's max HP: at application the status records its applier's
-  strength, and each tick deals that as **indirect damage** (a fifth of the bearer's Defence
-  applies). Placeholders, tuned in 4.1-H2c: **Spore 15% of the applier's Speed, Burn 25% of its
-  Intelligence, Poison 20% of its Attack**. Re-applying refreshes the timer and keeps the stronger
-  one. While the applier lives it is the damage's source (its kill and damage traits fire);
-  after it dies, the bearer is. A tick is never struck back at: retaliation doesn't answer it.
-- **Spore's spread keeps its strength:** the spores that burst from a dying host carry that host's
-  infection (its applier's strength), not the dying host's own stats.
-- **Myconet Rotcore's Poison** is applied as it dies, so its ticks have each bearer as their
-  source.
-- **Sporch Igniter** brands its target with **one** Burn (no "2-stack"); its potency comes from the
-  numbers H2c sets. **Sporch Cinderlord** applies Burn to every remaining enemy on each kill (no
-  stack count; an enemy already Burning keeps the stronger Burn and has its timer refreshed).
 - **Health (4.1-H2c):** every creature's Health moves to the 20–45 range, as in every biome.

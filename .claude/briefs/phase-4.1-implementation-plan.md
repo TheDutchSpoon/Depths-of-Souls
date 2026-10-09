@@ -203,8 +203,9 @@ Cross-reference this table when implementing. "Deleted" rows are removed outrigh
 | `PerkDef.phase` | Data field | G | **Deleted** |
 | Balance simulator | Tool | H | Deterministic; real store + documented policy; loose CI thresholds |
 
-**Response vocabulary after 4.1:** nine verbs (`deal-damage`, `apply-status`, `apply-stat-modifier`,
-`heal`, `revive`, `grant-action-state`, `consume-stacks`, `remove-status`, `perform-action`). The
+**Response vocabulary after 4.1:** eight verbs (`deal-damage`, `apply-status`, `apply-stat-modifier`,
+`heal`, `revive`, `grant-action-state`, `remove-status`, `perform-action`; `consume-stacks` left in
+4.1-H2b2). The
 count is not the rule; **"no side doors"** is.
 
 ---
@@ -1205,6 +1206,10 @@ Moved to .claude/phases/4.1/H2b2/brief.md at its kickoff.
   124).
 - **Per-item tuning toward the bands and the CI thresholds** (ASSUMPTION 129): the floor-1
   problem creatures the floor 1–5 matchup table shows, and the DoT percentages.
+  - **Input from the H2b2 PR review:** with the placeholders, 4,971 of the corpus's 5,318 ticks
+    (93%) land on the minimum of 1 (a potency of 4–5 from a stat near 20, against a fifth of a
+    Defence near 20); corpus draws rose 39 → 52 with H2b2. Tuning the percentages has to lift a
+    tick's potency clear of `0.2 × Defence` across the level range, or DoT stays inert.
 - **The report additions** (ASSUMPTION 127) and the **floor-5 threshold change** (ASSUMPTION 126);
   then the CI threshold test asserted.
 - **Before/after report** in the PR and the phase record: the report on `main` before H2c (with
@@ -1994,7 +1999,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      response (target `self`, no `magnitudeSource`), a status without one carries none, and
      traits, perks and spells carry none. An instance holds a snapshot (applier id, affinity,
      potency) iff its status declares a potency. `heal.amountPerStack` is renamed `flatAmount`.
-     Why: under 131 a status's flat self-damage was a tick and its formula-mode self-damage a cost;
+     A plain (unmarked) heal inside a status stays an ordinary heal from its bearer: a heal has no
+     cost path (no shipped status has one; confirmed at the H2b2 PR review). Why: under 131 a status's flat self-damage was a tick and its formula-mode self-damage a cost;
      the marker makes a tick something the data says. Rejected: keeping 131's shape test.
 
 145. **Decided (H2b2 plan review, 2026-10-09; design owner).** **Snapshot pass-on is the rule, not

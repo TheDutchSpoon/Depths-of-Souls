@@ -149,8 +149,8 @@ already covers every affinity; these are spice on top of it, not a replacement k
 |---|---|---|
 | Beacon Charge | Wit | Heals a single ally for **30% of the caster's effective Health**, and grants that ally **Grant Act First** (the same status Blindclaws' Setter and Vanguard grant) for **3 turns**. |
 | Disorient | Instinct | A single-target hit dealing damage equal to **85% of the caster's Intelligence**, and applies Web (act-last) to the target for **3 turns** — the same status Overgrowth's Vine Snare applies, reused rather than re-authored under a new name. |
-| Blinding Flare | Violence | A single-target hit dealing damage equal to **70% of the caster's Intelligence**, and leaves the target **Vulnerable** (takes ×1.5 damage) for **3 turns** — a light-burst setup debuff; no other spell applies Vulnerability. |
-| Afterglow | Vitality | Heals a single ally for **50% of the caster's effective Health**, and grants **Regen** (heals a further **5% of the target's own effective max HP per stack** at the end of each round) for **3 turns** — a lingering-light sustain heal, distinct from Regrowth's plain burst. |
+| Blinding Flare | Violence | A single-target hit dealing damage equal to **70% of the caster's Intelligence**, and leaves the target **Vulnerable** (takes ×1.5 damage, once: re-casting refreshes it, it never compounds) for **3 turns** — a light-burst setup debuff; no other spell applies Vulnerability. |
+| Afterglow | Vitality | Heals a single ally for **50% of the caster's effective Health**, and grants **Regen** (heals a further **10% of the caster's Health** at the end of each round, measured when cast; a placeholder until 4.1-H2c) for **3 turns** — a lingering-light sustain heal, distinct from Regrowth's plain burst. Regen never stacks: re-granting it refreshes the timer and keeps the stronger heal. While the caster lives the heal is credited to it, after that to the target. |
 | Kindred Light | Wit | Heals **every ally** for **20% of the caster's effective Health** — a party-wide wave of light; the game's first AOE support spell. |
 
 Every ally-targeting entry above (Beacon Charge, Afterglow, Kindred Light) can be
@@ -183,11 +183,8 @@ bearer's turns** instead of at round end. A status applied during or after its b
 starts counting the next turn; one applied at the start of the bearer's turn, before it acts,
 counts that turn.
 
-**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; mostly 4.1-H2b, each item names its
-PR where it differs; the Flickerlings, Glow's deletion, Beacon Charge, Kindred Light and the affinity
-spread landed in 4.1-H2b1 and are folded into the sections above):
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; the Flickerlings, Glow's deletion,
+Beacon Charge, Kindred Light and the affinity spread landed in 4.1-H2b1, and single-instance
+Vulnerability and Afterglow's Regen in 4.1-H2b2; all are folded into the sections above):
 
-- **Single-instance statuses:** Blinding Flare's Vulnerability is ×1.5 once (re-casting refreshes
-  it). Afterglow's Regen heals **10% of the caster's Health** per tick (placeholder, tuned in
-  4.1-H2c) instead of a share of the target's max HP.
 - **Health (4.1-H2c):** every other creature's Health moves to the 20–45 range, as in every biome.
