@@ -1,7 +1,8 @@
 // Golden: PR #64 review fix 3 -- `triggering-source` never resolves to the firing creature
-// itself. A DoT tick's `deal-damage` response targets `{kind:'self'}` (the bearer damages
-// itself), so `applyDamageAndEmit`'s `sourceId === targetId` -- `on-damage-taken`'s hook context
-// then has `context.source === context.self`. Before the fix, Hollowkin Wretch's real
+// itself. A SELF-APPLIED DoT tick (applier = bearer) has the bearer as its source; before the fix,
+// `on-damage-taken`'s hook context then had `context.source === context.self`. (4.1-H2b2: a tick now
+// offers no `triggering-source` at all, applier alive or not -- golden-h2b2-tick-no-retaliation covers
+// a living OTHER applier; this golden keeps the self-applied case.) Before the fix, Hollowkin Wretch's real
 // `on-damage-taken -> apply-status(triggering-source, confusion)` trait would resolve
 // `triggering-source` to WRETCH itself and confuse its own bearer off its own Poison tick.
 //
@@ -12,12 +13,13 @@
 // so it is never born in any turn). Re-derived in 4.1-F2: the tick is no longer a round-end sweep
 // step but a trigger in the bearer's OWN turn-end hooks.
 //
-//   WRETCH's turn end (round 1): Poison's tick: flatAmount 3% of WRETCH's own max HP [100] * 1
-//     stack = 3. WRETCH 100 - 3 = 97, survives (no TriggerFired for the tick itself --
+//   WRETCH's turn end (round 1): Poison's tick, snapshot at application (applier WRETCH, endurance,
+//     potency 20% of its Attack 14 = floor(14 x 20 / 100) = 2). Indirect: 2 x 1.0 (endurance vs
+//     endurance) - 0.2 x Defence 20 = 2 - 4 = -2, raised to the minimum 1. WRETCH 100 - 1 = 99, survives (no TriggerFired for the tick itself --
 //     emitTriggerFired: false).
 //   WRETCH survived -> on-damage-taken fires: Madness Touch's trigger fires
 //     (TriggerFired(WRETCH, on-damage-taken, madness-touch)), but `triggering-source` resolves to
-//     [] (context.source === context.self, both WRETCH) -- no StatusApplied follows. WRETCH is
+//     [] (a tick offers no source) -- no StatusApplied follows. WRETCH is
 //     NOT confused by its own tick. Cleanup then counts Poison down (3 -> 2, no event); TurnEnded.
 //   Round 2 begins: queue = [P, WRETCH] -> RoundStarted{round:2} -> P's turn (always-wait) ->
 //     Waited.
@@ -73,11 +75,11 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: WRETCH,
     targetId: WRETCH,
-    rawDamage: 3,
-    finalDamage: 3,
+    rawDamage: -2,
+    finalDamage: 1,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 97,
+    remainingHp: 99,
     damageSource: 'dot',
     statusId: 'poison',
   },
@@ -87,7 +89,7 @@ export const expectedEvents: CombatEvent[] = [
     hook: 'on-damage-taken',
     effectId: HOLLOWKIN_WRETCH_TRAIT.id,
   },
-  // No StatusApplied -- triggering-source fizzles since the DoT's source IS the bearer.
+  // No StatusApplied -- triggering-source fizzles: a tick offers no source.
   { type: 'TurnEnded', creatureId: WRETCH },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: P },

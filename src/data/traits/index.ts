@@ -1,6 +1,7 @@
 import type { Trait } from '../../engine/effect-types'
 import {
   validateNoBreakChanceOutsideStatus,
+  validateNoSnapshotPotencyOutsideStatus,
   validateNoRandomSelectorInResponseTargets,
   validateObservationFilters,
   validateStatModifierConditions,
@@ -182,6 +183,7 @@ export const TRAIT_REGISTRY: ReadonlyMap<string, Trait> = new Map(
 export function validateTrait(trait: Trait): void {
   validateStatModifierConditions(trait.effects)
   validateNoBreakChanceOutsideStatus(trait.effects)
+  validateNoSnapshotPotencyOutsideStatus(trait.effects)
   validateNoRandomSelectorInResponseTargets(trait.effects)
   // Phase 4.1-H2b1: observation-filter fields belong to one observation hook each.
   validateObservationFilters(trait.effects, `trait "${trait.id}"`)

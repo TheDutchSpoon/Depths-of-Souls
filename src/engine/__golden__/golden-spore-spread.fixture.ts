@@ -15,7 +15,7 @@
 // Spore, so it's the sole (deterministic, no-RNG) candidate for the spread.
 //
 //   on-attack fires BEFORE the attack's own damage (CONVENTIONS): SEEDER's Infest trait applies
-//     Spore to BEARER (1 stack, duration 3) first.
+//     Spore to BEARER (duration 3) first.
 //   SEEDER->BEARER (off 16, def 0): core = max(16-0,0) = 16. chip = 0.01*16 = 0.16. raw = 16.16
 //     (wit-vs-wit affinity x1.0, no dealt/taken mods) -> final = floor(16.16) = 16.
 //     BEARER 10 - 16 = -6 -> clamped to 0 -> dies.
@@ -23,7 +23,7 @@
 //   CreatureDied(BEARER) -> on-death fires on BEARER: SPORE's own on-death trigger reads
 //     `random-ally-without-status(spore)` relative to BEARER (self) -- BEARER's only living ally
 //     is ALLY, which does not carry spore -> the sole candidate, no RNG draw needed (pool size
-//     1). StatusApplied(ALLY, spore, 1 stack, duration 3, source BEARER).
+//     1). StatusApplied(ALLY, spore, duration 3, source BEARER).
 //   on-kill (SEEDER): no matching effect -> nothing. fireDeathObservers: on-ally-death fires on
 //     ALLY (BEARER's only living ally) -- ALLY carries no trait -> nothing. on-enemy-death fires
 //     on SEEDER -- no matching effect -> nothing.
@@ -100,7 +100,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: BEARER,
     statusId: 'spore',
-    stacks: 1,
     duration: 3,
     sourceId: SEEDER,
   },
@@ -127,7 +126,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: ALLY,
     statusId: 'spore',
-    stacks: 1,
     duration: 3,
     sourceId: BEARER,
   },

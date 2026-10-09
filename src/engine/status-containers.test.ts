@@ -309,7 +309,7 @@ describe("the skip: an 'all' lock", () => {
     // perform-action(self, cast slot 0); slot 0 = an ally-side AOE whose only effect is
     // remove-status(cast-target, stun). FOE (enemy, speed 1, HP 500) only waits.
     //
-    // Fight start: effect 1 -> TriggerFired + StatusApplied(x, stun, stacks 1, duration 5).
+    // Fight start: effect 1 -> TriggerFired + StatusApplied(x, stun, duration 5).
     // X's turn: TurnStarted. Turn-start hooks, in effect order: effect 2 -> TriggerFired, the boost lands
     // on x then y (default duration 4); Y's on-status-applied fires for y only -> TriggerFired(y),
     // queueing Y's cast FIRST. Effect 3 -> TriggerFired(x), queueing X's attack SECOND.
@@ -325,11 +325,10 @@ describe("the skip: an 'all' lock", () => {
     const FIXTURE_X = createCreatureId('x')
     const FIXTURE_Y = createCreatureId('y')
     // 4.1-H2b1: stands in for the real Glow this test used to borrow (deleted): the same shape, a
-    // buff with a dealt damage-modifier of 0.08 per stack, cap 5, default duration 4.
+    // buff with a dealt damage-modifier of 0.08, default duration 4.
     const FIXTURE_DAMAGE_BOOST: StatusDef = {
       statusId: 'fixture-damage-boost',
       effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: 0.08 }],
-      cap: 5,
       polarity: 'buff',
       defaultDuration: 4,
     }
@@ -448,7 +447,6 @@ describe("the skip: an 'all' lock", () => {
         type: 'StatusApplied',
         targetId: FIXTURE_X,
         statusId: 'stun',
-        stacks: 1,
         duration: 5,
         sourceId: FIXTURE_X,
       },
@@ -464,7 +462,6 @@ describe("the skip: an 'all' lock", () => {
         type: 'StatusApplied',
         targetId: FIXTURE_X,
         statusId: FIXTURE_DAMAGE_BOOST.statusId,
-        stacks: 1,
         duration: 4,
         sourceId: FIXTURE_X,
       },
@@ -472,7 +469,6 @@ describe("the skip: an 'all' lock", () => {
         type: 'StatusApplied',
         targetId: FIXTURE_Y,
         statusId: FIXTURE_DAMAGE_BOOST.statusId,
-        stacks: 1,
         duration: 4,
         sourceId: FIXTURE_X,
       },
@@ -675,7 +671,7 @@ describe('immunity is checked once, in the effect iterator', () => {
   })
 
   it('an immune bearer has no damage-modifier from the status (dealt and taken)', () => {
-    // Weaken: -0.2 dealt per stack; Vulnerability: 1.5 taken per stack. One stack each.
+    // Weaken: -0.2 dealt; Vulnerability: 1.5 taken. One instance each.
     for (const immune of [true, false]) {
       const weak = withStatus('weaken', immune)
       expect(gatherDealtMods(creatureOf(weak), weak)).toEqual(immune ? [] : [-0.2])
@@ -717,16 +713,14 @@ describe('immunity is checked once, in the effect iterator', () => {
   })
 })
 
-describe("a status's effects scale by its stacks as the default count", () => {
-  /** A one-effect status on X at `stacks`, its trigger fired through the real hook path. */
-  function fireWithStacks(
+describe("a status's effects carry no count of their own (single instance, 4.1-H2b2)", () => {
+  /** A one-effect status on X, applied once, its trigger fired through the real hook path. */
+  function fireOnce(
     effect: EffectDef,
-    stacks: number,
     x: CreatureOverrides = {},
   ): { state: CombatState; events: CombatEvent[] } {
     const status: StatusDef = {
-      statusId: 'stacky',
-      cap: 5,
+      statusId: 'single',
       polarity: 'buff',
       defaultDuration: 3,
       effects: [effect],
@@ -736,7 +730,7 @@ describe("a status's effects scale by its stacks as the default count", () => {
     if (currentHp !== undefined) created = updateCreature(created, X, { currentHp })
     const events: CombatEvent[] = []
     const ctx = createResolutionContext(events, newCascade())
-    let state = applyStatus(FOE, X, { statusId: 'stacky', stacks }, created, ctx)
+    let state = applyStatus(FOE, X, { statusId: 'single' }, created, ctx)
     events.length = 0
     state = fireHook('on-turn-end', [X], undefined, state, ctx).state
     return { state, events }
@@ -749,99 +743,82 @@ describe("a status's effects scale by its stacks as the default count", () => {
     response,
   })
 
-  it('deal-damage, formula mode: X attack 20, defence 0, spellPower 0.5 -> x2 stacks = full Attack', () => {
-    // effOff = 20 * (0.5 * stacks): stacks 2 -> 20, raw (20 - 0) + 0.2 = 20.2 -> 20 (HP 100 -> 80);
-    // stacks 1 -> 10, raw 10.1 -> 10 (HP 90).
+  it('deal-damage, formula mode: X attack 20, defence 0, spellPower 0.5 -> the count is 1', () => {
+    // effOff = 20 * 0.5 = 10, a self hit: raw (10 - 0) + 0.1 = 10.1 -> 10 (HP 100 -> 90).
     const hit = onTurnEnd({
       kind: 'deal-damage',
       target: { kind: 'self' },
       offStat: 'attack',
       spellPower: 0.5,
     })
-    expect(creatureOf(fireWithStacks(hit, 2, { attack: 20 }).state).currentHp).toBe(80)
-    expect(creatureOf(fireWithStacks(hit, 1, { attack: 20 }).state).currentHp).toBe(90)
+    expect(creatureOf(fireOnce(hit, { attack: 20 }).state).currentHp).toBe(90)
   })
 
-  it('deal-damage, flat mode: 3% of max HP per stack (HP 100 -> 3 per stack)', () => {
-    const tick = onTurnEnd({
+  it('deal-damage, flat mode: a status response damaging its own bearer without the tick marker is a COST (3% of max HP: 100 -> 97)', () => {
+    const cost = onTurnEnd({
       kind: 'deal-damage',
       target: { kind: 'self' },
       flatAmount: { ofStat: 'health', percent: 3 },
       emitTriggerFired: false,
       damageSource: 'dot',
     })
-    expect(creatureOf(fireWithStacks(tick, 3).state).currentHp).toBe(91) // 100 - floor(100*3*3/100)
+    expect(creatureOf(fireOnce(cost).state).currentHp).toBe(97) // 100 - floor(100*3/100)
   })
 
-  it('heal, formula mode: scalingStat intelligence 20 x spellPower 0.5 x stacks 2 = 20', () => {
+  it('heal, formula mode: scalingStat intelligence 20 x spellPower 0.5 = 10', () => {
     const heal = onTurnEnd({
       kind: 'heal',
       target: { kind: 'self' },
       scalingStat: 'intelligence',
       spellPower: 0.5,
     })
-    expect(creatureOf(fireWithStacks(heal, 2, { currentHp: 10 }).state).currentHp).toBe(
-      30,
-    )
-    expect(creatureOf(fireWithStacks(heal, 1, { currentHp: 10 }).state).currentHp).toBe(
-      20,
-    )
+    expect(creatureOf(fireOnce(heal, { currentHp: 10 }).state).currentHp).toBe(20)
   })
 
-  it('apply-stat-modifier: factor 1.5 at stacks 2 -> 1 + 0.5 * 2 = 2.0 (attack 20 -> 40); one stack keeps 1.5 verbatim', () => {
+  it('apply-stat-modifier: factor 1.5 is applied verbatim (attack 20 -> 30)', () => {
     const buff = onTurnEnd({
       kind: 'apply-stat-modifier',
       target: { kind: 'self' },
       stat: 'attack',
       factor: 1.5,
     })
-    const two = fireWithStacks(buff, 2, { attack: 20 })
-    expect(two.events.find((e) => e.type === 'StatModifierApplied')).toMatchObject({
-      factor: 2,
-      effectiveAfter: 40,
-    })
-    const one = fireWithStacks(buff, 1, { attack: 20 })
+    const one = fireOnce(buff, { attack: 20 })
     expect(one.events.find((e) => e.type === 'StatModifierApplied')).toMatchObject({
       factor: 1.5,
       effectiveAfter: 30,
     })
   })
 
-  it('damage-modifier: dealt -0.2 x stacks 2 = -0.4; taken 1.5 ** 2 = 2.25', () => {
+  it('damage-modifier: dealt -0.2 once; taken 1.5 once, even re-applied (never 2.25)', () => {
     const dealtStatus: StatusDef = {
-      statusId: 'dealt2',
-      cap: 3,
+      statusId: 'dealt1',
       polarity: 'debuff',
       defaultDuration: 3,
       effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.2 }],
     }
     const takenStatus: StatusDef = {
-      statusId: 'taken2',
-      cap: 3,
+      statusId: 'taken1',
       polarity: 'debuff',
       defaultDuration: 3,
       effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.5 }],
     }
     let state = build({ statuses: [dealtStatus, takenStatus] })
     const ctx = createResolutionContext([], newCascade())
-    state = applyStatus(FOE, X, { statusId: 'dealt2', stacks: 2 }, state, ctx)
-    state = applyStatus(FOE, X, { statusId: 'taken2', stacks: 2 }, state, ctx)
-    expect(gatherDealtMods(creatureOf(state), state)).toEqual([-0.2 * 2])
-    expect(gatherTakenFactors(creatureOf(state), state)).toEqual([1.5 ** 2])
+    state = applyStatus(FOE, X, { statusId: 'dealt1' }, state, ctx)
+    state = applyStatus(FOE, X, { statusId: 'taken1' }, state, ctx)
+    state = applyStatus(FOE, X, { statusId: 'dealt1' }, state, ctx)
+    state = applyStatus(FOE, X, { statusId: 'taken1' }, state, ctx)
+    expect(gatherDealtMods(creatureOf(state), state)).toEqual([-0.2])
+    expect(gatherTakenFactors(creatureOf(state), state)).toEqual([1.5])
   })
 })
 
 describe('every effect kind a status may carry is read through the one iterator', () => {
-  /** A status container instance holding `effects` at `stacks`, placed on X after setup. */
-  function carry(
-    effects: readonly EffectDef[],
-    stacks = 1,
-    x: CreatureOverrides = {},
-  ): CombatState {
+  /** A status container instance holding `effects`, placed on X after setup. */
+  function carry(effects: readonly EffectDef[], x: CreatureOverrides = {}): CombatState {
     const instance: StatusEffect = {
       category: 'status',
       statusId: 'carrier',
-      cap: 5,
       polarity: 'buff',
       defaultDuration: 3,
       effects,
@@ -849,7 +826,6 @@ describe('every effect kind a status may carry is read through the one iterator'
       sourceTraitId: 'carrier',
       remainingDuration: 3,
       appliedAt: 0,
-      stacks,
     }
     const state = build({ x })
     return updateCreature(state, X, { activeEffects: [instance as ActiveEffect] })
@@ -887,7 +863,6 @@ describe('every effect kind a status may carry is read through the one iterator'
         {
           category: 'status',
           statusId: 'carrier',
-          cap: 1,
           polarity: 'buff',
           defaultDuration: 3,
           effects: [
@@ -902,7 +877,6 @@ describe('every effect kind a status may carry is read through the one iterator'
           sourceTraitId: 'carrier',
           remainingDuration: 3,
           appliedAt: 0,
-          stacks: 1,
         },
       ],
     })
@@ -919,21 +893,20 @@ describe('every effect kind a status may carry is read through the one iterator'
       resolveTurn(state).events.find((e) => e.type === 'DamageDealt')
     const control = build({ x: { attack: 20, scriptId: 'always-attack' } })
     expect(hit(control)).toMatchObject({ finalDamage: 20 })
-    const withBonus = carry([bonus], 1, { scriptId: 'always-attack' })
+    const withBonus = carry([bonus], { scriptId: 'always-attack' })
     // attack 20 is the `makeParty` default for X (stats default to 20)
     expect(hit(withBonus)).toMatchObject({ finalDamage: 30 })
   })
 
-  it('taken-reduction inside a status takes its stacks as the default count: 0.5 ** 2 = 0.25', () => {
-    const state = carry([{ category: 'taken-reduction', magnitude: 0.5 }], 2)
-    expect(gatherTakenFactors(creatureOf(state), state)).toEqual([0.25])
+  it('taken-reduction inside a status has the default count of 1: 0.5', () => {
+    const state = carry([{ category: 'taken-reduction', magnitude: 0.5 }])
+    expect(gatherTakenFactors(creatureOf(state), state)).toEqual([0.5])
   })
 })
 
 describe('the status validator (the bright line)', () => {
   const statusWith = (effect: EffectDef): StatusDef => ({
     statusId: 'bad',
-    cap: 1,
     polarity: 'debuff',
     defaultDuration: 1,
     effects: [effect],

@@ -80,7 +80,6 @@ const stunApplied = (who: typeof FAST): CombatEvent => ({
   type: 'StatusApplied',
   targetId: who,
   statusId: 'stun',
-  stacks: 1,
   duration: 1,
   sourceId: STRIKER,
 })

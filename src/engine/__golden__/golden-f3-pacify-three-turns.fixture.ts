@@ -173,7 +173,6 @@ const applyEvents = (caster: Id, target: Id): CombatEvent[] => [
     type: 'StatusApplied',
     targetId: target,
     statusId: 'pacified',
-    stacks: 1,
     duration: 3,
     sourceId: caster,
   },

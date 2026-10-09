@@ -12,21 +12,23 @@
 // Hand-derived (independent `node -e` calculator, verified via Bash). BEARER starts the fight
 // already carrying Spore (applied via a direct `applyStatus` call before any turn resolves, into
 // a throwaway events array, at turn clock 0 -- mirrors the PR #64 repro's own setup idiom) and
-// wounded to 1 HP, so its own first DoT tick is lethal. P (speed 30) acts before BEARER (speed
-// 20) before MATE (speed 10); all three `always-wait`.
+// wounded to 1 HP, so its own first DoT tick is lethal. P (speed 60) acts before BEARER (speed
+// 20) before MATE (speed 10); all three `always-wait`. (4.1-H2b2) P applies the Spore: snapshot =
+// applier P, vitality, potency 15% of P's Speed = floor(60 x 15 / 100) = 9. Every bearer has
+// Defence 20, vitality (neutral): a tick is 9 - 0.2 x 20 = 5, sourced from P (alive).
 //
 //   BEARER's turn end (round 1): its Spore is not born (applied before any turn). The tick:
-//     flatAmount 4% of BEARER's own max HP [100] * 1 stack = 4. BEARER 1 - 4 -> clamped to 0 ->
+//     snapshot tick 5 (see above). BEARER 1 - 5 -> clamped to 0 ->
 //     dies. No TriggerFired for the tick itself (emitTriggerFired: false). Neither side is wiped
 //     (P and MATE live), so the turn goes on.
 //   CreatureDied(BEARER) -> on-death fires Spore's OWN spread trigger (a DIFFERENT guard identity
 //     now, per the fix) -> TriggerFired(BEARER, on-death, spore) -> random-ally-without-status
 //     relative to BEARER: MATE is BEARER's only living ally and doesn't carry Spore -> the sole
 //     candidate (pool size 1, so the draw is deterministic regardless of RNG value) ->
-//     StatusApplied(MATE, spore, 1 stack, duration 3, source BEARER).
+//     StatusApplied(MATE, spore, duration 3, source BEARER) -- carrying BEARER's whole snapshot (P, 9).
 //   BEARER's cleanup: a corpse's statuses are inert (no countdown, no StatusExpired). TurnEnded.
 //   MATE's turn: the Spore was applied in BEARER's turn, so for MATE it is NOT born this turn: at
-//     MATE's own turn end it ticks (4% of 100 = 4, MATE 100 -> 96, no TriggerFired) and then
+//     MATE's own turn end it ticks (the inherited 9 - 4 = 5 from P, MATE 100 -> 95, no TriggerFired) and then
 //     counts down 3 -> 2 (no event). (Under the old sweep it was skipped until round 2.)
 //   Round 2 begins: queue = [P, MATE] (BEARER excluded, dead) -> RoundStarted{round:2} -> P's turn
 //     (always-wait) -> Waited.
@@ -52,7 +54,7 @@ export const MATE = createCreatureId('mate')
 export const BEARER_STARTING_HP = 1
 
 export const playerParty = makeParty('player', [
-  { id: 'p', speed: 30, scriptId: 'always-wait' },
+  { id: 'p', speed: 60, scriptId: 'always-wait' },
 ])
 
 export const enemyParty = makeParty('enemy', [
@@ -76,10 +78,10 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'Waited', creatureId: BEARER },
   {
     type: 'DamageDealt',
-    sourceId: BEARER,
+    sourceId: P,
     targetId: BEARER,
-    rawDamage: 4,
-    finalDamage: 4,
+    rawDamage: 5,
+    finalDamage: 5,
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 0,
@@ -92,7 +94,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: MATE,
     statusId: 'spore',
-    stacks: 1,
     duration: 3,
     sourceId: BEARER,
   },
@@ -101,13 +102,13 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'Waited', creatureId: MATE },
   {
     type: 'DamageDealt',
-    sourceId: MATE,
+    sourceId: P,
     targetId: MATE,
-    rawDamage: 4,
-    finalDamage: 4,
+    rawDamage: 5,
+    finalDamage: 5,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 96,
+    remainingHp: 95,
     damageSource: 'dot',
     statusId: 'spore',
   },

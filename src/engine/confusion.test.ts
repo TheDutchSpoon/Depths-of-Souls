@@ -15,14 +15,12 @@ function confusionFixture(chancePercent: number): ActiveEffect {
   return {
     category: 'status',
     statusId: 'confusion-fixture',
-    cap: 1,
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId('confusion-fixture'),
     sourceTraitId: 'confusion-fixture',
     remainingDuration: 3,
     appliedAt: 0,
-    stacks: 1,
     effects: [{ category: 'friendly-fire', chancePercent }],
   }
 }

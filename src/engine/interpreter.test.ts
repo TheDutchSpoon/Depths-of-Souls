@@ -506,7 +506,6 @@ describe('decideAction -- status-immunity vs scoped action-lock (Phase 4 Slice C
   const SILENCED_CAST_SUPPRESSION: ActiveEffect = {
     category: 'status',
     statusId: 'silenced',
-    cap: 1,
     effects: [{ category: 'action-lock', scope: 'cast' }],
     polarity: 'debuff',
     defaultDuration: 3,
@@ -514,7 +513,6 @@ describe('decideAction -- status-immunity vs scoped action-lock (Phase 4 Slice C
     sourceTraitId: 'silenced',
     remainingDuration: 2,
     appliedAt: 0,
-    stacks: 1,
   }
   const CLEAR_MIND: ActiveEffect = {
     category: 'status-immunity',

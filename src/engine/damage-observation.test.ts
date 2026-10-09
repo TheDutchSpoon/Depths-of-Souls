@@ -127,11 +127,20 @@ function inflict(scenario: Scenario, state: CombatState): CombatEvent[] {
         ctx,
       )
       break
-    case 'tick': // a status-sourced flat hit on its own bearer: the tick path (source === target)
+    case 'tick': // a self-applied status tick (applier = bearer): the tick path (source === target)
       executeResponse(
-        { kind: 'deal-damage', target: { kind: 'self' }, flatAmount: 3 },
+        {
+          kind: 'deal-damage',
+          target: { kind: 'self' },
+          flatAmount: { kind: 'snapshot-potency' },
+        },
         'fixture',
-        { channel: 'indirect', self: V, statusId: 'some-status' },
+        {
+          channel: 'indirect',
+          self: V,
+          statusId: 'some-status',
+          snapshot: { applierId: V, affinity: 'vitality', potency: 3 },
+        },
         state,
         ctx,
       )
@@ -695,7 +704,7 @@ describe('the validator keeps each filter field on its own hook, on every trigge
     category: 'triggered',
     hook,
     observationFilter,
-    response: { kind: 'heal', target: { kind: 'self' }, amountPerStack: 1 },
+    response: { kind: 'heal', target: { kind: 'self' }, flatAmount: 1 },
   })
 
   it('accepts a field on its own hook, and permissive (absent) fields', () => {
@@ -761,7 +770,6 @@ describe('the validator keeps each filter field on its own hook, on every trigge
   it('a STATUS carrier is checked (validateStatusDef), and so is a status handed to createCombat', () => {
     const bad: StatusDef = {
       statusId: 'bad-status',
-      cap: 1,
       polarity: 'buff',
       defaultDuration: 1,
       effects: [triggered('on-damage-observed', { actionKind: 'cast' })],

@@ -21,7 +21,7 @@
 //   ATTACKER->BEARER (off 20, def 0): core = 20. chip = 0.01*20 = 0.2. raw = 20.2 -> final =
 //     floor(20.2) = 20. BEARER (wounded to 10 post-createCombat) 10 - 20 -> 0, dies.
 //   on-death fires Spore's spread trigger: TriggerFired(BEARER, on-death, spore) -> filtered pool
-//     [ALLY_A, ALLY_B] -> draw index 1 -> StatusApplied(ALLY_B, spore, 1 stack, duration 3,
+//     [ALLY_A, ALLY_B] -> draw index 1 -> StatusApplied(ALLY_B, spore, duration 3,
 //     source BEARER). ALLY_SPORED (filtered out) and ALLY_A (not drawn) receive nothing.
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -86,7 +86,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: ALLY_B,
     statusId: 'spore',
-    stacks: 1,
     duration: 3,
     sourceId: BEARER,
   },

@@ -342,7 +342,6 @@ export interface StatusAppliedEvent {
   readonly type: 'StatusApplied'
   readonly targetId: CreatureId
   readonly statusId: string
-  readonly stacks: number
   readonly duration: number
   readonly sourceId?: CreatureId
 }

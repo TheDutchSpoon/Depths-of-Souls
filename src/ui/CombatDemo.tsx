@@ -220,7 +220,7 @@ function describeEvent(event: CombatEvent): string {
     case 'ActionGranted':
       return `  ${event.sourceId} grants ${event.actorId} an action (${event.effectId})`
     case 'StatusApplied':
-      return `  ${event.targetId} gains ${event.statusId} x${event.stacks} (${event.duration}r)`
+      return `  ${event.targetId} gains ${event.statusId} (${event.duration}r)`
     case 'StatusExpired':
       return `  ${event.creatureId}'s ${event.statusId} expired`
     case 'StatModifierApplied':

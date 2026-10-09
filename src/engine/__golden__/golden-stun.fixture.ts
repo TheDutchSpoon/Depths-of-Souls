@@ -71,7 +71,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: VICTIM,
     statusId: 'stun',
-    stacks: 1,
     duration: 1,
     sourceId: VICTIM,
   },

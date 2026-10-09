@@ -34,6 +34,7 @@
 import type { EffectDef } from '../engine/effect-types'
 import {
   validateNoBreakChanceOutsideStatus,
+  validateNoSnapshotPotencyOutsideStatus,
   validateNoRandomSelectorInResponseTargets,
   validateObservationFilters,
   validateStatModifierConditions,
@@ -75,6 +76,7 @@ export function validateSpecialization(spec: Specialization): void {
     const effects = typeof perk.effects === 'function' ? perk.effects(1) : perk.effects
     validateStatModifierConditions(effects)
     validateNoBreakChanceOutsideStatus(effects)
+    validateNoSnapshotPotencyOutsideStatus(effects)
     validateNoRandomSelectorInResponseTargets(effects)
     // Phase 4.1-H2b1: a perk is a trigger carrier too.
     validateObservationFilters(effects, `perk "${perk.id}"`)

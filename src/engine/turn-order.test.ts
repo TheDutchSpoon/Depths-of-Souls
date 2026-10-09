@@ -63,14 +63,12 @@ function turnOrderStatus(position: 'first' | 'last', id: string): ActiveEffect {
   return {
     category: 'status',
     statusId: id,
-    cap: 1,
     polarity: position === 'first' ? 'buff' : 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId(id),
     sourceTraitId: id,
     remainingDuration: 3,
     appliedAt: 0,
-    stacks: 1,
     effects: [{ category: 'turn-order', position }],
   }
 }

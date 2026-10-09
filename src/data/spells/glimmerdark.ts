@@ -90,7 +90,7 @@ export const DISORIENT: Spell = {
 
 /**
  * ASSUMPTION (interstitial slice expansion, NEW CONTENT -- design-agent proposal, numbers deferred):
- * Blinding Flare -- first spell to apply Vulnerability (statuses.ts: x1.5 damage TAKEN/stack); an
+ * Blinding Flare -- first spell to apply Vulnerability (statuses.ts: x1.5 damage TAKEN, once); an
  * offensive setup debuff no biome-1 spell provides. Violence's first Glimmerdark-own spell. Unique
  * under the dedup guard by spellPower (0.7 vs Ember Lance 0.5 / Thorn Lash 1.0). */
 export const BLINDING_FLARE: Spell = {

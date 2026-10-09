@@ -236,6 +236,43 @@ describe('corpus coverage (Phase 4.1-D2)', () => {
     ).toEqual([])
   })
 
+  it('the corpus exercises the applier snapshot (4.1-H2b2): a living-applier tick, a dead-applier tick and a Spore spread', () => {
+    // A tick's source is its applier while it lives (so source !== bearer), else the bearer: a
+    // tick sourced from its own bearer whose status was last applied by SOMEONE ELSE is a
+    // dead-applier tick (a self-applied one was applied by the bearer). A spread is Spore's own
+    // on-death trigger immediately followed by a Spore application.
+    let living = 0
+    let dead = 0
+    let spreads = 0
+    for (const { events } of resolved) {
+      const lastApplier = new Map<string, string>() // "bearer|status" -> the last applying creature
+      events.forEach((e, at) => {
+        if (e.type === 'StatusApplied') {
+          lastApplier.set(e.targetId + '|' + e.statusId, e.sourceId ?? '')
+        } else if (e.type === 'DamageDealt' && e.statusId !== undefined) {
+          if (e.sourceId !== e.targetId) living++
+          else if (
+            (lastApplier.get(e.targetId + '|' + e.statusId) ?? e.targetId) !== e.targetId
+          )
+            dead++
+        } else if (
+          e.type === 'TriggerFired' &&
+          e.hook === 'on-death' &&
+          e.effectId === 'spore'
+        ) {
+          const next = events[at + 1]
+          if (next?.type === 'StatusApplied' && next.statusId === 'spore') spreads++
+        }
+      })
+    }
+    expect(living, 'ticks credited to a living applier').toBeGreaterThan(0)
+    expect(
+      dead,
+      'ticks whose applier is dead (the bearer is the source)',
+    ).toBeGreaterThan(0)
+    expect(spreads, 'Spore spreads').toBeGreaterThan(0)
+  })
+
   it('every perk with effects matters: removing it alone changes its fight', () => {
     const mattersIn = new Map<string, string[]>()
     for (const spec of SPECIALIZATIONS) {

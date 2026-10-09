@@ -41,7 +41,6 @@ const SLEEP_STATUS_ID = 'sleep-fixture'
 
 export const SLEEP_FIXTURE: StatusDef = {
   statusId: SLEEP_STATUS_ID,
-  cap: 1,
   effects: [
     { category: 'action-lock', scope: 'all' },
     {
@@ -133,7 +132,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: SLEEPER,
     statusId: SLEEP_STATUS_ID,
-    stacks: 1,
     duration: 5,
     sourceId: SLEEPER,
   },

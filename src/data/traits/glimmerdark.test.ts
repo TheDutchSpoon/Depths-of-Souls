@@ -48,7 +48,7 @@ describe('the Flickerling Wick (ASSUMPTION 140)', () => {
       response: {
         kind: 'heal',
         target: { kind: 'lowest-hp-injured-other-ally' },
-        amountPerStack: { ofStat: 'health', percent: 20 },
+        flatAmount: { ofStat: 'health', percent: 20 },
       },
     })
   })

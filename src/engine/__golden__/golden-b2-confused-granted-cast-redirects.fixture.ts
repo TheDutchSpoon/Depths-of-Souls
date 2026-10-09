@@ -114,7 +114,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: CASTER,
     statusId: CONFUSION.statusId,
-    stacks: 1,
     duration: 3,
     sourceId: CASTER,
   },

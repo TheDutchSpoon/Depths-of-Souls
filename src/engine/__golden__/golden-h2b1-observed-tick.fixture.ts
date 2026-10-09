@@ -1,16 +1,18 @@
 // Golden: a DoT tick is not a cost, so a cost observer stays silent (Phase 4.1-H2b1, ASSUMPTIONS
-// 115, 131, 137). Hand-derived. Its own golden on purpose: H2b2 moves the tick's source to the
-// applier and makes it indirect, so this case changes alone then, while the ordinary-hit,
-// spell-on-caster and zero-cost cases (golden-h2b1-observed-silent) stay byte-identical.
+// 115, 131, 137; 4.1-H2b2: the tick is a snapshot-potency status tick, ASSUMPTION 144).
+// Hand-derived. Its own golden on purpose: H2b2 moved the tick's source to the applier and made it
+// indirect, so this case changed alone, while the ordinary-hit, spell-on-caster and zero-cost cases
+// (golden-h2b1-observed-silent) stayed byte-identical.
 //
 // Players (speed order O 10, P 5; both always-wait), enemy E (health 100, always-wait, speed 1):
 //   O (health 40) carries the Flare-shaped observer (`relationship 'ally'`, `selfInflicted true`)
 //     answering with Attack x1.5 on itself -- any TriggerFired from O would show.
-//   P (health 40) is poisoned at fight start (duration 3): its status carries an on-turn-end flat
-//     tick of 1% of P's Health.
-// P's turn end: floor(40 x 1 / 100) = floor(0.4) = 0, raised to the tick minimum of 1: rawDamage
-// 0.4, finalDamage 1, tagged 'dot' WITH statusId. P 40 -> 39. The bearer is both source and target
-// of the tick, but the tick is not a cost (it never took the cost branch), so O is SILENT.
+//   P (health 40) is poisoned by itself at fight start (duration 3): its status declares a potency
+//     of 5% of the applier's Health and carries an on-turn-end snapshot-potency tick.
+// Snapshot (applier P, vitality): potency floor(40 x 5 / 100) = 2. P's turn end: indirect, 2 x 1.0
+// - 0.2 x P's Defence 20 = -2, raised to the tick minimum of 1: rawDamage -2, finalDamage 1, tagged
+// 'dot' WITH statusId, credited to P (the applier, alive). P 40 -> 39. The bearer is both source and
+// target of the tick, but the tick is not a cost (it never took the cost branch), so O is SILENT.
 // (Reading "self-inflicted" as `source === target`, or passing true from the tick path, fires O.)
 // TURN_STEPS = 2 (O's turn, P's turn).
 
@@ -28,9 +30,9 @@ const P = createCreatureId('p')
 
 export const MINI_POISON: StatusDef = {
   statusId: 'h2b1-mini-poison',
-  cap: 1,
   polarity: 'debuff',
   defaultDuration: 3,
+  potency: { ofStat: 'health', percent: 5 },
   effects: [
     {
       category: 'triggered',
@@ -38,7 +40,7 @@ export const MINI_POISON: StatusDef = {
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
-        flatAmount: { ofStat: 'health', percent: 1 },
+        flatAmount: { kind: 'snapshot-potency' },
         emitTriggerFired: false,
         damageSource: 'dot',
       },
@@ -111,7 +113,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: P,
     statusId: MINI_POISON.statusId,
-    stacks: 1,
     duration: 3,
     sourceId: P,
   },
@@ -125,7 +126,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: P,
     targetId: P,
-    rawDamage: 0.4,
+    rawDamage: -2,
     finalDamage: 1,
     affinityMultiplier: 1,
     wasChipOnly: false,

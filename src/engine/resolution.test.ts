@@ -408,9 +408,12 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
 })
 
 describe('applyStatus + status-container content (Slice C)', () => {
+  // A ticking status (4.1-H2b2): potency 50% of the APPLIER's Attack. The applier `e` has Attack 20
+  // (makeParty default), so the snapshot potency is floor(20 * 50 / 100) = 10; `p` has Defence 0 and
+  // the same affinity (neutral), so a tick is 10 - 0.2 * 0 = 10.
   const TEST_DOT: StatusDef = {
     statusId: 'test-dot',
-    cap: 3,
+    potency: { ofStat: 'attack', percent: 50 },
     effects: [
       {
         category: 'triggered',
@@ -418,7 +421,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
         response: {
           kind: 'deal-damage',
           target: { kind: 'self' },
-          flatAmount: 5,
+          flatAmount: { kind: 'snapshot-potency' },
           emitTriggerFired: false,
           damageSource: 'dot',
         },
@@ -429,7 +432,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
   }
 
   function stateWithTestDot() {
-    const player = makeParty('player', [{ id: 'p', health: 40 }])
+    const player = makeParty('player', [{ id: 'p', health: 40, defence: 0 }])
     const enemy = makeParty('enemy', [{ id: 'e' }])
     const statuses = new Map([[TEST_DOT.statusId, TEST_DOT]])
     return createCombat({
@@ -454,11 +457,11 @@ describe('applyStatus + status-container content (Slice C)', () => {
       state,
       createResolutionContext(events, newCascade()),
     )
-    expect(events[0]).toMatchObject({
+    // Exactly these keys: single instance (4.1-H2b2), so no `stacks` on the event.
+    expect(events[0]).toEqual({
       type: 'StatusApplied',
       targetId: createCreatureId('p'),
       statusId: 'test-dot',
-      stacks: 1,
       duration: 2,
       sourceId: createCreatureId('e'),
     })
@@ -493,7 +496,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
     expect(events[0]).toMatchObject({ type: 'StatusApplied', duration: 9 })
   })
 
-  it('re-applying refreshes duration and stacks up to the declared cap', () => {
+  it('re-applying keeps ONE instance and refreshes the timer to the latest application', () => {
     let state = stateWithTestDot()
     const events: CombatEvent[] = []
     const apply = (duration: number) => {
@@ -506,25 +509,35 @@ describe('applyStatus + status-container content (Slice C)', () => {
       )
     }
     apply(2)
+    const first = (
+      [...state.playerParty, ...state.enemyParty]
+        .find((c) => c.id === createCreatureId('p'))!
+        .activeEffects.find((e) => e.category === 'status') as StatusEffect
+    ).instanceId
     apply(5)
     apply(5)
-    apply(5) // 4th application; cap is 3
+    apply(1) // a shorter one still takes the new application's duration (ASSUMPTION 8)
 
     const p = [...state.playerParty, ...state.enemyParty].find(
       (c) => c.id === createCreatureId('p'),
     )!
-    const effect = p.activeEffects.find((e) => e.category === 'status') as StatusEffect
-    expect(effect.stacks).toBe(3) // capped
-    expect(effect.remainingDuration).toBe(5) // refreshed to the latest application's duration
+    const statuses = p.activeEffects.filter(
+      (e) => e.category === 'status',
+    ) as StatusEffect[]
+    expect(statuses).toHaveLength(1)
+    expect(statuses[0]!.instanceId).toBe(first) // the instance (and its id) is kept
+    expect(statuses[0]!.remainingDuration).toBe(1)
+    expect('stacks' in statuses[0]!).toBe(false)
+    expect(events.filter((e) => e.type === 'StatusApplied')).toHaveLength(4)
   })
 
-  it('a DoT tick is a flat, stack-scaled deal-damage bypassing the OffStat/Defence formula, with no TriggerFired', () => {
+  it('a DoT tick is indirect damage from the applier snapshot, credited to the living applier, with no TriggerFired', () => {
     let state = stateWithTestDot()
     const events: CombatEvent[] = []
     state = applyStatus(
       createCreatureId('e'),
       createCreatureId('p'),
-      { statusId: 'test-dot', duration: 2, stacks: 2 },
+      { statusId: 'test-dot', duration: 2 },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -538,10 +551,11 @@ describe('applyStatus + status-container content (Slice C)', () => {
     )
     const tick = events.slice(before).find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({
-      finalDamage: 10,
+      sourceId: createCreatureId('e'), // the applier, alive
+      finalDamage: 10, // potency 10 (50% of the applier's Attack 20) - 0.2 * Defence 0
       damageSource: 'dot',
       statusId: 'test-dot',
-    }) // 5 * 2 stacks
+    })
     expect(events.slice(before).some((e) => e.type === 'TriggerFired')).toBe(false)
   })
 
@@ -569,7 +583,6 @@ describe('applyStatus + status-container content (Slice C)', () => {
 describe('heal response (Regen)', () => {
   const TEST_REGEN: StatusDef = {
     statusId: 'test-regen',
-    cap: 3,
     effects: [
       {
         category: 'triggered',
@@ -577,7 +590,7 @@ describe('heal response (Regen)', () => {
         response: {
           kind: 'heal',
           target: { kind: 'self' },
-          amountPerStack: 10,
+          flatAmount: 10,
           emitTriggerFired: false,
         },
       },
@@ -624,7 +637,7 @@ describe('heal response (Regen)', () => {
 })
 
 describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', () => {
-  it('throws a resolver-invariant error when both amountPerStack and scalingStat are set', () => {
+  it('throws a resolver-invariant error when both flatAmount and scalingStat are set', () => {
     const state = createCombat({
       seed: 1,
       player: { party: makeParty('player', [{ id: 'a' }]) },
@@ -635,7 +648,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
         {
           kind: 'heal',
           target: { kind: 'self' },
-          amountPerStack: 5,
+          flatAmount: 5,
           scalingStat: 'health',
         },
         'fixture',
@@ -643,7 +656,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
         state,
         createResolutionContext([], newCascade()),
       ),
-    ).toThrow(/more than one of amountPerStack\/scalingStat/)
+    ).toThrow(/more than one of flatAmount\/scalingStat/)
   })
 
   it('scalingStat mode reads the HEALER’s own effective stat, not the target’s', () => {
@@ -682,7 +695,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
     expect(heal).toMatchObject({ amount: 20, remainingHp: 30 })
   })
 
-  it('magnitudeSource (count) scales a flat heal by a live count instead of stacks', () => {
+  it('magnitudeSource (count) scales a flat heal by a live count', () => {
     const player = makeParty('player', [
       { id: 'necromoss', health: 100 },
       { id: 'dead1', alive: false },
@@ -701,7 +714,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
       {
         kind: 'heal',
         target: { kind: 'self' },
-        amountPerStack: 5, // per-unit rate the live count multiplies, not a real "stack"
+        flatAmount: 5, // per-unit rate the live count multiplies
         magnitudeSource: { kind: 'count', of: 'dead-allies' },
       },
       'necromoss-fixture',
@@ -773,8 +786,8 @@ describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
 })
 
 describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', () => {
-  it('heal: 1 stack scales off the bearer’s own floored max HP', () => {
-    // Bearer max HP 100, percent 5, 1 stack (default): floor(floor(100) * 5 * 1 / 100) =
+  it('heal: scales off the firing creature’s own floored max HP', () => {
+    // Bearer max HP 100, percent 5, count 1 (default): floor(floor(100) * 5 * 1 / 100) =
     // floor(5) = 5. 90 + 5 = 95, well under the 100 cap.
     const player = makeParty('player', [{ id: 'p', health: 100 }])
     const enemy = makeParty('enemy', [{ id: 'e' }])
@@ -790,7 +803,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       {
         kind: 'heal',
         target: { kind: 'self' },
-        amountPerStack: { ofStat: 'health', percent: 5 },
+        flatAmount: { ofStat: 'health', percent: 5 },
       },
       'fixture',
       { channel: 'indirect', self: createCreatureId('p') },
@@ -801,8 +814,8 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     expect(heal).toMatchObject({ amount: 5, remainingHp: 95 })
   })
 
-  it('heal: cap stacks (3) clamp to effective max HP, never overheal', () => {
-    // Bearer max HP 100, percent 5, 3 stacks: floor(floor(100) * 5 * 3 / 100) = floor(15) = 15.
+  it('heal: a live count (3) clamps to effective max HP, never overheal', () => {
+    // Bearer max HP 100, percent 5, count 3: floor(floor(100) * 5 * 3 / 100) = floor(15) = 15.
     // 97 + 15 = 112, clamped to 100 -- HealApplied.amount is the CLAMPED delta (3), not the
     // requested 15.
     const player = makeParty('player', [{ id: 'p', health: 100 }])
@@ -819,10 +832,11 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       {
         kind: 'heal',
         target: { kind: 'self' },
-        amountPerStack: { ofStat: 'health', percent: 5 },
+        flatAmount: { ofStat: 'health', percent: 5 },
+        magnitudeSource: { kind: 'flat', value: 3 },
       },
       'fixture',
-      { channel: 'indirect', self: createCreatureId('p'), stacks: 3 },
+      { channel: 'indirect', self: createCreatureId('p') },
       state,
       createResolutionContext(events, newCascade()),
     )
@@ -830,9 +844,9 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     expect(heal).toMatchObject({ amount: 3, remainingHp: 100 })
   })
 
-  it('DoT: 1 stack tick is unaffected by the victim’s own (huge) Defence -- flat mode bypasses the formula', () => {
-    // Bearer max HP 100, percent 3, 1 stack: floor(floor(100) * 3 * 1 / 100) = floor(3) = 3.
-    // Defence 999 would zero out any formula-based hit; flat mode never reads it.
+  it('a status response damaging its own bearer with a StatPercent is a COST: unaffected by the bearer’s own (huge) Defence', () => {
+    // Bearer max HP 100, percent 3, count 1: floor(floor(100) * 3 * 1 / 100) = floor(3) = 3.
+    // Defence 999 would zero out any formula-based hit; a cost never reads it.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100, defence: 999 }])
     const state = createCombat({
@@ -858,8 +872,8 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     expect(tick).toMatchObject({ finalDamage: 3, remainingHp: 97 })
   })
 
-  it('DoT: cap stacks (5) tick', () => {
-    // Bearer max HP 100, percent 3, 5 stacks: floor(floor(100) * 3 * 5 / 100) = floor(15) = 15.
+  it('a cost with a live count (5)', () => {
+    // Bearer max HP 100, percent 3, count 5: floor(floor(100) * 3 * 5 / 100) = floor(15) = 15.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
     const state = createCombat({
@@ -875,13 +889,13 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         target: { kind: 'self' },
         flatAmount: { ofStat: 'health', percent: 3 },
         damageSource: 'dot',
+        magnitudeSource: { kind: 'flat', value: 5 },
       },
       'fixture',
       {
         channel: 'indirect',
         statusId: 'poison',
         self: createCreatureId('victim'),
-        stacks: 5,
       },
       state,
       createResolutionContext(events, newCascade()),
@@ -923,13 +937,13 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         target: { kind: 'self' },
         flatAmount: { ofStat: 'health', percent: 3 },
         damageSource: 'dot',
+        magnitudeSource: { kind: 'flat', value: 5 },
       },
       'fixture',
       {
         channel: 'indirect',
         statusId: 'poison',
         self: createCreatureId('victim'),
-        stacks: 5,
       },
       state,
       createResolutionContext(events, newCascade()),
@@ -938,9 +952,9 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     expect(tick).toMatchObject({ finalDamage: 10 })
   })
 
-  it('DoT: keeps the existing minimum of 1 at very low max HP', () => {
-    // Bearer max HP 10, percent 3, 1 stack: floor(floor(10) * 3 * 1 / 100) = floor(0.3) = 0,
-    // min-1'd by applyFlatDamage's existing Math.max(1, ...) to 1.
+  it('a cost that floors to 0 is a full no-op at very low max HP (no minimum of 1: a cost is not a hit)', () => {
+    // Bearer max HP 10, percent 3, count 1: floor(floor(10) * 3 * 1 / 100) = floor(0.3) = 0 -> no
+    // DamageDealt at all (applyCostDamage).
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 10 }])
     const state = createCombat({
@@ -962,14 +976,12 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       state,
       createResolutionContext(events, newCascade()),
     )
-    const tick = events.find((e) => e.type === 'DamageDealt')
-    expect(tick).toMatchObject({ rawDamage: 0.3, finalDamage: 1, remainingHp: 9 })
+    expect(events.find((e) => e.type === 'DamageDealt')).toBeUndefined()
   })
 
-  it('DoT: the victim’s own damage-dealt buff does not amplify its own tick -- flat mode never reads dealtMods', () => {
+  it('a cost: the bearer’s own damage-dealt buff does not amplify it -- a cost never reads dealtMods', () => {
     const DEALT_BUFF_FIXTURE: StatusDef = {
       statusId: 'dealt-buff-fixture',
-      cap: 1,
       // +50% dealt on a real formula hit -- irrelevant to flat mode
       polarity: 'buff',
       defaultDuration: 3,
@@ -1010,15 +1022,14 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       createResolutionContext(events, newCascade()),
     )
     // Still floor(100 * 3 * 1 / 100) = 3, not 4 (3 x 1.5 floored) -- the +50% dealt buff never
-    // applies to a flat-mode tick.
+    // applies to a cost.
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 3 })
   })
 
-  it('DoT: the victim’s own taken-damage multiplier does not change its own tick -- flat mode never reads takenFactors', () => {
+  it('a cost: the bearer’s own taken-damage multiplier does not change it -- a cost never reads takenFactors', () => {
     const VULNERABLE_FIXTURE: StatusDef = {
       statusId: 'vulnerable-fixture',
-      cap: 1,
       // x1.5 taken on a real formula hit -- irrelevant to flat mode
       polarity: 'debuff',
       defaultDuration: 3,
@@ -1058,15 +1069,14 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
       state,
       createResolutionContext(events, newCascade()),
     )
-    // Still 3, not 4 (3 x 1.5 floored) -- Vulnerable's taken multiplier never applies to a flat
-    // DoT tick.
+    // Still 3, not 4 (3 x 1.5 floored) -- Vulnerable's taken multiplier never applies to a cost.
     const tick = events.find((e) => e.type === 'DamageDealt')
     expect(tick).toMatchObject({ finalDamage: 3 })
   })
 
-  it('floors once over stat x percent x stacks, never per stack', () => {
-    // Bearer max HP 30, percent 5, 3 stacks: floor(30 * 5 * 3 / 100) = floor(4.5) = 4. A
-    // (wrong) per-stack floor would compute floor(30 * 5 / 100) = 1 per stack x 3 stacks = 3.
+  it('floors once over stat x percent x count, never per unit', () => {
+    // Bearer max HP 30, percent 5, count 3: floor(30 * 5 * 3 / 100) = floor(4.5) = 4. A
+    // (wrong) per-unit floor would compute floor(30 * 5 / 100) = 1 per unit x 3 = 3.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 30 }])
     const state = createCombat({
@@ -1082,13 +1092,13 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         target: { kind: 'self' },
         flatAmount: { ofStat: 'health', percent: 5 },
         damageSource: 'dot',
+        magnitudeSource: { kind: 'flat', value: 3 },
       },
       'fixture',
       {
         channel: 'indirect',
         statusId: 'poison',
         self: createCreatureId('victim'),
-        stacks: 3,
       },
       state,
       createResolutionContext(events, newCascade()),
@@ -1098,8 +1108,8 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
   })
 
   it('is exact where a float-fraction implementation would floor one too low (the "float trap")', () => {
-    // Bearer max HP 180, percent 3, 5 stacks: floor(180 * 3 * 5 / 100) = floor(2700 / 100) =
-    // floor(27) = 27 exactly, because percent/stacks are multiplied in as integers BEFORE
+    // Bearer max HP 180, percent 3, count 5: floor(180 * 3 * 5 / 100) = floor(2700 / 100) =
+    // floor(27) = 27 exactly, because percent/count are multiplied in as integers BEFORE
     // dividing by 100. A float-fraction equivalent (180 * 0.03 * 5) evaluates to
     // 26.999999999999996 in IEEE-754 double precision and would floor to 26 -- one too low.
     expect(180 * 0.03 * 5).toBeLessThan(27) // the float trap this brief exists to avoid
@@ -1118,13 +1128,13 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         target: { kind: 'self' },
         flatAmount: { ofStat: 'health', percent: 3 },
         damageSource: 'dot',
+        magnitudeSource: { kind: 'flat', value: 5 },
       },
       'fixture',
       {
         channel: 'indirect',
         statusId: 'poison',
         self: createCreatureId('victim'),
-        stacks: 5,
       },
       state,
       createResolutionContext(events, newCascade()),
@@ -1156,8 +1166,8 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     }
   })
 
-  it('a literal number flatAmount/amountPerStack still behaves exactly as before (regression)', () => {
-    // Unchanged: 7 x 2 stacks = 14, exactly the pre-existing literal-number behavior -- the
+  it('a literal number flatAmount/flatAmount still behaves exactly as before (regression)', () => {
+    // Unchanged: 7 x 2 (live count) = 14, exactly the pre-existing literal-number behavior -- the
     // StatPercent union is purely additive.
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 100 }])
@@ -1174,13 +1184,13 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
         target: { kind: 'self' },
         flatAmount: 7,
         damageSource: 'dot',
+        magnitudeSource: { kind: 'flat', value: 2 },
       },
       'fixture',
       {
         channel: 'indirect',
         statusId: 'poison',
         self: createCreatureId('victim'),
-        stacks: 2,
       },
       state,
       createResolutionContext(events, newCascade()),
@@ -1625,117 +1635,9 @@ describe('revive response (Phase 4 Slice B)', () => {
   })
 })
 
-describe('consume-stacks response (Phase 4 Slice D, Glowflies’ Detonator)', () => {
-  const GLOW: StatusDef = {
-    statusId: 'glow-fixture',
-    cap: 5,
-    polarity: 'buff',
-    defaultDuration: 3,
-    effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: 0.1 }],
-  }
-
-  function stateWithGlowStacks(stacks: number) {
-    const player = makeParty('player', [
-      { id: 'detonator', intelligence: 10, defence: 0 },
-    ])
-    const enemy = makeParty('enemy', [{ id: 'foe', health: 100, defence: 0 }])
-    const statuses = new Map([[GLOW.statusId, GLOW]])
-    let state = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: {
-        scripts: FIXTURE_SCRIPTS_BY_ID,
-        traits: TRAIT_REGISTRY,
-        statuses: statuses,
-      },
-    })
-    const events: CombatEvent[] = []
-    state = applyStatus(
-      createCreatureId('detonator'),
-      createCreatureId('detonator'),
-      { statusId: 'glow-fixture', duration: 5, stacks },
-      state,
-      createResolutionContext(events, newCascade()),
-    )
-    return state
-  }
-
-  it('reads and clears the firing creature’s own stacks, then executes the wrapped effect scaled by the consumed count', () => {
-    const state = stateWithGlowStacks(3)
-    const events: CombatEvent[] = []
-    const result = executeResponse(
-      {
-        kind: 'consume-stacks',
-        statusId: 'glow-fixture',
-        effect: {
-          kind: 'deal-damage',
-          target: { kind: 'triggering-source' },
-          scalingStat: 'intelligence',
-          magnitudeSource: { kind: 'consumed-stacks' },
-        },
-      },
-      'detonator-fixture',
-      {
-        channel: 'indirect',
-        self: createCreatureId('detonator'),
-        source: createCreatureId('foe'),
-      },
-      state,
-      createResolutionContext(events, newCascade()),
-    )
-
-    expect(events[0]).toMatchObject({ type: 'StatusExpired', statusId: 'glow-fixture' })
-    // off = intelligence(10) * spellPower(1.0 * 3 consumed stacks) = 30; def 0: core 30, chip
-    // 0.3 -> raw 30.3 -> final 30.
-    expect(events[1]).toMatchObject({ type: 'DamageDealt', finalDamage: 30 })
-
-    const detonator = [...result.state.playerParty, ...result.state.enemyParty].find(
-      (c) => c.id === createCreatureId('detonator'),
-    )!
-    expect(detonator.activeEffects).toEqual([])
-  })
-
-  it('is a full no-op when the status is absent (0/absent stacks == no status present)', () => {
-    // A creature that never had Glow applied at all -- CONVENTIONS: "no status present" and
-    // "0 stacks" are the same state.
-    const player = makeParty('player', [{ id: 'detonator' }])
-    const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const bareState = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
-    })
-    const events: CombatEvent[] = []
-    const result = executeResponse(
-      {
-        kind: 'consume-stacks',
-        statusId: 'glow-fixture',
-        effect: {
-          kind: 'deal-damage',
-          target: { kind: 'triggering-source' },
-          flatAmount: 999,
-        },
-      },
-      'detonator-fixture',
-      {
-        channel: 'indirect',
-        self: createCreatureId('detonator'),
-        source: createCreatureId('foe'),
-      },
-      bareState,
-      createResolutionContext(events, newCascade()),
-    )
-    expect(events).toEqual([])
-    expect(result.state).toEqual(bareState)
-  })
-})
-
 describe('remove-status response (Phase 4 Slice E2)', () => {
   const TEST_DEBUFF: StatusDef = {
     statusId: 'test-debuff',
-    cap: 3,
     effects: [
       {
         category: 'triggered',
@@ -2534,7 +2436,6 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
 describe('exact-instance rule (Phase 4.1-B, B4)', () => {
   const TICK_STATUS: StatusDef = {
     statusId: 'b4-tick-fixture',
-    cap: 1,
     effects: [
       {
         category: 'triggered',
@@ -2800,30 +2701,9 @@ describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", ()
     )
   })
 
-  it("throws when the same target is nested inside a consume-stacks response's wrapped effect", () => {
-    const effects: EffectDef[] = [
-      {
-        category: 'triggered',
-        hook: 'on-turn-start',
-        response: {
-          kind: 'consume-stacks',
-          statusId: 'fixture-status',
-          effect: {
-            kind: 'grant-action-state',
-            target: { kind: 'selector', selector: { kind: 'random' } },
-          },
-        },
-      },
-    ]
-    expect(() => validateNoRandomSelectorInResponseTargets(effects)).toThrow(
-      /intent-only 'random' selector/,
-    )
-  })
-
   it("throws when a status's own trigger response targets it", () => {
     const status: StatusDef = {
       statusId: 'fixture-status',
-      cap: 1,
       polarity: 'debuff',
       defaultDuration: 1,
       effects: [
@@ -2857,7 +2737,6 @@ describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", ()
 
     const status: StatusDef = {
       statusId: 'fixture-status',
-      cap: 1,
       polarity: 'debuff',
       defaultDuration: 1,
       effects: [

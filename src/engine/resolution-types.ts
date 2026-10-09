@@ -22,6 +22,25 @@ import type { EffectInstanceId } from './effect-types'
  */
 export type DamageChannel = 'direct' | 'indirect'
 
+/**
+ * Phase 4.1-H2b2 (ASSUMPTIONS 5, 17, 146; supersedes H2b1's `selfInflicted: boolean`): where one
+ * damage application came from, REQUIRED of `applyDamageAndEmit` with no default so the compiler
+ * finds every caller. Stated by the branch that chose the path, never inferred from ids.
+ *  - `'hit'`: an Attack/Cast action's damage, or an indirect response hitting a target. Its
+ *    source is the dealer; its `on-damage-taken` / `on-death` offer that source as
+ *    `triggering-source`.
+ *  - `'cost'`: a creature's own response damaging itself (`applyCostDamage`). The ONLY origin the
+ *    damage observer reports as `selfInflicted`.
+ *  - `'tick'`: a status tick (`applyTickDamage`). Never self-inflicted. It offers NO
+ *    `triggering-source` (so no retaliator answers it) while `on-damage-taken` / `on-death` still
+ *    fire on the bearer. `dealerId` is the living applier (its `on-damage-dealt` / `on-kill` fire),
+ *    or `null` when the applier is dead and the bearer is only the logged source.
+ */
+export type DamageOrigin =
+  | { readonly kind: 'hit' }
+  | { readonly kind: 'cost' }
+  | { readonly kind: 'tick'; readonly dealerId: CreatureId | null }
+
 /** Trigger-cascade bookkeeping for one top-level action: chain depth (bounds
  * `MAX_TRIGGER_CASCADE_DEPTH`) and the self-re-entry guard (an effect instance already unwinding
  * on the stack is skipped). Lives on the call stack only -- never in `CombatState`, never

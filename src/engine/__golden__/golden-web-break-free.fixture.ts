@@ -31,7 +31,6 @@ const WEB_STATUS_ID = 'web-test-fixture'
 
 export const WEB_TEST_STATUS: StatusDef = {
   statusId: WEB_STATUS_ID,
-  cap: 1,
   polarity: 'debuff',
   defaultDuration: 3,
   effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 50 }],
@@ -87,7 +86,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: BEARER,
     statusId: WEB_STATUS_ID,
-    stacks: 1,
     duration: 99,
     sourceId: BEARER,
   },

@@ -101,7 +101,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: STRIKER,
     statusId: 'grant-act-first',
-    stacks: 1,
     duration: 3,
     sourceId: SETTER,
   },

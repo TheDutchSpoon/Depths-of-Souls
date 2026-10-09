@@ -15,7 +15,7 @@
 //
 // Round 1, PACIFIER's turn. `always-cast` casts slot 0, so no gem draw; Pacify is an enemy-side
 // single-target spell, so the default target is the lowest-HP enemy, SOVEREIGN (the only one); no
-// Confusion, Tunnel Vision or Provoke applies. StatusApplied: Pacified, 1 stack, 3 turns. It lands
+// Confusion, Tunnel Vision or Provoke applies. StatusApplied: Pacified, 3 turns. It lands
 // before SOVEREIGN's action slot, so it is already in force on her turn.
 //
 // Round 1, SOVEREIGN's turn. The `striker` rules, top first:
@@ -110,7 +110,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: SOVEREIGN,
     statusId: 'pacified',
-    stacks: 1,
     duration: 3,
     sourceId: PACIFIER,
   },
