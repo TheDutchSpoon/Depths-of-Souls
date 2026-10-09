@@ -87,7 +87,7 @@ export const PUPPET_STRING: Spell = {
 
 /** Charnel Feast: Vitality's first AOE support spell (Regrowth/Afterglow are both
  * single-target) -- a small heal to the whole living party at once, "the party feeds together."
- * AOE + upside -> the ~20-40% band (mirrors Luminous Tide's own 0.2). */
+ * AOE + upside -> the ~20-40% band (mirrors Kindred Light's own 0.2). */
 export const CHARNEL_FEAST: Spell = {
   id: 'charnel-feast',
   name: 'Charnel Feast',

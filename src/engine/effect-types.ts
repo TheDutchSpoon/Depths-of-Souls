@@ -16,7 +16,9 @@ export function createEffectInstanceId(value: string): EffectInstanceId {
   return value as EffectInstanceId
 }
 
-// The v1 hook vocabulary (13, pinned) plus Phase 4 Slice B's on-[action] family (+4, -> 17).
+// The v1 hook vocabulary (13, pinned) plus Phase 4 Slice B's on-[action] family (+4, -> 17), one
+// fewer after Slice E2 (below: the never-wired pair out, on-action-observed in, -> 16), plus Phase
+// 4.1-H2b1's on-damage-observed (+1), 17 in all.
 // on-wait is deliberately omitted (CONVENTIONS' Phase 4 addenda). Phase 4 Slice E2: the
 // originally-listed on-ally-action/on-enemy-action pair was NEVER WIRED (confirmed dead -- no
 // fireHook call site anywhere referenced them) and is superseded here by a single general
@@ -31,6 +33,7 @@ export type Hook =
   | 'on-kill'
   | 'on-death'
   | 'on-action-observed'
+  | 'on-damage-observed'
   | 'on-ally-death'
   | 'on-enemy-death'
   | 'on-status-applied'
@@ -135,6 +138,12 @@ export type ResponseTarget =
   // lands nowhere. Outside a cast context (no `castTarget` on the HookContext) resolving it is a
   // resolver-invariant error.
   | { readonly kind: 'cast-target' }
+  // Phase 4.1-H2b1 (ASSUMPTION 140, the Flickerling Wick's heal): the lowest-current-HP living ally
+  // OTHER than the firing creature that is below its effective max Health. Reads the SAME pool
+  // (`injuredOtherAlliesOf`, targeting.ts) as the trigger-only `other-ally-injured` condition, so
+  // the gate and the target cannot disagree. A response target, deliberately NOT a player-facing
+  // `TargetSelector`. RNG-free; ties by the standard order.
+  | { readonly kind: 'lowest-hp-injured-other-ally' }
 
 // Applied via a spell or a triggered apply-status response (Slice C).
 export interface StatusSpec {
@@ -184,8 +193,8 @@ export type EffectResponse =
        * magnitude is scaled by -- flatAmount's `× stacks` or (in offStat/scalingStat mode)
        * spellPower's own `× 1` -- see MagnitudeSource's doc comment for the exact composition.
        * Absent (the common case) is byte-identical to pre-Slice-D behavior (stacks / no-op ×1).
-       * Detonator-shaped: `{ scalingStat: 'intelligence', magnitudeSource: { kind:
-       * 'consumed-stacks' } }` scales the burst's spellPower by the just-consumed Glow count. */
+       * Consume-shaped: `{ scalingStat: 'intelligence', magnitudeSource: { kind:
+       * 'consumed-stacks' } }` scales the burst's spellPower by the just-consumed stack count. */
       readonly magnitudeSource?: MagnitudeSource
     }
   | {
@@ -260,7 +269,7 @@ export type EffectResponse =
       readonly defending?: boolean
       readonly provoking?: boolean
     }
-  // Phase 4 Slice D (Glowflies' Detonator). SELF-scoped (no target field, unlike every other
+  // Phase 4 Slice D (the retired Glowfly Detonator). SELF-scoped (no target field, unlike every other
   // response) -- reads and clears the FIRING creature's own statusId stacks, matching the
   // status/triggered-response convention that trigger evaluation is self-scoped.
   // ASSUMPTION 18: emits StatusExpired for the consumed status (it's genuinely gone, not merely
@@ -362,6 +371,42 @@ export function validateStatModifierCondition(def: StatModifierDef): void {
 export function validateStatModifierConditions(defs: readonly EffectDef[]): void {
   for (const def of defs) {
     if (def.category === 'stat-modifier') validateStatModifierCondition(def)
+  }
+}
+
+/** Phase 4.1-H2b1 (CONVENTIONS "Damage observation"): the load-time validator for observation
+ * filters -- throws if `actionKind`/`excludeActor` sit on a trigger that is not
+ * `on-action-observed`, `selfInflicted` on one that is not `on-damage-observed`, or an
+ * `observationFilter` of any kind on a hook that is neither. Absent fields stay permissive.
+ * Called over EVERY trigger carrier at import: every trait's effects (`data/traits/index.ts`),
+ * every perk's effects (`data/specializations.ts`) and every status in the registry
+ * (`validateStatusDef`, called from `data/statuses.ts`). */
+export function validateObservationFilters(
+  defs: readonly EffectDef[],
+  context = 'a trigger',
+): void {
+  for (const def of defs) {
+    if (def.category !== 'triggered' || def.observationFilter === undefined) continue
+    const filter = def.observationFilter
+    const where = `${context} on "${def.hook}"`
+    if (def.hook !== 'on-action-observed' && def.hook !== 'on-damage-observed') {
+      throw new Error(
+        `effect invariant violated: ${where} carries an observationFilter, which only an observation hook may carry`,
+      )
+    }
+    if (
+      def.hook !== 'on-action-observed' &&
+      (filter.actionKind !== undefined || filter.excludeActor !== undefined)
+    ) {
+      throw new Error(
+        `effect invariant violated: ${where} carries actionKind/excludeActor, which belong to on-action-observed`,
+      )
+    }
+    if (def.hook !== 'on-damage-observed' && filter.selfInflicted !== undefined) {
+      throw new Error(
+        `effect invariant violated: ${where} carries selfInflicted, which belongs to on-damage-observed`,
+      )
+    }
   }
 }
 
@@ -481,6 +526,7 @@ export function validateStatusDef(def: StatusDef): void {
     }
   }
   validateStatusNoRandomSelectorInResponseTargets(def)
+  validateObservationFilters(def.effects, `status "${def.statusId}"'s trigger`)
 }
 
 /** Phase 4.1-F1: `turn-order.breakChancePercent` is status-only (breaking free removes the status
@@ -501,7 +547,7 @@ export function validateNoBreakChanceOutsideStatus(defs: readonly EffectDef[]): 
  * bound, not by this. `chancePercent: 100` and `always` are trivially-true guards, so they don't count. */
 export function hasRealGuard(trigger: {
   readonly chancePercent?: number
-  readonly condition?: Condition
+  readonly condition?: TriggerCondition
 }): boolean {
   if (trigger.chancePercent !== undefined && trigger.chancePercent < 100) return true
   return trigger.condition !== undefined && trigger.condition.kind !== 'always'
@@ -581,27 +627,45 @@ export type ActionInstanceDef = {
 // at fire time (omission = unconditional). This union is self/global-scoped, so it cannot yet
 // reference the triggering source (e.g. "retaliate only if the attacker is Vitality"); that needs a
 // hook-context condition variant, deferred until content requires it.
-/** Phase 4 Slice E2 (`on-action-observed`, general action-observation system): meaningful only
- * when the owning TriggeredDef's `hook` is `'on-action-observed'`; ignored otherwise. Reacting
- * effects filter on THEMSELVES, not on the hook name -- absent fields match everything
- * (permissive default, matching this project's "unspecified magnitude means 100%" convention).
- * `relationship` compares the OBSERVER (self) to the ACTOR (the hook's `source`); 'ally' includes
- * self (matches livingAlliesOf's own convention). `excludeActor` drops the case where the
- * observer IS the actor (relevant when relationship is 'any' and a creature would otherwise
- * observe its own action). Resonants (H2) is the only locked consumer:
- * `{ relationship: 'ally', actionKind: 'cast' }`. */
+/** Phase 4 Slice E2 (`on-action-observed`) and Phase 4.1-H2b1 (`on-damage-observed`): the filter
+ * of an observation hook's candidate. Reacting effects filter on THEMSELVES, not on the hook name
+ * -- absent fields match everything (permissive default, matching this project's "unspecified
+ * magnitude means 100%" convention). Which field belongs to which hook (enforced at load time by
+ * `validateObservationFilters`):
+ *  - `actionKind`, `excludeActor`: `on-action-observed` only.
+ *  - `selfInflicted`: `on-damage-observed` only. true = only a COST (a creature's own response
+ *    damaging itself, `applyCostDamage`); false = only damage that is not a cost. The flag is
+ *    carried from the branch that chose the cost path, never derived from `source === target`.
+ *  - `relationship`: shared. On `on-action-observed` it compares the OBSERVER (self) to the ACTOR
+ *    (the hook's `source`); on `on-damage-observed` it compares the observer to the DAMAGED
+ *    creature (the hook's `source` there). 'ally' includes self (matches livingAlliesOf's own
+ *    convention). `excludeActor` drops the case where the observer IS the actor.
+ * Resonants (H2) are the `on-action-observed` consumer: `{ relationship: 'ally', actionKind:
+ * 'cast' }`; the Flickerling Flare is the `on-damage-observed` one: `{ relationship: 'ally',
+ * selfInflicted: true }`. */
 export type ObservationFilter = {
   readonly relationship?: 'self' | 'ally' | 'enemy' | 'any'
   readonly actionKind?: 'attack' | 'cast' | 'defend' | 'provoke'
   readonly excludeActor?: boolean
+  readonly selfInflicted?: boolean
 }
+
+/** Phase 4.1-H2b1 (ASSUMPTION 141): a condition only a trigger can carry. `other-ally-injured` =
+ * a living ally other than the bearer is below its effective max Health (integer comparison). It
+ * is NOT part of the scripting `Condition` union: players author scripts, and the type keeps this
+ * kind out of a rule. Evaluated by `evaluateTriggerCondition` (conditions.ts); `evaluateCondition`
+ * never sees it. */
+export type OtherAllyInjuredCondition = { readonly kind: 'other-ally-injured' }
+
+/** What a trigger's `condition` may be: any scripting `Condition`, or a trigger-only kind. */
+export type TriggerCondition = Condition | OtherAllyInjuredCondition
 
 export type TriggeredDef = {
   readonly category: 'triggered'
   readonly hook: Hook
-  readonly condition?: Condition
-  /** Phase 4 Slice E2: meaningful only when `hook` is `'on-action-observed'`. See
-   * ObservationFilter's own doc comment. */
+  readonly condition?: TriggerCondition
+  /** Phase 4 Slice E2: meaningful only when `hook` is an observation hook
+   * (`'on-action-observed'` / `'on-damage-observed'`). See ObservationFilter's own doc comment. */
   readonly observationFilter?: ObservationFilter
   /** Phase 4 Slice E2 (Concussive Blows / Sleeper): an optional probabilistic gate, a sibling of
    * `condition` -- one is deterministic, the other a roll. Plain number, baked at instantiation
@@ -767,7 +831,7 @@ export type FriendlyFireDef = {
 
 export type DamageModifierDirection = 'dealt' | 'taken'
 
-/** Weaken/Vulnerability/Glow: read PASSIVELY by the damage formula's pools. The repetition count
+/** Weaken/Vulnerability: read PASSIVELY by the damage formula's pools. The repetition count
  * is `magnitudeSource` if declared, else the carrying status's `stacks` (1 outside a status). */
 export type DamageModifierDef = {
   readonly category: 'damage-modifier'
@@ -885,11 +949,12 @@ export type InnateSpellEffect = InnateSpellDef & InstanceIdentity
 export type ResolvedHookEffect = {
   readonly instanceId: EffectInstanceId
   readonly sourceTraitId: string
-  readonly condition?: Condition
+  readonly condition?: TriggerCondition
   readonly chancePercent?: number
-  /** Phase 4 Slice E2: meaningful only when this resolved trigger's hook is
-   * 'on-action-observed'. Only a TriggeredDef can declare it (no locked status content
-   * observes actions), so this is always undefined when the source was a status trigger. */
+  /** Phase 4 Slice E2: meaningful only when this resolved trigger's hook is an observation hook
+   * ('on-action-observed' / 'on-damage-observed'). A status carries ordinary effects since 4.1-F1
+   * and `flatEffects` spreads a status trigger's fields through, so a status trigger can carry
+   * one too; it is undefined only when none was authored. */
   readonly observationFilter?: ObservationFilter
   readonly response: EffectResponse
   readonly stacks?: number

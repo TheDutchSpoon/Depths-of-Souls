@@ -1,11 +1,12 @@
 import { pickExtremum } from './tie-break'
-import { livingAlliesOf, livingEnemiesOf } from './targeting'
+import { injuredOtherAlliesOf, livingAlliesOf, livingEnemiesOf } from './targeting'
 import { hasStatus, hpPercentSatisfied } from './effective-stats'
 import { getAffinityMultiplier } from './affinity'
 import { peekTargetSelector } from './target-selectors'
 import { findCreature } from './creature-lookup'
 import type { CombatState, Creature } from './types'
 import type { CreatureId } from './ids'
+import type { TriggerCondition } from './effect-types'
 import type {
   Condition,
   ComparatorOp,
@@ -150,4 +151,23 @@ export function evaluateCondition(
       throw new Error(`Unhandled condition kind: ${String(exhaustive)}`)
     }
   }
+}
+
+/**
+ * Phase 4.1-H2b1 (ASSUMPTION 141): a TRIGGER's condition -- any scripting `Condition`, or a
+ * trigger-only kind. `other-ally-injured` is true iff `injuredOtherAlliesOf` (targeting.ts, the
+ * pool the `lowest-hp-injured-other-ally` target also reads) is non-empty. Every other kind
+ * delegates to `evaluateCondition` unchanged, whose exhaustive `never` arm is untouched, so the
+ * interpreter can never evaluate the trigger-only kind. Pure; never draws RNG.
+ */
+export function evaluateTriggerCondition(
+  condition: TriggerCondition,
+  creature: Creature,
+  state: CombatState,
+  resolvingAgainstId?: CreatureId,
+): boolean {
+  if (condition.kind === 'other-ally-injured') {
+    return injuredOtherAlliesOf(creature, state).length > 0
+  }
+  return evaluateCondition(condition, creature, state, undefined, resolvingAgainstId)
 }

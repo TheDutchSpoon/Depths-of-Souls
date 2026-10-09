@@ -12,7 +12,7 @@
 // balance number are parked balance (GAME_DESIGN §13), picked only to be flavorful and internally
 // consistent. species-locked.md's own "Coverage" note for this biome: "Vitality absent at species
 // level -- resolved by sprinkling Vitality creatures into these species at stamping (agreed)" --
-// applied here to Glowflies' Radiant and Sparkeaters' Voidmaw (both amplifiers).
+// applied here to the Flickerlings' Wick and Sparkeaters' Voidmaw.
 //
 // Composition ONLY (Species/SpeciesCreature/BiomeData + boss data) -- Trait/Spell objects live in
 // the central `../traits`/`../spells` library (CONVENTIONS "Data layer -- carriers vs.
@@ -31,19 +31,18 @@ import {
   BEACON_CHARGE,
   BLINDING_FLARE,
   DISORIENT,
-  LUMINOUS_TIDE,
-  OVERCHARGE,
+  KINDRED_LIGHT,
 } from '../spells'
 import {
   BLINDCLAWS_SETTER_TRAIT,
   BLINDCLAWS_STRIKER_TRAIT,
   BLINDCLAWS_VANGUARD_TRAIT,
+  FLICKERLING_FLARE_TRAIT,
+  FLICKERLING_LAST_GLEAM_TRAIT,
+  FLICKERLING_WICK_TRAIT,
   GLOOMJAW_EXECUTIONER_TRAIT,
   GLOOMJAW_RAVAGER_TRAIT,
   GLOOMJAW_STALKER_TRAIT,
-  GLOWFLY_CHARGER_TRAIT,
-  GLOWFLY_DETONATOR_TRAIT,
-  GLOWFLY_RADIANT_TRAIT,
   LEECH_SOVEREIGN_TRAIT,
   RESONANT_ADEPT_TRAIT,
   RESONANT_CHORUS_TRAIT,
@@ -67,52 +66,54 @@ import {
 
 export const GLIMMERDARK_SPELLS = [
   BEACON_CHARGE,
-  OVERCHARGE,
   DISORIENT,
   BLINDING_FLARE,
   AFTERGLOW,
-  LUMINOUS_TIDE,
+  KINDRED_LIGHT,
 ]
 
-// ---- Glowflies (Wit/Instinct lean) -- closed mechanic: Charge & release (Glow + consume-stacks) ----
+// ---- Flickerlings (Vitality/Wit/Violence) -- closed mechanic: the flame that feeds on itself ----
+// Phase 4.1-H2b1 (ASSUMPTION 116): replace the Glowflies in the same pool slot, creatures in the
+// same rarity order, so the species swap is the only generation change. Their Health (38 / 25 /
+// 28) is on the new 20-45 scale NOW, while every other creature stays on 10-30 until 4.1-H2c, whose
+// remap must skip them. Every number is parked balance (H2c).
 
-export const GLOWFLY_CHARGER: SpeciesCreature = {
-  id: 'glowfly-charger',
-  name: 'Glowfly Charger',
-  affinity: 'wit',
-  baseStats: { health: 14, attack: 14, intelligence: 20, defence: 10, speed: 22 },
-  defaultScriptId: 'caster',
-  innateTraitIds: [GLOWFLY_CHARGER_TRAIT.id],
+export const FLICKERLING_WICK: SpeciesCreature = {
+  id: 'flickerling-wick',
+  name: 'Flickerling Wick',
+  affinity: 'vitality',
+  baseStats: { health: 38, attack: 10, intelligence: 16, defence: 14, speed: 16 },
+  defaultScriptId: 'support',
+  innateTraitIds: [FLICKERLING_WICK_TRAIT.id],
   rarity: 'common',
 }
 
-export const GLOWFLY_DETONATOR: SpeciesCreature = {
-  id: 'glowfly-detonator',
-  name: 'Glowfly Detonator',
-  affinity: 'instinct',
-  baseStats: { health: 14, attack: 16, intelligence: 22, defence: 10, speed: 20 },
-  defaultScriptId: 'striker',
-  innateTraitIds: [GLOWFLY_DETONATOR_TRAIT.id],
+export const FLICKERLING_FLARE: SpeciesCreature = {
+  id: 'flickerling-flare',
+  name: 'Flickerling Flare',
+  affinity: 'wit',
+  baseStats: { health: 25, attack: 14, intelligence: 22, defence: 10, speed: 22 },
+  defaultScriptId: 'caster',
+  innateTraitIds: [FLICKERLING_FLARE_TRAIT.id],
   rarity: 'uncommon',
 }
 
-/** Coverage sprinkle (Vitality -- see file header). */
-export const GLOWFLY_RADIANT: SpeciesCreature = {
-  id: 'glowfly-radiant',
-  name: 'Glowfly Radiant',
-  affinity: 'vitality',
-  baseStats: { health: 18, attack: 12, intelligence: 22, defence: 12, speed: 18 },
-  defaultScriptId: 'support',
-  innateTraitIds: [GLOWFLY_RADIANT_TRAIT.id],
+export const FLICKERLING_LAST_GLEAM: SpeciesCreature = {
+  id: 'flickerling-last-gleam',
+  name: 'Flickerling Last Gleam',
+  affinity: 'violence',
+  baseStats: { health: 28, attack: 24, intelligence: 10, defence: 14, speed: 18 },
+  defaultScriptId: 'striker',
+  innateTraitIds: [FLICKERLING_LAST_GLEAM_TRAIT.id],
   rarity: 'rare',
 }
 
-export const GLOWFLIES_SPECIES_ID = 'glowflies'
-export const GLOWFLIES: Species = {
-  id: GLOWFLIES_SPECIES_ID,
-  name: 'Glowflies',
+export const FLICKERLINGS_SPECIES_ID = 'flickerlings'
+export const FLICKERLINGS: Species = {
+  id: FLICKERLINGS_SPECIES_ID,
+  name: 'Flickerlings',
   weight: 1,
-  creatures: [GLOWFLY_CHARGER, GLOWFLY_DETONATOR, GLOWFLY_RADIANT],
+  creatures: [FLICKERLING_WICK, FLICKERLING_FLARE, FLICKERLING_LAST_GLEAM],
 }
 
 // ---- Blindclaws (Instinct lean) -- closed mechanic: ambush via turn order ----
@@ -331,7 +332,7 @@ export const SHELLBACKS: Species = {
 // ---- Biome-wide registries ----
 
 export const GLIMMERDARK_SPECIES_POOL: readonly Species[] = [
-  GLOWFLIES,
+  FLICKERLINGS,
   BLINDCLAWS,
   RESONANTS,
   SPARKEATERS,

@@ -64,7 +64,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: goldens byte-identical; the digest is regenerated once, existing entries changing only through the cast-role loadout roll (attributed mechanically), plus any appended coverage fights |
 | **4.1-G** | Hub actions + enemy behaviour, shipped as **G1** (enemy behaviour) and **G2** (hub and store) | G1: deliberate, listed; mechanism goldens byte-identical, content goldens and the digest change (attributed stage by stage); G2: engine goldens and the digest **byte-identical**, store tests change |
-| **4.1-H** | Balance simulator, combat-rule changes from the H2 grill, and the first tuning pass, shipped as **H1** (the simulator and its report), **H2a** (damage rules), **H2b** (status rules and the content they need) and **H2c** (the first tuning pass) | H1: **byte-identical** (new files only; every golden, store test and the digest unchanged); H2a, H2b: deliberate, listed (each rule's own goldens); H2c: content numbers change, deliberate and listed; mechanism goldens untouched |
+| **4.1-H** | Balance simulator, combat-rule changes from the H2 grill, and the first tuning pass, shipped as **H1** (the simulator and its report), **H2a** (damage rules), **H2b1** (Flickerlings and damage observation), **H2b2** (status rules) and **H2c** (the first tuning pass) | H1: **byte-identical** (new files only; every golden, store test and the digest unchanged); H2a, H2b1, H2b2: deliberate, listed (each rule's own goldens); H2c: content numbers change, deliberate and listed; mechanism goldens untouched |
 
 The split keeps each PR under one golden policy: a PR that must be byte-identical never also
 carries deliberate changes, so "any diff is a regression" stays checkable.
@@ -1052,13 +1052,14 @@ and **6v6 boss floors** (decided at the PR #81 review).
 
 Item: **D1** (simulator, bands, CI thresholds, tuning).
 
-### The split: H1, H2a, H2b, H2c (H1/H2 decided before the H kickoff; H2 split at the H2 grill)
+### The split: H1, H2a, H2b1, H2b2, H2c (H2 split at the H2 grill; H2b before its kickoff)
 
 | PR | Items | Golden policy |
 |---|---|---|
 | **4.1-H1** | The simulator (ASSUMPTION 21's policy), `npm run sim`, the full report including every watch point's metrics, and the determinism test. ASSUMPTION 22's thresholds are computed and shown in the report, not asserted. | **Byte-identical**: new files and a `package.json` script only. Every golden export, every existing test and the corpus digest unchanged. |
 | **4.1-H2a** | Damage rules: an engine-visible creature `level`, the fading **Additional** on direct hits, and the **direct/indirect** damage split (ASSUMPTIONS 110–112). | **Deliberate, listed**: every golden that has a hit changes; each change attributed to one of the three rules. |
-| **4.1-H2b** | Status rules: **single-instance statuses** (no stacks), **DoT and Regen from the applier's snapshot** as indirect damage, the observer watching **damage events**, and the content those rules need: **Flickerlings replace Glowflies**, Glow deleted, Beacon Charge and Overcharge, Vulnerability, Spore and Sporch (ASSUMPTIONS 113–116). | **Deliberate, listed**: status and DoT goldens and the content goldens change; `golden-glowfly-detonator` is retired; the digest is regenerated once. |
+| **4.1-H2b1** | Flickerlings and damage observation: the observer watching **damage events** (ASSUMPTION 115) and **Flickerlings replacing Glowflies** with the content that goes with them: Glow deleted, Beacon Charge grants Act First, Overcharge deleted, Luminous Tide becomes Kindred Light (ASSUMPTION 116). Stacking is untouched. | **Deliberate, listed**: `golden-glowfly-detonator` is retired; every other golden is byte-identical; the data, store and mechanism tests that read Glowflies, Glow, Overcharge or Luminous Tide change, each listed; the digest is regenerated once. |
+| **4.1-H2b2** | Status rules: **single-instance statuses** (no stacks; ASSUMPTION 114) and **DoT and Regen from the applier's snapshot** as indirect damage (ASSUMPTION 113), with the content they change: Vulnerability ×1.5 once, Sporch Igniter's one Burn, Spore's spread passing the snapshot, the placeholder DoT and Regen percentages. | **Deliberate, listed**: goldens that log a status event lose its stack count (that field only), the stacking and DoT-tick goldens change, `golden-consume-stacks` is retired; each attributed to one of the two rules; the digest is regenerated once. |
 | **4.1-H2c** | The first tuning pass on the final rules: Health 20–45, the early-floor level range, the boss level offset, the Shieldbarer starter, Snapback, Arcane Bolt, the floor-1 per-item fixes, the DoT numbers, the report's additions, the CI threshold test asserted, and the before/after report (ASSUMPTIONS 117–129). | **Deliberate, listed**: content goldens, store and integration tests and the digest change, each attributed to a listed tuning change. Mechanism goldens untouched. |
 
 **Why this split, and this order.**
@@ -1072,6 +1073,23 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
   statuses), and the tuning comes last.
 - Floor 1 was far below ASSUMPTION 22's 80% on H1's report (first try: Sorcerer 0 of 40, Brute
   24, Shieldbarer 7). A threshold test can't be green before tuning.
+
+**Why H2b ships as H2b1 then H2b2** (decided before H2b's kickoff, 2026-10-08; ASSUMPTION 139).
+- As one PR, H2b would change goldens for four unrelated reasons: 41 of 114 goldens only lose the
+  stack count from their status events, 8 change through DoT ticks, 3 through stacking, and the
+  Glimmerdark content and the digest through the species swap. It would also add the damage
+  observer.
+- **The observer and the Flickerlings go together:** the Flare is the observer's first user, and
+  no Flickerling uses stacks or a DoT.
+- **Single-instance statuses and the applier snapshot go together:** the snapshot needs one
+  instance to be unambiguous, and "the stronger value stays" needs the snapshot's potency. Apart,
+  the stacking goldens would change twice, through an interim refresh-only rule that is never the
+  spec.
+- **The content comes first:** every user of Glow is Glimmerdark content (the Glowfly traits,
+  Beacon Charge, Overcharge, Luminous Tide). Status rules first would mean reworking Glowfly
+  content that the next PR deletes.
+- **"4.1-H2b" in the living docs** means the pair. The table above says which rule lands in which
+  part; the docs' markers stay as written.
 
 ### The H2 grill (decided on H1's report, 2026-10-06/07)
 
@@ -1168,34 +1186,34 @@ carry the changed rules and values.
   direct). The digest is regenerated once, every changed fight attributed. The plan's rulings are
   ASSUMPTIONS 130–136.
 
-### 4.1-H2b — status rules and the content they need (deliberate)
+### 4.1-H2b1 — Flickerlings and damage observation (deliberate)
+
+Moved to .claude/phases/4.1/H2b1/brief.md at its kickoff.
+
+### 4.1-H2b2 — status rules (deliberate)
 
 - **Single-instance statuses** (ASSUMPTION 114): `cap`, `StatusSpec.stacks`, stack increments, the
   `consume-stacks` response and the `consumed-stacks` magnitude source are deleted; re-application
   keeps the stronger value and refreshes the timer.
 - **DoT and Regen from the applier's snapshot** (ASSUMPTION 113), DoT ticks as indirect damage
   with the applier as the damage source.
-- **The observer watches damage events** (ASSUMPTION 115).
-- **Content:** Flickerlings replace Glowflies; Glow is deleted; Beacon Charge swaps Glow for Grant
-  Act First; Overcharge is deleted; Vulnerability is ×1.5 once; Sporch Igniter applies one Burn;
-  Spore's spread inherits the snapshot (ASSUMPTIONS 113, 114, 116; `content/glimmerdark.md` and
-  `content/rotcap-hollow.md`, "Phase 4.1 — decided changes"); Luminous Tide becomes Kindred Light,
-  a plain team heal (ASSUMPTION 116).
-- **The Wick's "no one else to heal → no burn" gate:** a condition or an empty-selector skip; the
-  plan proposes which, alongside the selector that excludes the bearer.
-- **Goldens:** `golden-glowfly-detonator` is retired (its mechanism is deleted); every other changed
-  golden is listed with its reason. Hand-derived focused goldens for: a re-application keeping the
-  stronger snapshot and refreshing the timer; a DoT tick as indirect damage from the applier's
-  snapshot, with the applier dead (the bearer is the source); a retaliator taking a tick from a
-  living applier and not striking back; Spore spreading with the dying bearer's snapshot; the
-  observer firing on a self-inflicted hit and not on an ordinary one, nor on a DoT tick whose
-  applier is dead (its source falls back to the bearer).
+- **Content:** Vulnerability is ×1.5 once; Sporch Igniter applies one Burn; Spore's spread inherits
+  the snapshot; Afterglow's Regen and the DoTs read the placeholder percentages (ASSUMPTIONS 113,
+  114; `content/*.md`, "Phase 4.1 — decided changes").
+- **Goldens:** `golden-consume-stacks` is retired (its mechanism is deleted); goldens that only
+  lose the stack count from a status event change in that field alone; every other changed golden
+  is listed with its rule. Hand-derived focused goldens for: a re-application keeping the stronger
+  snapshot and refreshing the timer; a DoT tick as indirect damage from the applier's snapshot,
+  with the applier dead (the bearer is the source); a retaliator taking a tick from a living
+  applier and not striking back; Spore spreading with the dying bearer's snapshot; the observer not
+  firing on a DoT tick whose applier is dead (its source falls back to the bearer).
 
 ### 4.1-H2c — the first tuning pass (deliberate)
 
 - **Config:** level-range width base 2 → 0 and a rounded-down minimum (ASSUMPTION 118);
   `bossLevelOffset` 3 → 5 (ASSUMPTION 119).
-- **Content data:** Health remapped to 20–45 for every creature (ASSUMPTION 125); the Shieldbarer
+- **Content data:** Health remapped to 20–45 for every creature (ASSUMPTION 125) except the three
+  Flickerlings, already on the new scale since 4.1-H2b1 (38 / 25 / 28): the remap skips them; the Shieldbarer
   starter's Attack 15 and `warden` role (ASSUMPTION 123); Snapback 0.3; Arcane Bolt 1.0 (ASSUMPTION
   124).
 - **Per-item tuning toward the bands and the CI thresholds** (ASSUMPTION 129): the floor-1
@@ -1235,6 +1253,13 @@ carry the changed rules and values.
     (Bramble Ward) Rallying Cry fires 513 times and Bramble Ward 300 times, effective Defence
     reaches about 1.6 × 10²³ and one creature carries 201 active effects. These are coverage
     fights, not balance data, so the simulator's draw-rate figures should come from its own runs.
+  - **More data (4.1-H2b1 PR review):** the Flickerling Flare's ×1.15 Speed to every ally fires on
+    each Wick burn, and the Wick burns every turn while another ally is hurt, so Speed compounds
+    (two Flares: ×1.32 per burn). On the regenerated corpus, 20 fights have a Flare reacting; the
+    worst reach 45 reactions and ×539 Speed (fight 190), and 43 reactions and ×407 (fights 344 and
+    348, both 100-round draws). Five Flickerling fights changed to draws in H2b1 (344, 370, 372,
+    490, 494). Same rule as above: if the report shows a fix is needed, it is per item (the factor,
+    or how often the Flare can fire), never a cap.
   - **The rule is locked**: `stat-modifier` stacking is multiplicative and uncapped (GAME_DESIGN,
     "Player-facing treatment"). The fix, if the report shows one is needed, is per content item:
     the factor, or how often it can fire (for example once per turn, or a trigger condition), and
@@ -1270,10 +1295,13 @@ carry the changed rules and values.
   existing test and the digest are unchanged.
 - **H2a:** each of the three damage rules has a hand-derived focused golden that fails with the
   rule removed; every changed golden and every changed digest fight is attributed to one rule.
-- **H2b:** each status rule (single instance, stronger stays, applier snapshot, damage observation)
-  has a hand-derived focused golden that fails with it removed; no `cap`, `stacks` or
-  `consume-stacks` remains in engine or data; the Flickerlings and spell changes match the content
-  docs; every changed golden is attributed.
+- **H2b1:** the damage observer and each Flickerling trait have a hand-derived focused golden
+  that fails with the mechanism removed; no Glowfly, Glow or Overcharge remains in data; the
+  Flickerlings and spell changes match the content docs; every changed test and digest fight is
+  attributed.
+- **H2b2:** each status rule (single instance, stronger stays, applier snapshot) has a
+  hand-derived focused golden that fails with it removed; no `cap`, `stacks` or `consume-stacks`
+  remains in engine or data; every changed golden is attributed.
 - **H2c:** the CI threshold test is green; the before/after report is in the PR and the phase
   record, every band (T1–T5) shown before and after; mechanism goldens untouched; content goldens
   re-derived or regenerated and listed where numbers changed.
@@ -1918,6 +1946,45 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 138. **Confirmed (PR #86 review).** **A zero cost still logs its `TriggerFired`.** `fireHook` emits
      it before the response runs; only the response's consequence is a no-op, as for a zero
      `magnitudeSource` count (PR #64 fix 4).
+139. **Decided (H2b kickoff, 2026-10-08).** **H2b ships as H2b1 (Flickerlings and damage
+     observation, ASSUMPTIONS 115, 116) then H2b2 (single-instance statuses and the applier
+     snapshot, ASSUMPTIONS 113, 114).** Each changes its own goldens for its own reasons (see "Why
+     H2b ships as H2b1 then H2b2"). Rejected: a three-way split separating single-instance from the
+     snapshot (an interim refresh-only rule, and the stacking goldens changing twice).
+140. **Decided (H2b1 kickoff, 2026-10-08; design owner).** **The Wick burns only when another ally
+     is hurt, and heals the lowest-HP hurt ally.** Refines ASSUMPTION 116. "No one else to heal"
+     means no living ally other than the Wick is below its effective max Health: with every other
+     ally at full Health, or none alive, the Wick neither burns nor heals. The heal's target is the
+     lowest current HP among the Wick's other living allies that are below max Health, so the gate
+     and the target read the same pool and a burn always buys a heal that lands on someone hurt.
+     Why: a burn that heals nobody is pointless self-harm, and plain "lowest-HP ally" ranks by
+     current HP, so it could pick a small ally at full Health over a bigger one that is hurt.
+     Consequences: the Flare's payoff waits until another ally has taken damage; the gate needs a
+     condition no existing variant expresses (`ally-count` and `hp-percent` both include the
+     bearer), so H2b1's plan proposes one. Rejected: "no other ally alive" (the Wick would burn on
+     round 1 for a heal that restores nothing); the lowest HP % (a new kind of target ranking).
+
+141. **Decided (H2b1 plan review, 2026-10-08; design owner).** **The Wick's gate is a trigger-only
+     condition.** A trigger's condition is a `TriggerCondition`: the scripting `Condition` plus
+     `other-ally-injured` (a living ally other than the bearer is below its effective max Health),
+     which script rules can't use; the type keeps it out. Its target, a new `ResponseTarget`
+     `lowest-hp-injured-other-ally`, reads the same pool function, so gate and target can't
+     disagree. Why: a general `other-ally` HP subject in the shared `Condition` would give
+     players a condition with no matching target (`lowest-hp-ally` includes the caster and ignores
+     full Health), so Phase 6 would inherit half a feature already saved in scripts. Precedent:
+     `SelfCondition` (S2). **Phase 6 must know** (design owner): the editor derives its condition
+     list from `Condition` and must not offer trigger-only kinds; if players want "another ally is
+     hurt", Phase 6 promotes the kind together with a matching selector (ROADMAP Phase 6 inputs).
+     Rejected: an `other-ally` `HpSubject` (`hp-percent` any `< 100`), valid in scripts.
+
+142. **Decided (H2b1 plan review).** **Damage observation's shape** (refines ASSUMPTION 115): a
+     sibling hook `on-damage-observed`, fired from `applyDamageAndEmit` on every living creature
+     after `on-damage-taken` and before the death chain, even on a lethal hit; the same
+     `ObservationFilter` with `relationship` read against the damaged creature plus
+     `selfInflicted`; the hook's source is the damaged creature; `selfInflicted` is a required
+     flag that only the cost path sets; both observation hooks fail closed when called without
+     their details; a load-time validator keeps each filter field on its own hook, over traits,
+     perks and statuses. CONVENTIONS "Damage observation" carries the detail.
 
 ## Sequencing summary
 
@@ -1926,5 +1993,6 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 (the corpus covers all real content, test-only) → `4.1-E` (`perform-action`) → `4.1-F1` (status
 containers) → `4.1-F2` (status timing + Web roll) → `4.1-F3` (Silence/Pacify) → `4.1-G1` (enemy
 behaviour) → `4.1-G2` (hub and store) → `4.1-H1` (simulator and report, byte-identical) →
-`4.1-H2a` (damage rules) → `4.1-H2b` (status rules and Flickerlings) → `4.1-H2c` (tuning) → then
+`4.1-H2a` (damage rules) → `4.1-H2b1` (Flickerlings and damage observation) → `4.1-H2b2` (status
+rules) → `4.1-H2c` (tuning) → then
 the Phase 4.5 demo brief. Each PR branches from `main` after the previous merge.

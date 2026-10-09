@@ -2,10 +2,10 @@
 
 Status: shipped — Phase 4 Slice H2, revised per PR #60 design review; spell list revised again by
 the Phase 4 interstitial slice (cumulative spell unlock, between H2 and H3); Phase 4.1 changes
-decided (see the last section); Phase 4.1-G1 added the roles and the 6v6 boss floor. Source: creature/
-species composition in `src/data/species/glimmerdark.ts`; trait definitions in
-`src/data/traits/glimmerdark.ts`; spell definitions in `src/data/spells/glimmerdark.ts`;
-Glow/grant-act-first in `src/data/statuses.ts`. Design source:
+decided (see the last section); Phase 4.1-G1 added the roles and the 6v6 boss floor; Phase 4.1-H2b1
+replaced the Glowflies with the Flickerlings and deleted Glow. Source: creature/species composition in
+`src/data/species/glimmerdark.ts`; trait definitions in `src/data/traits/glimmerdark.ts`; spell
+definitions in `src/data/spells/glimmerdark.ts`; Grant Act First in `src/data/statuses.ts`. Design source:
 `.claude/species/species-locked.md`'s Biome 2 table.
 
 **Spell unlock is now cumulative** (GAME_DESIGN §4): every biome-1 spell (The Overgrowth's own
@@ -13,9 +13,9 @@ Glow/grant-act-first in `src/data/statuses.ts`. Design source:
 and every deeper biome. Glimmerdark originally shipped 10 of its own spells (two per affinity,
 mirroring Overgrowth's density); 8 turned out to be exact mechanical reskins of an Overgrowth
 spell and a 9th (Glowspark Bolt) was a near-dup of Arcane Bolt — all 9 are **deleted**. Only
-**Beacon Charge** was genuinely Glimmerdark's own; **five** new spells (**Overcharge**,
-**Disorient**, **Blinding Flare**, **Afterglow**, **Luminous Tide**) join it below. See "Spells"
-for the current list.
+**Beacon Charge** was genuinely Glimmerdark's own; four new spells (**Disorient**, **Blinding Flare**,
+**Afterglow**, **Kindred Light**) join it below (a fifth, Overcharge, was deleted with Glow in 4.1-H2b1,
+and Luminous Tide became Kindred Light). See "Spells" for the current list.
 
 This doc is the **player-facing reference** — every trait and spell below is written as a single,
 literal description of what it does, exact numbers included, in the phrasing style a future
@@ -29,21 +29,29 @@ up, payoff benefits from it, amplifier does its own distinct thing. Two species 
 two-role trick to chain off (**Resonants**, **Gloomjaws**) — all three of their creatures share
 the *same* mechanic instead, just at a bigger scope or a bigger number as rarity rises.
 
-## Statuses
+Affinity spread across the 18 creatures: **4 Wit** (the Flare and the three Resonants), **3 Instinct**
+(the Blindclaws), **5 Violence** (the Last Gleam, the Leech, the three Gloomjaws), **4 Endurance** (the
+Gorger and the three Shellbacks) and **2 Vitality** (the Wick and the Voidmaw).
 
-**Glow** — A stacking resource. While a creature holds Glow, it deals **8% more damage per
-stack** (up to 5 stacks, +40%). Lasts up to **4 turns** unless consumed first.
+## Statuses
 
 **Grant Act First** — The turn-order twin of Web (The Overgrowth): a creature with this lands at
 the *front* of the round's turn order instead of the back. Lasts up to **3 turns**.
 
-## Glowflies (Wit/Instinct) — Charge & Release
+## Flickerlings (Vitality/Wit/Violence) — The Flame That Feeds on Itself
 
-| Creature | Affinity | Role | Description |
-|---|---|---|---|
-| Charger | Wit | Enabler | At the start of its own turn, this creature applies a stack of Glow to whichever living ally (including itself) has the highest Attack. |
-| Detonator | Instinct | Payoff | When this creature attacks, it first consumes all of its own Glow stacks in one burst of bonus damage against the creature it's attacking — **its own Intelligence, multiplied by how many stacks it had** (e.g. 3 stacks = one hit worth 3x Intelligence, not three separate hits). Its normal attack then lands on top, as usual. With no Glow stacked, nothing extra happens. |
-| Radiant | Vitality | Amplifier | At the start of the fight, this creature charges its **entire team** with 2 stacks of Glow at once — a one-time, team-wide jolt, unlike Charger's repeating single-target trickle. |
+Pale cave-dwellers whose glow is their life (names are placeholders). They replaced the Glowflies in
+4.1-H2b1. Their Health is on the new 20–45 scale.
+
+| Creature | Affinity | Role | Health / Atk / Int / Def / Spd | Description |
+|---|---|---|---|---|
+| Wick | Vitality | Enabler | 38 / 10 / 16 / 14 / 16 | At the start of its turn, **only while another living ally is below maximum Health**, this creature burns **10% of its own maximum HP** to heal its lowest-HP **injured** ally **other than itself** for **20% of its own maximum HP**. When every other ally is at full health (or none is left), it neither burns nor heals. The burn is a **cost**: exactly 10% of its maximum HP, whatever its Defence. It can kill the Wick; then no heal follows (Last Stand can still save it, and the heal then proceeds). |
+| Flare | Wit | Payoff | 25 / 14 / 22 / 10 / 22 | Whenever an ally damages **itself** (a cost, like the Wick's burn — never an ordinary hit or a damage-over-time tick), **every living ally** permanently gains **15% Speed**. The Flare counts itself as an ally. Two Flares both react, so their bonuses multiply. |
+| Last Gleam | Violence | Amplifier | 28 / 24 / 10 / 14 / 18 | Whenever an ally dies, **every living ally** permanently gains **20% Attack**. It does not react to its own death. Two Last Gleams both react, so their bonuses multiply. |
+
+The Flare is the first trait to watch **damage** rather than actions (CONVENTIONS, "Damage
+observation"). Order on a lethal burn: the burn's damage, then the Flare's reaction, then the Wick's
+death, then the Last Gleam's reaction.
 
 ## Blindclaws (Instinct) — Ambush via Turn Order
 
@@ -100,9 +108,9 @@ different spells** of its own affinity.
 
 | Creature | Role | Creature | Role |
 |---|---|---|---|
-| Glowfly Charger | caster | Sparkeater Leech | striker |
-| Glowfly Detonator | striker | Sparkeater Gorger | striker |
-| Glowfly Radiant | support | Sparkeater Voidmaw | striker |
+| Flickerling Wick | support | Sparkeater Leech | striker |
+| Flickerling Flare | caster | Sparkeater Gorger | striker |
+| Flickerling Last Gleam | striker | Sparkeater Voidmaw | striker |
 | Blindclaws Setter | opener | Gloomjaw Stalker | opener |
 | Blindclaws Striker | striker | Gloomjaw Executioner | striker |
 | Blindclaws Vanguard | striker | Gloomjaw Ravager | striker |
@@ -111,8 +119,8 @@ different spells** of its own affinity.
 | Resonant Overtone | caster | Shellback Bulwark | warden (provoking draws more hits to retaliate against) |
 | **Leech Sovereign** (boss) | striker | | |
 
-Resonant Chorus is no longer the biome's only spellcaster: the three Resonants and Glowfly Charger
-are casters, Glowfly Radiant is a support, and Blindclaws Setter and Gloomjaw Stalker are openers.
+Resonant Chorus is no longer the biome's only spellcaster: the three Resonants and Flickerling Flare
+are casters, Flickerling Wick is a support, and Blindclaws Setter and Gloomjaw Stalker are openers.
 
 ## The Leech Sovereign (floor-20 boss)
 
@@ -129,25 +137,24 @@ does not fire that turn).
   the party hollows out while the Sovereign snowballs, so the fight is a race to burst it down
   before the steal compounds too far.
 
-## Spells (6 of Glimmerdark's own, unlocked at biome 2 — plus every biome-1 spell, inherited)
+## Spells (5 of Glimmerdark's own, unlocked at biome 2 — plus every biome-1 spell, inherited)
 
 Spell unlock is cumulative (GAME_DESIGN §4): a Glimmerdark caster can roll ANY biome-1 spell
 (The Overgrowth's 16 + the 3 shared "core" spells — see `.claude/content/overgrowth.md` and
-`src/data/spells/core.ts`) in addition to the 6 spells below, which unlock starting at biome 2.
+`src/data/spells/core.ts`) in addition to the 5 spells below, which unlock starting at biome 2.
 Glimmerdark deliberately does not re-author a full per-affinity kit — the inherited biome-1 base
 already covers every affinity; these are spice on top of it, not a replacement kit (per GAME_DESIGN §4's ≥4–5-own-spells-per-biome bar).
 
 | Spell | Affinity | Description |
 |---|---|---|
-| Beacon Charge | Wit | Heals a single ally for **30% of the caster's effective Health**, and charges that ally with a stack of Glow. |
-| Overcharge | Wit | Heals a single ally for **15% of the caster's effective Health** (half of Beacon Charge's heal), and charges that ally with **2 stacks** of Glow at once (double Beacon Charge's one). |
+| Beacon Charge | Wit | Heals a single ally for **30% of the caster's effective Health**, and grants that ally **Grant Act First** (the same status Blindclaws' Setter and Vanguard grant) for **3 turns**. |
 | Disorient | Instinct | A single-target hit dealing damage equal to **85% of the caster's Intelligence**, and applies Web (act-last) to the target for **3 turns** — the same status Overgrowth's Vine Snare applies, reused rather than re-authored under a new name. |
 | Blinding Flare | Violence | A single-target hit dealing damage equal to **70% of the caster's Intelligence**, and leaves the target **Vulnerable** (takes ×1.5 damage) for **3 turns** — a light-burst setup debuff; no other spell applies Vulnerability. |
 | Afterglow | Vitality | Heals a single ally for **50% of the caster's effective Health**, and grants **Regen** (heals a further **5% of the target's own effective max HP per stack** at the end of each round) for **3 turns** — a lingering-light sustain heal, distinct from Regrowth's plain burst. |
-| Luminous Tide | Wit | Heals **every ally** for **20% of the caster's effective Health** and charges each with a stack of **Glow** — a party-wide wave of light; the game's first AOE support spell. |
+| Kindred Light | Wit | Heals **every ally** for **20% of the caster's effective Health** — a party-wide wave of light; the game's first AOE support spell. |
 
-Every ally-targeting entry above (Beacon Charge, Overcharge, Afterglow, Luminous Tide) can be
-cast on any living ally, including the caster itself; Luminous Tide hits the whole ally side at
+Every ally-targeting entry above (Beacon Charge, Afterglow, Kindred Light) can be
+cast on any living ally, including the caster itself; Kindred Light hits the whole ally side at
 once.
 
 **Deleted (Phase 4 interstitial slice):** Crystal Shard, Fracture Strike, and Glowspark Bolt
@@ -169,37 +176,17 @@ middle of it, and it obeys every action rule (a Silenced caster can't echo, and 
 during its own cast, by a retaliation say, loses the echo). The log shows `ActionGranted` instead
 of `EchoCastGranted`.
 
-**Status timing (4.1-F):** every status's duration (Glow, Grant Act First, the Regen from
+**Status timing (4.1-F):** every status's duration (Grant Act First, the Regen from
 Afterglow, the Web from Disorient, the Vulnerability from Blinding Flare) counts the **bearer's own
 turns**, counted down at the end of each of its turns. Regen heals **at the end of each of its
 bearer's turns** instead of at round end. A status applied during or after its bearer's action
-starts counting the next turn; one applied at the start of the bearer's turn, before it acts (the
-Charger's Glow on itself), counts that turn.
+starts counting the next turn; one applied at the start of the bearer's turn, before it acts,
+counts that turn.
 
 **Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; mostly 4.1-H2b, each item names its
-PR where it differs):
+PR where it differs; the Flickerlings, Glow's deletion, Beacon Charge, Kindred Light and the affinity
+spread landed in 4.1-H2b1 and are folded into the sections above):
 
-- **Flickerlings replace the Glowflies, and Glow is deleted.** Once statuses stopped stacking,
-  Glow was just another "+% damage" status beside Weaken and Vulnerability. The Flickerlings are
-  pale cave-dwellers whose glow is their life (names are placeholders). Stats are on the new
-  20–45 Health scale.
-
-  | Creature | Affinity | Role, script | Health / Atk / Int / Def / Spd | Description |
-  |---|---|---|---|---|
-  | Flickerling Wick | Vitality | Enabler, support | 38 / 10 / 16 / 14 / 16 | At the start of its turn, burns **10% of its own maximum HP** to heal its lowest-HP ally **other than itself** for **20% of its own maximum HP**. With no one else to heal, it doesn't burn. |
-  | Flickerling Flare | Wit | Payoff, caster | 25 / 14 / 22 / 10 / 22 | Whenever an ally damages itself, **every ally** permanently gains **15% Speed**. |
-  | Flickerling Last Gleam | Violence | Amplifier, striker | 28 / 24 / 10 / 14 / 18 | Whenever an ally dies, **every ally** permanently gains **20% Attack**. |
-
-  The Flare is the first trait to watch **damage** rather than actions (CONVENTIONS, "Damage
-  observation").
-- **Beacon Charge** keeps its heal and grants **Grant Act First** instead of a Glow stack.
-  **Overcharge is deleted**, leaving five Glimmerdark spells.
-- **Luminous Tide becomes Kindred Light**: it keeps its team heal (**20% of the
-  caster's effective Health** to every ally) and loses the Glow.
-- **The Wick's burn is a cost:** it loses exactly 10% of its maximum HP, whatever its Defence (a
-  creature's own trait, status or perk response damaging itself ignores Defence and modifiers).
-- **Affinity spread:** Glimmerdark's creatures go from 4 Wit, 4 Instinct, 4 Violence, 4 Endurance
-  and 2 Vitality to **4 / 3 / 5 / 4 / 2**.
 - **Single-instance statuses:** Blinding Flare's Vulnerability is ×1.5 once (re-casting refreshes
   it). Afterglow's Regen heals **10% of the caster's Health** per tick (placeholder, tuned in
   4.1-H2c) instead of a share of the target's max HP.

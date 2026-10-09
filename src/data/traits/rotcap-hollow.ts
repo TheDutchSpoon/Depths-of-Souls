@@ -57,8 +57,8 @@ export const SPORECLOUD_REAPER_TRAIT: Trait = {
 }
 
 /** Sporecloud Bloomer (amplifier, rare): a genuinely distinct mechanic from BOTH Seeder and
- * Reaper -- breadth over depth (the same "team-wide burst vs. per-hit trickle" shape Glowfly
- * Radiant established in H2): once at fight-start, it seeds the WHOLE enemy line with Spore at
+ * Reaper -- breadth over depth (the same "team-wide burst vs. per-hit trickle" shape the
+ * Glimmerdark amplifiers established in H2): once at fight-start, it seeds the WHOLE enemy line with Spore at
  * once, rather than infecting one target per attack. */
 export const SPORECLOUD_BLOOMER_TRAIT: Trait = {
   id: 'sporecloud-bloomer-spore-burst',
@@ -262,7 +262,7 @@ export const NECROMOSS_THICKET_TRAIT: Trait = {
 
 /** Necromoss Hollowroot (rare, amplifier): every turn, heals the WHOLE living team, each member
  * scaled by the LIVE count of the team's own dead allies (breadth over Wisp's self-only heal, per
- * Glowfly Radiant/Swarmhive Queen's own "breadth for the rare tier" precedent). A `support`
+ * Swarmhive Queen's own "breadth for the rare tier" precedent). A `support`
  * (species/rotcap-hollow.ts): its trait fires
  * on `on-turn-start` regardless of the chosen action, so casting doesn't blunt it. */
 export const NECROMOSS_HOLLOWROOT_TRAIT: Trait = {

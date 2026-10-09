@@ -65,7 +65,7 @@ at creature-stamping (affinity is per-creature).
 
 | Species | Affinity lean | Closed mechanic | Roles (illustrative) | Uses |
 |---|---|---|---|---|
-| **Flickerlings** *(from 4.1-H2b; replaced the Glowflies)* | Vitality / Wit / Violence | Glow is their life (spend HP, the team grows) | Wick (`on-turn-start → burn 10% own max HP → heal the lowest-HP other ally 20% of own max HP`), Flare (`an ally damages itself → every ally +15% Speed`), Last Gleam (`an ally dies → every ally +20% Attack`) | the observer watching **damage events** (self-inflicted filter, 4.1-H2b) + existing responses |
+| **Flickerlings** *(from 4.1-H2b1; replaced the Glowflies)* | Vitality / Wit / Violence | Glow is their life (spend HP, the team grows) | Wick (`on-turn-start → burn 10% own max HP → heal the lowest-HP hurt other ally 20% of own max HP`; no burn when no other ally is hurt), Flare (`an ally damages itself → every ally +15% Speed`), Last Gleam (`an ally dies → every ally +20% Attack`) | the observer watching **damage events** (self-inflicted filter, 4.1-H2b1) + existing responses |
 | **Blindclaws** | Instinct | Ambush via turn order | Setter (`grant act-first` to an ally), Striker (`+% while acting before its target`) | **Turn-order status** + acted-before condition |
 | **Resonants** | Wit | Caster synergy | Chorus/Adept `on-ally-action (cast) → gain Attack / Int`; **Overtone** (rare payoff) `on-ally-action (cast) → 10% the caster echo-casts a random one of its own spells` (non-stacking; echoes are themselves observable) | `on-action-observed` (built) + a **`perform-action(triggering-source, cast a random gem at a random target)`** response (4.1-E; built in H2 as an echo-cast flag), bounded by cascade depth — see CONVENTIONS |
 | **Sparkeaters** | Violence / Endurance / Vitality (each drainer's affinity = the stat it steals, per CLAUDE.md soft-mapping) | Stat-parasites | Leech (`on-attack → −Attack enemy + same +Attack self`, Violence), Gorger (same shape on Defence, Endurance), **Voidmaw** (rare, Vitality — genuinely distinct: `on-attack → steal max-HP from target + feed that max-HP to the WHOLE team`, apex parasite) | ~free (apply-stat-modifier pairs; Voidmaw uses the `health` stat + `all-allies`, precedent: Treant Grovekeep) |
@@ -77,7 +77,7 @@ at creature-stamping (affinity is per-creature).
   stack** while held (charging up); the Detonator's **consume-all-stacks → burst** is the payoff.
   A new primitive class: *accumulate-and-spend resource* (distinct from Web/Sleep markers and from
   count-scaling's live-board read). Needs a **consume-stacks response** (read count → effect → clear).
-  *(Deleted in 4.1-H2b with the Glowflies, stacking and `consume-stacks`: once statuses stopped
+  *(Glow was deleted in 4.1-H2b1 with the Glowflies; stacking and `consume-stacks` go in 4.1-H2b2. Once statuses stopped
   stacking, Glow was another "+% damage" status beside Weaken and Vulnerability. Brief ASSUMPTIONS
   114, 116.)*
 - **Damage observation** (4.1-H2b) — the action observer also watches **damage events**, filtered by
@@ -100,7 +100,7 @@ at creature-stamping (affinity is per-creature).
 with the Flickerlings' Vitality / Wit / Violence lean replacing the Glowflies' Wit / Instinct:
 Wit ×2 / Instinct ×1 / Violence ×3 / Endurance ×2 / Vitality ×2) (Sparkeaters now
 span Violence/Endurance/Vitality via the stat-aligned drainer affinities, so Vitality is carried at
-species level by Voidmaw; Glowfly Radiant remains the extra sprinkle). **From 4.1-H2b** the
+species level by Voidmaw; the Glowfly Radiant was the extra sprinkle until 4.1-H2b1). **From 4.1-H2b1** the
 Flickerlings (Vitality / Wit / Violence) replace the Glowflies (Wit / Instinct): the creature
 spread moves from 4 Wit / 4 Instinct / 4 Violence / 4 Endurance / 2 Vitality to 4 / 3 / 5 / 4 / 2,
 with the Flickerling Wick as the Vitality sprinkle (brief ASSUMPTION 116). *(Superseded: earlier
@@ -212,10 +212,10 @@ emptying it (GAME_DESIGN "Milestone bosses").
   death-reset rule), and — already-present-but-now-counted — **`grant-action-state`** and
   **`consume-stacks`**. Eight top-level response kinds at seed-content lock. *(Slice E2 later
   added a ninth, **`remove-status`**; the line is now held at nine — see CONVENTIONS "Response
-  vocabulary — now NINE".)* *(4.1-H2b deletes `consume-stacks` and Glow with stacking, leaving
+  vocabulary — now NINE".)* *(4.1-H2b1 deleted Glow; 4.1-H2b2 deletes `consume-stacks` with stacking, leaving
   eight.)*
 - **Flow:** **scripted-intro encounter** (a rigged fight with a story outcome instead of wipe→hub).
-- Statuses: **Sleep** (breaks-on-damage suppress), **Glow** (stacking resource), **turn-order**
+- Statuses: **Sleep** (breaks-on-damage suppress), **Glow** (stacking resource; deleted in 4.1-H2b1), **turn-order**
   (act first *or* last — two-way primitive; **Web** = act-last consumer + 10%/turn break-free),
   **Spore** (DoT + spread-on-death), **Confusion** (3-turn, 50%/harmful-action friendly-fire).
 - Targets: **`random-ally-without-status`** `ResponseTarget` (H3, Spore's spread — a random living

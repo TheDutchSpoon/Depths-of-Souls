@@ -1,4 +1,4 @@
-import { activeFriendlyFireStatus, hasProvokeImmunity } from './effects'
+import { activeFriendlyFireStatus, effectiveMaxHp, hasProvokeImmunity } from './effects'
 import { nextRandom } from './rng'
 import type { CombatState, Creature } from './types'
 import type { CreatureId } from './ids'
@@ -19,6 +19,23 @@ export function livingAlliesOf(
 ): readonly Creature[] {
   const party = creature.side === 'player' ? state.playerParty : state.enemyParty
   return party.filter((c) => c.alive)
+}
+
+/**
+ * Phase 4.1-H2b1 (ASSUMPTION 140): the ONE pool behind the Flickerling Wick's gate and heal -- the
+ * living allies of `creature` OTHER than itself that are below their effective max Health. "Hurt"
+ * is `currentHp < effectiveMaxHp` (the floor of effective Health, an integer comparison), so a
+ * raised ceiling counts as hurt and a clamped current HP never does. Read by both the trigger-only
+ * `other-ally-injured` condition (non-empty) and the `lowest-hp-injured-other-ally` response target
+ * (the lowest current HP in it), so the two cannot disagree.
+ */
+export function injuredOtherAlliesOf(
+  creature: Creature,
+  state: CombatState,
+): readonly Creature[] {
+  return livingAlliesOf(creature, state).filter(
+    (c) => c.id !== creature.id && c.currentHp < effectiveMaxHp(c),
+  )
 }
 
 /** Alive members of `party` currently marked as provoking. */

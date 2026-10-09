@@ -24,7 +24,10 @@ import {
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
-import { resolveTargetSelector } from './target-selectors'
+import {
+  resolveLowestHpInjuredOtherAlly,
+  resolveTargetSelector,
+} from './target-selectors'
 import {
   effectsForHook,
   effectiveMaxHp,
@@ -39,7 +42,7 @@ import {
   instantiateStatus,
   resolveMagnitudeCount,
 } from './effects'
-import { evaluateCondition } from './conditions'
+import { evaluateCondition, evaluateTriggerCondition } from './conditions'
 import { createEffectInstanceId } from './effect-types'
 import {
   MAX_TRIGGER_CASCADE_DEPTH,
@@ -262,11 +265,14 @@ function dealDamageCore(
       takenFactors,
     })
   }
+  // A hit routed through the damage formula is never a cost, even when attacker === target
+  // (a Confusion redirect, a spell effect on its own caster).
   return applyDamageAndEmit(
     attackerId,
     target,
     damage,
     damageSource,
+    false,
     state,
     ctx,
     statusId,
@@ -276,15 +282,22 @@ function dealDamageCore(
 /**
  * Applies a computed damage result, emits DamageDealt, then fires the damage-path hooks in the
  * pinned order: on-damage-dealt (source, UNCONDITIONAL — even on a lethal hit) → on-damage-taken
- * (self, survived only) → if it died: CreatureDied → on-death → on-kill → on-ally-death /
- * on-enemy-death (observers). Death pre-empts the victim's on-damage-taken; hit-reactions resolve
- * before death-reactions.
+ * (self, survived only) → on-damage-observed (every living creature, UNCONDITIONAL — even on a
+ * lethal hit; Phase 4.1-H2b1) → if it died: CreatureDied → on-death → on-kill → on-ally-death /
+ * on-enemy-death (observers). Death pre-empts the victim's on-damage-taken; hit-reactions
+ * (including the observation of the hit) resolve before death-reactions.
+ *
+ * `selfInflicted` (Phase 4.1-H2b1, ASSUMPTIONS 115, 132, 137) is REQUIRED, with no default, so the
+ * compiler finds every caller: it is true only from `applyCostDamage` -- the branch that chose the
+ * cost path -- and is NEVER derived from `sourceId === target.id` (a DoT tick's bearer and a direct
+ * action landing on its own actor have equal ids and are not costs).
  */
 export function applyDamageAndEmit(
   sourceId: CreatureId,
   target: Creature,
   damage: DamageResult,
   damageSource: 'attack' | 'cast' | 'dot',
+  selfInflicted: boolean,
   state: CombatState,
   ctx: ResolutionContext,
   statusId?: string,
@@ -328,14 +341,35 @@ export function applyDamageAndEmit(
 
   if (!died) {
     working = fireHook('on-damage-taken', [target.id], sourceId, working, ctx).state
-    return working
   }
+
+  // Phase 4.1-H2b1: the damage observation sits between the hit-reactions and the death chain. The
+  // hook's `source` is the DAMAGED creature (what `relationship` compares against); a creature
+  // killed by this hit is already `alive: false`, so it does not observe its own death blow.
+  working = fireHook(
+    'on-damage-observed',
+    livingIdsOf(working),
+    target.id,
+    working,
+    ctx,
+    { observedDamage: { selfInflicted } },
+  ).state
+
+  if (!died) return working
 
   ctx.events.push({ type: 'CreatureDied', creatureId: target.id })
   working = fireHook('on-death', [target.id], sourceId, working, ctx).state
   working = fireHook('on-kill', [sourceId], target.id, working, ctx).state
   working = fireDeathObservers(target.id, working, ctx)
   return working
+}
+
+/** All living creatures' ids in tie-break order (player slots, then enemy slots): the scope of an
+ * observation hook. (actions.ts keeps its own private copy for `on-action-observed`.) */
+function livingIdsOf(state: CombatState): CreatureId[] {
+  return [...state.playerParty, ...state.enemyParty]
+    .filter((c) => c.alive)
+    .map((c) => c.id)
 }
 
 function fireDeathObservers(
@@ -372,6 +406,12 @@ export interface FireHookOptions {
     readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
     readonly instanceIndex: number
   }
+  /** Phase 4.1-H2b1 (CONVENTIONS "Damage observation"): supplied ONLY by `applyDamageAndEmit`'s
+   * `on-damage-observed` call. `selfInflicted` is the cost classification carried from the branch
+   * that chose the cost path. Both observation hooks FAIL CLOSED: a candidate on
+   * `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
+   * `observed` is. */
+  readonly observedDamage?: { readonly selfInflicted: boolean }
   /** Phase 4.1-F2 (ASSUMPTION 52): the born-this-turn tick gate, supplied ONLY by `resolveTurn`'s
    * `on-turn-end` call. Consulted for every STATUS-sourced candidate (trait-sourced triggers are
    * never gated): true means the bearer's status instance (`statusInstanceId`) was applied or
@@ -409,7 +449,7 @@ export function fireHook(
   ctx: ResolutionContext,
   options?: FireHookOptions,
 ): { state: CombatState } {
-  const { observed, skipStatusTrigger, stopWhen } = options ?? {}
+  const { observed, observedDamage, skipStatusTrigger, stopWhen } = options ?? {}
   const { events, cascade } = ctx
   let working = state
   const isDeathHook = hook === 'on-death'
@@ -461,19 +501,44 @@ export function fireHook(
       // BEFORE the generic `condition` (a cheaper, more fundamental "is this candidate even
       // relevant" gate); a non-matching observer draws nothing and consumes no depth budget,
       // same silent-skip discipline as a false condition.
-      if (effect.observationFilter && observed) {
-        const actor = source ? findCreature(working, source) : undefined
-        const {
-          relationship = 'any',
-          actionKind,
-          excludeActor = false,
-        } = effect.observationFilter
-        if (actionKind && actionKind !== observed.actionKind) continue
-        if (excludeActor && actor && actor.id === self.id) continue
-        if (relationship !== 'any' && actor) {
-          if (relationship === 'self' && actor.id !== self.id) continue
-          if (relationship === 'ally' && actor.side !== self.side) continue
-          if (relationship === 'enemy' && actor.side === self.side) continue
+      // Phase 4.1-H2b1: BOTH observation hooks fail closed. A candidate on `on-action-observed` is
+      // skipped when the caller passed no `observed`, one on `on-damage-observed` when it passed
+      // no `observedDamage` -- a call site that forgets its option can never make every observer
+      // fire on every event. (All five action call sites and the one damage call site pass theirs.)
+      if (hook === 'on-action-observed') {
+        if (!observed) continue
+        if (effect.observationFilter) {
+          const actor = source ? findCreature(working, source) : undefined
+          const {
+            relationship = 'any',
+            actionKind,
+            excludeActor = false,
+          } = effect.observationFilter
+          if (actionKind && actionKind !== observed.actionKind) continue
+          if (excludeActor && actor && actor.id === self.id) continue
+          if (relationship !== 'any' && actor) {
+            if (relationship === 'self' && actor.id !== self.id) continue
+            if (relationship === 'ally' && actor.side !== self.side) continue
+            if (relationship === 'enemy' && actor.side === self.side) continue
+          }
+        }
+      } else if (hook === 'on-damage-observed') {
+        if (!observedDamage) continue
+        if (effect.observationFilter) {
+          // `source` is the DAMAGED creature; one that cannot be found is no match, so the
+          // relationship check can never fall through (it cannot happen at the one call site).
+          const damaged = source ? findCreature(working, source) : undefined
+          if (!damaged) continue
+          const { relationship = 'any', selfInflicted } = effect.observationFilter
+          if (
+            selfInflicted !== undefined &&
+            selfInflicted !== observedDamage.selfInflicted
+          ) {
+            continue
+          }
+          if (relationship === 'self' && damaged.id !== self.id) continue
+          if (relationship === 'ally' && damaged.side !== self.side) continue
+          if (relationship === 'enemy' && damaged.side === self.side) continue
         }
       }
 
@@ -488,7 +553,7 @@ export function fireHook(
       // on-fight-start), in which case 'target' simply evaluates false, same as scripting lookahead.
       if (
         effect.condition &&
-        !evaluateCondition(effect.condition, self, working, undefined, source)
+        !evaluateTriggerCondition(effect.condition, self, working, source)
       ) {
         continue
       }
@@ -633,6 +698,11 @@ function resolveResponseTargets(
       const index = Math.floor(nextRandom(state.rng) * deadAllies.length)
       const chosen = deadAllies[index]
       return chosen ? [chosen.id] : []
+    }
+    case 'lowest-hp-injured-other-ally': {
+      // Phase 4.1-H2b1 (ASSUMPTION 140): the same pool as the `other-ally-injured` condition.
+      const id = resolveLowestHpInjuredOtherAlly(getCreature(state, context.self), state)
+      return id ? [id] : []
     }
     case 'random-ally-without-status': {
       // Phase 4 Slice H3 (Spore's spread-on-death, ASSUMPTION 30): livingAlliesOf resolves off
@@ -1029,7 +1099,7 @@ export function executeResponse(
       return { state: working }
     }
     case 'consume-stacks': {
-      // Phase 4 Slice D (Glowflies' Detonator). SELF-scoped: reads and clears the FIRING
+      // Phase 4 Slice D (the retired Glowfly Detonator). SELF-scoped: reads and clears the FIRING
       // creature's own statusId stacks (context.self), not a targeted creature's -- consume-
       // stacks has no `target` field, matching the self-scoped trigger-condition convention.
       const self = getCreature(state, context.self)
@@ -1125,7 +1195,18 @@ function applyFlatDamage(
     affinityMultiplier: 1,
     wasChipOnly: false,
   }
-  return applyDamageAndEmit(sourceId, target, damage, damageSource, state, ctx, statusId)
+  // The tick path (ASSUMPTION 131): never self-inflicted, even though the bearer is both source and
+  // target here (H2b2 moves the source to the applier).
+  return applyDamageAndEmit(
+    sourceId,
+    target,
+    damage,
+    damageSource,
+    false,
+    state,
+    ctx,
+    statusId,
+  )
 }
 
 /**
@@ -1145,11 +1226,14 @@ function applyCostDamage(
 ): CombatState {
   const damage = calculateCost(magnitude)
   if (damage.finalDamage === 0) return state
+  // The ONLY caller that passes selfInflicted: true (Phase 4.1-H2b1, ASSUMPTIONS 115, 132, 137):
+  // the cost classification is the choice of this branch, carried -- not re-derived from the ids.
   return applyDamageAndEmit(
     selfId,
     getCreature(state, selfId),
     damage,
     damageSource,
+    true,
     state,
     ctx,
     statusId,

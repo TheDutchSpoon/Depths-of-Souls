@@ -2,6 +2,7 @@ import type { Trait } from '../../engine/effect-types'
 import {
   validateNoBreakChanceOutsideStatus,
   validateNoRandomSelectorInResponseTargets,
+  validateObservationFilters,
   validateStatModifierConditions,
 } from '../../engine/effect-types'
 import {
@@ -38,9 +39,9 @@ import {
   BROODMOTHER_TRAIT,
 } from './overgrowth'
 import {
-  GLOWFLY_CHARGER_TRAIT,
-  GLOWFLY_DETONATOR_TRAIT,
-  GLOWFLY_RADIANT_TRAIT,
+  FLICKERLING_WICK_TRAIT,
+  FLICKERLING_FLARE_TRAIT,
+  FLICKERLING_LAST_GLEAM_TRAIT,
   BLINDCLAWS_SETTER_TRAIT,
   BLINDCLAWS_STRIKER_TRAIT,
   BLINDCLAWS_VANGUARD_TRAIT,
@@ -125,9 +126,10 @@ export const STOCK_TRAITS: readonly Trait[] = [
   LULLPOLLEN_DOZER_TRAIT,
   BROODMOTHER_TRAIT,
   // Phase 4 Slice H2: Glimmerdark's 18 species-creature traits + the Leech Sovereign boss trait.
-  GLOWFLY_CHARGER_TRAIT,
-  GLOWFLY_DETONATOR_TRAIT,
-  GLOWFLY_RADIANT_TRAIT,
+  // (4.1-H2b1: the Glowflies' three became the Flickerlings'.)
+  FLICKERLING_WICK_TRAIT,
+  FLICKERLING_FLARE_TRAIT,
+  FLICKERLING_LAST_GLEAM_TRAIT,
   BLINDCLAWS_SETTER_TRAIT,
   BLINDCLAWS_STRIKER_TRAIT,
   BLINDCLAWS_VANGUARD_TRAIT,
@@ -181,6 +183,8 @@ export function validateTrait(trait: Trait): void {
   validateStatModifierConditions(trait.effects)
   validateNoBreakChanceOutsideStatus(trait.effects)
   validateNoRandomSelectorInResponseTargets(trait.effects)
+  // Phase 4.1-H2b1: observation-filter fields belong to one observation hook each.
+  validateObservationFilters(trait.effects, `trait "${trait.id}"`)
 }
 
 for (const trait of STOCK_TRAITS) {
