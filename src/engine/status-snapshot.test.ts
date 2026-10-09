@@ -241,6 +241,66 @@ describe('applyStatus: single instance, keep the stronger snapshot, refresh the 
   })
 })
 
+describe('pass-on rule: only the SAME status inherits the firing instance’s snapshot (ASSUMPTION 145)', () => {
+  it('a status X whose effect applies a DIFFERENT status snapshots its bearer fresh, not X’s snapshot', () => {
+    const xTick: EffectDef = {
+      category: 'triggered',
+      hook: 'on-turn-end',
+      response: {
+        kind: 'deal-damage',
+        target: { kind: 'self' },
+        flatAmount: { kind: 'snapshot-potency' },
+      },
+    }
+    const xSeedsPoison: EffectDef = {
+      category: 'triggered',
+      hook: 'on-turn-start',
+      response: {
+        kind: 'apply-status',
+        target: { kind: 'self' },
+        status: { statusId: 'poison', duration: 3 },
+      },
+    }
+    const x: StatusDef = {
+      statusId: 'h2b2-seeder',
+      polarity: 'debuff',
+      defaultDuration: 3,
+      effects: [xTick, xSeedsPoison],
+      potency: { ofStat: 'attack', percent: 20 },
+    }
+    expect(() => validateStatusDef(x)).not.toThrow()
+
+    const base = world()
+    const state0: CombatState = {
+      ...base,
+      statuses: new Map([...STATUS_REGISTRY, [x.statusId, x]]),
+    }
+    // A (Attack 50) applies X to B: X's snapshot = applier A, potency floor(50 x 20 / 100) = 10.
+    let state = apply(state0, A, x.statusId, 3)
+    expect(statusOn(state, 'b', x.statusId).snapshot).toEqual({
+      applierId: A,
+      affinity: 'vitality',
+      potency: 10,
+    })
+    state = { ...state, turnClock: 1 } // the application is old news: not born
+    // B's turn start fires X's second trigger: B (Attack 20) is the firing creature.
+    state = fireHook(
+      'on-turn-start',
+      [B],
+      undefined,
+      state,
+      createResolutionContext([], newCascade()),
+    ).state
+    // The new Poison is B's own fresh snapshot: applier B, potency floor(20 x 20 / 100) = 4.
+    // (Inheriting X's snapshot would give applier A, potency 10.)
+    expect(statusOn(state, 'b', 'poison').snapshot).toEqual({
+      applierId: B,
+      affinity: 'vitality',
+      potency: 4,
+    })
+  })
+})
+
 describe('a tick with no snapshot fails loud (resolver invariant)', () => {
   const tick = (kind: 'deal-damage' | 'heal') =>
     kind === 'deal-damage'

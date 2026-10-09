@@ -3406,9 +3406,16 @@ a tick; a tick self-inflicted (applier dead, and dealer = bearer); the spread sn
 passing its snapshot on; the bearer's affinity used; the applier offered as `on-death`'s source; dealer hooks
 firing on the fallback bearer; dealer hooks not firing for a self-applied tick. Table in `report-r1.md`.
 
+Two more rows from the PR review (r2, test-only; table in `report-r2.md`), each killed by a named non-digest
+test: the bearer's status/perk taken factors dropped from a tick (`takenFactors: [...defendFactors]`) killed by
+`golden-h2b2-tick-taken-factors`; the pass-on rule widened to any status (`context.statusId !== undefined`)
+killed by `status-snapshot.test.ts` "a status X whose effect applies a DIFFERENT status snapshots its bearer fresh". 24 mutations in all.
+
 ### Test count (main -> slice, file by file)
 
-Files 182 -> 192; tests 1266 (1265 passed, 1 skipped) -> 1295 (1294 passed, 1 skipped), +29:
+Files 182 -> 193; tests 1266 (1265 passed, 1 skipped) -> 1297 (1296 passed, 1 skipped), +31 (r2 added
+`golden-h2b2-tick-taken-factors` +1 file / +1 test and one test in `status-snapshot.test.ts`, so 24 there); r1 was
+files 182 -> 192, +29:
 `status-snapshot.test.ts` +23, ten `golden-h2b2-*` +10, `golden-sporch-cinderlord-burn-refresh` +1,
 `data/statuses.test.ts` +3, `corpus-coverage.test.ts` +1, `resolution.test.ts` -3, `effects.test.ts` -2,
 `perform-action.test.ts` -2, `golden-consume-stacks` -1, `golden-sporch-cinderlord-burn-stacks` -1.
@@ -3428,6 +3435,6 @@ Data: `statuses.ts`, `traits/rotcap-hollow.ts`, `traits/glimmerdark.ts` (the Wic
 `CombatDemo.tsx` (no stack count). Tests: `status-snapshot.test.ts` (new), `corpus-coverage.test.ts`, the
 mechanical `cap` / `stacks` removals and rewrites in the files listed in the report, 42 modified golden
 fixtures (31 field-only, 9 re-derived, `golden-heal-scaling-count` and `golden-defend-count` input/comment
-only), ten new `golden-h2b2-*` and the renamed Cinderlord pair,
+only), eleven new `golden-h2b2-*` (the eleventh, `golden-h2b2-tick-taken-factors`, from r2) and the renamed Cinderlord pair,
 `corpus-digest.fixture.ts`. No living doc or content doc edited. Deleted by Duncan: `golden-consume-stacks`
 and `golden-sporch-cinderlord-burn-stacks` (each `.fixture.ts` and `.test.ts`).
