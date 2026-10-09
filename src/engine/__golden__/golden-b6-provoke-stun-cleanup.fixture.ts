@@ -51,7 +51,6 @@ const STUN_STATUS_ID = 'b6-stun-fixture'
 
 export const STUN_FIXTURE: StatusDef = {
   statusId: STUN_STATUS_ID,
-  cap: 1,
   effects: [{ category: 'action-lock', scope: 'all' }],
   polarity: 'debuff',
   defaultDuration: 3,
@@ -167,7 +166,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: PROVOKER,
     statusId: STUN_STATUS_ID,
-    stacks: 1,
     duration: 3,
     sourceId: PROVOKER,
   },

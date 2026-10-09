@@ -32,7 +32,6 @@ const NORMAL_SLOW = createCreatureId('normal-slow')
 
 export const WEB_FIXTURE_STATUS: StatusDef = {
   statusId: 'web-fixture',
-  cap: 1,
   polarity: 'debuff',
   defaultDuration: 3,
   effects: [{ category: 'turn-order', position: 'last' }],
@@ -40,7 +39,6 @@ export const WEB_FIXTURE_STATUS: StatusDef = {
 
 export const HASTE_FIXTURE_STATUS: StatusDef = {
   statusId: 'haste-fixture',
-  cap: 1,
   polarity: 'buff',
   defaultDuration: 3,
   effects: [{ category: 'turn-order', position: 'first' }],
@@ -114,7 +112,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: WEBBED,
     statusId: 'web-fixture',
-    stacks: 1,
     duration: 3,
     sourceId: WEBBED,
   },
@@ -128,7 +125,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: HASTY,
     statusId: 'haste-fixture',
-    stacks: 1,
     duration: 3,
     sourceId: HASTY,
   },

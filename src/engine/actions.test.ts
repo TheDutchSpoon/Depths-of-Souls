@@ -282,7 +282,6 @@ function lock(scope: 'all' | 'cast', id = 'lock'): ActiveEffect {
   return {
     category: 'status',
     statusId: 'lock-' + id,
-    cap: 1,
     effects: [{ category: 'action-lock', scope: scope }],
     polarity: 'debuff',
     defaultDuration: 3,
@@ -290,7 +289,6 @@ function lock(scope: 'all' | 'cast', id = 'lock'): ActiveEffect {
     sourceTraitId: 'lock-' + id,
     remainingDuration: 2,
     appliedAt: 0,
-    stacks: 1,
   }
 }
 
@@ -535,14 +533,12 @@ describe('resolveInstanceTarget -- rule 4 (B2.4, 4.1-C2c)', () => {
     const confused: ActiveEffect = {
       category: 'status',
       statusId: 'confusion',
-      cap: 1,
       polarity: 'debuff',
       defaultDuration: 3,
       instanceId: createEffectInstanceId('conf'),
       sourceTraitId: 'confusion',
       remainingDuration: 3,
       appliedAt: 0,
-      stacks: 1,
       effects: [{ category: 'friendly-fire', chancePercent: 100 }],
     }
     const { targets, state } = attackFrom(

@@ -34,7 +34,6 @@ interface Spec {
 /** A Web with a 100% break chance: a rolled Web always breaks, so a roll shows as `StatusExpired`. */
 const WEB_100: StatusDef = {
   statusId: 'web-100',
-  cap: 1,
   polarity: 'debuff',
   defaultDuration: 3,
   effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 100 }],
@@ -703,7 +702,6 @@ describe('a fight-start wipe ends the fight before round 1', () => {
 describe('a status may not trigger on round end', () => {
   const ROUND_END_DOT: StatusDef = {
     statusId: 'round-end-dot-fixture',
-    cap: 1,
     polarity: 'debuff',
     defaultDuration: 3,
     effects: [

@@ -15,7 +15,6 @@ import {
   hasRealGuard,
   validateNoRandomSelectorInResponseTargets,
   validateSpellEffects,
-  validateStatusNoRandomSelectorInResponseTargets,
 } from './effect-types'
 import { createCreatureId } from './ids'
 import { makeParty } from './__fixtures__/creatures'
@@ -322,38 +321,6 @@ describe('load-time rejections (ASSUMPTION 7)', () => {
     )
   })
 
-  it("consume-stacks' wrapped effect rejects perform-action (traits and perks)", () => {
-    const wrapped: EffectDef = {
-      category: 'triggered',
-      hook: 'on-turn-end',
-      chancePercent: 50,
-      response: { kind: 'consume-stacks', statusId: 'glow', effect: performAction },
-    }
-    expect(() => validateNoRandomSelectorInResponseTargets([wrapped])).toThrow(
-      /wraps 'perform-action' inside consume-stacks/,
-    )
-  })
-
-  it("consume-stacks' wrapped effect rejects perform-action (status triggers)", () => {
-    const status: StatusDef = {
-      statusId: 'wrapped-fixture',
-      cap: 1,
-      polarity: 'debuff',
-      defaultDuration: 1,
-      effects: [
-        {
-          category: 'triggered',
-          hook: 'on-turn-end',
-          chancePercent: 50,
-          response: { kind: 'consume-stacks', statusId: 'glow', effect: performAction },
-        },
-      ],
-    }
-    expect(() => validateStatusNoRandomSelectorInResponseTargets(status)).toThrow(
-      /wraps 'perform-action' inside consume-stacks/,
-    )
-  })
-
   it("a plain perform-action may carry the intent-only 'random' target selector", () => {
     const echo: EffectDef = {
       category: 'triggered',
@@ -414,7 +381,6 @@ describe('the guard lint helpers (ASSUMPTION 7)', () => {
   it('findUnguardedStatusPerformActions covers status triggers too', () => {
     const status: StatusDef = {
       statusId: 'grant-status-fixture',
-      cap: 1,
       polarity: 'buff',
       defaultDuration: 1,
       effects: [

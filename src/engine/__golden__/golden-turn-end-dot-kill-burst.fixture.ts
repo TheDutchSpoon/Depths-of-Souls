@@ -12,16 +12,23 @@
 // both survive the whole fixture. Turn order (speed): ROTCORE(20) > TANK(15) > E1(10) in round 1;
 // TANK(15) > E1(10) in rounds 2-3 (Rotcore excluded, dead).
 //
-//   ROTCORE's turn end (round 1): Poison tick: flatAmount 3% of its own max HP [100] * 1 stack =
-//     3. ROTCORE 1 - 3 -> clamped to 0 -> dies. CreatureDied(ROTCORE) -> on-death fires Death
-//     Bloom -> apply-status(all-enemies, poison) -> StatusApplied(E1, poison, 1 stack, duration
-//     3, source ROTCORE). Not wiped (TANK, E1 live). ROTCORE's cleanup is skipped (a corpse's
+// (4.1-H2b2) Poison's potency is 20% of the APPLIER's effective Attack at application. ROTCORE has
+// Attack 50; every bearer has Defence 20 and is vitality (neutral), so every tick here is
+// potency 10 - 0.2 x 20 = 6.
+//
+//   ROTCORE's turn end (round 1): ROTCORE applied its own Poison (alive applier = bearer, a
+//     self-applied tick): potency floor(50 x 20 / 100) = 10, tick 6, sourced from ROTCORE.
+//     ROTCORE 1 - 6 -> clamped to 0 -> dies. CreatureDied(ROTCORE) -> on-death fires Death
+//     Bloom -> apply-status(all-enemies, poison) -> StatusApplied(E1, poison, duration 3, source
+//     ROTCORE). ROTCORE is DEAD at that application: the snapshot reads the corpse's effective
+//     Attack then (50): applier ROTCORE, potency 10 -- and, the applier being dead, E1's ticks have
+//     E1 itself as their source from the first. Not wiped (TANK, E1 live). ROTCORE's cleanup is skipped (a corpse's
 //     statuses are inert, no StatusExpired). TurnEnded.
 //   TANK: nothing.
 //   E1's turn end (round 1): the Poison was applied in ROTCORE's turn, so for E1 it is NOT born
-//     this turn: it ticks (3% of 100 * 1 = 3, E1 100 -> 97) and counts down 3 -> 2. (Under the old
+//     this turn: it ticks (6, source E1, E1 100 -> 94) and counts down 3 -> 2. (Under the old
 //     sweep it waited a full round.)
-//   Round 2: TANK waits; E1's turn end: tick 97 -> 94, countdown 2 -> 1. Round 3 begins: TANK's
+//   Round 2: TANK waits; E1's turn end: tick 94 -> 88, countdown 2 -> 1. Round 3 begins: TANK's
 //     turn (always-wait) -> Waited.
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -48,6 +55,7 @@ export const playerParty = makeParty('player', [
   {
     id: 'myconet-rotcore',
     health: 100,
+    attack: 50,
     speed: 20,
     scriptId: 'always-wait',
     innateTraitIds: [MYCONET_ROTCORE_TRAIT.id],
@@ -75,8 +83,8 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: ROTCORE,
     targetId: ROTCORE,
-    rawDamage: 3,
-    finalDamage: 3,
+    rawDamage: 6,
+    finalDamage: 6,
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 0,
@@ -94,7 +102,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: E1,
     statusId: 'poison',
-    stacks: 1,
     duration: 3,
     sourceId: ROTCORE,
   },
@@ -108,11 +115,11 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: E1,
     targetId: E1,
-    rawDamage: 3,
-    finalDamage: 3,
+    rawDamage: 6,
+    finalDamage: 6,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 97,
+    remainingHp: 94,
     damageSource: 'dot',
     statusId: 'poison',
   },
@@ -127,11 +134,11 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: E1,
     targetId: E1,
-    rawDamage: 3,
-    finalDamage: 3,
+    rawDamage: 6,
+    finalDamage: 6,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 94,
+    remainingHp: 88,
     damageSource: 'dot',
     statusId: 'poison',
   },

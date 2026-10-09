@@ -5,7 +5,8 @@
 // Phase 4.1-F1 (A3): statuses are containers of these same effects (`StatusDef.effects`), read
 // through the one effect iterator (effects.ts `flatEffects`).
 
-import type { Spell, Stat } from './types'
+import type { Affinity, Spell, Stat } from './types'
+import type { CreatureId } from './ids'
 import type { ComparatorOp, Condition, Intent, TargetSelector } from './scripting-types'
 
 // Stable per-fight identity for an effect instance. Deterministic (never RNG) so goldens
@@ -46,18 +47,34 @@ export type Hook =
 // to effective-stats' ActionKind ('attack' | 'cast').
 export type RemapSlot = 'attack' | 'cast'
 
-/** Phase 4 (percent-hp-condition-ticks brief): an alternative to a literal flat-mode magnitude
- * (`deal-damage.flatAmount` / `heal.amountPerStack`) -- a percentage of the BEARER's own
- * (`context.self`) effective stat, e.g. Regen/Poison/Burn's "X% of max HP per stack". `percent`
- * is a positive integer, not a float fraction: `floor(floor(stat) * percent * count / 100)` is
- * exact in integer arithmetic, whereas a float fraction (e.g. `stat * 0.03`) can land just below
- * an integer and floor one too low (180 * 0.03 * 5 = 26.999999999999996 -> 26, not 27). See
- * resolveFlatTotal (resolution.ts) for the exact composition with the stack/magnitudeSource
- * count. A plain number keeps meaning exactly what it means today -- this is purely an
- * additional mode. */
+/** An alternative to a literal flat-mode magnitude (`deal-damage.flatAmount` / `heal.flatAmount`)
+ * -- a percentage of a creature's effective stat. Two readers: a response's own cost or heal reads
+ * the FIRING creature's stat live (the Wick's burn and heal, `CATASTROPHIC_COLLAPSE`); a status's
+ * `potency` (4.1-H2b2) reads the APPLIER's stat once, at application (`snapshotFor`, effects.ts).
+ * `percent` is a positive integer, not a float fraction: `floor(floor(stat) * percent * count /
+ * 100)` is exact in integer arithmetic, whereas a float fraction (e.g. `stat * 0.03`) can land
+ * just below an integer and floor one too low (180 * 0.03 * 5 = 26.999999999999996 -> 26, not
+ * 27). See resolveFlatTotal (resolution.ts) for the composition with the magnitudeSource count. */
 export type StatPercent = {
   readonly ofStat: Stat
   readonly percent: number
+}
+
+/** Phase 4.1-H2b2 (ASSUMPTION 144): the magnitude marker of a status's tick -- "the instance's
+ * potency". A `deal-damage` / `heal` whose `flatAmount` is this IS the status's tick: indirect
+ * damage (or a heal) from the instance's applier snapshot (`StatusSnapshot`), never the bearer's
+ * stat. Valid only inside a status that declares `StatusDef.potency` (`validateStatusDef`); a
+ * trait, perk or spell may not carry it. Any other self-damage inside a status is a cost. */
+export type SnapshotPotency = { readonly kind: 'snapshot-potency' }
+
+/** Phase 4.1-H2b2 (ASSUMPTIONS 113, 143, 144): what a ticking status instance records at
+ * application and never re-reads from the applier: who applied it, the applier's affinity then,
+ * and the potency (`StatusDef.potency`'s percent of the applier's effective stat then, floored
+ * once). Present on an instance iff its def declares `potency`. */
+export type StatusSnapshot = {
+  readonly applierId: CreatureId
+  readonly affinity: Affinity
+  readonly potency: number
 }
 
 // ---- Forward surface for Slices B/C (declared, not yet consumed) ----
@@ -80,22 +97,17 @@ export type CountOf =
 
 /** ASSUMPTION (Slice D, not literally shaped by the brief -- CONVENTIONS/the vocabulary table
  * name the mechanism, "a modifier... may declare magnitudeSource... instead of a flat number,"
- * but not how it composes with a host's EXISTING per-stack formula). Interpreted here as an
- * ALTERNATIVE SOURCE for whatever repetition count a host field already multiplies/exponentiates
- * its own authored rate by (deal-damage's flatAmount×stacks / spellPower, damage-modifier's
- * magnitude×stacks or magnitude**stacks) -- i.e. it substitutes for "stacks", not for the rate
- * itself. This keeps every existing formula SHAPE unchanged and every Phase 1-3 call site
- * byte-identical when magnitudeSource is absent (ASSUMPTION 16), while letting the substituted
- * count be a LIVE board count instead of an applied-status's own bookkeeping. `flat` is "the
- * existing implicit behavior, made explicit" (CONVENTIONS); `consumed-stacks` is resolved only
- * inside a consume-stacks response's wrapped `effect` (a resolver-invariant error otherwise --
- * see resolveMagnitudeCount). Flagged for review: `stat-modifier`'s `factor` is NOT wired to
- * this source in this slice (see StatModifierDef's own comment) -- deferred to whichever slice
- * first authors a count-scaled stat-modifier (H1's Swarmhive Striker). */
+ * but not how it composes with a host's formula). Interpreted here as the SOURCE of the
+ * repetition count a host field multiplies/exponentiates its own authored rate by (deal-damage's
+ * spellPower, damage-modifier's magnitude×count or magnitude**count). Absent means a count of
+ * one, so every call site is byte-identical when magnitudeSource is absent (ASSUMPTION 16). The
+ * count is a LIVE board count, recomputed on every read. `flat` is "the existing implicit
+ * behavior, made explicit" (CONVENTIONS). Flagged for review: `stat-modifier`'s `factor` is NOT
+ * wired to this source in this slice (see StatModifierDef's own comment) -- deferred to whichever
+ * slice first authors a count-scaled stat-modifier (H1's Swarmhive Striker). */
 export type MagnitudeSource =
   | { readonly kind: 'flat'; readonly value: number }
   | { readonly kind: 'count'; readonly of: CountOf; readonly statusId?: string }
-  | { readonly kind: 'consumed-stacks' }
 
 export type ResponseTarget =
   | { readonly kind: 'self' }
@@ -126,9 +138,9 @@ export type ResponseTarget =
   // dead, since livingAlliesOf filters on `alive`) that do NOT carry `statusId`, via `hasStatus`
   // (effects.ts). Empty pool -> no targets: the owning trigger's `TriggerFired` still fires (this
   // is a targeting fizzle, not a suppressed trigger), but nothing follows it -- the same "no
-  // valid target after TriggerFired" discipline as revive's "target must be dead" skip /
-  // consume-stacks' "0 stacks" skip -- this is what makes Spore's contagion infect only fresh
-  // hosts instead of endlessly refreshing the same one.
+  // valid target after TriggerFired" discipline as revive's "target must be dead" skip -- this
+  // is what makes Spore's contagion infect only fresh hosts instead of endlessly refreshing
+  // the same one.
   | { readonly kind: 'random-ally-without-status'; readonly statusId: string }
   // Phase 4.1-D (A4): valid ONLY inside `Spell.effects` (rejected in trait/perk/status responses
   // by `throwIfRandomSelectorTarget`'s validators). The spell's current landed target -- the
@@ -153,8 +165,6 @@ export interface StatusSpec {
    * status land with a consistent duration everywhere it's applied without every producer
    * (traits/perks/spells) having to repeat the same number. */
   readonly duration?: number
-  /** Stacks added per application; defaults to 1. */
-  readonly stacks?: number
 }
 
 // The v1 triggered-response vocabulary (Slice B/C). Each is parameterized by target + magnitude.
@@ -174,43 +184,39 @@ export type EffectResponse =
       // offStat/scalingStat/flatAmount throws a resolver-invariant error, mirroring how
       // applyStatus treats an unknown statusId, rather than silently picking one.
       readonly scalingStat?: Stat
-      // Flat mode (DoT): a fixed per-stack magnitude, independent of any stat -- GAME_DESIGN's
-      // "own value from the source." Bypasses the OffStat/Defence/affinity/pools formula
-      // entirely (not merely zeroing Defence). Mutually exclusive with offStat/scalingStat
-      // (enforced -- see ASSUMPTION 6 above); presence of flatAmount selects this mode and its
-      // sibling spellPower field is simply never read. Scales by the firing status's current
-      // stacks. May also be a `StatPercent` (percent-hp-condition-ticks brief: Poison/Burn) --
-      // still flat mode, still formula-bypassing; only the per-stack number's SOURCE changes,
-      // read from the bearer (context.self), never the applier. Deliberately NOT `scalingStat`
-      // mode: that would route the victim through its own damage formula (own Defence/dealt-
-      // buffs would apply to its own DoT) -- see resolveFlatTotal (resolution.ts).
-      readonly flatAmount?: number | StatPercent
+      // Flat mode: a fixed magnitude -- a number, a `StatPercent` of the FIRING creature's stat
+      // (a cost when it targets itself), or the `snapshot-potency` marker (a status's tick,
+      // 4.1-H2b2: the applier's snapshot, never the bearer's stat). Always indirect (no true-
+      // damage channel, ASSUMPTION 112), scaled by the magnitudeSource count when one is declared.
+      // Mutually exclusive with offStat/scalingStat (enforced -- see ASSUMPTION 6 above);
+      // presence of flatAmount selects this mode and its sibling spellPower field is simply never
+      // read. Deliberately NOT `scalingStat` mode: a tick has its own formula (resolution.ts
+      // `applyTickDamage`) over the snapshot's inputs.
+      readonly flatAmount?: number | StatPercent | SnapshotPotency
       /** DoT ticks emit no TriggerFired (their StatusApplied already announced them); default true. */
       readonly emitTriggerFired?: boolean
       /** Overrides the DamageDealt tag; default derived from offStat ('dot' when flatAmount is set). */
       readonly damageSource?: 'attack' | 'cast' | 'dot'
-      /** Phase 4 Slice D: an alternative source for the repetition count this response's own
-       * magnitude is scaled by -- flatAmount's `× stacks` or (in offStat/scalingStat mode)
-       * spellPower's own `× 1` -- see MagnitudeSource's doc comment for the exact composition.
-       * Absent (the common case) is byte-identical to pre-Slice-D behavior (stacks / no-op ×1).
-       * Consume-shaped: `{ scalingStat: 'intelligence', magnitudeSource: { kind:
-       * 'consumed-stacks' } }` scales the burst's spellPower by the just-consumed stack count. */
+      /** Phase 4 Slice D: the source of the repetition count this response's own magnitude is
+       * scaled by (flat mode's `amount × count`, or in offStat/scalingStat mode spellPower's own
+       * `× 1`) -- see MagnitudeSource's doc comment for the exact composition. Absent (the common
+       * case) is a count of one. */
       readonly magnitudeSource?: MagnitudeSource
     }
   | {
       readonly kind: 'heal'
       readonly target: ResponseTarget
-      /** Flat per-stack heal amount (Regen); scales by the firing status's current stacks.
-       * Mutually exclusive with `scalingStat` -- ASSUMPTION (Slice E2, mirrors deal-damage's own
+      /** Flat heal amount (4.1-H2b2: renamed from `amountPerStack`, the concept is gone). A
+       * number, a `StatPercent` of the FIRING creature's stat (the Wick's heal), or the
+       * `snapshot-potency` marker (Regen's tick: the applier's snapshot, 4.1-H2b2). Mutually
+       * exclusive with `scalingStat` -- ASSUMPTION (Slice E2, mirrors deal-damage's own
        * ASSUMPTION 6): setting both throws a resolver-invariant error rather than silently
-       * picking one. May also be a `StatPercent` (percent-hp-condition-ticks brief: Regen) --
-       * read from the bearer (the creature being healed), same composition as deal-damage's own
-       * flatAmount -- see resolveFlatTotal (resolution.ts). */
-      readonly amountPerStack?: number | StatPercent
+       * picking one. See resolveFlatTotal (resolution.ts). */
+      readonly flatAmount?: number | StatPercent | SnapshotPotency
       /** Phase 4.1-D (A4, plan review F2): the remap-aware formula slot, mirroring deal-damage's
        * own `offStat` -- `getOffensiveStat(HEALER, offStat, spellPower × count)`, so `'cast'` is
        * the default Intelligence lookup a heal SPELL always used (a `stat-remap` redirects it;
-       * `scalingStat` reads its stat raw). The three magnitude modes (`amountPerStack` /
+       * `scalingStat` reads its stat raw). The three magnitude modes (`flatAmount` /
        * `scalingStat` / `offStat`) are mutually exclusive -- a resolver-invariant error otherwise. */
       readonly offStat?: RemapSlot
       /** Phase 4 Slice E2 (Treants Elder): stat-scaled mode -- `getEffectiveStat(HEALER,
@@ -221,11 +227,10 @@ export type EffectResponse =
       readonly scalingStat?: Stat
       /** Coefficient on `scalingStat` / `offStat`; only read in those modes. Default 1.0. */
       readonly spellPower?: number
-      /** Phase 4 Slice E2 (Necromoss): an alternative source for the repetition count this
-       * response's own magnitude is scaled by -- `amountPerStack`'s `× stacks` (flat mode) or,
-       * in `scalingStat` mode, `spellPower`'s own implicit `× 1` -- see deal-damage's own
-       * `magnitudeSource` doc comment for the exact composition (identical shape here). Absent
-       * is byte-identical to pre-Slice-E2 behavior. */
+      /** Phase 4 Slice E2 (Necromoss): the source of the repetition count this response's own
+       * magnitude is scaled by -- `flatAmount`'s `× count` (flat mode) or, in `scalingStat` mode,
+       * `spellPower`'s own implicit `× 1` -- see deal-damage's own `magnitudeSource` doc comment
+       * for the exact composition (identical shape here). Absent is a count of one. */
       readonly magnitudeSource?: MagnitudeSource
       /** Regen ticks emit no TriggerFired, matching DoT; default true. */
       readonly emitTriggerFired?: boolean
@@ -269,22 +274,10 @@ export type EffectResponse =
       readonly defending?: boolean
       readonly provoking?: boolean
     }
-  // Phase 4 Slice D (the retired Glowfly Detonator). SELF-scoped (no target field, unlike every other
-  // response) -- reads and clears the FIRING creature's own statusId stacks, matching the
-  // status/triggered-response convention that trigger evaluation is self-scoped.
-  // ASSUMPTION 18: emits StatusExpired for the consumed status (it's genuinely gone, not merely
-  // decremented). 0/absent stacks is a full no-op per CONVENTIONS ("applyStatus's cap-driven
-  // model means 'no status present' and '0 stacks' are the same state") -- resolution.ts skips
-  // BOTH the removal and the wrapped `effect` entirely in that case, not just the removal.
-  | {
-      readonly kind: 'consume-stacks'
-      readonly statusId: string
-      readonly effect: EffectResponse
-    }
-  // Phase 4 Slice E2. The 9th and (per CONVENTIONS' "hold the line at nine") final response
-  // verb: clear a status from a target, reusing the existing StatusExpired path (death-reset and
+  // Phase 4 Slice E2. The final response verb (per CONVENTIONS' "hold the line"): clear a status
+  // from a target, reusing the existing StatusExpired path (death-reset and
   // turn-end cleanup stay consistent) -- a no-op, no-event when the target doesn't carry it
-  // (mirrors revive's "target must be dead" / consume-stacks' "0 stacks" skip style). `target`
+  // (mirrors revive's "target must be dead" skip style). `target`
   // reuses the full ResponseTarget vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies"
   // get targeting for free. `filter` is a plain statusId for now -- a polarity-based filter
   // (`'buff' | 'debuff'`, reading StatusDef.polarity) is a natural future widening for the first
@@ -302,8 +295,7 @@ export type EffectResponse =
   // the granting action (all its instances) has completed. `actor: 'self'` is the bearer;
   // `'triggering-source'` is the hook's source INCLUDING the bearer itself (Overtone echoes its own
   // casts -- the PR #64 "never resolves to the firing creature" rule covers response TARGETS, not
-  // this field). Legal on trait/perk effects and status triggers only: a spell's effect list and
-  // `consume-stacks`' wrapped effect reject it at load time. RNG draw order: the trigger's
+  // this field). Legal on trait/perk effects and status triggers only: a spell's effect list rejects it at load time. RNG draw order: the trigger's
   // `chancePercent` roll at trigger time; then, when the grant runs, the gem draw, the target draw,
   // and any Confusion/Provoke draws.
   | {
@@ -417,9 +409,8 @@ export function validateObservationFilters(
  * status, or perk effect) has no such side to resolve it against. `resolveTargetSelector` throws
  * on it at RESOLUTION time (target-selectors.ts); this is the load-time counterpart, so a data
  * mistake fails fast at import (mirrors `validateStatModifierCondition`'s own precedent) instead
- * of throwing mid-fight the first time the response actually fires. Recurses into `consume-
- * stacks`'s own wrapped `effect` (the only response that nests another). Every other response
- * kind either carries a `target` field or none at all (`perform-action`).
+ * of throwing mid-fight the first time the response actually fires. Every response kind either
+ * carries a `target` field or none at all (`perform-action`).
  */
 function throwIfRandomSelectorTarget(target: ResponseTarget, context: string): void {
   // Phase 4.1-D: `cast-target` only means something inside a spell's own effect list (it reads
@@ -451,16 +442,6 @@ function validateResponseTargetNoRandomSelector(
       throwIfRandomSelectorTarget(response.target, context)
       return
     case 'perform-action': // no response target (its `intent.targeting` MAY be `'random'`)
-      return
-    case 'consume-stacks':
-      // Phase 4.1-E: a grant hidden inside a wrapped effect would dodge the guard lint (below), and
-      // no content wants one -- rejected at load time (CONVENTIONS "perform-action").
-      if (response.effect.kind === 'perform-action') {
-        throw new Error(
-          `effect invariant violated: ${context} wraps 'perform-action' inside consume-stacks, which is not allowed`,
-        )
-      }
-      validateResponseTargetNoRandomSelector(response.effect, context)
       return
     default: {
       const exhaustive: never = response
@@ -527,6 +508,69 @@ export function validateStatusDef(def: StatusDef): void {
   }
   validateStatusNoRandomSelectorInResponseTargets(def)
   validateObservationFilters(def.effects, `status "${def.statusId}"'s trigger`)
+  validateStatusPotency(def)
+}
+
+/** True iff `response` is a tick: a `deal-damage` / `heal` whose `flatAmount` is the
+ * `snapshot-potency` marker. */
+export function isSnapshotTick(response: EffectResponse): boolean {
+  return (
+    (response.kind === 'deal-damage' || response.kind === 'heal') &&
+    typeof response.flatAmount === 'object' &&
+    'kind' in response.flatAmount
+  )
+}
+
+/** Phase 4.1-H2b2 (ASSUMPTION 144): a status that declares `potency` carries EXACTLY ONE tick (a
+ * `snapshot-potency` `deal-damage` or `heal` targeting `self`, with no `magnitudeSource`), its
+ * `potency.percent` a positive integer; a status that declares none carries no tick. */
+function validateStatusPotency(def: StatusDef): void {
+  const ticks = def.effects.filter(
+    (e): e is TriggeredDef => e.category === 'triggered' && isSnapshotTick(e.response),
+  )
+  if (def.potency === undefined) {
+    if (ticks.length > 0) {
+      throw new Error(
+        `effect invariant violated: status "${def.statusId}" carries a snapshot-potency tick but declares no potency`,
+      )
+    }
+    return
+  }
+  if (!Number.isInteger(def.potency.percent) || def.potency.percent <= 0) {
+    throw new Error(
+      `effect invariant violated: status "${def.statusId}" potency.percent must be a positive integer`,
+    )
+  }
+  if (ticks.length !== 1) {
+    throw new Error(
+      `effect invariant violated: status "${def.statusId}" declares a potency, so it must carry exactly one snapshot-potency tick (found ${ticks.length})`,
+    )
+  }
+  const response = ticks[0]?.response
+  if (
+    response === undefined ||
+    (response.kind !== 'deal-damage' && response.kind !== 'heal') ||
+    response.target.kind !== 'self' ||
+    response.magnitudeSource !== undefined
+  ) {
+    throw new Error(
+      `effect invariant violated: status "${def.statusId}"'s snapshot-potency tick must target self and carry no magnitudeSource`,
+    )
+  }
+}
+
+/** Phase 4.1-H2b2 (ASSUMPTION 144): the trait / perk counterpart -- a `snapshot-potency` marker
+ * means "the instance's potency", which only a status instance has, so a trait or perk effect
+ * list carrying one is rejected at load. (A spell's own list rejects every `flatAmount`:
+ * `validateSpellEffects`.) */
+export function validateNoSnapshotPotencyOutsideStatus(defs: readonly EffectDef[]): void {
+  for (const def of defs) {
+    if (def.category === 'triggered' && isSnapshotTick(def.response)) {
+      throw new Error(
+        `effect invariant violated: a "${def.hook}" trigger carries a snapshot-potency magnitude, which is only valid inside a status that declares a potency`,
+      )
+    }
+  }
 }
 
 /** Phase 4.1-F1: `turn-order.breakChancePercent` is status-only (breaking free removes the status
@@ -697,7 +741,7 @@ export type TriggeredDef = {
  * (effects.ts `flatEffects`), which skips every effect of an immune status -- its locks,
  * friendly-fire, triggers, damage-modifiers and turn-order -- never at applyStatus. Per
  * CONVENTIONS' "immunity suppresses the effect, not the application": the status still
- * applies/stacks/counts down/counts for has-status; only its effects are skipped for an immune
+ * applies/refreshes/counts down/counts for has-status; only its effects are skipped for an immune
  * bearer. Read only from non-status carriers (a status may not carry one). */
 export type StatusImmunityDef = {
   readonly category: 'status-immunity'
@@ -754,8 +798,7 @@ export type ConditionalDamageBonusDef = {
  * unlike `DamageModifierDef`; not surfaced as a status icon). Carries the exact same
  * accumulation shape `DamageModifierDef`'s own `taken` direction already proved (Slice D's
  * `golden-defend-count-additive-cap`): `magnitude` (the per-unit factor), an optional
- * `magnitudeSource` (a live count substituting for a re-application-driven `stacks` -- absent
- * means a flat single application, count 1), `accumulation` (`'multiplicative'` default /
+ * `magnitudeSource` (a live count -- absent means a flat single application, count 1), `accumulation` (`'multiplicative'` default /
  * `'additive'`-with-`reductionCap`), and `reductionCap` (meaningful only for `'additive'`).
  * First (and so far only) consumer: Bulwark, now authored as a genuine perk-granted PASSIVE
  * (`{ category: 'taken-reduction', magnitude: 0.95, magnitudeSource: {kind:'count',
@@ -832,16 +875,15 @@ export type FriendlyFireDef = {
 export type DamageModifierDirection = 'dealt' | 'taken'
 
 /** Weaken/Vulnerability: read PASSIVELY by the damage formula's pools. The repetition count
- * is `magnitudeSource` if declared, else the carrying status's `stacks` (1 outside a status). */
+ * is `magnitudeSource` if declared, else 1 (a status is single-instance, 4.1-H2b2). */
 export type DamageModifierDef = {
   readonly category: 'damage-modifier'
   readonly direction: DamageModifierDirection
-  /** Per-stack term: for 'dealt', an ADDITIVE contribution to (1 + Σ dealtMods); for 'taken', a
-   * per-stack MULTIPLICATIVE factor compounding via magnitude ** count into Π(takenFactors). */
+  /** Per-unit term: for 'dealt', an ADDITIVE contribution to (1 + Σ dealtMods); for 'taken', a
+   * MULTIPLICATIVE factor compounding via magnitude ** count into Π(takenFactors). */
   readonly magnitude: number
-  /** Phase 4 Slice D (Bulwark-shaped): when present, the live resolveCount(...) reading REPLACES
-   * the status's `stacks` as the exponent/multiplier `magnitude` is raised to/multiplied by,
-   * recomputed every read. */
+  /** Phase 4 Slice D (Bulwark-shaped): when present, the live resolveCount(...) reading is the
+   * exponent/multiplier `magnitude` is raised to/multiplied by (absent: 1), recomputed every read. */
   readonly magnitudeSource?: MagnitudeSource
   /** Phase 4 Slice D (PR #47 review): how a count combines with `magnitude` for a 'taken'
    * effect. 'multiplicative' (default): `magnitude ** count`. 'additive': `factor = 1 -
@@ -878,17 +920,21 @@ export type EffectDef =
 // response or a spell's `apply-status` effect, never innate. Declared in a separate status registry
 // (data/statuses.ts), looked up by statusId at application time. ----
 
-/** Phase 4.1-F1 (A3): a status is a timed, stacking CONTAINER of ordinary effects. The status owns
- * the lifecycle (apply, refresh, stack to `cap`, count down, expire, `has-status`); its
- * `effects` own the behaviour, read through the one effect iterator (effects.ts `flatEffects`),
- * which hands each its status's `stacks` as the default count and skips them all for an immune
- * bearer. The bright line (`validateStatusDef`): no stat-modifier / stat-remap / status-immunity /
- * innate-spell inside a status. */
+/** Phase 4.1-F1 (A3): a status is a timed, single-instance CONTAINER of ordinary effects. The
+ * status owns the lifecycle (apply, refresh, count down, expire, `has-status`); its `effects` own
+ * the behaviour, read through the one effect iterator (effects.ts `flatEffects`), which skips
+ * them all for an immune bearer. Single instance (4.1-H2b2, ASSUMPTION 114): a re-application
+ * keeps the stronger snapshot and refreshes the timer, it never adds a stack. The bright line
+ * (`validateStatusDef`): no stat-modifier / stat-remap / status-immunity / innate-spell inside a
+ * status. */
 export type StatusDef = {
   readonly statusId: string
-  /** Max stacks a re-application can reach. */
-  readonly cap: number
   readonly effects: readonly EffectDef[]
+  /** Phase 4.1-H2b2 (ASSUMPTIONS 113, 144): declared by a TICKING status (Poison, Burn, Regen,
+   * Spore) -- which applier stat and what percent of it the instance's tick is worth. Recorded
+   * once, at application, as the instance's `StatusSnapshot`. Exactly one `snapshot-potency`
+   * response per such status (`validateStatusDef`); none in a status that declares no potency. */
+  readonly potency?: StatPercent
   /** A status's beneficial/harmful nature isn't mechanically derivable, so it's declared on every
    * status -- consumed by `remove-status`'s future polarity-filter branch (cleanse/dispel). */
   readonly polarity: 'buff' | 'debuff'
@@ -907,11 +953,13 @@ interface InstanceIdentity {
   readonly sourceTraitId: string
 }
 
-/** Statuses additionally carry live, mutable duration/stack bookkeeping (absent from the
- * static StatusDef, which only declares the cap/mechanism). */
+/** Statuses additionally carry live, mutable duration bookkeeping (absent from the static
+ * StatusDef, which only declares the mechanism). */
 interface StatusInstanceState {
   readonly remainingDuration: number
-  readonly stacks: number
+  /** Phase 4.1-H2b2: the applier snapshot, present iff the def declares `potency`. Frozen at
+   * application; a re-application replaces it only when strictly stronger. */
+  readonly snapshot?: StatusSnapshot
   /** Phase 4.1-F2 (ASSUMPTION 18): `CombatState.turnClock` when this instance was applied or last
    * refreshed. Born this turn iff it equals the current clock (no tick, no countdown, no Web roll
    * this turn). Invisible in events. */
@@ -922,7 +970,7 @@ export type StatModifierEffect = StatModifierDef & InstanceIdentity
 export type StatRemapEffect = StatRemapDef & InstanceIdentity
 export type TriggeredEffect = TriggeredDef & InstanceIdentity
 /** A status instance (4.1-F1): the `StatusDef` (its `effects` embedded, as the old def spread
- * was) plus live duration/stack bookkeeping. `sourceTraitId` is the statusId. */
+ * was) plus live duration bookkeeping and the snapshot (4.1-H2b2). `sourceTraitId` is the statusId. */
 export type StatusEffect = StatusDef &
   InstanceIdentity &
   StatusInstanceState & { readonly category: 'status' }
@@ -945,7 +993,7 @@ export type InnateSpellEffect = InnateSpellDef & InstanceIdentity
 /** Phase 4 Slice E2: what `effectsForHook` (effects.ts) returns -- a single hook reaction,
  * already resolved down to a uniform shape regardless of whether it came from a trait's
  * `TriggeredEffect` or a `triggered` effect inside a status container (4.1-F1). `fireHook` (resolution.ts) consumes this shape uniformly, never branching on
- * which one supplied it. `stacks`/`statusId` are present only when the source was a status. */
+ * which one supplied it. `statusId` is present only when the source was a status. */
 export type ResolvedHookEffect = {
   readonly instanceId: EffectInstanceId
   readonly sourceTraitId: string
@@ -957,11 +1005,10 @@ export type ResolvedHookEffect = {
    * one too; it is undefined only when none was authored. */
   readonly observationFilter?: ObservationFilter
   readonly response: EffectResponse
-  readonly stacks?: number
   readonly statusId?: string
   /** Phase 4 Slice H2 (PR #60 review, E2.1): derived from a `TriggeredDef`'s own `stacks: false`
-   * (renamed here to avoid colliding with the STATUS stack-count field above, which is an
-   * unrelated number) -- `true` iff this effect must claim a fireHook-call-scoped dedup slot
+   * (the dedup flag; not a status stack count, which no longer exists) --
+   * `true` iff this effect must claim a fireHook-call-scoped dedup slot
    * before it's even allowed to roll `chancePercent`. Always undefined for a status-sourced
    * entry (no v1 status declares it). */
   readonly nonStacking?: boolean
@@ -1002,12 +1049,10 @@ export type ActiveEffect =
  * effect instance, plus, when it came out of a status container, the status it belongs to. For a
  * status-borne entry `instanceId` is the per-effect guard id (`${statusInstanceId}#effect#${index}`,
  * the PR #64 rule) and `sourceInstanceId` is the status's real instance id; for a plain entry
- * `sourceInstanceId` is absent (read `instanceId`). `statusStacks` is named so as not to collide
- * with `TriggeredDef.stacks` (the E2.1 dedup flag). */
+ * `sourceInstanceId` is absent (read `instanceId`). */
 type FlatOf<T> = T extends unknown
   ? T & {
       readonly statusId?: string
-      readonly statusStacks?: number
       readonly sourceInstanceId?: EffectInstanceId
     }
   : never
@@ -1037,8 +1082,8 @@ export type BaselineEffectEntry = {
 /**
  * Phase 4.1-D (A4, plan review F1): the load-time validator for `Spell.effects` (called by
  * `data/spells/index.ts` over the registry; also unit-tested directly). A spell's list may hold
- * `deal-damage` / `heal` in FORMULA mode (`offStat` or `scalingStat`; no `flatAmount` /
- * `amountPerStack`, no `magnitudeSource`), `apply-status`, `apply-stat-modifier` and
+ * `deal-damage` / `heal` in FORMULA mode (`offStat` or `scalingStat`; no `flatAmount`,
+ * no `magnitudeSource`), `apply-status`, `apply-stat-modifier` and
  * `remove-status`, each targeting `cast-target` or `self`. Other verbs and targets join when
  * content needs them. Throws at import time, like `validateStatModifierConditions`.
  */
@@ -1080,9 +1125,9 @@ export function validateSpellEffects(spell: Spell): void {
         }
         break
       case 'heal':
-        if (effect.amountPerStack !== undefined || effect.magnitudeSource !== undefined) {
+        if (effect.flatAmount !== undefined || effect.magnitudeSource !== undefined) {
           throw new Error(
-            `spell invariant violated: ${context} must be formula mode (offStat/scalingStat), with no amountPerStack/magnitudeSource`,
+            `spell invariant violated: ${context} must be formula mode (offStat/scalingStat), with no flatAmount/magnitudeSource`,
           )
         }
         if (effect.offStat === undefined && effect.scalingStat === undefined) {

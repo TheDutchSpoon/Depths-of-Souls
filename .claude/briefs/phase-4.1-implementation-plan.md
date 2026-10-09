@@ -85,7 +85,8 @@ carries deliberate changes, so "any diff is a regression" stays checkable.
   below. That is a "bring it back to design" signal (WORKFLOWS).
 - **Content docs stay in sync:** a PR that changes content behaviour folds the matching item from
   a content doc's "Phase 4.1 — decided changes" section into that doc's body and deletes it from the
-  pending section.
+  pending section. From 4.1-H2b2 the design agent does the fold, at the PR review, on the slice
+  branch, from the code as verified (`workflow/pr-review.md`); the coding agent lists the changes.
 
 ## Architecture overview
 
@@ -202,8 +203,9 @@ Cross-reference this table when implementing. "Deleted" rows are removed outrigh
 | `PerkDef.phase` | Data field | G | **Deleted** |
 | Balance simulator | Tool | H | Deterministic; real store + documented policy; loose CI thresholds |
 
-**Response vocabulary after 4.1:** nine verbs (`deal-damage`, `apply-status`, `apply-stat-modifier`,
-`heal`, `revive`, `grant-action-state`, `consume-stacks`, `remove-status`, `perform-action`). The
+**Response vocabulary after 4.1:** eight verbs (`deal-damage`, `apply-status`, `apply-stat-modifier`,
+`heal`, `revive`, `grant-action-state`, `remove-status`, `perform-action`; `consume-stacks` left in
+4.1-H2b2). The
 count is not the rule; **"no side doors"** is.
 
 ---
@@ -1192,21 +1194,7 @@ Moved to .claude/phases/4.1/H2b1/brief.md at its kickoff.
 
 ### 4.1-H2b2 — status rules (deliberate)
 
-- **Single-instance statuses** (ASSUMPTION 114): `cap`, `StatusSpec.stacks`, stack increments, the
-  `consume-stacks` response and the `consumed-stacks` magnitude source are deleted; re-application
-  keeps the stronger value and refreshes the timer.
-- **DoT and Regen from the applier's snapshot** (ASSUMPTION 113), DoT ticks as indirect damage
-  with the applier as the damage source.
-- **Content:** Vulnerability is ×1.5 once; Sporch Igniter applies one Burn; Spore's spread inherits
-  the snapshot; Afterglow's Regen and the DoTs read the placeholder percentages (ASSUMPTIONS 113,
-  114; `content/*.md`, "Phase 4.1 — decided changes").
-- **Goldens:** `golden-consume-stacks` is retired (its mechanism is deleted); goldens that only
-  lose the stack count from a status event change in that field alone; every other changed golden
-  is listed with its rule. Hand-derived focused goldens for: a re-application keeping the stronger
-  snapshot and refreshing the timer; a DoT tick as indirect damage from the applier's snapshot,
-  with the applier dead (the bearer is the source); a retaliator taking a tick from a living
-  applier and not striking back; Spore spreading with the dying bearer's snapshot; the observer not
-  firing on a DoT tick whose applier is dead (its source falls back to the bearer).
+Moved to .claude/phases/4.1/H2b2/brief.md at its kickoff.
 
 ### 4.1-H2c — the first tuning pass (deliberate)
 
@@ -1218,6 +1206,10 @@ Moved to .claude/phases/4.1/H2b1/brief.md at its kickoff.
   124).
 - **Per-item tuning toward the bands and the CI thresholds** (ASSUMPTION 129): the floor-1
   problem creatures the floor 1–5 matchup table shows, and the DoT percentages.
+  - **Input from the H2b2 PR review:** with the placeholders, 4,971 of the corpus's 5,318 ticks
+    (93%) land on the minimum of 1 (a potency of 4–5 from a stat near 20, against a fifth of a
+    Defence near 20); corpus draws rose 39 → 52 with H2b2. Tuning the percentages has to lift a
+    tick's potency clear of `0.2 × Defence` across the level range, or DoT stays inert.
 - **The report additions** (ASSUMPTION 127) and the **floor-5 threshold change** (ASSUMPTION 126);
   then the CI threshold test asserted.
 - **Before/after report** in the PR and the phase record: the report on `main` before H2c (with
@@ -1765,9 +1757,9 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        2026-10-08: DoT is the counter to Defence tanks, and most retaliators are those tanks);
      - **Regen heals** the potency (no Defence).
      Placeholder numbers (H2c tunes them, ASSUMPTION 129): **Poison 20% of Attack, Burn 25% of
-     Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** A status applied by a
-     creature that already carries it passes its own snapshot on (Spore spreading on death keeps
-     the original strength). Integer percent, one floor (the percent-hp brief's float rule). This
+     Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** A status that applies
+     itself through its own effect passes its snapshot on (Spore spreading on death keeps the
+     original strength; ASSUMPTION 143). Integer percent, one floor (the percent-hp brief's float rule). This
      reverses the Phase 4 percent-of-max-HP model (`phase-4-percent-hp-condition-ticks.md`), whose
      only objection to stat-scaling was reading the victim's stats; the snapshot reads the
      applier's. Rejected: DoT as a third "true damage" channel (measured indistinguishable for the
@@ -1901,7 +1893,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      defined, in flat mode, targeting its bearer is a DoT tick: in H2a it stays on today's
      `applyFlatDamage` path (floor, minimum 1). It is never a cost, and H2b reuses the same test
      for "a tick is never self-inflicted" (ASSUMPTION 115). It does not read `damageSource: 'dot'`:
-     `CATASTROPHIC_COLLAPSE` carries that label with no `statusId` and is a cost.
+     `CATASTROPHIC_COLLAPSE` carries that label with no `statusId` and is a cost. **Superseded in
+     4.1-H2b2** by ASSUMPTION 144: a tick is the `snapshot-potency` response.
 132. **Decided (H2a plan review).** **The cost (ASSUMPTION 116) in detail.**
      - A cost is a `deal-damage` on the indirect channel whose **resolved** target id is the firing
        creature (a selector landing on itself counts). A spell effect on its own caster is direct.
@@ -1985,6 +1978,54 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      flag that only the cost path sets; both observation hooks fail closed when called without
      their details; a load-time validator keeps each filter field on its own hook, over traits,
      perks and statuses. CONVENTIONS "Damage observation" carries the detail.
+
+143. **Decided (H2b2 kickoff, 2026-10-09; design owner).** **Only a status's own effect passes its
+     snapshot on.** Refines ASSUMPTION 113. When a status's own effect applies that same status
+     (Spore's `on-death` spread), the new instance copies the firing instance's whole snapshot
+     (applier id, affinity, potency). Every other application snapshots its applier fresh, even
+     when the applier carries the status itself. Why: read as "any creature that carries it", a
+     healer carrying another healer's Regen would cast Afterglow at that healer's strength, and a
+     player Sporecloud carrying an enemy's Spore would put a Spore on an enemy whose recorded
+     applier is that enemy's own ally (the tick's source, kill credit and affinity on the wrong
+     side). Both happen in real fights. Rejected: the literal "a creature that already carries it".
+
+144. **Decided (H2b2 plan review, 2026-10-09; design owner).** **A tick is declared in data, not
+     inferred.** A ticking status declares its **`potency`** on its `StatusDef` (`{ ofStat,
+     percent }`, read off the applier's effective stat at application); its one tick response (a
+     `deal-damage` or `heal` targeting `self`) takes the magnitude **`{ kind: 'snapshot-potency'
+     }`**, and that response is the tick. Supersedes ASSUMPTION 131's test (`statusId` + flat +
+     self): any other damage a status deals its own bearer is a cost (ASSUMPTION 116), whatever its
+     magnitude mode. Validators: a status with a potency carries exactly one snapshot-magnitude
+     response (target `self`, no `magnitudeSource`), a status without one carries none, and
+     traits, perks and spells carry none. An instance holds a snapshot (applier id, affinity,
+     potency) iff its status declares a potency. `heal.amountPerStack` is renamed `flatAmount`.
+     A plain (unmarked) heal inside a status stays an ordinary heal from its bearer: a heal has no
+     cost path (no shipped status has one; confirmed at the H2b2 PR review). Why: under 131 a status's flat self-damage was a tick and its formula-mode self-damage a cost;
+     the marker makes a tick something the data says. Rejected: keeping 131's shape test.
+
+145. **Decided (H2b2 plan review, 2026-10-09; design owner).** **Snapshot pass-on is the rule, not
+     a flag** (refines ASSUMPTION 143). An `apply-status` fired by a status's own effect that
+     applies that same status (the firing context's `statusId` equals the applied one) copies the
+     firing instance's whole snapshot; nothing opts in. A trait, perk or spell has no `statusId` in
+     its context, so it can never pass a snapshot on. Rejected: an `inheritSnapshot` flag on
+     `StatusSpec` (optional, so a future spreading status that left it out would silently snapshot
+     the dying bearer).
+
+146. **Decided (H2b2 plan review, 2026-10-09; design owner).** **A tick's dealer is its living
+     applier, or no one** (refines ASSUMPTION 113). The tick path carries the dealer: the applier
+     if it is alive at tick time (a revived applier is the dealer again), else none.
+     `DamageDealt.sourceId`, and a Regen tick's `HealApplied.sourceId`, is the dealer, or the
+     bearer when there is none. The dealer-side hooks (`on-damage-dealt`, `on-kill`) fire only on a
+     dealer, so a bearer never runs them for its own tick after its applier dies; a self-applied
+     tick's dealer is its living bearer, whose hooks do fire. The bearer's own hooks
+     (`on-damage-taken`, `on-death`) get **no source** on a tick, so `triggering-source` and a
+     `'triggering-source'` actor resolve to nothing while the hooks still fire (Sleep wakes).
+     `applyDamageAndEmit` takes a required `origin` (`hit`, `cost`, or `tick` carrying its
+     dealer id or none) in place of `selfInflicted` (self-inflicted iff `cost`): carried, never
+     inferred from the ids. A trigger `condition` on `subject: 'target'` reads no creature on a
+     tick (no shipped bearer-side trigger has one; H2b2 plan review, round 2). No
+     shipped content reads `on-damage-dealt`, so no fight changes through the dealer rule. Rejected:
+     the fallback bearer as a full dealer (today's behaviour, an accident of the old source rule).
 
 ## Sequencing summary
 

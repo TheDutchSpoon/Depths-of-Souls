@@ -1,8 +1,12 @@
-// Golden: PR #64 review fix 6 -- Sporch Cinderlord's real `on-kill` trait writes `stacks: 1`
-// explicitly in its `apply-status` StatusSpec (rather than relying on the default, also 1) --
-// pins Burn's own stacking/cap/duration-refresh behavior against real content: a fresh target
-// ends at 1 stack, a target already carrying stacks stacks further up to Burn's own cap (3),
-// with duration refreshed to the full 3 either way.
+// Golden: Sporch Cinderlord's real `on-kill` trait applies ONE Burn to every remaining enemy
+// (Phase 4.1-H2b2: renamed from golden-sporch-cinderlord-burn-stacks -- the stacking it was named
+// for is gone). It pins the single-instance rule against real content: a fresh target gets a Burn
+// at the full 3 turns, a target already Burning keeps its one instance and has the timer
+// REFRESHED 1 -> 3, with no count anywhere.
+//
+// Field-only golden: the expected events equal main's once `stacks` is stripped from its
+// `StatusApplied` events (ENEMY_B's pre-applied 2 stacks lived in the SETUP, a throwaway events
+// array, which is the only thing that changed besides the field).
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). CINDERLORD (real Sporch
 // Cinderlord base stats, speed 16) acts before VICTIM/ENEMY_A/ENEMY_B (speeds 5/4/3, all
@@ -11,17 +15,18 @@
 //
 //   CINDERLORD->VICTIM (off 22, def 0): core = 22. chip = 0.01*22 = 0.22. raw = 22.22 -> final =
 //     floor(22.22) = 22. VICTIM (wounded to 5 post-createCombat) 5 - 22 -> 0, dies.
-//   on-kill fires Immolate: apply-status(all-enemies, burn, stacks:1) -- VICTIM is already dead
-//     and excluded from all-enemies (livingEnemiesOf filters `.alive`), leaving ENEMY_A and
-//     ENEMY_B (living-enemies-of-self order, i.e. slot order among the living):
-//     ENEMY_A (no prior Burn): newStacks = min(cap 3, 0 + 1) = 1 -- StatusApplied(ENEMY_A, burn,
-//       1 stack, duration 3).
-//     ENEMY_B (pre-applied 2 Burn stacks at duration:1 -- deliberately NOT Burn's own default of
-//       3, so the refresh below is actually VISIBLE -- before any turn resolves, into a throwaway
-//       events array): newStacks = min(cap 3, 2 + 1) = 3 (the cap) -- StatusApplied(ENEMY_B, burn,
-//       3 stacks, duration REFRESHED 1 -> 3, per applyStatus's own re-application rule (the NEW
+//   on-kill fires Immolate: apply-status(all-enemies, burn) -- VICTIM is already dead and
+//     excluded from all-enemies (livingEnemiesOf filters `.alive`), leaving ENEMY_A and ENEMY_B
+//     (living-enemies-of-self order, i.e. slot order among the living):
+//     ENEMY_A (no prior Burn): a fresh instance -- StatusApplied(ENEMY_A, burn, duration 3).
+//     ENEMY_B (pre-applied Burn at duration:1 -- deliberately NOT Burn's own default of 3, so
+//       the refresh below is actually VISIBLE -- before any turn resolves, into a throwaway
+//       events array): the same instance is kept and refreshed -- StatusApplied(ENEMY_B, burn,
+//       duration REFRESHED 1 -> 3, per applyStatus's own re-application rule (the NEW
 //       application carries no explicit duration, so it inherits Burn's own defaultDuration: 3,
-//       overwriting the pre-existing 1).
+//       overwriting the pre-existing 1). Its snapshot stays ENEMY_B's own (Intelligence 20 x 25% = 5,
+//       stronger than Cinderlord's 12 x 25% = 3), but no tick lands in this one step, so neither
+//       is visible in the events.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -119,7 +124,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: ENEMY_A,
     statusId: 'burn',
-    stacks: 1,
     duration: 3,
     sourceId: CINDERLORD,
   },
@@ -127,7 +131,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: ENEMY_B,
     statusId: 'burn',
-    stacks: 3,
     duration: 3,
     sourceId: CINDERLORD,
   },
@@ -137,14 +140,14 @@ export const expectedEvents: CombatEvent[] = [
 /** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
-  // Pre-apply 2 Burn stacks to ENEMY_B at duration:1 (not Burn's own default of 3) and wound
-  // VICTIM, both before any turn resolves -- into a throwaway events array. Duration 1 (rather
-  // than the default 3) is what makes Cinderlord's own re-application visibly REFRESH it back
-  // up to 3, instead of landing on the same value it already had.
+  // Pre-apply a Burn to ENEMY_B at duration:1 (not Burn's own default of 3) and wound VICTIM,
+  // both before any turn resolves -- into a throwaway events array. Duration 1 (rather than the
+  // default 3) is what makes Cinderlord's own re-application visibly REFRESH it back up to 3,
+  // instead of landing on the same value it already had.
   let state = applyStatus(
     ENEMY_B,
     ENEMY_B,
-    { statusId: 'burn', stacks: 2, duration: 1 },
+    { statusId: 'burn', duration: 1 },
     created,
     createResolutionContext([], newCascade()),
   )

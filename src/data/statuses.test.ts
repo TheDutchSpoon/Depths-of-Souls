@@ -4,6 +4,7 @@ import {
   POISON,
   BURN,
   REGEN,
+  SPORE,
   STUN,
   WEAKEN,
   VULNERABILITY,
@@ -20,31 +21,66 @@ describe('stock statuses (representative Phase 3 content)', () => {
     )
   })
 
-  it('POISON/BURN are on-turn-end flat DoT ticks with no per-tick TriggerFired', () => {
+  it('POISON/BURN are on-turn-end snapshot-potency DoT ticks with no per-tick TriggerFired', () => {
     for (const dot of [POISON, BURN]) {
       expect(dot.polarity).toBe('debuff')
       expect(dot.effects).toHaveLength(1)
       expect(dot.effects[0]).toMatchObject({
         category: 'triggered',
         hook: 'on-turn-end',
-        response: { kind: 'deal-damage', damageSource: 'dot', emitTriggerFired: false },
+        response: {
+          kind: 'deal-damage',
+          flatAmount: { kind: 'snapshot-potency' },
+          damageSource: 'dot',
+          emitTriggerFired: false,
+        },
       })
     }
   })
 
-  it('REGEN is an on-turn-end heal with no per-tick TriggerFired', () => {
+  it('REGEN is an on-turn-end snapshot-potency heal with no per-tick TriggerFired', () => {
     expect(REGEN.polarity).toBe('buff')
     expect(REGEN.effects[0]).toMatchObject({
       category: 'triggered',
       hook: 'on-turn-end',
-      response: { kind: 'heal', emitTriggerFired: false },
+      response: {
+        kind: 'heal',
+        flatAmount: { kind: 'snapshot-potency' },
+        emitTriggerFired: false,
+      },
     })
   })
 
-  it("STUN is a passive 'all' action-lock, capped at 1 stack", () => {
+  it("the four ticking statuses declare the placeholder potencies (percent of the APPLIER's stat; H2c tunes them)", () => {
+    expect(POISON.potency).toEqual({ ofStat: 'attack', percent: 20 })
+    expect(BURN.potency).toEqual({ ofStat: 'intelligence', percent: 25 })
+    expect(REGEN.potency).toEqual({ ofStat: 'health', percent: 10 })
+    expect(SPORE.potency).toEqual({ ofStat: 'speed', percent: 15 })
+  })
+
+  it('SPORE carries one tick and one spread: the spread is a plain apply-status of spore (the engine passes the snapshot on)', () => {
+    expect(SPORE.effects).toHaveLength(2)
+    expect(SPORE.effects[0]).toMatchObject({
+      hook: 'on-turn-end',
+      response: { kind: 'deal-damage', flatAmount: { kind: 'snapshot-potency' } },
+    })
+    expect(SPORE.effects[1]).toMatchObject({
+      hook: 'on-death',
+      response: { kind: 'apply-status', status: { statusId: 'spore' } },
+    })
+  })
+
+  it('only the four ticking statuses declare a potency', () => {
+    expect(
+      STOCK_STATUSES.filter((s) => s.potency !== undefined)
+        .map((s) => s.statusId)
+        .sort(),
+    ).toEqual(['burn', 'poison', 'regen', 'spore'])
+  })
+
+  it("STUN is a passive 'all' action-lock", () => {
     expect(STUN.polarity).toBe('debuff')
     expect(STUN.effects).toEqual([{ category: 'action-lock', scope: 'all' }])
-    expect(STUN.cap).toBe(1)
   })
 
   it('WEAKEN reduces damage dealt additively; VULNERABILITY increases damage taken multiplicatively', () => {
@@ -64,11 +100,10 @@ describe('stock statuses (representative Phase 3 content)', () => {
     }
   })
 
-  it("SILENCED is a passive 'cast' action-lock and PACIFIED a passive 'attack' one (cap 1, 3 turns, debuffs)", () => {
+  it("SILENCED is a passive 'cast' action-lock and PACIFIED a passive 'attack' one (3 turns, debuffs)", () => {
     expect(SILENCED.effects).toEqual([{ category: 'action-lock', scope: 'cast' }])
     expect(PACIFIED.effects).toEqual([{ category: 'action-lock', scope: 'attack' }])
     for (const lock of [SILENCED, PACIFIED]) {
-      expect(lock.cap).toBe(1)
       expect(lock.defaultDuration).toBe(3)
       expect(lock.polarity).toBe('debuff')
       expect(STATUS_REGISTRY.get(lock.statusId)).toBe(lock)

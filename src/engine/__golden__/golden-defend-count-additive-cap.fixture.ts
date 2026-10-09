@@ -59,7 +59,6 @@ export const BULWARK_ADDITIVE_FIXTURE: Trait = {
 
 export const BULWARK_ADDITIVE_STATUS: StatusDef = {
   statusId: BULWARK_STATUS_ID,
-  cap: 1,
   // applied exactly once -- magnitudeSource, not re-application, drives the scaling
   polarity: 'buff',
   defaultDuration: 3,
@@ -121,7 +120,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: BEARER,
     statusId: BULWARK_STATUS_ID,
-    stacks: 1,
     duration: 10,
     sourceId: BEARER,
   },

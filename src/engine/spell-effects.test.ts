@@ -1039,12 +1039,12 @@ describe('heal.offStat (plan review F2)', () => {
         createResolutionContext([], newCascade()),
       )
     for (const modes of [
-      { amountPerStack: 1, scalingStat: 'health' as const },
-      { amountPerStack: 1, offStat: 'cast' as const },
+      { flatAmount: 1, scalingStat: 'health' as const },
+      { flatAmount: 1, offStat: 'cast' as const },
       { scalingStat: 'health' as const, offStat: 'cast' as const },
     ]) {
       expect(() => run(modes)).toThrow(
-        /more than one of amountPerStack\/scalingStat\/offStat/,
+        /more than one of flatAmount\/scalingStat\/offStat/,
       )
     }
     expect(() => run({ offStat: 'cast' })).not.toThrow()
@@ -1102,10 +1102,7 @@ describe('validateSpellEffects', () => {
         magnitudeSource: { kind: 'flat', value: 2 },
       },
     ],
-    [
-      'flat-mode heal',
-      { kind: 'heal', target: { kind: 'cast-target' }, amountPerStack: 5 },
-    ],
+    ['flat-mode heal', { kind: 'heal', target: { kind: 'cast-target' }, flatAmount: 5 }],
     ['a heal with no magnitude stat', { kind: 'heal', target: { kind: 'cast-target' } }],
     [
       'a verb a spell may not carry',
@@ -1143,7 +1140,6 @@ describe('validateSpellEffects', () => {
     )
     const status: StatusDef = {
       statusId: 'cast-target-test',
-      cap: 1,
       polarity: 'debuff',
       defaultDuration: 1,
       effects: [

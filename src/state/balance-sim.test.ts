@@ -635,7 +635,6 @@ describe.skipIf(isSim)('balance simulator', () => {
       type: 'StatusApplied',
       targetId: target,
       statusId,
-      stacks: 1,
       duration: 3,
     })
     const expired = (statusId: string): CombatEvent => ({
@@ -684,7 +683,6 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(scopes.has('poison')).toBe(false)
       const dazed: StatusDef = {
         statusId: 'dazed',
-        cap: 1,
         polarity: 'debuff',
         defaultDuration: 2,
         effects: [{ category: 'action-lock', scope: 'all' }],

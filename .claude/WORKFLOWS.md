@@ -21,9 +21,11 @@ drifts and stale decisions silently outlive their correction.
   `main` without the human.
 - **Coding agent (Claude Code in VS Code):** writes the implementation plan, then the code, tests,
   reports and the slice's record. Never commits and never deletes files; says what needs deleting.
+  Never edits the living docs, content docs included: its report says what they need.
   Standing rules: `workflow/coding-rules.md`.
 - **Design & review agent (Cowork, with the local repo connected):** writes kickoffs, reviews plans
-  and PRs, writes fix hand-outs, and edits the docs in place for every decision. Never writes engine
+  and PRs, writes fix hand-outs, and edits the living docs in place: every decision, and the
+  content docs for the content a slice ships (folded at the PR review). Never writes engine
   or app code, never commits. Re-reads the living docs from the working tree at the start of every
   session. Standing rules: `workflow/design-rules.md`.
 

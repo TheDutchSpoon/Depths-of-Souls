@@ -1,6 +1,5 @@
 // Golden: the triggered `heal` response's `magnitudeSource` mode (Phase 4 Slice E2, Necromoss-
-// shaped) -- a flat per-unit `amountPerStack` scaled by a LIVE count (dead-allies) instead of
-// the firing status's own `stacks`, mirroring deal-damage's own magnitudeSource composition
+// shaped) -- a flat per-unit `flatAmount` scaled by a LIVE count (dead-allies), mirroring deal-damage's own magnitudeSource composition
 // exactly. NECROMOSS self-heals via `on-turn-end` (no round end needed) -- fixture-shaped,
 // not real Necromoss content (H3's job).
 //
@@ -13,7 +12,7 @@
 //   FOE->NECROMOSS (off 30, def 0): core 30, chip 0.01*30=0.3 -> raw 30.3 -> final 30.
 //     NECROMOSS 100 - 30 -> 70.
 //   NECROMOSS's own on-turn-end heal (self): dead-allies count = 1 (DEAD-ALLY) -> amount =
-//     amountPerStack(5) x count(1) = 5. newHp = min(maxHp 100, 70+5=75) = 75 (no clamp).
+//     flatAmount(5) x count(1) = 5. newHp = min(maxHp 100, 70+5=75) = 75 (no clamp).
 //     HealApplied.amount = 5, remainingHp = 75.
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -38,7 +37,7 @@ export const NECROMOSS_FIXTURE: Trait = {
       response: {
         kind: 'heal',
         target: { kind: 'self' },
-        amountPerStack: 5,
+        flatAmount: 5,
         magnitudeSource: { kind: 'count', of: 'dead-allies' },
       },
     },

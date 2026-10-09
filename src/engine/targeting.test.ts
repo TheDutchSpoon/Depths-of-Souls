@@ -151,14 +151,12 @@ function confusion(chancePercent: number, id = 'confusion'): ActiveEffect {
   return {
     category: 'status',
     statusId: id,
-    cap: 3,
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId(id),
     sourceTraitId: id,
     remainingDuration: 3,
     appliedAt: 0,
-    stacks: 1,
     effects: [{ category: 'friendly-fire', chancePercent }],
   }
 }

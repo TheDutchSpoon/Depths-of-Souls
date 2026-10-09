@@ -241,7 +241,7 @@ data.
   pure-utility spell (status only, a cleanse) simply has no `deal-damage` / `heal` effect. The old
   `scalingStat: 'none'` is gone (4.1-D plan review: no content used it). See GAME_DESIGN §5.
 
-### Response vocabulary — nine verbs (eight from 4.1-H2b), and "no side doors"
+### Response vocabulary — eight verbs (nine until 4.1-H2b2), and "no side doors"
 History: four in Phase 3; `heal` + `revive` joined as the two justified new verbs, `grant-action-state`
 + `consume-stacks` were counted as responses too, and **Phase 4 Slice E2 added `remove-status`**
 (spell-driven cleanse/dispel is a near-term certainty, so a general removal verb invoked on *other*
@@ -249,10 +249,10 @@ creatures earns its place; `consume-stacks`' self-scoped read-and-clear cannot s
 
 **Phases 4.1-E and 4.1-F change the set (A2 + A3):** `perform-action` is **added** and `suppress-action` is
 **removed** (a turn-skip is now a passive `action-lock` inside a status, and "interrupt one action"
-is simply `apply-status(stun, 1)`). The nine top-level kinds after 4.1-F: `deal-damage`,
-`apply-status`, `apply-stat-modifier`, `heal`, `revive`, `grant-action-state`, `consume-stacks`,
-`remove-status`, `perform-action`. **4.1-H2b deletes `consume-stacks`** (statuses no longer stack,
-brief ASSUMPTION 114), leaving **eight**.
+is simply `apply-status(stun, 1)`). 4.1-F left nine; **4.1-H2b2 deleted `consume-stacks`**
+(statuses no longer stack, brief ASSUMPTION 114), leaving **eight** top-level kinds: `deal-damage`,
+`apply-status`, `apply-stat-modifier`, `heal`, `revive`, `grant-action-state`, `remove-status`,
+`perform-action`.
 
 **The principle is "no side doors"** (replaces "hold the line at nine", which was held on paper
 while action-granting behaviour came in through a side-channel `EffectDef` category and a
@@ -270,9 +270,6 @@ attack executor is correct.
   "dead creatures fire only `on-death`" (interaction edges): a corpse neither reacts nor is acted
   on. Revive resets a creature's effects and action state anyway, so nothing done to a corpse could
   matter; the rule keeps the log honest and removes the case from every future verb.
-  `consume-stacks` (until 4.1-H2b) has no target: it spends the *firing* creature's own stacks as
-  part of that creature's trigger, so it runs whenever its trigger does, including an `on-death`
-  trigger firing as the creature dies. Its wrapped effect follows the rule like any other response.
 - **`perform-action`** (Phase 4.1-E, A2) — `{ kind: 'perform-action', actor: 'self' |
   'triggering-source', intent }`, where `intent` is the same rule-shaped intent the action pipeline
   takes (`{ action: RuleAction, targeting?: TargetSelector }`, with `gemSlot: 'random'` and a `'random'`
@@ -303,7 +300,7 @@ attack executor is correct.
     an echo chain; an echo chain can pass through the same Overtone again and still truncates at
     `MAX_TRIGGER_CASCADE_DEPTH`.
   - **Where it may appear:** trait effects, perk effects and status triggers. It is rejected at
-    load time inside a spell's effect list and inside `consume-stacks`' wrapped effect. A **data
+    load time inside a spell's effect list. A **data
     test** reads every registry and requires each `perform-action` trigger to carry a real guard:
     a `chancePercent` below 100, or a `condition` other than `always`. That is a lint against
     unconditional self-perpetuating grants; the depth bound is what guarantees termination.
@@ -330,10 +327,11 @@ attack executor is correct.
 - **`heal`** — restore HP to a *living* target (self / ally / all-allies via targeting); caps at
   effective max HP (no overheal) **after any scaling**; distinct from Regen (the over-time status).
   **Slice E2** gives the triggered `heal` the same magnitude modes as `deal-damage`: flat
-  (`amountPerStack`, Regen), **stat-scaled off the *healer's* stat** (`scalingStat`; Treants Elder →
+  (`flatAmount`, `amountPerStack` until 4.1-H2b2; the Wick's heal, and Regen's tick through its
+  `snapshot-potency` marker), **stat-scaled off the *healer's* stat** (`scalingStat`; Treants Elder →
   Health), and **`magnitudeSource`** (× a count; Necromoss → dead-allies). **4.1-D** adds
   **`offStat`** (a remap-aware slot, exactly as on `deal-damage`), so a heal spell keeps its
-  remap-aware Intelligence default. `amountPerStack`, `scalingStat` and `offStat` are mutually
+  remap-aware Intelligence default. `flatAmount`, `scalingStat` and `offStat` are mutually
   exclusive; setting more than one is a resolver-invariant error. **One formula for every
   formula-mode magnitude** (PR #74 review): `deal-damage` and `heal`, `offStat` or `scalingStat`
   mode, fired by a trait or a spell, all compute **stat × (spellPower × multiplier)**. The
@@ -355,33 +353,46 @@ attack executor is correct.
   float rule below). A tick is that potency, no stack count:
   - a **damage tick is indirect damage** (see "Damage channels"): `potency × affinity(snapshot vs
     bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective Defence`, `MAX(1, floor(...))`.
-    The **damage source is the applier** while it is alive, else the bearer, so the applier's
-    `on-damage-dealt`/`on-kill` fire. A tick still offers **no `triggering-source`** to the
-    bearer's responses, so retaliation never fires back at a tick (see "`triggering-source` never
-    resolves to the firing creature itself");
-  - a **Regen tick heals** the potency (no Defence, no minimum).
-  - A status applied by a creature that **already carries it** passes its own snapshot on (Spore
-    spreading on death keeps the original strength).
+    The **damage source is the applier** while it is alive at tick time, else the bearer. Only a
+    living applier is the tick's **dealer**: its `on-damage-dealt`/`on-kill` fire. On the fallback
+    the bearer is the logged source and no dealer-side hook fires; a self-applied tick's living
+    bearer is its own dealer. The bearer's `on-damage-taken`/`on-death` get **no source** on a
+    tick, so a tick offers **no `triggering-source`** to the bearer's responses and retaliation
+    never fires back at it (see "`triggering-source` never resolves to the firing creature
+    itself"); the hooks themselves still fire. Carried as `applyDamageAndEmit`'s `origin: 'tick'`
+    (brief ASSUMPTION 146);
+  - a **Regen tick heals** the potency (no Defence, no minimum), its `HealApplied` source by the
+    same rule.
+  - A status that **applies itself through its own effect** passes its snapshot on, whole (applier
+    id, affinity, potency): Spore spreading on death keeps the original strength. It is the rule,
+    not an opt-in field: an `apply-status` fired by a status's own effect for that same status
+    copies the firing instance's snapshot. Any other application snapshots its applier fresh, even
+    an applier that carries the status (brief ASSUMPTIONS 143, 145).
+  - **Data shape** (brief ASSUMPTION 144): the status declares `potency: { ofStat, percent }`; its
+    one tick response (`deal-damage` or `heal`, on `self`) takes the magnitude `{ kind:
+    'snapshot-potency' }`. That marker is what makes it a tick; any other damage a status deals
+    its bearer is a cost, and any other heal an ordinary heal from the bearer. An instance holds `snapshot` iff its status declares a potency.
   - Placeholder numbers (tuned in 4.1-H2c): Poison 20% of Attack, Burn 25% of Intelligence, Regen
     10% of the healer's Health, Spore 15% of Speed.
   - Why: the percent-hp brief rejected stat-scaling only because a DoT's `context.self` is the
     victim; the snapshot reads the applier, and a DoT now belongs to its applier's build.
-- **Flat-mode stat-derived magnitude** (percent-hp-condition-ticks brief; **status ticks until
-  4.1-H2b**) — `deal-damage.flatAmount`
-  and `heal.amountPerStack` each accept either a literal number (unchanged) or a `StatPercent`
-  (`{ ofStat, percent }`, `percent` a **positive integer**), a percentage of the **bearer's**
-  (`context.self`) own effective stat — Regen/Poison/Burn read `{ ofStat: 'health', percent }` so
-  each tick is the same fraction of the bearer's max HP at every level.
-  Composition: `floor(floor(getEffectiveStat(bearer, ofStat)) × percent × count / 100)`, where
-  `count` is `stacks` or the live `magnitudeSource` count that already replaces `stacks` in flat
-  mode today (unchanged) — the stat is read **floored** and `percent`/`count` are multiplied in
+- **Flat-mode stat-derived magnitude** (percent-hp-condition-ticks brief; it carried the status
+  ticks until 4.1-H2b2, which moved them to the snapshot above) — `deal-damage.flatAmount`
+  and `heal.flatAmount` (`amountPerStack` until 4.1-H2b2, brief ASSUMPTION 144) each accept
+  either a literal number (unchanged) or a `StatPercent`
+  (`{ ofStat, percent }`, `percent` a **positive integer**), a percentage of the **firing
+  creature's** (`context.self`) own effective stat — the Wick's burn and heal, and
+  `CATASTROPHIC_COLLAPSE`. (Until 4.1-H2b2 Regen/Poison/Burn read `{ ofStat: 'health', percent }`
+  here, each tick a fraction of the bearer's max HP.)
+  Composition: `floor(floor(getEffectiveStat(self, ofStat)) × percent × count / 100)`, where
+  `count` is the live `magnitudeSource` count, else 1 (until 4.1-H2b2 the status's `stacks`) —
+  the stat is read **floored** and `percent`/`count` are multiplied in
   **before** dividing by 100, so the whole thing is exact integer arithmetic; a float fraction
   (`stat × 0.03`) can land just below an integer and floor one too low (180 × 0.03 × 5 =
   26.999999999999996 → 26 instead of 27), which is why this is an integer percent, not a fraction.
-  The floor happens **once**, at the existing single `Math.floor` in `applyFlatDamage`/`applyHeal`
-  — never per stack. Heal ticks have **no minimum** (`applyHeal` floors to ≥ 0), unlike flat
-  damage's min-1, so a stat-derived Regen ticks for 0 when `floor(maxHp × percent × count / 100)`
-  is 0 (e.g. 5% × 1 stack below 20 max HP) — accepted, not special-cased. **`scalingStat` mode is
+  The floor happens **once**, at the single `Math.floor` in `applyCostDamage`/`applyHeal`. Heals
+  have **no minimum** (`applyHeal` floors to ≥ 0), unlike damage's min-1, so a heal can be 0 (a
+  Regen snapshot of 10% of a healer below 10 Health is 0) — accepted, not special-cased. **`scalingStat` mode is
   deliberately NOT used for DoTs**: for damage, that
   mode runs the response's `context.self` through the real damage formula as the *attacker*, and
   for a DoT `context.self` is the poisoned creature itself — its own Defence would mitigate its
@@ -423,8 +434,8 @@ attack executor is correct.
 - **count-scaling** modifier — factor reads a **live count**: living allies, allies of a
   species/affinity, enemies-with-a-status, **dead allies**, or a per-creature **defend-count**.
   Recomputed each read. **Built in Phase 4 Slice D** as `MagnitudeSource` (`effect-types.ts`):
-  `{ kind: 'flat', value }` | `{ kind: 'count', of, statusId? }` | `{ kind: 'consumed-stacks' }`
-  (`consumed-stacks` deleted in 4.1-H2b),
+  `{ kind: 'flat', value }` | `{ kind: 'count', of, statusId? }` (a third kind,
+  `consumed-stacks`, was deleted in 4.1-H2b2),
   an optional sibling field on `DamageModifierDef.magnitude` and the `deal-damage` response.
   **Count-source semantics (decided):** a `magnitudeSource` substitutes for the **repetition
   count** a host field already scales its authored rate by — it stands in for `stacks` in the
@@ -481,16 +492,12 @@ attack executor is correct.
 - **Zero count ⇒ full no-op (decided, PR #64 review).** A `deal-damage` or `heal` response whose
   `magnitudeSource` resolves to **0** does nothing: no `DamageDealt`/heal, no min-1 chip floor, no
   downstream hooks (`on-damage-taken`, Sleep's wake, …). `TriggerFired` is still emitted (the
-  uniform fizzle shape — see the H3 addenda). Mirrors `consume-stacks`' "0 stacks is a full no-op,
-  not fired-with-magnitude-0." Affects Sporecloud Reaper, Spider Broodwarden, Lullpollen Dozer.
+  uniform fizzle shape — see the H3 addenda). Affects Sporecloud Reaper, Spider Broodwarden,
+  Lullpollen Dozer.
 - **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
   **Built in Phase 4 Slice D; deleted in 4.1-H2b2** with stacking (Glow, its last real user, went in
-  4.1-H2b1) (brief ASSUMPTIONS
-  114, 116). SELF-scoped (no `target` field) — always reads/clears the FIRING
-  creature's own stacks. 0/absent stacks is a full no-op (the wrapped effect never fires, not
-  fired-with-magnitude-0); a successful consume emits `StatusExpired` (ASSUMPTION 18) before the
-  wrapped effect executes (continuing the SAME trigger firing — no new `TriggerFired`, no extra
-  cascade-depth bookkeeping).
+  4.1-H2b1) (brief ASSUMPTIONS 114, 116). History only: it was self-scoped (no `target`) and read
+  and cleared the firing creature's own stacks.
 - **status-effect immunity** — `{ category: 'status-immunity', statusId }`, a permanent-for-fight
   passive `EffectDef` (Clear Mind/Aggressive/Lucidity), structurally identical to
   armor-penetration/cross-stat. **Built in Phase 4 Slice C.** Consulted at each immune-able
@@ -623,7 +630,7 @@ consumable; deleted in 4.1-H2b1), turn-order (act first *or* last — two-way, *
 + spread-on-death to the host's own side, **built H3**), Confusion (3-turn; 50% harmful-action
 friendly-fire, **built C**), Silenced
 (`action-lock` cast; applied by the Violence spell **Silence**) and Pacified (`action-lock` attack;
-applied by the Wit spell **Pacify**) — both **pure status spells** (no damage, cap 1,
+applied by the Wit spell **Pacify**) — both **pure status spells** (no damage,
 `defaultDuration: 3`, unlocked at biome 1), authored in **Phase 4.1-F**, after A4 (4.1-D) and
 A3's action lock (they were missed in Phase 4, which left Clear Mind and Aggressive buyable but
 inert), Splashing (adjacency
@@ -776,14 +783,13 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   `TriggerFired` is emitted, and then the response produces **no** further events and **no**
   downstream hooks. Applies to: an empty `ResponseTarget` pool (Spore's spread with every ally
   already Spored; `revive` with no dead ally), `triggering-source` resolving to self, a zero
-  `magnitudeSource` count, and `consume-stacks` with 0 stacks. Docs must never describe these as
+  `magnitudeSource` count (and, until 4.1-H2b2, `consume-stacks` with 0 stacks). Docs must never describe these as
   "no event."
-- **Sporch Cinderlord's kill-burst is creature-level and applies exactly 1 Burn stack per enemy
-  (decided; from 4.1-H2b statuses don't stack, so it applies Burn, `stacks` is deleted, and an
-  enemy already Burning keeps the stronger Burn and has its timer refreshed).**
-  `on-kill → apply-status(all-enemies, burn, stacks: 1)` — `stacks: 1` is written explicitly in the
-  data, not left to the `StatusSpec` default. On an enemy already Burning it adds
-  1 stack (up to Burn's cap of 3) and refreshes duration, same as any re-application. The Burn
+- **Sporch Cinderlord's kill-burst is creature-level and applies one Burn per remaining enemy
+  (decided; built in 4.1-H2b2, which deleted `stacks`).** `on-kill → apply-status(all-enemies,
+  burn)`, each Burn snapshotting the Cinderlord. On an enemy already Burning it is an ordinary
+  re-application: the stronger snapshot stays and the timer refreshes. (Until 4.1-H2b2 it added
+  one stack, up to Burn's cap of 3.) The Burn
   **status** carries no spread trigger; "non-spreading Burn" refers to the status.
 
 ## Combat & scripting
@@ -919,8 +925,8 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   - **Who decides the channel** (brief ASSUMPTIONS 130, 131): the caller. Actions (`executeAttack`,
     `executeSpellEffects`) pass direct; `fireHook` passes indirect. `HookContext.channel` is
     **required**, so no caller can leave it out. `damageSource` stays a display label. A DoT tick
-    (a flat `deal-damage` with a `statusId`, on its bearer) is recognised by that test, never by its
-    'dot' label.
+    is recognised by its `snapshot-potency` magnitude (brief ASSUMPTION 144; until 4.1-H2b2, as a
+    flat `deal-damage` with a `statusId`, on its bearer); never by its 'dot' label.
     The channel follows the **action, not the target**: a direct action that lands on its own
     actor (a Confusion redirect, a spell effect on its caster) stays direct, with the Additional
     read from the actor's own level and max Health. It is never a cost; a cost is an
@@ -1011,10 +1017,9 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   - **AOE Cast**: target set **frozen at cast-start** (all living enemies, slot order); the whole
     action resolves fully (all `DamageDealt`/`CreatureDied`) **before** win/loss is checked — the
     win-check stays at the action boundary, never inside the per-target loop.
-- **DoT damage** does **not** use the direct formula. **Until 4.1-H2b** it is its own value
-  (a percentage of the bearer's max HP, flat mode) and **bypasses Defence**. **From 4.1-H2b** a
-  tick is indirect damage from the applier's snapshot (see "DoT and Regen from the applier's
-  snapshot" above).
+- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's
+  snapshot (see "DoT and Regen from the applier's snapshot" above). Until 4.1-H2b2 it was its own
+  value (a percentage of the bearer's max HP, flat mode) and bypassed Defence.
 - **Provoke targeting**: single-target offensive actions (Attack / single-target Cast) against the
   enemy side target a **random provoking enemy** (seeded combat RNG, never `Math.random()`) if any
   enemy provokes, else the script's selector. Implement as a **target-set override applied after**
@@ -1297,15 +1302,14 @@ the same interpreter, differing only in how they attach and which hooks they use
   chancePercent?, response }`). A **carrier** is what attaches a list of effects to a creature:
   - **Trait** `{ id, name, effects: EffectDef[] }` — permanent for the fight (innate, fused, perk
     effects are carried the same way).
-  - **Status** `StatusDef { statusId, polarity, defaultDuration, effects: EffectDef[] }` (from
-    4.1-H2b; `cap` deleted) — a **timed, single-instance container of the same effects a trait
+  - **Status** `StatusDef { statusId, polarity, defaultDuration, effects: EffectDef[], potency? }`
+    (4.1-H2b2: `cap` deleted; `potency` declared by a ticking status) — a **timed, single-instance container of the same effects a trait
     carries**. The status owns the lifecycle (apply, refresh, count down, expire, `has-status`);
     its effects own the behaviour. **Statuses never stack** (brief ASSUMPTION 114): one instance
     per status per creature; re-application keeps the **stronger** value (a DoT's or Regen's
     snapshot potency; a fixed-magnitude status just refreshes; a tie keeps the current one) and
-    **refreshes the timer**. A status's effects take a count of 1. *Until 4.1-H2b a status stacked
-    to a declared `cap` and passed its `stacks` as its effects' default count; other mentions of
-    stacks, `cap`, `consume-stacks` or Glow in this file describe that earlier shape.*
+    **refreshes the timer**. A status's effects take a count of 1. *Until 4.1-H2b2 a status stacked
+    to a declared `cap` and passed its `stacks` as its effects' default count.*
   - Phase 8 gem augments ("append responses to a spell") and equipment infusions (permanent effect
     lists) join the same model.
   - Why not merge Trait and Status into one carrier: their lifecycles really differ. Sharing the
@@ -1318,7 +1322,7 @@ the same interpreter, differing only in how they attach and which hooks they use
   `triggered`, `armor-penetration`, `cross-stat`, `action-instance`, `status-immunity`,
   `provoke-immunity`, `splashing`, `annihilate`, `conditional-damage-bonus`, `taken-reduction`,
   `cheat-death` (`bonus-cast` is deleted in 4.1-E). Passives added for statuses (4.1-F): a
-  **damage-modifier** (Weaken, Vulnerability; Glow until 4.1-H2b; stack-scaled until 4.1-H2b),
+  **damage-modifier** (Weaken, Vulnerability; Glow until 4.1-H2b1; stack-scaled until 4.1-H2b2),
   **`turn-order { position, breakChancePercent? }`** (Web, Grant Act First), **`friendly-fire {
   chancePercent }`**
   (Confusion) and **`action-lock { scope }`** (Stun, Sleep, Silenced, Pacified). DoT/HoT statuses
@@ -1332,8 +1336,8 @@ the same interpreter, differing only in how they attach and which hooks they use
     may carry any effect a trait carries, and every reader goes through the one effect iterator.
     Two readers read the raw effect list on purpose: `getEffectiveStat` and the stat remap, because
     a status may not carry `stat-modifier` or `stat-remap`. The status lifecycle reads the
-    containers themselves: `has-status`, applying and refreshing, `remove-status`,
-    `consume-stacks`, counting down, and the immunity lookup (PR #79 review).
+    containers themselves: `has-status`, applying and refreshing, `remove-status`, counting
+    down, and the immunity lookup (PR #79 review).
   - **`breakChancePercent` is status-only**: breaking free removes the status instance, so a
     `turn-order` carrying it on any other carrier is rejected at load.
 - **Immunity is checked once, in the effect iterator** (4.1-F): an immune bearer's iterator skips
@@ -1488,9 +1492,11 @@ itself"). **The shape** (decided at the 4.1-H2b1 plan review, brief ASSUMPTION 1
   every trigger carrier (traits, perks, statuses) enforces it.
 - Hook context: `source` is the **damaged creature** (so `triggering-source` and the `'target'`
   condition subject resolve to it); the channel is indirect, as for every hook.
-- **Self-inflicted is carried, never inferred:** `applyDamageAndEmit` takes a required
-  `selfInflicted` flag, `true` only from the cost path (`applyCostDamage`), `false` from the direct
-  path and the tick path. Never `source === target`: a DoT tick and a direct action landing on its
+- **Self-inflicted is carried, never inferred:** `applyDamageAndEmit` takes a required `origin`
+  (`DamageOrigin`: `{ kind: 'hit' } | { kind: 'cost' } | { kind: 'tick'; dealerId }`, `dealerId`
+  the living applier or `null`; brief ASSUMPTION 146; H2b1's `selfInflicted` flag until 4.1-H2b2).
+  Self-inflicted iff `cost`, which only the cost path (`applyCostDamage`) passes; the direct path
+  passes `hit`, the tick path `tick`. Never `source === target`: a DoT tick and a direct action landing on its
   own actor have equal ids and are not self-inflicted. A zero cost emits nothing, so there is
   nothing to observe.
 - **Both observation hooks fail closed:** a candidate on `on-action-observed` fired without the
@@ -1503,7 +1509,7 @@ itself"). **The shape** (decided at the 4.1-H2b1 plan review, brief ASSUMPTION 1
 - **Observation** (`on-action-observed`): **Resonants** (`relationship: ally`, `actionKind: cast`)
   — the *only* action-observation consumer across every species, starter, and all three spec
   trees. From 4.1-H2b1 the Flickerling Flare observes damage (`on-damage-observed`, above).
-- **Actor-self** (own action hook): Weaver, Lure, Sleeper, Charger (until 4.1-H2b), Setter,
+- **Actor-self** (own action hook): Weaver, Lure, Sleeper, Charger (until 4.1-H2b1), Setter,
   Sparkeaters' Drainer, Seeder, Hollowkin, Shieldbarer starter, Unicorn
   (`on-attack`/`on-cast`/`on-provoke`); Shield up, Defensive Stance, Concussive Blows, Aggressive
   Caster (perks); Sorcerer's on-turn-end cast
@@ -1552,9 +1558,9 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   `getEffectiveStat` folding (never cached).
 - **Triggered traits** = `{ hook, condition?, chancePercent?, response }`. **Response vocabulary
   (each parameterized by target + magnitude): deal-damage, apply-status, apply-stat-modifier, heal,
-  revive, grant-action-state, consume-stacks, remove-status, perform-action** (nine after 4.1-F,
-  which adds `perform-action` and removes `suppress-action`; eight from 4.1-H2b, which deletes
-  `consume-stacks`; see "Response vocabulary" above).
+  revive, grant-action-state, remove-status, perform-action** (eight: 4.1-F added `perform-action`
+  and removed `suppress-action`, 4.1-H2b2 deleted `consume-stacks`; see "Response vocabulary"
+  above).
   Breadth = hook × condition × parameter cross-product, not more response types.
   The optional `condition?` **reuses the scripting `Condition` union** (declarative data, like
   every condition since S2), evaluated **against live state at fire time** (pure, no RNG; a false
@@ -1603,8 +1609,11 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
 ### Status lifecycle (Phase 3, re-timed in Phase 4.1-F)
 - **Single instance, no stacking** (from 4.1-H2b, brief ASSUMPTION 114): one instance per
   (status, creature) with a remaining duration; re-applying **refreshes** the duration (and keeps
-  the instance and its id, B4) and keeps the **stronger** value (see "Carriers and effects").
-  *Until 4.1-H2b re-applying also incremented a stack count up to the status's declared cap.*
+  the instance and its id, B4) and keeps the **stronger** value (see "Carriers and effects"). The
+  duration becomes the new application's **even when shorter**, and `appliedAt` resets (born this
+  turn); a weaker or tied re-application still refreshes, emits `StatusApplied` and fires
+  `on-status-applied` (4.1-H2b2). *Until 4.1-H2b2 re-applying also incremented a stack count up to
+  the status's declared cap.*
 - **Durations count the bearer's own turns** (Phase 4.1-F, D6; Phase 3 counted rounds at round
   end). In the bearer's **turn-end cleanup**, each of its statuses counts down by one and expires
   at 0 (`StatusExpired`). So a status's real length no longer depends on turn order: a 3-turn Weaken
@@ -1614,8 +1623,8 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
 - **DoT / HoT ticks are status triggers on `on-turn-end`** (4.1-F): Poison, Burn, Regen and Spore
   tick in the bearer's turn-end hooks, **before** that turn's cleanup counts them down, so a
   1-turn DoT ticks exactly once. Same machinery as any trigger: **no separate status-tick pass**.
-  **DoT carries its own value and bypasses Defence** (until 4.1-H2b; then indirect damage from the
-  applier's snapshot). `DamageDealt` carries a **required
+  **A DoT tick is indirect damage from the applier's snapshot** (until 4.1-H2b2 it carried its
+  own value and bypassed Defence). `DamageDealt` carries a **required
   `damageSource: 'attack' | 'cast' | 'dot'`** (+ status identity for `'dot'`); a DoT tick emits a
   `'dot'`-tagged `DamageDealt` (no `TriggerFired`) so the log reads "[creature] took X poison
   damage."
@@ -1631,7 +1640,7 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   (re)application never silently loses a tick, a turn or a roll to the step that applied it.
   - **Authoring: pick the hook for when the status should start.** Applied before the bearer acts
     (`on-turn-start`), it counts this turn: right for a status meant to shape this turn's action
-    (the Glowfly Charger's Glow, until 4.1-H2b). Applied from the action on (a spell, a granted
+    (the Glowfly Charger's Glow, until 4.1-H2b1). Applied from the action on (a spell, a granted
     cast, an `on-[action]` or `on-turn-end` trigger), it starts next turn: right for a status whose
     effect only matters later. Web acts on the next round's turn order, so the Spiders' Weaver
     applies it `on-turn-end` (moved from `on-turn-start` at the 4.1-F2 plan review, so its own
@@ -1679,7 +1688,7 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   log: it pins the round-end **trait** pass, which 4.1-F keeps, and never involved a status tick
   (PR #80 review). The stun and sleep goldens gain `TurnSkipped`.
 - **v1 status content**: DoT (Poison, Burn, Spore), Regen (HoT), Stun, Sleep, Confusion, Web /
-  Grant Act First, Glow (until 4.1-H2b), Silenced, Pacified, and timed **damage-modifier statuses**
+  Grant Act First, Glow (until 4.1-H2b1), Silenced, Pacified, and timed **damage-modifier statuses**
   — Weaken (−% dealt) and Vulnerability (+% taken). **Raw stat buffs/debuffs are NOT statuses** —
   they're
   permanent-for-fight multiplicative `stat-modifier` effects (invisible-as-status; the player sees

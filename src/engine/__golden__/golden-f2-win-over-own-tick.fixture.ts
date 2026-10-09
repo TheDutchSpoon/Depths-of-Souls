@@ -71,7 +71,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: P,
     statusId: 'poison',
-    stacks: 1,
     duration: 3,
     sourceId: P,
   },

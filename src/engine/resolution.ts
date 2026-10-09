@@ -41,6 +41,7 @@ import {
   instantiateEffectDefs,
   instantiateStatus,
   resolveMagnitudeCount,
+  snapshotFor,
 } from './effects'
 import { evaluateCondition, evaluateTriggerCondition } from './conditions'
 import { createEffectInstanceId } from './effect-types'
@@ -53,7 +54,12 @@ import {
 import { nextRandom } from './rng'
 import type { DamageResult } from './damage'
 import type { CreatureId } from './ids'
-import type { CascadeState, DamageChannel, ResolutionContext } from './resolution-types'
+import type {
+  CascadeState,
+  DamageChannel,
+  DamageOrigin,
+  ResolutionContext,
+} from './resolution-types'
 import type { CombatState, Creature, Stat } from './types'
 import type {
   ActiveEffect,
@@ -61,12 +67,19 @@ import type {
   EffectResponse,
   Hook,
   ResponseTarget,
+  SnapshotPotency,
   StatPercent,
   StatusEffect,
+  StatusSnapshot,
   StatusSpec,
 } from './effect-types'
 
-export type { CascadeState, DamageChannel, ResolutionContext } from './resolution-types'
+export type {
+  CascadeState,
+  DamageChannel,
+  DamageOrigin,
+  ResolutionContext,
+} from './resolution-types'
 
 export function newCascade(): CascadeState {
   return { depth: 0, activeInstances: new Set() }
@@ -81,17 +94,14 @@ interface HookContext {
   /** The other creature involved in the trigger (attacker for on-damage-taken, victim for
    * on-damage-dealt/on-kill, dead ally for on-ally-death, ...). */
   readonly source?: CreatureId
-  /** The firing effect's current stack count, when it's a status; absent
-   * for a plain (unstacked) triggered trait. Scales flat deal-damage/heal magnitudes. */
-  readonly stacks?: number
   /** The firing effect's statusId, when it's a status; absent for a plain
    * triggered trait. Threaded onto DamageDealt so a DoT tick's causing status is attributable. */
   readonly statusId?: string
-  /** Phase 4 Slice D: populated ONLY by a consume-stacks response's own wrapped-effect call
-   * (the just-read, about-to-be-cleared stack count) -- absent everywhere else. A
-   * `magnitudeSource: { kind: 'consumed-stacks' }` read outside this context is a resolver
-   * invariant violation (resolveMagnitudeCount throws). */
-  readonly consumedStacks?: number
+  /** Phase 4.1-H2b2 (ASSUMPTION 143): the firing status INSTANCE's applier snapshot, read from
+   * the live owning instance by `fireHook`; absent for a trait/perk/spell and for a status that
+   * declares no potency. A `snapshot-potency` magnitude reads it (a tick), and a status's OWN
+   * `apply-status` of that same status copies it (Spore's spread) -- nothing else does. */
+  readonly snapshot?: StatusSnapshot
   /** Phase 4.1-D (A4): populated ONLY by a spell's own effect loop (actions.ts
    * `executeSpellEffects`) -- the current landed target `cast-target` resolves to. Absent for
    * every trigger; resolving `cast-target` without it is a resolver-invariant error. */
@@ -272,7 +282,7 @@ function dealDamageCore(
     target,
     damage,
     damageSource,
-    false,
+    { kind: 'hit' },
     state,
     ctx,
     statusId,
@@ -287,17 +297,22 @@ function dealDamageCore(
  * on-enemy-death (observers). Death pre-empts the victim's on-damage-taken; hit-reactions
  * (including the observation of the hit) resolve before death-reactions.
  *
- * `selfInflicted` (Phase 4.1-H2b1, ASSUMPTIONS 115, 132, 137) is REQUIRED, with no default, so the
- * compiler finds every caller: it is true only from `applyCostDamage` -- the branch that chose the
- * cost path -- and is NEVER derived from `sourceId === target.id` (a DoT tick's bearer and a direct
- * action landing on its own actor have equal ids and are not costs).
+ * `origin` (Phase 4.1-H2b2, ASSUMPTIONS 5, 17, 146; it replaces H2b1's `selfInflicted` boolean) is
+ * REQUIRED, with no default, so the compiler finds every caller. It is stated by the branch that
+ * chose the path and NEVER derived from `sourceId === target.id` (a tick's self-applied bearer and
+ * a direct action landing on its own actor have equal ids and are not costs):
+ *  - `cost` (only `applyCostDamage`) is the one origin the damage observer reports as self-inflicted.
+ *  - `tick` (only `applyTickDamage`) offers NO source to the bearer's `on-damage-taken` /
+ *    `on-death` -- so `triggering-source` resolves to nothing and no retaliator answers a tick,
+ *    while the hooks themselves still fire (Sleep wakes) -- and fires the dealer-side hooks
+ *    (`on-damage-dealt`, `on-kill`) only for `origin.dealerId`, the living applier.
  */
 export function applyDamageAndEmit(
   sourceId: CreatureId,
   target: Creature,
   damage: DamageResult,
   damageSource: 'attack' | 'cast' | 'dot',
-  selfInflicted: boolean,
+  origin: DamageOrigin,
   state: CombatState,
   ctx: ResolutionContext,
   statusId?: string,
@@ -337,10 +352,24 @@ export function applyDamageAndEmit(
     statusId,
   })
 
-  working = fireHook('on-damage-dealt', [sourceId], target.id, working, ctx).state
+  // The dealer-side hooks (on-damage-dealt, on-kill) run on the creature that dealt the damage; a
+  // tick's dealer is its living applier or no one (a dead applier's fallback bearer is only the
+  // logged source). The bearer-side hooks (on-damage-taken, on-death) see the dealer as their
+  // `source`, except for a tick, which offers none.
+  const dealerIds: readonly CreatureId[] =
+    origin.kind === 'tick' ? (origin.dealerId ? [origin.dealerId] : []) : [sourceId]
+  const bearerSideSource = origin.kind === 'tick' ? undefined : sourceId
+
+  working = fireHook('on-damage-dealt', dealerIds, target.id, working, ctx).state
 
   if (!died) {
-    working = fireHook('on-damage-taken', [target.id], sourceId, working, ctx).state
+    working = fireHook(
+      'on-damage-taken',
+      [target.id],
+      bearerSideSource,
+      working,
+      ctx,
+    ).state
   }
 
   // Phase 4.1-H2b1: the damage observation sits between the hit-reactions and the death chain. The
@@ -352,14 +381,14 @@ export function applyDamageAndEmit(
     target.id,
     working,
     ctx,
-    { observedDamage: { selfInflicted } },
+    { observedDamage: { selfInflicted: origin.kind === 'cost' } },
   ).state
 
   if (!died) return working
 
   ctx.events.push({ type: 'CreatureDied', creatureId: target.id })
-  working = fireHook('on-death', [target.id], sourceId, working, ctx).state
-  working = fireHook('on-kill', [sourceId], target.id, working, ctx).state
+  working = fireHook('on-death', [target.id], bearerSideSource, working, ctx).state
+  working = fireHook('on-kill', dealerIds, target.id, working, ctx).state
   working = fireDeathObservers(target.id, working, ctx)
   return working
 }
@@ -483,8 +512,10 @@ export function fireHook(
       // against the LIVE `self` (not `initial`) that the effect's REAL owning instance
       // (`sourceInstanceId` -- for a status trigger this is the status's shared id, not the
       // derived per-trigger guard id used for the cascade check below) is still present.
-      if (!self.activeEffects.some((a) => a.instanceId === effect.sourceInstanceId))
-        continue
+      const owner = self.activeEffects.find(
+        (a) => a.instanceId === effect.sourceInstanceId,
+      )
+      if (!owner) continue
 
       if (cascade.activeInstances.has(effect.instanceId)) continue // self-re-entry guard
 
@@ -607,9 +638,11 @@ export function fireHook(
       }
 
       // Present only when the resolved trigger came from a status; absent for
-      // a plain permanent trait.
-      const stacks = effect.stacks
+      // a plain permanent trait. The snapshot is read from the LIVE owning instance (ASSUMPTION 7:
+      // the safe read -- unobservable today, a same-pass refresh makes the instance born so its
+      // tick is skipped, and a corpse can't be re-applied), never carried on the candidate.
       const statusId = effect.statusId
+      const snapshot = owner.category === 'status' ? owner.snapshot : undefined
 
       // A `perform-action` response only ENQUEUES its grant (executeResponse), so the self-re-entry
       // guard below is released before the granted action ever starts: an echo chain can pass
@@ -619,7 +652,7 @@ export function fireHook(
       const result = executeResponse(
         effect.response,
         effect.sourceTraitId,
-        { channel: 'indirect', self: self.id, source, stacks, statusId },
+        { channel: 'indirect', self: self.id, source, statusId, snapshot },
         working,
         ctx,
       )
@@ -645,16 +678,16 @@ function resolveResponseTargets(
       return [context.self]
     case 'triggering-source':
     case 'triggering-ally':
-      // PR #64 review fix 3: never resolves to the firing creature itself. A DoT tick's
-      // deal-damage response targets `{kind:'self'}` (the bearer damages itself), so
-      // applyDamageAndEmit's sourceId===targetId -- on-damage-taken's hook context then has
-      // context.source === context.self, and without this check a retaliatory trait (e.g.
-      // Hollowkin Wretch's on-damage-taken -> apply-status(triggering-source, confusion)) would
-      // apply its response to its OWN bearer. TriggerFired has already been emitted by the time
-      // this resolves (fireHook, before executeResponse runs) -- only the response's actual
-      // effect fizzles, the same "no valid target -> empty list -> no-op" discipline every other
-      // ResponseTarget already uses. on-damage-taken itself still fires unconditionally for a
-      // DoT tick (Sleep's wake-on-damage depends on it) -- this fix only narrows targeting, never
+      // PR #64 review fix 3: never resolves to the firing creature itself. A creature's own cost
+      // damages itself (applyCostDamage), so on-damage-taken's hook context has context.source ===
+      // context.self, and without this check a retaliatory trait (e.g. Hollowkin Wretch's
+      // on-damage-taken -> apply-status(triggering-source, confusion)) would apply its response to
+      // its OWN bearer. TriggerFired has already been emitted by the time this resolves (fireHook,
+      // before executeResponse runs) -- only the response's actual effect fizzles, the same "no
+      // valid target -> empty list -> no-op" discipline every other ResponseTarget already uses.
+      // 4.1-H2b2: a status TICK offers no source at all (applyDamageAndEmit, origin 'tick'), so a
+      // living applier's tick reaches no retaliator either; on-damage-taken itself still fires
+      // for a tick (Sleep's wake-on-damage depends on it) -- this only narrows targeting, never
       // hook firing.
       return context.source && context.source !== context.self ? [context.source] : []
     case 'all-enemies':
@@ -724,18 +757,49 @@ function resolveResponseTargets(
   }
 }
 
-/** Flat mode's per-stack magnitude (deal-damage's `flatAmount` / heal's `amountPerStack`),
- * scaled by `count` (stacks, or the live magnitudeSource count that replaces them) -- the exact
- * multiplication both call sites did inline before this brief (`response.flatAmount * flatCount`
- * / `response.amountPerStack * flatCount`), now also accepting a `StatPercent`. Reads the
- * BEARER's (`context.self`) own stat, floored (the integer value the game actually uses -- an
+/** True iff a flat magnitude is the `snapshot-potency` marker (a status's tick, 4.1-H2b2). */
+function isSnapshotPotency(
+  amount: number | StatPercent | SnapshotPotency,
+): amount is SnapshotPotency {
+  return typeof amount === 'object' && 'kind' in amount
+}
+
+/** The firing status instance's snapshot, or a resolver-invariant THROW: a tick with no snapshot
+ * (an instance built by hand without one, a future path that forgets it) must never fall back to
+ * 0 or to the bearer's stat -- that would silently reintroduce the bearer-relative tick. */
+function requireSnapshot(context: HookContext): StatusSnapshot {
+  if (context.snapshot === undefined) {
+    throw new Error(
+      "resolver invariant violated: a snapshot-potency magnitude fired with no snapshot in context (a tick needs its status instance's applier snapshot)",
+    )
+  }
+  return context.snapshot
+}
+
+/** The creature a tick credits (4.1-H2b2, ASSUMPTIONS 113, 146): its applier WHILE IT LIVES --
+ * judged at tick time, so a revived applier is the source again -- else the bearer, which is only
+ * the logged source (`dealerId` is then null: no dealer-side hook fires). One rule for the damage
+ * tick and Regen's heal. */
+function tickDealer(
+  snapshot: StatusSnapshot,
+  state: CombatState,
+): { sourceOf: (bearerId: CreatureId) => CreatureId; dealerId: CreatureId | null } {
+  const applier = findCreature(state, snapshot.applierId)
+  const dealerId = applier?.alive ? applier.id : null
+  return { sourceOf: (bearerId) => dealerId ?? bearerId, dealerId }
+}
+
+/** Flat mode's magnitude (deal-damage's / heal's `flatAmount`, never the snapshot marker -- that
+ * is a tick, handled before this is reached), scaled by `count` (the live magnitudeSource count,
+ * else 1), also accepting a `StatPercent`. Reads the FIRING creature's (`context.self`) own
+ * stat, floored (the integer value the game actually uses -- an
  * effective stat can be fractional under modifiers, e.g. 240 * 1.1 = 264.00000000000006),
  * multiplies in the integer `percent` and `count` BEFORE dividing by 100 -- `percent` is a
  * positive integer specifically so this is exact in floating point (a float fraction like `*
  * 0.03` can land just below an integer, e.g. 180 * 0.03 * 5 = 26.999999999999996, and floor one
  * too low). The one remaining floor (over the whole `stat * percent * count / 100`, never
- * per-stack) stays where it already lived: applyFlatDamage's `Math.floor` (with its minimum of
- * 1) and applyHeal's `Math.floor` (clamped to effective max HP) -- this function returns an
+ * per-unit) stays where it already lived: applyCostDamage's `Math.floor` and applyHeal's
+ * `Math.floor` (clamped to effective max HP) -- this function returns an
  * unfloored value on purpose so that single downstream floor is the only one. */
 function resolveFlatTotal(
   bearer: Creature,
@@ -776,21 +840,21 @@ export function executeResponse(
         )
       }
       const bearer = getCreature(state, context.self)
-      // Phase 4 Slice D: magnitudeSource, when present, REPLACES the repetition count this
-      // response's magnitude is scaled by with a live resolveMagnitudeCount(...) reading (see
-      // MagnitudeSource's own doc comment). Phase 4.1-F1 (A3): the DEFAULT count -- when no
-      // magnitudeSource is declared -- is the firing status's `stacks` (undefined for a trait's
-      // own trigger, so it stays the implicit 1), in flat AND formula mode. Resolved ONCE up
-      // front (bearer/state don't change per target); the single `count` feeds whichever mode
-      // below actually reads it (only one does per call).
+      // Phase 4 Slice D: magnitudeSource, when present, is the repetition count this response's
+      // magnitude is scaled by, a live resolveMagnitudeCount(...) reading (see MagnitudeSource's
+      // own doc comment); absent, the count stays the implicit 1, in flat AND formula mode (a
+      // status is single-instance, 4.1-H2b2). Resolved ONCE up front (bearer/state don't change
+      // per target); the single `count` feeds whichever mode below actually reads it (only one
+      // does per call).
       const count = response.magnitudeSource
-        ? resolveMagnitudeCount(
-            bearer,
-            state,
-            response.magnitudeSource,
-            context.consumedStacks,
-          )
-        : context.stacks
+        ? resolveMagnitudeCount(bearer, state, response.magnitudeSource)
+        : undefined
+      // A status's tick (4.1-H2b2): its snapshot is required up front (the invariant throw), read
+      // once -- the bearer is the one target (the validator pins `self`).
+      const tickSnapshot =
+        response.flatAmount !== undefined && isSnapshotPotency(response.flatAmount)
+          ? requireSnapshot(context)
+          : undefined
       // PR #64 review fix 4: a magnitudeSource resolving to exactly 0 is a FULL no-op -- no
       // DamageDealt, no downstream damage-path hooks (on-damage-dealt/on-damage-taken/death). The
       // damage formula's own MIN(1, floor(raw)) floor would otherwise still deal 1 damage even at
@@ -813,22 +877,24 @@ export function executeResponse(
         const t = findCreature(working, targetId)
         if (!t || !t.alive) continue // never strike a corpse
         const damageSource = response.damageSource ?? 'dot'
-        if (response.flatAmount !== undefined) {
-          const amount = resolveFlatTotal(bearer, response.flatAmount, flatCount)
-          if (context.statusId !== undefined && targetId === context.self) {
-            // A DoT tick (ASSUMPTION 131): a status-sourced flat hit on its own bearer. Stays on
-            // today's path in H2a (floor, minimum 1); H2b moves it. Judged on `statusId`, never on
-            // the 'dot' label (CATASTROPHIC_COLLAPSE carries that label and is a cost).
-            working = applyFlatDamage(
-              context.self,
-              targetId,
-              amount,
-              damageSource,
-              working,
-              ctx,
-              context.statusId,
-            )
-          } else if (context.channel === 'indirect' && targetId === context.self) {
+        if (tickSnapshot !== undefined) {
+          // A status tick (ASSUMPTION 144): recognised by its marker, never by the 'dot' label or
+          // by statusId + self (CATASTROPHIC_COLLAPSE carries that label and is a cost).
+          working = applyTickDamage(
+            targetId,
+            tickSnapshot,
+            damageSource,
+            working,
+            ctx,
+            context.statusId,
+          )
+        } else if (response.flatAmount !== undefined) {
+          const amount = resolveFlatTotal(
+            bearer,
+            response.flatAmount as number | StatPercent,
+            flatCount,
+          )
+          if (context.channel === 'indirect' && targetId === context.self) {
             working = applyCostDamage(
               context.self,
               amount,
@@ -910,30 +976,25 @@ export function executeResponse(
     case 'heal': {
       // Phase 4 Slice E2 (Treants Elder / Necromoss): mirrors deal-damage's own mode-selection
       // exactly (ASSUMPTION 6-style exclusivity, magnitudeSource-as-repetition-count). Flat mode
-      // (Regen, the pre-Slice-E2 default) scales `amountPerStack` by `stacks` (or the live count,
-      // if magnitudeSource replaces it); `scalingStat` mode reads the HEALER's (firing
-      // creature's) own effective stat × spellPower × the same live count -- never the target's.
+      // (the Wick's heal; Regen's tick via the `snapshot-potency` marker, 4.1-H2b2) reads
+      // `flatAmount`; `scalingStat` mode reads the HEALER's (firing creature's) own effective stat
+      // × spellPower × the same live count -- never the target's.
       // Phase 4.1-D (F2): offStat joins as the third mode; all three are mutually exclusive.
       const healModesSet = [
-        response.amountPerStack !== undefined,
+        response.flatAmount !== undefined,
         response.scalingStat !== undefined,
         response.offStat !== undefined,
       ].filter(Boolean).length
       if (healModesSet > 1) {
         throw new Error(
-          'resolver invariant violated: heal response set more than one of amountPerStack/scalingStat/offStat',
+          'resolver invariant violated: heal response set more than one of flatAmount/scalingStat/offStat',
         )
       }
       const bearer = getCreature(state, context.self)
-      // Same count composition as deal-damage (magnitudeSource, else the firing status's stacks).
+      // Same count composition as deal-damage (magnitudeSource, else the implicit 1).
       const count = response.magnitudeSource
-        ? resolveMagnitudeCount(
-            bearer,
-            state,
-            response.magnitudeSource,
-            context.consumedStacks,
-          )
-        : context.stacks
+        ? resolveMagnitudeCount(bearer, state, response.magnitudeSource)
+        : undefined
       // PR #64 review fix 4: mirrors deal-damage's own zero-count no-op -- see its comment above.
       // A heal has no min-1 floor to worry about (applyHeal's own Math.max(0, ...) already
       // allows a 0 heal), but this still skips emitting a HealApplied event for a "heal" that
@@ -945,11 +1006,28 @@ export function executeResponse(
       // deal-damage's own magnitudeSource.
       const flatCount = count ?? 1
       const formulaMultiplier = count ?? context.castPowerFraction ?? 1
+      // Regen's tick (4.1-H2b2): the snapshot is required up front, like deal-damage's.
+      const tickSnapshot =
+        response.flatAmount !== undefined && isSnapshotPotency(response.flatAmount)
+          ? requireSnapshot(context)
+          : undefined
 
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const t = findCreature(working, targetId)
         if (!t || !t.alive) continue
+        if (tickSnapshot !== undefined) {
+          // The healer's potency, frozen at application; credited to the applier while it lives,
+          // else the bearer -- the damage tick's rule (ASSUMPTION 146, one tick rule).
+          working = applyHeal(
+            tickDealer(tickSnapshot, working).sourceOf(targetId),
+            targetId,
+            tickSnapshot.potency,
+            working,
+            ctx,
+          )
+          continue
+        }
         let amount: number
         if (response.offStat !== undefined) {
           // Remap-aware (a stat-remap redirects the slot), the lookup a heal SPELL always used;
@@ -967,7 +1045,11 @@ export function executeResponse(
             getEffectiveStat(bearer, response.scalingStat) *
             ((response.spellPower ?? 1.0) * formulaMultiplier)
         } else {
-          amount = resolveFlatTotal(bearer, response.amountPerStack ?? 0, flatCount)
+          amount = resolveFlatTotal(
+            bearer,
+            (response.flatAmount ?? 0) as number | StatPercent,
+            flatCount,
+          )
         }
         working = applyHeal(context.self, targetId, amount, working, ctx)
       }
@@ -980,19 +1062,11 @@ export function executeResponse(
       // finalFactor is a plain number baked into every target's new StatModifierEffect, never
       // recomputed later (contrast Bulwark's damage-modifier, which DOES live-recompute).
       const bearer = getCreature(state, context.self)
-      // Phase 4.1-F1 (A3): the default count is the firing status's stacks -- only when above 1,
-      // so a single stack (and every trait trigger) keeps `factor` verbatim instead of the
-      // float-lossy `1 + (factor - 1) * 1`.
+      // No magnitudeSource keeps `factor` verbatim instead of the float-lossy
+      // `1 + (factor - 1) * 1`.
       const count = response.magnitudeSource
-        ? resolveMagnitudeCount(
-            bearer,
-            state,
-            response.magnitudeSource,
-            context.consumedStacks,
-          )
-        : context.stacks !== undefined && context.stacks > 1
-          ? context.stacks
-          : undefined
+        ? resolveMagnitudeCount(bearer, state, response.magnitudeSource)
+        : undefined
       const finalFactor =
         count === undefined ? response.factor : 1 + (response.factor - 1) * count
 
@@ -1017,7 +1091,20 @@ export function executeResponse(
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
         if (!findCreature(working, targetId)?.alive) continue
-        working = applyStatus(context.self, targetId, response.status, working, ctx)
+        // Pass-on by rule (ASSUMPTIONS 143, 145): a status's OWN effect applying that same status
+        // copies the firing instance's snapshot (Spore's spread, the dying bearer's whole
+        // snapshot). A trait, perk or spell has no `statusId` in its context, so a carrier can
+        // never pass a snapshot on -- it snapshots its own stat fresh.
+        const inherited =
+          context.statusId === response.status.statusId ? context.snapshot : undefined
+        working = applyStatus(
+          context.self,
+          targetId,
+          response.status,
+          working,
+          ctx,
+          inherited,
+        )
       }
       return { state: working }
     }
@@ -1098,52 +1185,12 @@ export function executeResponse(
       }
       return { state: working }
     }
-    case 'consume-stacks': {
-      // Phase 4 Slice D (the retired Glowfly Detonator). SELF-scoped: reads and clears the FIRING
-      // creature's own statusId stacks (context.self), not a targeted creature's -- consume-
-      // stacks has no `target` field, matching the self-scoped trigger-condition convention.
-      const self = getCreature(state, context.self)
-      const existing = self.activeEffects.find(
-        (e): e is StatusEffect =>
-          e.category === 'status' && e.statusId === response.statusId,
-      )
-      // 0/absent stacks is a full no-op (CONVENTIONS: "no status present" and "0 stacks" are the
-      // same state) -- the wrapped `effect` never fires, mirroring `deal-damage`'s "never strike
-      // a corpse" skip rather than firing it with a magnitude of 0.
-      if (!existing) return { state }
-
-      const consumedStacks = existing.stacks
-      const working = updateCreature(state, context.self, {
-        activeEffects: self.activeEffects.filter(
-          (e) => e.instanceId !== existing.instanceId,
-        ),
-      })
-      // ASSUMPTION 18: StatusExpired, not a mere decrement -- the status is genuinely gone.
-      ctx.events.push({
-        type: 'StatusExpired',
-        creatureId: context.self,
-        statusId: response.statusId,
-      })
-
-      // The wrapped effect is executed DIRECTLY (not via fireHook) -- it's a continuation of the
-      // SAME trigger firing, not a new hook point: no separate TriggerFired, no additional
-      // cascade-depth increment/self-re-entry-guard bookkeeping (the outer consume-stacks
-      // trigger's own instance already holds that). Consumes/clears state, so it cannot re-fire
-      // itself even if the wrapped effect somehow re-triggered this same hook.
-      return executeResponse(
-        response.effect,
-        sourceTraitId,
-        { ...context, consumedStacks },
-        working,
-        ctx,
-      )
-    }
     case 'remove-status': {
-      // Phase 4 Slice E2 (Sleep's on-damage-taken wake-up; future cleanse/dispel). Unlike
-      // consume-stacks, this has a real `target` field -- reuses the full ResponseTarget
+      // Phase 4 Slice E2 (Sleep's on-damage-taken wake-up; future cleanse/dispel). It has a real
+      // `target` field -- reuses the full ResponseTarget
       // vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies" get targeting for free.
       // A no-op, no-event when the target doesn't carry the statusId (mirrors revive's
-      // "target must be dead" / consume-stacks' "0 stacks" skip style) -- reuses the exact
+      // "target must be dead" skip style) -- reuses the exact
       // StatusExpired clear path so death-reset and the turn-end cleanup stay consistent.
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
@@ -1175,34 +1222,43 @@ export function executeResponse(
   }
 }
 
-/** DoT: a flat, stack-scaled magnitude, independent of any stat, bypassing the whole formula
- * (Defence/affinity/pools). Still real damage application -- fires the same damage-path hooks
- * (on-damage-dealt/-taken/-death/-kill/-ally-death/-enemy-death) as any other damage source. */
-function applyFlatDamage(
-  sourceId: CreatureId,
-  targetId: CreatureId,
-  amount: number,
+/**
+ * Phase 4.1-H2b2 (ASSUMPTIONS 113, 143, 144, 146; CONVENTIONS "DoT and Regen from the applier's
+ * snapshot"): a status's damage tick -- INDIRECT damage computed from the instance's applier
+ * snapshot, through the ONE indirect formula (`calculateIndirectDamage`, no third formula):
+ * `potency × affinity(snapshot vs bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective
+ * Defence`, `MAX(1, floor(...))`. Defend's ×1.5 Defence and ×0.65 taken factor apply, as for all
+ * indirect damage. There is NO dealt pool (so no `conditional-damage-bonus`), no cross-stat, no
+ * armour penetration and no Additional: those are the applier's live build, absent from the
+ * snapshot. The source is the applier while it lives, else the bearer (`tickDealer`); the origin
+ * is a `tick` carrying that dealer, so the bearer's hooks see no `triggering-source` and the
+ * dealer-side hooks fire only for a living applier. Never self-inflicted.
+ */
+function applyTickDamage(
+  bearerId: CreatureId,
+  snapshot: StatusSnapshot,
   damageSource: 'attack' | 'cast' | 'dot',
   state: CombatState,
   ctx: ResolutionContext,
   statusId?: string,
 ): CombatState {
-  const target = getCreature(state, targetId)
-  const finalDamage = Math.max(1, Math.floor(amount))
-  const damage: DamageResult = {
-    rawDamage: amount,
-    finalDamage,
-    affinityMultiplier: 1,
-    wasChipOnly: false,
-  }
-  // The tick path (ASSUMPTION 131): never self-inflicted, even though the bearer is both source and
-  // target here (H2b2 moves the source to the applier).
+  const bearer = getCreature(state, bearerId)
+  const { defence, takenFactors: defendFactors } = resolveDefenceAndTakenFactors(bearer)
+  const damage = calculateIndirectDamage({
+    magnitude: snapshot.potency,
+    defence,
+    attackerAffinity: snapshot.affinity,
+    defenderAffinity: bearer.affinity,
+    dealtMods: [],
+    takenFactors: [...defendFactors, ...gatherTakenFactors(bearer, state)],
+  })
+  const { sourceOf, dealerId } = tickDealer(snapshot, state)
   return applyDamageAndEmit(
-    sourceId,
-    target,
+    sourceOf(bearerId),
+    bearer,
     damage,
     damageSource,
-    false,
+    { kind: 'tick', dealerId },
     state,
     ctx,
     statusId,
@@ -1226,21 +1282,21 @@ function applyCostDamage(
 ): CombatState {
   const damage = calculateCost(magnitude)
   if (damage.finalDamage === 0) return state
-  // The ONLY caller that passes selfInflicted: true (Phase 4.1-H2b1, ASSUMPTIONS 115, 132, 137):
-  // the cost classification is the choice of this branch, carried -- not re-derived from the ids.
+  // The ONLY caller that passes origin 'cost' (Phase 4.1-H2b1, ASSUMPTIONS 115, 132, 137): the
+  // cost classification is the choice of this branch, carried -- not re-derived from the ids.
   return applyDamageAndEmit(
     selfId,
     getCreature(state, selfId),
     damage,
     damageSource,
-    true,
+    { kind: 'cost' },
     state,
     ctx,
     statusId,
   )
 }
 
-/** Regen / spell heal: a flat or stat-scaled heal, clamped to effective max Health -- no
+/** Regen tick / spell heal: a flat or stat-scaled heal, clamped to effective max Health -- no
  * auto-heal past it. Reached through `executeResponse`'s `heal` (a trigger's or a spell's own
  * effect list); exported so the 4.1-D equivalence oracle (spell-effects.test.ts) can replay the
  * pre-4.1-D cast path on the same primitive. */
@@ -1266,15 +1322,22 @@ export function applyHeal(
 }
 
 /**
- * Applies (or re-applies) a status. Single instance per (statusId, creature): a fresh
- * application creates a new instance at the status's declared duration/stacks; re-applying
- * REFRESHES duration to the new application's value and increments stacks up to the status
- * definition's declared cap. Emits StatusApplied, then fires on-status-applied (event-before-hook).
+ * Applies (or re-applies) a status. Single instance per (statusId, creature) (4.1-H2b2, ASSUMPTION
+ * 114): a fresh application creates a new instance at the status's declared duration; re-applying
+ * keeps the instance (and its id), REFRESHES the timer to the new application's duration (even
+ * when shorter) and resets `appliedAt` (born this turn), and replaces the applier snapshot ONLY
+ * when the new one's potency is STRICTLY greater -- a tie or a weaker one keeps the current
+ * instance whole (applier, affinity and potency), so the source of later ticks does not move on a
+ * tie. A fixed-magnitude status carries no snapshot and just refreshes. Every application emits
+ * StatusApplied (`sourceId` = the applying creature, ASSUMPTION 9) and fires on-status-applied
+ * (event-before-hook), weaker or tied included.
+ *
+ * The candidate snapshot is `inherited` when the caller passes one (a status's own effect applying
+ * the same status: Spore's spread, ASSUMPTION 143) and otherwise the APPLYING creature's own,
+ * taken fresh now (`snapshotFor`) -- even when that creature carries the status itself.
  *
  * Phase 4 Slice F (review amendment): `spec.duration ?? def.defaultDuration` -- an omitted
- * duration inherits the status's own declared default; an explicit one overrides it. Every
- * pre-amendment `StatusSpec` in real content/goldens already sets `duration` explicitly, so this
- * is byte-identical there (`spec.duration` always wins when present).
+ * duration inherits the status's own declared default; an explicit one overrides it.
  */
 export function applyStatus(
   sourceId: CreatureId,
@@ -1282,6 +1345,7 @@ export function applyStatus(
   spec: StatusSpec,
   state: CombatState,
   ctx: ResolutionContext,
+  inherited?: StatusSnapshot,
 ): CombatState {
   const def = state.statuses.get(spec.statusId)
   if (!def) {
@@ -1294,8 +1358,9 @@ export function applyStatus(
     (e): e is StatusEffect => e.category === 'status' && e.statusId === spec.statusId,
   )
 
-  const addedStacks = spec.stacks ?? 1
-  const newStacks = Math.min(def.cap, (existing?.stacks ?? 0) + addedStacks)
+  const candidate: StatusSnapshot | undefined = def.potency
+    ? (inherited ?? snapshotFor(getCreature(state, sourceId), def.potency))
+    : undefined
 
   // Phase 4.1-B (B4): refreshing keeps the existing instance and its id (no new counter draw);
   // only a genuinely FRESH application issues a new id, from the shared per-fight counter (the
@@ -1307,17 +1372,18 @@ export function applyStatus(
         e.instanceId === existing.instanceId
           ? // Phase 4 Slice H2 (PR #60 review): spread `existing` (already narrowed to the status
             // container by the `.find()` above), not the loop's own `e: ActiveEffect` --
-            // now that `TriggeredEffect` also carries an UNRELATED `stacks?: boolean` field
-            // (E2.1's dedup flag), spreading the raw union member no longer type-checks cleanly
-            // against `ActiveEffect` (a real conflict TS now catches, not a spurious one: `e`
-            // could type-widen to `TriggeredEffect`, whose `stacks` is a boolean, not this
-            // status's numeric stack count). `existing` carries the exact same runtime value at
-            // this index (that's how it was found) with a type that's actually correct.
+            // `TriggeredEffect` carries an UNRELATED `stacks?: boolean` field (E2.1's dedup
+            // flag), so spreading the raw union member no longer type-checks cleanly against
+            // `ActiveEffect`. `existing` carries the exact same runtime value at this index.
             {
               ...existing,
               remainingDuration: duration,
-              stacks: newStacks,
               appliedAt: state.turnClock, // F2: a refresh is born this turn too
+              ...(candidate &&
+              (existing.snapshot === undefined ||
+                candidate.potency > existing.snapshot.potency)
+                ? { snapshot: candidate }
+                : {}),
             }
           : e,
       )
@@ -1327,7 +1393,7 @@ export function applyStatus(
           def,
           createEffectInstanceId(`eff-${counter++}`),
           duration,
-          newStacks,
+          candidate,
           state.turnClock,
         ),
       ]
@@ -1339,7 +1405,6 @@ export function applyStatus(
     type: 'StatusApplied',
     targetId,
     statusId: spec.statusId,
-    stacks: newStacks,
     duration,
     sourceId,
   })

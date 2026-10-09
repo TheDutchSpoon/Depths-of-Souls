@@ -737,14 +737,12 @@ describe('born-this-turn: a status refreshed in its own bearer turn keeps full d
     }
     const WEAKEN_TEST: StatusDef = {
       statusId: 'weaken-test',
-      cap: 1,
       polarity: 'debuff',
       defaultDuration: 3,
       effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.1 }],
     }
     const VULNERABILITY_TEST: StatusDef = {
       statusId: 'vulnerability-test',
-      cap: 1,
       polarity: 'debuff',
       defaultDuration: 3,
       effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.2 }],
@@ -989,7 +987,6 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
 describe('Web break-free (Phase 4 Slice E2)', () => {
   const WEB_TEST_STATUS: StatusDef = {
     statusId: 'web-test-fixture',
-    cap: 1,
     polarity: 'debuff',
     defaultDuration: 3,
     effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 50 }],

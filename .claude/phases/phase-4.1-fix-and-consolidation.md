@@ -3341,3 +3341,100 @@ Engine: `effect-types.ts`, `resolution.ts`, `targeting.ts`, `target-selectors.ts
 and spell files. Tests, goldens, `__fixtures__/flickerlings.ts`, `corpus-digest.fixture.ts`. Docs:
 `content/glimmerdark.md`, the plan's Revision 2. Deleted by Duncan: `golden-glowfly-detonator.fixture.ts` and
 `.test.ts`.
+
+## 4.1-H2b2 -- Status rules: single instance and the applier snapshot (deliberate)
+
+Mailbox: `.claude/phases/4.1/H2b2/` (kickoff, brief, plan with Revision 1, plan review rounds 1-2 with six
+binding build conditions, `report-r1.md`). Built against ASSUMPTIONS 113-115, 129, 131, 132, 134, 136, 139,
+142, 143 and the decisions 144-146.
+
+### What was built
+
+- **Single instance** (ASSUMPTION 114): `StatusDef.cap`, `StatusSpec.stacks`, the instance's stack count,
+  the x stacks count on ticks, `magnitude ** stacks`, the `consume-stacks` response, the `consumed-stacks`
+  magnitude source and `StatusApplied.stacks` are deleted. A re-application keeps the instance and its id,
+  refreshes the timer to the new application's duration (even a shorter one), resets `appliedAt`, and
+  replaces the snapshot only when its potency is strictly greater (a tie or a weaker one keeps the current
+  instance whole).
+- **The applier snapshot** (ASSUMPTIONS 113, 143-146): `StatusDef.potency: { ofStat, percent }` (Poison 20%
+  Attack, Burn 25% Intelligence, Regen 10% Health, Spore 15% Speed, placeholders for H2c);
+  `StatusInstanceState.snapshot: { applierId, affinity, potency }` recorded once by `snapshotFor`; the tick is
+  the `{ kind: 'snapshot-potency' }` magnitude of a `deal-damage` / `heal` (`flatAmount`, which replaces
+  `amountPerStack`). A damage tick goes through `calculateIndirectDamage` with the snapshot's potency and
+  affinity, the bearer's Defence (Defend included) and taken factors, no dealt pool, no cross-stat, no armour
+  penetration, no Additional. `applyDamageAndEmit` takes a required `origin` (`hit | cost | tick{ dealerId }`)
+  in place of `selfInflicted`: a tick offers no `triggering-source` to the bearer's `on-damage-taken` /
+  `on-death`, and its dealer-side hooks (`on-damage-dealt`, `on-kill`) fire only for the living applier.
+  The source is the applier while it lives (judged at tick time), else the bearer; Regen's `HealApplied`
+  follows the same rule.
+- **Pass-on by rule** (ASSUMPTIONS 143, 145): in `executeResponse`'s `apply-status`,
+  `context.statusId === spec.statusId` copies the firing instance's snapshot (Spore's spread). Anything else
+  snapshots its applier fresh. `fireHook` reads the snapshot from the live owning instance. A tick with no
+  snapshot is a resolver-invariant throw.
+- **Validators:** a status with `potency` carries exactly one self-targeted `snapshot-potency` tick with no
+  `magnitudeSource` and a positive-integer percent; a status without it carries none (`validateStatusDef`);
+  traits and perks reject the marker (`validateNoSnapshotPotencyOutsideStatus`); spells reject every
+  `flatAmount`.
+- **Content:** Vulnerability x1.5 once; Sporch Igniter and Cinderlord one Burn; the percentages above.
+
+### Predicted changed set against what changed
+
+Predicted (plan section 3, written before anything ran): 1 retired, 32 field-only (31 + the renamed Cinderlord
+golden), 8 snapshot (7 with a `StatusApplied`), 1 both, the rest unchanged. Built: exactly that. A deep-compare
+of every `expected*` export against `main` (extracted outside the repo): 79 identical, 31 equal after stripping
+`stacks`, 9 differ (the 8 tick goldens and the burst-refresh), 2 removed (`golden-consume-stacks`, and
+`golden-sporch-cinderlord-burn-stacks`, renamed to `-burn-refresh`, which equals it after the strip). The H2b
+split's "41" was the count of fixtures containing a `StatusApplied` (41 then and now), not of field-only ones.
+
+### Corpus digest (regenerated once)
+
+457 of 527 fights changed (the 70 unchanged are the fights with no status event). Layers: field only 305;
+single instance 89, all with a re-application or `stacks > 1` in `main`'s log; snapshot 151, all with a tick or
+Regen; 88 under both; 0 unexplained. All 151 snapshot fights differ from a bearer-source variant by the tick's
+source label alone: no hook or retaliation effect of a tick occurs in the corpus. Results win 222 -> 215, loss
+266 -> 260, draw 39 -> 52. The corpus already holds living-applier ticks (137 fights), dead-applier ticks (47)
+and Spore spreads (108); `corpus-coverage.test.ts` asserts all three. About 93% of corpus ticks sit on the
+minimum of 1 with the placeholder percentages (for H2c).
+
+### Mutations (a scratch copy of the finished tree, one change at a time; the digest does not count)
+
+All 22 killed by a named non-digest test: stacking restored; the weaker value replacing the stronger; a tie
+replacing the applier; the timer not refreshed on a weaker application; the tick / the Regen heal reading the
+bearer's stat; the snapshot read live (damage and heal); the tick without Defence; the dealt pool applied; the
+source left as the bearer (damage and heal); the dead-applier fallback removed; `triggering-source` offered on
+a tick; a tick self-inflicted (applier dead, and dealer = bearer); the spread snapshotting fresh; a carrier
+passing its snapshot on; the bearer's affinity used; the applier offered as `on-death`'s source; dealer hooks
+firing on the fallback bearer; dealer hooks not firing for a self-applied tick. Table in `report-r1.md`.
+
+Two more rows from the PR review (r2, test-only; table in `report-r2.md`), each killed by a named non-digest
+test: the bearer's status/perk taken factors dropped from a tick (`takenFactors: [...defendFactors]`) killed by
+`golden-h2b2-tick-taken-factors`; the pass-on rule widened to any status (`context.statusId !== undefined`)
+killed by `status-snapshot.test.ts` "a status X whose effect applies a DIFFERENT status snapshots its bearer fresh". 24 mutations in all.
+
+### Test count (main -> slice, file by file)
+
+Files 182 -> 193; tests 1266 (1265 passed, 1 skipped) -> 1297 (1296 passed, 1 skipped), +31 (r2 added
+`golden-h2b2-tick-taken-factors` +1 file / +1 test and one test in `status-snapshot.test.ts`, so 24 there); r1 was
+files 182 -> 192, +29:
+`status-snapshot.test.ts` +23, ten `golden-h2b2-*` +10, `golden-sporch-cinderlord-burn-refresh` +1,
+`data/statuses.test.ts` +3, `corpus-coverage.test.ts` +1, `resolution.test.ts` -3, `effects.test.ts` -2,
+`perform-action.test.ts` -2, `golden-consume-stacks` -1, `golden-sporch-cinderlord-burn-stacks` -1.
+
+### Deviations and spec notes
+
+- The two rules were built in one pass, not as two separately green steps.
+- A plain flat number damaging its own bearer inside a status is a cost; a plain flat heal is an ordinary
+  heal. A weaker or tied re-application refreshes the timer, even to a shorter one. A self-applied tick makes
+  its bearer the dealer. The docs' stale text is listed with file and line in `report-r1.md` (Spec questions).
+
+### Files changed
+
+Engine: `effect-types.ts`, `effects.ts`, `resolution.ts`, `resolution-types.ts` (`DamageOrigin`), `types.ts`.
+Data: `statuses.ts`, `traits/rotcap-hollow.ts`, `traits/glimmerdark.ts` (the Wick's `flatAmount`),
+`traits/index.ts` and `specializations.ts` (the marker validator), `spells/glimmerdark.ts` (a comment). UI:
+`CombatDemo.tsx` (no stack count). Tests: `status-snapshot.test.ts` (new), `corpus-coverage.test.ts`, the
+mechanical `cap` / `stacks` removals and rewrites in the files listed in the report, 42 modified golden
+fixtures (31 field-only, 9 re-derived, `golden-heal-scaling-count` and `golden-defend-count` input/comment
+only), eleven new `golden-h2b2-*` (the eleventh, `golden-h2b2-tick-taken-factors`, from r2) and the renamed Cinderlord pair,
+`corpus-digest.fixture.ts`. No living doc or content doc edited. Deleted by Duncan: `golden-consume-stacks`
+and `golden-sporch-cinderlord-burn-stacks` (each `.fixture.ts` and `.test.ts`).

@@ -197,27 +197,23 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
   const weaken: ActiveEffect = {
     category: 'status',
     statusId: 'weaken',
-    cap: 1,
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId('w'),
     sourceTraitId: 'weaken',
     remainingDuration: 2,
     appliedAt: 0,
-    stacks: 1,
     effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.2 }],
   }
   const vulnerability: ActiveEffect = {
     category: 'status',
     statusId: 'vulnerability',
-    cap: 2,
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId('v'),
     sourceTraitId: 'vulnerability',
     remainingDuration: 2,
     appliedAt: 0,
-    stacks: 2,
     effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.5 }],
   }
   const unrelated: ActiveEffect = {
@@ -228,28 +224,26 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     sourceTraitId: 'brutish',
   }
 
-  it('gatherDealtMods sums magnitude*stacks for dealt damage-modifier effects only', () => {
+  it('gatherDealtMods sums magnitude for dealt damage-modifier effects only', () => {
     const c = makeCreature({ activeEffects: [weaken, vulnerability, unrelated] })
     expect(gatherDealtMods(c, makeState())).toEqual([-0.2])
   })
 
-  it('gatherTakenFactors compounds magnitude ** stacks for taken damage-modifier effects only', () => {
+  it('gatherTakenFactors yields magnitude once (single instance, 4.1-H2b2) for taken damage-modifier effects only', () => {
     const c = makeCreature({ activeEffects: [weaken, vulnerability, unrelated] })
-    expect(gatherTakenFactors(c, makeState())).toEqual([1.5 ** 2])
+    expect(gatherTakenFactors(c, makeState())).toEqual([1.5])
   })
 
-  it('a magnitudeSource replaces `stacks` as the live count the magnitude is scaled by (Phase 4 Slice D)', () => {
+  it('a magnitudeSource is the live count the magnitude is scaled by (Phase 4 Slice D)', () => {
     const bulwarkShaped: ActiveEffect = {
       category: 'status',
       statusId: 'bulwark-fixture',
-      cap: 999,
       polarity: 'buff',
       defaultDuration: 3,
       instanceId: createEffectInstanceId('b'),
       sourceTraitId: 'bulwark-fixture',
       remainingDuration: 999,
       appliedAt: 0,
-      stacks: 1,
       // ignored -- magnitudeSource overrides it with the live defendCount below,
       effects: [
         {
@@ -271,14 +265,12 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
       return {
         category: 'status',
         statusId: 'bulwark-additive-fixture',
-        cap: 1,
         polarity: 'buff',
         defaultDuration: 3,
         instanceId: createEffectInstanceId('bulwark-additive'),
         sourceTraitId: 'bulwark-additive-fixture',
         remainingDuration: 999,
         appliedAt: 0,
-        stacks: 1,
         effects: [
           {
             category: 'damage-modifier',
@@ -315,14 +307,12 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
       const multiplicative: ActiveEffect = {
         category: 'status',
         statusId: 'bulwark-fixture',
-        cap: 999,
         polarity: 'buff',
         defaultDuration: 3,
         instanceId: createEffectInstanceId('b2'),
         sourceTraitId: 'bulwark-fixture',
         remainingDuration: 999,
         appliedAt: 0,
-        stacks: 1,
         effects: [
           {
             category: 'damage-modifier',
@@ -346,7 +336,6 @@ describe('hasStatus', () => {
     const dot: ActiveEffect = {
       category: 'status',
       statusId: 'poison',
-      cap: 5,
       effects: [
         {
           category: 'triggered',
@@ -360,7 +349,6 @@ describe('hasStatus', () => {
       sourceTraitId: 'poison',
       remainingDuration: 2,
       appliedAt: 0,
-      stacks: 1,
     }
     const c = makeCreature({ activeEffects: [dot] })
     expect(hasStatus(c, 'poison')).toBe(true)
@@ -530,14 +518,12 @@ describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
   const confusion: ActiveEffect = {
     category: 'status',
     statusId: 'confusion',
-    cap: 1,
     polarity: 'debuff',
     defaultDuration: 3,
     instanceId: createEffectInstanceId('confusion'),
     sourceTraitId: 'confusion',
     remainingDuration: 3,
     appliedAt: 0,
-    stacks: 1,
     effects: [{ category: 'friendly-fire', chancePercent: 50 }],
   }
 
@@ -617,7 +603,6 @@ describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
     const poisoned: ActiveEffect = {
       category: 'status',
       statusId: 'poison',
-      cap: 5,
       effects: [
         {
           category: 'triggered',
@@ -631,7 +616,6 @@ describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
       sourceTraitId: 'poison',
       remainingDuration: 2,
       appliedAt: 0,
-      stacks: 1,
     }
     const player = makeParty('player', [{ id: 'a' }])
     const enemy = makeParty('enemy', [
@@ -683,20 +667,6 @@ describe('resolveMagnitudeCount (Phase 4 Slice D)', () => {
         of: 'self-defend-count',
       }),
     ).toBe(4)
-  })
-
-  it("'consumed-stacks' returns the threaded consumedStacks value", () => {
-    const c = makeCreature({})
-    expect(resolveMagnitudeCount(c, makeState(), { kind: 'consumed-stacks' }, 6)).toBe(6)
-  })
-
-  it("'consumed-stacks' throws when resolved outside a consume-stacks response (no consumedStacks threaded)", () => {
-    const c = makeCreature({})
-    expect(() =>
-      resolveMagnitudeCount(c, makeState(), { kind: 'consumed-stacks' }),
-    ).toThrow(
-      /consumed-stacks magnitudeSource resolved outside a consume-stacks response/,
-    )
   })
 })
 

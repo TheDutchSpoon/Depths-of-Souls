@@ -33,7 +33,7 @@ const TICK_STATUS_ID = 'b4-golden-tick'
 
 export const TICK_STATUS: StatusDef = {
   statusId: TICK_STATUS_ID,
-  cap: 1,
+  potency: { ofStat: 'attack', percent: 25 },
   effects: [
     {
       category: 'triggered',
@@ -41,7 +41,7 @@ export const TICK_STATUS: StatusDef = {
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
-        flatAmount: 5,
+        flatAmount: { kind: 'snapshot-potency' },
         damageSource: 'dot',
       },
     },
@@ -108,7 +108,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: BEARER,
     statusId: TICK_STATUS_ID,
-    stacks: 1,
     duration: 3,
     sourceId: BEARER,
   },

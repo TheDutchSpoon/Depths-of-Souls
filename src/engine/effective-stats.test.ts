@@ -148,7 +148,6 @@ describe('getEffectiveStat — stat-modifier folding', () => {
     const status: ActiveEffect = {
       category: 'status',
       statusId: 'fixture',
-      cap: 1,
       effects: [],
       polarity: 'buff',
       defaultDuration: 3,
@@ -156,7 +155,6 @@ describe('getEffectiveStat — stat-modifier folding', () => {
       sourceTraitId: 'fixture',
       remainingDuration: 3,
       appliedAt: 0,
-      stacks: 1,
     }
     const withStatus = makeCreature({
       attack: 20,

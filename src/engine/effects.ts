@@ -1,6 +1,6 @@
 // Effect-framework runtime helpers (pure). Slice A: instantiate innate-trait effects onto a
 // creature's active-effects list, and the HP-vs-effective-max-Health helpers. Grows in
-// Slices B/C (status apply/stack/decrement/expire, gatherDealtMods/gatherTakenFactors).
+// Slices B/C (status apply/refresh/decrement/expire, gatherDealtMods/gatherTakenFactors).
 //
 // Dependency direction is one-way: effects.ts -> effective-stats.ts (for getEffectiveStat,
 // hasStatus). effective-stats.ts never imports this module, so there is no cycle.
@@ -19,6 +19,7 @@ import type {
   MagnitudeSource,
   ResolvedHookEffect,
   StatusDef,
+  StatusSnapshot,
   Trait,
 } from './effect-types'
 import type { CombatState, Creature } from './types'
@@ -142,14 +143,13 @@ function withInstance(
  * Phase 4.1-F1 (A3): THE effect iterator -- the one way every reader sees a creature's effects.
  * A trait/perk effect is yielded as is. A status (a timed container, `category: 'status'`) is
  * flattened in place into its own `effects`, in order, each tagged with the status it came from
- * (`statusId`, `statusStacks` -- the default count the effect scales by -- and
- * `sourceInstanceId`) and given its own guard identity `${statusInstanceId}#effect#${index}`
+ * (`statusId` and `sourceInstanceId`) and given its own guard identity `${statusInstanceId}#effect#${index}`
  * (PR #64: a trigger's self-re-entry guard is scoped to ONE trigger, never the whole status).
  *
  * **Immunity is checked here, once** (CONVENTIONS "Immunity"): every effect, of every kind, of a
  * status the bearer is immune to is skipped -- locks, friendly-fire, triggers (a tick included),
  * damage-modifiers, turn-order (so the Web roll draws nothing). The status itself still exists,
- * stacks, counts down and counts for `has-status` (those read `activeEffects` directly, never
+ * refreshes, counts down and counts for `has-status` (those read `activeEffects` directly, never
  * this). Immunity is read only from non-status carriers (a status may not carry
  * `status-immunity`, `validateStatusDef`), so it can't depend on itself.
  *
@@ -174,7 +174,6 @@ export function flatEffects(creature: Creature): readonly FlatEffect[] {
         instanceId: createEffectInstanceId(`${e.instanceId}#effect#${index}`),
         sourceTraitId: e.statusId,
         statusId: e.statusId,
-        statusStacks: e.stacks,
         sourceInstanceId: e.instanceId,
       })
     })
@@ -205,7 +204,6 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
       // Phase 4 Slice H2 (PR #60 review, E2.1): the dedup flag (`stacks: false`).
       nonStacking: e.stacks === false ? true : undefined,
       // Present only when the trigger came out of a status container.
-      stacks: e.statusStacks,
       statusId: e.statusId,
       // Phase 4.1-B (B4): the REAL owning instance's id -- a plain trigger's own id, or the
       // status's shared instance id (distinct from the derived per-trigger guard `instanceId`).
@@ -237,15 +235,12 @@ export function clampedHp(creature: Creature): number {
 }
 
 /** Phase 4 Slice F (review amendment): the shared structural shape `damageModifierCount`/
- * `takenFactorFor` read -- satisfied by BOTH `damage-modifier` and `taken-reduction` entries.
- * `stacks` is the carrying status's stack count (4.1-F1: the default repetition count); absent
- * outside a status. */
+ * `takenFactorFor` read -- satisfied by BOTH `damage-modifier` and `taken-reduction` entries. */
 interface TakenReductionSource {
   readonly magnitude: number
   readonly magnitudeSource?: MagnitudeSource
   readonly accumulation?: 'multiplicative' | 'additive'
   readonly reductionCap?: number
-  readonly stacks?: number
 }
 
 function modifierSource(e: FlatEffect & TakenReductionSource): TakenReductionSource {
@@ -254,27 +249,23 @@ function modifierSource(e: FlatEffect & TakenReductionSource): TakenReductionSou
     magnitudeSource: e.magnitudeSource,
     accumulation: e.accumulation,
     reductionCap: e.reductionCap,
-    stacks: e.statusStacks,
   }
 }
 
 /** Phase 4 Slice D: the live repetition count a damage-modifier's `magnitude` is
- * multiplied/exponentiated by -- the carrying status's `stacks` (4.1-F1: a status's effects get
- * its stacks as their default count) unless the effect declares a `magnitudeSource`, in which
- * case the live resolveCount(...) reading is used instead (recomputed every read). `?? 1`: the
- * flat single application for an effect carried outside a status. */
+ * multiplied/exponentiated by -- the live resolveCount(...) reading when the effect declares a
+ * `magnitudeSource` (recomputed every read), else 1: the flat single application (a status is
+ * single-instance, 4.1-H2b2, so it has no count of its own). */
 function damageModifierCount(
   bearer: Creature,
   state: CombatState,
   e: TakenReductionSource,
 ): number {
-  return e.magnitudeSource
-    ? resolveMagnitudeCount(bearer, state, e.magnitudeSource)
-    : (e.stacks ?? 1)
+  return e.magnitudeSource ? resolveMagnitudeCount(bearer, state, e.magnitudeSource) : 1
 }
 
 /** Attacker's additive dealt-mod pool contribution from active `damage-modifier` effects
- * (e.g. Weaken: -20%/stack). Read passively, like getEffectiveStat -- never fired via a hook. */
+ * (e.g. Weaken: -20%). Read passively, like getEffectiveStat -- never fired via a hook. */
 export function gatherDealtMods(creature: Creature, state: CombatState): number[] {
   const mods: number[] = []
   for (const e of flatEffects(creature)) {
@@ -306,7 +297,7 @@ function takenFactorFor(
 }
 
 /** Defender's multiplicative taken-pool contribution from active `damage-modifier` (taken)
- * effects (e.g. Vulnerability: x1.5/stack) AND permanent perk-granted `taken-reduction`
+ * effects (e.g. Vulnerability: x1.5) AND permanent perk-granted `taken-reduction`
  * passives (Bulwark) -- both share the same hard-cap shape, so both collapse via
  * `takenFactorFor`. Order is part of the contract (float multiplication is not associative):
  * every damage-modifier first, then every taken-reduction, each in iterator order. */
@@ -381,13 +372,15 @@ export function gatherExtraInstances(
   return out
 }
 
-/** Instantiates a status definition into a container `ActiveEffect` with fresh duration/stack
- * bookkeeping (4.1-F1: ONE instance shape; the def's `effects` are embedded on it). */
+/** Instantiates a status definition into a container `ActiveEffect` with fresh duration
+ * bookkeeping (4.1-F1: ONE instance shape; the def's `effects` are embedded on it). `snapshot` is
+ * the applier snapshot (4.1-H2b2); passed iff the def declares `potency`, so a fixed-magnitude
+ * status carries no `snapshot` key at all. */
 export function instantiateStatus(
   def: StatusDef,
   instanceId: EffectInstanceId,
   remainingDuration: number,
-  stacks: number,
+  snapshot: StatusSnapshot | undefined,
   appliedAt: number,
 ): ActiveEffect {
   return {
@@ -396,8 +389,27 @@ export function instantiateStatus(
     instanceId,
     sourceTraitId: def.statusId,
     remainingDuration,
-    stacks,
+    ...(snapshot ? { snapshot } : {}),
     appliedAt,
+  }
+}
+
+/** Phase 4.1-H2b2 (ASSUMPTIONS 113, 144): the applier snapshot a ticking status records at
+ * application -- who applied it, their affinity then, and `potency.percent` of their effective
+ * `potency.ofStat` then. Integer arithmetic with ONE floor (the stat is floored, then `percent`
+ * multiplied in before dividing by 100, as `resolveFlatTotal` always did, so a float fraction
+ * cannot land just below an integer). Read from the applier AS IT IS NOW -- a corpse's effective
+ * stats (modifiers included) stay readable (Myconet Rotcore poisons as it dies, ASSUMPTION 13). */
+export function snapshotFor(
+  applier: Creature,
+  potency: NonNullable<StatusDef['potency']>,
+): StatusSnapshot {
+  return {
+    applierId: applier.id,
+    affinity: applier.affinity,
+    potency: Math.floor(
+      (Math.floor(getEffectiveStat(applier, potency.ofStat)) * potency.percent) / 100,
+    ),
   }
 }
 
@@ -530,29 +542,18 @@ export function resolveCount(
 
 /**
  * Resolves a MagnitudeSource to a live number. 'flat' is "the existing implicit behavior, made
- * explicit" (CONVENTIONS); 'count' delegates to resolveCount above; 'consumed-stacks' has no
- * meaning read cold -- it's populated only by a consume-stacks response's own wrapped-effect
- * call (resolution.ts), so resolving it without that context is a resolver-invariant violation
- * (mirrors applyStatus's unknown-statusId throw), not a silent 0.
+ * explicit" (CONVENTIONS); 'count' delegates to resolveCount above.
  */
 export function resolveMagnitudeCount(
   bearer: Creature,
   state: CombatState,
   source: MagnitudeSource,
-  consumedStacks?: number,
 ): number {
   switch (source.kind) {
     case 'flat':
       return source.value
     case 'count':
       return resolveCount(bearer, source.of, state, source.statusId)
-    case 'consumed-stacks':
-      if (consumedStacks === undefined) {
-        throw new Error(
-          'resolver invariant violated: consumed-stacks magnitudeSource resolved outside a consume-stacks response',
-        )
-      }
-      return consumedStacks
     default: {
       const exhaustive: never = source
       throw new Error(`Unhandled magnitude source kind: ${String(exhaustive)}`)

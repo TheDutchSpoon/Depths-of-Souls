@@ -22,7 +22,7 @@
 // Instance 2 (30%): rule 4 -> lowest-HP survivor of {A 30, B 25} = B (first-by-slot would be A).
 //   SpellCast(B). on-cast on B: 25*100 = 2500 <= 30*25 = 750 FALSE -> no trigger. Hit: off 20 x
 //   (1.0 x 0.3) = 6, def 0 -> core 6, chip 0.06 -> raw 6.06 -> final 6; B 25 - 6 = 19 (no clamp).
-//   Then Weaken lands on B (a LIVING target): StatusApplied(B, weaken, 1 stack, 2 turns).
+//   Then Weaken lands on B (a LIVING target): StatusApplied(B, weaken, 2 turns).
 // With the cast guard removed the log gains a DamageDealt on the dead C (the effect list runs), and
 // with first-by-slot restored for rule 4 the second SpellCast targets A.
 
@@ -195,7 +195,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: B,
     statusId: WEAKEN.statusId,
-    stacks: 1,
     duration: 2,
     sourceId: CASTER,
   },

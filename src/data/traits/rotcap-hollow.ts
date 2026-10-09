@@ -339,9 +339,10 @@ export const HOLLOWKIN_PUPPETEER_TRAIT: Trait = {
 
 // ---- Sporch (Violence/Wit) -- closed mechanic: Strong non-spreading Burn ----
 
-/** Sporch Igniter (enabler, common): every attack brands its target with a potent (2-stack)
- * Burn -- deliberately no spread mechanic on the status itself (unlike Spore), per
- * species-locked.md's own "strong non-spreading Burn". */
+/** Sporch Igniter (enabler, common): every attack brands its target with a Burn (one instance:
+ * 4.1-H2b2 retired the 2-stack brand; the Burn's potency is the Igniter's own Intelligence) --
+ * deliberately no spread mechanic on the status itself (unlike Spore), per species-locked.md's own
+ * "strong non-spreading Burn". */
 export const SPORCH_IGNITER_TRAIT: Trait = {
   id: 'sporch-igniter-brand',
   name: 'Brand',
@@ -352,7 +353,7 @@ export const SPORCH_IGNITER_TRAIT: Trait = {
       response: {
         kind: 'apply-status',
         target: { kind: 'triggering-source' },
-        status: { statusId: 'burn', stacks: 2 },
+        status: { statusId: 'burn' },
       },
     },
   ],
@@ -387,11 +388,9 @@ export const SPORCH_CINDERLORD_TRAIT: Trait = {
       response: {
         kind: 'apply-status',
         target: { kind: 'all-enemies' },
-        // PR #64 review fix 6: `stacks: 1` written explicitly rather than relying on
-        // StatusSpec's own default (also 1) -- makes the intent (exactly one fresh Burn stack
-        // per remaining enemy, stacking toward Burn's own cap like any other application) visible
-        // at the call site instead of implicit.
-        status: { statusId: 'burn', stacks: 1 },
+        // One Burn per remaining enemy, each snapshotting the Cinderlord's own Intelligence
+        // (4.1-H2b2: a re-application keeps the stronger snapshot and refreshes the timer).
+        status: { statusId: 'burn' },
       },
     },
   ],

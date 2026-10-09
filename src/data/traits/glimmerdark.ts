@@ -49,7 +49,7 @@ export const FLICKERLING_WICK_TRAIT: Trait = {
       response: {
         kind: 'heal',
         target: { kind: 'lowest-hp-injured-other-ally' },
-        amountPerStack: { ofStat: 'health', percent: 20 },
+        flatAmount: { ofStat: 'health', percent: 20 },
       },
     },
   ],

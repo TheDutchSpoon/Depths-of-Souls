@@ -2,20 +2,25 @@ import { validateStatusDef } from '../engine/effect-types'
 import type { StatusDef } from '../engine/effect-types'
 
 // Status content. Since Phase 4.1-F1 (A3) every status is the same shape: a container
-// `{ statusId, cap, polarity, defaultDuration, effects: EffectDef[] }` of ordinary effects (the
-// ones a trait carries), read through the engine's one effect iterator -- no per-status
-// special-casing in the engine, and no bespoke status categories.
+// `{ statusId, polarity, defaultDuration, effects: EffectDef[], potency? }` of ordinary effects
+// (the ones a trait carries), read through the engine's one effect iterator -- no per-status
+// special-casing in the engine, and no bespoke status categories. Since 4.1-H2b2 a status is
+// SINGLE-INSTANCE: a re-application keeps the stronger value and refreshes the timer.
+//
+// A TICKING status (Poison, Burn, Regen, Spore) declares a `potency`: a percent of the APPLIER's
+// effective stat, recorded once at application as the instance's snapshot (applier, affinity,
+// potency). Its tick is the `snapshot-potency` magnitude: indirect damage (or a heal) from that
+// snapshot, with the applier as its source while it lives. The percentages are PLACEHOLDERS
+// (4.1-H2b2); H2c tunes them.
 
-/** DoT: 3% of the bearer's own effective max HP per stack per bearer turn (on-turn-end) (percent-hp-condition-ticks
- * brief -- the same fraction of max HP at every level, unlike a flat number), bypassing
- * Defence/affinity/pools entirely (GAME_DESIGN: "own value from the source"). Deliberately flat
- * mode with a stat-derived amount, not `scalingStat` -- `scalingStat` would route the victim
- * through its own damage formula (own Defence/dealt-buffs applying to its own poison); see
- * resolveFlatTotal (resolution.ts). No TriggerFired per tick -- its StatusApplied already
+/** DoT: each bearer turn (on-turn-end) the bearer takes the instance's potency -- 20% of the
+ * APPLIER's effective Attack when applied (placeholder) -- as INDIRECT damage from the applier's
+ * snapshot (affinity of the applier against the bearer, the bearer's Defence at a fifth, the
+ * bearer's taken factors; no dealt pool). No TriggerFired per tick -- its StatusApplied already
  * announced it. */
 export const POISON: StatusDef = {
   statusId: 'poison',
-  cap: 5,
+  potency: { ofStat: 'attack', percent: 20 },
   effects: [
     {
       category: 'triggered',
@@ -23,7 +28,7 @@ export const POISON: StatusDef = {
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
-        flatAmount: { ofStat: 'health', percent: 3 },
+        flatAmount: { kind: 'snapshot-potency' },
         emitTriggerFired: false,
         damageSource: 'dot',
       },
@@ -36,11 +41,11 @@ export const POISON: StatusDef = {
   defaultDuration: 3,
 }
 
-/** DoT: 5% of the bearer's own effective max HP per stack per bearer turn (on-turn-end). Same stat-derived flat
- * mode as POISON -- see its doc comment for why this isn't `scalingStat`. */
+/** DoT: as POISON, but the potency is 25% of the APPLIER's effective Intelligence when applied
+ * (placeholder). */
 export const BURN: StatusDef = {
   statusId: 'burn',
-  cap: 3,
+  potency: { ofStat: 'intelligence', percent: 25 },
   effects: [
     {
       category: 'triggered',
@@ -48,24 +53,25 @@ export const BURN: StatusDef = {
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
-        flatAmount: { ofStat: 'health', percent: 5 },
+        flatAmount: { kind: 'snapshot-potency' },
         emitTriggerFired: false,
         damageSource: 'dot',
       },
     },
   ],
   polarity: 'debuff',
-  // No real producer applies Burn yet (representative Phase 3 content); placeholder matching
-  // its DoT sibling Poison's own default.
+  // No real producer applies Burn with a bare default (Withering Bolt and Sporch pass 3);
+  // placeholder matching its DoT sibling Poison's own default.
   defaultDuration: 3,
 }
 
-/** HoT: 5% of the bearer's (the healed creature's) own effective max HP per stack per bearer turn (on-turn-end),
- * clamped to effective max Health (no auto-heal past it). Same stat-derived flat mode as
- * POISON/BURN's own deal-damage, mirrored onto heal. */
+/** HoT: each bearer turn (on-turn-end) the bearer is healed the instance's potency -- 10% of the
+ * HEALER's (the applier's) effective Health when applied (placeholder) -- clamped to the bearer's
+ * effective max Health (no auto-heal past it). The healer's snapshot, mirrored onto heal; the
+ * HealApplied source is the healer while it lives, else the bearer. */
 export const REGEN: StatusDef = {
   statusId: 'regen',
-  cap: 3,
+  potency: { ofStat: 'health', percent: 10 },
   effects: [
     {
       category: 'triggered',
@@ -73,7 +79,7 @@ export const REGEN: StatusDef = {
       response: {
         kind: 'heal',
         target: { kind: 'self' },
-        amountPerStack: { ofStat: 'health', percent: 5 },
+        flatAmount: { kind: 'snapshot-potency' },
         emitTriggerFired: false,
       },
     },
@@ -85,34 +91,31 @@ export const REGEN: StatusDef = {
 
 /** Just a status carrying a passive `action-lock { scope: 'all' }` (4.1-F1): when the bearer's turn
  * comes up it is skipped (`TurnSkipped`), and every action it could take, chosen or granted, is
- * illegal. No special resolver branch. Single-instance (cap 1); stacking would be inert either way. */
+ * illegal. No special resolver branch. */
 export const STUN: StatusDef = {
   statusId: 'stun',
-  cap: 1,
   effects: [{ category: 'action-lock', scope: 'all' }],
   polarity: 'debuff',
   // Matches REELING's own real usage (duration: 1), never actually read by it.
   defaultDuration: 1,
 }
 
-/** Damage-modifier: -20% damage DEALT per stack, additive into (1 + Σ dealtMods). Capped at
- * 1 stack per GAME_DESIGN ("~1 stack + duration"). */
+/** Damage-modifier: -20% damage DEALT, additive into (1 + Σ dealtMods). One instance
+ * (GAME_DESIGN: "one instance + duration"). */
 export const WEAKEN: StatusDef = {
   statusId: 'weaken',
   effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.2 }],
-  cap: 1,
   polarity: 'debuff',
   // Phase 4 Slice F (review amendment): Concussive Blows (data/specializations.ts) now omits
   // its own explicit duration entirely, inheriting this.
   defaultDuration: 3,
 }
 
-/** Damage-modifier: x1.5 damage TAKEN per stack, multiplicative (Π(takenFactors), compounding
- * via magnitude ** stacks). */
+/** Damage-modifier: x1.5 damage TAKEN, once (4.1-H2b2: single-instance, so a re-application
+ * refreshes the timer and never compounds to 2.25). Multiplicative: it enters Π(takenFactors). */
 export const VULNERABILITY: StatusDef = {
   statusId: 'vulnerability',
   effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.5 }],
-  cap: 2,
   polarity: 'debuff',
   // Matches combat.test.ts's own real usage (duration: 3), never actually read by it.
   defaultDuration: 3,
@@ -123,13 +126,12 @@ export const VULNERABILITY: StatusDef = {
  * will be the SAME primitive at the opposite pole -- "same tool, opposite pole" per
  * species-locked.md). Deliberately light per the design doc: a 10%/turn break-free roll
  * (`breakChancePercent`, Slice E2's already-built mechanism -- rolled at every creature's
- * turn-end cleanup against every Web-bearer, ~72% free within one round) with a 3-turn cap as a
- * bad-luck backstop (`defaultDuration`/`cap`) -- the reward lives in Spiders' Ambusher exploit
- * (+% damage to Webbed), not in the status itself lasting long. Single-instance (cap 1):
- * re-applying Web to an already-Webbed target just refreshes it, never stacks. */
+ * turn-end cleanup against every Web-bearer, ~72% free within one round) with a 3-turn duration as a
+ * bad-luck backstop (`defaultDuration`) -- the reward lives in Spiders' Ambusher exploit
+ * (+% damage to Webbed), not in the status itself lasting long. Re-applying Web to an
+ * already-Webbed target just refreshes it. */
 export const WEB: StatusDef = {
   statusId: 'web',
-  cap: 1,
   effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 10 }],
   polarity: 'debuff',
   defaultDuration: 3,
@@ -143,10 +145,9 @@ export const WEB: StatusDef = {
  * (Lullpollen's Reaper) still reads the target as asleep at the moment its own bonus is gathered
  * -- the hit that wakes the target is also the hit that benefits from the bonus, per the design
  * doc's "the waking hit still lands its vs-Sleeping bonus, then wakes." Default 3 turns if never
- * struck; single-instance (cap 1).*/
+ * struck. */
 export const SLEEP: StatusDef = {
   statusId: 'sleep',
-  cap: 1,
   effects: [
     { category: 'action-lock', scope: 'all' },
     {
@@ -166,18 +167,18 @@ export const SLEEP: StatusDef = {
 /** Phase 4 Slice H2 (Glimmerdark, Blindclaws): the act-FIRST pole of the same `turn-order`
  * primitive Web (act-last, H1) already proved -- "same tool, opposite pole"
  * (species-locked.md). No `breakChancePercent` -- unlike Web, nothing breaks this early; it just
- * runs its duration. Single-instance (cap 1): re-applying just refreshes it. */
+ * runs its duration. Re-applying just refreshes it. */
 export const GRANT_ACT_FIRST: StatusDef = {
   statusId: 'grant-act-first',
-  cap: 1,
   effects: [{ category: 'turn-order', position: 'first' }],
   polarity: 'buff',
   defaultDuration: 3,
 }
 
 /** Phase 4 Slice H3 (Rotcap Hollow, Sporecloud): a DoT status with TWO triggers (the
- * Sleep-established pattern for a status needing more than one hook) -- 4% of the bearer's own
- * effective max HP per stack per bearer turn (on-turn-end) (same stat-derived flat mode as POISON/BURN), PLUS an
+ * Sleep-established pattern for a status needing more than one hook) -- a tick of 15% of the
+ * APPLIER's effective Speed (placeholder; same snapshot mechanism as POISON/BURN) each bearer turn
+ * (on-turn-end), PLUS an
  * `on-death -> apply-status({kind:'random-ally-without-status', statusId:'spore'}, spore)` --
  * this trigger lives on the STATUS itself (not a species trait), so any Spore bearer spreads it
  * on death regardless of which creature/spell originally applied it. When the bearer dies, the
@@ -191,10 +192,14 @@ export const GRANT_ACT_FIRST: StatusDef = {
  * dying bearer); when every living ally already carries Spore, resolution.ts's
  * `resolveResponseTargets` returns an empty target list, so the trigger's own `TriggerFired` is
  * still emitted but nothing follows it -- a fizzle, not a silent no-op -- which is what keeps the
- * disease spreading to FRESH hosts instead of endlessly refreshing one. */
+ * disease spreading to FRESH hosts instead of endlessly refreshing one.
+ *
+ * The spread is this status's OWN effect applying this same status, so the engine copies the dying
+ * bearer's WHOLE snapshot onto the new host (applier, affinity, potency -- ASSUMPTIONS 143, 145):
+ * the new host's ticks are still the original applier's, not the dying bearer's. */
 export const SPORE: StatusDef = {
   statusId: 'spore',
-  cap: 3,
+  potency: { ofStat: 'speed', percent: 15 },
   effects: [
     {
       category: 'triggered',
@@ -202,7 +207,7 @@ export const SPORE: StatusDef = {
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
-        flatAmount: { ofStat: 'health', percent: 4 },
+        flatAmount: { kind: 'snapshot-potency' },
         emitTriggerFired: false,
         damageSource: 'dot',
       },
@@ -227,7 +232,6 @@ export const SPORE: StatusDef = {
  * its own side"), that redirects the whole action to the bearer's own living side instead. */
 export const CONFUSION: StatusDef = {
   statusId: 'confusion',
-  cap: 1,
   effects: [{ category: 'friendly-fire', chancePercent: 50 }],
   polarity: 'debuff',
   defaultDuration: 3,
@@ -237,10 +241,9 @@ export const CONFUSION: StatusDef = {
  * skips the turn: the script falls through to its next legal rule, then to the implicit fallback
  * (Attack if legal, else Wait). Refuses a granted cast too (every action source goes through
  * `checkLegality`). Clear Mind (Sorcerer perk) is immunity to it: the status still lands and
- * `has-status` stays true, but the lock is ignored. Counts the bearer's own turns, cap 1. */
+ * `has-status` stays true, but the lock is ignored. Counts the bearer's own turns. */
 export const SILENCED: StatusDef = {
   statusId: 'silenced',
-  cap: 1,
   effects: [{ category: 'action-lock', scope: 'cast' }],
   polarity: 'debuff',
   defaultDuration: 3,
@@ -250,7 +253,6 @@ export const SILENCED: StatusDef = {
  * 'attack' }`). Aggressive (Brute perk) is immunity to it. Same rules as Silenced. */
 export const PACIFIED: StatusDef = {
   statusId: 'pacified',
-  cap: 1,
   effects: [{ category: 'action-lock', scope: 'attack' }],
   polarity: 'debuff',
   defaultDuration: 3,

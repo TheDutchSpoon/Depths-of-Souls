@@ -9,7 +9,7 @@
 //
 // BEARER's trait applies a permanent (duration 10, never re-applied) `taken`-direction
 // damage-modifier ONCE at fight-start, whose `magnitude` (0.95) is raised to the power of a LIVE
-// `self-defend-count` reading instead of the status's own (frozen at 1) `stacks` -- so the taken
+// `self-defend-count` reading instead of the status's own count (a status is single-instance: 1) -- so the taken
 // factor keeps shrinking round-over-round purely from BEARER defending again, with no
 // re-application needed. Multiplicative mode never clamps (CONVENTIONS: "reductions trend toward
 // but never reach 0") -- contrast the additive-with-cap fixture, which hard-clamps.
@@ -60,7 +60,6 @@ export const BULWARK_FIXTURE: Trait = {
 
 export const BULWARK_STATUS: StatusDef = {
   statusId: BULWARK_STATUS_ID,
-  cap: 1,
   // applied exactly once -- magnitudeSource, not re-application, drives the scaling
   polarity: 'buff',
   defaultDuration: 3,
@@ -117,7 +116,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: BEARER,
     statusId: BULWARK_STATUS_ID,
-    stacks: 1,
     duration: 10,
     sourceId: BEARER,
   },

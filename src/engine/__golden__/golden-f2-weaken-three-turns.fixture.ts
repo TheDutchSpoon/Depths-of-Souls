@@ -100,7 +100,6 @@ const weakenApplied = (who: typeof FAST): CombatEvent => ({
   type: 'StatusApplied',
   targetId: who,
   statusId: 'weaken',
-  stacks: 1,
   duration: 3,
   sourceId: TANK,
 })

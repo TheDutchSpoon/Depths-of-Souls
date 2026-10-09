@@ -253,7 +253,6 @@ describe('evaluateCondition -- has-status', () => {
   const poisonEffect: ActiveEffect = {
     category: 'status',
     statusId: 'poison',
-    cap: 5,
     effects: [
       {
         category: 'triggered',
@@ -267,7 +266,6 @@ describe('evaluateCondition -- has-status', () => {
     sourceTraitId: 'poison',
     remainingDuration: 2,
     appliedAt: 0,
-    stacks: 1,
   }
 
   it('is existential over the subject pool, matching a literal statusId', () => {
@@ -297,7 +295,6 @@ describe('evaluateCondition -- has-status', () => {
     const stunEffect: ActiveEffect = {
       category: 'status',
       statusId: 'stun',
-      cap: 1,
       effects: [{ category: 'action-lock', scope: 'all' }],
       polarity: 'debuff',
       defaultDuration: 3,
@@ -305,7 +302,6 @@ describe('evaluateCondition -- has-status', () => {
       sourceTraitId: 'stun',
       remainingDuration: 1,
       appliedAt: 0,
-      stacks: 1,
     }
     const stunned = makeCreature({ activeEffects: [stunEffect] })
     expect(

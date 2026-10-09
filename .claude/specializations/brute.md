@@ -43,7 +43,7 @@ demo labels them "inactive until Phase 8". Inert perks are still buyable.*
 ## New mechanics this spec introduces (for the Phase-4 manifest)
 - **Pacified** — a status whose effect is **`action-lock { scope: 'attack' }`** (the mirror of
   Silenced). Applied by the **Wit spell Pacify**, a pure status spell (`effects:
-  [apply-status(pacified)]`, no damage, cap 1, default duration 3, unlocked at biome 1). *Missed in
+  [apply-status(pacified)]`, no damage, default duration 3, unlocked at biome 1). *Missed in
   Phase 4 (Aggressive was buyable and inert); authored in Phase 4.1-F.* A Pacified creature running
   a role script falls through to "cast a random gem". Intrinsic effect = the attack-lock. *(Silenced ⇄ Pacified: each affinity's anti-tool against the other's core action.)*
 - **Adjacency targeting** — slot-adjacency, **built now** (un-defers the biome-4+ adjacency

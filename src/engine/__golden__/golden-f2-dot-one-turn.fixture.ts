@@ -3,15 +3,21 @@
 // Poison the bearer applies to ITSELF in its own turn-end hooks (since the action slot) is born:
 // it neither ticks nor counts down that turn, and ticks once at the NEXT turn end. Hand-derived.
 //
-// Poison: 3% of the bearer's max HP per stack per tick (data/statuses.ts) = 3 at 100 max HP.
+// Poison (4.1-H2b2): a tick is indirect damage from the applier's snapshot, potency 20% of the
+// applier's Attack at application. Every bearer here has Defence 20 (makeParty default) and the
+// same affinity (neutral): tick = potency - 0.2 x 20 = potency - 4.
+//   A (Attack 100) poisons E1 and E2: potency floor(100 x 20 / 100) = 20 -> tick 20 - 4 = 16,
+//     sourced from A (alive): 100 -> 84.
+//   S (Attack 50) poisons itself: potency floor(50 x 20 / 100) = 10 -> tick 10 - 4 = 6, sourced
+//     from S itself (applier = bearer, alive: a self-applied tick): 100 -> 94.
 // Round 1 queue: E1 (speed 40), A (30), S (20), E2 (10).
 //   A (player) carries a trait: on-turn-start, round 1, Poison for 1 turn on all enemies (slot
 //     order E1, E2). It lands in A's turn, so for E1 and E2 it is not born in their own turns.
 //   S (player) carries a trait: on-turn-end, round 1, Poison for 1 turn on itself.
-//   E2 (acts after A): R1 turn end tick 100 -> 97, then the countdown 1 -> 0 expires it. Once.
-//   E1 (acted before A): R1 nothing; R2 turn end tick 100 -> 97, then it expires. Once.
+//   E2 (acts after A): R1 turn end tick 100 -> 84, then the countdown 1 -> 0 expires it. Once.
+//   E1 (acted before A): R1 nothing; R2 turn end tick 100 -> 84, then it expires. Once.
 //   S: the self-applied Poison is born in S's R1 turn -> no tick, no countdown in R1 (no events
-//     at its R1 end beyond the trait). R2 turn end: tick 100 -> 97, then it expires. Once.
+//     at its R1 end beyond the trait). R2 turn end: tick 100 -> 94, then it expires. Once.
 //   Round 3: everybody waits.
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -66,6 +72,7 @@ export const playerParty = makeParty('player', [
   {
     id: 'a',
     health: 100,
+    attack: 100,
     speed: 30,
     scriptId: 'always-wait',
     innateTraitIds: [POISONER_TRAIT.id],
@@ -73,6 +80,7 @@ export const playerParty = makeParty('player', [
   {
     id: 's',
     health: 100,
+    attack: 50,
     speed: 20,
     scriptId: 'always-wait',
     innateTraitIds: [SELF_POISON_TRAIT.id],
@@ -97,15 +105,15 @@ const turn = (who: Id, ...body: CombatEvent[]): CombatEvent[] => [
   { type: 'TurnEnded', creatureId: who },
 ]
 const waited = (who: Id): CombatEvent => ({ type: 'Waited', creatureId: who })
-const tick = (who: Id): CombatEvent => ({
+const tick = (who: Id, sourceId: Id, damage: number): CombatEvent => ({
   type: 'DamageDealt',
-  sourceId: who,
+  sourceId,
   targetId: who,
-  rawDamage: 3,
-  finalDamage: 3,
+  rawDamage: damage,
+  finalDamage: damage,
   affinityMultiplier: 1,
   wasChipOnly: false,
-  remainingHp: 97,
+  remainingHp: 100 - damage,
   damageSource: 'dot',
   statusId: 'poison',
 })
@@ -118,7 +126,6 @@ const poisoned = (who: Id, sourceId: Id): CombatEvent => ({
   type: 'StatusApplied',
   targetId: who,
   statusId: 'poison',
-  stacks: 1,
   duration: 1,
   sourceId,
 })
@@ -150,11 +157,11 @@ export const expectedEvents: CombatEvent[] = [
     },
     poisoned(S, S),
   ),
-  ...turn(E2, waited(E2), tick(E2), expired(E2)),
+  ...turn(E2, waited(E2), tick(E2, A, 16), expired(E2)),
   { type: 'RoundStarted', round: 2 },
-  ...turn(E1, waited(E1), tick(E1), expired(E1)),
+  ...turn(E1, waited(E1), tick(E1, A, 16), expired(E1)),
   ...turn(A, waited(A)),
-  ...turn(S, waited(S), tick(S), expired(S)),
+  ...turn(S, waited(S), tick(S, S, 6), expired(S)),
   ...turn(E2, waited(E2)),
   { type: 'RoundStarted', round: 3 },
   ...turn(E1, waited(E1)),

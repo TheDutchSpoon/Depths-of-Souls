@@ -1,7 +1,8 @@
-// Golden: the COST rule and the DoT-tick exclusion (Phase 4.1-H2a, ASSUMPTIONS 116, 131, 132).
+// Golden: the COST rule and the DoT-tick exclusion (Phase 4.1-H2a, ASSUMPTIONS 116, 131, 132;
+// 4.1-H2b2: the tick is now a snapshot-potency status tick, ASSUMPTION 144).
 // Hand-derived. A creature's OWN trait response damaging itself is a cost: the exact magnitude,
 // floored once, no Defence/pools/affinity/chip; a cost of 0 is a full no-op. A status tick is
-// never a cost: it keeps today's floor-and-minimum-1 path.
+// never a cost: it is indirect damage from the status's snapshot, floor and minimum 1.
 //
 // Players (speed order S 10, P 5; both always-wait), enemy E (health 100, always-wait, speed 1):
 //   S (health 30, Attack 20, Defence 5, vitality) carries two on-turn-start traits, in this order:
@@ -14,10 +15,12 @@
 //       no-op: TriggerFired still fires, but NO DamageDealt and no hooks. (Read as a tick it
 //       would deal the tick minimum of 1.)
 //   P (health 40) is poisoned at fight start by an on-fight-start fixture trait (mini-poison,
-//     duration 3): its status carries an on-turn-end flat tick of 1% of P's Health.
-//     P's turn end: floor(40 x 1 / 100) = floor(0.4) = 0, raised to the tick minimum of 1:
-//     rawDamage 0.4, finalDamage 1, tagged 'dot' WITH statusId. P 40 -> 39. (As a cost it would
-//     be 0 and silently vanish.)
+//     duration 3): its status declares a potency of 5% of the applier's Health and carries an
+//     on-turn-end snapshot-potency tick. Snapshot at application (applier P, vitality):
+//     potency floor(40 x 5 / 100) = 2. P's turn end: indirect, 2 x 1.0 - 0.2 x P's Defence 20 =
+//     2 - 4 = -2, raised to the tick minimum of 1: rawDamage -2, finalDamage 1, tagged 'dot' WITH
+//     statusId, credited to P (the applier, alive; self-applied). P 40 -> 39. (As a cost, a
+//     plain flat 2 would deal exactly 2.)
 // TURN_STEPS = 2 (S's turn, P's turn).
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -68,9 +71,9 @@ export const ZERO_COST_DOT_LABEL: Trait = {
 
 export const MINI_POISON: StatusDef = {
   statusId: 'h2a-mini-poison',
-  cap: 1,
   polarity: 'debuff',
   defaultDuration: 3,
+  potency: { ofStat: 'health', percent: 5 },
   effects: [
     {
       category: 'triggered',
@@ -78,7 +81,7 @@ export const MINI_POISON: StatusDef = {
       response: {
         kind: 'deal-damage',
         target: { kind: 'self' },
-        flatAmount: { ofStat: 'health', percent: 1 },
+        flatAmount: { kind: 'snapshot-potency' },
         emitTriggerFired: false,
         damageSource: 'dot',
       },
@@ -142,7 +145,6 @@ export const expectedEvents: CombatEvent[] = [
     type: 'StatusApplied',
     targetId: P,
     statusId: MINI_POISON.statusId,
-    stacks: 1,
     duration: 3,
     sourceId: P,
   },
@@ -180,7 +182,7 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: P,
     targetId: P,
-    rawDamage: 0.4,
+    rawDamage: -2,
     finalDamage: 1,
     affinityMultiplier: 1,
     wasChipOnly: false,
