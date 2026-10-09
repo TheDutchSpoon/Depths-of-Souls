@@ -1856,7 +1856,9 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
   - CI checks only loose "badly broken" thresholds (brief ASSUMPTIONS 22, 107, 126): first-try floor
     1 ≥ 80%; the median floor runs to the first soul ≤ 30; some seed fights on floor 5 or deeper
     within its first **20** floor runs (10 until the 4.1-H2 grill: on H1's report no seed of any
-    spec reached it in 10). The bands guide tuning passes (the first one lands before
+    spec reached it in 10). From 4.1-H2c a test in the normal suite asserts the three verdicts
+    over the full 40 seeds per spec, capped at 30 floor runs with the boss probe off; the cap
+    changes no verdict (brief ASSUMPTION 148). The bands guide tuning passes (the first one lands before
     the Phase 4.5 demo). Framing (design owner, H2 grill): balance needn't be perfect yet; Phase 6
     player scripts and Phase 8 equipment will strengthen the starting team.
 
@@ -1977,6 +1979,17 @@ undefined there); `src/ui` and `src/app` run in **jsdom**. (Before the split, js
 covered by the per-biome goldens and the integration test. Placeholder content does not live in
 production registries: the Phase-3 placeholder traits move to test-only fixtures in the Phase 4.5
 demo slice (their goldens stay byte-identical).
+
+**Tuning never changes a mechanism golden** (4.1-H2c kickoff, brief ASSUMPTION 147):
+- A golden whose subject is a **rule** is a mechanism golden. When it borrows a real status, spell
+  or trait, it pins every tuned number it reads in its own fixture (the real def with only that
+  number held), so a tuning PR leaves its expected values byte-identical. That byte-identity is
+  the PR's proof that only numbers moved.
+- A golden whose subject is a **named content item** (a creature, trait or spell) is a content
+  golden: it reads real data and is re-derived by hand when a tuning PR moves a number it reads.
+- A tuning PR shows each effect number it changes (a status potency, a spell's power, a trait's
+  magnitude; not base stats, which the data tests cover) in a hand-derived content golden on real
+  data, new or re-derived.
 
 **Discipline:**
 - **A golden-test failure is a question, not a chore.** It means *either* a regression *or* an
