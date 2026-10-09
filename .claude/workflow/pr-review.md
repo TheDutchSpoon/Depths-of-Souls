@@ -99,5 +99,10 @@ that.
 - **`handout-r<N>.md`**, only when there are fixes: a standalone hand-out for the coding agent, who
   sees nothing else. Duncan runs `/slice-fix <slice-id> <N>`; the coding agent answers with
   `report-r<N+1>.md`, and the next round reviews that.
+- **Content docs:** fold the slice's content changes into `content/`, `species/` and
+  `specializations/` on the slice branch, written from the code as verified, not from the report
+  alone: each "decided changes" item the PR builds moves into its doc's body and leaves the pending
+  section; content that is new gets its doc (the designed content and a plain-language explanation
+  of how it works).
 - Decisions the review makes go into the living docs in place, on the slice branch while the PR is
   open. Decisions made after approval go on `main` right after the merge.

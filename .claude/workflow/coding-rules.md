@@ -41,6 +41,11 @@ before designing around it.
   `npm run build`, `npx tsc -b`.
 - Leave `main` green and deployable; a demo consumes the engine, it doesn't leak into it.
 - **Never commit, never delete files.** Say what needs deleting; Duncan commits and deletes.
+- **The living docs are the design agent's:** `CLAUDE`, `CONVENTIONS`, `GAME_DESIGN`, `ROADMAP`,
+  `WORKFLOWS`, `workflow/`, the briefs, and `content/`, `species/`, `specializations/`. Don't edit
+  them, even to fold a decided item or flip an "until <slice>" marker: put what they need under
+  **Spec questions** (and **Content changes**) in your report. Your files are the mailbox, the code
+  and the phase record.
 
 ## Report format (`report-r<N>.md`)
 
@@ -52,7 +57,10 @@ State how each claim was checked:
   changed fight attributed;
 - for each mechanism, the test that fails with it removed;
 - **Spec questions:** anything that surfaced a question the docs don't answer, so the docs get
-  updated before the next slice;
+  updated before the next slice, and any living-doc text your change makes stale (file + line);
+- **Content changes:** each content behaviour the slice changes, as built (the creature, trait,
+  spell or status, its numbers and what it now does), so the design agent can fold the content
+  docs against the code;
 - **To delete:** files that need deleting, if any.
 
 ## Phase record
@@ -62,5 +70,6 @@ State how each claim was checked:
 - Otherwise (Phase 4.1): append the slice's section to the phase record,
   `.claude/phases/phase-4.1-fix-and-consolidation.md`, as before.
 
-A record is immutable once its slice merges. Content slices also add a doc in `.claude/content/`
-with the designed content and a plain-language explanation of how it works.
+A record is immutable once its slice merges. A content slice describes its content in the record
+and the report's **Content changes**; the design agent writes the content doc from them at the PR
+review.
