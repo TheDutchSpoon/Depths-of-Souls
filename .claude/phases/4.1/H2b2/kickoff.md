@@ -5,6 +5,9 @@ Build ONLY this slice. Standing rules: .claude/workflow/coding-rules.md.
 ## Read (in addition to the standing list)
 
 - `.claude/phases/4.1/H2b2/brief.md`: this slice's brief.
+- `.claude/phases/4.1/H2b2/plan-review.md`, "Round 2" "Plan fixes (build conditions)": six binding
+  amendments to `plan.md` (approved 2026-10-09). Build to them as if written into the plan; the PR
+  report shows each one done.
 - `.claude/briefs/phase-4.1-implementation-plan.md`, these headings only:
   - "Slice plan and sequencing rules" (the golden rules and "Content docs stay in sync");
   - "The split: H1, H2a, H2b1, H2b2, H2c" (the H2b2 row) and "Why H2b ships as H2b1 then H2b2";

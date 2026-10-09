@@ -2014,8 +2014,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      tick's dealer is its living bearer, whose hooks do fire. The bearer's own hooks
      (`on-damage-taken`, `on-death`) get **no source** on a tick, so `triggering-source` and a
      `'triggering-source'` actor resolve to nothing while the hooks still fire (Sleep wakes).
-     `applyDamageAndEmit` takes a required `origin: 'hit' | 'tick' | 'cost'` in place of
-     `selfInflicted` (self-inflicted iff `'cost'`): carried, never inferred from the ids. No
+     `applyDamageAndEmit` takes a required `origin` (`hit`, `cost`, or `tick` carrying its
+     dealer id or none) in place of `selfInflicted` (self-inflicted iff `cost`): carried, never
+     inferred from the ids. A trigger `condition` on `subject: 'target'` reads no creature on a
+     tick (no shipped bearer-side trigger has one; H2b2 plan review, round 2). No
      shipped content reads `on-damage-dealt`, so no fight changes through the dealer rule. Rejected:
      the fallback bearer as a full dealer (today's behaviour, an accident of the old source rule).
 

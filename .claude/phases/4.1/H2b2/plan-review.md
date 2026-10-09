@@ -201,3 +201,129 @@ stated and tested.
   rewritten.
 - `.claude/workflow/pr-review.md` *(process, own commit)*: the design agent folds content docs on
   the slice branch at the PR review.
+
+## Round 2
+
+Reviewed the revised `plan.md` (Revision 1) against round 1's fixes and decisions, ASSUMPTIONS
+143–146 as written, CONVENTIONS "DoT and Regen from the applier's snapshot", and the code on
+`phase-4.1-slice-h2b2` (`resolution.ts` `fireHook`, `executeResponse`, `applyDamageAndEmit`,
+`applyStatus`, `resolveResponseTargets`; `damage.ts` `calculateIndirectDamage`; every golden
+fixture with a `StatusApplied`, a `cap`, an `amountPerStack`, a `'dot'` hit or a `HealApplied`;
+every data trigger on `on-damage-taken` / `on-death` and every `subject: 'target'` condition).
+
+**Verdict: approved, with the six plan fixes below as build conditions** (decide-point 1). Every
+round-1 fix and both decisions landed, and they landed correctly: the dealer union, the hook table
+per case, pass-on by rule, the positive layers with "unexplained" as a real outcome, Regen and the
+affinity as tested sites, the `on-death` site, the complete `on-kill` reader list, and the docs
+handed back. The plan also corrected me in one place, rightly: at step 1 ticks haven't moved, so
+the snapshot goldens can't fail there (round 1's fix 4 said they would). What's left is precision,
+not design: one step-1 prediction that doesn't hold as written, one attribution test that is too
+loose to fail, fixture edits missing from the changed set, and two small test gaps.
+
+Verified against the code, so nobody re-checks them: `HookContext.statusId` is set for every
+status-sourced candidate (`fireHook` passes `effect.statusId`), so assumption 16's step-0 check is
+already answered. The tick formula's inputs match `dealDamageCore`'s indirect branch exactly (same
+Defend factors, same taken-factor order) once the dealt pool, armour penetration and the Additional
+are dropped. The predicted groups match the fixtures: 43 files mention `StatusApplied`, 41 log one;
+the two `golden-b4-*` and `golden-f2-win-over-own-tick` log no tick; `golden-spore-spread`,
+`-filter` and `golden-rot-sovereign` log no tick either.
+
+### Plan fixes (build conditions)
+
+1. **Step 1's red set, made true.** As written, step 1 strips `stacks` from "the field-only
+   fixtures" only. The seven snapshot goldens and `golden-turn-end-dot-kill-burst-refresh` also log
+   a `StatusApplied` with `stacks`, so they would go red on the field, not stay green. Strip the
+   field from **every** expected `StatusApplied` at step 1: it is a field removal, not a
+   derivation, and the step-0 deep-compare justifies it the same way. The expected red set at step
+   1 is then: `golden-turn-end-dot-kill-burst-refresh` (stays red until step 3),
+   **`corpus-digest.test.ts`** (red from step 1 until the one `corpus:update` at step 4, since
+   every fight with a status changes through the field), and the unit tests rewritten in that
+   step. Fix section 1's "the gates stay green between them" to say exactly that.
+2. **Evidence (a) must be able to fail.** "An application of Vulnerability, Igniter's Burn or
+   Cinderlord's Burn" accepts any fight where one of them is applied once, but a single
+   application changes nothing under single instance: Vulnerability at one stack was already
+   `1.5 ** 1`, and Cinderlord already applies `stacks: 1`. The only first application that changes
+   is Igniter's `stacks: 2`. Replace the clause with: **a `StatusApplied` on a creature that already
+   holds that status, or a `StatusApplied` with `stacks > 1`, in `main`'s log.** That covers all
+   three content changes, and a layer-2 change without it is unexplained.
+3. **Fixture inputs that change are in the changed set.** The table covers expected events only.
+   Add a row **"input edited, expected byte-identical"**: the `cap:` in local status defs of
+   `golden-b4-cleanse-then-tick`, `-remove-then-reapply`, `golden-b6-provoke-stun-cleanup`,
+   `golden-defend-count`, `golden-defend-count-additive-cap`, `golden-h2a-cost`,
+   `golden-h2b1-observed-tick`, `golden-sleep-wake`, `golden-turn-order-status` and
+   `golden-web-break-free`; and `amountPerStack` → `flatAmount` in `golden-heal-scaling-count`
+   (today counted "unchanged"). Run the step-0 deep-compare over **every** golden, not only the
+   field-only group: field-only ones equal with `stacks` stripped, all others equal as they are.
+   That is what proves this row. Also complete assumption 2's touch list: the rename also touches
+   `damage-observation.test.ts`, `spell-effects.test.ts`, `resolution.test.ts` and that fixture.
+4. **A tick with no snapshot fails loud.** If the `snapshot-potency` response fires and the context
+   carries no snapshot (an instance built by hand without one, a future path that forgets it), that
+   is a resolver-invariant throw, not a fallback to 0 or to the bearer's stat. Say so in
+   `executeResponse`'s two branches and add the throwing case to `status-snapshot.test.ts`. This is
+   the same "carried, never inferred" discipline as `origin`: a silent fallback would reintroduce
+   the bearer-relative tick with nothing failing.
+5. **Mutation 12 at the self-applied site.** The dead-applier golden kills "self-inflicted when
+   `sourceId === target.id`". It doesn't kill "self-inflicted when the dealer is the bearer", which
+   is the id inference H2b1 refused, in its other spelling. Give `golden-h2b2-tick-self-applied` a
+   Flare-shaped ally observer (`relationship: 'ally'`, `selfInflicted: true`) that stays silent,
+   and name it as mutation 12's second killer.
+6. **Assumption 5, one more side effect, stated.** With no source on a tick, a trigger `condition`
+   with `subject: 'target'` on the bearer's `on-damage-taken` or `on-death` now evaluates false
+   (today it reads the bearer). No shipped content has one: all six `subject: 'target'` conditions
+   in `src/data` are `conditional-damage-bonus` passives. One sentence beside the `perform-action`
+   one.
+
+### Assumptions
+
+| # | Item | Verdict |
+|---|---|---|
+| 1 | Data shape | **Confirm** (ASSUMPTION 144 as decided). |
+| 2 | `amountPerStack` → `flatAmount` | **Confirm**; touch list completed (fix 3). |
+| 3 | Regen `HealApplied.sourceId` | **Confirm** (146). |
+| 4 | The marker is the tick | **Confirm** (144); a marker with no snapshot throws (fix 4). |
+| 5 | `origin` as `hit \| cost \| tick{dealerId}` | **Confirm.** The union is a faithful refinement of 146's three values; 146's wording updated to match. Side effects stated (fix 6). |
+| 6 | `on-death` after a tick kill gets no source | **Confirm.** |
+| 7 | Snapshot read from the live instance; unobservable, no row | **Confirm.** |
+| 8 | Refresh takes the new duration even when shorter | **Confirm.** |
+| 9 | `StatusApplied.sourceId` stays the applying creature | **Confirm.** |
+| 10 | Cinderlord golden renamed `-burn-refresh` | **Confirm** (decided). Note its expected ENEMY_B event carries `stacks: 3` today; still field-only. |
+| 11 | Fixture-local tick statuses become `potency` statuses | **Confirm.** |
+| 12 | Coverage fight appended if missing | **Confirm.** |
+| 13 | Rotcore reads the corpse's effective stats | **Confirm.** |
+| 14 | No armour penetration on a tick | **Confirm.** |
+| 15 | Simulator, store, `demoFight` | **Confirm.** |
+| 16 | Pass-on by rule | **Confirm** (145). The step-0 check is already answered: `fireHook` sets `statusId` for every status-sourced candidate. |
+| 17 | The tick carries its dealer | **Confirm** (146). |
+| 18 | Step 1 strips `stacks` mechanically | **Correct:** from every expected `StatusApplied`, not only the field-only group (fix 1). |
+
+Golden policy: matches the kickoff (deliberate and listed; retirement; field-only proved by
+importing fixtures; one `corpus:update`, attributed in positive layers). Mutation table: the
+kickoff's fourteen plus round 1's four, each with a named non-digest killer; fix 5 adds a second
+killer to row 12.
+
+### Decide-points
+
+**1. Approve now with the six fixes as build conditions, or one more plan revision?** My
+recommendation: **approve now.** None of the six changes a design decision, a mechanism or a
+golden's meaning: they correct one prediction, tighten one attribution test, add a table row, one
+throw, one observer and one sentence, and each is written above precisely enough to build from.
+A third round is the workflow's signal to pull a slice back into a design pass, and this slice
+doesn't need one. The risk is the coding agent building from `plan.md` alone and missing them, so
+the condition is concrete: I add `plan-review.md` Round 2 to the kickoff's reading list as
+binding plan amendments, and the PR review checks all six. If you'd rather keep `plan.md` the single
+source, run `/slice-plan 4.1-H2b2` once more; I'd review it as a light round 3 and not count it as
+a pull-back signal.
+
+### Decisions (Duncan, 2026-10-09)
+
+- **Decide-point 1: approved now, as recommended.** The plan is approved with the six plan fixes
+  above as binding build conditions; no round 3. `kickoff.md`'s reading list now names this
+  section, and the PR review checks each of the six.
+
+### Docs edited
+
+- `.claude/briefs/phase-4.1-implementation-plan.md`: ASSUMPTION 146's `origin` sentence matches the
+  plan's union (`tick` carrying its dealer or none), and records that a `subject: 'target'`
+  condition reads no creature on a tick.
+- `.claude/phases/4.1/H2b2/kickoff.md`: the reading list names Round 2's plan fixes as binding
+  amendments to `plan.md`.
