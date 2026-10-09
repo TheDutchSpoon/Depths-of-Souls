@@ -360,8 +360,10 @@ attack executor is correct.
     bearer's responses, so retaliation never fires back at a tick (see "`triggering-source` never
     resolves to the firing creature itself");
   - a **Regen tick heals** the potency (no Defence, no minimum).
-  - A status applied by a creature that **already carries it** passes its own snapshot on (Spore
-    spreading on death keeps the original strength).
+  - A status that **applies itself through its own effect** passes its snapshot on, whole (applier
+    id, affinity, potency): Spore spreading on death keeps the original strength. Any other
+    application snapshots its applier fresh, even an applier that carries the status (brief
+    ASSUMPTION 143).
   - Placeholder numbers (tuned in 4.1-H2c): Poison 20% of Attack, Burn 25% of Intelligence, Regen
     10% of the healer's Health, Spore 15% of Speed.
   - Why: the percent-hp brief rejected stat-scaling only because a DoT's `context.self` is the

@@ -1192,21 +1192,7 @@ Moved to .claude/phases/4.1/H2b1/brief.md at its kickoff.
 
 ### 4.1-H2b2 — status rules (deliberate)
 
-- **Single-instance statuses** (ASSUMPTION 114): `cap`, `StatusSpec.stacks`, stack increments, the
-  `consume-stacks` response and the `consumed-stacks` magnitude source are deleted; re-application
-  keeps the stronger value and refreshes the timer.
-- **DoT and Regen from the applier's snapshot** (ASSUMPTION 113), DoT ticks as indirect damage
-  with the applier as the damage source.
-- **Content:** Vulnerability is ×1.5 once; Sporch Igniter applies one Burn; Spore's spread inherits
-  the snapshot; Afterglow's Regen and the DoTs read the placeholder percentages (ASSUMPTIONS 113,
-  114; `content/*.md`, "Phase 4.1 — decided changes").
-- **Goldens:** `golden-consume-stacks` is retired (its mechanism is deleted); goldens that only
-  lose the stack count from a status event change in that field alone; every other changed golden
-  is listed with its rule. Hand-derived focused goldens for: a re-application keeping the stronger
-  snapshot and refreshing the timer; a DoT tick as indirect damage from the applier's snapshot,
-  with the applier dead (the bearer is the source); a retaliator taking a tick from a living
-  applier and not striking back; Spore spreading with the dying bearer's snapshot; the observer not
-  firing on a DoT tick whose applier is dead (its source falls back to the bearer).
+Moved to .claude/phases/4.1/H2b2/brief.md at its kickoff.
 
 ### 4.1-H2c — the first tuning pass (deliberate)
 
@@ -1765,9 +1751,9 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        2026-10-08: DoT is the counter to Defence tanks, and most retaliators are those tanks);
      - **Regen heals** the potency (no Defence).
      Placeholder numbers (H2c tunes them, ASSUMPTION 129): **Poison 20% of Attack, Burn 25% of
-     Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** A status applied by a
-     creature that already carries it passes its own snapshot on (Spore spreading on death keeps
-     the original strength). Integer percent, one floor (the percent-hp brief's float rule). This
+     Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** A status that applies
+     itself through its own effect passes its snapshot on (Spore spreading on death keeps the
+     original strength; ASSUMPTION 143). Integer percent, one floor (the percent-hp brief's float rule). This
      reverses the Phase 4 percent-of-max-HP model (`phase-4-percent-hp-condition-ticks.md`), whose
      only objection to stat-scaling was reading the victim's stats; the snapshot reads the
      applier's. Rejected: DoT as a third "true damage" channel (measured indistinguishable for the
@@ -1985,6 +1971,16 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      flag that only the cost path sets; both observation hooks fail closed when called without
      their details; a load-time validator keeps each filter field on its own hook, over traits,
      perks and statuses. CONVENTIONS "Damage observation" carries the detail.
+
+143. **Decided (H2b2 kickoff, 2026-10-09; design owner).** **Only a status's own effect passes its
+     snapshot on.** Refines ASSUMPTION 113. When a status's own effect applies that same status
+     (Spore's `on-death` spread), the new instance copies the firing instance's whole snapshot
+     (applier id, affinity, potency). Every other application snapshots its applier fresh, even
+     when the applier carries the status itself. Why: read as "any creature that carries it", a
+     healer carrying another healer's Regen would cast Afterglow at that healer's strength, and a
+     player Sporecloud carrying an enemy's Spore would put a Spore on an enemy whose recorded
+     applier is that enemy's own ally (the tick's source, kill credit and affinity on the wrong
+     side). Both happen in real fights. Rejected: the literal "a creature that already carries it".
 
 ## Sequencing summary
 
