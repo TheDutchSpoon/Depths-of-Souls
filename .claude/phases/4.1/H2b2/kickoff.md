@@ -141,11 +141,13 @@ different field; it stays).
 - **You can't delete files.** When you reach the step that deletes `consume-stacks`, stop and ask
   Duncan to delete `golden-consume-stacks.fixture.ts` and `.test.ts`, then run the gates. Never
   neutralise a test by emptying or skipping it.
-- **Content docs fold now.** Fold the H2b2 items of the "Decided at the 4.1-H2 grill" sections of
-  `rotcap-hollow.md`, `overgrowth.md` and `glimmerdark.md` into their bodies (the Spore paragraph,
-  the Sporch table's "2-stack" and "1 stack", Afterglow's "per stack" row) and delete them from the
-  pending sections; the Health and tuning items stay pending. Fix code comments that describe
-  stacks, caps or `consume-stacks` as current.
+- **Content docs fold at the PR review** (changed at the plan review, 2026-10-09; `coding-rules.md`
+  "The living docs are the design agent's"). Don't edit `content/*.md`. List under the report's
+  **Content changes** each H2b2 content change as built: Spore (tick and spread), Poison, Burn,
+  Regen, Vulnerability, Sporch Igniter and Cinderlord. The design agent folds the "Decided at the
+  4.1-H2 grill" items (the Spore paragraph, the Sporch table's "2-stack" and "1 stack", Afterglow's
+  "per stack" row) from the code. Do fix code comments that describe stacks, caps or
+  `consume-stacks` as current.
 
 ## Must stay green
 

@@ -355,22 +355,33 @@ attack executor is correct.
   float rule below). A tick is that potency, no stack count:
   - a **damage tick is indirect damage** (see "Damage channels"): `potency × affinity(snapshot vs
     bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective Defence`, `MAX(1, floor(...))`.
-    The **damage source is the applier** while it is alive, else the bearer, so the applier's
-    `on-damage-dealt`/`on-kill` fire. A tick still offers **no `triggering-source`** to the
-    bearer's responses, so retaliation never fires back at a tick (see "`triggering-source` never
-    resolves to the firing creature itself");
-  - a **Regen tick heals** the potency (no Defence, no minimum).
+    The **damage source is the applier** while it is alive at tick time, else the bearer. Only a
+    living applier is the tick's **dealer**: its `on-damage-dealt`/`on-kill` fire. On the fallback
+    the bearer is the logged source and no dealer-side hook fires; a self-applied tick's living
+    bearer is its own dealer. The bearer's `on-damage-taken`/`on-death` get **no source** on a
+    tick, so a tick offers **no `triggering-source`** to the bearer's responses and retaliation
+    never fires back at it (see "`triggering-source` never resolves to the firing creature
+    itself"); the hooks themselves still fire. Carried as `applyDamageAndEmit`'s `origin: 'tick'`
+    (brief ASSUMPTION 146);
+  - a **Regen tick heals** the potency (no Defence, no minimum), its `HealApplied` source by the
+    same rule.
   - A status that **applies itself through its own effect** passes its snapshot on, whole (applier
-    id, affinity, potency): Spore spreading on death keeps the original strength. Any other
-    application snapshots its applier fresh, even an applier that carries the status (brief
-    ASSUMPTION 143).
+    id, affinity, potency): Spore spreading on death keeps the original strength. It is the rule,
+    not an opt-in field: an `apply-status` fired by a status's own effect for that same status
+    copies the firing instance's snapshot. Any other application snapshots its applier fresh, even
+    an applier that carries the status (brief ASSUMPTIONS 143, 145).
+  - **Data shape** (brief ASSUMPTION 144): the status declares `potency: { ofStat, percent }`; its
+    one tick response (`deal-damage` or `heal`, on `self`) takes the magnitude `{ kind:
+    'snapshot-potency' }`. That marker is what makes it a tick; any other damage a status deals
+    its bearer is a cost. An instance holds `snapshot` iff its status declares a potency.
   - Placeholder numbers (tuned in 4.1-H2c): Poison 20% of Attack, Burn 25% of Intelligence, Regen
     10% of the healer's Health, Spore 15% of Speed.
   - Why: the percent-hp brief rejected stat-scaling only because a DoT's `context.self` is the
     victim; the snapshot reads the applier, and a DoT now belongs to its applier's build.
 - **Flat-mode stat-derived magnitude** (percent-hp-condition-ticks brief; **status ticks until
   4.1-H2b**) — `deal-damage.flatAmount`
-  and `heal.amountPerStack` each accept either a literal number (unchanged) or a `StatPercent`
+  and `heal.amountPerStack` (renamed `flatAmount` in 4.1-H2b2, brief ASSUMPTION 144) each accept
+  either a literal number (unchanged) or a `StatPercent`
   (`{ ofStat, percent }`, `percent` a **positive integer**), a percentage of the **bearer's**
   (`context.self`) own effective stat — Regen/Poison/Burn read `{ ofStat: 'health', percent }` so
   each tick is the same fraction of the bearer's max HP at every level.
@@ -921,8 +932,8 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
   - **Who decides the channel** (brief ASSUMPTIONS 130, 131): the caller. Actions (`executeAttack`,
     `executeSpellEffects`) pass direct; `fireHook` passes indirect. `HookContext.channel` is
     **required**, so no caller can leave it out. `damageSource` stays a display label. A DoT tick
-    (a flat `deal-damage` with a `statusId`, on its bearer) is recognised by that test, never by its
-    'dot' label.
+    is recognised until 4.1-H2b2 as a flat `deal-damage` with a `statusId`, on its bearer, and from
+    4.1-H2b2 by its `snapshot-potency` magnitude (brief ASSUMPTION 144); never by its 'dot' label.
     The channel follows the **action, not the target**: a direct action that lands on its own
     actor (a Confusion redirect, a spell effect on its caster) stays direct, with the Additional
     read from the actor's own level and max Health. It is never a cost; a cost is an
@@ -1491,7 +1502,8 @@ itself"). **The shape** (decided at the 4.1-H2b1 plan review, brief ASSUMPTION 1
 - Hook context: `source` is the **damaged creature** (so `triggering-source` and the `'target'`
   condition subject resolve to it); the channel is indirect, as for every hook.
 - **Self-inflicted is carried, never inferred:** `applyDamageAndEmit` takes a required
-  `selfInflicted` flag, `true` only from the cost path (`applyCostDamage`), `false` from the direct
+  `selfInflicted` flag (from 4.1-H2b2 a required `origin: 'hit' | 'tick' | 'cost'`, self-inflicted
+  iff `'cost'`; brief ASSUMPTION 146), `true` only from the cost path (`applyCostDamage`), `false` from the direct
   path and the tick path. Never `source === target`: a DoT tick and a direct action landing on its
   own actor have equal ids and are not self-inflicted. A zero cost emits nothing, so there is
   nothing to observe.

@@ -85,7 +85,8 @@ carries deliberate changes, so "any diff is a regression" stays checkable.
   below. That is a "bring it back to design" signal (WORKFLOWS).
 - **Content docs stay in sync:** a PR that changes content behaviour folds the matching item from
   a content doc's "Phase 4.1 — decided changes" section into that doc's body and deletes it from the
-  pending section.
+  pending section. From 4.1-H2b2 the design agent does the fold, at the PR review, on the slice
+  branch, from the code as verified (`workflow/pr-review.md`); the coding agent lists the changes.
 
 ## Architecture overview
 
@@ -1887,7 +1888,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      defined, in flat mode, targeting its bearer is a DoT tick: in H2a it stays on today's
      `applyFlatDamage` path (floor, minimum 1). It is never a cost, and H2b reuses the same test
      for "a tick is never self-inflicted" (ASSUMPTION 115). It does not read `damageSource: 'dot'`:
-     `CATASTROPHIC_COLLAPSE` carries that label with no `statusId` and is a cost.
+     `CATASTROPHIC_COLLAPSE` carries that label with no `statusId` and is a cost. **Superseded in
+     4.1-H2b2** by ASSUMPTION 144: a tick is the `snapshot-potency` response.
 132. **Decided (H2a plan review).** **The cost (ASSUMPTION 116) in detail.**
      - A cost is a `deal-damage` on the indirect channel whose **resolved** target id is the firing
        creature (a selector landing on itself counts). A spell effect on its own caster is direct.
@@ -1981,6 +1983,41 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      player Sporecloud carrying an enemy's Spore would put a Spore on an enemy whose recorded
      applier is that enemy's own ally (the tick's source, kill credit and affinity on the wrong
      side). Both happen in real fights. Rejected: the literal "a creature that already carries it".
+
+144. **Decided (H2b2 plan review, 2026-10-09; design owner).** **A tick is declared in data, not
+     inferred.** A ticking status declares its **`potency`** on its `StatusDef` (`{ ofStat,
+     percent }`, read off the applier's effective stat at application); its one tick response (a
+     `deal-damage` or `heal` targeting `self`) takes the magnitude **`{ kind: 'snapshot-potency'
+     }`**, and that response is the tick. Supersedes ASSUMPTION 131's test (`statusId` + flat +
+     self): any other damage a status deals its own bearer is a cost (ASSUMPTION 116), whatever its
+     magnitude mode. Validators: a status with a potency carries exactly one snapshot-magnitude
+     response (target `self`, no `magnitudeSource`), a status without one carries none, and
+     traits, perks and spells carry none. An instance holds a snapshot (applier id, affinity,
+     potency) iff its status declares a potency. `heal.amountPerStack` is renamed `flatAmount`.
+     Why: under 131 a status's flat self-damage was a tick and its formula-mode self-damage a cost;
+     the marker makes a tick something the data says. Rejected: keeping 131's shape test.
+
+145. **Decided (H2b2 plan review, 2026-10-09; design owner).** **Snapshot pass-on is the rule, not
+     a flag** (refines ASSUMPTION 143). An `apply-status` fired by a status's own effect that
+     applies that same status (the firing context's `statusId` equals the applied one) copies the
+     firing instance's whole snapshot; nothing opts in. A trait, perk or spell has no `statusId` in
+     its context, so it can never pass a snapshot on. Rejected: an `inheritSnapshot` flag on
+     `StatusSpec` (optional, so a future spreading status that left it out would silently snapshot
+     the dying bearer).
+
+146. **Decided (H2b2 plan review, 2026-10-09; design owner).** **A tick's dealer is its living
+     applier, or no one** (refines ASSUMPTION 113). The tick path carries the dealer: the applier
+     if it is alive at tick time (a revived applier is the dealer again), else none.
+     `DamageDealt.sourceId`, and a Regen tick's `HealApplied.sourceId`, is the dealer, or the
+     bearer when there is none. The dealer-side hooks (`on-damage-dealt`, `on-kill`) fire only on a
+     dealer, so a bearer never runs them for its own tick after its applier dies; a self-applied
+     tick's dealer is its living bearer, whose hooks do fire. The bearer's own hooks
+     (`on-damage-taken`, `on-death`) get **no source** on a tick, so `triggering-source` and a
+     `'triggering-source'` actor resolve to nothing while the hooks still fire (Sleep wakes).
+     `applyDamageAndEmit` takes a required `origin: 'hit' | 'tick' | 'cost'` in place of
+     `selfInflicted` (self-inflicted iff `'cost'`): carried, never inferred from the ids. No
+     shipped content reads `on-damage-dealt`, so no fight changes through the dealer rule. Rejected:
+     the fallback bearer as a full dealer (today's behaviour, an accident of the old source rule).
 
 ## Sequencing summary
 
