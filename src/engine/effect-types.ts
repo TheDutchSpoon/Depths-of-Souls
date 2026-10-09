@@ -16,7 +16,8 @@ export function createEffectInstanceId(value: string): EffectInstanceId {
   return value as EffectInstanceId
 }
 
-// The v1 hook vocabulary (13, pinned) plus Phase 4 Slice B's on-[action] family (+4) and Phase
+// The v1 hook vocabulary (13, pinned) plus Phase 4 Slice B's on-[action] family (+4, -> 17), one
+// fewer after Slice E2 (below: the never-wired pair out, on-action-observed in, -> 16), plus Phase
 // 4.1-H2b1's on-damage-observed (+1), 17 in all.
 // on-wait is deliberately omitted (CONVENTIONS' Phase 4 addenda). Phase 4 Slice E2: the
 // originally-listed on-ally-action/on-enemy-action pair was NEVER WIRED (confirmed dead -- no
