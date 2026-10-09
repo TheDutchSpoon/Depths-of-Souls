@@ -1212,7 +1212,8 @@ Moved to .claude/phases/4.1/H2b1/brief.md at its kickoff.
 
 - **Config:** level-range width base 2 → 0 and a rounded-down minimum (ASSUMPTION 118);
   `bossLevelOffset` 3 → 5 (ASSUMPTION 119).
-- **Content data:** Health remapped to 20–45 for every creature (ASSUMPTION 125); the Shieldbarer
+- **Content data:** Health remapped to 20–45 for every creature (ASSUMPTION 125) except the three
+  Flickerlings, already on the new scale since 4.1-H2b1 (38 / 25 / 28): the remap skips them; the Shieldbarer
   starter's Attack 15 and `warden` role (ASSUMPTION 123); Snapback 0.3; Arcane Bolt 1.0 (ASSUMPTION
   124).
 - **Per-item tuning toward the bands and the CI thresholds** (ASSUMPTION 129): the floor-1
@@ -1252,6 +1253,13 @@ Moved to .claude/phases/4.1/H2b1/brief.md at its kickoff.
     (Bramble Ward) Rallying Cry fires 513 times and Bramble Ward 300 times, effective Defence
     reaches about 1.6 × 10²³ and one creature carries 201 active effects. These are coverage
     fights, not balance data, so the simulator's draw-rate figures should come from its own runs.
+  - **More data (4.1-H2b1 PR review):** the Flickerling Flare's ×1.15 Speed to every ally fires on
+    each Wick burn, and the Wick burns every turn while another ally is hurt, so Speed compounds
+    (two Flares: ×1.32 per burn). On the regenerated corpus, 20 fights have a Flare reacting; the
+    worst reach 45 reactions and ×539 Speed (fight 190), and 43 reactions and ×407 (fights 344 and
+    348, both 100-round draws). Five Flickerling fights changed to draws in H2b1 (344, 370, 372,
+    490, 494). Same rule as above: if the report shows a fix is needed, it is per item (the factor,
+    or how often the Flare can fire), never a cap.
   - **The rule is locked**: `stat-modifier` stacking is multiplicative and uncapped (GAME_DESIGN,
     "Player-facing treatment"). The fix, if the report shows one is needed, is per content item:
     the factor, or how often it can fire (for example once per turn, or a trigger condition), and

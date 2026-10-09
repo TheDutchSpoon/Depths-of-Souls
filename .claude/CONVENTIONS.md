@@ -484,7 +484,8 @@ attack executor is correct.
   uniform fizzle shape — see the H3 addenda). Mirrors `consume-stacks`' "0 stacks is a full no-op,
   not fired-with-magnitude-0." Affects Sporecloud Reaper, Spider Broodwarden, Lullpollen Dozer.
 - **consume-stacks** response — read a resource-status's stacks → apply effect → clear (Glow).
-  **Built in Phase 4 Slice D; deleted in 4.1-H2b** with stacking and Glow (brief ASSUMPTIONS
+  **Built in Phase 4 Slice D; deleted in 4.1-H2b2** with stacking (Glow, its last real user, went in
+  4.1-H2b1) (brief ASSUMPTIONS
   114, 116). SELF-scoped (no `target` field) — always reads/clears the FIRING
   creature's own stacks. 0/absent stacks is a full no-op (the wrapped effect never fires, not
   fired-with-magnitude-0); a successful consume emits `StatusExpired` (ASSUMPTION 18) before the
@@ -618,7 +619,7 @@ attack executor is correct.
 ### New statuses (data — several ride the mechanisms above)
 Web (act-last + a global 10% break-free roll per bearer at every creature's turn, see turn-order
 status above; **built E2**), Sleep (breaks on damage; 3-turn), Glow (stacking resource; +%dmg/stack;
-consumable; deleted in 4.1-H2b), turn-order (act first *or* last — two-way, **built C**), Spore (DoT
+consumable; deleted in 4.1-H2b1), turn-order (act first *or* last — two-way, **built C**), Spore (DoT
 + spread-on-death to the host's own side, **built H3**), Confusion (3-turn; 50% harmful-action
 friendly-fire, **built C**), Silenced
 (`action-lock` cast; applied by the Violence spell **Silence**) and Pacified (`action-lock` attack;

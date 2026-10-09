@@ -44,9 +44,9 @@ Endurance, Instinct**, cycle **Vitality > Violence > Wit > Endurance > Instinct 
 in the **build-modifier pools/effective stats**, not levels. **Unified effect framework**: traits,
 statuses, gem augments, equipment infusions are ONE data-driven hook-based model: carriers holding
 the same `EffectDef[]` (a status = a timed, single-instance container of effects, 4.1; no
-stat-modifier inside a status, validator-enforced). Hooks: 16-hook
-v1 vocab as of Phase 4 (Phase 3's 13 + the `on-[action]` family on-attack/cast/defend/provoke;
-`on-action-observed` replaced the never-wired on-ally-/on-enemy-action pair), fired via `effectsForHook` (scoped iteration, shared per-creature effect order), reusing
+stat-modifier inside a status, validator-enforced). Hooks: 17-hook
+vocab (Phase 4's 16 — Phase 3's 13 + the `on-[action]` family on-attack/cast/defend/provoke;
+`on-action-observed` replaced the never-wired on-ally-/on-enemy-action pair — plus `on-damage-observed`, 4.1), fired via `effectsForHook` (scoped iteration, shared per-creature effect order), reusing
 action machinery; a **`TriggerFired`** event precedes triggered consequences; an effect fires only
 if its exact instance still exists (unique per-fight instance ids, 4.1). **Traits** =
 `{id,name,effects[]}` — passive (incl. conditional via a data `SelfCondition`, 4.1) + triggered
