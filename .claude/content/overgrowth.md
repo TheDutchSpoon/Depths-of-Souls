@@ -71,8 +71,14 @@ design. Lasts up to **3** of its turns if it is never hit.
 
 ### Stun
 
-Skips its bearer's turn (`spec/statuses.md` "Status effects"). No trait or spell in the seed
-content applies it.
+Skips its bearer's turn (`spec/statuses.md` "Stun is just a status"). No trait or spell in the
+seed content applies it.
+
+### Weaken
+
+A Weakened creature deals **−20% damage**. Lasts **3** of its own turns unless what applies it says
+otherwise; Weakening it again refreshes the timer. Applied by **Stifling Weight** (Endurance) and the
+Brute perk **Concussive Blows**.
 
 ## Spiders (Wit): trap → exploit
 

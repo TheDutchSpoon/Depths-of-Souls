@@ -20,7 +20,11 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
   `data/balance.ts:18`); `data/statuses.ts:125-133` says Blindclaws' act-first status "will be" the
   Web primitive (built: `GRANT_ACT_FIRST`); `data/spells/glimmerdark.ts:3-24` and
   `data/traits/glimmerdark.ts:349-353` narrate deleted spells; the comment above `BROODMOTHER` in
-  `data/species/overgrowth.ts` says her runner is unbuilt (built: `OVERGROWTH_BOSS`).
+  `data/species/overgrowth.ts` says her runner is unbuilt (built: `OVERGROWTH_BOSS`). From 4.2-D:
+  `engine/effect-types.ts:670-673` says a trigger condition can't reference the triggering source
+  (it can: the `'target'` subject resolves to the source in `fireHook`); `engine/effects.ts:434`
+  says Splashing follows "Attack/Cast main hits" (attacks only); `engine/effects.ts:501-503` says
+  every creature lacks a `speciesId` (generation and `materializeCreature` set it).
 - The `citations` mode, blocking in CI, and the `budgets` mode, reported only (phase brief
   "Checks"). The budgets are set from the condensed sizes.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the

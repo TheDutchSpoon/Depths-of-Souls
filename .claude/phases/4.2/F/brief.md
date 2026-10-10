@@ -31,6 +31,14 @@ Phase brief: `.claude/phases/4.2/brief.md`. Loop: condense. Golden policy: **byt
   whose home is now `spec/creatures.md` "Levels and XP".
 - **From 4.2-C:** the spec rules (phase brief "Rules for the new spec") now include the
   `## Not built` half. Wherever those rules live after 4.2, it goes with them.
+- **From 4.2-D:** `OPEN_QUESTIONS.md` "Behavioral traits" parks "scripting-altering /
+  extra-action traits", but extra actions are built (`perform-action`); only extra turns,
+  scripting options and decision-altering traits stay parked. `spec/effects.md` "Traits" links that
+  item by its label. The "DoT and Regen potencies" item restates numbers whose home is the content
+  docs (`content/rotcap-hollow.md` "Damage over time", `content/glimmerdark.md` "Regen").
+- **From 4.2-D:** ROADMAP gains two "Decided, not built" entries moved out of the effects spec:
+  Phase 7 "Effective stats on screen" and Phase 4.5 `on-death-observed`. Condense them with the
+  rest.
 
 ## Done when
 

@@ -67,3 +67,23 @@ Read this when changing progression: specializations, perks and perk points, the
 - A swap grants the new spec's starter if the player doesn't own it yet, and never takes a creature
   away.
 
+## Engine rules
+
+### Specializations are data
+
+- A specialization is a named collection of perks, as data (`src/data/specializations.ts`). A perk
+  is an effect carrier (`spec/effects.md` "Carriers and effects"), combat-only; `Perk` stays a
+  plain effect carrier, with no meta-economy framework.
+- A spec is valid iff its perks' `Σ(maxLevel × costPerLevel) === 1000`, checked at load.
+- Perk points are **derived**: `bossesCleared × 100`, first clears only. The spend is
+  `Map<perkId, level>`; refunding is free and unlimited (one perk, all of them, or a spec swap are
+  the same clear), and the budget recomputes. The store actions are `spec/store.md` "Store
+  actions".
+- Each starter spec defines a **starter creature**.
+
+### Inert perks
+
+- Nothing gates build order: a perk that stays inert until Phase 8 is buyable. **`PerkDef` carries
+  no phase tag**; each inert perk has a code comment instead (`// Inert until Phase 8 (gem system)
+  -- see sorcerer.md`), and a data test holds the explicit list of the 9 known-inert perk ids,
+  while every other perk must have at least one effect at max level.
