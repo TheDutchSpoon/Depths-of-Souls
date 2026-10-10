@@ -79,7 +79,7 @@ const ROLES: Readonly<Record<string, string>> = {
   // Starters and the Unicorn (ASSUMPTION 8)
   'sorcerer-starter': 'caster',
   'brute-starter': 'striker',
-  'shieldbarer-starter': 'taunter',
+  'shieldbarer-starter': 'warden', // 4.1-H2c (ASSUMPTION 123): was 'taunter'
   unicorn: 'striker',
 }
 
@@ -125,7 +125,8 @@ describe('creature roles (Phase 4.1-G1)', () => {
         (counts.get(creature.defaultScriptId) ?? 0) + 1,
       )
     }
-    // Starters are excluded: the Stonehorn Warden starter is the second taunter.
+    // Starters are excluded: they have their own rows above (the Stonehorn Warden starter is a
+    // warden since 4.1-H2c; Snapjaw Lure is the only taunter).
     expect(Object.fromEntries(counts)).toEqual({
       striker: 27,
       warden: 10,

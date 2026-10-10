@@ -2,7 +2,7 @@
 // `setSpec`, `runScriptedIntro`, `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with the
 // documented player policy below, over a fixed list of seeds, and builds a plain-data report of the
 // design targets (T1-T5), the 4.1-H watch points and ASSUMPTION 22's thresholds. It REPORTS; it
-// asserts nothing (the CI threshold test is H2's). It changes no number and no file under src/.
+// asserts nothing (the CI threshold test is 4.1-H2d's). It changes no number and no file under src/.
 //
 // Run the full report with `npm run sim` (vitest in `--mode sim`, the corpus pattern).
 //
@@ -37,11 +37,12 @@
 // Read over the seeds of one spec: floor 1 = the first-try floor-1 clear rate (fails below 80%);
 // first soul = the median over EVERY seed of the floor runs until a soul first reaches 100%, a seed
 // that never completes one counting as infinite (fails above 30); floor 5 = some seed fought on
-// floor 5 or deeper in its first 10 floor runs. The walls' size (ASSUMPTION 108) is reported as the
+// floor 5 or deeper in its first FLOOR5_WINDOW_RUNS (20) floor runs (ASSUMPTION 126; T3's "first
+// session" stays 10 floor runs). The walls' size (ASSUMPTION 108) is reported as the
 // most failed pushes on one floor below 10 and the floor runs to the first floor-10 clear.
 //
 // Nothing here is pinned to a balance value: the simulator runs the store's default config, and
-// the H2 tuning pass moves those numbers.
+// the tuning passes (H2c, then H2d) move those numbers.
 
 import type { BalanceConfig } from '../engine/balance-types'
 import { ROUND_CAP, MAX_REVIVES_PER_CREATURE } from '../engine/config'
@@ -92,7 +93,14 @@ export const RUN_CAP = 400
 export const WALL_FAILED_PUSHES = 5
 /** "The first session" = the first this many floor runs (T3, ASSUMPTION 22). */
 export const FIRST_SESSION_RUNS = 10
-/** ASSUMPTION 107: the floor the third threshold asks a seed to reach in its first session. */
+/** ASSUMPTION 126: the window the floor-5 threshold reads (was FIRST_SESSION_RUNS, 10, until the H2
+ * grill). It is NOT the session: T3's party size is still read after FIRST_SESSION_RUNS. */
+export const FLOOR5_WINDOW_RUNS = 20
+/** ASSUMPTION 127: the matchup table covers fights on floors 1 to this one. */
+export const MATCHUP_MAX_FLOOR = 5
+/** How many traits per stack bucket the report prints. */
+export const TOP_TRAIT_STACKS = 5
+/** ASSUMPTION 107: the floor the third threshold asks a seed to reach within FLOOR5_WINDOW_RUNS. */
 export const SESSION_TARGET_FLOOR = 5
 /** The first boss floor: T4's "no wall before the floor-10 boss" and ASSUMPTION 108's measures. */
 export const FIRST_BOSS_FLOOR = 10
@@ -123,6 +131,13 @@ export const INITIAL_PROGRESS: Progress = {
   lastRunFailedPush: false,
   failedPushes: {},
   firstWallFloor: null,
+}
+
+/** ASSUMPTIONS 107, 126: one of the first FLOOR5_WINDOW_RUNS floor runs was on floor
+ * SESSION_TARGET_FLOOR or deeper (fighting on it, not clearing it). Read from the finished runs, so a
+ * seed that stops before the window (a small run cap) still gets the right value. */
+export function reachedFloorInWindow(runs: readonly Pick<RunRecord, 'floor'>[]): boolean {
+  return runs.slice(0, FLOOR5_WINDOW_RUNS).some((r) => r.floor >= SESSION_TARGET_FLOOR)
 }
 
 /** ASSUMPTION 97: the next run's floor and kind. */
@@ -353,6 +368,23 @@ export const NO_STACKS: StackMaxima<never> = {
 /** A seed's maxima: each stack with the floor of the fight it came from. */
 export type SeedStackMaxima = StackMaxima<StackCount & { readonly floor: number }>
 
+/** H2c (plan review, fix 4): the largest stack per (bucket, trait), so a trait that is not its
+ * bucket's overall maximum (Rallying Cry once the Warden attacks, the Flare) still has its number.
+ * Keyed by the attribution (a trait id, `(spell)` or `(unattributed)`). */
+export type TraitStackMaxima<T> = Readonly<
+  Record<StackBucket, Readonly<Record<string, T>>>
+>
+export const NO_TRAIT_STACKS: TraitStackMaxima<never> = {
+  'growth-player': {},
+  'growth-enemy': {},
+  'shred-player': {},
+  'shred-enemy': {},
+}
+export type SeedTraitStacks = TraitStackMaxima<StackCount & { readonly floor: number }>
+export type SpecTraitStacks = TraitStackMaxima<
+  StackCount & { readonly floor: number; readonly seed: number }
+>
+
 export interface StackAttribution {
   readonly stacks: readonly StackCount[]
   /** Applications attributed to no trigger or spell. */
@@ -508,6 +540,10 @@ export interface FightMetrics {
   readonly deaths: number
   /** The largest stack in each bucket (direction x the target's side). */
   readonly largestStacks: StackMaxima<StackCount>
+  /** The largest stack per (bucket, trait) in this fight (H2c). */
+  readonly traitStacks: TraitStackMaxima<StackCount>
+  /** The distinct enemy-side creature template ids that started the fight (ASSUMPTION 127). */
+  readonly enemyTemplateIds: readonly string[]
   readonly unattributed: number
   readonly applications: number
   /** Revives by the Unicorn (source = its combat id); null when it isn't in the party. */
@@ -538,6 +574,70 @@ export function stackBucket(stack: StackCount): StackBucket | null {
   if (PLAYER_ID.test(stack.targetId)) return `${stack.direction}-player`
   if (ENEMY_ID.test(stack.targetId)) return `${stack.direction}-enemy`
   return null
+}
+
+/** A combat creature id without its `-<side>-<slot>` suffix: the template id. */
+export function templateIdOf(combatId: string): string {
+  return combatId.replace(/-(player|enemy)-\d+$/, '')
+}
+
+/** The largest stack per (bucket, attribution) among one fight's stacks (the first wins a tie). */
+export function traitStackMaxima(
+  stacks: readonly StackCount[],
+): TraitStackMaxima<StackCount> {
+  const next: Record<StackBucket, Record<string, StackCount>> = {
+    'growth-player': {},
+    'growth-enemy': {},
+    'shred-player': {},
+    'shred-enemy': {},
+  }
+  for (const stack of stacks) {
+    const bucket = stackBucket(stack)
+    if (bucket === null) continue
+    const current = next[bucket][stack.attribution]
+    if (current === undefined || stack.count > current.count) {
+      next[bucket][stack.attribution] = stack
+    }
+  }
+  return next
+}
+
+/** Folds one fight's per-trait maxima into a seed's: per (bucket, trait) the larger wins, with the
+ * floor of its fight; a tie keeps the first. Pure. */
+export function foldTraitStacks(
+  acc: SeedTraitStacks,
+  fight: Pick<FightMetrics, 'traitStacks'>,
+  floor: number,
+): SeedTraitStacks {
+  const next: Record<StackBucket, Record<string, StackCount & { floor: number }>> = {
+    'growth-player': { ...acc['growth-player'] },
+    'growth-enemy': { ...acc['growth-enemy'] },
+    'shred-player': { ...acc['shred-player'] },
+    'shred-enemy': { ...acc['shred-enemy'] },
+  }
+  for (const bucket of STACK_BUCKETS) {
+    for (const [attribution, candidate] of Object.entries(fight.traitStacks[bucket])) {
+      const current = next[bucket][attribution]
+      if (current === undefined || candidate.count > current.count) {
+        next[bucket][attribution] = { ...candidate, floor }
+      }
+    }
+  }
+  return next
+}
+
+/** A bucket's traits, largest stack first (ties: attribution ascending), at most `limit`. */
+export function topTraitStacks<T extends StackCount>(
+  bucket: Readonly<Record<string, T>>,
+  limit: number,
+): T[] {
+  return Object.values(bucket)
+    .sort(
+      (a, b) =>
+        b.count - a.count ||
+        (a.attribution < b.attribution ? -1 : a.attribution > b.attribution ? 1 : 0),
+    )
+    .slice(0, limit)
 }
 
 /** R2: folds one fight's maxima into a seed's, per bucket: the larger stack wins, the floor of the
@@ -619,6 +719,8 @@ export function analyzeFight(
     capDraw: result === 'draw' && maxRound >= ROUND_CAP,
     deaths,
     largestStacks,
+    traitStacks: traitStackMaxima(attribution.stacks),
+    enemyTemplateIds: [...new Set(firstRoundEnemyIds(events).map(templateIdOf))],
     unattributed: attribution.unattributed,
     applications: attribution.applications,
     unicornRevives,
@@ -686,17 +788,29 @@ export interface SeedResult {
   readonly runsToFirstSoul: number | null
   readonly partySizeAfterSession: number | null
   readonly deepestAfterSession: number | null
-  /** ASSUMPTION 107: one of the first FIRST_SESSION_RUNS floor runs was on floor
+  /** ASSUMPTIONS 107, 126: one of the first FLOOR5_WINDOW_RUNS floor runs was on floor
    * SESSION_TARGET_FLOOR or deeper (fighting on it, not clearing it). */
-  readonly reachedFloor5InSession: boolean
+  readonly reachedFloor5InWindow: boolean
+  /** ASSUMPTION 127: every fight on floors 1..MATCHUP_MAX_FLOOR, for the matchup table. */
+  readonly earlyFights: readonly EarlyFight[]
   readonly fights: number
   readonly draws: number
   readonly capDraws: number
   readonly largestStacks: SeedStackMaxima
+  readonly traitStacks: SeedTraitStacks
   readonly unattributed: number
   readonly applications: number
   readonly unicorn: UnicornTotals
   readonly bossVisits: readonly BossVisit[]
+}
+
+/** One fight on an early floor: who the enemy side was and how it ended (ASSUMPTION 127). */
+export interface EarlyFight {
+  readonly floor: number
+  readonly enemyTemplateIds: readonly string[]
+  readonly result: 'win' | 'loss' | 'draw'
+  /** A draw that ran the full ROUND_CAP rounds. */
+  readonly capDraw: boolean
 }
 
 export interface SimOptions {
@@ -943,7 +1057,8 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
   let runsToFirstSoul: number | null = null
   let partySizeAfterSession: number | null = null
   let deepestAfterSession: number | null = null
-  let reachedFloor5InSession = false
+  const earlyFights: EarlyFight[] = []
+  let traitStacks: SeedTraitStacks = NO_TRAIT_STACKS
   let fights = 0
   let draws = 0
   let capDraws = 0
@@ -977,11 +1092,13 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
         runsToFirstSoul,
         partySizeAfterSession,
         deepestAfterSession,
-        reachedFloor5InSession,
+        reachedFloor5InWindow: reachedFloorInWindow(runs),
+        earlyFights,
         fights,
         draws,
         capDraws,
         largestStacks,
+        traitStacks,
         unattributed,
         applications,
         unicorn,
@@ -998,6 +1115,15 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
       unattributed += m.unattributed
       applications += m.applications
       largestStacks = foldFightStacks(largestStacks, m, run.floor)
+      traitStacks = foldTraitStacks(traitStacks, m, run.floor)
+      if (run.floor <= MATCHUP_MAX_FLOOR) {
+        earlyFights.push({
+          floor: run.floor,
+          enemyTemplateIds: m.enemyTemplateIds,
+          result: m.result,
+          capDraw: m.capDraw,
+        })
+      }
       if (m.unicornRevives === null) {
         unicorn.fightsWithoutUnicorn += 1
         if (m.result === 'win') unicorn.winsWithoutUnicorn += 1
@@ -1030,7 +1156,6 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
         .getState()
         .activeParty.filter((id) => id !== null).length
       deepestAfterSession = progress.deepestFloor
-      reachedFloor5InSession = runs.some((r) => r.floor >= SESSION_TARGET_FLOOR)
     }
   }
 }
@@ -1100,9 +1225,9 @@ export interface Thresholds {
   readonly medianRunsToFirstSoul: number
   readonly seedsWithoutSoul: number
   readonly firstSoulPass: boolean
-  /** Seeds with one of their first FIRST_SESSION_RUNS floor runs on floor 5 or deeper; passes
+  /** Seeds with one of their first FLOOR5_WINDOW_RUNS floor runs on floor 5 or deeper; passes
    * when at least one seed did. */
-  readonly seedsReachingFloor5InSession: number
+  readonly seedsReachingFloor5InWindow: number
   readonly floor5Pass: boolean
 }
 
@@ -1149,9 +1274,15 @@ export interface SpecReport {
   readonly largestStacks: StackMaxima<
     StackCount & { readonly floor: number; readonly seed: number }
   >
+  /** H2c: per bucket, every trait's largest stack (the report prints the top few). */
+  readonly traitStacks: SpecTraitStacks
   readonly unattributed: number
   readonly applications: number
   readonly unicorn: UnicornTotals
+  /** ASSUMPTION 127: the floor 1-5 matchup rows, by (floor, enemy template). */
+  readonly matchups: readonly MatchupRow[]
+  /** ASSUMPTION 127: the first-try clear rate per floor. */
+  readonly firstTry: readonly FirstTryRow[]
   readonly bosses: readonly BossFloorRow[]
   readonly attrition: AttritionRow
   readonly thresholds: Thresholds
@@ -1202,22 +1333,103 @@ export function spreadOf(values: readonly number[]): Spread | null {
 export function computeThresholds(
   results: readonly Pick<
     SeedResult,
-    'firstTryFloor1Clear' | 'runsToFirstSoul' | 'reachedFloor5InSession'
+    'firstTryFloor1Clear' | 'runsToFirstSoul' | 'reachedFloor5InWindow'
   >[],
 ): Thresholds {
   const seeds = results.length
   const firstTryClears = results.filter((r) => r.firstTryFloor1Clear).length
   const medianRuns = medianOfSeeds(results.map((r) => r.runsToFirstSoul))
-  const reachFive = results.filter((r) => r.reachedFloor5InSession).length
+  const reachFive = results.filter((r) => r.reachedFloor5InWindow).length
   return {
     floor1ClearRatePct: seeds === 0 ? 0 : (100 * firstTryClears) / seeds,
     floor1Pass: seeds > 0 && firstTryClears * 100 >= FLOOR1_MIN_CLEAR_PCT * seeds,
     medianRunsToFirstSoul: medianRuns,
     seedsWithoutSoul: results.filter((r) => r.runsToFirstSoul === null).length,
     firstSoulPass: medianRuns <= FIRST_SOUL_MAX_RUNS,
-    seedsReachingFloor5InSession: reachFive,
+    seedsReachingFloor5InWindow: reachFive,
     floor5Pass: reachFive > 0,
   }
+}
+
+/** ASSUMPTION 127: one (floor, enemy creature) row of the matchup table. A fight counts once for
+ * each DISTINCT enemy template in it, with the fight's own result: a row is "fights containing
+ * this creature". On floor 1 there is one enemy, so its rows attribute each fight exactly. */
+export interface MatchupRow {
+  readonly floor: number
+  readonly enemyTemplateId: string
+  readonly fights: number
+  readonly wins: number
+  readonly losses: number
+  readonly capDraws: number
+  readonly otherDraws: number
+}
+
+export function buildMatchupRows(
+  results: readonly Pick<SeedResult, 'earlyFights'>[],
+): MatchupRow[] {
+  const rows = new Map<string, MatchupRow>()
+  for (const result of results) {
+    for (const fight of result.earlyFights) {
+      if (fight.floor > MATCHUP_MAX_FLOOR) continue
+      for (const enemyTemplateId of new Set(fight.enemyTemplateIds)) {
+        const key = `${fight.floor}|${enemyTemplateId}`
+        const row = rows.get(key) ?? {
+          floor: fight.floor,
+          enemyTemplateId,
+          fights: 0,
+          wins: 0,
+          losses: 0,
+          capDraws: 0,
+          otherDraws: 0,
+        }
+        rows.set(key, {
+          ...row,
+          fights: row.fights + 1,
+          wins: row.wins + (fight.result === 'win' ? 1 : 0),
+          losses: row.losses + (fight.result === 'loss' ? 1 : 0),
+          capDraws: row.capDraws + (fight.result === 'draw' && fight.capDraw ? 1 : 0),
+          otherDraws:
+            row.otherDraws + (fight.result === 'draw' && !fight.capDraw ? 1 : 0),
+        })
+      }
+    }
+  }
+  return [...rows.values()].sort(
+    (a, b) =>
+      a.floor - b.floor ||
+      (a.enemyTemplateId < b.enemyTemplateId
+        ? -1
+        : a.enemyTemplateId > b.enemyTemplateId
+          ? 1
+          : 0),
+  )
+}
+
+/** ASSUMPTION 127: per floor, over the seeds that ever ran it, how many cleared it on their FIRST
+ * run there (a push or a farm, whichever came first). A floor no seed ran has no row. */
+export interface FirstTryRow {
+  readonly floor: number
+  readonly seeds: number
+  readonly firstTryClears: number
+}
+
+export function buildFirstTryRows(
+  results: readonly Pick<SeedResult, 'runs'>[],
+  frontier: number,
+): FirstTryRow[] {
+  const rows: FirstTryRow[] = []
+  for (let floor = 1; floor <= frontier; floor++) {
+    let seeds = 0
+    let firstTryClears = 0
+    for (const result of results) {
+      const first = result.runs.find((run) => run.floor === floor)
+      if (first === undefined) continue
+      seeds += 1
+      if (first.cleared) firstTryClears += 1
+    }
+    if (seeds > 0) rows.push({ floor, seeds, firstTryClears })
+  }
+  return rows
 }
 
 export function buildBossRows(
@@ -1357,6 +1569,25 @@ export function buildSpecReport(
     const hit = r.runs.find((run) => run.floor === FIRST_BOSS_FLOOR && run.cleared)
     return hit ? [hit.index] : []
   })
+  const traitStacks: Record<
+    StackBucket,
+    Record<string, SpecTraitStacks[StackBucket][string]>
+  > = {
+    'growth-player': {},
+    'growth-enemy': {},
+    'shred-player': {},
+    'shred-enemy': {},
+  }
+  for (const r of results) {
+    for (const bucket of STACK_BUCKETS) {
+      for (const [attribution, candidate] of Object.entries(r.traitStacks[bucket])) {
+        const current = traitStacks[bucket][attribution]
+        if (current === undefined || candidate.count > current.count) {
+          traitStacks[bucket][attribution] = { ...candidate, seed: r.seed }
+        }
+      }
+    }
+  }
   const sumUnicorn = (key: keyof UnicornTotals): number =>
     results.reduce((s, r) => s + r.unicorn[key], 0)
   const bosses = buildBossRows(results)
@@ -1397,8 +1628,11 @@ export function buildSpecReport(
     draws: results.reduce((s, r) => s + r.draws, 0),
     capDraws: results.reduce((s, r) => s + r.capDraws, 0),
     largestStacks,
+    traitStacks,
     unattributed: results.reduce((s, r) => s + r.unattributed, 0),
     applications: results.reduce((s, r) => s + r.applications, 0),
+    matchups: buildMatchupRows(results),
+    firstTry: buildFirstTryRows(results, frontier),
     unicorn: {
       fightsWithUnicorn: sumUnicorn('fightsWithUnicorn'),
       winsWithUnicorn: sumUnicorn('winsWithUnicorn'),
@@ -1510,6 +1744,21 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     )
   }
   out.push(
+    "First-try clear per floor (each seed's FIRST run on the floor, a push or a farm):",
+    ...spec.firstTry.map(
+      (row) =>
+        `  floor ${pad(row.floor, 2)}: ${pad(row.firstTryClears, 2)}/${pad(row.seeds, 2)} = ${pct(row.firstTryClears, row.seeds)}`,
+    ),
+  )
+  out.push(
+    `Matchups on floors 1-${MATCHUP_MAX_FLOOR} (fights CONTAINING each enemy creature, with the fight's result; floor 1 has one enemy per fight, so its rows are exact):`,
+    '  floor  enemy creature                  fights   wins  losses  capDraw  otherDraw   win%',
+    ...spec.matchups.map(
+      (row) =>
+        `  ${pad(row.floor, 5)}  ${row.enemyTemplateId.padEnd(28)} ${pad(row.fights, 7)} ${pad(row.wins, 6)} ${pad(row.losses, 7)} ${pad(row.capDraws, 8)} ${pad(row.otherDraws, 10)} ${pad(pct(row.wins, row.fights), 7)}`,
+    ),
+  )
+  out.push(
     `Floors 20-${frontier} (watch point), failed pushes by floor: ${
       Object.entries(spec.t4.failedPushesByFloor)
         .filter(([floor]) => Number(floor) >= 20)
@@ -1534,6 +1783,20 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     `Largest SHRED stack (a factor below 1, a cut to the target) of one trait, on a player creature: ${stackText(spec.largestStacks['shred-player'])}`,
     `Largest SHRED stack of one trait, on an enemy creature: ${stackText(spec.largestStacks['shred-enemy'])}; unattributed ${spec.unattributed}/${spec.applications} applications`,
   )
+  for (const bucket of STACK_BUCKETS) {
+    const top = topTraitStacks(spec.traitStacks[bucket], TOP_TRAIT_STACKS)
+    out.push(
+      `Top ${TOP_TRAIT_STACKS} traits by largest ${bucket} stack: ${
+        top.length === 0
+          ? 'none'
+          : top
+              .map(
+                (t) => `${t.attribution} ${t.count}x (floor ${t.floor}, seed ${t.seed})`,
+              )
+              .join('; ')
+      }`,
+    )
+  }
   out.push('Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):')
   for (const row of spec.bosses) {
     out.push(
@@ -1545,7 +1808,7 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     `Rot Sovereign's Attrition (policy runs): ${a.visits} visits, ${a.policyClears} cleared, mean deaths ${fmt(a.meanDeaths)}, max Attrition stacks ${a.maxAttritionStacks}, peak boss Attack ${fmt(a.maxPeakAttack)}`,
   )
   out.push(
-    `ASSUMPTION 22: floor-1 clear >= ${FLOOR1_MIN_CLEAR_PCT}%: ${fmt(t.floor1ClearRatePct)}% ${verdict(t.floor1Pass)}; first soul median <= ${FIRST_SOUL_MAX_RUNS} floor runs: ${fmtMedian(t.medianRunsToFirstSoul)} ${verdict(t.firstSoulPass)}; a seed fights on floor ${SESSION_TARGET_FLOOR}+ in its first ${FIRST_SESSION_RUNS} floor runs: ${t.seedsReachingFloor5InSession} seeds ${verdict(t.floor5Pass)}`,
+    `ASSUMPTION 22: floor-1 clear >= ${FLOOR1_MIN_CLEAR_PCT}%: ${fmt(t.floor1ClearRatePct)}% ${verdict(t.floor1Pass)}; first soul median <= ${FIRST_SOUL_MAX_RUNS} floor runs: ${fmtMedian(t.medianRunsToFirstSoul)} ${verdict(t.firstSoulPass)}; a seed fights on floor ${SESSION_TARGET_FLOOR}+ in its first ${FLOOR5_WINDOW_RUNS} floor runs: ${t.seedsReachingFloor5InWindow} seeds ${verdict(t.floor5Pass)}`,
   )
   return out
 }

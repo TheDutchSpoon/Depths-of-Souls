@@ -49,11 +49,15 @@ describe('The Overgrowth: shape', () => {
     }
   })
 
-  it("base stats fall within GAME_DESIGN's 10-30 range for every stat", () => {
+  it("base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat", () => {
     for (const creature of ALL_CREATURES) {
-      for (const value of Object.values(creature.baseStats)) {
-        expect(value).toBeGreaterThanOrEqual(10)
-        expect(value).toBeLessThanOrEqual(30)
+      for (const [stat, value] of Object.entries(creature.baseStats)) {
+        expect(value, creature.id + ' ' + stat).toBeGreaterThanOrEqual(
+          stat === 'health' ? 20 : 10,
+        )
+        expect(value, creature.id + ' ' + stat).toBeLessThanOrEqual(
+          stat === 'health' ? 45 : 30,
+        )
       }
     }
   })
@@ -111,10 +115,10 @@ describe('Broodmother (floor-10 boss)', () => {
     expect(BROODMOTHER.innateTraitIds).toEqual([BROODMOTHER_TRAIT.id])
   })
 
-  it('base stats fall within the 10-30 range (elevated power comes from level, not raw base)', () => {
-    for (const value of Object.values(BROODMOTHER.baseStats)) {
-      expect(value).toBeGreaterThanOrEqual(10)
-      expect(value).toBeLessThanOrEqual(30)
+  it('base stats fall within the ranges: Health 20-45, other stats 10-30 (elevated power comes from level, not raw base)', () => {
+    for (const [stat, value] of Object.entries(BROODMOTHER.baseStats)) {
+      expect(value, stat).toBeGreaterThanOrEqual(stat === 'health' ? 20 : 10)
+      expect(value, stat).toBeLessThanOrEqual(stat === 'health' ? 45 : 30)
     }
   })
 

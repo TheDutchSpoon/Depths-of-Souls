@@ -25,6 +25,10 @@ three creatures always play the same three roles:
 Rarity never means "stronger" here — a rare creature's total stat budget is about the same as its
 common/uncommon species-mates. Rarity only changes how often it spawns.
 
+**Base stats** sit in the game's design ranges: **Health 20–45**, every other stat **10–30**.
+Health was remapped from 10–30 in 4.1-H2c, each creature keeping its place in the range
+(GAME_DESIGN §5).
+
 ## Statuses
 
 **Web** — A Webbed creature acts last in the round. **Every time any creature takes a turn** (not
@@ -92,7 +96,7 @@ the fight goes on, and it buffs the whole team, not just herself.
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Lure | Endurance | Enabler | Whenever this creature Provokes, it also Defends. |
-| Jaws | Violence | Payoff | Whenever this creature takes damage, it attacks back for **60% of its Attack**. This is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
+| Jaws | Violence | Payoff | Whenever this creature takes damage, it attacks back for **30% of its Attack**. This is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
 | Ironjaw | Violence | Amplifier | Every time this creature's own turn starts, its Defence permanently increases by **20%** — a self-ramping wall, distinct from both Lure's provoke-and-Defend and Jaws' retaliation. |
 
 ## Lullpollen (Wit/Instinct) — Sleep & Punish
@@ -162,7 +166,7 @@ third, plain-damage entry: Arcane Bolt).
 | Weakening Bite | Violence | Permanently lowers a single enemy's Defence by **20%** for the rest of the fight. |
 | Vine Snare | Wit | A single-target hit dealing **85% of the caster's Intelligence**, and applies Web to its target for 3 turns. |
 | Pollen Cloud | Wit | Hits every enemy for **35% of the caster's Intelligence** each, and puts all of them to Sleep for 2 turns. |
-| Arcane Bolt | Wit | A single-target hit dealing damage equal to **50% of the caster's Intelligence**. Also the Sorcerer starter's fixed granted gem. |
+| Arcane Bolt | Wit | A single-target hit dealing damage equal to **100% of the caster's Intelligence**. Also the Sorcerer starter's fixed granted gem. |
 | Root Grasp | Endurance | A single-target hit dealing damage equal to **100% of the caster's own Defence** (instead of Intelligence). |
 | Bramble Ward | Endurance | Permanently raises the whole team's Defence by **20%** for the rest of the fight. |
 | Regrowth | Vitality | Heals a single ally for an amount equal to **30% of the caster's own effective Health**. |
@@ -196,7 +200,7 @@ tagged `unlockedAtBiome: 1` and reachable at The Overgrowth and every deeper bio
 |---|---|---|
 | Ember Lance | Violence | A single-target hit dealing damage equal to **50% of the caster's Intelligence**. |
 | Cinder Nova | Violence | Hits every enemy for **30% of the caster's Intelligence** each. |
-| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns: each tick deals **20% of the caster's Attack** (measured when cast; a placeholder until 4.1-H2c) as indirect damage, only a fifth of the target's Defence applying. Re-poisoning refreshes the timer and keeps the stronger Poison. |
+| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns: each tick deals **20% of the caster's Attack** (measured when cast; a placeholder until 4.1-H2d) as indirect damage, only a fifth of the target's Defence applying. Re-poisoning refreshes the timer and keeps the stronger Poison. |
 
 ### Cumulative unlock
 
@@ -228,11 +232,8 @@ turn's roll never touches the Web it just placed.
 **Stun has no real source** in the seed content for now (no trait or spell applies it); it stays in
 the status vocabulary.
 
-**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; Poison from its applier landed in
-4.1-H2b2 and is folded into the Venom Bolt row above):
-
-- **Snapback (4.1-H2c):** the Jaws strike back for **30% of their Attack** (was 60%). As indirect
-  damage the 60% beat the Shieldbarer pair in every floor-1 fight.
-- **Arcane Bolt (4.1-H2c):** deals **100% of the caster's Intelligence** (was 50%).
-- **Health (4.1-H2c):** every creature's Health moves to the 20–45 range (`floor(20 + (old − 10) ×
-  1.25 + 0.5)`), so a 10 becomes 20 and a 30 becomes 45.
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129): every item has landed and is folded
+into the sections above. Poison from its applier landed in 4.1-H2b2 (the Venom Bolt row). In
+4.1-H2c the Jaws' Snapback went from 60% to 30% of their Attack (as indirect damage the 60% beat
+the Shieldbarer pair in every floor-1 fight), Arcane Bolt from 50% to 100% of the caster's
+Intelligence, and Health to the 20–45 range ("Reading this biome").

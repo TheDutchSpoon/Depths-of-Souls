@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from './__fixtures__/balance'
-import { enemyLevelRange, enemyPartySize, fightCount } from './curves'
+import { bossLevel, enemyLevelRange, enemyPartySize, fightCount } from './curves'
 
 describe('enemyLevelRange (Phase-4 placeholder config)', () => {
   // Hand-derived against the placeholder formula: min = floor, max = floor + 2 + floor(floor/10)
@@ -16,6 +16,12 @@ describe('enemyLevelRange (Phase-4 placeholder config)', () => {
     expect(enemyLevelRange(floor, CFG)).toEqual(expected)
   })
 
+  it('the minimum is exactly the floor at every floor, so rounding it down (4.1-H2c) cannot move this config', () => {
+    for (let floor = 1; floor <= 250; floor++) {
+      expect(enemyLevelRange(floor, CFG).min).toBe(floor)
+    }
+  })
+
   it('the range never inverts (max always >= min)', () => {
     for (const floor of [1, 5, 17, 50, 250]) {
       const { min, max } = enemyLevelRange(floor, CFG)
@@ -24,19 +30,41 @@ describe('enemyLevelRange (Phase-4 placeholder config)', () => {
   })
 })
 
-describe('enemyLevelRange (default config, Phase 4.1-A / ASSUMPTION 4)', () => {
-  // Hand-derived: multiplier rises linearly from x1.25 at floor 1 to x2.00 at floor 100, then
-  // +0.01/floor after. min = round(floor * multiplier), max = min + 2 + floor(floor/10).
-  it('floor 1 -> multiplier x1.25, min = round(1*1.25) = 1', () => {
-    expect(enemyLevelRange(1, DEFAULT_BALANCE_CONFIG)).toEqual({ min: 1, max: 3 })
+describe('enemyLevelRange (default config, Phase 4.1-H2c / ASSUMPTIONS 4, 118, 119)', () => {
+  // Hand-derived: the multiplier rises linearly from x1.25 at floor 1 to x2.00 at floor 100, then
+  // +0.01/floor after. min = floor(floor * multiplier) -- rounded DOWN since H2c (ASSUMPTION 118),
+  // computed as floor * (99a + (b - a)(floor - 1)) / 9900 with a = 125, b = 200 (floors <= 100) and
+  // floor * (b + (floor - 100)) / 100 above; max = min + 0 + floor(floor/10) (width base 0).
+  //   floor: raw min -> min  (round would give)
+  //     1: 1.250 -> 1   2: 2.515 -> 2 (3)   3: 3.795 -> 3 (4)   4: 5.091 -> 5   5: 6.402 -> 6
+  //     6: 7.727 -> 7 (8)   7: 9.068 -> 9   8: 10.424 -> 10   9: 11.795 -> 11 (12)
+  //    10: 13.182 -> 13   20: 27.879 -> 27 (28)   30: 44.091 -> 44
+  //   100: 200.000 -> 200   101: 203.010 -> 203   108: 224.640 -> 224 (225)
+  it.each([
+    [1, { min: 1, max: 1 }],
+    [2, { min: 2, max: 2 }],
+    [3, { min: 3, max: 3 }],
+    [4, { min: 5, max: 5 }],
+    [5, { min: 6, max: 6 }],
+    [6, { min: 7, max: 7 }],
+    [7, { min: 9, max: 9 }],
+    [8, { min: 10, max: 10 }],
+    [9, { min: 11, max: 11 }],
+    [10, { min: 13, max: 14 }],
+    [20, { min: 27, max: 29 }],
+    [30, { min: 44, max: 47 }],
+    [100, { min: 200, max: 210 }],
+    [101, { min: 203, max: 213 }],
+    [108, { min: 224, max: 234 }], // the one floor above 100 where round and floor differ
+  ])('floor %i -> %o', (floor, expected) => {
+    expect(enemyLevelRange(floor, DEFAULT_BALANCE_CONFIG)).toEqual(expected)
   })
 
-  it('floor 100 -> multiplier x2.00, min = round(100*2.00) = 200', () => {
-    expect(enemyLevelRange(100, DEFAULT_BALANCE_CONFIG)).toEqual({ min: 200, max: 212 })
-  })
-
-  it('floor 101 -> multiplier x2.01 (2.00 + 0.01), min = round(101*2.01) = 203', () => {
-    expect(enemyLevelRange(101, DEFAULT_BALANCE_CONFIG)).toEqual({ min: 203, max: 215 })
+  it('floors 1-9 spawn at exactly 1, 2, 3, 5, 6, 7, 9, 10, 11 (ASSUMPTION 118)', () => {
+    const minimums = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(
+      (floor) => enemyLevelRange(floor, DEFAULT_BALANCE_CONFIG).min,
+    )
+    expect(minimums).toEqual([1, 2, 3, 5, 6, 7, 9, 10, 11])
   })
 
   it('the range never inverts (max always >= min)', () => {
@@ -44,6 +72,17 @@ describe('enemyLevelRange (default config, Phase 4.1-A / ASSUMPTION 4)', () => {
       const { min, max } = enemyLevelRange(floor, DEFAULT_BALANCE_CONFIG)
       expect(max).toBeGreaterThanOrEqual(min)
     }
+  })
+})
+
+describe('bossLevel (default config, Phase 4.1-H2c / ASSUMPTION 119)', () => {
+  // bossLevel = enemyLevelRange(floor).max + 5: floor 10: 14 + 5, floor 20: 29 + 5, floor 30: 47 + 5.
+  it.each([
+    [10, 19],
+    [20, 34],
+    [30, 52],
+  ])('floor %i -> boss level %i', (floor, expected) => {
+    expect(bossLevel(floor, DEFAULT_BALANCE_CONFIG)).toBe(expected)
   })
 })
 

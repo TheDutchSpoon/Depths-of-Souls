@@ -25,7 +25,9 @@ where everything you produce goes. It is also where the coding agent works, so:
 
 A slice id like `4.1-H2b2` maps to `.claude/phases/4.1/H2b2/` (phase = before the first `-`, slice =
 after it). Read the previous step's file from there and write yours there. Create the folder if
-it's missing.
+it's missing. Evidence a step file cites goes in the slice's `evidence/` folder; the mailbox keeps
+nothing else (WORKFLOWS "What a mailbox keeps"). At the PR review, list anything in the mailbox
+that breaks this under **To delete** or as a move for Duncan.
 
 ## Doc edits
 

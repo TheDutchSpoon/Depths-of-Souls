@@ -5,8 +5,9 @@
 // -- the NEW `random-ally-without-status` ResponseTarget (ASSUMPTION 30), exercised here for the
 // first time against real content, not a fixture stand-in for the producer.
 //
-// Hand-derived (independent `node -e` calculator). SEEDER (real Sporecloud Seeder base stats,
-// attack 16) acts first (speed 22 > BEARER's 10 > ALLY's 5). BEARER starts the fight wounded to
+// Hand-derived (independent `node -e` calculator). SEEDER (real Sporecloud Seeder base stats:
+// attack 16, intelligence 20, defence 10; its speed 22 is the fixture's own -- the real one is 18 --
+// and its Health is the fixture default, not the species') acts first (speed 22 > BEARER's 10 > ALLY's 5). BEARER starts the fight wounded to
 // 10 HP (applied post-createCombat, same idiom golden-dot.fixture.ts uses -- createCombat resets
 // currentHp to effective max, so a raw `currentHp` override on the party literal would be
 // discarded) so SEEDER's single attack both infects it AND kills it outright, no round-end tick

@@ -1,0 +1,12 @@
+
+ RUN  v5.0.3 C:/Users/dunca/AppData/Local/Temp/claude/c--Users-dunca-MyProjects-Depths-of-Souls/2944aac2-4e3f-41b1-95e5-f5d8e8faf58c/scratchpad/h2c-set-low
+
+stdout | src/engine/__corpus__/dot-scan.test.ts > dot scan
+DOTSCAN {"parts":{"AB":{"ticks":6999,"ones":4311,"fights":500,"withTicks":149},"A":{"ticks":5525,"ones":3018,"fights":300,"withTicks":115},"B":{"ticks":1474,"ones":1293,"fights":200,"withTicks":34},"C":{"ticks":304,"ones":303,"fights":27,"withTicks":4}},"byStatus":{"spore":{"ticks":4076,"ones":1899},"poison":{"ticks":281,"ones":107},"burn":{"ticks":2642,"ones":2305}},"fights":527}
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  02:38:43
+   Duration  2.42s (tests 86%, transform 11%, import 3%)
+

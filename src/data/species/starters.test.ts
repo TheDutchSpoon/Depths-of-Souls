@@ -36,11 +36,15 @@ describe('starter + Unicorn shape', () => {
     }
   })
 
-  it("base stats fall within GAME_DESIGN's 10-30 range for every stat", () => {
+  it("base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat", () => {
     for (const creature of STARTERS) {
-      for (const value of Object.values(creature.baseStats)) {
-        expect(value).toBeGreaterThanOrEqual(10)
-        expect(value).toBeLessThanOrEqual(30)
+      for (const [stat, value] of Object.entries(creature.baseStats)) {
+        expect(value, creature.id + ' ' + stat).toBeGreaterThanOrEqual(
+          stat === 'health' ? 20 : 10,
+        )
+        expect(value, creature.id + ' ' + stat).toBeLessThanOrEqual(
+          stat === 'health' ? 45 : 30,
+        )
       }
     }
   })
@@ -59,6 +63,22 @@ describe('starter + Unicorn shape', () => {
     expect(BRUTE_STARTER.baseStats.attack).toBe(30)
     expect(SHIELDBARER_STARTER.affinity).toBe('endurance') // -> Defence
     expect(SHIELDBARER_STARTER.baseStats.defence).toBe(30)
+  })
+})
+
+describe('Stonehorn Warden starter (Phase 4.1-H2c, ASSUMPTIONS 123, 125)', () => {
+  it('has Attack 15 and Health 39 (the remap of 25), the rest unchanged', () => {
+    expect(SHIELDBARER_STARTER.baseStats).toEqual({
+      health: 39,
+      attack: 15,
+      intelligence: 10,
+      defence: 30,
+      speed: 10,
+    })
+  })
+
+  it('runs the warden role script (it Provokes only when an ally is hurt, and attacks otherwise)', () => {
+    expect(SHIELDBARER_STARTER.defaultScriptId).toBe('warden')
   })
 })
 

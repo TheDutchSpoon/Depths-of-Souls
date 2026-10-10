@@ -48,7 +48,7 @@ export const SORCERER_STARTER: SpeciesCreature = {
   // (species-locked.md) is authored in a later biome; this stands in until then.
   name: 'Glyphmoth Seer',
   affinity: 'wit',
-  baseStats: { health: 20, attack: 10, intelligence: 30, defence: 10, speed: 20 },
+  baseStats: { health: 33, attack: 10, intelligence: 30, defence: 10, speed: 20 },
   defaultScriptId: 'caster',
   innateTraitIds: [SORCERER_STARTER_TRAIT.id],
   rarity: 'rare',
@@ -74,7 +74,7 @@ export const BRUTE_STARTER: SpeciesCreature = {
   // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
   name: 'Cragfang Mauler',
   affinity: 'violence',
-  baseStats: { health: 20, attack: 30, intelligence: 10, defence: 15, speed: 15 },
+  baseStats: { health: 33, attack: 30, intelligence: 10, defence: 15, speed: 15 },
   defaultScriptId: 'striker',
   innateTraitIds: [BRUTE_STARTER_TRAIT.id],
   rarity: 'rare',
@@ -91,8 +91,10 @@ export const SHIELDBARER_STARTER: SpeciesCreature = {
   // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
   name: 'Stonehorn Warden',
   affinity: 'endurance',
-  baseStats: { health: 25, attack: 10, intelligence: 10, defence: 30, speed: 10 },
-  defaultScriptId: 'taunter',
+  // 4.1-H2c: Health 39 is the ASSUMPTION 125 remap of 25; Attack 15 is ASSUMPTION 123 (was 10).
+  baseStats: { health: 39, attack: 15, intelligence: 10, defence: 30, speed: 10 },
+  // 4.1-H2c (ASSUMPTION 123): 'warden', was 'taunter' ("always: Provoke"), which never attacked.
+  defaultScriptId: 'warden',
   innateTraitIds: [SHIELDBARER_STARTER_TRAIT.id],
   rarity: 'rare',
 }
@@ -111,7 +113,7 @@ export const UNICORN: SpeciesCreature = {
   // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
   name: 'Unicorn Lightbearer',
   affinity: 'vitality',
-  baseStats: { health: 25, attack: 15, intelligence: 15, defence: 15, speed: 20 },
+  baseStats: { health: 39, attack: 15, intelligence: 15, defence: 15, speed: 20 },
   defaultScriptId: 'striker',
   innateTraitIds: [UNICORN_TRAIT.id],
   rarity: 'rare',

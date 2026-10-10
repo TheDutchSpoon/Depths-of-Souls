@@ -22,6 +22,10 @@ species here doesn't have a two-role trick to chain off (**Necromoss**) — all 
 creatures share the *same* mechanic instead, just at a bigger scope or a bigger number as rarity
 rises (the Resonants/Gloomjaws pattern from Glimmerdark).
 
+**Base stats** sit in the game's design ranges: **Health 20–45**, every other stat **10–30**.
+Health was remapped from 10–30 in 4.1-H2c, each creature keeping its place in the range
+(GAME_DESIGN §5).
+
 Every status below counts its duration down in **rounds** (once at the end of each round), the
 same as every other status in the game — never per individual turn. **This changes in Phase
 4.1-F:** every status will count down in its **bearer's own turns**, and damage-over-time ticks at
@@ -31,7 +35,7 @@ the end of each of the bearer's turns (see the last section).
 
 **Spore** — A festering infection. While active, the bearer takes damage every round worth **15%
 of the Speed of the creature that infected it**, measured at the moment of infection (a placeholder
-until 4.1-H2c). If the bearer *dies* while infected, the spores burst and infect one living,
+until 4.1-H2d). If the bearer *dies* while infected, the spores burst and infect one living,
 still-healthy member of the bearer's own side, **carrying the same infection**: the new host takes
 the original infector's damage, not a share of the dying host's own Speed. The contagion keeps
 spreading through a population as it's whittled down, rather than clinging to whoever already has
@@ -98,7 +102,7 @@ Nothing happens until an ally has actually fallen.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Igniter | Violence | Enabler | Every attack brands its target with Burn: each round, damage worth **25% of the Igniter's Intelligence**, measured when branded (a placeholder until 4.1-H2c). Re-branding refreshes the Burn and keeps the stronger one. |
+| Igniter | Violence | Enabler | Every attack brands its target with Burn: each round, damage worth **25% of the Igniter's Intelligence**, measured when branded (a placeholder until 4.1-H2d). Re-branding refreshes the Burn and keeps the stronger one. |
 | Ashborn | Wit | Payoff | Deals **30% more damage** to any enemy currently Burning. |
 | Cinderlord | Violence | Amplifier | Every kill it personally lands applies **Burn to every remaining enemy**, measured from the Cinderlord's own Intelligence; an enemy already Burning keeps the stronger Burn and has its timer refreshed. |
 
@@ -180,7 +184,6 @@ turn. Spore's spread on death is unchanged.
 Vigor, …) now land on **its own side** by default. In Phase 4 an enemy support caster targeted the
 player's lowest-HP creature, healing and buffing the player.
 
-**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; the DoT, Spore-spread, Rotcore and
-Sporch items landed in 4.1-H2b2 and are folded into the sections above):
-
-- **Health (4.1-H2c):** every creature's Health moves to the 20–45 range, as in every biome.
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129): every item has landed and is folded
+into the sections above. The DoT, Spore-spread, Rotcore and Sporch items landed in 4.1-H2b2, and
+every creature's Health moved to the 20–45 range in 4.1-H2c ("Reading this biome").

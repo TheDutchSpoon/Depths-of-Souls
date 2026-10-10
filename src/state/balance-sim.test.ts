@@ -1,5 +1,5 @@
 // Phase 4.1-H1: balance simulator tests. They assert determinism, report shape and the POLICY
-// MECHANICS, never a balance value (ASSUMPTION 106), so the H2 tuning pass doesn't rewrite them.
+// MECHANICS, never a balance value (ASSUMPTION 106), so the tuning passes (H2c, H2d) don't rewrite them.
 // `npm run sim` (vitest --mode sim) runs the full report instead of these tests.
 
 import { describe, expect, it } from 'vitest'
@@ -43,6 +43,7 @@ import {
   lockScopesByStatus,
   medianOfSeeds,
   NO_STACKS,
+  NO_TRAIT_STACKS,
   nextRun,
   noteBossVisit,
   orderedParty,
@@ -60,6 +61,7 @@ import {
   stopReason,
   summonPass,
   FIRST_SESSION_RUNS,
+  FLOOR5_WINDOW_RUNS,
   INITIAL_PROGRESS,
   WALL_FAILED_PUSHES,
   type BossVisit,
@@ -794,11 +796,13 @@ describe.skipIf(isSim)('balance simulator', () => {
         runsToFirstSoul: null,
         partySizeAfterSession: null,
         deepestAfterSession: null,
-        reachedFloor5InSession: false,
+        reachedFloor5InWindow: false,
+        earlyFights: [],
         fights: 0,
         draws: 0,
         capDraws: 0,
         largestStacks: NO_STACKS,
+        traitStacks: NO_TRAIT_STACKS,
         unattributed: 0,
         applications: 0,
         unicorn: zeroUnicorn,
@@ -936,11 +940,11 @@ describe.skipIf(isSim)('balance simulator', () => {
 
       it('floor 5: one seed passes, none fails', () => {
         const one = computeThresholds(
-          many(5, (i) => ({ reachedFloor5InSession: i === 3 })),
+          many(5, (i) => ({ reachedFloor5InWindow: i === 3 })),
         )
-        expect(one.seedsReachingFloor5InSession).toBe(1)
+        expect(one.seedsReachingFloor5InWindow).toBe(1)
         expect(one.floor5Pass).toBe(true)
-        const none = computeThresholds(many(5, () => ({ reachedFloor5InSession: false })))
+        const none = computeThresholds(many(5, () => ({ reachedFloor5InWindow: false })))
         expect(none.floor5Pass).toBe(false)
       })
     })
@@ -949,7 +953,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       const results = many(4, (i) => ({
         firstTryFloor1Clear: i < 3,
         runsToFirstSoul: 5,
-        reachedFloor5InSession: i === 0,
+        reachedFloor5InWindow: i === 0,
       }))
       expect(report(results).thresholds).toEqual(computeThresholds(results))
     })
@@ -1062,8 +1066,12 @@ describe.skipIf(isSim)('balance simulator', () => {
           expect(r.partySizeAfterSession).toBe(
             r.runs[FIRST_SESSION_RUNS]!.partyLevels.length,
           )
-          expect(r.reachedFloor5InSession).toBe(
-            session.some((x) => x.floor >= SESSION_TARGET_FLOOR),
+          // ASSUMPTION 126: the floor-5 flag reads the finished runs at the 20-run window (here the
+          // run cap is 11, so it reads all of them), not the 10-run session.
+          expect(r.reachedFloor5InWindow).toBe(
+            r.runs
+              .slice(0, FLOOR5_WINDOW_RUNS)
+              .some((x) => x.floor >= SESSION_TARGET_FLOOR),
           )
         })
       }

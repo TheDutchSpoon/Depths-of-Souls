@@ -736,9 +736,9 @@ describe('a status may not trigger on round end', () => {
 describe('Arcane Surge and a lethal tick in one turn-end pass', () => {
   it("a Seer killed by its own tick keeps Surge's TriggerFired; the queued cast is refused at drain (dead actor)", () => {
     // Innate effects run before the status tick in canonical effect order, so the Surge roll
-    // (seed 0's first draw, 0.2664 < 50%) happens first. The Poison then kills the Seer (3 HP, a
-    // 3% tick of 100 max HP is 3); the grant it queued is refused (ASSUMPTION 43). An ally keeps
-    // the side alive, so the drain runs.
+    // (seed 0's first draw, 0.2664 < 50%) happens first. The Poison then kills the Seer (3 HP; its
+    // tick is the 4.1-H2b2 applier-snapshot potency, no longer a percent of max HP); the grant it
+    // queued is refused (ASSUMPTION 43). An ally keeps the side alive, so the drain runs.
     const state = fight(
       [
         {

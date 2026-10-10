@@ -249,7 +249,10 @@ finding labels B1, A4, … are a separate scheme.)
     indirect damage;
   - **H2b1** Flickerlings replacing Glowflies, and the observer watching damage events;
   - **H2b2** status rules: single-instance statuses, DoT and Regen from the applier's snapshot;
-  - **H2c** the first tuning pass on the final rules, with the CI thresholds asserted.
+  - **H2c** the numbers the H2 grill decided (level range, boss level, Health 20–45, the Shieldbarer
+    starter, Snapback, Arcane Bolt) and the report additions, with no balance number chosen;
+  - **H2d** the balancing pass: a grill of the design owner on H2c's report decides the floor-1
+    fixes and the DoT percentages, then the CI thresholds are asserted.
 - **No demo of its own** (a fix phase): the Phase 4.5 demo covers Phase 4 and 4.1 together
   (CONVENTIONS "Every feature phase ships a demo").
 

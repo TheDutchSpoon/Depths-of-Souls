@@ -720,8 +720,9 @@ describe('pinBiome() / canPinBiome()', () => {
 
 describe('runScriptedIntro()', () => {
   test('adds the Unicorn on a win', () => {
-    // The real Unicorn (health25/attack15/def15/speed20) is trivially weaker than HERO
-    // (speed50 acts first, attack50 - def15 easily one-shots a 25-HP target).
+    // The real Unicorn (health39 since the 4.1-H2c remap, attack15/def15/speed20) is trivially
+    // weaker than HERO (speed50 acts first, attack50 - def15 = 35 core plus chip and the Additional,
+    // and HERO acts again, so the 39-HP target dies within HERO's first turns).
     const store = createGameStore(
       makeDeps({
         standaloneCreatures: [

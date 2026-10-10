@@ -13,13 +13,16 @@ export interface LevelRange {
 export type RarityTier = 'common' | 'uncommon' | 'rare'
 
 /**
- * ASSUMPTION 4 (phase-4.1-implementation-plan.md) + the 4.1-A plan review's own correction:
- * min = round(floor * m(floor)), where m(floor) rises linearly from
+ * ASSUMPTION 4 (phase-4.1-implementation-plan.md) + the 4.1-A plan review's own correction, with
+ * the rounding changed by 4.1-H2c (ASSUMPTION 118): min = floor(floor * m(floor)) -- ROUNDED DOWN,
+ * so an early floor's minimum never exceeds floor * m(floor) -- where m(floor) rises linearly from
  * levelMultiplier.atFloor1Hundredths/100 at floor 1 to .../atFloor100Hundredths/100 at floor
- * 100, then + perFloorAfter100Hundredths/100 per floor after. Computed with a SINGLE Math.round
- * at the very end -- multiplying out before dividing keeps the whole computation exact integer
- * arithmetic until that one rounding, so there is no compounding float drift across floors (the
- * plan's own "no intermediate rounding of the multiplier" requirement).
+ * 100, then + perFloorAfter100Hundredths/100 per floor after. Computed with a SINGLE Math.floor
+ * at the very end, in both branches -- multiplying out before dividing keeps the whole computation
+ * exact integer arithmetic until that one rounding, so there is no compounding float drift across
+ * floors (the plan's own "no intermediate rounding of the multiplier" requirement). A flat x1.00
+ * multiplier (the Phase 4 placeholder config) makes the quotient an exact integer, so floor and
+ * round agree there.
  */
 function scaledMinLevel(floor: number, config: BalanceConfig): number {
   const {
@@ -28,9 +31,9 @@ function scaledMinLevel(floor: number, config: BalanceConfig): number {
     perFloorAfter100Hundredths: p,
   } = config.levelMultiplier
   if (floor <= 100) {
-    return Math.round((floor * (99 * a + (b - a) * (floor - 1))) / 9900)
+    return Math.floor((floor * (99 * a + (b - a) * (floor - 1))) / 9900)
   }
-  return Math.round((floor * (b + p * (floor - 100))) / 100)
+  return Math.floor((floor * (b + p * (floor - 100))) / 100)
 }
 
 export function enemyLevelRange(floor: number, config: BalanceConfig): LevelRange {
@@ -56,7 +59,8 @@ export function enemyPartySize(floor: number, config: BalanceConfig): number {
 }
 
 /** A boss floor's boss spawns a few levels above that floor's own enemyLevelRange(floor).max.
- * Default offset 3 (unchanged from Phase 4 Slice I). */
+ * Default offset 5 since 4.1-H2c (ASSUMPTION 119; it was 3, Phase 4 Slice I), so the narrower
+ * range doesn't lower boss levels: 19 / 34 / 52 on floors 10 / 20 / 30. */
 export function bossLevel(floor: number, config: BalanceConfig): number {
   return enemyLevelRange(floor, config).max + config.bossLevelOffset
 }

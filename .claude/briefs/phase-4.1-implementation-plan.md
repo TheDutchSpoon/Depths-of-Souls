@@ -64,7 +64,7 @@ that each has a single golden policy (confirmed with the design owner):
 | **4.1-E** | `perform-action` (bonus/echo become data) | Deliberate changes, listed |
 | **4.1-F** | Statuses as effect containers + status timing + Web roll + Silence/Pacify, shipped as **F1** (A3: statuses as effect containers, timing unchanged), **F2** (D6 status timing + D5 Web roll) and **F3** (G2: Silence & Pacify) | F1: deliberate, narrow (only the turn-skip shape and the two fixture locks re-expressed on `action-lock`); F2: deliberate, listed (timing); F3: goldens byte-identical; the digest is regenerated once, existing entries changing only through the cast-role loadout roll (attributed mechanically), plus any appended coverage fights |
 | **4.1-G** | Hub actions + enemy behaviour, shipped as **G1** (enemy behaviour) and **G2** (hub and store) | G1: deliberate, listed; mechanism goldens byte-identical, content goldens and the digest change (attributed stage by stage); G2: engine goldens and the digest **byte-identical**, store tests change |
-| **4.1-H** | Balance simulator, combat-rule changes from the H2 grill, and the first tuning pass, shipped as **H1** (the simulator and its report), **H2a** (damage rules), **H2b1** (Flickerlings and damage observation), **H2b2** (status rules) and **H2c** (the first tuning pass) | H1: **byte-identical** (new files only; every golden, store test and the digest unchanged); H2a, H2b1, H2b2: deliberate, listed (each rule's own goldens); H2c: content numbers change, deliberate and listed; mechanism goldens untouched |
+| **4.1-H** | Balance simulator, combat-rule changes from the H2 grill, and the first tuning pass, shipped as **H1** (the simulator and its report), **H2a** (damage rules), **H2b1** (Flickerlings and damage observation), **H2b2** (status rules), **H2c** (the grill-decided numbers and the report additions) and **H2d** (the balancing pass) | H1: **byte-identical** (new files only; every golden, store test and the digest unchanged); H2a, H2b1, H2b2: deliberate, listed (each rule's own goldens); H2c, H2d: content numbers change, deliberate and listed; mechanism goldens untouched |
 
 The split keeps each PR under one golden policy: a PR that must be byte-identical never also
 carries deliberate changes, so "any diff is a regression" stays checkable.
@@ -1054,7 +1054,7 @@ and **6v6 boss floors** (decided at the PR #81 review).
 
 Item: **D1** (simulator, bands, CI thresholds, tuning).
 
-### The split: H1, H2a, H2b1, H2b2, H2c (H2 split at the H2 grill; H2b before its kickoff)
+### The split: H1, H2a, H2b1, H2b2, H2c, H2d (H2 split at the H2 grill; H2b before its kickoff; H2d at the H2c plan review)
 
 | PR | Items | Golden policy |
 |---|---|---|
@@ -1062,7 +1062,8 @@ Item: **D1** (simulator, bands, CI thresholds, tuning).
 | **4.1-H2a** | Damage rules: an engine-visible creature `level`, the fading **Additional** on direct hits, and the **direct/indirect** damage split (ASSUMPTIONS 110–112). | **Deliberate, listed**: every golden that has a hit changes; each change attributed to one of the three rules. |
 | **4.1-H2b1** | Flickerlings and damage observation: the observer watching **damage events** (ASSUMPTION 115) and **Flickerlings replacing Glowflies** with the content that goes with them: Glow deleted, Beacon Charge grants Act First, Overcharge deleted, Luminous Tide becomes Kindred Light (ASSUMPTION 116). Stacking is untouched. | **Deliberate, listed**: `golden-glowfly-detonator` is retired; every other golden is byte-identical; the data, store and mechanism tests that read Glowflies, Glow, Overcharge or Luminous Tide change, each listed; the digest is regenerated once. |
 | **4.1-H2b2** | Status rules: **single-instance statuses** (no stacks; ASSUMPTION 114) and **DoT and Regen from the applier's snapshot** as indirect damage (ASSUMPTION 113), with the content they change: Vulnerability ×1.5 once, Sporch Igniter's one Burn, Spore's spread passing the snapshot, the placeholder DoT and Regen percentages. | **Deliberate, listed**: goldens that log a status event lose its stack count (that field only), the stacking and DoT-tick goldens change, `golden-consume-stacks` is retired; each attributed to one of the two rules; the digest is regenerated once. |
-| **4.1-H2c** | The first tuning pass on the final rules: Health 20–45, the early-floor level range, the boss level offset, the Shieldbarer starter, Snapback, Arcane Bolt, the floor-1 per-item fixes, the DoT numbers, the report's additions, the CI threshold test asserted, and the before/after report (ASSUMPTIONS 117–129). | **Deliberate, listed**: content goldens, store and integration tests and the digest change, each attributed to a listed tuning change. Mechanism goldens untouched. |
+| **4.1-H2c** | The numbers the H2 grill decided, on the final rules: Health 20–45, the early-floor level range, the boss level offset, the Shieldbarer starter, Snapback, Arcane Bolt (ASSUMPTIONS 118, 119, 123–125); the report's additions and the floor-5 window (126, 127); the before/after report; and the measurements the H2d grill needs (ASSUMPTION 149). It chooses no balance number. | **Deliberate, listed**: content goldens, store and integration tests and the digest change, each attributed to a listed change. Mechanism goldens untouched. |
+| **4.1-H2d** | The balancing pass: the floor-1 per-item fixes and the DoT percentages, decided by the design owner in a grill on H2c's report (ASSUMPTIONS 129, 149), and the CI threshold test asserted (ASSUMPTION 148). | **Deliberate, listed**: as H2c; mechanism goldens that read a tuned number are pinned (ASSUMPTION 147). |
 
 **Why this split, and this order.**
 - A tuning plan's ASSUMPTIONS name what changes and by how much. That needs the report first, so
@@ -1156,13 +1157,13 @@ carry the changed rules and values.
 - **Watch points:** no per-turn break-through chance on locks (120); no draw band (121); bosses
   stay one fight (122).
 - **Content (H2c):** the Shieldbarer starter (123); Snapback and Arcane Bolt (124); Health 20–45
-  (125); the remaining floor-1 fixes and the DoT numbers (129).
+  (125). **(H2d):** the remaining floor-1 fixes and the DoT numbers (129).
 - **The report and CI (H2c):** the floor-5 threshold within 20 floor runs (126); two report
-  additions (127).
+  additions (127). **(H2d):** the CI threshold test asserted (148).
 - **Order:** H2a → H2b → H2c (128).
 - **Framing (design owner):** balance doesn't have to be perfect yet. Player-written scripts
-  (Phase 6) and equipment (Phase 8) will strengthen the starting team, so H2c aims at the bands
-  and the CI thresholds, not at perfection.
+  (Phase 6) and equipment (Phase 8) will strengthen the starting team, so H2c and H2d aim at the
+  bands and the CI thresholds, not at perfection.
 
 ### 4.1-H2a — damage rules (deliberate)
 
@@ -1198,88 +1199,28 @@ Moved to .claude/phases/4.1/H2b2/brief.md at its kickoff.
 
 ### 4.1-H2c — the first tuning pass (deliberate)
 
-- **Config:** level-range width base 2 → 0 and a rounded-down minimum (ASSUMPTION 118);
-  `bossLevelOffset` 3 → 5 (ASSUMPTION 119).
-- **Content data:** Health remapped to 20–45 for every creature (ASSUMPTION 125) except the three
-  Flickerlings, already on the new scale since 4.1-H2b1 (38 / 25 / 28): the remap skips them; the Shieldbarer
-  starter's Attack 15 and `warden` role (ASSUMPTION 123); Snapback 0.3; Arcane Bolt 1.0 (ASSUMPTION
-  124).
-- **Per-item tuning toward the bands and the CI thresholds** (ASSUMPTION 129): the floor-1
-  problem creatures the floor 1–5 matchup table shows, and the DoT percentages.
-  - **Input from the H2b2 PR review:** with the placeholders, 4,971 of the corpus's 5,318 ticks
-    (93%) land on the minimum of 1 (a potency of 4–5 from a stat near 20, against a fifth of a
-    Defence near 20); corpus draws rose 39 → 52 with H2b2. Tuning the percentages has to lift a
-    tick's potency clear of `0.2 × Defence` across the level range, or DoT stays inert.
-- **The report additions** (ASSUMPTION 127) and the **floor-5 threshold change** (ASSUMPTION 126);
-  then the CI threshold test asserted.
-- **Before/after report** in the PR and the phase record: the report on `main` before H2c (with
-  H2a and H2b merged) and after it.
-- Content-doc numbers follow the data in the same PR.
+Moved to .claude/phases/4.1/H2c/brief.md at its kickoff.
 
-- A **deterministic balance simulator**: drives the **real store** (`newGame`, the intro, `setSpec`,
-  `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with a **documented simple player policy**
-  (ASSUMPTION 21) over a fixed set of seeds, and reports:
-  - **T1** floor-1 clear rate (target ≥95% of seeds);
-  - **T2** floor runs until the first soul completes (target ~10; floor runs, not clears, since the
-    PR #84 review: ASSUMPTION 107);
-  - **T3** party size after the first session = the first 10 floor runs (target 6);
-  - **T4** the deepest floor reached before a hard wall (target: no wall before the floor-10 boss);
-  - **T5** party level vs floor, and enemy level vs floor (target: party ≈ floor, enemy per the
-    multiplier curve).
-- Output is a readable report (a table per spec). **CI asserts only loose "badly broken"
-  thresholds** (ASSUMPTION 22); bands are reported, not asserted.
-- **First tuning pass** (H2c, scoped by the H2 grill above): adjust `BalanceConfig` values and the
-  numbers of the three new spells (and any creature/spell numbers the report shows as outliers)
-  toward the bands. Record the before/after report in the PR and in the phase record. Content-doc
-  numbers follow the data in the same PR.
-- Watch points to report explicitly: fight-count compounding (floor success vs per-fight win rate),
-  floors 20–30, and the Unicorn's revive strength under the cap.
-- **Watch point: uncapped stat stacking stalls fights** (PR #73 review, measured on the corpus
-  after 4.1-C2c). 40 of the 500 corpus fights end as round-cap draws, and 31 of those have the
-  Shieldbarer starter's Rallying Cry (`on-provoke` → ×1.35 Defence to every ally, permanent) stacked
-  58 to 101 times on one creature. In corpus fight 374 the Unicorn reaches about 3 × 10¹⁰ effective
-  Defence, damage falls to the chip floor, and a Defence-scaled retaliation (Retaliating Shell) hits
-  for 75,204. Other traits reach 100–200 stacks too (fights 9, 83, 344, 348).
-  - **More data (PR #77 review, after 4.1-D2):** the Part C coverage fights face a wall of
-    Shieldbarers that Provoke and Defend for 100 rounds, so they stack hardest. In fight 507
-    (Bramble Ward) Rallying Cry fires 513 times and Bramble Ward 300 times, effective Defence
-    reaches about 1.6 × 10²³ and one creature carries 201 active effects. These are coverage
-    fights, not balance data, so the simulator's draw-rate figures should come from its own runs.
-  - **More data (4.1-H2b1 PR review):** the Flickerling Flare's ×1.15 Speed to every ally fires on
-    each Wick burn, and the Wick burns every turn while another ally is hurt, so Speed compounds
-    (two Flares: ×1.32 per burn). On the regenerated corpus, 20 fights have a Flare reacting; the
-    worst reach 45 reactions and ×539 Speed (fight 190), and 43 reactions and ×407 (fights 344 and
-    348, both 100-round draws). Five Flickerling fights changed to draws in H2b1 (344, 370, 372,
-    490, 494). Same rule as above: if the report shows a fix is needed, it is per item (the factor,
-    or how often the Flare can fire), never a cap.
-  - **The rule is locked**: `stat-modifier` stacking is multiplicative and uncapped (GAME_DESIGN,
-    "Player-facing treatment"). The fix, if the report shows one is needed, is per content item:
-    the factor, or how often it can fire (for example once per turn, or a trigger condition), and
-    never a global stack cap.
-  - The report adds, per spec: the **round-cap draw rate**, and the **largest stack of one trait's
-    stat-modifier** seen on a creature. Whether draws get a target band is decided on H1's report,
-    before H2's plan. **Decided at the H2 grill: no band for now** (ASSUMPTION 121); the draw rate
-    stays in the report.
-- **Watch point: boss floors in 6v6** (PR #82 review, measured on the corpus after 4.1-G1).
-  - **Lock uptime needs a script that aims at the boss.** Role scripts aim a spell at the lowest-HP
-    enemy, so the simple policy never locks a boss. In the G1 corpus, 19 boss fights have a
-    player-side Pacify, and it lands on the boss in none of them. The four Leech Sovereign fights
-    the F3 attribution named (19, 109, 199, 289) are rerolled fights now, not a measurement of the
-    lock.
-  - So run every boss floor twice for the same party: once on the simple policy, and once with one
-    creature on `Cast Pacify → highest-HP enemy`, the case GAME_DESIGN "Milestone bosses" accepts.
-    The store has no script action until Phase 6, but it already materializes an instance's
-    `scriptId` against its script registry, so this case runs through the real store (decided at
-    the 4.1-H1 plan review, ASSUMPTION 101): the extra script registered, set on one instance from
-    a state snapshot, and the snapshot restored after.
-  - Report the boss's locked-turn share and the clear rate both ways. A large jump in the clear rate
-    means the lock still switches a boss off, and the watch point's per-turn break-through chance
-    comes back as a decision. **Measured on H1's report: no jump** (the clear rate falls or holds
-    on every boss floor but the Leech Sovereign's, where it rises 4–8 points over all visits), so
-    **no break-through chance** (ASSUMPTION 120).
-  - **The Rot Sovereign's Attrition** (+10% Attack on every death, either side) has up to 11 other
-    deaths to feed on in 6v6, where it had at most 8. T4 and the floor-30 report show whether she
-    runs away.
+### 4.1-H2d — the balancing pass (deliberate)
+
+Added at the H2c plan review (2026-10-10; ASSUMPTION 149): choosing balance numbers is design work,
+so H2c ships only the numbers the H2 grill already decided, and this slice carries the rest.
+- **A grill first.** The design owner is grilled on H2c's "after" report and its DoT measurements:
+  which levers move each spec toward the CI thresholds (the floor-1 problem creatures in the floor
+  1–5 matchup table, the DoT percentages against floors 21–30). The rulings are the slice's
+  ASSUMPTIONS; the coding agent implements numbers, it doesn't choose them.
+- **The CI threshold test asserted** (ASSUMPTION 148): green on the tuned data, failing on H2c's.
+- **Goldens:** ASSUMPTION 147. The mechanism goldens that read a DoT percentage (`golden-dot`, the
+  `golden-f2-*` DoT goldens, the `golden-h2b2-*` goldens that read one, the
+  `golden-spore-spread-*` mechanism goldens, the `turn-end-dot-kill-burst` pair and
+  `golden-hollowkin-wretch-self-dot`) are pinned; each changed number is shown in a hand-derived
+  content golden on real data.
+- **Before/after report:** H2c's "after" is H2d's "before".
+- **Input from the H2c PR review** (`phases/4.1/H2c/review-r1.md`), for reading the matchup table
+  in the grill: a row counts **fights**, repeat visits to a floor included, not seeds; and a floor's
+  enemies come from the seed and the store's run counter, not from the spec. A spec that leaves
+  floor 1 sooner meets fewer templates there (after H2c the Brute meets 12 of floor 1's 18; none of
+  its rows is a Treant).
 
 ### Acceptance (4.1-H)
 - **H1:** the simulator is deterministic (same seeds → identical report, asserted); the report
@@ -1294,9 +1235,14 @@ Moved to .claude/phases/4.1/H2b2/brief.md at its kickoff.
 - **H2b2:** each status rule (single instance, stronger stays, applier snapshot) has a
   hand-derived focused golden that fails with it removed; no `cap`, `stacks` or `consume-stacks`
   remains in engine or data; every changed golden is attributed.
-- **H2c:** the CI threshold test is green; the before/after report is in the PR and the phase
-  record, every band (T1–T5) shown before and after; mechanism goldens untouched; content goldens
-  re-derived or regenerated and listed where numbers changed.
+- **H2c:** the before/after report is in the PR and the phase record, every band (T1–T5) and the
+  three threshold verdicts shown before and after (reported, not asserted); the DoT measurements
+  for the H2d grill are in the PR (ASSUMPTION 149); mechanism goldens untouched (expected values
+  byte-identical, tuned numbers pinned: ASSUMPTION 147); content goldens re-derived and listed
+  where numbers changed.
+- **H2d:** the CI threshold test is green, and fails on H2c's data; the before/after report is in
+  the PR and the phase record; every changed number traces to an H2d grill ruling; goldens as for
+  H2c.
 
 ---
 
@@ -1414,7 +1360,7 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 22. **CI thresholds:** fail only if floor-1 clear rate < 80%, the first soul takes > 30 floor runs,
     or no seed reaches floor 5 within the first 20 floor runs (the first session until the H2
     grill: ASSUMPTION 126). Everything else is reported. H1 reports them; the CI test asserts them
-    from H2c (see "The split"). How each is read: ASSUMPTIONS 107 and 126 (the first soul counted
+    from H2d (see "The split"; H2c until its plan review, ASSUMPTION 149). How each is read: ASSUMPTIONS 107 and 126 (the first soul counted
     clears until the PR #84 review).
 23. **Reachable floors** = `1 .. min(deepestFloor + 1, contentFrontier)`, inclusive. When a floor
     fails both checks, **`beyond-content-frontier` wins** (it is the more specific reason, and the
@@ -1700,7 +1646,7 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        deeper (reaching a floor is fighting on it, not clearing it); fails when no seed does.
        *(First 10 floor runs until the H2 grill: ASSUMPTION 126.)*
      The report shows each threshold's value next to its verdict, and the pure function that
-     computes them is tested on hand-built seed results, so H2's CI test asserts a computation
+     computes them is tested on hand-built seed results, so 4.1-H2d's CI test asserts a computation
      that is already pinned.
 108. **Decided (PR #84 review).** T4's hard wall stays 5 failed pushes at one floor (ASSUMPTION
      98). On H1's report every seed walls before floor 10, and the walls are real: the worst floor
@@ -1756,7 +1702,7 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        Retaliate and the Wretch's Confusion never answer a tick (decided at the doc-sync,
        2026-10-08: DoT is the counter to Defence tanks, and most retaliators are those tanks);
      - **Regen heals** the potency (no Defence).
-     Placeholder numbers (H2c tunes them, ASSUMPTION 129): **Poison 20% of Attack, Burn 25% of
+     Placeholder numbers (H2d tunes them, ASSUMPTIONS 129, 149): **Poison 20% of Attack, Burn 25% of
      Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** A status that applies
      itself through its own effect passes its snapshot on (Spore spreading on death keeps the
      original strength; ASSUMPTION 143). Integer percent, one floor (the percent-hp brief's float rule). This
@@ -1861,7 +1807,7 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      Measured on the full decided set ("What the evidence said"): it lifts first-try floor 1 for the
      Sorcerer (33 → 40 of 40) and Brute (32 → 35), and slows the mid-game for all three; the
      Shieldbarer pays most (floor 1 28 → 26; floor-10 first clear 145 → 213 median floor runs, 13
-     seeds of 40 never clearing it in 400 runs). H2c tunes against that (ASSUMPTION 129).
+     seeds of 40 never clearing it in 400 runs). H2d tunes against that (ASSUMPTIONS 129, 149).
 126. **Decided (H2 grill).** **ASSUMPTION 22's floor-5 threshold reads the first 20 floor runs**
      (was 10). On H1's report, and in every configuration measured before the full decided set, no
      seed of any spec reached floor 5 in 10 runs; in 20, most do. On the full decided set 4 / 12 /
@@ -1882,6 +1828,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      of 40, 65%; Brute 35, Sorcerer 40), and it is also the spec the Health remap slowed most
      (ASSUMPTION 125). Measured before the remap, its remaining floor-1 losses were to Wit casters
      (Spider Weaver, Pollinator Beneficiary and Pollenlord; Wit beats its Endurance).
+     *(Amended at the H2c plan review, ASSUMPTION 149: the design owner decides these fixes and
+     percentages in the H2d grill; H2c's plan proposes none.)*
 130. **Decided (H2a plan review).** **Each caller states the damage channel.** `executeAttack`
      (every instance and every Splashing hit) and `executeSpellEffects` pass `'direct'`; `fireHook`
      passes `'indirect'`. A granted `perform-action` needs nothing: it runs later through
@@ -2027,6 +1975,57 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      shipped content reads `on-damage-dealt`, so no fight changes through the dealer rule. Rejected:
      the fallback bearer as a full dealer (today's behaviour, an accident of the old source rule).
 
+147. **Decided (H2c kickoff, 2026-10-09; design owner).** **Tuning never changes a mechanism
+     golden** (refines the "Mechanism goldens on fixtures, content on real data" rule above; a
+     standing rule in CONVENTIONS, "Mechanism goldens vs content goldens"). A golden whose subject
+     is a rule is a **mechanism golden**: when it borrows a real status, spell or trait, it pins
+     every tuned number it reads in its own fixture (the real def, with only that number held), so
+     a tuning PR leaves its expected values byte-identical. A golden whose subject is a named
+     content item (a creature, trait or spell) is a **content golden**: it reads real data and is
+     re-derived by hand when a tuning PR moves a number it reads. A tuning PR shows each effect
+     number it changes (a status potency, a spell's power, a trait's magnitude; not base stats,
+     which the data tests cover) in a hand-derived content golden on real data, new or
+     re-derived. H2c pins nothing: `golden-g1-leech-sovereign-pacified` (a rule on the real Leech
+     Sovereign) reads no number H2c moves, since none of its events reads her Health (measured at
+     the H2c plan review, round 2), so it gets a comment fix, not a pin. The DoT goldens wait for
+     H2d, which moves their numbers (ASSUMPTION 149): `golden-dot`, the `golden-f2-*` DoT goldens, the `golden-h2b2-*`
+     goldens that read a percentage, `golden-spore-spread-filter`, `-fizzle` and `-dot-kill`, and,
+     corrected at the H2c plan review, `golden-turn-end-dot-kill-burst`, `-refresh` and
+     `golden-hollowkin-wretch-self-dot`, whose subjects are rules too. Each pin is a setup-only
+     edit. Why: in a tuning PR, mechanism goldens that stay byte-identical are the proof that only numbers moved; a hand golden re-derived under new numbers can still
+     pass while no longer reaching the branch it was built for (a tick above the minimum of 1, a
+     potency tie); and every later tuning pass would re-derive the same goldens again. Real content
+     stays covered by the content goldens, the corpus and the data tests. Rejected: every golden
+     following the data; every golden pinned.
+
+148. **Decided (H2c kickoff, 2026-10-09; design owner; lands in H2d, ASSUMPTION 149).** **The CI
+     threshold test runs in the normal suite** (`npm run test`), over the full 40 seeds of each spec with the run cap at 30
+     floor runs and the boss probe off. The three verdicts read nothing past run 30 (floor 1 is
+     the first try; floor 5 reads the first 20 runs; a first soul after run 30 fails the median
+     whether it lands at 31 or never), so the cap changes no verdict, only the reported median.
+     The test asserts the three verdicts, never a value. The plan measures its runtime and stops
+     to ask if it adds more than about 2 minutes to the suite. Rejected: a separate CI step (the
+     threshold would leave the local gates); fewer seeds (it changes what the thresholds read).
+
+149. **Decided (H2c plan review, 2026-10-10; design owner).** **Choosing balance numbers is design
+     work, so H2c ships only the numbers the H2 grill decided, and a balancing slice, H2d, follows.**
+     - **H2c** implements ASSUMPTIONS 118, 119 and 123–127 and the before/after report. It picks no
+       DoT percentage and makes no per-item fix (the DoT and Regen placeholders stay as they are),
+       and it doesn't assert the CI threshold test (on the grill's measurement the Shieldbarer's
+       first-try floor 1 is about 65%, so the test would be red).
+     - **H2c also measures, for the H2d grill**, in a scratch clone with nothing committed: the full
+       report (cap 400, probe off) on the "after" data with three DoT sets: today's placeholders
+       (Poison 20 / Burn 25 / Spore 15), 35 / 30 / 30, and 50 / 40 / 45; Regen at 10 throughout.
+       Per set: first-try clear on floors 21–30, T4, the Rot Sovereign's row, the round-cap draws,
+       the three threshold verdicts, and the minimum-of-1 share of DoT ticks on the corpus's
+       generated fights (Parts A and B; Part C's coverage fights reported apart). The numbers are
+       evidence, not a recommendation.
+     - **H2d** opens with a grill of the design owner on H2c's report and these measurements,
+       aimed at the CI thresholds: which levers to use (per-item fixes, the DoT percentages) and
+       by how much. It then implements the rulings and asserts the CI threshold test (148).
+     Why: a tuning loop run by the coding agent would make design decisions inside an
+     implementation plan; the grill is where balance has been decided so far (the H2 grill).
+
 ## Sequencing summary
 
 `4.1-A` (data, store, generation) → `4.1-B` (engine foundations, byte-identical) → `4.1-C`
@@ -2035,5 +2034,5 @@ ASSUMPTION-tagged, and this list is what the design review checks.
 containers) → `4.1-F2` (status timing + Web roll) → `4.1-F3` (Silence/Pacify) → `4.1-G1` (enemy
 behaviour) → `4.1-G2` (hub and store) → `4.1-H1` (simulator and report, byte-identical) →
 `4.1-H2a` (damage rules) → `4.1-H2b1` (Flickerlings and damage observation) → `4.1-H2b2` (status
-rules) → `4.1-H2c` (tuning) → then
+rules) → `4.1-H2c` (the grill-decided numbers) → `4.1-H2d` (the balancing pass) → then
 the Phase 4.5 demo brief. Each PR branches from `main` after the previous merge.

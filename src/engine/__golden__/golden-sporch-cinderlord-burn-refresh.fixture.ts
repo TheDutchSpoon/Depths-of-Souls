@@ -9,7 +9,8 @@
 // array, which is the only thing that changed besides the field).
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). CINDERLORD (real Sporch
-// Cinderlord base stats, speed 16) acts before VICTIM/ENEMY_A/ENEMY_B (speeds 5/4/3, all
+// Cinderlord base stats, speed 16; its Health 18 is the pre-4.1-H2c value, the real one is now 30)
+// acts before VICTIM/ENEMY_A/ENEMY_B (speeds 5/4/3, all
 // always-wait, never reached in 1 step). Violence-vs-Violence is always neutral (same affinity)
 // -- x1.0, no complication. No random selectors anywhere -- SEED is inert.
 //

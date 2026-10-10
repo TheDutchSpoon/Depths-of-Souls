@@ -105,7 +105,7 @@ export const POLLEN_CLOUD: Spell = {
  * pool; there was never a design reason for that, so it's been promoted here like every other
  * spell). The Sorcerer starter (`data/species/starters.ts`) still references it directly for its
  * fixed slot-0 loadout; it also now rolls normally for any Wit-affinity caster. Single-target,
- * no upside -> the plain ~100% band. */
+ * no upside -> the plain ~100% band: spell power 1.0 since 4.1-H2c (ASSUMPTION 124; it was 0.5). */
 export const ARCANE_BOLT: Spell = {
   id: 'arcane-bolt',
   name: 'Arcane Bolt',
@@ -118,7 +118,7 @@ export const ARCANE_BOLT: Spell = {
       kind: 'deal-damage',
       target: { kind: 'cast-target' },
       offStat: 'cast',
-      spellPower: 0.5,
+      spellPower: 1.0,
     },
   ],
 }

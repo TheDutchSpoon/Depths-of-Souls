@@ -7,7 +7,8 @@
 // `triggering-source` to WRETCH itself and confuse its own bearer off its own Poison tick.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). P (speed 20) acts before
-// WRETCH (speed 10, real Hollowkin Wretch base stats) -- both `always-wait` through round 1
+// WRETCH (speed 10, real Hollowkin Wretch base stats -- its Attack 14, Intelligence 12 and Defence 20;
+// the speed and the Health 100 are the fixture's own, the real ones being 14 and 33) -- both `always-wait` through round 1
 // uneventfully. WRETCH starts the fight already carrying Poison (applied via a direct
 // `applyStatus` call before any turn resolves, into a throwaway events array, at turn clock 0 --
 // so it is never born in any turn). Re-derived in 4.1-F2: the tick is no longer a round-end sweep

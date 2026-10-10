@@ -10,7 +10,9 @@
 //
 // Setup. PACIFIER (player, Wit, speed 30) is the only player creature; it has Pacify in slot 0 and
 // runs the fixture `always-cast` script. SOVEREIGN (enemy, level 1, so her stats are the species'
-// own: Health 30, Attack 26, Intelligence 20, Defence 20, Speed 22) acts after it (22 < 30). The
+// own: Attack 26, Intelligence 20, Defence 20, Speed 22) acts after it (22 < 30). Her Health is
+// the species' too (30 when this was written, 45 since 4.1-H2c's remap) but no event of this fight
+// reads it, so the golden is unaffected by it. The
 // player's single creature has no allies, so every default target is PACIFIER.
 //
 // Round 1, PACIFIER's turn. `always-cast` casts slot 0, so no gem draw; Pacify is an enemy-side
