@@ -1,0 +1,21 @@
+
+line-proof: map PASS, multiset PASS, placement PASS
+
+Old files (pinned)
+  .claude/CONVENTIONS.md: 2160 lines, 2089 non-blank, sha256 prefix 91455dd2026ba18d
+  .claude/GAME_DESIGN.md: 1347 lines, 1248 non-blank, sha256 prefix 0970f347753833df
+
+New files: rows-only bytes (moved rows, decimal kB) vs the brief table, and whole-file bytes
+  CONVENTIONS.md         rows   25324 B (25.3 kB)  table 25.3 kB  MATCH   whole 25393 B (329 lines)
+  VISION.md              rows    4359 B (4.4 kB)  table 4.4 kB  MATCH   whole 4396 B (81 lines)
+  OPEN_QUESTIONS.md      rows    5151 B (5.2 kB)  table 5.2 kB  MATCH   whole 5235 B (68 lines)
+  spec/effects.md        rows   61352 B (61.4 kB)  table 61.4 kB  MATCH   whole 61465 B (734 lines)
+  spec/combat.md         rows   52825 B (52.8 kB)  table 52.8 kB  MATCH   whole 52931 B (643 lines)
+  spec/statuses.md       rows   28946 B (28.9 kB)  table 28.9 kB  MATCH   whole 29044 B (342 lines)
+  spec/creatures.md      rows   27418 B (27.4 kB)  table 27.4 kB  MATCH   whole 27524 B (348 lines)
+  spec/run.md            rows   26252 B (26.3 kB)  table 26.3 kB  MATCH   whole 26367 B (320 lines)
+  spec/scripting.md      rows   19813 B (19.8 kB)  table 19.8 kB  MATCH   whole 19910 B (251 lines)
+  spec/responses.md      rows   17782 B (17.8 kB)  table 17.8 kB  MATCH   whole 17873 B (217 lines)
+  spec/progression.md    rows    9384 B (9.4 kB)  table 9.4 kB  MATCH   whole 9469 B (141 lines)
+  spec/store.md          rows    1983 B (2.0 kB)  table 2.0 kB  MATCH   whole 2091 B (33 lines)
+  spec/saves.md          rows    6325 B (6.3 kB)  table 6.3 kB  MATCH   whole 6415 B (97 lines)

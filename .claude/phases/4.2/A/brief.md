@@ -5,7 +5,9 @@ Phase brief: `.claude/phases/4.2/brief.md` (read "Target layout", "The file map"
 
 ## Scope
 
-A Node script (no new dependencies, `npm run docs:check -- <mode>`) with four modes:
+A Node script, `scripts/docs-check.ts` (no new dependencies, run by Node's type stripping as
+`npm run docs:check -- <mode>`), with four modes. `tsconfig.node.json` includes `scripts` so
+`tsc -b` type-checks it.
 
 - `move`: writes the 13 files of the target layout from the pinned commit, per the file map. It's
   deterministic and reads only `git show 892f1b8:…`, so running it twice gives the same files.
@@ -19,8 +21,9 @@ The files `move` writes:
   Creatures, Run, Progression, Store, Saves), a blank line, the read-when line, a blank line, then
   the halves present (`## Design`, `## Engine rules`, `## To fold`), each followed by its rows.
 - `CONVENTIONS.md` and `VISION.md`: their rows in order, with the read-when line (and a blank line
-  on each side) inserted after the first line, which is the old title. `VISION.md` keeps
-  GAME_DESIGN's title until 4.2-F.
+  on each side) inserted after the first line, which is the old title. Old line 2 is blank in
+  both files and serves as the blank after it, so only one blank line and the read-when line are
+  inserted. `VISION.md` keeps GAME_DESIGN's title until 4.2-F.
 - `OPEN_QUESTIONS.md`: `# Open questions`, a blank line, the read-when line, a blank line, its rows.
 
 Read-when lines, verbatim:
@@ -59,6 +62,7 @@ and the ROADMAP status. The note in `CLAUDE.md` on resolving old citations until
 
 - `line-proof` passes, with its output in the report (line counts, per-file bytes, which should
   match the phase brief's table).
-- The diff touches only the 13 files, the script, `package.json` and the mailbox.
+- The diff touches only the 13 files, the script, `package.json`, `tsconfig.node.json` (its
+  `include`) and the mailbox.
 - `inventory-skeleton B` and `inventory-skeleton C` run and list their units (counts in the report).
 - All gates green, golden policy byte-identical.

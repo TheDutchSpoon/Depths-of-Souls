@@ -90,7 +90,31 @@ prestige, no resets** — forward-only.
 Items marked **(4.1)** were decided at the Phase 4 close review and landed during Phase 4.1 (see
 ROADMAP).
 
-Full design: `.claude/GAME_DESIGN.md`. Read it before designing features.
+The design and the engine rules live in one home per rule, under `.claude/`. Every chat reads this
+file and `CONVENTIONS.md`; the kickoff names the spec files a slice reads, and a reviewer reads the
+same plus any spec file the diff touches. Each file opens with a "Read this when …" line.
+
+| File | Read it when |
+| --- | --- |
+| `VISION.md` | designing a feature (vision, pillars, core loop, non-goals) |
+| `OPEN_QUESTIONS.md` | a slice touches a parked question, or at a grill |
+| `spec/effects.md` | any trait, perk or effect change |
+| `spec/responses.md` | with `effects.md`, for any triggered behaviour |
+| `spec/statuses.md` | any status change |
+| `spec/combat.md` | any change to how a fight resolves |
+| `spec/scripting.md` | script or behaviour changes |
+| `spec/creatures.md` | collection, creature or gem changes |
+| `spec/run.md` | descent, generation or hub changes |
+| `spec/progression.md` | progression changes |
+| `spec/store.md` | any store or UI-facing state change |
+| `spec/saves.md` | save or load changes |
+
+(Phase 4.2 only) Until 4.2-G, citations of the form `CONVENTIONS "…"` and `GAME_DESIGN §…`, in
+`src/` and in the docs, name the files as they were at commit `892f1b8`. Find the section's new
+file with the map in `.claude/phases/4.2/brief.md` ("The file map"), or read the old text with
+`git show 892f1b8:.claude/CONVENTIONS.md` (or `GAME_DESIGN.md`). Until its condensing slice (4.2-C
+to E), a spec file still holds the old wording, provenance included, and a `## To fold` half of
+Phase 4 addenda that amend the rules above them.
 
 ## Tech stack
 
@@ -129,7 +153,7 @@ src/
 4. **Scripting is serializable data**: the player's rules are JSON-shaped, saved & replayable.
 5. **Versioned saves**: every save has a version; add a migration when the shape changes.
 
-Detailed conventions: `.claude/CONVENTIONS.md`.
+Engineering conventions (every chat reads them): `.claude/CONVENTIONS.md`.
 Roadmap & what to build first: `.claude/ROADMAP.md`.
 How slices get built & reviewed (fresh chat per step; docs-are-the-memory; the per-slice
 mailbox and its commands): `.claude/WORKFLOWS.md` — read before starting or reviewing any slice.

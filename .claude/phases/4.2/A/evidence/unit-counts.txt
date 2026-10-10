@@ -1,0 +1,48 @@
+# Unit counts: inventory-skeleton for B to F (run in the scratch clone; no flags, base = git merge-base HEAD main)
+
+$ npm run docs:check -- inventory-skeleton B   (exit 0)
+inventory-skeleton B: base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c
+  content/enemy-behaviour.md: 22 units
+  content/glimmerdark.md: 37 units
+  content/overgrowth.md: 45 units
+  content/rotcap-hollow.md: 36 units
+  specializations/brute.md: 17 units
+  specializations/shieldbarer.md: 15 units
+  specializations/sorcerer.md: 10 units
+  species/species-locked.md: 46 units
+  total: 228 units, written to .claude/phases/4.2/B/inventory.md
+  table rows written: 228
+
+$ npm run docs:check -- inventory-skeleton C   (exit 0)
+inventory-skeleton C: base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c
+  CONVENTIONS.md (pinned at 892f1b8): 44 units
+  GAME_DESIGN.md (pinned at 892f1b8): 110 units
+  total: 154 units, written to .claude/phases/4.2/C/inventory.md
+  table rows written: 154
+
+$ npm run docs:check -- inventory-skeleton D   (exit 0)
+inventory-skeleton D: base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c
+  CONVENTIONS.md (pinned at 892f1b8): 117 units
+  GAME_DESIGN.md (pinned at 892f1b8): 55 units
+  total: 172 units, written to .claude/phases/4.2/D/inventory.md
+  table rows written: 172
+
+$ npm run docs:check -- inventory-skeleton E   (exit 0)
+inventory-skeleton E: base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c
+  CONVENTIONS.md (pinned at 892f1b8): 32 units
+  GAME_DESIGN.md (pinned at 892f1b8): 55 units
+  total: 87 units, written to .claude/phases/4.2/E/inventory.md
+  table rows written: 87
+
+$ npm run docs:check -- inventory-skeleton F   (exit 0)
+inventory-skeleton F: base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c
+  CONVENTIONS.md (pinned at 892f1b8): 68 units
+  GAME_DESIGN.md (pinned at 892f1b8): 42 units
+  CLAUDE.md: 24 units
+  ROADMAP.md: 100 units
+  WORKFLOWS.md: 34 units
+  total: 268 units, written to .claude/phases/4.2/F/inventory.md
+  table rows written: 268
+
+pinned rows (C:/G: ids) in the C, D, E, F skeletons: 154 + 172 + 87 + 110 = 523
+distinct ids across C, D, E, F: 523; from C: 261, from G: 262

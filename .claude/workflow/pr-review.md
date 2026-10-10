@@ -55,8 +55,8 @@ Green gates only prove the code agrees with its own fixtures. Proceed to reading
 
 ## 3. Read the code against the spec
 
-- Check behaviour against GAME_DESIGN / CONVENTIONS / the phase brief on `main`, not against the
-  PR's own claims.
+- Check behaviour against the spec on `main` (the kickoff's spec files, plus any spec file the
+  diff touches), `CONVENTIONS` and the phase brief, not against the PR's own claims.
 - Goldens must be hand-derived: the header shows setup, arithmetic and random draws. Recompute the
   draws independently (mulberry32 from the seed) and spot-check the arithmetic.
 - Integration goldens must be labeled generated-then-checkpoint-verified.

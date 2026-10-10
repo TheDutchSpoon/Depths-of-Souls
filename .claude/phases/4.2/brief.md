@@ -23,7 +23,7 @@ the engine spec, which is why an engine slice must read both files today.
 
 | File | Read this when | Holds | Size after 4.2-A |
 | --- | --- | --- | --- |
-| `CLAUDE.md` | always (every chat) | orientation, the doc map, the non-negotiables | (condensed in E) |
+| `CLAUDE.md` | always (every chat) | orientation, the doc map, the non-negotiables | (condensed in F) |
 | `CONVENTIONS.md` | always (every chat) | engineering rules only: TypeScript, engine purity, testing and goldens, layout, deployment, plans, style | 25.3 KB |
 | `VISION.md` | designing a feature | vision, pillars, core loop, non-goals | 4.4 KB |
 | `OPEN_QUESTIONS.md` | a slice touches a parked question, or at a grill | open and parked design questions | 5.2 KB |
@@ -187,7 +187,9 @@ copies.
 - **Order and placement:** for each new file and half, its lines are exactly the concatenation of
   the map rows assigned to it, in old order. The check derives this from the map independently of
   the move code, so a bug in one is caught by the other.
-- Prints per-file byte totals, to compare with the table above.
+- Prints per-file byte totals, to compare with the table above. The table's sizes are the bytes of
+  each file's moved rows (decimal kB), without the allowed additions, so a whole file is about
+  0.1 kB larger.
 
 ### Inventory (4.2-B to F)
 
@@ -196,10 +198,15 @@ copies.
 
 - **A unit** is a line of a pinned old file that, outside code fences, is a heading, a top-level list
   item (`- ` at column 0), or the first line of a top-level paragraph (not indented, not a
-  blockquote, table row or `---`). Nested bullets, tables and code belong to the unit above them.
-  CONVENTIONS has 261 units and GAME_DESIGN 262.
+  blockquote, table row or `---`). A paragraph starts only at the top of the file or after a blank
+  line, so a paragraph directly under a heading belongs to the heading's unit; a numbered item
+  (`1. `) after a blank line is a paragraph start. Nested bullets, tables and code belong to the
+  unit above them. CONVENTIONS has 261 units and GAME_DESIGN 262.
 - **A slice's units** are those whose map row targets one of the slice's spec files, plus every unit
-  of the other files it condenses, read as of 4.2-A's merge commit (prefix `<path>:<line>`):
+  of the other files it condenses, read at the slice's base, `git merge-base HEAD main`, so each
+  slice inventories those files as it found them (prefix `<path>:<line>`; the glob is expanded at
+  the base too). The base moves only when the slice branch takes in a newer `main` (merge or
+  rebase); if that shifts a file's lines, the check fails rather than passing on shifted lines.
 
   | Slice | Spec files (from the map) | Other files |
   | --- | --- | --- |
@@ -275,10 +282,10 @@ comes from the old text's own tags (blank when it has none).
   | # | Step | Who | Writes |
   | --- | --- | --- | --- |
   | 0 | Pre-flight | Duncan | the slice branch |
-  | 1 | Condense | design agent | the condensed files, `inventory.md`, `verify-request.md` |
+  | 1 | Condense | design agent, `/slice-condense <id>` | the condensed files, `inventory.md`, `verify-request.md` |
   | 2 | First commit | Duncan | commits step 1 |
   | 3 | Verify | coding agent, `/slice-verify <id> <N>` | `verify-r<N>.md` |
-  | 4 | Fix | design agent | doc fixes, `## Round <N+1>` in `verify-request.md` |
+  | 4 | Fix | design agent, `/slice-condense <id> <N+1>` | doc fixes, `## Round <N+1>` in `verify-request.md` |
   | 5 | Merge | Duncan | when a verify round has no findings |
 
   Steps 3 and 4 repeat. A finding that needs Duncan (spec and code disagree) goes to him with a
@@ -290,7 +297,8 @@ comes from the old text's own tags (blank when it has none).
 Everything added to a lasting file for this phase only (a rule, a paragraph, a skill, a script
 mode) carries the marker `(Phase 4.2 only)`, so 4.2-G can find and remove it all. After 4.2-G,
 `grep -rn "Phase 4.2 only"` outside `phases/` returns nothing. Today that covers the exception in
-`workflow/coding-rules.md`, the paragraph in `WORKFLOWS.md`, and `skills/slice-verify/`.
+`workflow/coding-rules.md`, the paragraph in `WORKFLOWS.md`, `skills/slice-verify/` and
+`workflow/condense.md`. Outside the repo: the Cowork command `/slice-condense`.
 
 ## During the transition (4.2-A merged → 4.2-G merged)
 

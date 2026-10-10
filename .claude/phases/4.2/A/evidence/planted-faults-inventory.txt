@@ -1,0 +1,217 @@
+# Planted faults: inventory modes (scratch clone outside the repo; harness not kept)
+
+=== unedited skeletons: rules 1 (coverage), 2 (ownership), 6 (old label) must not fire ===
+(the skeleton has empty Fate/New home/Reason, so rules 3, 4, 5 fire on every row, as they should)
+  inventory B: exit 1; failures by rule {"3":228,"4":228,"5":228}; rule 1+2+6 failures: 0  OK
+  inventory C: exit 1; failures by rule {"3":154,"4":154,"5":154}; rule 1+2+6 failures: 0  OK
+  inventory D: exit 1; failures by rule {"3":172,"4":172,"5":172}; rule 1+2+6 failures: 0  OK
+  inventory E: exit 1; failures by rule {"3":87,"4":87,"5":87}; rule 1+2+6 failures: 0  OK
+  inventory F: exit 1; failures by rule {"3":268,"4":268,"5":268}; rule 1+2+6 failures: 0  OK
+
+Headings appended to the clone-only .claude/spec/statuses.md: the brief example row's heading ("### DoT and Regen tick from the applier's snapshot", plan fix 2), an inline-code heading, a punctuation heading, an em-dash heading, "### Repeat" three times, and "### Hidden" inside a code fence.
+
+=== the passing inventory (every D unit, a mix of fates, the brief example row as written) ===
+planted in: nothing
+result: exit 0; inventory D: PASS, 172 units and 172 rows checked (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+same with the lowercase argument "d" (plan fix 7): exit 0; inventory D: PASS, 172 units and 172 rows checked (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+inventory-skeleton b (lowercase) with B's file already there: exit 1; .claude/phases/4.2/B/inventory.md already exists: not overwriting
+
+=== a unit missing ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:244 | Response vocabulary — eight verbs (nine until 4.1-H2b2), and "no side… |  | rewritten | `spec/statuses.md#spec--statuses` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md: unit C:244 (Response vocabulary — eight verbs (nine until 4.1-H2b2), and "no side…) is missing (1)
+expected: rule 1; failures by rule {"1":1}
+
+=== a unit twice ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
++| C:244 | Response vocabulary — eight verbs (nine until 4.1-H2b2), and "no side… |  | rewritten | `spec/statuses.md#spec--statuses` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md: unit C:244 appears in 2 rows (1)
+expected: rule 1; failures by rule {"1":1}
+
+=== a unit from another slice ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
++| C:187 | **Action instance-list (locked, resolves the "attack again" ambiguity)… |  | moved | `spec/statuses.md#spec--statuses` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:5: C:187 belongs to slice E, not D (2)
+expected: rule 2 ("belongs to slice E"); failures by rule {"2":1}
+
+=== not a unit of any slice ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
++| C:2 | x |  | moved | `spec/statuses.md#spec--statuses` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:5: C:2 is not a unit of any slice (2)
+expected: rule 2 ("not a unit"); failures by rule {"2":1}
+
+=== an unknown fate ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | replaced | `spec/statuses.md#spec--statuses` |  |
+result: exit 1; inventory D: FAIL, 2 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 unknown fate "replaced" (3)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 fate replaced needs a Reason (5)
+expected: rule 3; failures by rule {"3":1,"5":1}
+
+=== a New home whose anchor does not exist ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | `spec/statuses.md#nope` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 New home spec/statuses.md#nope: no such heading anchor (4)
+expected: rule 4; failures by rule {"4":1}
+
+=== a New home in a file that does not exist ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | `spec/nothing.md#spec--statuses` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 New home file spec/nothing.md does not exist (4)
+expected: rule 4; failures by rule {"4":1}
+
+=== a non-dropped row with no New home ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved |  | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 fate moved needs a New home (4)
+expected: rule 4; failures by rule {"4":1}
+
+=== a non-kept row with no Reason ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | `spec/statuses.md#spec--statuses` |  |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 fate moved needs a Reason (5)
+expected: rule 5; failures by rule {"5":1}
+
+=== a wrong Old label ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | a label that is not in the unit |  | kept | `spec/statuses.md#spec--statuses` |  |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 old label "a label that is not in the unit" is not in "Engine-vocabulary additions beyond the Grill-1 spine, surfaced while authoring seed content." (6)
+expected: rule 6; failures by rule {"6":1}
+
+=== a row with five cells ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |
+result: exit 1; inventory D: FAIL, 2 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: row has 5 cells, expected 6 (7)
+  FAIL .claude/phases/4.2/D/inventory.md: unit C:178 (Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a…) is missing (1)
+expected: rule 7; failures by rule {"1":1,"7":1}
+
+=== a dropped row whose New home is present but wrong (A13) ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:213 | **Grant-action-state response** — a triggered response that sets `defe… |  | dropped |  | scratch |
++| C:213 | **Grant-action-state response** — a triggered response that sets `defe… |  | dropped | `spec/statuses.md#nope` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:8: C:213 New home spec/statuses.md#nope: no such heading anchor (4)
+expected: rule 4; failures by rule {"4":1}
+
+--- anchor resolver (New home with several entries, comma-separated) ---
+
+=== resolver: inline code, punctuation, em dash and repeats all resolve ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | `spec/statuses.md#triggereddefstacks-flag`, `spec/statuses.md#punctuation-a-b--c`, `spec/statuses.md#em--dash`, `spec/statuses.md#repea…
+result: exit 0; inventory D: PASS, 172 units and 172 rows checked (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+expected: PASS (exit 0); failures by rule {}
+
+=== resolver: a heading inside a code fence must not resolve ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | `spec/statuses.md#hidden` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 New home spec/statuses.md#hidden: no such heading anchor (4)
+expected: rule 4 fails; failures by rule {"4":1}
+
+=== resolver: a repeat suffix that does not exist ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | `spec/statuses.md#repeat-3` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 New home spec/statuses.md#repeat-3: no such heading anchor (4)
+expected: rule 4 fails; failures by rule {"4":1}
+
+=== resolver: the wrong suffix form ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | `spec/statuses.md#repeat-0` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 New home spec/statuses.md#repeat-0: no such heading anchor (4)
+expected: rule 4 fails; failures by rule {"4":1}
+
+=== resolver: the code span left in the slug ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | `spec/statuses.md#triggereddefstacks--flag` | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 New home spec/statuses.md#triggereddefstacks--flag: no such heading anchor (4)
+expected: rule 4 fails; failures by rule {"4":1}
+
+=== resolver: New home not backticked ===
+planted in: the hand-made D inventory (generated from the skeleton by a scratch script, then edited)
+diff vs the passing inventory:
+-| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | kept | `spec/statuses.md#spec--statuses` |  |
++| C:178 | Engine-vocabulary additions beyond the Grill-1 spine, surfaced while a… |  | moved | spec/statuses.md#repeat | scratch |
+result: exit 1; inventory D: FAIL, 1 problems (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+  FAIL .claude/phases/4.2/D/inventory.md:6: C:178 New home must be backticked file#anchor entries, comma-separated: spec/statuses.md#repeat (4)
+expected: rule 4 fails; failures by rule {"4":1}
+
+--- unit rule and the 261 / 262 / 523 assertions (script patched in the clone) ---
+
+=== unit rule changed to a parser-style paragraph rule (no "after a blank line") ===
+planted in: scripts/docs-check.ts
+-      const paragraph = prevBlank && !/^\s/.test(text) && !/^(>|\||---)/.test(text)
++      const paragraph = !/^\s/.test(text) && !/^(>|\||---)/.test(text)
+  inventory D            exit 1: unit counts: CONVENTIONS 339 (expected 261), GAME_DESIGN 447 (expected 262)
+  inventory-skeleton E   exit 1: unit counts: CONVENTIONS 339 (expected 261), GAME_DESIGN 447 (expected 262)
+
+=== slice E loses one spec file in the SLICES table (partition no longer sums to 523) ===
+planted in: scripts/docs-check.ts
+-  E: { spec: ['spec/combat.md', 'spec/scripting.md'], other: [] },
++  E: { spec: ['spec/combat.md'], other: [] },
+  inventory D            exit 1: pinned units of slices C to F: 494 (494 distinct), expected 523
+  inventory-skeleton E   exit 1: pinned units of slices C to F: 494 (494 distinct), expected 523
+
+# Stale base (plan fix 1): B inventory, a commit on main, then main merged into the slice branch
+
+merge-base HEAD main at the start: ba18fa0eb3c3ac0db6669a2d816b46501e96b34c
+1. B inventory against the original base: exit 0; inventory B: PASS, 228 units and 228 rows checked (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+Preparing worktree (checking out 'main')
+
+commit on main (clone only): 56b414e scratch: shift content/overgrowth.md
+merge-base HEAD main after the commit on main alone: ba18fa0eb3c3ac0db6669a2d816b46501e96b34c (unchanged: the base has not moved)
+2. B inventory after a commit on main only (intended: still passes): exit 0; inventory B: PASS, 228 units and 228 rows checked (base ba18fa0eb3c3ac0db6669a2d816b46501e96b34c)
+
+$ git merge main   (into the slice branch; the clone has uncommitted scratch changes elsewhere)
+Merge made by the 'ort' strategy.
+ .claude/content/overgrowth.md | 1 +
+ 1 file changed, 1 insertion(+)
+merge-base HEAD main after the merge: 56b414ecf466e6f652cc6d355e7656e3bf512a09
+3. B inventory after the slice branch took in main (expected: rules 1/2 and 6 fail): exit 1; inventory B: FAIL, 85 problems (base 56b414ecf466e6f652cc6d355e7656e3bf512a09)
+  FAIL .claude/phases/4.2/B/inventory.md:65: content/overgrowth.md:3 old label "Status: shipped — Phase 4 Slice H1; Phase 4.1-G1 added the roles, the…" is not in "A scratch line inserted near the top, which shifts every la…
+  FAIL .claude/phases/4.2/B/inventory.md:66: content/overgrowth.md:10 is not a unit of any slice (2)
+  FAIL .claude/phases/4.2/B/inventory.md:67: content/overgrowth.md:15 is not a unit of any slice (2)
+  FAIL .claude/phases/4.2/B/inventory.md:68: content/overgrowth.md:17 is not a unit of any slice (2)
+  FAIL .claude/phases/4.2/B/inventory.md:69: content/overgrowth.md:20 is not a unit of any slice (2)
+  … 80 more; by rule {"1":41,"2":41,"6":3}

@@ -19,6 +19,23 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the
   script; `citations` and `budgets` stay.
 
+## Known from 4.2-A's review
+
+`scripts/docs-check.ts` as 4.2-A built it, for this slice's plan:
+
+- **`resolveAnchors` before it becomes blocking.** It differs from GitHub (github-slugger) in three
+  ways: (1) a suffixed slug can collide with a real heading: `a`, `a`, `a-1` give `a`, `a-1`,
+  `a-1` here, where GitHub gives `a`, `a-1`, `a-1-1` (GitHub bumps the suffix while the slug is
+  taken); (2) a heading indented one to three spaces is not seen; (3) `_emphasis_` and HTML entities
+  stay in the slug (listed in its doc comment). The citations check promises "exactly one heading",
+  so (1) must be fixed; (2) and (3) only if a living doc has such a heading.
+- **4.2-only helpers without their own marker** (`capitalise`, `sha256`, `SPEC_NAMES`, `FATES`,
+  `INVENTORY_HEADER`, `row` and its `D`/`E`/`F`, `pinnedCache`, the interfaces). The script's
+  header says everything not listed as lasting is 4.2-only, and `tsconfig.node.json` has
+  `noUnusedLocals`, so `tsc -b` fails on any of them left behind once the modes go.
+- **`git merge-base HEAD main` needs a local `main`**, which a CI checkout doesn't have. Fine for the
+  4.2-only inventory modes; a lasting mode must not depend on it.
+
 ## Clean-up
 
 Everything marked `(Phase 4.2 only)` goes (phase brief "Phase-4.2-only text"). Known now:
@@ -27,6 +44,8 @@ Everything marked `(Phase 4.2 only)` goes (phase brief "Phase-4.2-only text"). K
 | --- | --- | --- |
 | The 4.2-only script modes | the `docs:check` script | coding agent (code edit) |
 | `/slice-verify`, the B–F verify command | `skills/slice-verify/` | Duncan deletes; the report lists it under **To delete** |
+| The condense step file | `workflow/condense.md` | Duncan deletes |
+| `/slice-condense`, the design side's command | Duncan's Cowork skills (outside the repo) | Duncan removes it |
 | The Phase 4.2 exception | `workflow/coding-rules.md` | design agent, at the PR review |
 | The pointer to the 4.2 variant loop | `WORKFLOWS.md`, after the loop table | design agent |
 | The "During the transition" note on old citations | `CLAUDE.md`, if 4.2-A added one | design agent |
