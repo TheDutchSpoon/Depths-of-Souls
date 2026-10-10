@@ -1216,6 +1216,11 @@ so H2c ships only the numbers the H2 grill already decided, and this slice carri
   `golden-hollowkin-wretch-self-dot`) are pinned; each changed number is shown in a hand-derived
   content golden on real data.
 - **Before/after report:** H2c's "after" is H2d's "before".
+- **Input from the H2c PR review** (`phases/4.1/H2c/review-r1.md`), for reading the matchup table
+  in the grill: a row counts **fights**, repeat visits to a floor included, not seeds; and a floor's
+  enemies come from the seed and the store's run counter, not from the spec. A spec that leaves
+  floor 1 sooner meets fewer templates there (after H2c the Brute meets 12 of floor 1's 18; none of
+  its rows is a Treant).
 
 ### Acceptance (4.1-H)
 - **H1:** the simulator is deterministic (same seeds → identical report, asserted); the report
@@ -1641,7 +1646,7 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        deeper (reaching a floor is fighting on it, not clearing it); fails when no seed does.
        *(First 10 floor runs until the H2 grill: ASSUMPTION 126.)*
      The report shows each threshold's value next to its verdict, and the pure function that
-     computes them is tested on hand-built seed results, so H2's CI test asserts a computation
+     computes them is tested on hand-built seed results, so 4.1-H2d's CI test asserts a computation
      that is already pinned.
 108. **Decided (PR #84 review).** T4's hard wall stays 5 failed pushes at one floor (ASSUMPTION
      98). On H1's report every seed walls before floor 10, and the walls are real: the worst floor

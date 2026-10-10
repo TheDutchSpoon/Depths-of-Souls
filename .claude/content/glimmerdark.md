@@ -33,6 +33,10 @@ Affinity spread across the 18 creatures: **4 Wit** (the Flare and the three Reso
 (the Blindclaws), **5 Violence** (the Last Gleam, the Leech, the three Gloomjaws), **4 Endurance** (the
 Gorger and the three Shellbacks) and **2 Vitality** (the Wick and the Voidmaw).
 
+**Base stats** sit in the game's design ranges: **Health 20–45**, every other stat **10–30**.
+Health was remapped from 10–30 in 4.1-H2c, each creature keeping its place in the range
+(GAME_DESIGN §5).
+
 ## Statuses
 
 **Grant Act First** — The turn-order twin of Web (The Overgrowth): a creature with this lands at
@@ -183,8 +187,8 @@ bearer's turns** instead of at round end. A status applied during or after its b
 starts counting the next turn; one applied at the start of the bearer's turn, before it acts,
 counts that turn.
 
-**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; the Flickerlings, Glow's deletion,
-Beacon Charge, Kindred Light and the affinity spread landed in 4.1-H2b1, and single-instance
-Vulnerability and Afterglow's Regen in 4.1-H2b2; all are folded into the sections above):
-
-- **Health (4.1-H2c):** every other creature's Health moves to the 20–45 range, as in every biome.
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129): every item has landed and is folded
+into the sections above. The Flickerlings, Glow's deletion, Beacon Charge, Kindred Light and the
+affinity spread landed in 4.1-H2b1, single-instance Vulnerability and Afterglow's Regen in
+4.1-H2b2, and every other creature's Health moved to the 20–45 range in 4.1-H2c ("Reading this
+biome"; the Flickerlings were already on it).

@@ -1984,12 +1984,17 @@ demo slice (their goldens stay byte-identical).
 - A golden whose subject is a **rule** is a mechanism golden. When it borrows a real status, spell,
   trait or creature, it pins every tuned number it reads in its own fixture (the real def with only
   that number held; for a creature, a base stat), so a tuning PR leaves its expected values
-  byte-identical. That byte-identity is the PR's proof that only numbers moved.
+  byte-identical. That byte-identity is the PR's proof that only numbers moved. Only a number the
+  golden reads is pinned: a borrowed number no event of the fight reads gets a header note, not a
+  pin (4.1-H2c: the Leech Sovereign golden reads none of her Health).
 - A golden whose subject is a **named content item** (a creature, trait or spell) is a content
   golden: it reads real data and is re-derived by hand when a tuning PR moves a number it reads.
 - A tuning PR shows each effect number it changes (a status potency, a spell's power, a trait's
-  magnitude; not base stats, which the data tests cover) in a hand-derived content golden on real
-  data, new or re-derived.
+  magnitude) in a hand-derived content golden on real data, new or re-derived. Base stats are the
+  exception: the data tests pin only their **ranges**, so an exact base stat is pinned by nothing
+  but the corpus digest (4.1-H2c: leaving a remapped Health at its old 20–30 value fails only the
+  digest). A PR that changes base stats lists every one, old → new, in its report, from a script
+  when it changes many, and the PR review checks the list against the data.
 
 **Discipline:**
 - **A golden-test failure is a question, not a chore.** It means *either* a regression *or* an

@@ -24,7 +24,7 @@ creatures run their role too, unless they're given a script of their own.
 | **Caster** | 1. Cast a random gem. 2. If it can't cast (Silenced, or nothing castable), attack the weakest enemy. |
 | **Support** | 1. If its weakest ally is below 50% HP, cast a random gem **that targets allies** (a heal or a buff). 2. Otherwise attack the weakest enemy. 3. If it can't attack, cast a random gem. |
 | **Opener** | 1. On round 1, cast a random gem. 2. Afterwards attack the weakest enemy. 3. If it can't attack, cast a random gem. |
-| **Taunter** | 1. Provoke, every turn. 2. and 3. as the others (never reached: Provoke is always possible). For creatures whose trait fires on Provoke (Snapjaw Lure; Stonehorn Warden until 4.1-H2c). |
+| **Taunter** | 1. Provoke, every turn. 2. and 3. as the others (never reached: Provoke is always possible). For creatures whose trait fires on Provoke (Snapjaw Lure; the Stonehorn Warden was one until 4.1-H2c). |
 
 **"Cast a random gem"** picks evenly among the creature's gems that can be cast right now (it has a
 spell in the slot, and a valid target on the side the spell is meant for). The spell's target is the
@@ -53,7 +53,7 @@ statuses they have already applied.
 |---|---|
 | Glyphmoth Seer (Sorcerer starter) | caster |
 | Cragfang Mauler (Brute starter) | striker |
-| Stonehorn Warden (Shieldbarer starter) | taunter; **warden from 4.1-H2c** (brief ASSUMPTION 123: as a taunter it never attacked) |
+| Stonehorn Warden (Shieldbarer starter) | warden (a taunter until 4.1-H2c, when it never attacked; brief ASSUMPTION 123) |
 | Unicorn Lightbearer | striker (its revive fires on attack) |
 
 ## Gem sets

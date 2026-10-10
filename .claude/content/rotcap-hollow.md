@@ -22,6 +22,10 @@ species here doesn't have a two-role trick to chain off (**Necromoss**) — all 
 creatures share the *same* mechanic instead, just at a bigger scope or a bigger number as rarity
 rises (the Resonants/Gloomjaws pattern from Glimmerdark).
 
+**Base stats** sit in the game's design ranges: **Health 20–45**, every other stat **10–30**.
+Health was remapped from 10–30 in 4.1-H2c, each creature keeping its place in the range
+(GAME_DESIGN §5).
+
 Every status below counts its duration down in **rounds** (once at the end of each round), the
 same as every other status in the game — never per individual turn. **This changes in Phase
 4.1-F:** every status will count down in its **bearer's own turns**, and damage-over-time ticks at
@@ -180,7 +184,6 @@ turn. Spore's spread on death is unchanged.
 Vigor, …) now land on **its own side** by default. In Phase 4 an enemy support caster targeted the
 player's lowest-HP creature, healing and buffing the player.
 
-**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129; the DoT, Spore-spread, Rotcore and
-Sporch items landed in 4.1-H2b2 and are folded into the sections above):
-
-- **Health (4.1-H2c):** every creature's Health moves to the 20–45 range, as in every biome.
+**Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129): every item has landed and is folded
+into the sections above. The DoT, Spore-spread, Rotcore and Sporch items landed in 4.1-H2b2, and
+every creature's Health moved to the 20–45 range in 4.1-H2c ("Reading this biome").

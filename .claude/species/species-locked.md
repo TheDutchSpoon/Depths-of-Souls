@@ -37,7 +37,7 @@ Makes death meaningful and revive a second chance, not a buff-preserving undo. A
 | **Swarmhive** | Violence | Strength in numbers | Drone (cheap body), Striker (scales per hive-mate **in the team**), Queen (anchor, scales hardest) | **Count-scaling** · needs `speciesId` wired + stat-modifier `magnitudeSource` (Slice E2) |
 | **Treants** | Vitality / Endurance | Health engine (grows over time) | Sapling (`on-round-end → permanent +max-HP / Regen`), Elder (huge sustained wall — heals the line / scales off own max HP) | — |
 | **Pollinators** | Wit / Vitality | Team-buff engine (non-health buffs) | Duster (spreads permanent non-health stat-buffs — Speed/Attack/etc.), Beneficiary (capitalizes on a buffed team) | Count-scaling (reuse) |
-| **Snapjaws** | Violence / Endurance | Bait & punish (carnivorous plants) | Lure (`on-provoke → grant self defending`, pulls aggro + tanks), Jaws (`on-damage-taken → big retaliate`) | Grant-action-state; retaliate |
+| **Snapjaws** | Violence / Endurance | Bait & punish (carnivorous plants) | Lure (`on-provoke → grant self defending`, pulls aggro + tanks), Jaws (`on-damage-taken → retaliate`, 30% of Attack since 4.1-H2c, was 60%) | Grant-action-state; retaliate |
 | **Lullpollen** | Wit / Instinct | Sleep & punish (sleep-flowers) | Sleeper (`on-attack → Sleep`, chance), Reaper (`+% dmg to Sleeping`) | **Sleep** status (self-removal: Slice E2) · Sleeper needs chance-response + Reaper needs target-conditional damage (Slice E2) |
 
 **New this biome:**
@@ -124,7 +124,7 @@ required `name` field, with a code comment marking them as placeholders (no data
   player-equippable in Phase 8), materialized through the same path as any creature's loadout —
   distinct from the generator rolling *enemy* spells from a biome pool.
 - **Brute starter — *Cragfang Mauler*** (placeholder name) — **Violence** affinity, high Attack. Trait: **Attack resolves one additional instance** (Attack executes twice at 100% — each a *real attack* firing `on-attack`; same target as the first, default-target fallback if it died). An **instance-list** modifier, not an on-attack trigger.
-- **Shieldbarer starter — *Stonehorn Warden*** (placeholder name) — **Endurance** affinity, high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide; permanent-for-fight, so repeated provokes stack). *(The old `on-provoke → grant self defending` trait became the Shieldbarer's **Shield up** perk.)* **From 4.1-H2c:** Attack 15 (was 10) and the `warden` role script instead of `taunter`, so it attacks when no ally is below 50% (brief ASSUMPTION 123).
+- **Shieldbarer starter — *Stonehorn Warden*** (placeholder name) — **Endurance** affinity, high Defence. Trait: `on-provoke → your creatures gain +35% Defence` (team-wide; permanent-for-fight, so repeated provokes stack). *(The old `on-provoke → grant self defending` trait became the Shieldbarer's **Shield up** perk.)* **Since 4.1-H2c:** Attack 15 (was 10), Health 39 (the 20–45 remap of 25) and the `warden` role script instead of `taunter`, so it attacks when no ally is below 50% (brief ASSUMPTION 123).
 
 *(Starter affinities **ratified** (grill follow-up, PR #56 review): Sorcerer = **Wit**, Brute =
 **Violence**, Shieldbarer = **Endurance**, Unicorn = **Vitality** — four distinct, each matching
