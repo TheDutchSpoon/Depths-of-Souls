@@ -18,6 +18,20 @@ Phase brief: `.claude/phases/4.2/brief.md`. Loop: condense. Golden policy: **byt
   stated in both keeps one home. The 4.1 transition paragraph shrinks to the one sentence a reader
   of the 4.1 mailboxes needs (the old file names map to `phases/4.1/brief.md` and `record.md`).
 
+## Known from earlier slices
+
+- **From 4.2-B:** `OPEN_QUESTIONS.md` still parks the "entrance-hub prelude", while the deleted
+  `species-locked.md` said the Unicorn's scripted intro un-parks it. They differ (several weak
+  fights against one rigged fight): decide with Duncan whether the parked item stays.
+- **From 4.2-C:** ROADMAP Phase 5 ("Inputs already decided") and Phase 8 restate
+  `spec/saves.md` and the `## Not built` halves of `spec/creatures.md` and `spec/run.md`; keep one
+  home. The ROADMAP's partition list and the IndexedDB-name env module aren't in `spec/saves.md`
+  yet, so move them there rather than drop them.
+- **From 4.2-C:** `CONVENTIONS.md` "Where each number lives" restates the XP curve's rationale,
+  whose home is now `spec/creatures.md` "Levels and XP".
+- **From 4.2-C:** the spec rules (phase brief "Rules for the new spec") now include the
+  `## Not built` half. Wherever those rules live after 4.2, it goes with them.
+
 ## Done when
 
 `inventory F` passes and a verify round has no findings. After F, no file carries a `## To fold`

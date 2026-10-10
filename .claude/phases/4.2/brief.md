@@ -56,10 +56,15 @@ These hold from 4.2-A on and are what the condensing slices write to.
    "Decided, not built" and moves into the spec at the PR review of the slice that builds it. No
    "until <slice>" or "(4.1)" markers. A **bug** is the exception: when `main` contradicts a rule
    that is still the design, the doc keeps the rule and adds a `**Known bug:**` line (see
-   "Condensing rules").
+   "Condensing rules"). A second exception, decided at the 4.2-C condense: a whole subsystem
+   designed for a later phase (fusion, equipment and the forge economy in Phase 8, the save format
+   in Phase 5) lives in its spec file's `## Not built` half, the last half of the file. Each rule
+   there names the phase that builds it; that phase's PR review moves the rule into `## Design` or
+   `## Engine rules` of the same file. A slice-sized decision still goes to its phase brief.
 2. **One home per rule.** A rule appears once. A file's `## Design` half holds player-facing
    behaviour, numbers and content tables; its `## Engine rules` half holds mechanisms, invariants
-   and data shapes. Never restate one half in the other: link.
+   and data shapes; its `## Not built` half (rule 1) holds designed rules `main` doesn't have yet.
+   Never restate one half in another: link.
 3. **No provenance in the spec.** Rules are present tense. Changing a rule rewrites it; nothing
    "supersedes". Where an existing rule was decided is recorded in the 4.2 inventories; later
    decisions are found through the spec's git history.

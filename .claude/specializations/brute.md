@@ -4,7 +4,8 @@ Read this when a slice touches the Brute's starter or perks.
 
 Source: the perks in `src/data/specializations.ts`; the starter in `src/data/species/starters.ts`
 and `src/data/traits/starters.ts`. The rules every spec follows (perk points, the 1000-point tree,
-refunds, inert perks): `spec/progression.md` "9. Player specializations".
+refunds, inert perks): `spec/progression.md` "Perks", "Perk points" and "Spending perk
+points".
 
 ## Identity
 

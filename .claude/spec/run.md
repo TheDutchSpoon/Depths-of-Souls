@@ -4,320 +4,301 @@ Read this when changing descent, generation or the hub.
 
 ## Design
 
-## 4. The Cave (world & structure)
+### The cave
 
-The entire game world is **one cave that descends endlessly**. The player can **never leave
-the cave**; all play happens either at the **entrance hub** or on the **floors below it**.
+- The whole world is **one cave that descends endlessly**. The player never leaves it: play happens
+  at the **entrance hub** or on the **floors** below it.
+- **Floors** are numbered from the entrance down; deeper is harder.
+- **Depth is persistent**: the player keeps their deepest cleared floor, with no per-run reset, and
+  can **fast-travel** from the hub to any floor up to one past it, so reaching a deep floor never
+  means re-walking the floors above it. Floor selection is a UI feature.
+- **No prestige and no resets**: progress only goes forward (`VISION.md` "Explicit non-goals").
 
-- **Floors**: the cave is a stack of floors numbered from the entrance downward. Greater
-  depth = harder creatures (scaling curve is config; see §13). Depth is **persistent** — the
-  player keeps their deepest-reached floor; there is no per-run reset. From the entrance the
-  player can **fast-travel to any floor up to their deepest-reached** (floor selection is a
-  UI feature; no need to re-walk cleared floors). A descent is **atomic**: choosing a floor
-  resolves the whole floor at once (every fight, HP reset between them, no choices mid-floor) and
-  returns to the hub; the game remembers the **last floor** fought to pre-select it next time.
-  Descending past the last floor that has authored content is refused (the **content frontier**,
-  derived from the biome data: floor 30 while three biomes exist).
-- **Biomes**: the biome changes **every 10 floors** to the next in sequence. v1 ships
-  **10 biomes** (so floors 1–10 are biome 1, 11–20 biome 2, … 91–100 biome 10; past floor 100,
-  each floor's biome is chosen by **seeded-RNG draw from all 10 biomes** unless the player has
-  pinned that floor via the Biome Atlas — see below; pinning can retroactively override a floor
-  already visited). Each biome has a **spawn pool of species**.
-  When a floor spawns an enemy, it picks a **species** from the biome's pool, then picks a
-  **specific creature within that species by rarity-weighted draw from the seeded RNG** (rarer
-  creatures appear less often). Biomes are **data** (name, theme, species pool, scaling tweaks,
-  visuals). **v1 content target per biome: 6 or more species, each with 3 or more
-  creatures** (so ≥18 creatures per biome; ~180+ creatures across the 10 v1 biomes — the
-  largest content-authoring task in the project, and why creatures/traits must be data-driven).
-- **Fights & HP**: a floor contains a **depth-determined number of fights** (`fightCount(floor)`, a
-  deterministic config function — **not** rolled; the fight *count* is stable across visits, only
-  the *creatures* re-roll; default from Phase 4.1-A: **10 + (floor − 1)**, i.e. 10 fights on floor
-  1, one more per floor, uncapped) drawn from its
-  biome pool. **Health resets to full between every fight** (including fights within the same
-  floor) — there is no cross-fight attrition. A creature reduced to 0 HP is flagged as no longer
-  alive and skipped in the turn order (its slot is retained, not deleted — see CONVENTIONS); death
-  has **no lasting consequence** beyond the current fight (no
-  instance loss, no cooldown, no soul/XP penalty) — full HP and full roster availability return
-  for the next fight regardless of outcome. Defend/Regen/healing are purely *intra-fight* tools.
-- **Milestone bosses**: every 10th floor (each biome transition) is a tougher **boss** fight —
-  a difficulty checkpoint and reward spike, and the **sole source of perk points** (see §9).
-  Bosses are unique, **cannot be soul-collected**, and grant no soul%. A boss floor is **the boss
-  encounter alone** (no ordinary fights). Bosses still drop XP and currency like any kill. The
-  first win grants the boss's perk points, and the floor can be re-fought afterwards for ordinary
-  rewards (no further perk points).
-  - **Each boss is a set-piece with one clear signature.** A boss may carry more than a roster
-    creature's single trait, but keeps one clear signature mechanic for legibility, and the bosses
-    are shaped to play differently from each other, not as three race-fights.
-  - **A boss fight is 6v6, like every fight from floor 6** (decided at the PR #81 review; built
-    in 4.1-G). The boss comes first, then its **authored adds**, the creatures its fight needs
-    (the Broodmother's spiderlings). The remaining slots are **filled with random creatures from
-    the biome's own pool**, excluding the boss's own species (so the Broodmother's count-scaling
-    sees only her authored spiderlings), drawn the way an ordinary fight draws them and rerolled
-    each visit. A boss with no authored adds (the Leech Sovereign) gets five random ones. The adds
-    are ordinary kills with ordinary rewards.
-  - **A boss takes control like any enemy: no boss immunity** (PR #81 review). A boss gets a full
-    gem set and its role script like every enemy, so a lock **downgrades** its turn and never
-    empties it: a Pacified striker casts a random gem instead of attacking, and a Silenced caster
-    attacks. A lock recast every turn holds for the whole fight, and that's the intended price:
-    one of the player's creatures spends its whole turn on it every round, against one enemy of
-    six.
-  - **Why** (the PR #81 corpus). The Leech Sovereign fought alone, ran `always-attack` and held no
-    gem. So once Pacified she had nothing to do but wait, and one creature casting Pacify every
-    round switched off the whole enemy side. In all four corpus fights where the player side
-    held Pacify, she waited every turn after her first, and every one of those losses became a
-    win. A side of six, and a boss with something to fall back on, fix that through the general
-    rules. A boss-only resistance isn't needed.
-  - **Watch points.** A lock with no break condition that blocks **every** action (Stun) would
-    still empty a boss's turn. Decide how bosses meet it when content first applies Stun. If a
-    softer lock on bosses is ever wanted, a shorter duration won't help, because a recast resets
-    it each round. The fair form is a per-turn chance to act through the lock, as a general effect
-    any creature could carry. **Decided at the 4.1-H2 grill: no break-through chance for now**
-    (brief ASSUMPTION 120). H1's probe raised the boss's locked-turn share on every boss floor
-    and the clear rate on none but the Leech Sovereign's (+4 to +8 points): Pacify costs a turn
-    and buys a turn. Measure again when content first applies Stun, and when Phase 6 adds a
-    "target lacks status" condition.
-  - **Measuring it** (PR #82 review). Role scripts aim a spell at the lowest-HP enemy, which is
-    almost never the boss, so the 4.1-G1 corpus never locks one: 19 boss fights have a player-side
-    Pacify, and it lands on the boss in none of them. The case this rule accepts is a player script
-    that aims the lock at the boss. 4.1-H's simulator runs that case on every boss floor and reports
-    how often the boss spends its turn locked, and the clear rate with and without the lock.
-- **Difficulty model**: each floor maps to an **enemy level range** (min–max), not a separate
-  stat multiplier — enemies are ordinary creature instances at some level, using the **same
-  linear growth formula** as the player's creatures (§5). Enemy level grows **faster than floor
-  number** (the gap is the difficulty pressure), and the range's **width widens with depth**
-  (deeper floors are spawn-level-swingier). Because HP resets each fight, deeper floors are
-  harder purely because enemy level outpaces the party's own leveling pace. Walls happen when
-  that gap outpaces level + build. This makes the **floor→level-range curve the single most
-  important balance lever** in the game (the curve's exact shape is config; see §13).
-  **Curve targets (decided at the Phase 4 close review):** the party's level should track roughly
-  **the floor number**; enemies sit at about **1.25× the floor at the start**, rising linearly to
-  **2× by floor 100**, then a further **+1 percentage point per floor** past 100 (for now). Enemy
-  count ramps **+1 per floor over floors 1–6**, so fights are full **6v6 from floor 6**. The player
-  wins the gap by **tactics and trait synergies**, not by out-levelling. These are targets a
-  deterministic balance simulator reports as bands, not hard rules.
-  **Early floors (decided at the 4.1-H2 grill, from 4.1-H2c):** the range's width starts at **0**
-  and grows one level per ten floors, and its minimum is **rounded down**, so floors 1–9 spawn at
-  exactly `floor(floor × multiplier)`: levels 1, 2, 3, 5, 6, 7, 9, 10 and 11 (floor 10's enemies
-  at 13–14). The boss sits **5** levels above the range's top (was 3), so the
-  narrower range doesn't make bosses easier. The early floors are balanced through this range;
-  the fight count and the XP curve stay (brief ASSUMPTIONS 117–119).
-- **Generation is deterministic-per-seed, fresh-per-visit**: which **biome** sits on a floor is
-  fixed (the 1–100 sequence, a seeded draw for 101+, or an Atlas pin), but the **specific creatures
-  a floor spawns re-roll on every descent** — re-running a floor yields different draws. This is the
-  **soul-grind loop**: farm a floor repeatedly for the creature whose soul you want. All of it is
-  reproducible from the run seed (a seeded RNG stream advanced per descent), so runs stay debuggable
-  and testable without ever repeating content in normal play.
-- **Biome progression**:
-  - Early game, biomes are **discovered by descending** — you meet each new biome the first
-    time you reach its depth band, in a fixed sequence. This 1–100 order is **authored, not
-    incidental**: it's an **onboarding ramp in interaction *scope*, not trait depth**. Every
-    creature is build-relevant from biome 1 (no filler) — what ramps is *how many moving pieces* an
-    interaction spans, not how shallow it is. Biomes 1–3 use **self-contained** or
-    **within-species-closed**, **single-condition** interactions (each species is authored as a
-    closed mini-system); **cross-species, chained, and multi-condition** combos are deferred to
-    **biome 4+**. This closes each species' **trait kit**, not the shared **spell pool** — a spell
-    may apply any status (incl. another species' signature status like Web/Sleep); spell-supplied
-    statuses are a shared primitive, not a deferred cross-species *trait*-chain, so a species
-    amplifier that reads "enemies currently [status]" may legitimately have no source present in
-    a given fight. There is **no difficulty ramp across biomes 1–3** — the enemy-level curve carries
-    escalation; only interaction *scope* widens with later biomes.
-  - **Spells unlock cumulatively (Phase 4 interstitial slice, pinned here):** unlike species/
-    creatures, which are **biome-exclusive** (see below), the **shared spell pool is additive** —
-    every `Spell` carries an `unlockedAtBiome` (1-based biome number); an enemy's loadout (every
-    enemy rolls a full set from Phase 4.1-G), and the player's own equip options once Phase 8
-    lands, are rolled/offered from
-    **every spell whose `unlockedAtBiome` is `≤` the current biome**, filtered by affinity. A
-    biome-1 spell stays available at every deeper biome; nothing is re-authored per biome once
-    it exists. This is **the opposite rule from species/creature biome-exclusivity** below —
-    don't conflate the two: a biome's own roster (which creatures spawn there) resets every
-    biome, but its casters draw from the FULL inherited spell list, not just that biome's own
-    additions. A new biome authors a focused set of its OWN
-    spells — **target ≥4–5 per biome** (its own mechanics or fresh takes; a cross-affinity clone
-    of an existing spell does NOT count toward the bar) — layered as *spice* on top of the large
-    inherited base, never a re-authored full kit per affinity. Two failure modes bracket the bar:
-    re-authoring a full kit caused Phase 4 Slice H2's own near-duplicate spells (since deleted; see
-    `.claude/archive/phases/` for the record); under-authoring (shipping only 2–3) leaves later biomes thin.
-    H3 (Rotcap Hollow) and every biome after author to this same ≥4–5 bar.
-  - **Seed biomes (Phase 4):** the first three authored biomes are **The Overgrowth** (lush,
-    sunlit entrance), **Glimmerdark** (light thins, life adapts, bioluminescence), and **Rotcap
-    Hollow** (fungal — colonies, spores, spread). Mood is a **creature-design filter** — it shapes
-    what feels *native*, not mechanics; every biome stays affinity-complete. Species are
-    **biome-exclusive** (a new biome = all-new creatures).
-  - Once **all biomes have been discovered**, the **Biome Atlas facility** lets the player
-    **assign (pin) a biome to a chosen cave floor** — shaping which biome occupies a floor to
-    farm, rather than taking whatever the sequence (or, past floor 100, the random draw) gave
-    them. Pinning can be applied at any time, including retroactively re-pinning a floor already
-    visited. Only a biome with authored content can be pinned (an unauthored biome has nothing to
-    fight, so the pin is refused rather than turning the floor into a dead end).
-- **Entrance hub**: a persistent base at the top of the cave where the player manages their
-  collection and builds **facilities** (see below). The hub is always accessible; returning
-  to it is how the player strengthens between descents.
+### A descent is atomic
 
-### Facilities
-Structures the player builds and upgrades **at the entrance** with **Bricks** to support deeper
-expeditions. Facilities are **data-driven** (cost, effect, upgrade tiers) and part of the
-permanent, forward-only progression. The player starts with minimal/none and **builds each
-out** as an early-game goal. **Every facility action (craft, infuse, fuse, summon) resolves
-instantly** on payment — no real-time timers/queues, consistent with the engine's no-wall-clock
-rule. Only **Gem Forge, Equipment Forge, and Fusion Chamber** have upgrade tiers (each
-facility's tier count is tailored individually); v1 tiers **raise the level cap**
-craftable/fuseable there (cost-reduction tiers may follow later). The other three facilities
-(Soul Altar, Storage/Vault, Biome Atlas) are **one-time builds** with no further tiers — they
-have no throughput axis to upgrade. v1 facility list:
+- Choosing a floor resolves **the whole floor at once**: every fight in order, HP reset between
+  them, no player choice mid-floor, then back to the hub. The game remembers the **last floor**
+  fought and pre-selects it next time.
+- Clearing the floor (winning every fight) advances the deepest cleared floor. A loss or draw ends
+  the descent at that fight and returns the party to the hub with everything banked so far
+  (`spec/combat.md` "Encounters, rewards & wipes").
 
-- **Gem Forge** — craft gems (from dropped recipes + **Essence**), augment gems, level gems
-  (Essence).
-- **Equipment Forge** — craft/infuse equipment (fixed base-types + dropped infusion recipes),
-  level equipment, using **Ore**.
-- **Fusion Chamber** — perform fusions **and** catch-up-level creatures up to the player's
-  current highest-level creature, both fuelled by **Lifeforce**.
-- **Soul Altar / Summoning Circle** — summon instances of any creature at 100% soul. *(Until
-  Phase 8 builds facilities, summoning is available without the Altar; the gate is added with it.)*
-- **Storage / Vault** — manage the unlimited collection; organize the 6-slot active party.
-  *(Until Phase 8 builds facilities, party arrangement works without it; whether it stays ungated
-  is a Phase 8 call.)*
-- **Biome Atlas** — unlocked once **all 10 biomes are discovered**; assigns a biome to a chosen
-  floor.
+### Content frontier
 
-*(No healing facility in v1 — HP resets every fight, so there is nothing persistent to heal.)*
+- A descent past the last floor with authored content is refused: the **content frontier**, the last
+  floor of the unbroken run of authored biomes from biome 1 (floor 30 with three biomes).
 
-**Currencies & drops (structure; numbers TBD):** floors drop **Essence** (gems), **Ore**
-(equipment), **Bricks** (facilities; rarer), **Lifeforce** (leveling + fusion), and **recipes**
-(gem, gem-augment, equipment-infusion). Recipe drops come from a **global depth-scaled drop
-table**, independent of which specific creature was defeated (not a per-creature loot table).
+### Biomes
+
+- The biome changes **every 10 floors**. v1 ships **10 biomes**: floors 1–10 are biome 1, 11–20
+  biome 2, …, 91–100 biome 10. Past floor 100, each floor's biome is a **seeded draw from all 10**,
+  unless the floor is pinned ("Pins").
+- A biome is data: a name, a **spawn pool of species**, and a boss.
+- **Content target per biome: 6 or more species, each with 3 or more creatures** (18+ per biome,
+  about 180 across the ten): the largest authoring task in the project, and why creatures and
+  traits are data.
+- Species are **biome-exclusive**: a new biome brings all-new creatures. A biome's **mood** is a
+  creature-design filter, shaping what feels native, not mechanics; every biome stays
+  affinity-complete. The three authored biomes are in `content/`.
+- The player **discovers** a biome by descending into it.
+
+### The onboarding ramp
+
+- The 1–100 biome order is **authored, not incidental**: a ramp in interaction **scope**, not trait
+  depth. Every creature is build-relevant from biome 1; what grows is how many moving pieces an
+  interaction spans.
+- Biomes 1–3 use **self-contained** or **within-species**, **single-condition** interactions: each
+  species is a closed mini-system. **Cross-species, chained and multi-condition** combos start at
+  **biome 4**.
+- That closes each species' **trait kit**, not the shared **spell pool**: a spell may apply any
+  status, another species' signature status included, so a species amplifier that reads "enemies
+  currently [status]" may have no source in a given fight.
+- There is **no difficulty ramp across biomes 1–3**: the enemy level curve carries escalation.
+
+### Spells unlock cumulatively
+
+- Every spell has an **`unlockedAtBiome`**. A gem set rolls from **every spell with
+  `unlockedAtBiome` ≤ the current biome**, filtered by affinity, so a biome-1 spell stays available
+  at every deeper biome. This is the **opposite** of species, which are biome-exclusive: a biome's
+  roster is new, but its spells are the whole inherited list plus its own.
+- Each biome authors **at least 4–5 spells of its own** (its mechanics or fresh takes; a
+  cross-affinity clone of an existing spell doesn't count), layered on the inherited base, never a
+  full kit per affinity. Re-authoring a full kit makes near-duplicates; authoring only 2–3 leaves
+  later biomes thin.
+
+### Spawning
+
+- An enemy is drawn as a **species** from the biome's pool, then a **creature within it by
+  rarity-weighted draw** (rarer creatures appear less often), then a level in the floor's range,
+  then its gem set.
+- Nothing steers the draw beyond choosing a biome: within a biome it is pure rarity-weighted
+  seeded RNG, by design.
+
+### Fresh every visit, deterministic per seed
+
+- A floor's **biome is fixed** (the 1–100 sequence, the seeded draw past 100, or a pin), but **its
+  creatures re-roll on every descent**. This is the **soul-grind loop**: farm a floor for the
+  creature whose soul you want.
+- All of it is reproducible from the run seed, so runs stay debuggable and testable without ever
+  repeating content in play.
+
+### Fights per floor
+
+- A floor has a **depth-determined number of fights**, `10 + (floor − 1)` (config): 10 on floor 1,
+  one more per floor, uncapped. The count is **not rolled**: it is the same on every visit; only
+  the creatures and their levels re-roll.
+
+### HP resets every fight
+
+- **Health resets to full between every fight**, within a floor too: there is no cross-fight
+  attrition. Defend, Regen and healing are intra-fight tools.
+- **Death has no lasting consequence** beyond its fight: no instance loss, no cooldown, no soul or XP
+  penalty. Full HP and the whole roster are back for the next fight, whatever the outcome.
+
+### Enemy count
+
+- Enemies per fight ramp **+1 per floor over floors 1–6** (`min(6, floor)`), so fights are full
+  **6v6 from floor 6**.
+
+### Enemy levels
+
+- Difficulty is an **enemy level range per floor**, not a separate stat multiplier: enemies are
+  ordinary creatures at a level, grown by the same formula as the player's (`spec/creatures.md`
+  "Levels and XP"). Enemy level grows **faster than the floor number**, and that gap is the
+  pressure. HP resets every fight, so a deeper floor is harder only because enemy level outpaces the
+  party's; a wall is where the gap outpaces level and build. The floor → level-range curve is the
+  **most important balance lever** in the game.
+- Targets: the **party's level tracks the floor**. An **enemy level multiplier** rises linearly
+  from **1.25 at floor 1 to 2.0 at floor 100**, then **+1 percentage point per floor** past 100. The
+  player wins the gap with **tactics and trait synergies**, not by out-levelling. The balance
+  simulator reports these as bands, not hard rules.
+- The range's minimum is **`floor(floor × multiplier)`**, rounded down; its width starts at **0**
+  and grows by **one level per ten floors**. Floors 1–9 spawn at exactly levels 1, 2, 3, 5, 6, 7, 9,
+  10 and 11; floor 10 at 13–14; floor 30 at 44–47.
+- Watch points for tuning are in `OPEN_QUESTIONS.md` "Balance numbers".
+
+### Boss floors
+
+- Every 10th floor is a **boss floor**: a difficulty checkpoint and reward spike, and the **only
+  source of perk points** (`spec/progression.md` "Perk points"). A boss floor is **one fight**, no
+  ordinary fights.
+- **Each boss is a set piece with one clear signature.** A boss may carry more than a roster
+  creature's single trait, but keeps one clear signature mechanic for legibility, and the bosses
+  are shaped to play differently from each other, not as three race-fights.
+- **The fight is 6v6**: the boss, then its **authored adds** (the creatures its fight needs, the
+  Broodmother's spiderlings), then **random creatures from the biome's own pool**, excluding the
+  boss's own species, drawn like an ordinary fight's and rerolled each visit. A boss with no
+  authored adds gets five random ones. The adds are ordinary kills with ordinary rewards; each
+  boss's adds are in its biome's content doc.
+- The boss sits **5 levels above the floor's range**.
+- Bosses are unique and can't be collected ("Rewards").
+
+### Bosses take control like any enemy
+
+- **No boss immunity.** A boss has a full gem set and its role script like every enemy, so a lock
+  **downgrades** its turn and never empties it: a Pacified striker casts a random gem instead of
+  attacking, a Silenced caster attacks. A lock recast every turn holds all fight, and that is the
+  intended price: one of the player's creatures spends every turn on it, against one enemy of six.
+- A side of six and a boss with something to fall back on keep one lock from switching off the
+  whole enemy side; a boss-only resistance isn't needed.
+- **No break-through chance.** A lock that blocks **every** action with no break condition (Stun)
+  would still empty a boss's turn: decide how bosses meet it when content first applies Stun. A
+  softer lock on bosses couldn't come from a shorter duration (a recast resets it each round); the
+  fair form would be a per-turn chance to act through the lock, as a general effect any creature
+  could carry. Measure again when content first applies Stun and when Phase 6 adds a "target lacks
+  status" condition.
+- Role scripts aim spells at the lowest-HP enemy, which is almost never the boss, so the case this
+  rule accepts is a player script aiming the lock at the boss. The balance simulator runs that case
+  on every boss floor and reports how often the boss spends its turn locked, and the clear rate
+  with and without the lock.
+
+### Rewards
+
+- Rewards **bank per kill** (`spec/combat.md` "Encounters, rewards & wipes"): XP to the whole active
+  party (`spec/creatures.md` "Levels and XP"), soul% to the creature's bar (`spec/creatures.md`
+  "Souls") and currency. A wipe keeps them.
+- **Level-ups apply after each fight**: the engine never sees a level change mid-fight, and the
+  party fights the floor's next fight at its new levels.
+  **Known bug:** `main` materializes the party once per descent and applies the floor's XP after the
+  whole floor, so levels never change between the fights of one floor. The fix is listed in
+  `ROADMAP.md` Phase 4.5 "Decided, not built".
+- **A boss kill** banks XP and currency through the same per-kill path, but **no soul%**.
+- **Winning** a boss fight records the boss as cleared; perk points come from the **first clear
+  only**. A cleared boss floor can be fought again for ordinary rewards. A loss banks the adds'
+  kills and records nothing.
+
+### Currencies
+
+- Floors drop **Essence** (gems), **Ore** (equipment), **Bricks** (facilities; rarer) and
+  **Lifeforce** (levelling and fusion), per kill, scaled by depth (config). **Perk points** are a
+  separate, non-dropped currency (`spec/progression.md` "Perk points").
+- Every currency is **unbounded**: no storage cap.
+
+### Pins
+
+- A floor can be **pinned** to a biome, overriding the 1–100 sequence or the draw past 100, at any
+  time, retroactively too. Only a biome with authored content can be pinned: an unauthored biome
+  has nothing to fight.
+
+### Entrance hub
+
+- A persistent base at the top of the cave, always reachable: the player manages the collection
+  there and strengthens the party between descents.
+
+### Scripted intro
+
+- `runScriptedIntro` is a fixed fight against a level-1 **Unicorn**, through the ordinary resolver
+  and outside any floor run. It never ends in wipe → hub: the Unicorn joins (if not owned) whether
+  the fight is won, lost or drawn.
+- Callers run it right after `setSpec` at a new game; the store doesn't enforce that order.
 
 ## Engine rules
 
-## Generation & the run layer (Phase 4)
+### Generation is a pure seeded module
 
-The **cave is generated by a pure, seeded module** (an `src/engine/` sibling to the combat
-resolver) under the same discipline as combat — `(biome data + floor + curve config + RNG state) ->
-FloorPlan` (a floor's fights as enemy `Creature[]`), golden-testable from a fixed seed. The
-**Zustand store owns navigation + ownership only** — `deepestFloor`, `lastFloor`, the collection,
-the per-creature soul `Map`, active-party order, discovered biomes, atlas pins, and the persistent
-**run RNG stream** — and *calls* the generator. It **never** owns the deterministic derivation of a
-floor's contents.
+- The cave is generated in `src/engine/` under combat's discipline: `generateFloor(floor, biome,
+  biomeIndex, allSpells, runRng, balanceConfig) -> Fight[]`, the floor's fights as enemy
+  `Creature[]`, golden-testable from a fixed seed. The store calls it and never derives a floor's
+  contents itself (`spec/store.md` "The store owns navigation and ownership").
+- Every curve (`fightCount`, `enemyPartySize`, `enemyLevelRange`, `bossLevel`) is a pure function
+  of `(floor, BalanceConfig)`, never a literal; the values live in `src/data/balance.ts`.
+- `FLOORS_PER_BIOME` and `BIOME_COUNT` are config constants (10 and 10).
 
-- **The run model is the hub plus atomic floor runs** (decided, Phase 4 close review G6).
-  `descend(floor)` resolves a whole floor synchronously: every fight in sequence, HP reset between
-  fights, no player choice mid-floor. There is **no "descent state"** in the store. **`lastFloor`**
-  is the floor last fought (the UI pre-selects it in the floor picker; Phase 5 saves it).
-  **Fast-travel is just `descend(floor)`** for any floor up to `deepestFloor + 1` (a separate
-  `travelTo` action does not exist). Lands in 4.1-A (`currentFloor` → `lastFloor`, `travelTo`
-  deleted).
-- **Content frontier** (Phase 4.1-A, fixes G5): the last floor of the **unbroken run of
-  authored biomes** from biome 1, **derived from the biome data** (authoring biome 4 moves it
-  automatically, no constant to bump). Walk the biome list in order and stop at the first biome
-  with **no content**: no species with a positive weight and at least one creature (exactly the
-  case where the generator's weighted pick throws). A gap in authoring therefore ends the frontier
-  instead of exposing floors that would crash. `descend` past it returns `{ ok: false, reason:
-  'beyond-content-frontier' }` (see "State & persistence" for the store action rule). **Pins
-  can't route around it** (PR #67 review): `pinBiome` refuses a biome with no content (reason
-  `biome-has-no-content`), so every floor inside the frontier resolves to an authored biome
-  whatever the pins; one shared "has content" check serves both. The generator's own throw on an
-  empty or zero-weight pool stays: reaching generation with one is still a real bug. *(Note, not
-  code: floor 101+ could draw a placeholder biome, which can't happen while the frontier sits at
-  30.)*
+### Floor runs
 
-- **`biomeForFloor(floor, pins, runSeed)`** — pure: fixed sequence 1–100, derived-seed draw 101+,
-  pins override either. The 1–100 order is an authored onboarding ramp (GAME_DESIGN §4).
-- **Per-visit spawn** — the specific-creature/level draws advance the **run RNG stream** (fresh each
-  descent, reproducible from the run seed): re-descending a floor re-rolls its creatures (the
-  soul-grind loop) while its biome stays fixed.
-- **`fightCount(floor)`** — deterministic; no per-visit roll. Default (Phase 4.1-A,
-  `BalanceConfig`): **`10 + (floor − 1)`, uncapped** (floor 1 = 10 fights, floor 10 = 19). Known
-  risk, accepted: floor success ≈ (per-fight win chance)^(fights), so a small per-fight loss rate
-  compounds; revisit with a cap or per-biome ramp if the balance simulator shows it dominating.
-  **Revisited at the 4.1-H2 grill and kept** (brief ASSUMPTION 117): H1's report shows the
-  compounding (floor clears follow p^n), and a flat 10 measured faster, but the design owner keeps
-  the growing count and balances the early floors through the level range instead. Watch point:
-  the per-fight win rate a floor needs rises with depth; T4 shows whether the curve keeps up.
-- **Boss floors** (built in Phase 4 Slice I) — a floor is a boss floor **iff** `floor %
-  FLOORS_PER_BIOME === 0` **and** its resolved biome carries a boss encounter (`BiomeData.boss?` —
-  `{ bossId, creature, speciesId, adds[] }`); otherwise it is an ordinary floor. One rule at every
-  depth: floor 101+ included (a drawn or pinned biome brings its own boss), and a biome with no
-  authored boss (placeholder biomes 4–10, test fixtures) simply generates ordinary floors. A boss
-  floor is **boss-only**: exactly **one** fight — the boss at slot 0, then its authored adds — with
-  no trash fights (`fightCount` is not consulted). **From 4.1-G** (PR #81 review) the fight is
-  `enemyPartySize(floor)` creatures like any other: after the authored adds, the remaining slots
-  are filled through the ordinary spawn path (weighted species selection from the biome's pool
-  **minus the boss's own `speciesId`**, run RNG, so they vary per visit). Only *which* creatures the boss brings is authored;
-  everything else is the ordinary spawn path: adds roll their level within `enemyLevelRange(floor)`
-  and their loadout like any spawned enemy, and the boss sits at **`bossLevel(floor)`** (a curve —
-  a few levels above the range max; the offset is parked balance: **+3, then +5 from 4.1-H2c** so
-  the narrower range doesn't lower boss levels, brief ASSUMPTION 119). The boss rolls its loadout
-  like any enemy too (a full gem set from 4.1-G), so no boss holds an empty kit. Every add must be a member of
-  the biome's own `speciesPool`, and its `speciesId` is resolved from that pool (invariant-checked,
-  never re-typed). The boss's `speciesId` is explicit data (the Broodmother carries the Spiders
-  species, so `living-allies-of-species` counts her together with her spiderlings). `Fight.boss?`
-  marks the boss creature for the run layer.
-- **`enemyPartySize(floor)`** — deterministic; no per-visit roll. Enemy count **scales with depth**,
-  ramping from 1 toward the full 6-slot slate as floors deepen (an authored curve alongside
-  `enemyLevelRange`/`fightCount`, clamped at the 6v6 max). Default: **+1 per floor over floors
-  1–6** (`min(6, floor)`), so fights are 6v6 from floor 6. It is *not* a flat 6.
-- **Enemy level curve** (decided, Phase 4 close review D1; defaults in `BalanceConfig`, 4.1-A):
-  the design assumes **party level ≈ floor**. An **enemy level multiplier** rises linearly from
-  **1.25 at floor 1 to 2.0 at floor 100**, then **+1 percentage point per floor** after 100 ("for
-  now"): the enemy level range is anchored on `floor × multiplier(floor)` and its **width widens
-  with depth**. Watch points for tuning: floors 20–30 before Phase 8 (roughly +40% enemy stats
-  answered only by perks and traits) and the steep climb past 100. The exact anchoring, rounding and
-  width parameters are proposed in the Phase 4.1 brief (ASSUMPTION 4) and confirmed in the 4.1-A
-  plan review. **From 4.1-H2c** (brief ASSUMPTION 118): the width starts at **0** (`max = min +
-  floor(floor / 10)`), and the minimum is **rounded down** (`floor` instead of `round`), so an early
-  floor's minimum is exactly `floor(floor × multiplier)`. Floors 1–9 spawn at exactly 1, 2, 3, 5,
-  6, 7, 9, 10 and 11; floor 10's enemies at 13–14 (its width is 1); floor 30 stays at 44 (44–47). A
-  width of 2 put level-3 enemies (+50% stats) against the level-1 starters on floor 1.
-- **Enemy script & loadout at spawn** (Phase 4.1-G, D4) — generation sets the enemy's `scriptId`
-  from the static creature's **`defaultScriptId`**, which is its **role script** (see "Combat &
-  scripting" → role scripts). **Every enemy rolls a full set of distinct gems** (one per gem slot)
-  from the spells matching its affinity with `unlockedAtBiome ≤` the current biome. Duplicates are
-  allowed **only as a safety net** when that pool is smaller than the slot count; a data test
-  requires **≥3 spells per affinity at biome 1**, so real content never hits the net. A
-  **cast-role** creature (`caster`/`support`/`opener`) with no usable spell is an invariant
-  violation and **throws**, backed by a data test that every cast-role creature has a matching
-  spell at its biome.
-- **Rewards** (XP / soul% / currency) are a **run-layer consumer of the event log**
-  (`CreatureDied.creatureId` joined against the generated enemy roster via each creature's
-  `origin`), never engine state. XP goes
-  to the **whole active party regardless of survival**, banked per kill, kept on wipe; **level-ups
-  apply post-fight** — the engine never sees a mid-fight level change. A **boss kill** banks XP and
-  currency through the same per-kill path but **no soul%** (bosses are not collectable). **Winning**
-  a boss fight adds its `bossId` to `bossesCleared` (idempotent, so perk points come from the first
-  clear only). A cleared boss floor can be re-fought for ordinary rewards and no further points; a
-  loss banks the adds' kills as usual and records nothing.
+- **`descend(floor)`** resolves a whole floor synchronously; there is **no descent state** in the
+  store. **`lastFloor`** is the floor last fought. **Fast travel is `descend(floor)`** for any floor
+  up to `deepestFloor + 1`.
+- Each descent draws its generation RNG and each fight's combat seed from `runSeed` and
+  `runCounter`, and advances `runCounter`. Re-descending a floor re-rolls its creatures; its biome
+  stays fixed. Every descent adds its biome to `discoveredBiomes`.
 
-- **Currencies** (config-tuned): Essence (gems), Ore (equipment), Bricks (facilities, rarer),
-  Lifeforce (fusion + catch-up leveling), perk points (specs; non-dropped, first-boss-only,
-  1000 = one maxed spec [flat list, some perks leveled], refund-on-swap, free/unlimited swap).
-  All combat-dropped except perk points; all currencies are **unbounded** (no storage cap).
-- **Biomes** are data (name, theme, **species spawn pool**, scaling tweaks, visuals); a floor
-  picks a species from the pool, then a specific creature by **rarity-weighted seeded RNG**.
-  Biome changes **every 10 floors** (10 in v1) — keep cadence/count as config constants
-  (`FLOORS_PER_BIOME`, `BIOME_COUNT`). Floors
-  1–100 use the fixed sequence; floor 101+ draws a biome by **seeded RNG** unless pinned via the
-  Biome Atlas (pinning may retroactively override a visited floor). v1 content target: **≥6
-  species/biome, ≥3 creatures/species** (~180+ creatures total). **Bosses** every 10th floor are
-  unique, non-collectable. Track **deepest-reached floor** as state (fast-travel up to it).
-  **HP resets every fight**; on wipe, return to hub (no loss).
-- **Difficulty/depth model**: each floor maps to an **enemy level range** (not a separate stat
-  multiplier) — enemies are ordinary creature instances at that level, using the same linear
-  growth formula as player creatures. Enemy level grows **faster than floor number** (a multiplier
-  from 1.25 at floor 1 to 2.0 at floor 100, then +1pp per floor; see "Generation & the run
-  layer"); the level-range **width widens with depth** (the intended variance axis). A floor
-  contains a **deterministic, depth-determined number of fights** (`fightCount(floor)` = `10 +
-  (floor − 1)` by default — **not** rolled; the fight *count* is stable across visits, only the
-  *creatures/levels* re-roll per visit).
-  Recipe drops (gem/augment/infusion) come from a **global depth-scaled table**, independent of
-  which creature died.
-- **Facilities**: all facility actions (craft, infuse, fuse, summon) resolve **instantly** on
-  payment — no real-time timers/queues, consistent with engine purity's no-wall-clock rule.
-  Only **Gem Forge, Equipment Forge, Fusion Chamber** have upgrade tiers (tier counts differ per
-  facility); v1 tiers **raise the level cap** craftable/fuseable there. Soul Altar,
-  Storage/Vault, and Biome Atlas are **one-time builds** with no tiers.
+### biomeForFloor
 
-## To fold
+- **`biomeForFloor(floor, biomes, atlasPins, runSeed)`**, pure: a pin wins; floors 1–100 take the
+  fixed sequence (decade N → `biomes[N]`); floor 101+ takes a draw seeded from the run seed and the
+  floor. The 1–100 order is positional, so an existing biome slot never changes place.
 
-### Flow
-- **scripted-intro encounter** — a rigged fight whose outcome triggers a story beat (revive the
-  starter + gain the **Unicorn**) instead of wipe→hub; the Unicorn joins win-or-lose.
+### Content frontier and pins
 
+- **`contentFrontier(biomes)`** walks the biome list in order and stops at the first biome with **no
+  content** (`biomeHasContent`: no species with a positive weight and at least one creature,
+  exactly the case where the generator's weighted pick throws). It is derived from the biome data,
+  so authoring a biome moves it with no constant to bump, and a gap in authoring ends it instead of
+  exposing floors that would crash. `descend` past it returns `{ ok: false, reason:
+  'beyond-content-frontier' }`.
+- **Pins can't route around it**: `pinBiome` refuses a biome with no content (reason
+  `biome-has-no-content`) through the same `biomeHasContent` check, so every floor inside the
+  frontier resolves to an authored biome whatever the pins.
+- The generator's own throw on an empty or zero-weight pool stays: reaching generation with one is
+  a real bug.
+
+### Boss floor generation
+
+- A floor is a boss floor **iff** `floor % FLOORS_PER_BIOME === 0` **and** its resolved biome has a
+  boss (`BiomeData.boss?: { bossId, creature, speciesId, adds[] }`). The rule holds at every depth,
+  floor 101+ included; a biome with no boss (the unauthored biomes, test fixtures) generates
+  ordinary floors.
+- A boss floor is exactly **one** fight, and `fightCount` is not consulted. The boss is at slot 0 at
+  **`bossLevel(floor)`** (the range's maximum plus `bossLevelOffset`), then its authored adds, each
+  at a level within `enemyLevelRange(floor)`, then the fill up to `enemyPartySize(floor)` through
+  the ordinary spawn path, over the biome's pool **minus the boss's own `speciesId`**, from the run
+  RNG. The boss and every add roll their gem set like any spawn, so no boss holds an empty kit.
+- Every add must be a member of the biome's own `speciesPool`; its `speciesId` is resolved from
+  that pool (invariant-checked, never re-typed). The boss's `speciesId` is explicit data (the
+  Broodmother carries the Spiders', so `living-allies-of-species` counts her with her
+  spiderlings). `Fight.boss` marks the boss creature for the run layer.
+
+### Enemy script and gem set
+
+- Generation leaves the enemy's `scriptId` unset, so `materializeCreature` gives it the creature's
+  `defaultScriptId`, its role script (`spec/scripting.md` "Role scripts").
+- **Every enemy rolls a full set of distinct spells** (`rollLoadout`, one per regular gem slot) from
+  the spells of its affinity with `unlockedAtBiome` ≤ the current biome. Duplicates appear only as
+  a safety net when that pool is smaller than the slot count; a data test requires **≥3 spells per
+  affinity at biome 1**, so real content never reaches the net.
+- A **cast-role** creature (`caster`, `support`, `opener`; `CAST_ROLE_SCRIPT_IDS`) with no usable
+  spell is an invariant violation and **throws**, backed by a data test that every cast-role
+  creature has a matching spell at its biome.
+
+### Rewards are a run-layer consumer of the event log
+
+- XP, soul% and currency are read from the event log (each `CreatureDied` joined to the generated
+  enemy through its `origin`), never kept as engine state. `Fight.boss` singles out the boss kill.
+- Winning a boss fight adds its `bossId` to `bossesCleared`, idempotently.
+
+## Not built
+
+### Facilities
+
+- Phase 8 builds them. Structures the player builds and upgrades **at the hub** with **Bricks**:
+  data-driven (cost, effect, tiers), part of the permanent progression, built out as an early-game
+  goal from little or nothing.
+- **Every facility action** (craft, infuse, fuse, summon) **resolves instantly** on payment: no
+  timers or queues, which the engine's no-wall-clock rule requires.
+- Only the **Gem Forge, Equipment Forge and Fusion Chamber** have upgrade tiers (tier counts per
+  facility); in v1 a tier **raises the level cap** craftable or fusable there (cost-reduction tiers
+  may follow). The others are **one-time builds**: they have no throughput to upgrade.
+- The v1 list:
+  - **Gem Forge**: craft gems (dropped recipes and Essence), augment and level them (Essence)
+    (`spec/creatures.md` "Gems as items").
+  - **Equipment Forge**: craft, infuse and level equipment with Ore (`spec/creatures.md`
+    "Equipment").
+  - **Fusion Chamber**: fusion and catch-up levelling, for Lifeforce (`spec/creatures.md` "Fusion",
+    "Catch-up levelling").
+  - **Soul Altar**: summoning happens there once it exists.
+  - **Storage / Vault**: manages the collection and the party; whether party arrangement then needs
+    it is Phase 8's call.
+  - **Biome Atlas**: pinning ("Pins") then needs it, and it unlocks once **all 10 biomes are
+    discovered**.
+- No healing facility: HP resets every fight, so there is nothing persistent to heal.
+
+### Recipe drops and currency sinks
+
+- Phase 8 builds them. Floors also drop **recipes** (gem, augment, infusion) from one **global,
+  depth-scaled table**, not from the creature defeated.
+- Essence and Ore are the long-tail sinks; Bricks is a front-loaded build-out sink that tapers.
+
+### Biome theme and visuals
+
+- Phase 10 builds them. A biome's data also carries a theme, scaling tweaks and visuals.
