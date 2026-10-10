@@ -29,7 +29,13 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
   until a later slice threads `speciesId` (it is threaded); `engine/effect-types.ts:121-127` calls
   `all-allies-of-species` dormant until wired (only a creature without a `speciesId` gets an empty
   list); `engine/effect-types.ts:277` calls `remove-status` "the final response verb" (the rule is
-  `spec/responses.md` "No side doors", not a verb ceiling).
+  `spec/responses.md` "No side doors", not a verb ceiling). From 4.2-E:
+  `engine/scripting-types.ts:9-22` repeats the `'target'` subject comment twice;
+  `engine/scripting-types.ts:78-89` says `acted-before-target` in a trigger "always evaluates
+  false" and names only `random-enemy` (it falls back to the creature being resolved against, and
+  all three random selectors peek to no target); `engine/target-selectors.ts:53-55` calls
+  `random-enemy` "the one blessed RNG draw site" (`random-ally` draws too); `data/scripts.ts:132`
+  lists the Stonehorn Warden as a `taunter` (it runs `warden`).
 - The `citations` mode, blocking in CI, and the `budgets` mode, reported only (phase brief
   "Checks"). The budgets are set from the condensed sizes.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the

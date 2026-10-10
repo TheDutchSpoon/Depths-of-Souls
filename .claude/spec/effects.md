@@ -114,7 +114,7 @@ status lifecycle in `spec/statuses.md`.
   Spore) carry `triggered` effects (`spec/statuses.md` "Action locks", "Turn order").
 - Armour penetration, cross-stat, action instances, provoke immunity and friendly-fire are damage
   and targeting rules (`spec/combat.md` "Armor penetration", "Cross-stat contribution", "Action
-  instance-list", "targeting-override").
+  instance-list", "Targeting override").
 - **Every effect is carrier-agnostic**: a status may carry any effect a trait carries, except what
   a validator rejects ("Validators").
 
@@ -437,13 +437,17 @@ status lifecycle in `spec/statuses.md`.
   the action kind already in scope where damage is dealt. Brute Force (`'attack'`) and Spell Focus
   (`'cast'`) are unconditional "+% damage" perks (`condition: always`) that must not leak onto the
   other action kind.
+- It lands as **one modified hit, never an `on-damage-dealt` follow-up**: a follow-up would be a
+  second hit that re-fires `on-damage-dealt`, re-splashes and double-counts on-hit effects. It is a
+  trait or perk passive, not a `DamageModifierDef` (the family statuses carry); a timed conditional
+  bonus would give `DamageModifierDef` a condition instead.
 
 ### Splashing and Annihilate
 
 - `{ category: 'splashing' }` and `{ category: 'annihilate' }` are permanent passives with no
   magnitude (perk effects, instantiated like innate traits, never runtime status instances).
 - After a single-target **Attack's** main hit (attacks only, never Cast), a Splashing bearer also
-  strikes each adjacent living enemy (`spec/combat.md` "adjacency targeting"), or with Annihilate
+  strikes each adjacent living enemy (`spec/combat.md` "Adjacency targeting"), or with Annihilate
   every other living enemy. Each splash hit is a full formula recompute against that target's own
   Defence, affinity and pools, never a copy of the main hit's number. No `TriggerFired`: it is the
   same action, not a trigger.

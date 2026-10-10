@@ -330,6 +330,13 @@ guardrails as every demo; own brief + phase record.
   hook name in `TriggerFired`, and the firing order on an enemy's death (today the dead creature's
   allies all fire before its enemies). The PR review rewrites `spec/effects.md` "Hooks", "Damage-path
   hook order" and "Action reactions: actor-self hooks or observation" to match (17 hooks become 16).
+- **HP% qualifiers pick by HP%** (found at the 4.2-E condense; the code doesn't match the design):
+  an `hp-percent` condition's `lowest` or `highest` qualifier must test the creature with the
+  lowest or highest HP%, compared by integer cross-multiplication with the shared tie-break. Today
+  `evaluateCondition` picks it by current HP. Users: the `warden` and `support` role scripts' first
+  rules, so the fix is a deliberate golden change for fights with either role, and the CI balance
+  bands are re-checked in the same PR. `spec/scripting.md` "Conditions in the engine" states the
+  design, with a "Known bug" line that the fix's PR review removes.
 
 ## Phase 5 — Persistence (large saves)
 - Versioned save/load with **IndexedDB as the primary store** (saves are large);
