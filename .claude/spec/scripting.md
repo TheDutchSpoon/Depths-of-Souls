@@ -39,8 +39,8 @@ How the chosen action then resolves is `spec/combat.md`.
   enemy the caster has no edge over.
 - **HP% is of max HP**, so a creature at full HP is exactly 100%. "Lowest" and "highest" pick the
   ally or enemy with the lowest or highest **HP%**, and test it.
-- Fight-context conditions ("is this a boss fight", the current floor) are deferred past v1. The
-  candidates for Phase 6 are in `ROADMAP.md` Phase 6.
+- Fight-context conditions ("is this a boss fight", the current floor) are deliberately deferred
+  past v1. The candidate conditions recorded so far for Phase 6 are in `ROADMAP.md` Phase 6.
 
 ### Target selectors
 

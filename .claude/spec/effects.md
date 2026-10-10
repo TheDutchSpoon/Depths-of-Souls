@@ -73,8 +73,9 @@ status lifecycle in `spec/statuses.md`.
   (`spec/responses.md` "No side doors").
 - A trait may react by dealing damage, applying a status, changing a stat, or **granting an extra
   action** (the Sorcerer starter's turn-end cast, Resonant Overtone's echo). A granted action
-  always runs after the action that caused it, inside the same turn, and obeys every action rule:
-  a Stunned creature can't take one, a Silenced one can't cast. Traits that insert extra *turns*,
+  takes no turn of its own: it runs at the end of the step that raised it (`spec/responses.md`
+  "perform-action"), and obeys every action rule: a Stunned creature can't take one, a Silenced
+  one can't cast. Traits that insert extra *turns*,
   change scripting options or alter the creature's own decision-making are parked past v1
   (`OPEN_QUESTIONS.md` "Behavioral traits").
 - **"attack" and "cast" in a trait or spell mean the real actions**: the same damage formula,

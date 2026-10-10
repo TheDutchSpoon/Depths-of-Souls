@@ -21,8 +21,9 @@ fight is `spec/effects.md`, `spec/responses.md` and `spec/statuses.md`.
 
 - **One round = every living creature acts once**, in descending **Speed** order, rebuilt every
   round, so a Speed change reorders the next round. Ties go **player side → slot → creature id**.
-- A creature gets **one turn per round**. A trait may grant an extra *action*, which runs inside
-  the same turn, after the action that caused it (`spec/effects.md` "Traits").
+- A creature gets **one turn per round**. A trait may grant an extra *action* (`spec/effects.md`
+  "Traits"). It takes no turn of its own: it runs at the end of the step that raised it
+  (`spec/responses.md` "perform-action").
 - Every fight has a hard **round cap** (config): a fight that reaches it (a pathological
   all-Defend or all-Wait standoff) ends at once as a **draw**, so no fight runs unbounded.
 
@@ -79,7 +80,7 @@ fight is `spec/effects.md`, `spec/responses.md` and `spec/statuses.md`.
 Direct damage, an Attack or Cast action ("Damage channels and the Additional"):
 
 ```
-effOffStat = getEffectiveStat( remapResolve(creature, action) ) × spellPower
+effOffStat = getOffensiveStat(creature, actionKind, spellPower)   // remap → effective → × spellPower
 raw        = ( MAX(effOffStat − Defence, 0) + 0.01 × effOffStat ) × Affinity × (1 + Σ dealtMods) × Π(takenFactors)
 damage     = MAX(1, floor(raw))
 ```
@@ -188,11 +189,13 @@ damage     = MAX(1, floor(raw))
   current effective Speed, ties player side → slot → id (`buildTurnQueue`; act-first and act-last
   statuses split it into poles, `spec/statuses.md` "Turn order"). It is **never recomputed
   mid-round**: Speed changes wait for the next round's rebuild.
-- A creature that dies before its turn keeps its slot as an empty `TurnStarted`/`TurnEnded`
-  bracket: no hooks, no action.
-- A granted extra action runs inside the turn that raised it (`spec/responses.md`
-  "perform-action"). An "insert an extra turn" effect would be a separate primitive, never a
-  re-sort of the queue.
+- A creature that dies before its turn keeps its slot as a `TurnStarted`/`TurnEnded` bracket with
+  no hooks, no action and no countdown; the Web roll still runs in it (`spec/statuses.md` "Turn
+  order").
+- A granted extra action takes no queue slot: it runs at the end of the step that raised it,
+  inside the current turn, or at round level for a fight-start or round-end grant
+  (`spec/responses.md` "perform-action"). An "insert an extra turn" effect would be a separate
+  primitive, never a re-sort of the queue.
 - **Round cap**: after `ROUND_CAP` (`engine/config.ts`) full rounds the fight ends as a draw,
   checked before a new round starts.
 
@@ -408,10 +411,8 @@ TurnStarted
   runAction }`**, created per top-level action or hook pass by the action layer and threaded
   through the resolver. A `perform-action` response queues on its `grants`, so `resolution.ts`
   never imports `combat.ts`. It is never stored in `CombatState`.
-- Rejected: patching each action source, routing everything through `decideAction`, legality
-  inside the executor, an import cycle, a global registry, a runner stored in state. Generator or
-  stack-machine resolution pays off only if players make choices mid-cascade, which the design
-  doesn't have.
+- Resolution is not a generator or stack machine: that pays off only if players make choices
+  mid-cascade, which the design doesn't have.
 
 ### Default targeting is side-aware
 

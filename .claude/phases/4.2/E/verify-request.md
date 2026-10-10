@@ -119,3 +119,81 @@ whether you think it is a bug or a stale doc.
   decision: a bug).
 - `phases/4.2/F/brief.md`, `G/brief.md`: 4.2-E's notes.
 - `phases/4.2/E/inventory.md` (new, from `inventory-skeleton`) and this file.
+
+## Round 2
+
+Design agent → coding agent, answering `verify-r1.md`. All six findings are fixed; none is
+rejected. `npm run docs:check -- inventory E` passes: 87 units, 87 rows, base `f666d7c`. The row
+counts per fate are unchanged (54 rewritten, 25 merged, 8 dropped); five rows' Reasons were
+extended (C:808, G:811, G:869, G:994, C:1029).
+
+### Findings and what changed
+
+- **F1, grant timing** (G:811, C:808). Stale doc, Duncan's decision, refining round 1's fix (4).
+  combat "Rounds and turns" now says a granted action takes no turn of its own and runs at the
+  end of the step that raised it, linking `spec/responses.md` "perform-action". "Turn queue" says
+  it takes no queue slot and runs at the end of the step that raised it: inside the current turn,
+  or at round level for a fight-start or round-end grant. The same stale sentence was also in
+  `spec/effects.md` "Traits" ("always runs after the action that caused it, inside the same
+  turn", a 4.2-D unit, C:1603/G:637), so it got the same fix. 4.2-D's inventory is left as merged.
+- **F2, ally HP% qualifier** (G:994). Stale doc, Duncan's decision: the `hp-percent` condition
+  takes `any`, `lowest` and `highest` for every subject (`conditions.ts`). The text stays as it
+  is; the G:994 row now records the change.
+- **F3, the Phase 6 pointer** (G:994, C:1129). The two statements are now separate: fight-context
+  conditions are "deliberately deferred past v1" (the old text's word, restored), and "the
+  candidate conditions recorded so far for Phase 6 are in `ROADMAP.md` Phase 6". That no longer
+  implies fight-context conditions are among them. They don't go to ROADMAP: the old text defers
+  them past v1 without naming a phase. The G:994 row says so.
+- **F4, the lookup's name** (G:869). Stale name, Duncan's decision: the formula's first line is now
+  `effOffStat = getOffensiveStat(creature, actionKind, spellPower)   // remap → effective → ×
+  spellPower`. The bullet below already states the order and names `getEffectiveStat`.
+- **F5, the "Rejected:" bullet** (C:1029). Dropped the list of rejected alternatives as history,
+  for consistency with C:956. Five of the six items also restate the bullets' positive rules
+  (`runAction` for every source, `checkLegality` separate from execution, `resolution.ts` never
+  imports `combat.ts`, the context is transient and never in `CombatState`). Kept the
+  generator/stack-machine sentence, reworded as "Resolution is not a generator or stack machine:
+  that pays off only if players make choices mid-cascade, which the design doesn't have." It is
+  design intent that a future mid-cascade choice must revisit, the same kind of sentence as
+  scripting's kept "utility-scoring AI was rejected". The C:1029 row records both.
+- **F6, the dead actor's bracket** (C:808). "Turn queue" now says the bracket has no hooks, no
+  action and no countdown, and the Web roll still runs in it (`spec/statuses.md` "Turn order").
+
+### Spec and code disagree: Duncan's decisions this round
+
+- Grant timing (F1): stale doc; the text says what `main` does.
+- Ally HP% `highest` (F2): stale doc; the text says what `main` does.
+- `remapResolve` → `getOffensiveStat` (F4): stale name; the text names `main`'s function.
+- The HP% qualifier bug stands as decided in round 1.
+- **A dead creature's empty turn** (raised by Duncan after F6): a new direction, not a bug. The
+  spec deliberately has the Web roll run in a dead actor's bracket, and `main` matches it. Duncan
+  wants dead creatures skipped entirely (no bracket, no clock bump, no Web roll). The spec keeps
+  describing `main`; the change is in `ROADMAP.md` Phase 4.5 "Decided, not built" ("A dead
+  creature's turn is skipped entirely"), as a deliberate golden change.
+
+### Check this round
+
+1. The three grant sentences (combat "Rounds and turns", "Turn queue"; effects "Traits") against
+   `combat.ts` `resolveTurn` / `resolveRoundEnd` and `spec/responses.md` "Where grants run".
+2. The "Turn queue" bracket sentence against `combat.ts:497-508`.
+3. That the reworded generator sentence and the split Phase 6 pointer say nothing their units
+   don't.
+
+### Notes for later slices
+
+- **4.2-G** (in `G/brief.md` Scope): the five stale `src/` comments from `verify-r1.md`
+  (`scripting-types.ts:144-149`, `types.ts:323-325`, `effect-types.ts:760`, `config.ts:1-2`, and
+  the `CONVENTIONS`/`GAME_DESIGN` citations in `combat.ts`, `actions.ts`, `types.ts`).
+  `effect-types.ts:760` is flagged as a decide-point for the plan as well as a comment, because
+  `targeting.ts`'s exported `adjacentLivingTargets` is tested but not the copy Splashing runs.
+
+### Docs edited this round
+
+- `spec/combat.md`: F1 ("Rounds and turns", "Turn queue"), F4 ("Damage formula"), F5 ("One action
+  pipeline"), F6 ("Turn queue").
+- `spec/scripting.md`: F3 ("Conditions").
+- `spec/effects.md`: "Traits" grant sentence, the same stale-doc fix as F1 (Duncan's decision).
+- `phases/4.2/E/inventory.md`: Reasons for C:808, G:811, G:869, G:994, C:1029.
+- `phases/4.2/G/brief.md`: 4.2-E's verify-r1 stale `src/` comments added to Scope.
+- `ROADMAP.md`: Phase 4.5 "Decided, not built" gains "A dead creature's turn is skipped entirely"
+  (Duncan's decision: a new direction).
+- `phases/4.2/E/verify-request.md`: this section.
