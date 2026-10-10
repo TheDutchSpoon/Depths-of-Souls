@@ -51,6 +51,7 @@ drifts and stale decisions silently outlive their correction.
         handout-r1.md   design agent → coding agent, only when there are fixes
         report-r2.md …  and so on, one round per fix batch
         record.md       what was built; immutable once merged
+        evidence/       generated output a step file cites (sim reports, scans, tables)
   archive/         Phases 0–4's briefs and records, untouched. History, not current truth.
 ```
 
@@ -67,6 +68,18 @@ is the first written in the new shape.
 
 Mailbox files are committed on the slice branch, so the PR carries its own plan, reviews and
 reports. Once merged they're immutable, like records.
+
+**What a mailbox keeps.** The folder itself holds only the step files above, all Markdown.
+Generated output that a step file cites as evidence (a simulator report, a corpus scan, a table a
+script printed) goes in `<slice>/evidence/`, as plain text or Markdown, and the citing file names
+it by that path. Not kept, anywhere in the mailbox:
+
+- marker files, logs and other scratch output of a run;
+- a run whose content another kept file already holds (keep one copy);
+- a one-off script that rewrites `src/` (a data remap, say): it can't safely run twice, so keep its
+  printed table in `evidence/` and quote the rule it applied in the report.
+
+Anything else the step needs lives in a scratch clone outside the repo, as before.
 
 ## The loop, per slice
 

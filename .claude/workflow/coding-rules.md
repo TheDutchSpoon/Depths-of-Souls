@@ -10,6 +10,13 @@ A slice id like `4.1-H2b2` maps to the mailbox folder `.claude/phases/4.1/H2b2/`
 before the first `-`, slice = the text after it). Everything you produce for the slice goes in that
 folder, except code and the phase record (see "Phase record" below).
 
+The folder holds only your step files (`plan.md`, `report-r<N>.md`), all Markdown. Output your
+report cites as evidence (simulator reports, corpus scans, a table a script printed) goes in the
+slice's `evidence/` folder, and the report names it by that path (WORKFLOWS "What a mailbox
+keeps"). Don't leave marker files, logs or duplicate runs there, and don't keep a one-off script
+that rewrites `src/`: keep its printed table and quote its rule in the report. Background runs
+write their scratch output outside the repo.
+
 ## Before writing anything, read
 
 - `.claude/CLAUDE.md`;

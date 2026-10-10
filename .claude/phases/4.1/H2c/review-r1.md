@@ -85,6 +85,10 @@ Duncan, 2026-10-10:
    agent proves in `report-r2.md` that nothing that runs changed, and Duncan merges on that. The
    stale comments leave H2d's brief section again (only the matchup-table note stays there).
 2. Decide-point 2 (base stats): open.
+3. **The mailbox's generated files** move to `evidence/` (the sim reports, the DoT scans, the Health
+   table); `health-remap.mjs` (a one-off script that rewrites `src/` and can't safely run twice) and
+   `sim-dot-today.txt` (the same report as `sim-after.txt` with the Pacify probe off) are deleted.
+   Done by Duncan. The standing rule is in WORKFLOWS "What a mailbox keeps", in its own commit.
 
 ## What was verified, and how
 
@@ -158,7 +162,7 @@ Duncan, 2026-10-10:
   A dead creature's empty `TurnStarted`/`TurnEnded` bracket shows up in many fights, on `main` too:
   that is the documented "dead actor's empty bracket" (CONVENTIONS), not a finding.
 - **The "after" report reproduced:** `npm run sim` on the branch (40 seeds, cap 400; 2,111 s
-  on my sandbox) prints a report identical to the committed `sim-after.txt` line for line, apart
+  on my sandbox) prints a report identical to the committed `evidence/sim-after.txt` line for line, apart
   from the runtime line. Linux against Duncan's Windows run, so the simulator is deterministic across
   platforms too.
 
