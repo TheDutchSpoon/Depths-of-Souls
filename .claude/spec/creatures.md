@@ -97,8 +97,8 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 
 ### Roster and party
 
-- The collection is **unlimited**; the active **party is 6**, arranged freely at the hub (any
-  instance into any slot; moving one onto an occupied slot swaps the two).
+- The collection is **unlimited**; the active **party is 6**, arranged freely at the hub: any
+  instance into any slot (`spec/store.md` "Store actions" for a move onto an occupied slot).
 - **Duplicates** may share the party: instances are independent.
 - The Unicorn is **permanently owned** but can be benched like any creature.
 
@@ -199,8 +199,10 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   creation**, through the enemy's own roll (`rollLoadout`: distinct picks, the safety net, the
   cast-role throw; `spec/run.md` "Enemy script and gem set"), and stores them on the instance.
 - **A stored set never changes**: nothing re-rolls it, so a set reflects the depth at which it was
-  made. The starters and the Unicorn are granted at floor 0 and can never be summoned (they bank
-  no soul), so they keep a biome-1 set; a creature summoned again deeper can roll a deeper spell.
+  made. The starter chosen at a new game and the Unicorn are granted at floor 0, so they keep a
+  biome-1 set; a starter granted by a later swap (`spec/progression.md` "Swapping specialization")
+  rolls at the depth of the swap. Neither can be summoned (they bank no soul), so neither re-rolls;
+  a creature summoned again deeper can roll a deeper spell.
 - **Its own RNG:** the roll draws from `createRng(hashGemDraw(runSeed, instance ordinal))`, a hash
   with its own constants. It never reads or advances `runCounter`, so a gem roll can't shift a
   floor draw.
@@ -235,7 +237,9 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   spell's `effects` list (an extra target, an added or stronger status, a buff on cast, …). They
   are the same effect-framework objects as traits and infusions.
 - Gems are crafted and augmented at the **Gem Forge** with Essence; gem and augment **recipes** drop
-  from floors (`spec/run.md` "Recipe drops").
+  from floors (`spec/run.md` "Recipe drops and currency sinks").
+- The spells on offer come from the same cumulative pool as a gem set: every spell with
+  `unlockedAtBiome` ≤ the current biome (`spec/run.md` "Spells unlock cumulatively").
 - Gems are a **shared, finite inventory**. A gem is equipped on one creature at a time, **free and
   instant** to equip or unequip, gated by the spell's affinity ("Spell affinity gate").
 - Traits and effects can change a creature's gem-slot count (the Sorcerer's True Wit).

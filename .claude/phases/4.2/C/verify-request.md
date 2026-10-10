@@ -134,3 +134,82 @@ G's "Clean-up"; 4.2-B's notes for D, E and F were carried over the same way.
   and 4.2-C's notes for each; `G/brief.md`: the `## Not built` step for `workflow/pr-review.md`.
 - `workflow/condense.md`: "Finish" says notes for later slices go into their briefs.
 - `phases/4.2/C/inventory.md` (new, from `inventory-skeleton`) and this file.
+
+## Round 2
+
+Answers `verify-r1.md`. `npm run docs:check -- inventory C` passes: 154 units, 154 rows, base
+`171d5fb`. Fate counts unchanged (kept 1, rewritten 103, merged 33, moved 2, dropped 15); rows
+touched this round carry a "round 2:" note in their Reason. Sizes now: creatures 17,749, run
+17,576, progression 3,515, store 2,421, saves 3,561 bytes.
+
+### Findings and what changed
+
+1. **C:149, starter and Unicorn gem sets.** Duncan: **stale doc**. `spec/creatures.md` "Player gem
+   sets" now says the starter chosen at a new game and the Unicorn are granted at floor 0 (so a
+   biome-1 set), a starter granted by a later swap rolls at the swap's depth, and neither can be
+   summoned, so neither re-rolls. Check against `setSpec` → `grantCreatureIfUnowned` →
+   `rollPlayerGems` / `unlockBiomeIndex`.
+2. **C:645, scripted intro.** Duncan: **stale doc, the beat kept for the UI**. `spec/run.md`
+   "Scripted intro" now describes `runScriptedIntro`: a fixed fight against a level-1 Unicorn
+   through the ordinary resolver, outside any floor run, never wipe → hub, and the Unicorn joins (if
+   not owned) on any result. "The first fight" became "callers run it right after `setSpec` at a
+   new game; the store doesn't enforce that order" (true of `balance-sim.ts:1036-1037`; there is no
+   app caller yet). The story beat (starter revived, Unicorn gained) is presentation only and is now
+   in ROADMAP Phase 7 "Decided, not built".
+3. **Dead link.** `spec/creatures.md` "Gems as items" now links `spec/run.md` "Recipe drops and
+   currency sinks".
+4. **G:172, lost Phase 8 clause.** `spec/creatures.md` "Gems as items" gains: the spells on offer
+   come from the same cumulative pool as a gem set (`unlockedAtBiome` ≤ the current biome), linking
+   `spec/run.md` "Spells unlock cumulatively". The row adds `creatures#gems-as-items` to New home.
+5. **G:1223, lost saves clause.** `spec/saves.md` "What a save holds", Collection: the instances
+   carry their equipped gem and equipment references from Phase 8.
+6. **4.2-B sentences with no C unit.** I can't change 4.2-B's inventory because B is merged and its
+   record is off-limits. Instead the C rows that now hold those sentences record the trace and the
+   anchors' new names. G:1124 holds "Each spec has one control immunity" (B row
+   `specializations/shieldbarer.md:59`; `#9-player-specializations` is now `#specializations`).
+   G:107 holds "Each boss is a set piece with one clear signature" (B row
+   `species/species-locked.md:186`; `#4-the-cave-world--structure` is now `#boss-floors`). 4.2-G's
+   citation check covers `src/` and the living docs, not phase inventories, so the stale anchors in
+   B's record don't fail it.
+7. **"No phase is scheduled yet".** Duncan: **Phase 10**. `spec/run.md` "Biome theme and visuals"
+   now says Phase 10 builds it, and ROADMAP Phase 10 gains a bullet pointing at it. That keeps
+   the Not built rule that every entry names its phase.
+8. **G:77, re-walk wording.** `spec/run.md` "The cave" now says fast travel means reaching a deep
+   floor never involves re-walking the floors above it. That matches the old meaning, and "Fresh every
+   visit" (re-running a cleared floor) no longer conflicts.
+9. **G:361, party arrangement.** Not a disagreement, so reworded (Duncan agreed). In `main`, the
+   occupant of the target slot moves to the placed instance's old place: its slot, or the bench if
+   it was benched. That is a swap in both cases. `spec/store.md` "Store actions" now states this
+   once and covers the bench case (row C:1882). `spec/creatures.md` "Roster and party" links to it.
+
+### Decisions Duncan made (round 2)
+
+- Starter and Unicorn gem sets: stale doc (finding 1).
+- Scripted intro: stale doc; the revive beat goes to ROADMAP Phase 7 as presentation (finding 2).
+- Party arrangement: wording, not a disagreement (finding 9).
+- Biome theme, scaling tweaks and visuals: built by Phase 10 (finding 7).
+
+### Check hardest this round
+
+- The two rewritten mechanics sentences (findings 1 and 2) against `store.ts`.
+- The new `setPartySlot` bullet against `store.ts:659-668`.
+- That the two added clauses (findings 4 and 5) say no more than G:172 and G:1223 said.
+
+### For later slices
+
+- **4.2-F:** ROADMAP Phase 7 and Phase 10 each gain one entry this round (above). Both are pointers
+  to `spec/run.md`, not restatements.
+
+### Docs edited (round 2)
+
+- `spec/creatures.md`: gem-set floor-0 sentence corrected (finding 1); "Recipe drops" link fixed
+  (3); the Phase 8 equip-options clause restored (4); the party bullet links store (9).
+- `spec/run.md`: scripted intro describes `main` (2); Phase 10 replaces the unsourced line (7);
+  re-walk wording (8).
+- `spec/saves.md`: Phase 8 references clause restored (5).
+- `spec/store.md`: `setPartySlot` bullet covers the bench case (9).
+- `ROADMAP.md`: Phase 7 "Decided, not built" gains the intro story beat (2); Phase 10 gains biome
+  theme and visuals (7).
+- `phases/4.2/C/inventory.md`: Reasons on C:149, C:645, C:1882, G:77, G:86, G:107, G:172, G:361,
+  G:1124, G:1223; New home on G:172.
+- `phases/4.2/C/verify-request.md`: this section.

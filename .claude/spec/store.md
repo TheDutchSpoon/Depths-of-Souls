@@ -44,7 +44,8 @@ Read this when changing the store or the state the UI reads.
 - `newGame({ seed })`, `setSpec`, `descend`, `runScriptedIntro`, `recordBossKill`, `pinBiome`,
   `setPerkLevel`, `refundAllPerks`, `summon(creatureId)` and `setPartySlot(slot, instanceId |
   null)`, plus the `can…` queries.
-- `setPartySlot` swaps: placing an instance that is already in another slot swaps the two, so the
-  party can be freely adjusted and reordered.
+- `setPartySlot` swaps: placing an instance on an occupied slot sends the occupant to the placed
+  instance's old place (its slot if it was in the party, the bench if it wasn't), so the party can
+  be freely adjusted and reordered.
 - Nothing removes an instance from the collection: the Unicorn is **permanently owned**, though not
   locked into the party.

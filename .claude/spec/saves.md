@@ -29,7 +29,8 @@ Read this when changing saving or loading. None of it is built: Phase 5 builds i
 - **Player meta**: the specialization; the perk spend (the earned total is derived from the bosses
   cleared, never stored); the deepest cleared floor and the **last floor**; the bosses cleared; the
   discovered biomes; the atlas pins; the run seed and counter; the party's slots.
-- **Collection**: the instances (`spec/creatures.md` "Instance") and the **per-creature soul%**.
+- **Collection**: the instances (`spec/creatures.md` "Instance"), from Phase 8 with their equipped
+  gem and equipment references, and the **per-creature soul%**.
 - **Inventory**: currency balances (Essence, Ore, Bricks, Lifeforce); from Phase 8, gem instances
   (level and augments), equipment instances (level and infusions) and unlocked recipes.
 - **Facilities**: which are built and their tiers.

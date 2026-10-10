@@ -10,8 +10,8 @@ Read this when changing descent, generation or the hub.
   at the **entrance hub** or on the **floors** below it.
 - **Floors** are numbered from the entrance down; deeper is harder.
 - **Depth is persistent**: the player keeps their deepest cleared floor, with no per-run reset, and
-  can **fast-travel** from the hub to any floor up to one past it. Floor selection is a UI feature;
-  cleared floors are never re-walked.
+  can **fast-travel** from the hub to any floor up to one past it, so reaching a deep floor never
+  means re-walking the floors above it. Floor selection is a UI feature.
 - **No prestige and no resets**: progress only goes forward (`VISION.md` "Explicit non-goals").
 
 ### A descent is atomic
@@ -187,8 +187,10 @@ Read this when changing descent, generation or the hub.
 
 ### Scripted intro
 
-- The first fight is a scripted encounter whose outcome triggers a story beat (the starter revived,
-  the **Unicorn** gained) instead of wipe → hub. The Unicorn joins whether it is won or lost.
+- `runScriptedIntro` is a fixed fight against a level-1 **Unicorn**, through the ordinary resolver
+  and outside any floor run. It never ends in wipe → hub: the Unicorn joins (if not owned) whether
+  the fight is won, lost or drawn.
+- Callers run it right after `setSpec` at a new game; the store doesn't enforce that order.
 
 ## Engine rules
 
@@ -299,4 +301,4 @@ Read this when changing descent, generation or the hub.
 
 ### Biome theme and visuals
 
-- No phase is scheduled yet. A biome's data also carries a theme, scaling tweaks and visuals.
+- Phase 10 builds them. A biome's data also carries a theme, scaling tweaks and visuals.

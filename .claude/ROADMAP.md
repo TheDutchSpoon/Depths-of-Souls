@@ -358,6 +358,12 @@ guardrails as every demo; own brief + phase record.
 - Clear "why did this happen" surfacing (which rule fired) — core to the design pillar of
   legibility.
 
+**Decided, not built:**
+- **The scripted intro's story beat** (decided at the 4.2-C condense): the intro's outcome is
+  presented as a story beat, the starter revived and the Unicorn gained. It is presentation only
+  (HP resets every fight, so a revive changes nothing); `spec/run.md` "Scripted intro" describes
+  the fight `main` runs.
+
 ## Phase 8 — Progression & incremental layers
 - **Facilities**: entrance-hub structures (Gem Forge, Equipment Forge, Fusion Chamber, Soul
   Altar, Storage/Vault, Biome Atlas) as data; all actions resolve instantly (no timers). Only
@@ -382,6 +388,8 @@ guardrails as every demo; own brief + phase record.
   save-compatibility check across a version migration, asset/bundle-size optimization, a custom
   domain if wanted, and confirming IndexedDB persistence + save export/import behave on the live
   origin (per-browser saves; export-to-file is the cross-device/eviction backstop).
+- **Biome theme and visuals** (decided at the 4.2-C condense): biome data gains a theme, scaling
+  tweaks and visuals (`spec/run.md` "Biome theme and visuals").
 
 ---
 
