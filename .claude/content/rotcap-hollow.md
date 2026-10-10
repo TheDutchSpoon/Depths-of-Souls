@@ -116,8 +116,8 @@ side** (2 dead allies heal every ally for 10% of its maximum HP), whatever it ca
 
 ### Hollowkin Wretch
 
-Endurance · enabler · warden (it provokes, then confuses whoever hits it). Whenever it is struck,
-it Confuses whoever hit it.
+Endurance · enabler · warden (provoking draws the hits its trait answers). Whenever it is struck, it
+Confuses whoever hit it.
 
 ### Hollowkin Marionette
 

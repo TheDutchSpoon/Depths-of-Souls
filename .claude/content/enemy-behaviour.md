@@ -72,9 +72,10 @@ have already applied.
 Every enemy rolls a **full set of three different spells** of its own affinity, from every spell
 unlocked at its biome or earlier, whatever its role: a striker's gems are what it casts when it is
 Pacified. The three are picked one at a time, each from what is left, so they never repeat; only a
-pool smaller than three (none exists) could repeat a spell. Bosses roll a full set too. No Vitality
-creature has a cast role, so an enemy casts Life Siphon (Vitality's only damage spell) only on a
-turn it can't attack.
+pool smaller than three (none exists) could repeat a spell. Bosses roll a full set too. Life Siphon
+is Vitality's only damage spell, no Vitality creature is a caster or opener, and a support's first
+rule casts only gems that target allies, so an enemy casts Life Siphon only on a turn it can't
+attack.
 
 ### Three biome-1 spells per affinity
 

@@ -11,13 +11,14 @@ their old text (`git show 6abd67a:.claude/<path>`), using `inventory.md` in this
 | `content/overgrowth.md` | 18,024 | 11,400 (the Unicorn added) |
 | `content/glimmerdark.md` | 15,712 | 8,294 |
 | `content/rotcap-hollow.md` | 13,847 | 7,639 |
-| `content/enemy-behaviour.md` | 6,788 | 5,050 |
+| `content/enemy-behaviour.md` | 6,788 | 5,133 |
 | `specializations/brute.md` | 4,703 | 2,258 |
-| `specializations/shieldbarer.md` | 4,482 | 2,414 |
+| `specializations/shieldbarer.md` | 4,482 | 2,659 |
 | `specializations/sorcerer.md` | 4,300 | 2,895 |
 | `species/species-locked.md` | 21,120 | folded in; Duncan deletes it |
 
-Total 88,976 → 39,950 bytes. Shape, now in the phase brief ("Condensing rules"): a title, a
+Total 88,976 → 40,278 bytes (corrected in round 2).
+Shape, now in the phase brief ("Condensing rules"): a title, a
 read-when line, a Source paragraph (the code wins); `##` groups, one `###` per status, creature,
 boss, spell and perk; each creature opens with "affinity · rarity role · role script", which
 replaces the three "How each creature plays" tables.
@@ -59,7 +60,8 @@ replaces the three "How each creature plays" tables.
    - enemy-behaviour.md:61: "Every Vitality enemy is a support" is false (Treant Sapling guardian;
      Treant Grovekeep and Necromoss Thicket wardens; Sparkeater Voidmaw and Rotfeeder Gorgemaw
      strikers). The conclusion (Life Siphon only on a turn the caster can't attack) still holds,
-     because no Vitality creature has a cast role.
+     because no Vitality creature is a caster or opener and a support's rule 1 casts only
+     ally-side gems (corrected in round 2: three Vitality creatures are supports).
    - glimmerdark.md:78: the Sparkeaters' lean was "Wit/Violence"; the code has Violence, Endurance
      and Vitality.
    - glimmerdark.md:27: the Gloomjaws don't share one mechanic (the doc's own :91 says so).
@@ -105,8 +107,8 @@ replaces the three "How each creature plays" tables.
 - **4.2-F:** `OPEN_QUESTIONS.md` still parks the "entrance-hub prelude", while species-locked.md
   said the Unicorn's scripted intro un-parks it. They differ (several weak fights against one
   rigged fight), so decide whether the parked item stays.
-- **4.2-G, stale `src/` comments:** `src/data/species/{overgrowth,glimmerdark,rotcap-hollow}.ts`
-  and `src/engine/__golden__/golden-brute-starter.fixture.ts` cite species-locked.md.
+- **4.2-G, stale `src/` comments:** species-locked.md is cited 70 times in 29 files of `src/`
+  (`verify-r1.md` lists them; corrected in round 2, round 1 named four).
 
 ## Docs edited
 
@@ -126,3 +128,61 @@ replaces the three "How each creature plays" tables.
   pilot; the bug exception to rules 1 and 7 and to "Spec and code disagree".
 - `workflow/condense.md`: step 4 asks "bug or stale doc?" first.
 - `phases/4.2/B/inventory.md` (new) and this file.
+
+## Round 2
+
+Answers `verify-r1.md`. `npm run docs:check -- inventory B` passes: 228 units, 228 rows, base
+`6abd67a`. Fate counts are unchanged (kept 13, rewritten 92, merged 30, moved 7, dropped 86).
+
+### Findings
+
+- **F1 (enemy-behaviour.md, Life Siphon's reason): fixed.** Right: Pollinator Duster, Flickerling
+  Wick and Necromoss Hollowroot are Vitality supports. The sentence now gives the real reason: Life
+  Siphon is Vitality's only damage spell (the only enemy-side Vitality spell in `src/data/spells`),
+  no Vitality creature or boss is a caster or opener, and a support's rule 1 casts only ally-side
+  gems (`scripts.ts`, `gemSide: 'ally'`), so it reaches Life Siphon only through the fallback. The
+  old "while no ally is below 50% HP" clause stays out: it was never exact, since a Pacified support
+  with no ally-side gem falls through rule 1 to "cast a random gem" whatever its allies' HP. Row
+  `content/enemy-behaviour.md:61`'s Reason and "Check hardest" 5 corrected to match. Stale doc.
+- **F2 (rotcap-hollow.md, Hollowkin Wretch): fixed.** "it provokes, then confuses whoever hits it"
+  becomes "provoking draws the hits its trait answers": a rationale for the role, like
+  the other role notes, not a turn description. Stale doc, not a bug: G1 (`e553576`) gave the
+  Wretch `warden` in the same commit that wrote the warden script, conditional from the start; the
+  note was loose from the day it was written. Swept the other role notes in the content docs: they
+  all give a reason for the role, none describes a turn. Row `content/rotcap-hollow.md:110`'s
+  Reason notes the correction.
+- **F3 (row `species/species-locked.md:112`): not a finding.** The rule is in
+  `spec/progression.md:61`, under "## 9. Player specializations": "its species sits **below the
+  ≥3-creature minimum on purpose**". `spec/creatures.md:61` is the Core stats scale bullet and does
+  not say it. The row's named home is right; no change.
+- **F4 (byte table): fixed.** The table above now has the current sizes, including the round-2
+  edits: shieldbarer.md 2,659, enemy-behaviour.md 5,133, total 40,278 (rotcap-hollow.md is back to 7,639).
+
+### Also changed
+
+- The 4.2-G line under "For later slices" now says 70 citations in 29 files, pointing at
+  `verify-r1.md`'s list, and the 4.2-G brief carries it: its scope said "the `src/data`
+  citations", which would have missed `engine/`, `state/` and 12 golden fixtures. The four other
+  stale comments from `verify-r1.md` (`balance-types.ts` default 3, the Web comment in
+  `statuses.ts`, the glimmerdark spell and trait narration, the Broodmother "unbuilt" comment) are
+  added to the 4.2-G brief's known list.
+
+### Spec and code disagree
+
+None new. F1 and F2 are stale docs: the code is right, and the text now follows it.
+
+### Check this round
+
+The two rewritten sentences against `scripts.ts` and the species files, the two Reasons, the
+byte table, and that F3's home holds the rule.
+
+### Docs edited (round 2)
+
+- `content/enemy-behaviour.md`: Life Siphon's reason corrected (F1).
+- `content/rotcap-hollow.md`: the Hollowkin Wretch's role note corrected (F2).
+- `phases/4.2/B/inventory.md`: Reasons of rows `content/enemy-behaviour.md:61` and
+  `content/rotcap-hollow.md:110`.
+- `phases/4.2/G/brief.md`: the species-locked citations widened to all of `src/` (70 in 29
+  files); four stale `src/` comments added to the known list.
+- `phases/4.2/B/verify-request.md`: byte table, "Check hardest" 5 and the 4.2-G note corrected;
+  this section.

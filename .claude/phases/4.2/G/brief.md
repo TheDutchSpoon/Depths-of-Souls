@@ -7,13 +7,20 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
 
 - Rewrite every `CONVENTIONS "…"` and `GAME_DESIGN §…` citation in `src/` and the living docs (not
   `phases/`, not `archive/`) to `<path>.md#<anchor>`, by script, using the B–F inventories. That
-  includes the `src/data` citations of `species/species-locked.md`, deleted after 4.2-B. The
+  includes the `src/` citations of `species/species-locked.md`, deleted after 4.2-B: 70 in 29
+  files on 2026-10-10, in `data/`, `engine/`, `state/` and 12 golden fixtures (list in
+  `phases/4.2/B/verify-r1.md` "Stale comments in `src/`"). The
   plan lists every citation form found and maps each old target. Citations whose text never
   matched the old docs (seven on 2026-10-10, for example `src/data/spells/glimmerdark.ts`'s
   "statuses are shared primitives") are mapped by hand in the plan and approved at its review.
 - Convert the label-form cross-links the condensing slices left (`spec/x.md "Label"`) to anchors.
 - Fix the stale `src/` comments the verify rounds listed. Known now: `src/data/statuses.ts` lines
-  17–18 say Poison is "20% … (decided at the 4.1-H2d grill; 20% before)"; the data is 40.
+  17–18 say Poison is "20% … (decided at the 4.1-H2d grill; 20% before)"; the data is 40. From
+  4.2-B's verify: `engine/balance-types.ts:37` says the boss level offset defaults to 3 (it is 5,
+  `data/balance.ts:18`); `data/statuses.ts:125-133` says Blindclaws' act-first status "will be" the
+  Web primitive (built: `GRANT_ACT_FIRST`); `data/spells/glimmerdark.ts:3-24` and
+  `data/traits/glimmerdark.ts:349-353` narrate deleted spells; the comment above `BROODMOTHER` in
+  `data/species/overgrowth.ts` says her runner is unbuilt (built: `OVERGROWTH_BOSS`).
 - The `citations` mode, blocking in CI, and the `budgets` mode, reported only (phase brief
   "Checks"). The budgets are set from the condensed sizes.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the
