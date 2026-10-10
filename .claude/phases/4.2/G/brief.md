@@ -27,6 +27,8 @@ Everything marked `(Phase 4.2 only)` goes (phase brief "Phase-4.2-only text"). K
 | --- | --- | --- |
 | The 4.2-only script modes | the `docs:check` script | coding agent (code edit) |
 | `/slice-verify`, the B–F verify command | `skills/slice-verify/` | Duncan deletes; the report lists it under **To delete** |
+| The condense step file | `workflow/condense.md` | Duncan deletes |
+| `/slice-condense`, the design side's command | Duncan's Cowork skills (outside the repo) | Duncan removes it |
 | The Phase 4.2 exception | `workflow/coding-rules.md` | design agent, at the PR review |
 | The pointer to the 4.2 variant loop | `WORKFLOWS.md`, after the loop table | design agent |
 | The "During the transition" note on old citations | `CLAUDE.md`, if 4.2-A added one | design agent |
