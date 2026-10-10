@@ -23,7 +23,7 @@ the engine spec, which is why an engine slice must read both files today.
 
 | File | Read this when | Holds | Size after 4.2-A |
 | --- | --- | --- | --- |
-| `CLAUDE.md` | always (every chat) | orientation, the doc map, the non-negotiables | (condensed in E) |
+| `CLAUDE.md` | always (every chat) | orientation, the doc map, the non-negotiables | (condensed in F) |
 | `CONVENTIONS.md` | always (every chat) | engineering rules only: TypeScript, engine purity, testing and goldens, layout, deployment, plans, style | 25.3 KB |
 | `VISION.md` | designing a feature | vision, pillars, core loop, non-goals | 4.4 KB |
 | `OPEN_QUESTIONS.md` | a slice touches a parked question, or at a grill | open and parked design questions | 5.2 KB |
@@ -205,8 +205,8 @@ copies.
 - **A slice's units** are those whose map row targets one of the slice's spec files, plus every unit
   of the other files it condenses, read at the slice's base, `git merge-base HEAD main`, so each
   slice inventories those files as it found them (prefix `<path>:<line>`; the glob is expanded at
-  the base too). If `main` moves during the slice, the check fails rather than passing on shifted
-  lines.
+  the base too). The base moves only when the slice branch takes in a newer `main` (merge or
+  rebase); if that shifts a file's lines, the check fails rather than passing on shifted lines.
 
   | Slice | Spec files (from the map) | Other files |
   | --- | --- | --- |

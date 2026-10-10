@@ -21,8 +21,9 @@ The files `move` writes:
   Creatures, Run, Progression, Store, Saves), a blank line, the read-when line, a blank line, then
   the halves present (`## Design`, `## Engine rules`, `## To fold`), each followed by its rows.
 - `CONVENTIONS.md` and `VISION.md`: their rows in order, with the read-when line (and a blank line
-  on each side) inserted after the first line, which is the old title. `VISION.md` keeps
-  GAME_DESIGN's title until 4.2-F.
+  on each side) inserted after the first line, which is the old title. Old line 2 is blank in
+  both files and serves as the blank after it, so only one blank line and the read-when line are
+  inserted. `VISION.md` keeps GAME_DESIGN's title until 4.2-F.
 - `OPEN_QUESTIONS.md`: `# Open questions`, a blank line, the read-when line, a blank line, its rows.
 
 Read-when lines, verbatim:
