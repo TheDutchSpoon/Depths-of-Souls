@@ -235,3 +235,163 @@ kickoff and this round, and lists what changed at its top. Round 2 reviews that.
 - `.claude/ROADMAP.md`: H2c's line is narrowed, and H2d is added.
 - `.claude/content/overgrowth.md`, `glimmerdark.md`, `rotcap-hollow.md`: "a placeholder until
   4.1-H2c" for Poison, Regen, Spore and Burn now says H2d.
+
+## Round 2
+
+Reviewed `plan.md` revision 1 (commit `154627d`) against the amended kickoff, round 1's Decisions,
+ASSUMPTIONS 147–149 and the code. This round I also **ran** the decided set: a scratch copy of the
+branch outside the repo (Linux `npm ci`), with every H2c number applied (`Math.floor` in both
+branches, width base 0, boss offset 5, the Health remap by script over the four species files with
+the Flickerlings skipped by id: 58 creatures, Warden Attack 15 + `warden`, Snapback 0.3, Arcane Bolt
+1.0), then the full `vitest run`. 17 tests fail in 11 files. That is the real predicted set, and it
+differs from the plan's in four places (fixes 1–4).
+
+**Verdict: approved with amendments** (decide-point 2). The revision does what round 1 and
+ASSUMPTION 149 asked: no balance number, stages 1–4 as cumulative patches, the corrected Arcane Bolt
+file, the (floor, template) matchup table, the three-set DoT measurement. The curve table is exact
+(every row rechecked, floor 108 included), the Health formula and its table are exact, and the
+remap count is 58 of 61. What's left is four errors in the predicted set (two are mine from round 1)
+and one gap in the report code. Each has a precise fix below, so I'm not sending it round again
+unless you want me to.
+
+### Plan fixes
+
+**Real fixes**
+
+1. **No pin in H2c: the Leech Sovereign golden doesn't read her Health.** None of its 11 expected
+   events carries her HP. PACIFIER's damage reads her Intelligence and PACIFIER's own max HP, and
+   both role rules read PACIFIER's HP. Run with her Health at 45, the golden **passes** (both tests).
+   Under the rule ("only a number the golden actually reads gets a pin", CONVENTIONS and the kickoff),
+   it gets **no pin**. Its file stays byte-identical except a **comment-only header correction**: the
+   setup comment says "her stats are the species' own: Health 30"; correct it to say Health is not
+   read by this fight. Add it to the header corrections (now five; P32's comments-stripped check
+   covers it). P1, P14 and P22 go. The plan's own P14 fallback would have caught this at build, but
+   the kickoff's "the pinned Leech Sovereign golden failing with its pin removed" can't be proven, so
+   the kickoff changes (decide-point 1). I confirmed P1 in round 1 without reading the events. That
+   was my error.
+2. **`state/integration.test.ts` "Phase 4.1-A defaults" does not change.** It passes on the full
+   decided set: the Brute party still wins all ten floor-1 fights, and the block asserts only that
+   plus the soul% multiples. My round-1 fix 3 said its log moves, which is true, but none of its
+   assertions does. P25 becomes "expected green, unchanged; checked", not "regenerate".
+3. **Two other `integration.test.ts` tests do change, and the plan predicts neither.** Both run
+   the CFG-pinned store (so the curve doesn't reach them; content does):
+   - **"Slice I … descends floor 1"**, line 193: `expect(revivedCount).toBe(0)` now gets **1**. The
+     comment above it explains why it was 0 since H2a (with the Additional, nobody was dead when the
+     Unicorn attacked). With the remap someone is. Re-pin it, generated-then-checkpoint-verified,
+     rewrite that comment with the new cause and its first stage, and keep the
+     `triggersFor(UNICORN_TRAIT) > 0` and Snapjaw `> 0` checkpoints. (The plan already lists this
+     run's Snapback comment.)
+   - **"Phase 4.1-G2 … the Pacified Unicorn casts its slot-0 gem instead of waiting"**, line 438. The
+     rule still holds: the Unicorn is Pacified (event 25), takes her turn, doesn't Wait, and casts.
+     But the gem draw now lands on **slot 1 (Wild Vigor: a `SpellCast` then a
+     `StatModifierApplied` on herself)** instead of slot 0 (Life Siphon: damage plus a heal). Slot 0
+     and Life Siphon were a generated pin on a random draw, not the rule. Re-pin it
+     generated-then-checkpoint-verified: keep the rule assertions (Pacified, her next turn has no
+     `Waited` and has her own `SpellCast`), pin the drawn slot and its effect, and add an independent
+     checkpoint (the cast slot holds a gem from her stored set, which the sibling test pins). Rename
+     the test. Rewrite the describe's header comment (the "137 events on main, 212 now … Life Siphon"
+     history) to the new log, and attribute the move to its first stage.
+4. **Rallying Cry's and the Flare's largest stacks need report code.** `largestStacks` keeps
+   **one** maximum per bucket (growth-player, growth-enemy, shred-player, shred-enemy), attributed
+   to whichever trait holds it. The kickoff wants Rallying Cry's largest stack (player growth) and
+   the Flare's (Flickerlings are mostly enemy growth) **before and after**. The Warden change is
+   meant to shrink Rallying Cry, so "after" it will likely stop being the bucket's maximum, and its
+   number vanishes from the report. Add a general per-attribution maximum (bucket × trait id → the
+   largest `StackCount`, with floor and seed), printed as the top few per bucket. It is pure fold
+   code on the existing `StackCount`s, tested like the matchup table on hand-built fights (two traits
+   in one bucket both kept; the smaller isn't lost). It also gives the H2d grill every trait's stacks,
+   not just the winner's. The "before" numbers come from the extended pass, as P4 already does for
+   the other new tables.
+
+**Labeling and small corrections**
+
+5. **`golden-h2c-snapback`, P's hit.** Fixture creatures default to level 11
+   (`DEFAULT_FIXTURE_LEVEL`), where the Additional is 0. So P's hit on E is
+   `floor(20 + 0.01 × 20) = 20`, not "20 plus an Additional up to the level-1 cap". Keep the default
+   level and write 20 (E 1000 → 980). Snapback itself is checked: `40 × 0.3 = 12` exactly in JS,
+   `12 − 0.2 × 10 = 10`, `22` at 0.6, P 100 → 90. Also: goldens assert the **full** event log with
+   `toEqual`, so write the whole `expectedEvents` (P's turn is enough, `TURN_STEPS = 1`). "Presence,
+   never absence" describes what the log proves, not a weaker assertion.
+6. **The predicted set, as measured:**
+   - `curves.test.ts`: 3 failing default-config tests (floor 1, 100, 101); their titles say
+     `round(...)`, so rename them.
+   - The species range tests: 2 per biome file plus 1 in `starters.test.ts`; their titles say 10–30.
+   - `roles.test.ts`: 1.
+   - The three Arcane Bolt goldens.
+   - `corpus-digest`.
+   - The two integration tests in fix 3.
+   - Everything else is green, including `store.test.ts` (as round 1 predicted), every other golden,
+     and `balance-sim.test.ts` as it stands today.
+   - I checked the 16 goldens that import real species or starter data: every one builds its
+     creatures through `makeParty` with explicit stats and reads only traits, so none moves (the h2b1
+     ones use the unchanged Flickerlings).
+7. `src/app/demoFight.ts` holds ten old-scale creatures (Health 18–50). It's the throwaway demo, not
+   content, so the remap rightly skips it. Say so in the report so the PR review doesn't ask.
+
+### Assumptions
+
+- **P1 correct:** no pin (fix 1). This reverses my round-1 confirm, for the reason given there.
+- **P2 confirm.**
+- **P4 confirm**; the extended pass also yields the per-trait stacks (fix 4).
+- **P5 confirm.** Rechecked: floors 2, 3, 6, 9, 108 are exactly the round ≠ floor rows.
+- **P6 confirm.** Today the flag is set at `runs === FIRST_SESSION_RUNS`; reading it from the
+  finished `runs` with the new window is right.
+- **P7, P8 confirm.**
+- **P10 confirm.**
+- **P12 confirm.** The scratch run shows no unit test borrowing a tuned number.
+- **P14 withdrawn** with P1.
+- **P20 confirm.** The script as specified remaps exactly 58.
+- **P21 confirm.** Fix 3's two tests get attributed with the digest stages.
+- **P22 withdrawn** with P1.
+- **P23 confirm.**
+- **P25 correct** (fix 2): unchanged, checked green.
+- **P26 correct** (fix 5).
+- **P27 confirm.** The scan has to regenerate the corpus fights per DoT set in the clone (the digest
+  holds hashes, not logs). The plan implies this; say it.
+- **P29 confirm.** The policy-only equality test is "a registered, unreferenced probe script is
+  inert".
+- **P30 correct** (fix 4): the existing `largestStacks` can't attribute both.
+- **P32 confirm**, now five files (fix 1).
+- **P33, P34 confirm.**
+
+### Decide-points
+
+1. **Does H2c ship with no pin?**
+   - **Recommendation: yes.** The Leech Sovereign golden passes with her Health at 45, so a pin
+     there would hold a number nothing reads. That is exactly what the rule says not to pin.
+     ASSUMPTION 147 itself doesn't change. Only its "H2c pins only the Leech Sovereign golden" line
+     does, plus the kickoff's golden policy, "Must stay green" and "The PR must prove" lines. The
+     Sovereign file gets the header correction instead, and the import comparison is still run over
+     every mechanism golden, all expected exports equal.
+   - **The alternative:** keep the pin "for safety". It would document a dependency that doesn't
+     exist, and its removal check would fail to fail.
+2. **Approve with these amendments, or a round 3?**
+   - **Recommendation: approve.** Every fix above is exact (measured, not guessed), and none changes
+     scope beyond the small per-trait fold (fix 4). WORKFLOWS treats a third round as a signal to
+     pull the slice back into design, and nothing here is a design question. On your yes, I write the
+     amendments into the kickoff's "Amended at the plan review" section (the coding agent reads the
+     kickoff), so they bind the build, and the plan stands as revised.
+   - **The alternative:** have the coding agent fold fixes 1–7 into `plan.md` and review it once
+     more. It's cleaner on paper but costs a round for no design content.
+
+### Decisions
+
+Duncan, 2026-10-10:
+1. **H2c ships with no pin.** The Leech Sovereign golden gets a comment-only header correction.
+   ASSUMPTION 147 stands; its H2c line now says H2c pins nothing.
+2. **Approved with the amendments.** No round 3. Fixes 1–7 are written into the kickoff's "Amended at
+   the plan review" section, which binds the build alongside `plan.md` revision 1.
+
+**The plan is approved: ready to commit.** The kickoff, the plan, this review and the doc edits go
+in as the first commit on `phase-4.1-slice-h2c`, so the PR carries the spec it was built against.
+
+### Docs edited
+
+- `.claude/phases/4.1/H2c/kickoff.md`:
+  - Read list, Scope, Golden policy, the Rallying Cry/Flare trap, the pinning trap, Must stay green
+    and The PR must prove: no pin (decision 1), five comment-only header corrections, the two moving
+    integration tests and the unchanged "Phase 4.1-A defaults" block (fixes 2, 3);
+  - "Amended at the plan review": the round-2 amendments, standalone for the coding agent
+    (decision 2).
+- `.claude/briefs/phase-4.1-implementation-plan.md`: ASSUMPTION 147, the H2c line: H2c pins nothing,
+  and why (decision 1).

@@ -1980,9 +1980,10 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      re-derived by hand when a tuning PR moves a number it reads. A tuning PR shows each effect
      number it changes (a status potency, a spell's power, a trait's magnitude; not base stats,
      which the data tests cover) in a hand-derived content golden on real data, new or
-     re-derived. H2c applies it first, to `golden-g1-leech-sovereign-pacified` (a rule on the real
-     Leech Sovereign, whose Health the remap moves). The DoT goldens wait for H2d, which moves their
-     numbers (ASSUMPTION 149): `golden-dot`, the `golden-f2-*` DoT goldens, the `golden-h2b2-*`
+     re-derived. H2c pins nothing: `golden-g1-leech-sovereign-pacified` (a rule on the real Leech
+     Sovereign) reads no number H2c moves, since none of its events reads her Health (measured at
+     the H2c plan review, round 2), so it gets a comment fix, not a pin. The DoT goldens wait for
+     H2d, which moves their numbers (ASSUMPTION 149): `golden-dot`, the `golden-f2-*` DoT goldens, the `golden-h2b2-*`
      goldens that read a percentage, `golden-spore-spread-filter`, `-fizzle` and `-dot-kill`, and,
      corrected at the H2c plan review, `golden-turn-end-dot-kill-burst`, `-refresh` and
      `golden-hollowkin-wretch-self-dot`, whose subjects are rules too. Each pin is a setup-only

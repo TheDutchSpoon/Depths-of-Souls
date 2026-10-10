@@ -49,7 +49,8 @@ Build ONLY this slice. Standing rules: .claude/workflow/coding-rules.md.
     `corpus-digest.test.ts`;
   - the goldens that read a number this slice changes: `golden-sorcerer-starter`,
     `golden-resonant-harmonize` and `-overtone` (Arcane Bolt), `golden-g1-leech-sovereign-pacified`
-    (the real Leech Sovereign's Health), and `golden-h2b2-tick-no-retaliation` (it holds Snapback,
+    (the real Leech Sovereign; it doesn't read her Health, plan review round 2), and
+    `golden-h2b2-tick-no-retaliation` (it holds Snapback,
     which never fires there). The four content goldens whose headers say "real base stats"
     (`golden-rot-sovereign`, `golden-spore-spread`, `golden-sporch-cinderlord-burn-refresh`,
     `golden-hollowkin-wretch-self-dot`) copy the old Health.
@@ -78,9 +79,9 @@ This slice is the first tuning pass, on the final rules.
     Evidence only: no recommendation.
 - The CI threshold test (ASSUMPTION 148) lands in 4.1-H2d, where it can be green.
 
-The mechanism goldens that read a number this slice changes get pinned (ASSUMPTION 147): today only
-`golden-g1-leech-sovereign-pacified` (the real Leech Sovereign's Health). The DoT goldens wait for
-H2d.
+The mechanism goldens that read a number this slice changes get pinned (ASSUMPTION 147): today
+none. `golden-g1-leech-sovereign-pacified` borrows the real Leech Sovereign but reads no number the
+slice moves (plan review round 2). The DoT goldens wait for H2d.
 
 **Not in scope:**
 - any combat or status rule, and any new engine mechanism;
@@ -98,12 +99,14 @@ golden").
   each tuned number it reads in its own fixture: the real def spread, with only that number held
   at today's value. The edit is setup-only.
   - This slice moves no DoT percentage, so the DoT goldens are untouched (H2d pins them).
-  - The one pin is `golden-g1-leech-sovereign-pacified`: the real Leech Sovereign, with
-    `baseStats.health` held at 30. Its subject is a rule (a Pacified striker casts).
+  - **No pin in this slice.** `golden-g1-leech-sovereign-pacified` uses the real Leech Sovereign,
+    but none of its events reads her Health: it passes with her Health at 45 (measured at the plan
+    review, round 2). It gets a comment-only header correction (its setup comment says "Health
+    30"), not a pin.
   - `golden-h2b2-tick-no-retaliation` holds Snapback but never evaluates it: no pin.
   - Show it by importing `main`'s and the branch's fixtures and deep-comparing every `expected*`
-    export: all equal. Every other mechanism golden stays byte-identical as a file. Show that the
-    pin is needed: with it removed, the golden fails.
+    export: all equal. Every mechanism golden stays byte-identical as a file, apart from the
+    comment-only header corrections.
 - **Content goldens: follow the data, re-derived by hand.** `golden-sorcerer-starter`,
   `golden-resonant-overtone` and `-harmonize` (Arcane Bolt 1.0).
   - Each is listed with the change that moved it, with the new arithmetic in its comments, and
@@ -112,15 +115,19 @@ golden").
   - The four content goldens that say "real base stats" but copy the old Health
     (`golden-rot-sovereign`, `golden-spore-spread`, `golden-sporch-cinderlord-burn-refresh`,
     `golden-hollowkin-wretch-self-dot`) get a header correction naming the copied stats that are
-    real and saying Health is the pre-H2c value. No setup or expected change.
+    real and saying Health is the pre-H2c value. No setup or expected change. So does
+    `golden-g1-leech-sovereign-pacified` (above): five comment-only corrections, each shown
+    identical to `main`'s file with comments stripped.
 - **New content golden:** Snapback at 30% (`golden-h2c-snapback`), hand-derived on the real Snapjaw
   Jaws trait, with the counter above the minimum of 1, failing at 60%.
 - **Store and integration tests** change through content (the Health remap, the starter, Snapback,
-  Arcane Bolt) and, in one place, through the curve: `state/integration.test.ts`'s "Phase 4.1-A
-  defaults" block runs the real default config, so floor 1's new level range moves it. Regenerate
-  it once (generated-then-checkpoint-verified) and keep its checkpoints. Every other store test
-  pins the Phase 4 placeholder config, which the curve change doesn't move. Each changed
-  expectation is listed with its cause.
+  Arcane Bolt). Measured at the plan review (round 2), two tests in `state/integration.test.ts`
+  move, both on the placeholder config: "Slice I … descends floor 1" (`revivedCount` 0 → 1) and
+  "Phase 4.1-G2 … the Pacified Unicorn casts" (the gem draw lands on slot 1, Wild Vigor, not slot 0).
+  Re-pin each generated-then-checkpoint-verified, keep its rule assertions and checkpoints, and
+  rewrite its comments with the new cause and first stage. The "Phase 4.1-A defaults" block runs
+  the default config, so its log moves with the curve, but its assertions hold: it stays unchanged.
+  Each changed expectation is listed with its cause.
 - **The corpus digest** is regenerated **once**, through `npm run corpus:update`. Nearly every
   fight changes, so attribute in stages. Build each stage in a scratch clone outside the repo as a
   cumulative patch on the one before (`starters.ts` carries both stage 2 and stage 3), in this
@@ -199,14 +206,14 @@ golden").
 - **Rallying Cry and the Flare: measure and report.** Under `warden` the Stonehorn Warden Provokes
   only when an ally is below 50% HP, so Rallying Cry should stack far less than under `taunter`.
   Report its largest stack before and after, and the Flare's (×1.15 Speed per Wick burn). Propose
-  no change.
+  no change. The report's `largestStacks` keeps one maximum per bucket, whichever trait holds it,
+  so this needs a per-trait maximum in the report code (see "Amended at the plan review").
 
 **Pinning and the docs**
 
-- **Pinning holds today's number, not the tuned one**, and only the number. For the Leech
-  Sovereign, spread the real creature with only `baseStats.health` held at 30, so its shape,
-  traits and other stats are still the real ones. Only a number the golden actually reads gets a
-  pin.
+- **Pinning holds today's number, not the tuned one**, and only the number. Only a number the
+  golden actually reads gets a pin: in this slice, none does (the Leech Sovereign golden doesn't
+  read her Health). H2d's DoT pins spread the real def with only that number held.
 - **The content docs are the design agent's.** List every content change under the report's
   **Content changes**: the Health table, the starter, Snapback and Arcane Bolt, each with its old
   and new number. The design agent folds the "(4.1-H2c)" items and
@@ -217,7 +224,7 @@ golden").
 - All five gates: `npm run test`, `npm run lint`,
   `npm run format:check`, `npm run build`, `npx tsc -b`.
 - Every mechanism golden's expected values, compared by importing the fixtures, including the
-  pinned Leech Sovereign golden.
+  Leech Sovereign golden.
 - The frozen double-resolve determinism test, the deep-frozen golden runner, and the simulator's
   determinism test.
 - `corpus-coverage.test.ts`: every spell cast with its effects landing and every status applied,
@@ -240,11 +247,10 @@ golden").
 - **The Health remap:** the old → new table for every creature, computed by the script; a test
   that every non-Flickerling creature's Health is in 20–45; and the Flickerlings unchanged.
 - **The goldens:**
-  - the mechanism goldens' expected exports equal to `main`'s by import comparison, and each
-    pinned file's diff shown to be setup-only;
+  - the mechanism goldens' expected exports equal to `main`'s by import comparison, and the five
+    header corrections shown comment-only;
   - each re-derived content golden listed with its cause and its new arithmetic;
-  - `golden-h2c-snapback` failing with Snapback at 60%;
-  - the pinned Leech Sovereign golden failing with its pin removed.
+  - `golden-h2c-snapback` failing with Snapback at 60%.
 - **The digest:** regenerated once, every changed fight attributed to its first stage, counts per
   stage.
 - **Housekeeping:**
@@ -259,6 +265,45 @@ no per-item fix, and no CI threshold test here. All three go to 4.1-H2d, which o
 on this slice's report. This kickoff was edited in place to match: Scope, the golden policy, the
 Traps ("The simulator", "Measurement, not tuning", pinning), Must stay green and The PR must prove.
 Round 1 of `plan-review.md` lists the plan fixes that still apply.
+
+**Round 2 (2026-10-10): plan approved with these amendments.** They bind the build alongside
+`plan.md` revision 1. They were measured by running the full suite on a scratch copy with every H2c
+number applied.
+- **No pin.** `golden-g1-leech-sovereign-pacified` passes with the Leech Sovereign's Health at 45:
+  none of its events reads it. Drop the plan's P1, P14 and P22. Correct its setup comment ("Health
+  30") instead, comment-only, as a fifth header correction (P32's comments-stripped check).
+- **`state/integration.test.ts`:**
+  - the "Phase 4.1-A defaults" block stays unchanged (still ten wins on floor 1; P25 is "checked
+    green", not "regenerate");
+  - "Slice I … descends floor 1": `revivedCount` goes 0 → 1 (line 193). Re-pin it, and rewrite the
+    comment above it (the H2a reason it was 0) with the new cause and first stage;
+  - "Phase 4.1-G2 … the Pacified Unicorn casts its slot-0 gem": the Unicorn is still Pacified and
+    still casts instead of waiting, but the gem draw lands on slot 1 (Wild Vigor: a `SpellCast`,
+    then a `StatModifierApplied` on herself), not slot 0 (Life Siphon). Re-pin the drawn slot and
+    its effect generated-then-checkpoint-verified. Keep the rule assertions (no `Waited`, her own
+    `SpellCast`), add a checkpoint that the cast slot holds a gem from her stored set, rename the
+    test, and rewrite the describe's header comment (the "137/212 events … Life Siphon" history).
+- **Per-trait stack maxima (report code).** `largestStacks` keeps one maximum per bucket, so
+  Rallying Cry's and the Flare's largest stacks can't both be read before and after. Add a general
+  per-attribution maximum (bucket × trait id → the largest `StackCount`, with floor and seed),
+  printed as the top few per bucket. It is a pure fold over the existing `StackCount`s, tested on
+  hand-built fights (two traits in one bucket both kept, the smaller not lost), with "before" from
+  the extended pass (P4).
+- **`golden-h2c-snapback`:** fixture creatures default to level 11, where the Additional is 0, so
+  P's hit on E is `floor(20 + 0.2) = 20` (E 1000 → 980); keep that level. Write the full
+  `expectedEvents` (`toEqual`, `TURN_STEPS = 1`).
+- **The DoT minimum-of-1 scan** regenerates the corpus fights per DoT set in the clone (the digest
+  holds hashes, not logs).
+- **The predicted set, as measured:**
+  - `curves.test.ts`: 3 default-config tests (floors 1, 100, 101); rename their `round(...)`
+    titles;
+  - the species range tests: 2 per biome file plus 1 in `starters.test.ts`;
+  - `roles.test.ts`: 1;
+  - the three Arcane Bolt goldens and the corpus digest;
+  - the two integration tests above;
+  - everything else stays green.
+- `src/app/demoFight.ts` keeps its old-scale creatures (the throwaway demo, not content). Say so in
+  the report.
 
 ## Docs edited
 
