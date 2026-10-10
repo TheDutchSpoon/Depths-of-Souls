@@ -33,7 +33,9 @@ drifts and stale decisions silently outlive their correction.
 
 ```
 .claude/
-  CLAUDE.md  CONVENTIONS.md  GAME_DESIGN.md  ROADMAP.md  WORKFLOWS.md   living docs
+  CLAUDE.md  CONVENTIONS.md  VISION.md  OPEN_QUESTIONS.md               living docs
+  ROADMAP.md  WORKFLOWS.md                                              living docs
+  spec/            the spec, one file per subsystem (CLAUDE.md has the map)   living docs
   content/  species/  specializations/                                   living docs
   workflow/        the standing rules and step files both agents follow
   skills/          the coding agent's commands (/slice-plan, /slice-build, /slice-fix)
@@ -150,8 +152,8 @@ brief records the split when it's decided.
   that change, never a regenerated whole file. Duncan reviews them as a git diff and commits them.
   Each step's file ends with the list of docs it edited.
 - **Records** are written by the coding agent and are immutable once merged. Living docs
-  (`GAME_DESIGN`, `CONVENTIONS`, `CLAUDE`, `ROADMAP`, briefs, `WORKFLOWS`, `workflow/`) are the
-  mutable source of truth.
+  (`CLAUDE`, `CONVENTIONS`, `VISION`, `OPEN_QUESTIONS`, `spec/`, `ROADMAP`, briefs, `WORKFLOWS`,
+  `workflow/`) are the mutable source of truth.
 - **Changing the process** is a normal doc change: edit `WORKFLOWS.md`, `workflow/` or
   `skills/`, in its own commit.
 

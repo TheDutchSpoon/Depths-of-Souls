@@ -13,8 +13,10 @@ Duncan does all of that. Recommend an answer for every decide-point; Duncan deci
 Duncan's local repo is connected to the session. That working tree is where you read the docs and
 where everything you produce goes. It is also where the coding agent works, so:
 
-- Start every session by reading the living docs **from the working tree** (`CLAUDE`, `WORKFLOWS`,
-  `ROADMAP`, and whatever the step needs). They are the source of truth, not earlier chats.
+- Start every session by reading the living docs **from the working tree** (`CLAUDE`,
+  `CONVENTIONS`, `WORKFLOWS`, `ROADMAP`, and whatever the step needs: a kickoff reads the spec files
+  it names, a review reads the kickoff's plus any spec file the diff touches). They are the source
+  of truth, not earlier chats.
 - Check where the tree is: `git --no-optional-locks status -sb` and
   `git --no-optional-locks log --oneline origin/main..HEAD`. Use only read-only git, always with
   `--no-optional-locks`, so git never leaves a lock file behind.

@@ -21,8 +21,10 @@ write their scratch output outside the repo.
 
 - `.claude/CLAUDE.md`;
 - the slice's `kickoff.md`, and every file its reading list names;
-- `.claude/CONVENTIONS.md` and `.claude/GAME_DESIGN.md` — the spec you build against. The docs win
-  over anything in the brief or kickoff if they disagree: flag the conflict, don't guess;
+- `.claude/CONVENTIONS.md`, and the spec files the kickoff names (`.claude/spec/<subsystem>.md`;
+  `CLAUDE.md` has the map) — the spec you build against. If the change reaches a subsystem whose
+  spec file the kickoff doesn't name, read that file too and say so in the plan. The docs win over
+  anything in the brief or kickoff if they disagree: flag the conflict, don't guess;
 - the current `src/engine` and the existing goldens (build against real code, not memory).
 
 Don't read `.claude/archive/` unless the kickoff points you there.
@@ -48,11 +50,11 @@ before designing around it.
   `npm run build`, `npx tsc -b`.
 - Leave `main` green and deployable; a demo consumes the engine, it doesn't leak into it.
 - **Never commit, never delete files.** Say what needs deleting; Duncan commits and deletes.
-- **The living docs are the design agent's:** `CLAUDE`, `CONVENTIONS`, `GAME_DESIGN`, `ROADMAP`,
-  `WORKFLOWS`, `workflow/`, the briefs, and `content/`, `species/`, `specializations/`. Don't edit
-  them, even to fold a decided item or flip an "until <slice>" marker: put what they need under
-  **Spec questions** (and **Content changes**) in your report. Your files are the mailbox, the code
-  and the phase record.
+- **The living docs are the design agent's:** `CLAUDE`, `CONVENTIONS`, `VISION`, `OPEN_QUESTIONS`,
+  `spec/`, `ROADMAP`, `WORKFLOWS`, `workflow/`, the briefs, and `content/`, `species/`,
+  `specializations/`. Don't edit them, even to fold a decided item or flip an "until <slice>"
+  marker: put what they need under **Spec questions** (and **Content changes**) in your report.
+  Your files are the mailbox, the code and the phase record.
 - **Phase 4.2 exception** (Phase 4.2 only). In 4.2-A and 4.2-G you write living docs **by script**, exactly as
   `.claude/phases/4.2/brief.md` and the slice's `brief.md` specify, and nothing else in them. In 4.2-B
   to F you only verify (`/slice-verify`): you never edit the docs.

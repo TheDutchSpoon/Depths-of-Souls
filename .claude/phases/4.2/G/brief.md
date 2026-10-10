@@ -19,6 +19,23 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the
   script; `citations` and `budgets` stay.
 
+## Known from 4.2-A's review
+
+`scripts/docs-check.ts` as 4.2-A built it, for this slice's plan:
+
+- **`resolveAnchors` before it becomes blocking.** It differs from GitHub (github-slugger) in three
+  ways: (1) a suffixed slug can collide with a real heading: `a`, `a`, `a-1` give `a`, `a-1`,
+  `a-1` here, where GitHub gives `a`, `a-1`, `a-1-1` (GitHub bumps the suffix while the slug is
+  taken); (2) a heading indented one to three spaces is not seen; (3) `_emphasis_` and HTML entities
+  stay in the slug (listed in its doc comment). The citations check promises "exactly one heading",
+  so (1) must be fixed; (2) and (3) only if a living doc has such a heading.
+- **4.2-only helpers without their own marker** (`capitalise`, `sha256`, `SPEC_NAMES`, `FATES`,
+  `INVENTORY_HEADER`, `row` and its `D`/`E`/`F`, `pinnedCache`, the interfaces). The script's
+  header says everything not listed as lasting is 4.2-only, and `tsconfig.node.json` has
+  `noUnusedLocals`, so `tsc -b` fails on any of them left behind once the modes go.
+- **`git merge-base HEAD main` needs a local `main`**, which a CI checkout doesn't have. Fine for the
+  4.2-only inventory modes; a lasting mode must not depend on it.
+
 ## Clean-up
 
 Everything marked `(Phase 4.2 only)` goes (phase brief "Phase-4.2-only text"). Known now:

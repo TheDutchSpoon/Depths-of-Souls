@@ -10,11 +10,14 @@ only by Phase 4.2's condensing slices (B to F); see `.claude/phases/4.2/brief.md
 - The working tree is on this slice's branch, cut from current `main`. If not, ask Duncan.
 - Read the phase brief ("Rules for the new spec", "Condensing rules", "Inventory format") and the
   slice's `brief.md`.
+- Never run `docs:check -- move` or `line-proof` after 4.2-A. `move` rewrites the 13 files from
+  the pinned commit with no check, over any condensed text, committed or not; `line-proof` fails by
+  design once a file is condensed.
 
 ## Round 1
 
-1. Run `npm run docs:check -- inventory-skeleton <slice>` and start `inventory.md` in the mailbox
-   from its output.
+1. Run `npm run docs:check -- inventory-skeleton <slice>`. It writes `inventory.md` in the mailbox
+   itself (it refuses to overwrite one) and prints the unit counts and the base.
 2. Condense the slice's files in place, per the condensing rules. Fill each inventory row as you go;
    `Decided in` comes from the old text's own tags.
 3. Run `npm run docs:check -- inventory <slice>` until it passes.

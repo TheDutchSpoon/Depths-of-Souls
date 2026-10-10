@@ -261,7 +261,8 @@ finding labels B1, A4, … are a separate scheme.)
 
 ## Phase 4.2 — Docs restructure: the context diet (between 4.1 and 4.5)
 *Brief: `.claude/phases/4.2/brief.md`. Docs only: no behaviour change and no golden
-changes; the one `src/` change is comment-only (citations).* Every fresh agent chat reads the living
+changes; the one `src/` change is comment-only (citations). Done: 4.2-A (the mechanical
+restructure and `npm run docs:check`); next: 4.2-B.* Every fresh agent chat reads the living
 docs, and CONVENTIONS (~181 KB) and GAME_DESIGN (~105 KB) are most of that weight. Decided with the
 design owner (2026-10-10):
 - **One home per rule, by subsystem.** GAME_DESIGN and CONVENTIONS merge into `spec/<subsystem>.md`
@@ -278,7 +279,7 @@ design owner (2026-10-10):
   existing rule was decided; later decisions are found through the spec's git history.
 - **Every rule is a heading, and citations are anchors** (`spec/combat.md#damage-channels`), checked
   by a script in CI. Each file opens with one "read this when" line and has a size budget the
-  script enforces.
+  script reports (a review trigger, not a CI failure).
 - **Content lives in the content docs** (`content/`, `specializations/`), which describe what `main`
   ships; the spec holds the rules and system-wide constants. `species/species-locked.md` is folded
   into the biome docs and deleted. `ROADMAP` and `WORKFLOWS` are condensed too: a finished phase is

@@ -13,8 +13,9 @@ Command in Cowork: `/slice-kickoff <slice-id>`. Read `design-rules.md` first.
 ## Output: `kickoff.md` in the mailbox
 
 The standing rules are in `coding-rules.md`, so the kickoff carries only what is specific to this
-slice. Fill in the template below. If writing it surfaces a decision, ask Duncan, then write the
-decision into the docs (in place) before the kickoff goes out.
+slice. Name the spec files the slice reads (CLAUDE.md has the map): the coding agent reads those
+and `CONVENTIONS.md`, not the whole spec. Fill in the template below. If writing it surfaces a
+decision, ask Duncan, then write the decision into the docs (in place) before the kickoff goes out.
 
 ```
 # Kickoff — Phase <X> — Slice <Y: name>
@@ -22,6 +23,9 @@ decision into the docs (in place) before the kickoff goes out.
 Build ONLY this slice. Standing rules: .claude/workflow/coding-rules.md.
 
 ## Read (in addition to the standing list)
+- Spec files: <the .claude/spec/*.md files this slice reads, picked by each file's "Read this
+  when" line; VISION.md for a slice that designs a feature; OPEN_QUESTIONS.md if it touches a
+  parked question>
 - <the brief section(s), by file and heading>
 - <content docs for content slices: .claude/species/, .claude/specializations/, .claude/content/>
 - <any specific code or golden this slice must understand first>
