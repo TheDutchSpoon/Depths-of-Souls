@@ -1,0 +1,24 @@
+# 4.2-F — Condense the top-level docs
+
+Phase brief: `.claude/phases/4.2/brief.md`. Loop: condense. Golden policy: **byte-identical**.
+
+## Scope
+
+- **`CONVENTIONS.md`:** no halves; its rules are `##` sections with `###` rules. "Where each number
+  lives" and the balance simulator stay here.
+- **`VISION.md`** (retitled from GAME_DESIGN's title) and **`OPEN_QUESTIONS.md`**.
+- **`CLAUDE.md`:** shrinks to orientation, the doc map and the non-negotiables. Each rule it
+  summarises must already have a home in the spec, or it can't be dropped.
+- **`ROADMAP.md`:** each finished phase (0 to 4.1) becomes one line: what shipped, with links to its
+  brief and record. Any rule still living only there is moved to the spec. "Guidance for AI-assisted
+  work" is checked line by line: stale items dropped, rules that duplicate `CONVENTIONS` or
+  `WORKFLOWS` dropped as duplicates, anything else moved. Future phases stay, minus stale items.
+  Phase 4.2's own entry stays until the phase closes.
+- **`WORKFLOWS.md`:** the overview of the process; the step rules live in `workflow/*.md`, so a rule
+  stated in both keeps one home. The 4.1 transition paragraph shrinks to the one sentence a reader
+  of the 4.1 mailboxes needs (the old file names map to `phases/4.1/brief.md` and `record.md`).
+
+## Done when
+
+`inventory F` passes and a verify round has no findings. After F, no file carries a `## To fold`
+section.

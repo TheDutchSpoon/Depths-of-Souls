@@ -62,7 +62,7 @@ but its brief and record stayed in the old places, `briefs/phase-4.1-implementat
 `phases/phase-4.1-fix-and-consolidation.md`, with each remaining slice's section moved out of the
 brief into its mailbox `brief.md` at kickoff. When 4.1 closed, the two files moved unchanged to
 `phases/4.1/brief.md` and `phases/4.1/record.md`; references under the old names (in the 4.1
-mailboxes and records) mean those files. Phase 4.5's brief
+mailboxes and records) mean those files. Phase 4.2's brief
 is the first written in the new shape.
 
 Mailbox files are committed on the slice branch, so the PR carries its own plan, reviews and
@@ -121,6 +121,9 @@ Anything else the step needs lives in a scratch clone outside the repo, as befor
 
 Duncan can merge steps when a slice is small (for example, skip a separate plan review for a pure
 docs or tooling change), but the review → sync → next-slice order never changes.
+
+(Phase 4.2 only) Phase 4.2, the docs restructure, runs a variant loop for its condensing slices: the design agent
+writes, the coding agent verifies (`/slice-verify`). See `phases/4.2/brief.md` "Process for 4.2".
 
 ## Golden policy: one per PR
 

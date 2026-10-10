@@ -259,16 +259,37 @@ finding labels B1, A4, … are a separate scheme.)
 - **No demo of its own** (a fix phase): the Phase 4.5 demo covers Phase 4 and 4.1 together
   (CONVENTIONS "Every feature phase ships a demo").
 
-## Docs pass — the context diet (between 4.1 and 4.5)
-*Brief: to be written after 4.1 closes. Docs only: no code, no goldens.* Every fresh agent chat
-reads the living docs, and CONVENTIONS (~175 KB) and GAME_DESIGN (~104 KB) are most of that weight.
-Split CONVENTIONS into `.claude/conventions/<area>.md` files, with `CONVENTIONS.md` kept as an index
-of one line per rule heading, so a kickoff names the areas a slice must read. Fold the "Phase 4
-systems addenda" section (~53 KB of decisions that accreted during content design) into the
-sections it amends. Proof of the move: every content line of the old file appears exactly once in
-the new files, checked mechanically, and anything reworded is listed with its reason. GAME_DESIGN
-gets the same treatment later; it's smaller, and its largest section is a fraction of CONVENTIONS'
-biggest. Lands **before** the 4.5 brief, so that brief is written against the split docs.
+## Phase 4.2 — Docs restructure: the context diet (between 4.1 and 4.5)
+*Brief: `.claude/phases/4.2/brief.md`. Docs only: no behaviour change and no golden
+changes; the one `src/` change is comment-only (citations).* Every fresh agent chat reads the living
+docs, and CONVENTIONS (~181 KB) and GAME_DESIGN (~105 KB) are most of that weight. Decided with the
+design owner (2026-10-10):
+- **One home per rule, by subsystem.** GAME_DESIGN and CONVENTIONS merge into `spec/<subsystem>.md`
+  (combat, effects, responses, statuses, scripting, creatures, run, progression, store, saves), each
+  with a `## Design` and an `## Engine rules` half. `CONVENTIONS.md` keeps only the engineering rules
+  (TypeScript, purity, testing, layout, deployment, plans, style); `VISION.md` takes GAME_DESIGN
+  §1–3 and §12, `OPEN_QUESTIONS.md` §13. CLAUDE.md shrinks to orientation, the doc map and the
+  non-negotiables, with no rule summary.
+- **The spec describes `main`.** A decision not yet built lives in its phase brief under "decided,
+  not built" and moves into the spec at the PR review of the slice that builds it. No "until
+  <slice>" or "(4.1)" markers.
+- **History lives in the mailboxes.** Rules are written in the present tense; changing a rule
+  rewrites it (no "supersedes"); rules carry no provenance. The 4.2 inventories record where each
+  existing rule was decided; later decisions are found through the spec's git history.
+- **Every rule is a heading, and citations are anchors** (`spec/combat.md#damage-channels`), checked
+  by a script in CI. Each file opens with one "read this when" line and has a size budget the
+  script enforces.
+- **Content lives in the content docs** (`content/`, `specializations/`), which describe what `main`
+  ships; the spec holds the rules and system-wide constants. `species/species-locked.md` is folded
+  into the biome docs and deleted. `ROADMAP` and `WORKFLOWS` are condensed too: a finished phase is
+  one line with links to its brief and record.
+- **Reading model:** every chat reads CLAUDE.md and `CONVENTIONS.md`; the kickoff names the spec
+  files; reviewers add any spec file the diff touches.
+- **Condensed up front, before the 4.5 brief.** First a mechanical restructure, proven line by line
+  (every content line of the old files appears exactly once in the new ones; bold labels become
+  headings; the Phase 4 addenda land under "To fold" in their file). Then the condensing slices,
+  each proven by a rule inventory: every old rule heading or label is kept, rewritten, merged or
+  dropped, with its reason, and a script checks that none is missing.
 
 ## Phase 4.5 — Run-loop demo (interlude)
 *Brief: to be written after 4.1-H merges.* The throwaway visual demo for Phase 4 **and** 4.1,

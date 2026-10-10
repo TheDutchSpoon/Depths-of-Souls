@@ -53,6 +53,9 @@ before designing around it.
   them, even to fold a decided item or flip an "until <slice>" marker: put what they need under
   **Spec questions** (and **Content changes**) in your report. Your files are the mailbox, the code
   and the phase record.
+- **Phase 4.2 exception** (Phase 4.2 only). In 4.2-A and 4.2-G you write living docs **by script**, exactly as
+  `.claude/phases/4.2/brief.md` and the slice's `brief.md` specify, and nothing else in them. In 4.2-B
+  to F you only verify (`/slice-verify`): you never edit the docs.
 
 ## Report format (`report-r<N>.md`)
 
