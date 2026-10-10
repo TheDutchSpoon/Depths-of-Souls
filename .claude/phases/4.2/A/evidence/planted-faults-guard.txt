@@ -1,0 +1,37 @@
+# Pinned-source guard and packaging faults (scratch clone, outside the repo)
+
+=== wrong sha prefix for the CONVENTIONS blob ===
+planted in: scripts/docs-check.ts (the PINNED constant)
+diff:
+-  C: { path: '.claude/CONVENTIONS.md', sha: '91455dd2026ba18d', lines: 2160 },
++  C: { path: '.claude/CONVENTIONS.md', sha: '81455dd2026ba18d', lines: 2160 },
+  move                   exit 1  stdout: (empty)  stderr: pinned source differs: stop. 892f1b8:.claude/CONVENTIONS.md has sha256 prefix 91455dd2026ba18d, expected 81455dd2026ba18d
+  line-proof             exit 1  stdout: (empty)  stderr: pinned source differs: stop. 892f1b8:.claude/CONVENTIONS.md has sha256 prefix 91455dd2026ba18d, expected 81455dd2026ba18d
+  inventory-skeleton D   exit 1  stdout: (empty)  stderr: pinned source differs: stop. 892f1b8:.claude/CONVENTIONS.md has sha256 prefix 91455dd2026ba18d, expected 81455dd2026ba18d
+  inventory D            exit 1  stdout: (empty)  stderr: pinned source differs: stop. 892f1b8:.claude/CONVENTIONS.md has sha256 prefix 91455dd2026ba18d, expected 81455dd2026ba18d
+  CONVENTIONS.md unchanged by the stopped move: true
+  .claude/phases/4.2/D/inventory.md written by the stopped skeleton: false
+
+=== wrong sha prefix for the GAME_DESIGN blob ===
+planted in: scripts/docs-check.ts (the PINNED constant)
+diff:
+-  G: { path: '.claude/GAME_DESIGN.md', sha: '0970f347753833df', lines: 1347 },
++  G: { path: '.claude/GAME_DESIGN.md', sha: '1970f347753833df', lines: 1347 },
+  move                   exit 1  stdout: (empty)  stderr: pinned source differs: stop. 892f1b8:.claude/GAME_DESIGN.md has sha256 prefix 0970f347753833df, expected 1970f347753833df
+  line-proof             exit 1  stdout: (empty)  stderr: pinned source differs: stop. 892f1b8:.claude/GAME_DESIGN.md has sha256 prefix 0970f347753833df, expected 1970f347753833df
+  inventory-skeleton D   exit 1  stdout: (empty)  stderr: pinned source differs: stop. 892f1b8:.claude/GAME_DESIGN.md has sha256 prefix 0970f347753833df, expected 1970f347753833df
+  inventory D            exit 1  stdout: (empty)  stderr: pinned source differs: stop. 892f1b8:.claude/GAME_DESIGN.md has sha256 prefix 0970f347753833df, expected 1970f347753833df
+  CONVENTIONS.md unchanged by the stopped move: true
+  .claude/phases/4.2/D/inventory.md written by the stopped skeleton: false
+
+
+=== packaging: tsc -b type-checks scripts/ ===
+clean script: npx tsc -b exit 0 
+planted in: scripts/docs-check.ts, two lines appended:
++
++const planted: number = 'not a number'
++console.log(planted)
+faulted script: npx tsc -b exit 2
+scripts/docs-check.ts(1207,7): error TS2322: Type 'string' is not assignable to type 'number'.
+(node:149212) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)

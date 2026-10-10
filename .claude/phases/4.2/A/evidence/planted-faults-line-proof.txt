@@ -1,0 +1,388 @@
+# Planted faults: line-proof (run in a scratch clone outside the repo; faults applied by a scratch harness that is not kept)
+# Each fault shows where it was planted and the non-empty diff it made, then line-proof's verdict.
+
+=== a line deleted ===
+planted in: generated file
+expected: multiset and placement fail
+--- diff .claude/spec/combat.md (pristine -> faulted) ---
+@@ -335,3 +335,2 @@ path — it's the same resolver with a different action source.
+     A bigger chip floor (5%) was measured and not taken (brief ASSUMPTION 109).
+-- The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
+   (Cast) have **no cost, freely castable**; a rule picks the **gem slot index** (not a spell ID),
+
+--- line-proof output ---
+line-proof: map PASS, multiset FAIL, placement FAIL
+FAIL multiset: line  old×1  new×0: - The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
+FAIL placement: spec/combat.md:336: expected "- The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells" (C:796–1020 line 956 (Engine rules)), got "  (Cast) have **no cost, freely castable**; a rule picks the **gem slot i…
+FAIL placement: spec/combat.md: 642 lines, expected 643
+exit code 1
+failing checks: multiset, placement  — expected: multiset, placement
+
+=== a line duplicated ===
+planted in: generated file
+expected: multiset and placement fail
+--- diff .claude/spec/combat.md (pristine -> faulted) ---
+@@ -335,2 +335,3 @@ path — it's the same resolver with a different action source.
+     A bigger chip floor (5%) was measured and not taken (brief ASSUMPTION 109).
++- The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
+ - The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
+
+--- line-proof output ---
+line-proof: map PASS, multiset FAIL, placement FAIL
+FAIL multiset: line  old×1  new×2: - The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminated union; grows). Spells
+FAIL placement: spec/combat.md:337: expected "  (Cast) have **no cost, freely castable**; a rule picks the **gem slot index** (not a spell ID)," (C:796–1020 line 957 (Engine rules)), got "- The action set is **Attack, Cast, Defend, Provoke, Wait** (discriminat…
+FAIL placement: spec/combat.md: 644 lines, expected 643
+exit code 1
+failing checks: multiset, placement  — expected: multiset, placement
+
+=== two rows swapped within a file (C:349–379 and C:502–513 in spec/statuses.md) ===
+planted in: generated file
+expected: placement fails; multiset cannot see order
+--- diff .claude/spec/statuses.md (pristine -> faulted) ---
+@@ -203,2 +203,14 @@ Read this when changing any status.
+ 
++- **status-effect immunity** — `{ category: 'status-immunity', statusId }`, a permanent-for-fight
++  passive `EffectDef` (Clear Mind/Aggressive/Lucidity), structurally identical to
++  armor-penetration/cross-stat. **Built in Phase 4 Slice C.** Consulted at each immune-able
++  mechanism's OWN read site, never at `applyStatus`: the interpreter's `isActionSuppressed` skips
++  a `condition-status` suppression whose `statusId` the creature is immune to (Clear Mind/
++  Aggressive), and targeting's Confusion roll (`activeFriendlyFireStatus`) treats an immune bearer
++  as having no active Confusion at all — the roll (and its RNG draw) never happens, not merely its
++  outcome. The status itself is untouched: still applies, stacks, and satisfies `has-status`.
++  **Phase 4.1-F (A3) moves the check to one place:** statuses become containers of ordinary
++  effects, and the **effect iterator skips every effect of a status the bearer is immune to**. The
++  per-mechanism checks (`isActionSuppressed`, `activeFriendlyFireStatus`) are deleted. Same
++  observable rule, including "no roll, no RNG draw" for an immune Confused creature.
+ - **DoT and Regen from the applier's snapshot** (Phase 4.1-H2b, brief ASSUMPTION 113; supersedes
+@@ -234,14 +246,2 @@ Read this when changing any status.
+     victim; the snapshot reads the applier, and a DoT now belongs to its applier's build.
+-- **status-effect immunity** — `{ category: 'status-immunity', statusId }`, a permanent-for-fight
+-  passive `EffectDef` (Clear Mind/Aggressive/Lucidity), structurally identical to
+-  armor-penetration/cross-stat. **Built in Phase 4 Slice C.** Consulted at each immune-able
+-  mechanism's OWN read site, never at `applyStatus`: the interpreter's `isActionSuppressed` skips
+-  a `condition-status` suppression whose `statusId` the creature is immune to (Clear Mind/
+-  Aggressive), and targeting's Confusion roll (`activeFriendlyFireStatus`) treats an immune bearer
+-  as having no active Confusion at all — the roll (and its RNG draw) never happens, not merely its
+--- line-proof output ---
+line-proof: map PASS, multiset PASS, placement FAIL
+FAIL placement: spec/statuses.md:204: expected "- **DoT and Regen from the applier's snapshot** (Phase 4.1-H2b, brief ASSUMPTION 113; supersedes" (C:349–379 line 349 (To fold)), got "- **status-effect immunity** — `{ category: 'status-immunity', statusId }`, a…
+exit code 1
+failing checks: placement  — expected: placement only
+
+=== row C:1021–1023 (Engine rules) moved to the To fold half of its own file ===
+planted in: generated file
+expected: placement fails; multiset passes
+--- diff .claude/spec/statuses.md (pristine -> faulted) ---
+@@ -107,5 +107,2 @@ Read this when changing any status.
+ 
+-- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's
+-  snapshot (see "DoT and Regen from the applier's snapshot" above). Until 4.1-H2b2 it was its own
+-  value (a percentage of the bearer's max HP, flat mode) and bypassed Defence.
+ ### Status lifecycle (Phase 3, re-timed in Phase 4.1-F)
+@@ -342 +339,4 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
+   its *owner* dies, never the host.
++- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's
++  snapshot (see "DoT and Regen from the applier's snapshot" above). Until 4.1-H2b2 it was its own
++  value (a percentage of the bearer's max HP, flat mode) and bypassed Defence.
+
+--- line-proof output ---
+line-proof: map PASS, multiset PASS, placement FAIL
+FAIL placement: spec/statuses.md:108: expected "- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's" (C:1021–1023 line 1021 (Engine rules)), got "### Status lifecycle (Phase 3, re-timed in Phase 4.1-F)"
+exit code 1
+failing checks: placement  — expected: placement only
+
+=== row C:1021–1023 moved into the wrong file (spec/store.md) ===
+planted in: generated files
+expected: placement fails; the global multiset is unchanged
+--- diff .claude/spec/statuses.md (pristine -> faulted) ---
+@@ -107,5 +107,2 @@ Read this when changing any status.
+ 
+-- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's
+-  snapshot (see "DoT and Regen from the applier's snapshot" above). Until 4.1-H2b2 it was its own
+-  value (a percentage of the bearer's max HP, flat mode) and bypassed Defence.
+ ### Status lifecycle (Phase 3, re-timed in Phase 4.1-F)
+
+--- diff .claude/spec/store.md (pristine -> faulted) ---
+@@ -33 +33,4 @@ data (specified with Phase 5).
+   creature id.
++- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's
++  snapshot (see "DoT and Regen from the applier's snapshot" above). Until 4.1-H2b2 it was its own
++  value (a percentage of the bearer's max HP, flat mode) and bypassed Defence.
+
+--- line-proof output ---
+line-proof: map PASS, multiset PASS, placement FAIL
+FAIL placement: spec/statuses.md:108: expected "- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's" (C:1021–1023 line 1021 (Engine rules)), got "### Status lifecycle (Phase 3, re-timed in Phase 4.1-F)"
+FAIL placement: spec/statuses.md: 339 lines, expected 342
+FAIL placement: spec/store.md:34: expected undefined (past the end), got "- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's"
+FAIL placement: spec/store.md: 36 lines, expected 33
+exit code 1
+failing checks: placement  — expected: placement only
+
+=== one byte changed inside a row (spec/run.md, "The " -> "Thx ") ===
+planted in: generated file
+expected: multiset and placement fail
+--- diff .claude/spec/run.md (pristine -> faulted) ---
+@@ -189,3 +189,3 @@ table**, independent of which specific creature was defeated (not a per-creature
+ 
+-The **cave is generated by a pure, seeded module** (an `src/engine/` sibling to the combat
++Thx **cave is generated by a pure, seeded module** (an `src/engine/` sibling to the combat
+ resolver) under the same discipline as combat — `(biome data + floor + curve config + RNG state) ->
+
+--- line-proof output ---
+line-proof: map PASS, multiset FAIL, placement FAIL
+FAIL multiset: line  old×1  new×0: The **cave is generated by a pure, seeded module** (an `src/engine/` sibling to the combat
+FAIL multiset: line  old×0  new×1: Thx **cave is generated by a pure, seeded module** (an `src/engine/` sibling to the combat
+FAIL placement: spec/run.md:190: expected "The **cave is generated by a pure, seeded module** (an `src/engine/` sibling to the combat" (C:40–118 line 42 (Engine rules)), got "Thx **cave is generated by a pure, seeded module** (an `src/engine/` sibling to the c…
+exit code 1
+failing checks: multiset, placement  — expected: multiset, placement
+
+=== a blank line dropped inside row C:244–348 (its line 256), spec/responses.md ===
+planted in: generated file
+expected: placement fails; multiset passes (it ignores blank lines)
+--- diff .claude/spec/responses.md (pristine -> faulted) ---
+@@ -27,3 +27,2 @@ is simply `apply-status(stun, 1)`). 4.1-F left nine; **4.1-H2b2 deleted `consume
+ `perform-action`.
+-
+ **The principle is "no side doors"** (replaces "hold the line at nine", which was held on paper
+
+--- line-proof output ---
+line-proof: map PASS, multiset PASS, placement FAIL
+FAIL placement: spec/responses.md:28: expected "" (C:244–348 line 256 (To fold)), got "**The principle is \"no side doors\"** (replaces \"hold the line at nine\", which was held on paper"
+FAIL placement: spec/responses.md: 216 lines, expected 217
+exit code 1
+failing checks: placement  — expected: placement only
+
+=== a trailing space added to one line (spec/scripting.md) ===
+planted in: generated file
+expected: placement fails; multiset passes (it strips trailing whitespace)
+--- diff .claude/spec/scripting.md (pristine -> faulted) ---
+@@ -101,3 +101,3 @@ Design constraints:
+   enemy creatures use the same system. Enemies run **role scripts** (Phase 4.1): seven stock
+-  templates, and each creature's role is its default script. They are the only scripts the game
++  templates, and each creature's role is its default script. They are the only scripts the game 
+   ships (4.1-G plan review); the old single-action `always-*` scripts are test fixtures:
+
+--- line-proof output ---
+line-proof: map PASS, multiset PASS, placement FAIL
+FAIL placement: spec/scripting.md:102: expected "  templates, and each creature's role is its default script. They are the only scripts the game" (G:973–1101 line 1068 (Design)), got "  templates, and each creature's role is its default script. They are the on…
+exit code 1
+failing checks: placement  — expected: placement only
+(move patched in the clone: each row loses its trailing blank line; move exit 0)
+
+=== move's code drops each row's trailing blank line ===
+planted in: scripts/docs-check.ts (diff below), then move re-run
+expected: placement fails; multiset passes
+--- diff scripts/docs-check.ts (pristine -> faulted) ---
+@@ -431,2 +431,3 @@ function runMove(): number {
+       .slice(r.from - 1, r.to)
++      .filter((l, i, a) => !(i === a.length - 1 && l === ''))
+       .map((l) => `${l}\n`)
+
+--- diff .claude/spec/statuses.md (pristine -> faulted) ---
+@@ -318,3 +318,2 @@ passive perk effect, the taken-pool mirror of `conditional-damage-bonus`, sharin
+ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
+-
+ ### Principles (locked)
+@@ -324,3 +323,2 @@ accumulation mechanism Slice D's `golden-defend-count-additive-cap` proved.
+   (Clear Mind/Silenced, Aggressive/Pacified, Lucidity/Confusion.)
+-
+ - **`StatusDef.defaultDuration: number`** (review amendment — the status system): every `StatusDef`
+
+--- diff .claude/spec/effects.md (pristine -> faulted) ---
+@@ -549,3 +549,2 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
+   *triggered*, in scope.
+-
+ - **Unspecified magnitude ⇒ 100%.** A trait/spell deal-damage or coefficient response that omits a
+@@ -733,2 +732 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
+   therefore **not** content-only.
+-
+
+--- line-proof output ---
+line-proof: map PASS, multiset PASS, placement FAIL
+FAIL placement: CONVENTIONS.md:41: expected "" (C:1–39 line 39), got "- **Where each number lives** (Phase 4.1-A, A7):"
+FAIL placement: CONVENTIONS.md: 327 lines, expected 329
+FAIL placement: VISION.md:73: expected "" (G:1–71 line 71), got "## 12. Explicit non-goals (for now)"
+FAIL placement: VISION.md: 79 lines, expected 81
+FAIL placement: spec/effects.md:550: expected "" (C:1295–1609 line 1609 (Engine rules)), got "- **Unspecified magnitude ⇒ 100%.** A trait/spell deal-damage or coefficient response that omits a"
+FAIL placement: spec/effects.md: 732 lines, expected 734
+… 14 more FAIL lines
+exit code 1
+failing checks: placement  — expected: placement only
+(move patched in the clone: trimStart on row lines; move exit 0)
+
+=== move's code applies trimStart to row lines ===
+planted in: scripts/docs-check.ts (diff below), then move re-run
+expected: multiset and placement fail
+--- diff scripts/docs-check.ts (pristine -> faulted) ---
+@@ -431,3 +431,3 @@ function runMove(): number {
+       .slice(r.from - 1, r.to)
+-      .map((l) => `${l}\n`)
++      .map((l) => `${l.trimStart()}\n`)
+       .join('')
+
+--- diff .claude/spec/effects.md (pristine -> faulted) ---
+@@ -21,6 +21,6 @@ chance, and a response). A **carrier** attaches a list of effects to a creature:
+ - a **status** is a **timed container of the same kinds of effects**, one instance per creature
+-  (it owns duration, re-application and "has status X"; its effects own what it does; statuses
+-  never stack, see "Status effects"). Poison is a status carrying a
+-  damage trigger; Weaken carries a damage-dealt reduction; Web carries "act last"; Stun carries
+-  "can't act";
++(it owns duration, re-application and "has status X"; its effects own what it does; statuses
++never stack, see "Status effects"). Poison is a status carrying a
++damage trigger; Weaken carries a damage-dealt reduction; Web carries "act last"; Stun carries
++"can't act";
+ - gem augments and equipment infusions (Phase 8) are carriers of the same effects.
+@@ -33,29 +33,29 @@ bright line, locked Phase 3):
+ 1. **`stat-modifier`** — scales a stat's *value* (`stat`, `factor`). Folds into **effective stats**
+-   (below) **multiplicatively** (`base × Π(factors)`). **Always permanent-for-the-fight, uncapped,
+-   never surfaced as a status** — the player sees only the resulting **effective stat** (and net
+-   multiplier), never a "−20% Attack" icon. Because folding is multiplicative, reductions **approach
+-   but never reach zero** (five ×0.8 = ×0.328, not zero) and **stacking is uncapped** — grinding a
+-   stat up or down is a supported, cap-free build path (the incremental-scaling lane). Buffs compound
+-   the same way (five ×1.3 = ×3.7). **There is no temporary stat-modifier** — all timed/capped
+-   debuffing is done via statuses (damage-modifiers, locks, DoTs) instead; a validator rejects a
+-   stat-modifier inside a status. Stat buffs/debuffs are data
+-   instances of this one primitive (parameters: stat, factor), no per-stat special-casing;
+-   spells/effects may apply custom factors.
++(below) **multiplicatively** (`base × Π(factors)`). **Always permanent-for-the-fight, uncapped,
+--- line-proof output ---
+line-proof: map PASS, multiset FAIL, placement FAIL
+FAIL multiset: line  old×1  new×0:   `Condition` should each be a union with a `kind`/`type` discriminant so the engine can
+FAIL multiset: line  old×1  new×0:   `switch` exhaustively. Use a `never` default case to force handling new variants.
+FAIL multiset: line  old×1  new×0:   at least named aliases — don't pass bare strings around.
+FAIL multiset: line  old×1  new×0:   a small xorshift) seeded per floor/combat; thread it through, don't reach for a global.
+FAIL multiset: line  old×1  new×0:   mutate for performance, do it on a local working copy, never on shared store state.
+FAIL multiset: line  old×1  new×0:   replays, fast-forward, and reliable tests. Treat any nondeterminism as a bug.
+… 5016 more FAIL lines
+exit code 1
+failing checks: multiset, placement  — expected: multiset, placement
+
+=== the read-when line removed (spec/store.md line 3) ===
+planted in: generated file
+expected: multiset reports a missing allowed addition; placement fails
+--- diff .claude/spec/store.md (pristine -> faulted) ---
+@@ -2,3 +2,2 @@
+ 
+-Read this when changing the store or the state the UI reads.
+ 
+
+--- line-proof output ---
+line-proof: map PASS, multiset FAIL, placement FAIL
+FAIL multiset: line  old×0  new×-1: Read this when changing the store or the state the UI reads.
+FAIL placement: spec/store.md:3: expected "Read this when changing the store or the state the UI reads." (added: read-when), got ""
+FAIL placement: spec/store.md: 32 lines, expected 33
+exit code 1
+failing checks: multiset, placement  — expected: multiset, placement
+
+=== a half heading removed (spec/store.md "## Design") ===
+planted in: generated file
+expected: multiset reports a missing allowed addition; placement fails
+--- diff .claude/spec/store.md (pristine -> faulted) ---
+@@ -4,3 +4,2 @@ Read this when changing the store or the state the UI reads.
+ 
+-## Design
+ 
+
+--- line-proof output ---
+line-proof: map PASS, multiset FAIL, placement FAIL
+FAIL multiset: line  old×0  new×-1: ## Design
+FAIL placement: spec/store.md:5: expected "## Design" (added: half heading), got ""
+FAIL placement: spec/store.md: 32 lines, expected 33
+exit code 1
+failing checks: multiset, placement  — expected: multiset, placement
+
+=== a range typo in the brief: C row 119–139 becomes 120–139 (a gap) ===
+planted in: phases/4.2/brief.md in the clone
+expected: map check fails (multiset and placement skipped); move is unaffected
+--- diff .claude/phases/4.2/brief.md (pristine -> faulted) ---
+@@ -93,3 +93,3 @@ have no halves (—). Every line of both files is in exactly one row (checked 20
+ | 40–118 | Generation & the run layer (Phase 4) | `spec/run.md` | Engine rules |
+-| 119–139 | `materializeCreature(template, { level, side, slot, speciesId, gems… | `spec/creatures.md` | Engine rules |
++| 120–139 | `materializeCreature(template, { level, side, slot, speciesId, gems… | `spec/creatures.md` | Engine rules |
+ | 140–148 | Enemy script & loadout at spawn | `spec/run.md` | Engine rules |
+
+--- line-proof output ---
+line-proof: map FAIL, multiset SKIPPED, placement SKIPPED
+FAIL map: C rows do not tile: 120–139 follows line 118
+FAIL map: C:120–139: label "`materializeCreature(template, { level, side, slot, speciesId, gems…" not in first line "  A5; exact field names are the 4.1-A plan's) —"
+exit code 1
+failing checks: map  — expected: map
+
+=== a range typo in the brief: C row 140–148 becomes 139–148 (an overlap) ===
+planted in: phases/4.2/brief.md in the clone
+expected: map check fails
+--- diff .claude/phases/4.2/brief.md (pristine -> faulted) ---
+@@ -94,3 +94,3 @@ have no halves (—). Every line of both files is in exactly one row (checked 20
+ | 119–139 | `materializeCreature(template, { level, side, slot, speciesId, gems… | `spec/creatures.md` | Engine rules |
+-| 140–148 | Enemy script & loadout at spawn | `spec/run.md` | Engine rules |
++| 139–148 | Enemy script & loadout at spawn | `spec/run.md` | Engine rules |
+ | 149–165 | Player gem sets | `spec/creatures.md` | Engine rules |
+
+--- line-proof output ---
+line-proof: map FAIL, multiset SKIPPED, placement SKIPPED
+FAIL map: C rows do not tile: 139–148 follows line 139
+FAIL map: C:139–148: label "Enemy script & loadout at spawn" not in first line "  `InstanceId`."
+exit code 1
+failing checks: map  — expected: map
+move does not read the brief (own MAP), so the brief faults cannot affect it; move exit 0 - wrote 13 files. .claude/GAME_DESIGN.md is not touched: delete it by hand.
+
+=== a wrong label in the brief table (C row 166–175: "Rewards" -> "Rewardz") ===
+planted in: phases/4.2/brief.md in the clone
+expected: map check fails
+--- diff .claude/phases/4.2/brief.md (pristine -> faulted) ---
+@@ -96,3 +96,3 @@ have no halves (—). Every line of both files is in exactly one row (checked 20
+ | 149–165 | Player gem sets | `spec/creatures.md` | Engine rules |
+-| 166–175 | Rewards | `spec/run.md` | Engine rules |
++| 166–175 | Rewardz | `spec/run.md` | Engine rules |
+ | 176–181 | Phase 4 systems addenda (surfaced during content design) | `spec/responses.md` | To fold |
+
+--- line-proof output ---
+line-proof: map FAIL, multiset SKIPPED, placement SKIPPED
+FAIL map: C:166–175: label "Rewardz" not in first line "- **Rewards** (XP / soul% / currency) are a **run-layer consumer of the event log**"
+exit code 1
+failing checks: map  — expected: map
+(move with a typo in its own MAP: C:1021–1023 targets spec/combat.md; move exit 0)
+
+=== a typo in move's own MAP that keeps tiling and labels valid ===
+planted in: scripts/docs-check.ts (diff below), then move re-run
+expected: move succeeds; line-proof placement (and not the map check) catches the divergence from the brief
+--- diff scripts/docs-check.ts (pristine -> faulted) ---
+@@ -283,3 +283,3 @@ const MAP: MapRow[] = [
+   row('C', 796, 1020, 'Combat & scripting', 'spec/combat.md', E),
+-  row('C', 1021, 1023, 'DoT damage', 'spec/statuses.md', E),
++  row('C', 1021, 1023, 'DoT damage', 'spec/combat.md', E),
+   row('C', 1024, 1128, 'Provoke targeting', 'spec/combat.md', E),
+
+--- diff .claude/spec/statuses.md (pristine -> faulted) ---
+@@ -107,5 +107,2 @@ Read this when changing any status.
+ 
+-- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's
+-  snapshot (see "DoT and Regen from the applier's snapshot" above). Until 4.1-H2b2 it was its own
+-  value (a percentage of the bearer's max HP, flat mode) and bypassed Defence.
+ ### Status lifecycle (Phase 3, re-timed in Phase 4.1-F)
+
+--- diff .claude/spec/combat.md (pristine -> faulted) ---
+@@ -400,2 +400,5 @@ path — it's the same resolver with a different action source.
+     win-check stays at the action boundary, never inside the per-target loop.
++- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's
++  snapshot (see "DoT and Regen from the applier's snapshot" above). Until 4.1-H2b2 it was its own
++  value (a percentage of the bearer's max HP, flat mode) and bypassed Defence.
+ - **Provoke targeting**: single-target offensive actions (Attack / single-target Cast) against the
+
+--- line-proof output ---
+line-proof: map PASS, multiset PASS, placement FAIL
+FAIL placement: spec/combat.md:401: expected "- **Provoke targeting**: single-target offensive actions (Attack / single-target Cast) against the" (C:1024–1128 line 1024 (Engine rules)), got "- **DoT damage** does **not** use the direct formula: a tick is indir…
+FAIL placement: spec/combat.md: 646 lines, expected 643
+FAIL placement: spec/statuses.md:108: expected "- **DoT damage** does **not** use the direct formula: a tick is indirect damage from the applier's" (C:1021–1023 line 1021 (Engine rules)), got "### Status lifecycle (Phase 3, re-timed in Phase 4.1-F)"
+FAIL placement: spec/statuses.md: 339 lines, expected 342
+exit code 1
+failing checks: placement  — expected: placement
+move with a range typo in its own MAP (1021–1022): exit 1 - map does not tile C: row 1024–1128 after line 1022
+diff is the one number above; move wrote nothing (stopped before writing). line-proof still passes against the untouched files:
+line-proof: map PASS, multiset PASS, placement PASS
+
+=== a stray file ===
+planted in: .claude/spec/x.md (new file)
+line-proof: map PASS, multiset PASS, placement FAIL
+FAIL placement: extra file in .claude/spec/: x.md
+exit code 1 (x.md stays in the scratch clone; this fault runs last)

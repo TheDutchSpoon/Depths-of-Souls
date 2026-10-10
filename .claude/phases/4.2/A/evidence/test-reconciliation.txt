@@ -1,0 +1,4 @@
+# Test count reconciliation, per file (vitest --reporter=json): main's src (scratch clone at HEAD, whose src equals main's) vs this branch
+main's src (clone): 201 files, 1357 tests, 1356 passed, 1 skipped
+this branch:        201 files, 1357 tests, 1356 passed, 1 skipped
+files with a different test count: 0 (of 201)

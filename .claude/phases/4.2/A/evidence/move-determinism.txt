@@ -1,0 +1,33 @@
+# move run 1 (sha256 per file)
+cbdac3964744fd9a70eafdcb0e6b1c0853ec4a989c688f143710b6e2b1c34683  .claude/spec/effects.md
+b7b1091e58610d0e6a6ffa9189fbcb6b21d8338c900c8a99b97180d5213ff9f1  .claude/spec/combat.md
+4037ebdb6b3d48d113faf1da318bb07b95c616e8f749297ab7fe48a27e7bbb7e  .claude/spec/statuses.md
+b3e0a9d954ecc56bd8ad4cd374d0f87b3dadd6a6c8fcc9a9cd38c814d0066a87  .claude/spec/creatures.md
+c58903d1e2fe484869d733527df8041d02fa40c0e9fc693465098f23636cc4d6  .claude/spec/run.md
+32322b7ad78be02d1288b892c86ac92a23527cdb47ec90adcbf33c4a16c20b4b  .claude/spec/scripting.md
+23156e7687eb48450ff5c9083b2b18fe2d90d5a804ff20f4d730500b159d0164  .claude/spec/responses.md
+034a6f1115b1688c428b66a3d194ec1203a5c6b779bc1ddcd83e02f12dbdee57  .claude/spec/progression.md
+a1568cf06a3fc5c7d4b9e5e6a65c20f2e2e11dc28ff54dbbda0c4ef582cea29f  .claude/spec/store.md
+6ff3ffa3191b34304f0ba90bd49a36bf5b09d4da5c3a216063c174d71ac1d8da  .claude/spec/saves.md
+ce1cd9ae9c587676601117a6dffa99d996ccaaea0e86abd1ab5f0d3ef7284bd3  .claude/CONVENTIONS.md
+5616f4b54a44f08e06d3191e5872a6464d619cffa7ebea37b8f883c040a69edf  .claude/VISION.md
+316d55cbc3ecd13d8a2011b73d44abc3596104d2ada44643308abe434dfb9ebb  .claude/OPEN_QUESTIONS.md
+wrote 13 files. .claude/GAME_DESIGN.md is not touched: delete it by hand.
+
+# move run 2
+cbdac3964744fd9a70eafdcb0e6b1c0853ec4a989c688f143710b6e2b1c34683  .claude/spec/effects.md
+b7b1091e58610d0e6a6ffa9189fbcb6b21d8338c900c8a99b97180d5213ff9f1  .claude/spec/combat.md
+4037ebdb6b3d48d113faf1da318bb07b95c616e8f749297ab7fe48a27e7bbb7e  .claude/spec/statuses.md
+b3e0a9d954ecc56bd8ad4cd374d0f87b3dadd6a6c8fcc9a9cd38c814d0066a87  .claude/spec/creatures.md
+c58903d1e2fe484869d733527df8041d02fa40c0e9fc693465098f23636cc4d6  .claude/spec/run.md
+32322b7ad78be02d1288b892c86ac92a23527cdb47ec90adcbf33c4a16c20b4b  .claude/spec/scripting.md
+23156e7687eb48450ff5c9083b2b18fe2d90d5a804ff20f4d730500b159d0164  .claude/spec/responses.md
+034a6f1115b1688c428b66a3d194ec1203a5c6b779bc1ddcd83e02f12dbdee57  .claude/spec/progression.md
+a1568cf06a3fc5c7d4b9e5e6a65c20f2e2e11dc28ff54dbbda0c4ef582cea29f  .claude/spec/store.md
+6ff3ffa3191b34304f0ba90bd49a36bf5b09d4da5c3a216063c174d71ac1d8da  .claude/spec/saves.md
+ce1cd9ae9c587676601117a6dffa99d996ccaaea0e86abd1ab5f0d3ef7284bd3  .claude/CONVENTIONS.md
+5616f4b54a44f08e06d3191e5872a6464d619cffa7ebea37b8f883c040a69edf  .claude/VISION.md
+316d55cbc3ecd13d8a2011b73d44abc3596104d2ada44643308abe434dfb9ebb  .claude/OPEN_QUESTIONS.md
+wrote 13 files. .claude/GAME_DESIGN.md is not touched: delete it by hand.
+
+IDENTICAL: all 13 sha256 equal across the two runs
