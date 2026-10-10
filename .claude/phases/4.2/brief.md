@@ -54,7 +54,9 @@ These hold from 4.2-A on and are what the condensing slices write to.
 
 1. **The spec describes `main`.** A decision that isn't built lives in its phase brief under
    "Decided, not built" and moves into the spec at the PR review of the slice that builds it. No
-   "until <slice>" or "(4.1)" markers.
+   "until <slice>" or "(4.1)" markers. A **bug** is the exception: when `main` contradicts a rule
+   that is still the design, the doc keeps the rule and adds a `**Known bug:**` line (see
+   "Condensing rules").
 2. **One home per rule.** A rule appears once. A file's `## Design` half holds player-facing
    behaviour, numbers and content tables; its `## Engine rules` half holds mechanisms, invariants
    and data shapes. Never restate one half in the other: link.
@@ -70,7 +72,8 @@ These hold from 4.2-A on and are what the condensing slices write to.
    files a slice reads. Reviewers read the same, plus any spec file the diff touches.
 7. **Content lives in the content docs.** Specific creatures, traits, spells, statuses and bosses,
    with their numbers, are described in `content/`, `specializations/` and the like, which describe
-   what `main` ships (the code wins). The spec holds the rules and the system-wide constants (the
+   what `main` ships (the code wins over a stale doc, never over a decided design: a bug follows
+   rule 1's exception). The spec holds the rules and the system-wide constants (the
    Additional's 0.2 and 10, the level curve), and links to content rather than restating it.
 
 ## The file map (4.2-A)
@@ -248,8 +251,14 @@ copies.
   counter to Defence") is kept: it is a rule, not history.
 - **Kept:** function, type and field names that pin an invariant or a data shape.
 - **No new rules.** Every sentence of condensed text traces to a unit in the inventory.
-- **Spec and code disagree:** never fixed quietly. It's a decide-point for Duncan. The spec then says
-  what `main` does; an intended change goes to a brief as "Decided, not built".
+- **Spec and code disagree:** never fixed quietly. It's a decide-point for Duncan, and the first
+  question is which kind it is:
+  - **A stale doc or a new direction** (the code is right, or the design changes): the doc says what
+    `main` does; an intended change goes to a brief as "Decided, not built".
+  - **A bug** (the code is wrong against a design that stands): the doc keeps the design and adds a
+    `**Known bug:**` line saying what `main` does and where the fix is listed (a phase brief's or the
+    ROADMAP's "Decided, not built"). The fix's PR review removes the line. The design must never
+    live only in the fix's listing, and a doc must never copy the bug.
 - **Content** (specific creatures, traits, spells, statuses, bosses and their numbers) goes to the
   content docs (rule 7). A spec unit that restates content already in a content doc is dropped as a
   duplicate, naming where; content found only in the spec is moved to the right content doc. Numbers
@@ -259,6 +268,15 @@ copies.
 - **Moving a unit to another file** (fate `moved`): its condensed text goes into the target file's
   right half, even if that file isn't condensed yet.
 - **Stale `src/` comments found while checking** are listed for 4.2-G, never fixed in B to F.
+- **The shape of a condensed content doc** (settled by the 4.2-B pilot): a `#` title, a "Read this
+  when …" line, then one paragraph with the Source pointers and the rule that the code wins. `##`
+  sections group the entries (statuses, a species, the boss, spells, perks); every entry (a status,
+  creature, boss, spell or perk) is its own `###` heading. A creature's entry opens with
+  "affinity · rarity role · role script", so the roles need no separate table. A rule the spec
+  holds is linked in label form, not restated.
+- **Inventory conventions** (settled by 4.2-B): a `dropped` row names the home it duplicates in its
+  Reason, in label form, and leaves New home empty; a row whose text spreads over many entries
+  lists every entry's anchor in New home.
 
 ## Inventory format
 

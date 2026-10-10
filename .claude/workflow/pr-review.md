@@ -97,7 +97,7 @@ that.
 ## Output, in the mailbox
 
 - **`review-r<N>.md`** (`N` matches the report it reviews): verdict (approved / fixes); real fixes;
-  scope and labeling; the 1–3 decide-points with your recommendation each; what was verified and
+  scope and labeling; decide-points with your recommendation each; what was verified and
   how, including counts; **Docs edited** at the end.
 - **`handout-r<N>.md`**, only when there are fixes: a standalone hand-out for the coding agent, who
   sees nothing else. Duncan runs `/slice-fix <slice-id> <N>`; the coding agent answers with

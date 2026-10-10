@@ -45,6 +45,9 @@ the cave**; all play happens either at the **entrance hub** or on the **floors b
   encounter alone** (no ordinary fights). Bosses still drop XP and currency like any kill. The
   first win grants the boss's perk points, and the floor can be re-fought afterwards for ordinary
   rewards (no further perk points).
+  - **Each boss is a set-piece with one clear signature.** A boss may carry more than a roster
+    creature's single trait, but keeps one clear signature mechanic for legibility, and the bosses
+    are shaped to play differently from each other, not as three race-fights.
   - **A boss fight is 6v6, like every fight from floor 6** (decided at the PR #81 review; built
     in 4.1-G). The boss comes first, then its **authored adds**, the creatures its fight needs
     (the Broodmother's spiderlings). The remaining slots are **filled with random creatures from

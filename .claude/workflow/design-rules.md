@@ -40,7 +40,7 @@ step's file. (No Prettier check: `.claude` is in `.prettierignore`.)
 
 ## Writing
 
-- Separate real fixes from scope/labeling, and keep decide-points to the 1–3 that truly need
+- Separate real fixes from scope/labeling, communicate decide-points to 
   Duncan, each with your recommendation and why.
 - Coding-agent hand-outs are standalone: they make sense without the review notes or any earlier
   hand-out, because the coding agent sees only the hand-out.

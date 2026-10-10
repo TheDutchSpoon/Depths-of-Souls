@@ -299,11 +299,20 @@ deliberately: if the run loop were first exercised in a browser after persistenc
 bugs and save bugs couldn't be told apart. Rough intent (the brief pins scope): spec pick →
 scripted intro → floor-by-floor descent with the paced log viewer, plus a side panel (floor, biome,
 soul %, XP/level, currencies), party arrangement and summoning, fast-travel, boss floors, and perks
-(inert perks labelled "inactive until Phase 8"). The baseline demo-UX carries forward. Includes the
-**content clean-up** decided at the review: the nine Phase-3 placeholder traits move out of game data
-into test-only fixtures (goldens byte-identical), Ember Lance and Venom Bolt are deleted, Cinder
-Nova is promoted to real biome-1 content (the pool's only plain AOE damage spell, with reviewed name
-and numbers). Same guardrails as every demo; own brief + phase record.
+(inert perks labelled "inactive until Phase 8"). The baseline demo-UX carries forward. Same
+guardrails as every demo; own brief + phase record.
+
+**Decided, not built** (the 4.5 brief takes these in):
+- **Content clean-up** (decided at the Phase 4 close review): the nine Phase-3 placeholder traits
+  move out of game data into test-only fixtures (goldens byte-identical); Ember Lance and Venom Bolt
+  are deleted (no niche: Venom Bolt overlaps Stinger Swarm); Cinder Nova is promoted to real biome-1
+  content (the pool's only plain AOE damage spell, with reviewed name and numbers).
+- **Two Shieldbarer perk bugs** (found at the 4.2-B condense; the code doesn't match the perks'
+  design): **Thorns** must answer only damage from an attack or a spell (today it answers any damage
+  with a source, trait and perk hits and other retaliations included); **Last Stand** must roll only
+  when the lethal damage is more than 1 (today it rolls on any lethal damage, so a creature left at
+  1 HP rolls again on a 1-damage hit). `specializations/shieldbarer.md` states the design, with a
+  "Known bug" line on each perk that the fix's PR review removes.
 
 ## Phase 5 — Persistence (large saves)
 - Versioned save/load with **IndexedDB as the primary store** (saves are large);
