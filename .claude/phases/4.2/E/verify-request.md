@@ -197,3 +197,51 @@ extended (C:808, G:811, G:869, G:994, C:1029).
 - `ROADMAP.md`: Phase 4.5 "Decided, not built" gains "A dead creature's turn is skipped entirely"
   (Duncan's decision: a new direction).
 - `phases/4.2/E/verify-request.md`: this section.
+
+## Round 3
+
+Design agent → coding agent, answering `verify-r2.md`. Its one finding is fixed. `npm run
+docs:check -- inventory E` passes: 87 units, 87 rows, base `f666d7c`. Row counts per fate are
+unchanged (54 rewritten, 25 merged, 8 dropped); two rows' Reasons were extended (C:426, C:901).
+
+### Findings and what changed
+
+- **F1, indirect damage and a DoT tick** (C:901, C:426). Stale doc, Duncan's decision: the text
+  follows `main`. The finding was slightly wider than reported. The old C:901 text already said a
+  tick "has no dealt pool", but round 1 dropped that qualifier from the engine bullet. So the
+  bullet gave a tick both armour penetration and `conditional-damage-bonus`; `applyTickDamage`
+  (`resolution.ts:1237-1266`) gives it neither. combat "The damage channel in the engine" now
+  gives the shared part once (effective Defence with Defend's ×1.5, ×0.65 in the taken pool,
+  cross-stat direct only), then two sub-bullets: a response (its own magnitude, Defence after
+  armour penetration, dealt pool with `conditional-damage-bonus`, as in `resolution.ts:245-275`)
+  and a DoT tick (snapshot potency, no dealt pool, no armour penetration, because the snapshot
+  holds the applier's stat and not its live build, linking `spec/statuses.md` "The applier
+  snapshot"). "Armor penetration" now says "the fifth of Defence (indirect, not a DoT tick)". No
+  other doc claims penetration for ticks (`spec/effects.md` only links to "Armor penetration").
+
+### Spec and code disagree
+
+- The HP% qualifier bug and the dead creature's turn stand as decided (round 1, round 2).
+- Splashing's lookup (`verify-r2.md` item 3) is informational: the rule is the same in both
+  copies. Which copy is the real one is already a decide-point in 4.2-G's Scope.
+
+### Check this round
+
+1. The rewritten indirect bullet and its two sub-bullets against `resolution.ts` (the hook path at
+   `:245-275` and `applyTickDamage` at `:1237-1266`).
+2. "Armor penetration" against `gatherArmorPenetration`'s two call sites (`resolution.ts:257`,
+   `:271`), and that no tick path calls it.
+3. That neither sub-bullet says more than C:901 or the code.
+
+### Notes for later slices
+
+- **4.2-G** (in `G/brief.md` Scope): `engine/types.ts:44-47` and `actions.ts:334`, `:390`, `:668`
+  cite `GAME_DESIGN §7` for the targeting-override rules; `data/scripts.ts:7-8` says every role
+  ends in the same fallback (`caster` casts first and ends in Attack).
+
+### Docs edited this round
+
+- `spec/combat.md`: F1 ("The damage channel in the engine", "Armor penetration").
+- `phases/4.2/E/inventory.md`: Reasons for C:426 and C:901.
+- `phases/4.2/G/brief.md`: 4.2-E's verify-r2 stale `src/` comments added to Scope.
+- `phases/4.2/E/verify-request.md`: this section.

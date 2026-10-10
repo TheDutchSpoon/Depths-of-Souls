@@ -268,10 +268,13 @@ TurnStarted
   constants in `engine/config.ts`; max HP is the target's effective max HP. It applies to **every
   direct `DamageDealt`**: each attack instance, each Splashing hit, each AOE target, each
   `deal-damage` in a spell's list, and granted actions.
-- In indirect damage, `magnitude` is the response's own (`spec/responses.md` "Magnitude modes") or
-  a tick's snapshot potency. `Defence` is effective, after armour penetration, and includes
-  Defend's ×1.5; Defend's ×0.65 is in the taken pool as usual. The dealt pool includes
-  `conditional-damage-bonus`; cross-stat contribution is direct only.
+- In indirect damage, `Defence` is effective and includes Defend's ×1.5; Defend's ×0.65 is in the
+  taken pool as usual. Cross-stat contribution is direct only.
+  - A response: `magnitude` is its own (`spec/responses.md` "Magnitude modes"), `Defence` is after
+    armour penetration, and the dealt pool includes `conditional-damage-bonus`.
+  - A DoT tick: `magnitude` is its snapshot potency, with no dealt pool and no armour penetration:
+    the snapshot holds the applier's stat, not its live build (`spec/statuses.md` "The applier
+    snapshot").
 - A DoT tick is recognised by its `snapshot-potency` magnitude, never by its `'dot'` label.
 - Flat-mode response damage (`flatAmount`) on another creature is indirect like any other response:
   the flat amount is the magnitude. There is no Defence bypass and no true-damage channel.
@@ -286,8 +289,8 @@ TurnStarted
 ### Armor penetration
 
 - `armor-penetration { percent }`: the attacker ignores that fraction of the **target's** Defence,
-  before the subtractive core (direct) or the fifth of Defence (indirect). Sources sum, clamped to
-  [0, 1].
+  before the subtractive core (direct) or the fifth of Defence (indirect, not a DoT tick). Sources
+  sum, clamped to [0, 1].
 
 ### Cross-stat contribution
 

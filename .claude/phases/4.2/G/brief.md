@@ -44,7 +44,11 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
   `actions.ts:458`, so `targeting.test.ts:326-368` tests code Splashing doesn't run: a decide-point
   for the plan, not only a comment); `engine/config.ts:1-2` calls `ROUND_CAP` "exact number TBD";
   `engine/combat.ts:160`, `:366`, `:385`, `:410`, `:500`, `actions.ts` (header, `:346`,
-  `:373-376`, `:397`) and `types.ts:33` cite `CONVENTIONS "…"` or `GAME_DESIGN §…`.
+  `:373-376`, `:397`) and `types.ts:33` cite `CONVENTIONS "…"` or `GAME_DESIGN §…`. From 4.2-E's
+  round-2 verify: `engine/types.ts:44-47` and `actions.ts:334`, `:390`, `:668` cite `GAME_DESIGN §7`
+  for the targeting-override rules (now `spec/combat.md` "Targeting override");
+  `data/scripts.ts:7-8` says every role ends in the same fallback (`caster` casts first and ends in
+  Attack; `spec/scripting.md` "Role scripts").
 - The `citations` mode, blocking in CI, and the `budgets` mode, reported only (phase brief
   "Checks"). The budgets are set from the condensed sizes.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the
