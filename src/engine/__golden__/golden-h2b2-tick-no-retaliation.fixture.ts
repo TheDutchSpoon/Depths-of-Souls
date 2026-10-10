@@ -6,7 +6,7 @@
 //
 // Hand-derived (independent `node -e` calculator). Player: A (the applier; Attack 100, speed 50).
 // Enemy: B (the bearer; Defence 20, speed 5) carries the real Snapjaw Jaws ("Snapback":
-// on-damage-taken -> deal-damage at triggering-source, 0.6 Attack) and the real Hollowkin Wretch
+// on-damage-taken -> deal-damage at triggering-source, 30% of its Attack since 4.1-H2c, 60% before; never evaluated here) and the real Hollowkin Wretch
 // ("Madness Touch": on-damage-taken -> apply Confusion at triggering-source), and is ASLEEP (the
 // real Sleep status: action-lock + an on-damage-taken wake-up). A applies Poison and Sleep (duration
 // 3) to B before any turn: Poison snapshot = applier A, vitality, potency floor(100 x 20 / 100) =

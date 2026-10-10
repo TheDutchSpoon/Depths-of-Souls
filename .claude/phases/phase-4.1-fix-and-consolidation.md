@@ -3438,3 +3438,57 @@ fixtures (31 field-only, 9 re-derived, `golden-heal-scaling-count` and `golden-d
 only), eleven new `golden-h2b2-*` (the eleventh, `golden-h2b2-tick-taken-factors`, from r2) and the renamed Cinderlord pair,
 `corpus-digest.fixture.ts`. No living doc or content doc edited. Deleted by Duncan: `golden-consume-stacks`
 and `golden-sporch-cinderlord-burn-stacks` (each `.fixture.ts` and `.test.ts`).
+
+## 4.1-H2c -- The first tuning pass: the decided numbers (deliberate)
+
+Mailbox: `.claude/phases/4.1/H2c/` (kickoff amended at the plan review, brief, plan with Revision 1, plan review
+rounds 1-2, `report-r1.md`, the sim reports). Built against ASSUMPTIONS 118, 119, 123-127, 147 and 149: this
+slice chose **no balance number**; the DoT percentages, the per-item fixes and the CI threshold test are 4.1-H2d's.
+
+### What was built
+
+- **Config:** `levelRangeWidth.base` 2 -> 0; `scaledMinLevel` rounds **down** in both branches; `bossLevelOffset`
+  3 -> 5. Floors 1-9 spawn at 1, 2, 3, 5, 6, 7, 9, 10, 11; floor 10 at 13-14; floor 30 at 44-47; bosses 19 / 34 / 52.
+- **Content:** Health 20-45 for 58 creatures by script (`health-remap.mjs`, table in `health-remap-table.md`; the
+  three Flickerlings skipped by id); the Stonehorn Warden at Attack 15 with the `warden` role; Snapback 60% -> 30%
+  of Attack; Arcane Bolt spell power 0.5 -> 1.0 (`data/spells/overgrowth.ts`).
+- **Simulator:** the floor-5 window `FLOOR5_WINDOW_RUNS = 20` (the session stays 10); the floor 1-5 matchup table
+  keyed by (floor, enemy template); the first-try clear rate per floor; the largest stack per (bucket, trait).
+- **Goldens:** no pin (the Leech Sovereign golden does not read her Health); six comment-only corrections; three
+  Arcane Bolt content goldens re-derived; `golden-h2c-snapback` new. Every other golden's expected exports equal
+  `main`'s by import.
+
+### Before / after
+
+See `report-r1.md` for the full tables. First-try floor 1: Sorcerer 15 -> 40 of 40, Brute 30 -> 35, Shieldbarer
+10 -> 26. Floor-10 first clear (median floor runs): 144 -> 86, 89.5 -> 72, 223 -> 213 (13 Shieldbarer seeds never).
+Round-cap draws 6.7 / 2.4 / 12.9% -> 4.9 / 2.5 / 10.6%. ASSUMPTION 22: Sorcerer and Brute pass all three; the
+Shieldbarer fails floor 1 (65%). Rallying Cry's largest stack 100x -> 100x; the Flare's 348 / 400 / 600x ->
+171 / 298 / 200x. The three DoT sets (placeholders, 35/30/30, 50/40/45) were measured for the H2d grill: the
+minimum-of-1 share of corpus ticks (Parts A+B) is 91.2%, 61.6%, 41.6% (93.1% on `main`).
+
+### Corpus digest (regenerated once)
+
+All 527 fights changed. First changed by stage: curve 498 (300 A / 198 B), Health remap 29 (2 B / 27 C), Warden 0,
+Snapback + Arcane Bolt 0 (the 132 and 288 fights whose logs differ from the previous stage were already changed).
+
+### Test count (main -> slice)
+
+Files 193 -> 195; tests 1297 (1296 passed, 1 skipped) -> 1333 (1332 passed, 1 skipped), +36: `curves.test.ts` +17,
+`balance-sim-report.test.ts` +16 (new), `golden-h2c-snapback` +1 (new), `starters.test.ts` +2.
+
+### Deviations and spec notes
+
+- `state/integration.test.ts` moves in three tests, not two: the revive count (stage 4, Snapback), the Brute's
+  attacks per turn (stage 2, the Health remap) and the G2 gem draw (stage 2). The "Phase 4.1-A defaults" block does not move.
+- The Health remap leaves `src/app/demoFight.ts` (a throwaway demo) on the old scale.
+- Spec questions for the design agent are in `report-r1.md`.
+
+### Files changed
+
+Engine: `curves.ts`. Data: `balance.ts`, the four species files (Health), `starters.ts` (Warden),
+`traits/overgrowth.ts` (Snapback), `spells/overgrowth.ts` (Arcane Bolt). Simulator: `balance-sim.ts`. Tests:
+`curves.test.ts`, the four species tests, `roles.test.ts`, `scripts.test.ts`, `store.test.ts`,
+`status-timing.test.ts`, `integration.test.ts`, `balance-sim.test.ts`, `balance-sim-report.test.ts` (new); goldens:
+`golden-sorcerer-starter`, `-resonant-overtone`, `-resonant-harmonize` (re-derived), `golden-h2c-snapback` (new),
+six comment-only; `corpus-digest.fixture.ts`. No living doc or content doc edited. Nothing deleted.

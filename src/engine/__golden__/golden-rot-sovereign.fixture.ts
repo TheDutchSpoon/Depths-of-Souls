@@ -8,7 +8,9 @@
 // across both death sources, and her own turn-start Spore blanket.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). TARGET (speed 40) acts
-// before SOVEREIGN (speed 30, real base stats) before WEAK (speed 10) before ADD (speed 1 --
+// before SOVEREIGN (speed 30; her Attack 22, Intelligence 20 and Defence 26 are the real Rot
+// Sovereign's base stats, but the speed is the fixture's own -- the real one is 16 -- and her Health
+// 30 is the pre-4.1-H2c value, the real one is now 45) before WEAK (speed 10) before ADD (speed 1 --
 // never reached; this golden stops after SOVEREIGN's own turn). Endurance-vs-Endurance
 // (everyone here is endurance) is always neutral -- x1.0 everywhere, no complication. No random
 // selectors anywhere (every attack's target is deterministically the lowest-HP living enemy) --

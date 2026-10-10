@@ -21,11 +21,13 @@
 // at turn-end, Arcane Surge's trigger rolls and queues the cast, which runs in the granted-actions
 // step -- BEFORE TurnEnded (Phase 4.1-C, D6: TurnEnded is always the turn's last event).
 //
-//   ARCANE_BOLT: spellPower 0.5, scalingStat unset -> default remap-aware Intelligence lookup.
-//   effInt 20 (no modifiers) x spellPower 0.5 x instance-list powerFraction 1.0 (no extra
-//   instances) = offStat 10. FOE (wit, neutral x1.0) defence 0: core 10, chip 0.01*10=0.1 ->
-//   raw 10.1 -> final 10. FOE health 10 - 10 -> 0 -> dies, ending the fight in CASTER's win
-//   inside its own single turn (before FOE ever gets to act).
+//   ARCANE_BOLT: spellPower 1.0 (4.1-H2c, ASSUMPTION 124; it was 0.5), scalingStat unset -> default
+//   remap-aware Intelligence lookup.
+//   effInt 20 (no modifiers) x spellPower 1.0 x instance-list powerFraction 1.0 (no extra
+//   instances) = offStat 20. FOE (wit, neutral x1.0) defence 0: core 20, chip 0.01*20=0.2 ->
+//   raw 20.2 -> final 20 (a direct Cast; the fixture creatures are level 11, so no Additional).
+//   FOE health 20 - 20 -> 0 -> dies, ending the fight in CASTER's win inside its own single turn
+//   (before FOE ever gets to act). At 0.5 the hit would be raw 10.1, final 10, leaving FOE at 10.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -53,7 +55,7 @@ export const playerParty = makeParty('player', [
 export const enemyParty = makeParty('enemy', [
   {
     id: 'foe',
-    health: 10,
+    health: 20,
     defence: 0,
     speed: 1,
     affinity: 'wit',
@@ -94,8 +96,8 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: CASTER,
     targetId: FOE,
-    rawDamage: 10.1,
-    finalDamage: 10,
+    rawDamage: 20.2,
+    finalDamage: 20,
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 0,

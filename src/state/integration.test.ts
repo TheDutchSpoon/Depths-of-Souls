@@ -173,8 +173,8 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // one drone, killed once in its fight, so the trigger fires exactly once.
     expect(triggersFor(outcome.events, SWARMHIVE_DRONE_TRAIT.id)).toBe(1)
     // Snapjaw Jaws (content/overgrowth.md: "whenever this creature takes damage, it attacks back
-    // for 60% of its Attack") -- an on-damage-taken retaliation trigger, fires once per hit
-    // landed on it before it dies.
+    // for 60% of its Attack"; 30% since 4.1-H2c) -- an on-damage-taken retaliation trigger, fires
+    // once per hit landed on it before it dies.
     expect(triggersFor(outcome.events, SNAPJAW_JAWS_TRAIT.id)).toBeGreaterThan(0)
     // The Unicorn's own signature trait (species-locked.md: "whenever this creature attacks, it
     // resurrects a random dead ally at 20% of its baseline max HP") -- Slice B's `revive`
@@ -187,10 +187,34 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // seed's fights end in 5, 6 and 5 hits and nobody is ever dead when the Unicorn attacks (the
     // fight-2 Unicorn dies, and a dead Unicorn revives no one). So the trigger still fires on
     // every Unicorn attack but its `random-dead-ally` pool is empty: a targeting fizzle (CONVENTIONS),
-    // not a suppressed trigger, and no Revived event. The revive response itself stays pinned
-    // end to end by golden-revive, golden-unicorn-starter and the golden-d3-revive-cap-* goldens.
-    const revivedCount = outcome.events.filter((e) => e.type === 'Revived').length
-    expect(revivedCount).toBe(0)
+    // not a suppressed trigger, and no Revived event (`revivedCount` was 0).
+    //
+    // 4.1-H2c re-pin (0 -> 1; generated-then-checkpoint-verified; first changed by Snapback at 30%
+    // of Attack, ASSUMPTION 124: the Health remap alone leaves it at 0, and so does Arcane Bolt):
+    // fight 2 against the Snapjaw Jaws now runs two events longer. The Brute (33 HP since the
+    // remap) takes two 6-damage counters (30% of its Attack against a fifth of its Defence) across
+    // its double strike, 6 left then 0, so the Unicorn's next attack finds a dead ally and its
+    // `on-attack` Guardian's Light revives the Brute at 7 HP. The revive response itself stays
+    // pinned end to end by golden-revive, golden-unicorn-starter and the golden-d3-revive-cap-*
+    // goldens.
+    const revives = outcome.events.filter((e) => e.type === 'Revived')
+    expect(revives).toHaveLength(1)
+    // Independent checkpoint: every Revived is the Unicorn's, on a creature that had died earlier
+    // in the SAME fight (a revive can only follow a death), not a number read off this run.
+    for (const revive of revives) {
+      const at = outcome.events.indexOf(revive)
+      const fightStart = outcome.events.map((e) => e.type).lastIndexOf('FightStarted', at)
+      expect(revive).toMatchObject({ sourceId: 'unicorn-player-1' })
+      expect(
+        outcome.events
+          .slice(fightStart, at)
+          .some(
+            (e) =>
+              e.type === 'CreatureDied' &&
+              e.creatureId === (revive as { targetId: string }).targetId,
+          ),
+      ).toBe(true)
+    }
 
     // ---- StatModifierApplied: the fight-start amplifier landed the exact documented rate ----
     // (Treant Grovekeep's +15% Health; the Swarmhive Striker's Attack amplifier is not in this
@@ -217,12 +241,17 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // floor 1's 3 fights (was 5), [2, 1, 2, 1] (was [2, 2, 2, 2, 1]): the double-strike still
     // fires ordinarily, and a turn is a single attack whenever instance 1 alone kills the lone
     // enemy (fight 1's second turn, and the whole of fight 3's one turn).
-    expect(perTurn).toEqual([2, 1, 2, 1])
-    // A turn is a single attack when instance 1 alone kills that fight's only enemy --
-    // instance 2 then has no living target left (`resolveInstanceTarget` returns null, the instance
-    // loop breaks per Slice B's own "falls back to default target... unless it's already died" rule
-    // with nothing left to fall back TO), so only one AttackDeclared fires that turn.
-    expect(perTurn[perTurn.length - 1]).toBe(1)
+    //
+    // 4.1-H2c re-pin (generated-then-checkpoint-verified; first changed by the Health remap,
+    // ASSUMPTION 125): with Health on the 20-45 scale no lone enemy dies to instance 1 any more, so
+    // every Brute turn is the full double strike, [2, 2, 2, 2]. The "instance 2 has no living
+    // target left" case (`resolveInstanceTarget` returns null, the instance loop breaks) is no
+    // longer reached by this run; `actions.test.ts` ('resolveInstanceTarget -- rule 4') pins it.
+    expect(perTurn).toEqual([2, 2, 2, 2])
+    // Independent checkpoint: a Brute turn is the double strike or, when instance 1 leaves no
+    // living target, a single attack -- never anything else, and the double strike fires.
+    for (const attacks of perTurn) expect([1, 2]).toContain(attacks)
+    expect(perTurn).toContain(2)
   })
 
   test('descends floor 10 -- the real Broodmother boss floor -- after leveling the party up to survive it', () => {
@@ -370,7 +399,16 @@ describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig'
 // Unicorn, Pacified by the Pollinator Beneficiary in round 2, Waited on main (no gem to cast) and
 // now casts its slot-0 gem, Life Siphon (15 damage to the Beneficiary, 30 healed), and every later
 // event follows from that turn. Floor 1 (both stores) and the second floor-10 visit are identical
-// to main, event for event: no party member is Pacified in them.
+// to main, event for event: no party member is Pacified in them. (That was G2's own log.)
+//
+// Phase 4.1-H2c re-pin (first changed by the Health remap, ASSUMPTION 125): the floor-10 log is now
+// 135 events (143 before H2c) and the Pacify lands earlier, in round 1 (event 25: the Pollinator
+// Beneficiary Pacifies the Unicorn before its first turn). The rule is unchanged: the Unicorn is
+// Pacified, takes its turn, does not Wait and casts instead. But the gem draw over its castable
+// slots now lands on slot 1, Wild Vigor (a SpellCast, then a StatModifierApplied on itself: Attack
+// x1.15, 86 -> 98.9), not slot 0, Life Siphon: the draw is a generated pin on a random roll, not
+// the rule. The test now pins the drawn slot and its effect, and checks the cast gem is one of
+// the Unicorn's stored set.
 //
 // Generated-then-checkpoint-verified: the pinned gem sets are what the roll returned for the
 // default run seed; the independent checkpoints are (a) the Unicorn's set is exactly the three
@@ -414,8 +452,8 @@ describe('Phase 4.1-G2: stored player gems in the real floor-10 fight', () => {
     for (const id of mauler.gems) expect(violence.has(id as string)).toBe(true)
   })
 
-  test('the Pacified Unicorn casts its slot-0 gem instead of waiting', () => {
-    const { outcome } = floor10()
+  test('the Pacified Unicorn casts one of its stored gems instead of waiting (4.1-H2c: slot 1, Wild Vigor)', () => {
+    const { store, outcome } = floor10()
     const events = outcome.events
     const pacifiedAt = events.findIndex(
       (e) =>
@@ -435,13 +473,24 @@ describe('Phase 4.1-G2: stored player gems in the real floor-10 fight', () => {
     const turn = events.slice(turnStart, turnEnd + 1)
     expect(turn.some((e) => e.type === 'Waited')).toBe(false)
     const cast = turn.find((e) => e.type === 'SpellCast')
-    expect(cast).toMatchObject({ casterId: 'unicorn-player-1', gemSlot: 0 })
-    // Life Siphon: damage to the target and a heal on the caster.
-    expect(turn.some((e) => e.type === 'DamageDealt' && e.damageSource === 'cast')).toBe(
-      true,
-    )
-    expect(
-      turn.some((e) => e.type === 'HealApplied' && e.targetId === 'unicorn-player-1'),
-    ).toBe(true)
+    expect(cast).toMatchObject({ casterId: 'unicorn-player-1' })
+    // Independent checkpoint: the cast slot holds a gem from the Unicorn's stored set (the sibling
+    // test pins that set), whichever slot the draw picked.
+    const unicorn = store.getState().collection.get(createInstanceId('inst-1'))!
+    const slot = (cast as { gemSlot: number }).gemSlot
+    expect(slot).toBeGreaterThanOrEqual(0)
+    expect(slot).toBeLessThan(unicorn.gems.length)
+    expect(['life-siphon', 'wild-vigor', 'regrowth']).toContain(unicorn.gems[slot])
+    // Generated pin: the draw lands on slot 1, Wild Vigor, which raises the caster's own Attack
+    // (x1.15) and deals no damage.
+    expect(cast).toMatchObject({ gemSlot: 1 })
+    expect(unicorn.gems[1]).toBe('wild-vigor')
+    expect(turn.find((e) => e.type === 'StatModifierApplied')).toMatchObject({
+      sourceId: 'unicorn-player-1',
+      targetId: 'unicorn-player-1',
+      stat: 'attack',
+      factor: 1.15,
+    })
+    expect(turn.some((e) => e.type === 'DamageDealt')).toBe(false)
   })
 })

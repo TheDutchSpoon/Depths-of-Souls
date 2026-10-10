@@ -8,8 +8,9 @@
 // Phase 4 interstitial slice (cumulative spell unlock): originally cast GLOWSPARK_BOLT
 // (Glimmerdark, spellPower 1.0), since deleted as a near-dup of ARCANE_BOLT (Overgrowth, now
 // inherited at every deeper biome -- see data/spells/glimmerdark.ts's own header comment).
-// Retargeted to ARCANE_BOLT (spellPower 0.5, same wit/single/damage shape) per design-owner
-// call -- the damage number below is RECOMPUTED against the new spellPower, not preserved.
+// Retargeted to ARCANE_BOLT (same wit/single/damage shape) per design-owner call -- the damage
+// number below is RECOMPUTED against the new spellPower, not preserved. Phase 4.1-H2c (ASSUMPTION
+// 124) raised Arcane Bolt's spellPower from 0.5 to 1.0 and the number was re-derived again.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). Both CHORUS/TARGET are wit
 // -> neutral (x1.0); ADEPT never deals damage in this fixture, so its own affinity is moot.
@@ -22,8 +23,8 @@
 //     (a separate ally) -> +8% Intelligence (26 -> 28.080000000000002, float-imprecise at full
 //     precision, per the harness's own precision). Neither modifies Intelligence used below.
 //   Spell damage: off = Intelligence(24, CHORUS's own, unaffected by either reaction above) x
-//     spellPower(0.5) = 12; vs def 0: core 12, chip 0.12 -> raw 12.12 -> final 12.
-//     TARGET 100-12=88.
+//     spellPower(1.0) = 24; vs def 0: core 24, chip 0.24 -> raw 24.24 -> final 24 (direct Cast; the
+//     fixture creatures are level 11, so no Additional). TARGET 100-24=76. (At 0.5: 12, 88 left.)
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -126,11 +127,11 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: CHORUS,
     targetId: TARGET,
-    rawDamage: 12.12,
-    finalDamage: 12,
+    rawDamage: 24.24,
+    finalDamage: 24,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 88,
+    remainingHp: 76,
     damageSource: 'cast',
   },
   { type: 'TurnEnded', creatureId: CHORUS },

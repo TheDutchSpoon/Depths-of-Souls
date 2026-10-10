@@ -304,8 +304,9 @@ describe('taunter', () => {
 })
 
 // Phase 4.1-G1 (ASSUMPTION 68): `taunter` is `always-provoke` renamed into the role set. Its two real
-// users (Snapjaw Lure, Stonehorn Warden) must fight exactly as they did: the same fight, with only
-// the script id swapped, gives the same event log.
+// users then (Snapjaw Lure, Stonehorn Warden) must fight exactly as they did: the same fight, with
+// only the script id swapped, gives the same event log. (Since 4.1-H2c the Warden runs `warden`; the
+// test still swaps the script on the same creature, so it stays valid.)
 describe('taunter behaves exactly as always-provoke did (ASSUMPTION 68)', () => {
   const scripts = new Map([...STOCK_SCRIPTS_BY_ID, ...FIXTURE_SCRIPTS_BY_ID])
 

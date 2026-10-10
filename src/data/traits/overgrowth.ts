@@ -268,8 +268,9 @@ export const SNAPJAW_LURE_TRAIT: Trait = {
   ],
 }
 
-/** Snapjaws' Jaws (payoff): a bigger retaliate than the Phase 3 representative RETALIATE trait
- * (0.3) -- a real "big retaliate" per species-locked.md. */
+/** Snapjaws' Jaws (payoff): a retaliate at 30% of its Attack, the Phase 3 representative RETALIATE
+ * trait's number. It was 60% ("a big retaliate", species-locked.md) until 4.1-H2c (ASSUMPTION 124):
+ * as indirect damage (a fifth of Defence) the 60% beat the Shieldbarer pair in every floor-1 fight. */
 export const SNAPJAW_JAWS_TRAIT: Trait = {
   id: 'snapjaw-jaws-snapback',
   name: 'Snapback',
@@ -281,7 +282,7 @@ export const SNAPJAW_JAWS_TRAIT: Trait = {
         kind: 'deal-damage',
         target: { kind: 'triggering-source' },
         offStat: 'attack',
-        spellPower: 0.6,
+        spellPower: 0.3,
       },
     },
   ],

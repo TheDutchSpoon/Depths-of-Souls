@@ -1,0 +1,180 @@
+
+> depths-of-souls@0.0.0 sim
+> vitest run src/state/balance-sim.test.ts --mode sim --silent=false
+
+
+ RUN  v5.0.3 C:/Users/dunca/MyProjects/Depths-of-Souls
+
+stdout | src/state/balance-sim.test.ts > balance simulator: full report (npm run sim) > prints the report
+Balance report: 40 seeds (1..40), run cap 400, content frontier floor 30
+
+=== sorcerer (40 seeds) ===
+T1 floor-1 first-try clear: 15/40 = 37.5% (target >= 95%)
+T2 first soul (target ~10): floor runs, median over all seeds 3.5 (seeds that never complete one: 0); clears among the completing seeds: median 1.0, max 3
+T3 party size after 10 floor runs (size:seeds): 6:40 (target 6)
+T4 stop: frontier 0, cap 40; walled seeds 40 (before floor 10: 40); first-wall floors f2:2 f4:9 f5:16 f6:13; deepest floor median 10.0
+T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below 10, per seed: min 8 / median 24.5 / max 44; floor runs to the first floor-10 clear: min 74 / median 144.0 / max 203 over the seeds that clear it, 0 never do
+T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):
+  floor  reached cleared  runs  clear%  pushFail   fights    p    p^n   partyLv  enemyLv   boss
+      1       40      40   184   68.5%       47     1550 0.963  0.683      1.5      1-3      
+      2       40      40   196   48.5%       97     1389 0.927  0.436      2.4      3-5      
+      3       40      40   214   64.0%       59     2091 0.963  0.637      4.4      4-6      
+      4       40      40   397   53.4%      115     3792 0.951  0.522      6.8      5-7      
+      5       40      40  1199   42.7%      242    11400 0.940  0.419     10.5      6-8      
+      6       40      40  1289   10.9%      917     7026 0.837  0.069     12.1     8-10      
+      7       40      40   617   17.5%      332     4715 0.892  0.161     14.9     9-11      
+      8       40      40   816   27.6%      245     7682 0.923  0.256     17.4    10-12      
+      9       40      40   579    6.9%      531     3662 0.853  0.057     18.0    12-14      
+     10       40      40  4964   92.9%        8     4964 0.929  0.929     21.1    13-16    19
+     11       40      10  5162    0.3%     4928    16455 0.687  0.001     21.2    15-18      
+     12        9       3   259    1.9%      228     1268 0.800  0.009     24.3    16-19      
+     13        3       2    50    6.0%       29      371 0.873  0.051     25.8    17-20      
+     14        2       1    47    8.5%       20      376 0.886  0.061     27.8    19-22      
+     15        1       0    27    0.0%       27      164 0.835  0.013     28.3    20-23      
+     16        0       0     0     n/a        0        0   n/a    n/a      n/a    22-25      
+     17        0       0     0     n/a        0        0   n/a    n/a      n/a    23-26      
+     18        0       0     0     n/a        0        0   n/a    n/a      n/a    25-28      
+     19        0       0     0     n/a        0        0   n/a    n/a      n/a    26-29      
+     20        0       0     0     n/a        0        0   n/a    n/a      n/a    28-32    35
+     21        0       0     0     n/a        0        0   n/a    n/a      n/a    29-33      
+     22        0       0     0     n/a        0        0   n/a    n/a      n/a    31-35      
+     23        0       0     0     n/a        0        0   n/a    n/a      n/a    33-37      
+     24        0       0     0     n/a        0        0   n/a    n/a      n/a    34-38      
+     25        0       0     0     n/a        0        0   n/a    n/a      n/a    36-40      
+     26        0       0     0     n/a        0        0   n/a    n/a      n/a    37-41      
+     27        0       0     0     n/a        0        0   n/a    n/a      n/a    39-43      
+     28        0       0     0     n/a        0        0   n/a    n/a      n/a    41-45      
+     29        0       0     0     n/a        0        0   n/a    n/a      n/a    42-46      
+     30        0       0     0     n/a        0        0   n/a    n/a      n/a    44-49    52
+Floors 20-30 (watch point), failed pushes by floor: none
+Unicorn revives: in party for 66905 fights (win 85.4%; not in party 0 fights, win n/a); 190889 revives, 26816 fights with one, max 50 in a fight, 4420 fights with a creature at the cap (10)
+Draws: 4465/66905 fights = 6.7%; round-cap draws 4464 = 6.7%
+Largest GROWTH stack (the watch point: a stat-modifier factor above 1, stacked) of one trait, on a player creature: 100x treant-sapling-taking-root (floor 6, seed 2, treant-sapling-player-4)
+Largest GROWTH stack (the watch point) of one trait, on an enemy creature: 400x shellback-warden-fortify (floor 11, seed 8, shellback-warden-enemy-0)
+Largest SHRED stack (a factor below 1, a cut to the target) of one trait, on a player creature: 91x sparkeater-voidmaw-consume (floor 11, seed 3, treant-sapling-player-2)
+Largest SHRED stack of one trait, on an enemy creature: 22x (spell) (floor 11, seed 11, shellback-warden-enemy-0); unattributed 0/3934473 applications
+Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):
+  floor 10 broodmother [first-visit] visits 40: policy clear 82.5%; probe n/a 0; where probed (40): policy 82.5% vs probe 50.0%; boss locked-turn share policy 51.8% (all 328 attack 242 cast 0) vs probe 70.4% (all 212 attack 1183 cast 3); Pacify lands in 40/40 probe runs (913 landings)
+  floor 10 broodmother [all-visits] visits 4964: policy clear 92.9%; probe n/a 0; where probed (4964): policy 92.9% vs probe 83.3%; boss locked-turn share policy 48.9% (all 23570 attack 13094 cast 117) vs probe 66.5% (all 23271 attack 82387 cast 367); Pacify lands in 4897/4964 probe runs (134763 landings)
+Rot Sovereign's Attrition (policy runs): 0 visits, 0 cleared, mean deaths n/a, max Attrition stacks 0, peak boss Attack 0.0
+ASSUMPTION 22: floor-1 clear >= 80%: 37.5% FAIL; first soul median <= 30 floor runs: 3.5 PASS; a seed fights on floor 5+ in its first 10 floor runs: 0 seeds FAIL
+
+=== brute (40 seeds) ===
+T1 floor-1 first-try clear: 30/40 = 75.0% (target >= 95%)
+T2 first soul (target ~10): floor runs, median over all seeds 3.0 (seeds that never complete one: 0); clears among the completing seeds: median 2.0, max 3
+T3 party size after 10 floor runs (size:seeds): 6:40 (target 6)
+T4 stop: frontier 39, cap 1; walled seeds 40 (before floor 10: 40); first-wall floors f2:1 f4:7 f5:11 f6:17 f7:1 f8:2 f9:1; deepest floor median 30.0
+T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below 10, per seed: min 6 / median 15.0 / max 34; floor runs to the first floor-10 clear: min 44 / median 89.5 / max 124 over the seeds that clear it, 0 never do
+T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):
+  floor  reached cleared  runs  clear%  pushFail   fights    p    p^n   partyLv  enemyLv   boss
+      1       40      40   139   82.7%       15     1258 0.981  0.825      1.5      1-3      
+      2       40      40   177   50.3%       84     1295 0.932  0.461      2.3      3-5      
+      3       40      40   193   62.7%       53     1860 0.961  0.623      4.2      4-6      
+      4       40      40   268   47.0%      100     2467 0.942  0.463      5.9      5-7      
+      5       40      40   641   62.7%      128     7086 0.966  0.619      9.2      6-8      
+      6       40      40   691   16.8%      473     4362 0.868  0.120     10.6     8-10      
+      7       40      40   406   30.3%      178     3564 0.921  0.266     12.7     9-11      
+      8       40      40   590   49.2%      188     6911 0.957  0.470     15.0    10-12      
+      9       40      40   410   10.7%      362     2812 0.870  0.081     15.9    12-14      
+     10       40      40  1075   91.5%        8     1075 0.915  0.915     17.9    13-16    19
+     11       40      40  1415    7.5%     1027     9306 0.859  0.048     18.4    15-18      
+     12       40      40   649   18.6%      348     6324 0.917  0.160     20.9    16-19      
+     13       40      40   678   30.5%      261     8512 0.945  0.286     23.1    17-20      
+     14       40      40   621   18.5%      377     6312 0.920  0.146     24.5    19-22      
+     15       40      40   685   31.7%      204     9642 0.951  0.303     26.9    20-23      
+     16       40      40   786   13.5%      441     8106 0.916  0.112     28.1    22-25      
+     17       40      40   743   26.9%      305    10244 0.947  0.243     30.2    23-26      
+     18       40      40   759   15.5%      398     9220 0.930  0.143     31.8    25-28      
+     19       40      40   368   11.7%      321     4119 0.921  0.100     32.7    26-29      
+     20       40      40    56   85.7%        7       56 0.857  0.857     33.9    28-32    35
+     21       40      40    79   84.8%        9     2166 0.994  0.846     34.1    29-33      
+     22       40      40   106   59.4%       30     2622 0.984  0.599     34.7    31-35      
+     23       40      40   111   52.3%       36     2589 0.980  0.516     35.2    33-37      
+     24       40      40   117   49.6%       35     2682 0.978  0.480     35.8    34-38      
+     25       40      40   136   41.9%       42     3281 0.976  0.437     36.5    36-40      
+     26       40      40   194   43.3%       54     4475 0.975  0.418     37.3    37-41      
+     27       40      40   251   33.5%      100     5398 0.969  0.323     38.4    39-43      
+     28       40      39   226   26.1%      111     4787 0.965  0.269     39.3    41-45      
+     29       39      39   115   33.9%       76     2573 0.970  0.320     39.6    42-46      
+     30       39      39    39  100.0%        0       39 1.000  1.000     40.3    44-49    52
+Floors 20-30 (watch point), failed pushes by floor: f20:7 f21:9 f22:30 f23:36 f24:35 f25:42 f26:54 f27:100 f28:111 f29:76
+Unicorn revives: in party for 135143 fights (win 93.8%; not in party 0 fights, win n/a); 177733 revives, 37665 fights with one, max 50 in a fight, 3629 fights with a creature at the cap (10)
+Draws: 3278/135143 fights = 2.4%; round-cap draws 3275 = 2.4%
+Largest GROWTH stack (the watch point: a stat-modifier factor above 1, stacked) of one trait, on a player creature: 100x treant-sapling-taking-root (floor 5, seed 2, treant-sapling-player-4)
+Largest GROWTH stack (the watch point) of one trait, on an enemy creature: 449x resonant-chorus-harmonize (floor 16, seed 4, resonant-chorus-enemy-0)
+Largest SHRED stack (a factor below 1, a cut to the target) of one trait, on a player creature: 100x sparkeater-gorger-gorge (floor 16, seed 7, snapjaw-lure-player-3)
+Largest SHRED stack of one trait, on an enemy creature: 23x (spell) (floor 11, seed 40, shellback-warden-enemy-3); unattributed 0/3648573 applications
+Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):
+  floor 10 broodmother [first-visit] visits 40: policy clear 82.5%; probe n/a 7; where probed (33): policy 81.8% vs probe 78.8%; boss locked-turn share policy 18.6% (all 51 attack 8 cast 0) vs probe 57.6% (all 14 attack 182 cast 0); Pacify lands in 33/33 probe runs (127 landings)
+  floor 10 broodmother [all-visits] visits 1075: policy clear 91.5%; probe n/a 111; where probed (964): policy 91.1% vs probe 89.1%; boss locked-turn share policy 16.2% (all 871 attack 87 cast 2) vs probe 46.5% (all 254 attack 3285 cast 6); Pacify lands in 942/964 probe runs (2323 landings)
+  floor 20 leech-sovereign [first-visit] visits 40: policy clear 85.0%; probe n/a 7; where probed (33): policy 84.8% vs probe 81.8%; boss locked-turn share policy 16.7% (all 40 attack 10 cast 0) vs probe 70.7% (all 30 attack 159 cast 0); Pacify lands in 30/33 probe runs (123 landings)
+  floor 20 leech-sovereign [all-visits] visits 56: policy clear 85.7%; probe n/a 10; where probed (46): policy 84.8% vs probe 84.8%; boss locked-turn share policy 15.4% (all 48 attack 12 cast 0) vs probe 68.3% (all 31 attack 188 cast 0); Pacify lands in 42/46 probe runs (156 landings)
+  floor 30 rot-sovereign [first-visit] visits 39: policy clear 100.0%; probe n/a 7; where probed (32): policy 100.0% vs probe 93.8%; boss locked-turn share policy 19.5% (all 13 attack 29 cast 3) vs probe 89.6% (all 0 attack 335 cast 0); Pacify lands in 32/32 probe runs (280 landings)
+  floor 30 rot-sovereign [all-visits] visits 39: policy clear 100.0%; probe n/a 7; where probed (32): policy 100.0% vs probe 93.8%; boss locked-turn share policy 19.5% (all 13 attack 29 cast 3) vs probe 89.6% (all 0 attack 335 cast 0); Pacify lands in 32/32 probe runs (280 landings)
+Rot Sovereign's Attrition (policy runs): 39 visits, 39 cleared, mean deaths 8.7, max Attrition stacks 19, peak boss Attack 1853.1
+ASSUMPTION 22: floor-1 clear >= 80%: 75.0% FAIL; first soul median <= 30 floor runs: 3.0 PASS; a seed fights on floor 5+ in its first 10 floor runs: 0 seeds FAIL
+
+=== shieldbarer (40 seeds) ===
+T1 floor-1 first-try clear: 10/40 = 25.0% (target >= 95%)
+T2 first soul (target ~10): floor runs, median over all seeds 4.0 (seeds that never complete one: 0); clears among the completing seeds: median 1.0, max 2
+T3 party size after 10 floor runs (size:seeds): 3:2 5:3 6:35 (target 6)
+T4 stop: frontier 0, cap 40; walled seeds 40 (before floor 10: 40); first-wall floors f1:3 f2:3 f3:4 f4:12 f5:12 f6:6; deepest floor median 8.0
+T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below 10, per seed: min 17 / median 78.5 / max 140; floor runs to the first floor-10 clear: min 131 / median 223.0 / max 394 over the seeds that clear it, 21 never do
+T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):
+  floor  reached cleared  runs  clear%  pushFail   fights    p    p^n   partyLv  enemyLv   boss
+      1       40      40   234   54.7%       78     1763 0.940  0.538      1.5      1-3      
+      2       40      40   259   48.3%      116     1814 0.926  0.430      2.6      3-5      
+      3       40      40   302   53.6%      103     2682 0.948  0.526      4.8      4-6      
+      4       40      40   980   31.2%      159     7674 0.912  0.303      9.1      5-7      
+      5       40      40  3185   16.4%      781    19730 0.865  0.131     13.1      6-8      
+      6       40      40  3665    3.2%     2364    15328 0.769  0.019     15.4     8-10      
+      7       40      33  1945    4.0%     1263     9432 0.802  0.029     18.2     9-11      
+      8       33      24  1427   10.0%      650     8969 0.857  0.072     19.9    10-12      
+      9       24      19   779    2.4%      755     3916 0.806  0.021     20.5    12-14      
+     10       19      19  1619   84.9%        5     1619 0.849  0.849     22.0    13-16    19
+     11       19       0  1605    0.0%     1605     3978 0.597  0.000     22.0    15-18      
+     12        0       0     0     n/a        0        0   n/a    n/a      n/a    16-19      
+     13        0       0     0     n/a        0        0   n/a    n/a      n/a    17-20      
+     14        0       0     0     n/a        0        0   n/a    n/a      n/a    19-22      
+     15        0       0     0     n/a        0        0   n/a    n/a      n/a    20-23      
+     16        0       0     0     n/a        0        0   n/a    n/a      n/a    22-25      
+     17        0       0     0     n/a        0        0   n/a    n/a      n/a    23-26      
+     18        0       0     0     n/a        0        0   n/a    n/a      n/a    25-28      
+     19        0       0     0     n/a        0        0   n/a    n/a      n/a    26-29      
+     20        0       0     0     n/a        0        0   n/a    n/a      n/a    28-32    35
+     21        0       0     0     n/a        0        0   n/a    n/a      n/a    29-33      
+     22        0       0     0     n/a        0        0   n/a    n/a      n/a    31-35      
+     23        0       0     0     n/a        0        0   n/a    n/a      n/a    33-37      
+     24        0       0     0     n/a        0        0   n/a    n/a      n/a    34-38      
+     25        0       0     0     n/a        0        0   n/a    n/a      n/a    36-40      
+     26        0       0     0     n/a        0        0   n/a    n/a      n/a    37-41      
+     27        0       0     0     n/a        0        0   n/a    n/a      n/a    39-43      
+     28        0       0     0     n/a        0        0   n/a    n/a      n/a    41-45      
+     29        0       0     0     n/a        0        0   n/a    n/a      n/a    42-46      
+     30        0       0     0     n/a        0        0   n/a    n/a      n/a    44-49    52
+Floors 20-30 (watch point), failed pushes by floor: none
+Unicorn revives: in party for 76905 fights (win 83.1%; not in party 0 fights, win n/a); 130141 revives, 18420 fights with one, max 50 in a fight, 2413 fights with a creature at the cap (10)
+Draws: 9909/76905 fights = 12.9%; round-cap draws 9909 = 12.9%
+Largest GROWTH stack (the watch point: a stat-modifier factor above 1, stacked) of one trait, on a player creature: 100x shieldbarer-starter-rally (floor 6, seed 1, shieldbarer-starter-player-0)
+Largest GROWTH stack (the watch point) of one trait, on an enemy creature: 600x flickerling-flare-kindle (floor 11, seed 16, flickerling-wick-enemy-0)
+Largest SHRED stack (a factor below 1, a cut to the target) of one trait, on a player creature: 190x sparkeater-gorger-gorge (floor 11, seed 28, shieldbarer-starter-player-0)
+Largest SHRED stack of one trait, on an enemy creature: 13x (spell) (floor 11, seed 19, sparkeater-gorger-enemy-5); unattributed 0/15914326 applications
+Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):
+  floor 10 broodmother [first-visit] visits 19: policy clear 89.5%; probe n/a 4; where probed (15): policy 86.7% vs probe 53.3%; boss locked-turn share policy 38.4% (all 193 attack 176 cast 0) vs probe 63.3% (all 51 attack 702 cast 0); Pacify lands in 15/15 probe runs (497 landings)
+  floor 10 broodmother [all-visits] visits 1619: policy clear 84.9%; probe n/a 283; where probed (1336): policy 85.1% vs probe 62.9%; boss locked-turn share policy 44.1% (all 19031 attack 15465 cast 21) vs probe 65.8% (all 6368 attack 50981 cast 45); Pacify lands in 1335/1336 probe runs (38808 landings)
+Rot Sovereign's Attrition (policy runs): 0 visits, 0 cleared, mean deaths n/a, max Attrition stacks 0, peak boss Attack 0.0
+ASSUMPTION 22: floor-1 clear >= 80%: 25.0% FAIL; first soul median <= 30 floor runs: 4.0 PASS; a seed fights on floor 5+ in its first 10 floor runs: 0 seeds FAIL
+
+ASSUMPTION 22 summary (reported, not asserted):
+  sorcerer: floor-1 FAIL, first soul PASS, floor 5 FAIL
+  brute: floor-1 FAIL, first soul PASS, floor 5 FAIL
+  shieldbarer: floor-1 FAIL, first soul PASS, floor 5 FAIL
+
+Runtime: 912.7 s
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 77 skipped (78)
+   Start at  02:06:48
+   Duration  913.10s (tests 100%)
+
