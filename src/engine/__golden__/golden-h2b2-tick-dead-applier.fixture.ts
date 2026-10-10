@@ -27,6 +27,7 @@ import { updateCreature } from '../creature-lookup'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { FLICKERLING_FLARE_TRAIT, TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
+import { holdPotency } from '../__fixtures__/held-statuses'
 import { applyStatus, newCascade } from '../resolution'
 import { createResolutionContext } from '../actions'
 import type { CombatEvent, CombatState, FightResult } from '../types'
@@ -101,7 +102,9 @@ export const traits: ReadonlyMap<string, Trait> = new Map([
   ...TRAIT_REGISTRY,
   [DEALER.id, DEALER],
 ])
-export const statuses = STATUS_REGISTRY
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
+// never changes a mechanism golden). The status is otherwise the real one.
+export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState => {
   const state = applyStatus(

@@ -3,6 +3,9 @@
 // golden-spore-spread.fixture.ts and golden-spore-spread-dot-kill.fixture.ts both exercise,
 // where the draw's OUTCOME is forced regardless of the RNG value).
 //
+// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned
+// (4.1-H2d).
+//
 // Hand-derived (independent `node -e` calculator, verified via Bash). BEARER itself is
 // pre-applied Spore (its own on-death spread trigger only exists while it carries the status),
 // and so is ALLY_SPORED -- both via a direct `applyStatus` call before any turn resolves, into a

@@ -1,0 +1,10 @@
+fights 527
+AB ?: 0 / 1064 at the minimum of 1 (0.0%)
+AB ALL (status ticks): 6615 / 7251 at the minimum of 1 (91.2%)
+AB burn: 2876 / 3112 at the minimum of 1 (92.4%)
+AB poison: 202 / 252 at the minimum of 1 (80.2%)
+AB spore: 3537 / 3887 at the minimum of 1 (91.0%)
+C ALL (status ticks): 304 / 304 at the minimum of 1 (100.0%)
+C burn: 100 / 100 at the minimum of 1 (100.0%)
+C poison: 103 / 103 at the minimum of 1 (100.0%)
+C spore: 101 / 101 at the minimum of 1 (100.0%)

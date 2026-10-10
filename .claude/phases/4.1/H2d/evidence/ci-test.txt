@@ -1,0 +1,21 @@
+CI threshold test (balance-ci-{sorcerer,brute,shieldbarer}.test.ts; 40 seeds, CI_RUN_CAP = 30, probe off)
+
+On H2d's data: all three green. File durations (vitest json, full run alongside the rest of the suite):
+  brute 17.0 s, shieldbarer 20.0 s, sorcerer 18.8 s (parallel).
+
+On H2c's data (scratch clone of main HEAD + the new simulator code + the three CI files, no content change):
+  sorcerer     PASS  floor 1 100%, first-soul median 3, floor 5 in window 40 seeds
+  brute        PASS  floor 1 87.5%, first-soul median 2, floor 5 in window 40 seeds
+  shieldbarer  FAIL  floor 1 65% (26 / 40 first-try, the grill's figure); first-soul median 3 PASS; floor 5 in window 26 seeds PASS
+  -> the failing verdict: balance-ci-shieldbarer, floor1.
+
+New T2 / T3 reads folded over the same cap-30 runs on H2c's data (expected by the plan review: T2 40/40/40, T3 40/40/28 met of 28 reached):
+  sorcerer     T2 40 / 40 (didn't reach 0)   T3 40 / 40 (didn't reach 0)
+  brute        T2 40 / 40 (didn't reach 0)   T3 37 / 37 (didn't reach 3)
+  shieldbarer  T2 40 / 40 (didn't reach 0)   T3 15 / 15 (didn't reach 25)
+  T2 matches. T3 does not match at cap 30 for Brute and Shieldbarer: fewer seeds reach floor 6 within 30 runs than the review expected. Every seed that reaches it has a full party (met = reached).
+At cap 400 (sim-before.txt): T2 40/40/40 with 0 didn't reach; T3 40 / 40 / 40, 0 didn't reach (the review's bound, Brute 40/40 and Shieldbarer >= 28 met of 40 reached, holds).
+
+Suite wall time (npx vitest run, one machine, a simulator also running; 3 runs each):
+  main (1333 tests):    9.0, 9.1, 9.6 s
+  branch (1357 tests): 22.6, 22.0, 21.6 s     -> about +13 s (limit: about +2 min)

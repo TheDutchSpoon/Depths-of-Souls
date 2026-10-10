@@ -176,7 +176,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // one drone, killed once in its fight, so the trigger fires exactly once.
     expect(triggersFor(outcome.events, SWARMHIVE_DRONE_TRAIT.id)).toBe(1)
     // Snapjaw Jaws (content/overgrowth.md: "whenever this creature takes damage, it attacks back
-    // for 60% of its Attack"; 30% since 4.1-H2c) -- an on-damage-taken retaliation trigger, fires
+    // for 60% of its Attack"; 30% in 4.1-H2c, 60% again since 4.1-H2d) -- an on-damage-taken retaliation trigger, fires
     // once per hit landed on it before it dies.
     expect(triggersFor(outcome.events, SNAPJAW_JAWS_TRAIT.id)).toBeGreaterThan(0)
     // The Unicorn's own signature trait (species-locked.md: "whenever this creature attacks, it
@@ -200,8 +200,19 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // `on-attack` Guardian's Light revives the Brute at 7 HP. The revive response itself stays
     // pinned end to end by golden-revive, golden-unicorn-starter and the golden-d3-revive-cap-*
     // goldens.
+    //
+    // 4.1-H2d re-pin (1 -> 0; generated-then-checkpoint-verified; first changed by Snapback back at
+    // 60% of Attack, ASSUMPTION 151, stage 2 of the digest attribution: Pollen Cloud and the DoT
+    // percentages leave this fight as it was). Fight 2's printed events: the Snapback counters
+    // against the Brute are now 15 each (Attack 40 x 0.6 = 24, minus a fifth of the Brute's Defence)
+    // and are the only damage the Brute takes: 33 -> 18 -> 3, alive. The Snapjaw's own two attacks
+    // land on the Unicorn (10 and 18) and the Snapjaw then dies, so nobody
+    // dies in the fight; the Unicorn's `random-dead-ally` pool is empty again, a targeting fizzle,
+    // and no Revived event. At 30% the Snapjaw's own 21-damage attack on the Brute plus two 6-damage
+    // counters killed it (33 -> 12 -> 6 -> 0) and the Unicorn revived it. The checkpoint loop below
+    // stays: it checks any Revived the fight produces.
     const revives = outcome.events.filter((e) => e.type === 'Revived')
-    expect(revives).toHaveLength(1)
+    expect(revives).toHaveLength(0)
     // Independent checkpoint: every Revived is the Unicorn's, on a creature that had died earlier
     // in the SAME fight (a revive can only follow a death), not a number read off this run.
     for (const revive of revives) {

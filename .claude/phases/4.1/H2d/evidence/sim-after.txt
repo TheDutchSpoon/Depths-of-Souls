@@ -1,0 +1,518 @@
+Balance report: 40 seeds (1..40), run cap 400, content frontier floor 30
+
+=== sorcerer (40 seeds) ===
+T1 floor-1 first-try clear: 40/40 = 100.0% (target >= 95%)
+T2 a soul completed by the first run on floor 3 (ceiling: sooner is fine): met 40 / 40 (didn't reach 0); first soul (target ~10): floor runs, median over all seeds 3.0 (seeds that never complete one: 0); clears among the completing seeds: median 2.0, max 3
+T3 a full party of 6 by the first run on floor 6 (ceiling): met 40 / 40 (didn't reach 0)
+T4 stop: frontier 0, cap 40; walled seeds 40 (before floor 10: 40); first-wall floors f4:1 f5:8 f6:21 f7:9 f9:1; deepest floor median 14.0
+T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below 10, per seed: min 8 / median 18.0 / max 38; floor runs to the first floor-10 clear: min 44 / median 106.0 / max 138 over the seeds that clear it, 0 never do
+T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):
+  floor  reached cleared  runs  clear%  pushFail   fights    p    p^n   partyLv  enemyLv   boss
+      1       40      40    85  100.0%        0      850 1.000  1.000      1.2      1-1      
+      2       40      40   100   55.0%       45      720 0.938  0.492      1.5      2-2      
+      3       40      40   121   86.8%       15     1382 0.988  0.870      3.0      3-3      
+      4       40      40   232   62.1%       66     2351 0.963  0.609      4.9      5-5      
+      5       40      40   470   47.2%      126     4640 0.947  0.463      7.7      6-6      
+      6       40      40   926   29.6%      304     7576 0.914  0.259     10.4      7-7      
+      7       40      40   956   16.2%      582     6447 0.876  0.120     12.3      9-9      
+      8       40      40   710   21.1%      334     6061 0.908  0.192     14.9    10-10      
+      9       40      40   400   11.3%      336     3098 0.885  0.112     16.0    11-11      
+     10       40      40  2803   90.0%       24     2803 0.900  0.900     18.7    13-14    19
+     11       40      40  3961    6.0%     2739    22263 0.833  0.026     19.9    14-15      
+     12       40      36  1889    6.0%     1186    12382 0.857  0.039     23.5    16-17      
+     13       36      33  1109    7.5%      667     8650 0.881  0.062     25.9    17-18      
+     14       33      25   748   10.8%      417     6698 0.900  0.090     27.7    18-19      
+     15       25      17   598    7.0%      306     4695 0.882  0.049     28.9    20-21      
+     16       17       9   399    7.0%      283     3379 0.890  0.055     30.1    21-22      
+     17        9       5   171    5.3%      107     1610 0.899  0.063     32.0    23-24      
+     18        5       5   128    9.4%       59     1373 0.916  0.092     34.1    24-25      
+     19        5       2    66    3.0%       64      516 0.876  0.025     34.9    26-27      
+     20        2       2    65   69.2%        0       65 0.692  0.692     34.1    27-29    34
+     21        2       0    63    0.0%       63      260 0.758  0.000     34.1    29-31      
+     22        0       0     0     n/a        0        0   n/a    n/a      n/a    31-33      
+     23        0       0     0     n/a        0        0   n/a    n/a      n/a    32-34      
+     24        0       0     0     n/a        0        0   n/a    n/a      n/a    34-36      
+     25        0       0     0     n/a        0        0   n/a    n/a      n/a    35-37      
+     26        0       0     0     n/a        0        0   n/a    n/a      n/a    37-39      
+     27        0       0     0     n/a        0        0   n/a    n/a      n/a    39-41      
+     28        0       0     0     n/a        0        0   n/a    n/a      n/a    40-42      
+     29        0       0     0     n/a        0        0   n/a    n/a      n/a    42-44      
+     30        0       0     0     n/a        0        0   n/a    n/a      n/a    44-47    52
+First-try clear per floor (each seed's FIRST run on the floor, a push or a farm):
+  floor  1: 40/40 = 100.0%
+  floor  2:  1/40 = 2.5%
+  floor  3: 25/40 = 62.5%
+  floor  4:  6/40 = 15.0%
+  floor  5:  2/40 = 5.0%
+  floor  6:  2/40 = 5.0%
+  floor  7:  0/40 = 0.0%
+  floor  8:  4/40 = 10.0%
+  floor  9:  4/40 = 10.0%
+  floor 10: 24/40 = 60.0%
+  floor 11:  0/40 = 0.0%
+  floor 12:  0/40 = 0.0%
+  floor 13:  0/36 = 0.0%
+  floor 14:  2/33 = 6.1%
+  floor 15:  1/25 = 4.0%
+  floor 16:  1/17 = 5.9%
+  floor 17:  0/ 9 = 0.0%
+  floor 18:  0/ 5 = 0.0%
+  floor 19:  0/ 5 = 0.0%
+  floor 20:  2/ 2 = 100.0%
+  floor 21:  0/ 2 = 0.0%
+Matchups on floors 1-5 (fights CONTAINING each enemy creature, with the fight's result; floor 1 has one enemy per fight, so its rows are exact):
+  floor  enemy creature                  fights   wins  losses  capDraw  otherDraw   win%
+      1  lullpollen-dozer                  10     10       0        0          0  100.0%
+      1  lullpollen-reaper                 37     37       0        0          0  100.0%
+      1  lullpollen-sleeper                50     50       0        0          0  100.0%
+      1  pollinator-beneficiary            23     23       0        0          0  100.0%
+      1  pollinator-duster                 81     81       0        0          0  100.0%
+      1  pollinator-pollenlord             17     17       0        0          0  100.0%
+      1  snapjaw-ironjaw                   12     12       0        0          0  100.0%
+      1  snapjaw-jaws                      29     29       0        0          0  100.0%
+      1  snapjaw-lure                      78     78       0        0          0  100.0%
+      1  spider-ambusher                   43     43       0        0          0  100.0%
+      1  spider-broodwarden                 8      8       0        0          0  100.0%
+      1  spider-weaver                     30     30       0        0          0  100.0%
+      1  swarmhive-drone                   58     58       0        0          0  100.0%
+      1  swarmhive-queen                   13     13       0        0          0  100.0%
+      1  swarmhive-striker                 27     27       0        0          0  100.0%
+      1  treant-elder                      45     45       0        0          0  100.0%
+      1  treant-grovekeep                  15     15       0        0          0  100.0%
+      1  treant-sapling                    64     64       0        0          0  100.0%
+      2  lullpollen-dozer                  29     27       2        0          0   93.1%
+      2  lullpollen-reaper                 65     60       5        0          0   92.3%
+      2  lullpollen-sleeper               154    149       5        0          0   96.8%
+      2  pollinator-beneficiary            72     64       8        0          0   88.9%
+      2  pollinator-duster                136    128       8        0          0   94.1%
+      2  pollinator-pollenlord             21     18       3        0          0   85.7%
+      2  snapjaw-ironjaw                   23     21       2        0          0   91.3%
+      2  snapjaw-jaws                      67     54      13        0          0   80.6%
+      2  snapjaw-lure                     133    131       2        0          0   98.5%
+      2  spider-ambusher                   88     82       6        0          0   93.2%
+      2  spider-broodwarden                26     25       1        0          0   96.2%
+      2  spider-weaver                    112    100      12        0          0   89.3%
+      2  swarmhive-drone                  139    132       7        0          0   95.0%
+      2  swarmhive-queen                   18     18       0        0          0  100.0%
+      2  swarmhive-striker                 64     56       8        0          0   87.5%
+      2  treant-elder                      77     75       2        0          0   97.4%
+      2  treant-grovekeep                  23     23       0        0          0  100.0%
+      2  treant-sapling                   120    118       2        0          0   98.3%
+      3  lullpollen-dozer                  71     69       2        0          0   97.2%
+      3  lullpollen-reaper                190    189       1        0          0   99.5%
+      3  lullpollen-sleeper               382    381       1        0          0   99.7%
+      3  pollinator-beneficiary           213    208       5        0          0   97.7%
+      3  pollinator-duster                384    382       2        0          0   99.5%
+      3  pollinator-pollenlord             65     64       1        0          0   98.5%
+      3  snapjaw-ironjaw                   72     72       0        0          0  100.0%
+      3  snapjaw-jaws                     217    216       1        0          0   99.5%
+      3  snapjaw-lure                     359    358       1        0          0   99.7%
+      3  spider-ambusher                  213    210       3        0          0   98.6%
+      3  spider-broodwarden                57     56       1        0          0   98.2%
+      3  spider-weaver                    378    368      10        0          0   97.4%
+      3  swarmhive-drone                  359    355       4        0          0   98.9%
+      3  swarmhive-queen                   57     56       1        0          0   98.2%
+      3  swarmhive-striker                218    216       2        0          0   99.1%
+      3  treant-elder                     197    192       5        0          0   97.5%
+      3  treant-grovekeep                  63     62       1        0          0   98.4%
+      3  treant-sapling                   346    343       3        0          0   99.1%
+      4  lullpollen-dozer                 137    130       7        0          0   94.9%
+      4  lullpollen-reaper                437    422      15        0          0   96.6%
+      4  lullpollen-sleeper               792    768      23        1          0   97.0%
+      4  pollinator-beneficiary           408    382      26        0          0   93.6%
+      4  pollinator-duster                802    779      23        0          0   97.1%
+      4  pollinator-pollenlord            154    142      12        0          0   92.2%
+      4  snapjaw-ironjaw                  161    154       7        0          0   95.7%
+      4  snapjaw-jaws                     427    397      30        0          0   93.0%
+      4  snapjaw-lure                     813    787      25        1          0   96.8%
+      4  spider-ambusher                  461    449      12        0          0   97.4%
+      4  spider-broodwarden               168    164       4        0          0   97.6%
+      4  spider-weaver                    817    775      42        0          0   94.9%
+      4  swarmhive-drone                  846    822      24        0          0   97.2%
+      4  swarmhive-queen                  146    139       7        0          0   95.2%
+      4  swarmhive-striker                427    410      17        0          0   96.0%
+      4  treant-elder                     458    435      22        1          0   95.0%
+      4  treant-grovekeep                 163    161       2        0          0   98.8%
+      4  treant-sapling                   813    805       8        0          0   99.0%
+      5  lullpollen-dozer                 372    352      16        4          0   94.6%
+      5  lullpollen-reaper               1058   1012      39        7          0   95.7%
+      5  lullpollen-sleeper              1907   1839      51       17          0   96.4%
+      5  pollinator-beneficiary          1039    975      56        8          0   93.8%
+      5  pollinator-duster               1905   1807      75       23          0   94.9%
+      5  pollinator-pollenlord            379    343      31        5          0   90.5%
+      5  snapjaw-ironjaw                  357    336      15        6          0   94.1%
+      5  snapjaw-jaws                    1040    955      81        4          0   91.8%
+      5  snapjaw-lure                    1877   1750      81       46          0   93.2%
+      5  spider-ambusher                 1032    985      42        5          0   95.4%
+      5  spider-broodwarden               376    353      20        3          0   93.9%
+      5  spider-weaver                   1955   1838     107       10          0   94.0%
+      5  swarmhive-drone                 1930   1857      54       19          0   96.2%
+      5  swarmhive-queen                  377    354      19        4          0   93.9%
+      5  swarmhive-striker               1012    959      44        9          0   94.8%
+      5  treant-elder                    1054    933      68       53          0   88.5%
+      5  treant-grovekeep                 365    354       7        4          0   97.0%
+      5  treant-sapling                  1896   1847      39       10          0   97.4%
+Floors 20-30 (watch point), failed pushes by floor: f21:63
+Unicorn revives: in party for 97819 fights (win 88.2%; not in party 0 fights, win n/a); 243612 revives, 31443 fights with one, max 50 in a fight, 6536 fights with a creature at the cap (10)
+Draws: 5812/97819 fights = 5.9%; round-cap draws 5812 = 5.9%
+Largest GROWTH stack (the watch point: a stat-modifier factor above 1, stacked) of one trait, on a player creature: 100x treant-sapling-taking-root (floor 5, seed 1, treant-sapling-player-4)
+Largest GROWTH stack (the watch point) of one trait, on an enemy creature: 471x shellback-warden-fortify (floor 14, seed 4, shellback-warden-enemy-2)
+Largest SHRED stack (a factor below 1, a cut to the target) of one trait, on a player creature: 110x sparkeater-gorger-gorge (floor 13, seed 7, snapjaw-lure-player-3)
+Largest SHRED stack of one trait, on an enemy creature: 14x (spell) (floor 11, seed 38, gloomjaw-stalker-enemy-2); unattributed 0/7263953 applications
+Top 5 traits by largest growth-player stack: treant-sapling-taking-root 100x (floor 5, seed 1); (spell) 48x (floor 11, seed 19); pollinator-duster-pollen-drift 1x (floor 1, seed 3); swarmhive-striker-hive-mind 1x (floor 3, seed 1)
+Top 5 traits by largest growth-enemy stack: shellback-warden-fortify 471x (floor 14, seed 4); resonant-chorus-harmonize 368x (floor 12, seed 31); resonant-adept-resonate 330x (floor 11, seed 17); flickerling-flare-kindle 221x (floor 11, seed 39); pollinator-pollenlord-bloom-surge 200x (floor 8, seed 31)
+Top 5 traits by largest shred-player stack: sparkeater-gorger-gorge 110x (floor 13, seed 7); sparkeater-voidmaw-consume 96x (floor 11, seed 8); sparkeater-leech-drain 46x (floor 13, seed 8); (spell) 38x (floor 8, seed 4); leech-sovereign-vital-siphon 13x (floor 20, seed 10)
+Top 5 traits by largest shred-enemy stack: (spell) 14x (floor 11, seed 38)
+Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):
+  floor 10 broodmother [first-visit] visits 40: policy clear 60.0%; probe n/a 0; where probed (40): policy 60.0% vs probe 45.0%; boss locked-turn share policy 49.7% (all 378 attack 195 cast 8) vs probe 66.0% (all 266 attack 1133 cast 13); Pacify lands in 38/40 probe runs (902 landings)
+  floor 10 broodmother [all-visits] visits 2803: policy clear 90.0%; probe n/a 0; where probed (2803): policy 90.0% vs probe 72.8%; boss locked-turn share policy 47.8% (all 14728 attack 7965 cast 65) vs probe 64.8% (all 15066 attack 52731 cast 352); Pacify lands in 2758/2803 probe runs (86802 landings)
+  floor 20 leech-sovereign [first-visit] visits 2: policy clear 100.0%; probe n/a 0; where probed (2): policy 100.0% vs probe 100.0%; boss locked-turn share policy 45.5% (all 5 attack 0 cast 0) vs probe 95.5% (all 7 attack 21 cast 0); Pacify lands in 2/2 probe runs (48 landings)
+  floor 20 leech-sovereign [all-visits] visits 65: policy clear 69.2%; probe n/a 0; where probed (65): policy 69.2% vs probe 66.2%; boss locked-turn share policy 58.3% (all 408 attack 278 cast 0) vs probe 90.7% (all 815 attack 1668 cast 0); Pacify lands in 65/65 probe runs (3362 landings)
+Rot Sovereign's Attrition (policy runs): 0 visits, 0 cleared, mean deaths n/a, max Attrition stacks 0, peak boss Attack 0.0
+ASSUMPTION 22: floor-1 clear >= 80%: 100.0% PASS; first soul median <= 30 floor runs: 3.0 PASS; a seed fights on floor 5+ in its first 20 floor runs: 40 seeds PASS
+
+=== brute (40 seeds) ===
+T1 floor-1 first-try clear: 40/40 = 100.0% (target >= 95%)
+T2 a soul completed by the first run on floor 3 (ceiling: sooner is fine): met 40 / 40 (didn't reach 0); first soul (target ~10): floor runs, median over all seeds 2.0 (seeds that never complete one: 0); clears among the completing seeds: median 2.0, max 3
+T3 a full party of 6 by the first run on floor 6 (ceiling): met 40 / 40 (didn't reach 0)
+T4 stop: frontier 36, cap 4; walled seeds 40 (before floor 10: 40); first-wall floors f5:6 f6:17 f7:12 f8:3 f9:2; deepest floor median 30.0
+T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below 10, per seed: min 6 / median 12.0 / max 19; floor runs to the first floor-10 clear: min 46 / median 71.0 / max 92 over the seeds that clear it, 0 never do
+T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):
+  floor  reached cleared  runs  clear%  pushFail   fights    p    p^n   partyLv  enemyLv   boss
+      1       40      40    69  100.0%        0      690 1.000  1.000      1.2      1-1      
+      2       40      40    86   66.3%       29      774 0.963  0.657      1.4      2-2      
+      3       40      40   108   84.3%       17     1188 0.986  0.841      2.8      3-3      
+      4       40      40   196   63.8%       51     2072 0.966  0.636      4.7      5-5      
+      5       40      40   317   53.6%      105     3294 0.955  0.528      6.9      6-6      
+      6       40      40   624   52.7%      172     6718 0.956  0.510      9.8      7-7      
+      7       40      40   648   20.4%      412     4740 0.891  0.158     11.4      9-9      
+      8       40      40   419   34.1%      196     4074 0.932  0.303     13.6    10-10      
+      9       40      40   247   19.8%      183     2248 0.912  0.190     14.6    11-11      
+     10       40      40  1122   87.7%       24     1122 0.877  0.877     16.6    13-14    19
+     11       40      40  1600   14.0%     1058    12356 0.889  0.094     17.4    14-15      
+     12       40      40   847   17.5%      502     7550 0.907  0.130     20.1    16-17      
+     13       40      40   572   20.1%      305     6046 0.924  0.177     22.2    17-18      
+     14       40      40   681   35.4%      227     9367 0.953  0.331     24.3    18-19      
+     15       40      40   675   15.1%      414     6903 0.917  0.125     25.6    20-21      
+     16       40      40   787   28.8%      221    11203 0.950  0.277     28.1    21-22      
+     17       40      40   898   13.3%      526     9509 0.918  0.108     29.4    23-24      
+     18       40      40   869   22.9%      332    11967 0.944  0.211     31.9    24-25      
+     19       40      39   551    7.4%      497     5327 0.904  0.060     32.8    26-27      
+     20       39      39    74   79.7%       15       74 0.797  0.797     33.7    27-29    34
+     21       39      39    86   60.5%       20     1964 0.983  0.592     34.0    29-31      
+     22       39      39   101   57.4%       27     2447 0.982  0.577     34.6    31-33      
+     23       39      39   124   56.5%       35     2907 0.981  0.549     35.1    32-34      
+     24       39      39   154   45.5%       50     3660 0.977  0.465     36.1    34-36      
+     25       39      39   199   35.7%       65     4256 0.970  0.354     37.2    35-37      
+     26       39      38   231   32.0%       96     4548 0.965  0.292     38.2    37-39      
+     27       38      38   262   32.1%       97     5588 0.968  0.312     39.0    39-41      
+     28       38      38   290   27.2%      127     6278 0.966  0.282     40.3    40-42      
+     29       38      36   173   22.5%      125     3493 0.962  0.226     41.2    42-44      
+     30       36      36    48   75.0%       12       48 0.750  0.750     40.5    44-47    52
+First-try clear per floor (each seed's FIRST run on the floor, a push or a farm):
+  floor  1: 40/40 = 100.0%
+  floor  2: 15/40 = 37.5%
+  floor  3: 24/40 = 60.0%
+  floor  4: 10/40 = 25.0%
+  floor  5:  5/40 = 12.5%
+  floor  6:  1/40 = 2.5%
+  floor  7:  0/40 = 0.0%
+  floor  8:  4/40 = 10.0%
+  floor  9:  3/40 = 7.5%
+  floor 10: 25/40 = 62.5%
+  floor 11:  1/40 = 2.5%
+  floor 12:  0/40 = 0.0%
+  floor 13:  3/40 = 7.5%
+  floor 14:  6/40 = 15.0%
+  floor 15:  1/40 = 2.5%
+  floor 16:  3/40 = 7.5%
+  floor 17:  2/40 = 5.0%
+  floor 18:  3/40 = 7.5%
+  floor 19:  2/40 = 5.0%
+  floor 20: 29/39 = 74.4%
+  floor 21: 31/39 = 79.5%
+  floor 22: 25/39 = 64.1%
+  floor 23: 20/39 = 51.3%
+  floor 24: 14/39 = 35.9%
+  floor 25: 20/39 = 51.3%
+  floor 26: 19/39 = 48.7%
+  floor 27: 13/38 = 34.2%
+  floor 28:  5/38 = 13.2%
+  floor 29:  8/38 = 21.1%
+  floor 30: 28/36 = 77.8%
+Matchups on floors 1-5 (fights CONTAINING each enemy creature, with the fight's result; floor 1 has one enemy per fight, so its rows are exact):
+  floor  enemy creature                  fights   wins  losses  capDraw  otherDraw   win%
+      1  lullpollen-dozer                   8      8       0        0          0  100.0%
+      1  lullpollen-reaper                 27     27       0        0          0  100.0%
+      1  lullpollen-sleeper                65     65       0        0          0  100.0%
+      1  pollinator-beneficiary            31     31       0        0          0  100.0%
+      1  pollinator-duster                 66     66       0        0          0  100.0%
+      1  pollinator-pollenlord             15     15       0        0          0  100.0%
+      1  snapjaw-lure                      48     48       0        0          0  100.0%
+      1  spider-ambusher                   37     37       0        0          0  100.0%
+      1  spider-broodwarden                 7      7       0        0          0  100.0%
+      1  spider-weaver                     66     66       0        0          0  100.0%
+      1  swarmhive-drone                   42     42       0        0          0  100.0%
+      1  swarmhive-striker                 35     35       0        0          0  100.0%
+      2  lullpollen-dozer                  31     30       1        0          0   96.8%
+      2  lullpollen-reaper                 77     76       1        0          0   98.7%
+      2  lullpollen-sleeper               150    147       3        0          0   98.0%
+      2  pollinator-beneficiary            77     69       8        0          0   89.6%
+      2  pollinator-duster                151    148       3        0          0   98.0%
+      2  pollinator-pollenlord             20     18       2        0          0   90.0%
+      2  snapjaw-ironjaw                   23     23       0        0          0  100.0%
+      2  snapjaw-jaws                      60     46      14        0          0   76.7%
+      2  snapjaw-lure                     139    139       0        0          0  100.0%
+      2  spider-ambusher                   82     77       5        0          0   93.9%
+      2  spider-broodwarden                25     25       0        0          0  100.0%
+      2  spider-weaver                    138    130       8        0          0   94.2%
+      2  swarmhive-drone                  128    124       4        0          0   96.9%
+      2  swarmhive-queen                   14     14       0        0          0  100.0%
+      2  swarmhive-striker                 74     72       2        0          0   97.3%
+      2  treant-elder                      66     62       4        0          0   93.9%
+      2  treant-grovekeep                  23     23       0        0          0  100.0%
+      2  treant-sapling                   129    129       0        0          0  100.0%
+      3  lullpollen-dozer                  47     46       1        0          0   97.9%
+      3  lullpollen-reaper                151    149       2        0          0   98.7%
+      3  lullpollen-sleeper               319    317       2        0          0   99.4%
+      3  pollinator-beneficiary           168    164       4        0          0   97.6%
+      3  pollinator-duster                308    308       0        0          0  100.0%
+      3  pollinator-pollenlord             65     63       2        0          0   96.9%
+      3  snapjaw-ironjaw                   59     57       2        0          0   96.6%
+      3  snapjaw-jaws                     202    198       4        0          0   98.0%
+      3  snapjaw-lure                     317    314       3        0          0   99.1%
+      3  spider-ambusher                  183    179       4        0          0   97.8%
+      3  spider-broodwarden                55     53       2        0          0   96.4%
+      3  spider-weaver                    314    301      13        0          0   95.9%
+      3  swarmhive-drone                  294    292       2        0          0   99.3%
+      3  swarmhive-queen                   44     43       1        0          0   97.7%
+      3  swarmhive-striker                179    176       3        0          0   98.3%
+      3  treant-elder                     162    162       0        0          0  100.0%
+      3  treant-grovekeep                  55     55       0        0          0  100.0%
+      3  treant-sapling                   311    310       1        0          0   99.7%
+      4  lullpollen-dozer                 131    124       7        0          0   94.7%
+      4  lullpollen-reaper                375    367       8        0          0   97.9%
+      4  lullpollen-sleeper               706    692      14        0          0   98.0%
+      4  pollinator-beneficiary           360    343      17        0          0   95.3%
+      4  pollinator-duster                738    720      18        0          0   97.6%
+      4  pollinator-pollenlord            144    133      11        0          0   92.4%
+      4  snapjaw-ironjaw                  119    116       3        0          0   97.5%
+      4  snapjaw-jaws                     366    343      23        0          0   93.7%
+      4  snapjaw-lure                     725    698      27        0          0   96.3%
+      4  spider-ambusher                  392    384       8        0          0   98.0%
+      4  spider-broodwarden               144    143       1        0          0   99.3%
+      4  spider-weaver                    693    643      50        0          0   92.8%
+      4  swarmhive-drone                  717    704      13        0          0   98.2%
+      4  swarmhive-queen                  133    128       5        0          0   96.2%
+      4  swarmhive-striker                373    357      16        0          0   95.7%
+      4  treant-elder                     420    404      16        0          0   96.2%
+      4  treant-grovekeep                 154    153       1        0          0   99.4%
+      4  treant-sapling                   692    684       8        0          0   98.8%
+      5  lullpollen-dozer                 246    239       6        1          0   97.2%
+      5  lullpollen-reaper                770    749      21        0          0   97.3%
+      5  lullpollen-sleeper              1380   1342      38        0          0   97.2%
+      5  pollinator-beneficiary           718    661      57        0          0   92.1%
+      5  pollinator-duster               1359   1308      51        0          0   96.2%
+      5  pollinator-pollenlord            269    242      26        1          0   90.0%
+      5  snapjaw-ironjaw                  249    240       9        0          0   96.4%
+      5  snapjaw-jaws                     787    746      41        0          0   94.8%
+      5  snapjaw-lure                    1294   1207      82        5          0   93.3%
+      5  spider-ambusher                  779    746      33        0          0   95.8%
+      5  spider-broodwarden               282    272      10        0          0   96.5%
+      5  spider-weaver                   1349   1260      85        4          0   93.4%
+      5  swarmhive-drone                 1322   1284      38        0          0   97.1%
+      5  swarmhive-queen                  234    223      11        0          0   95.3%
+      5  swarmhive-striker                734    693      40        1          0   94.4%
+      5  treant-elder                     788    745      38        5          0   94.5%
+      5  treant-grovekeep                 256    252       4        0          0   98.4%
+      5  treant-sapling                  1355   1324      28        3          0   97.7%
+Floors 20-30 (watch point), failed pushes by floor: f20:15 f21:20 f22:27 f23:35 f24:50 f25:65 f26:96 f27:97 f28:127 f29:125 f30:12
+Unicorn revives: in party for 142411 fights (win 93.8%; not in party 0 fights, win n/a); 212407 revives, 34326 fights with one, max 50 in a fight, 4989 fights with a creature at the cap (10)
+Draws: 3842/142411 fights = 2.7%; round-cap draws 3841 = 2.7%
+Largest GROWTH stack (the watch point: a stat-modifier factor above 1, stacked) of one trait, on a player creature: 100x treant-sapling-taking-root (floor 5, seed 1, treant-sapling-player-4)
+Largest GROWTH stack (the watch point) of one trait, on an enemy creature: 441x resonant-chorus-harmonize (floor 17, seed 32, resonant-chorus-enemy-0)
+Largest SHRED stack (a factor below 1, a cut to the target) of one trait, on a player creature: 103x sparkeater-gorger-gorge (floor 11, seed 38, snapjaw-lure-player-4)
+Largest SHRED stack of one trait, on an enemy creature: 16x (spell) (floor 7, seed 30, spider-weaver-enemy-2); unattributed 0/5174030 applications
+Top 5 traits by largest growth-player stack: treant-sapling-taking-root 100x (floor 5, seed 1); (spell) 36x (floor 7, seed 38); pollinator-duster-pollen-drift 1x (floor 2, seed 3); swarmhive-striker-hive-mind 1x (floor 3, seed 1)
+Top 5 traits by largest growth-enemy stack: resonant-chorus-harmonize 441x (floor 17, seed 32); shellback-warden-fortify 400x (floor 11, seed 7); resonant-adept-resonate 275x (floor 13, seed 8); flickerling-flare-kindle 200x (floor 19, seed 8); pollinator-pollenlord-bloom-surge 200x (floor 7, seed 5)
+Top 5 traits by largest shred-player stack: sparkeater-gorger-gorge 103x (floor 11, seed 38); sparkeater-voidmaw-consume 100x (floor 18, seed 7); sparkeater-leech-drain 33x (floor 11, seed 21); (spell) 31x (floor 26, seed 22); leech-sovereign-vital-siphon 15x (floor 20, seed 12)
+Top 5 traits by largest shred-enemy stack: (spell) 16x (floor 7, seed 30)
+Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):
+  floor 10 broodmother [first-visit] visits 40: policy clear 62.5%; probe n/a 9; where probed (31): policy 64.5% vs probe 51.6%; boss locked-turn share policy 6.0% (all 32 attack 13 cast 0) vs probe 28.0% (all 9 attack 169 cast 0); Pacify lands in 31/31 probe runs (102 landings)
+  floor 10 broodmother [all-visits] visits 1122: policy clear 87.7%; probe n/a 195; where probed (927): policy 87.4% vs probe 80.8%; boss locked-turn share policy 15.5% (all 1628 attack 303 cast 7) vs probe 37.7% (all 381 attack 5121 cast 18); Pacify lands in 924/927 probe runs (3445 landings)
+  floor 20 leech-sovereign [first-visit] visits 39: policy clear 74.4%; probe n/a 9; where probed (30): policy 76.7% vs probe 86.7%; boss locked-turn share policy 19.3% (all 77 attack 12 cast 0) vs probe 61.7% (all 30 attack 273 cast 0); Pacify lands in 30/30 probe runs (238 landings)
+  floor 20 leech-sovereign [all-visits] visits 74: policy clear 79.7%; probe n/a 16; where probed (58): policy 84.5% vs probe 91.4%; boss locked-turn share policy 23.6% (all 137 attack 17 cast 0) vs probe 61.3% (all 33 attack 352 cast 0); Pacify lands in 58/58 probe runs (318 landings)
+  floor 30 rot-sovereign [first-visit] visits 36: policy clear 77.8%; probe n/a 9; where probed (27): policy 81.5% vs probe 63.0%; boss locked-turn share policy 4.1% (all 11 attack 12 cast 0) vs probe 40.1% (all 5 attack 135 cast 2); Pacify lands in 26/27 probe runs (93 landings)
+  floor 30 rot-sovereign [all-visits] visits 48: policy clear 75.0%; probe n/a 13; where probed (35): policy 77.1% vs probe 62.9%; boss locked-turn share policy 4.2% (all 17 attack 13 cast 0) vs probe 45.6% (all 10 attack 176 cast 2); Pacify lands in 34/35 probe runs (123 landings)
+Rot Sovereign's Attrition (policy runs): 48 visits, 36 cleared, mean deaths 10.2, max Attrition stacks 19, peak boss Attack 1853.1
+ASSUMPTION 22: floor-1 clear >= 80%: 100.0% PASS; first soul median <= 30 floor runs: 2.0 PASS; a seed fights on floor 5+ in its first 20 floor runs: 40 seeds PASS
+
+=== shieldbarer (40 seeds) ===
+T1 floor-1 first-try clear: 40/40 = 100.0% (target >= 95%)
+T2 a soul completed by the first run on floor 3 (ceiling: sooner is fine): met 40 / 40 (didn't reach 0); first soul (target ~10): floor runs, median over all seeds 3.0 (seeds that never complete one: 0); clears among the completing seeds: median 2.0, max 3
+T3 a full party of 6 by the first run on floor 6 (ceiling): met 40 / 40 (didn't reach 0)
+T4 stop: frontier 0, cap 40; walled seeds 40 (before floor 10: 40); first-wall floors f4:7 f5:19 f6:10 f7:4; deepest floor median 10.0
+T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below 10, per seed: min 6 / median 48.5 / max 134; floor runs to the first floor-10 clear: min 62 / median 169.0 / max 358 over the seeds that clear it, 14 never do
+T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):
+  floor  reached cleared  runs  clear%  pushFail   fights    p    p^n   partyLv  enemyLv   boss
+      1       40      40    94  100.0%        0      940 1.000  1.000      1.2      1-1      
+      2       40      40   115   52.2%       54      820 0.933  0.466      1.5      2-2      
+      3       40      40   178   86.5%       21     2002 0.988  0.865      3.5      3-3      
+      4       40      40   626   43.8%      117     5660 0.938  0.434      7.3      5-5      
+      5       40      40  1705   16.5%      469    10896 0.869  0.141     10.7      6-6      
+      6       40      40  2889   13.0%     1196    16567 0.848  0.085     14.1      7-7      
+      7       40      37  2564    4.5%     1653    12038 0.797  0.026     16.7      9-9      
+      8       37      29  1482    7.7%      882     8590 0.841  0.052     18.8    10-10      
+      9       29      26   617    4.4%      571     3350 0.824  0.031     19.3    11-11      
+     10       26      26  2819   79.7%       20     2819 0.797  0.797     19.6    13-14    19
+     11       26       1  2802    0.4%     2773     6455 0.567  0.000     19.6    14-15      
+     12        1       1    37    5.4%       28      242 0.855  0.038     25.0    16-17      
+     13        1       1    12   16.7%        8      106 0.906  0.113     26.9    17-18      
+     14        1       1    32    9.4%        3      226 0.872  0.042     28.7    18-19      
+     15        1       0    28    0.0%       28      196 0.857  0.025     28.9    20-21      
+     16        0       0     0     n/a        0        0   n/a    n/a      n/a    21-22      
+     17        0       0     0     n/a        0        0   n/a    n/a      n/a    23-24      
+     18        0       0     0     n/a        0        0   n/a    n/a      n/a    24-25      
+     19        0       0     0     n/a        0        0   n/a    n/a      n/a    26-27      
+     20        0       0     0     n/a        0        0   n/a    n/a      n/a    27-29    34
+     21        0       0     0     n/a        0        0   n/a    n/a      n/a    29-31      
+     22        0       0     0     n/a        0        0   n/a    n/a      n/a    31-33      
+     23        0       0     0     n/a        0        0   n/a    n/a      n/a    32-34      
+     24        0       0     0     n/a        0        0   n/a    n/a      n/a    34-36      
+     25        0       0     0     n/a        0        0   n/a    n/a      n/a    35-37      
+     26        0       0     0     n/a        0        0   n/a    n/a      n/a    37-39      
+     27        0       0     0     n/a        0        0   n/a    n/a      n/a    39-41      
+     28        0       0     0     n/a        0        0   n/a    n/a      n/a    40-42      
+     29        0       0     0     n/a        0        0   n/a    n/a      n/a    42-44      
+     30        0       0     0     n/a        0        0   n/a    n/a      n/a    44-47    52
+First-try clear per floor (each seed's FIRST run on the floor, a push or a farm):
+  floor  1: 40/40 = 100.0%
+  floor  2:  2/40 = 5.0%
+  floor  3: 21/40 = 52.5%
+  floor  4:  1/40 = 2.5%
+  floor  5:  0/40 = 0.0%
+  floor  6:  0/40 = 0.0%
+  floor  7:  1/40 = 2.5%
+  floor  8:  3/37 = 8.1%
+  floor  9:  2/29 = 6.9%
+  floor 10: 17/26 = 65.4%
+  floor 11:  0/26 = 0.0%
+  floor 12:  0/ 1 = 0.0%
+  floor 13:  0/ 1 = 0.0%
+  floor 14:  0/ 1 = 0.0%
+  floor 15:  0/ 1 = 0.0%
+Matchups on floors 1-5 (fights CONTAINING each enemy creature, with the fight's result; floor 1 has one enemy per fight, so its rows are exact):
+  floor  enemy creature                  fights   wins  losses  capDraw  otherDraw   win%
+      1  lullpollen-dozer                  12     12       0        0          0  100.0%
+      1  lullpollen-reaper                 45     45       0        0          0  100.0%
+      1  lullpollen-sleeper                84     84       0        0          0  100.0%
+      1  pollinator-beneficiary            41     41       0        0          0  100.0%
+      1  pollinator-duster                 94     94       0        0          0  100.0%
+      1  pollinator-pollenlord             25     25       0        0          0  100.0%
+      1  snapjaw-ironjaw                   13     13       0        0          0  100.0%
+      1  snapjaw-jaws                      42     42       0        0          0  100.0%
+      1  snapjaw-lure                      96     96       0        0          0  100.0%
+      1  spider-ambusher                   61     61       0        0          0  100.0%
+      1  spider-broodwarden                12     12       0        0          0  100.0%
+      1  spider-weaver                     87     87       0        0          0  100.0%
+      1  swarmhive-drone                   82     82       0        0          0  100.0%
+      1  swarmhive-queen                   16     16       0        0          0  100.0%
+      1  swarmhive-striker                 48     48       0        0          0  100.0%
+      1  treant-elder                      53     53       0        0          0  100.0%
+      1  treant-grovekeep                  19     19       0        0          0  100.0%
+      1  treant-sapling                    93     93       0        0          0  100.0%
+      2  lullpollen-dozer                  27     24       3        0          0   88.9%
+      2  lullpollen-reaper                 77     70       7        0          0   90.9%
+      2  lullpollen-sleeper               170    162       8        0          0   95.3%
+      2  pollinator-beneficiary            85     74      11        0          0   87.1%
+      2  pollinator-duster                154    148       6        0          0   96.1%
+      2  pollinator-pollenlord             21     19       2        0          0   90.5%
+      2  snapjaw-ironjaw                   29     26       3        0          0   89.7%
+      2  snapjaw-jaws                      81     67      14        0          0   82.7%
+      2  snapjaw-lure                     151    151       0        0          0  100.0%
+      2  spider-ambusher                   88     83       5        0          0   94.3%
+      2  spider-broodwarden                25     23       2        0          0   92.0%
+      2  spider-weaver                    153    138      15        0          0   90.2%
+      2  swarmhive-drone                  181    173       8        0          0   95.6%
+      2  swarmhive-queen                   31     31       0        0          0  100.0%
+      2  swarmhive-striker                 73     66       6        1          0   90.4%
+      2  treant-elder                      74     61      13        0          0   82.4%
+      2  treant-grovekeep                  24     24       0        0          0  100.0%
+      2  treant-sapling                   142    137       4        1          0   96.5%
+      3  lullpollen-dozer                  97     95       2        0          0   97.9%
+      3  lullpollen-reaper                254    252       2        0          0   99.2%
+      3  lullpollen-sleeper               568    562       6        0          0   98.9%
+      3  pollinator-beneficiary           316    310       6        0          0   98.1%
+      3  pollinator-duster                519    515       4        0          0   99.2%
+      3  pollinator-pollenlord            116    110       6        0          0   94.8%
+      3  snapjaw-ironjaw                  114    112       2        0          0   98.2%
+      3  snapjaw-jaws                     291    288       3        0          0   99.0%
+      3  snapjaw-lure                     509    505       4        0          0   99.2%
+      3  spider-ambusher                  279    276       3        0          0   98.9%
+      3  spider-broodwarden               102    100       2        0          0   98.0%
+      3  spider-weaver                    517    503      14        0          0   97.3%
+      3  swarmhive-drone                  560    557       3        0          0   99.5%
+      3  swarmhive-queen                   92     91       1        0          0   98.9%
+      3  swarmhive-striker                286    283       3        0          0   99.0%
+      3  treant-elder                     287    280       7        0          0   97.6%
+      3  treant-grovekeep                 113    113       0        0          0  100.0%
+      3  treant-sapling                   542    542       0        0          0  100.0%
+      4  lullpollen-dozer                 344    324      14        6          0   94.2%
+      4  lullpollen-reaper               1036   1000      26       10          0   96.5%
+      4  lullpollen-sleeper              1942   1866      40       36          0   96.1%
+      4  pollinator-beneficiary          1049    961      66       22          0   91.6%
+      4  pollinator-duster               1913   1774      83       56          0   92.7%
+      4  pollinator-pollenlord            405    370      27        8          0   91.4%
+      4  snapjaw-ironjaw                  360    348       9        3          0   96.7%
+      4  snapjaw-jaws                    1035    981      43       11          0   94.8%
+      4  snapjaw-lure                    1918   1722      84      112          0   89.8%
+      4  spider-ambusher                 1056   1010      29       17          0   95.6%
+      4  spider-broodwarden               399    382      15        2          0   95.7%
+      4  spider-weaver                   1916   1779     103       34          0   92.8%
+      4  swarmhive-drone                 1975   1894      55       26          0   95.9%
+      4  swarmhive-queen                  391    365      23        3          0   93.4%
+      4  swarmhive-striker               1031    980      38       13          0   95.1%
+      4  treant-elder                    1079    878     109       92          0   81.4%
+      4  treant-grovekeep                 402    380      14        8          0   94.5%
+      4  treant-sapling                  1949   1900      19       30          0   97.5%
+      5  lullpollen-dozer                 907    817      46       44          0   90.1%
+      5  lullpollen-reaper               2396   2164      92      140          0   90.3%
+      5  lullpollen-sleeper              4480   4071     148      261          0   90.9%
+      5  pollinator-beneficiary          2459   2181     137      141          0   88.7%
+      5  pollinator-duster               4415   3610     287      518          0   81.8%
+      5  pollinator-pollenlord            930    819      60       51          0   88.1%
+      5  snapjaw-ironjaw                  916    799      48       69          0   87.2%
+      5  snapjaw-jaws                    2407   2149     135      123          0   89.3%
+      5  snapjaw-lure                    4520   3427     312      781          0   75.8%
+      5  spider-ambusher                 2517   2285      90      142          0   90.8%
+      5  spider-broodwarden               818    736      36       46          0   90.0%
+      5  spider-weaver                   4533   4004     233      296          0   88.3%
+      5  swarmhive-drone                 4522   4077     187      258          0   90.2%
+      5  swarmhive-queen                  850    723      99       28          0   85.1%
+      5  swarmhive-striker               2437   2199     115      123          0   90.2%
+      5  treant-elder                    2400   1636     267      497          0   68.2%
+      5  treant-grovekeep                 862    781      25       56          0   90.6%
+      5  treant-sapling                  4468   4090      68      310          0   91.5%
+Floors 20-30 (watch point), failed pushes by floor: none
+Unicorn revives: in party for 70907 fights (win 82.7%; not in party 0 fights, win n/a); 161696 revives, 18545 fights with one, max 50 in a fight, 3218 fights with a creature at the cap (10)
+Draws: 8791/70907 fights = 12.4%; round-cap draws 8791 = 12.4%
+Largest GROWTH stack (the watch point: a stat-modifier factor above 1, stacked) of one trait, on a player creature: 100x treant-sapling-taking-root (floor 5, seed 1, treant-sapling-player-4)
+Largest GROWTH stack (the watch point) of one trait, on an enemy creature: 437x shellback-warden-fortify (floor 12, seed 26, shellback-warden-enemy-0)
+Largest SHRED stack (a factor below 1, a cut to the target) of one trait, on a player creature: 148x sparkeater-voidmaw-consume (floor 11, seed 40, shieldbarer-starter-player-0)
+Largest SHRED stack of one trait, on an enemy creature: 20x (spell) (floor 11, seed 40, flickerling-wick-enemy-0); unattributed 0/9460461 applications
+Top 5 traits by largest growth-player stack: shieldbarer-starter-rally 100x (floor 11, seed 1); treant-sapling-taking-root 100x (floor 5, seed 1); (spell) 42x (floor 6, seed 14); pollinator-duster-pollen-drift 1x (floor 2, seed 3); swarmhive-striker-hive-mind 1x (floor 3, seed 1)
+Top 5 traits by largest growth-enemy stack: shellback-warden-fortify 437x (floor 12, seed 26); resonant-chorus-harmonize 401x (floor 11, seed 8); resonant-adept-resonate 340x (floor 11, seed 29); flickerling-flare-kindle 200x (floor 13, seed 26); pollinator-pollenlord-bloom-surge 200x (floor 8, seed 19)
+Top 5 traits by largest shred-player stack: sparkeater-voidmaw-consume 148x (floor 11, seed 40); sparkeater-gorger-gorge 114x (floor 11, seed 38); sparkeater-leech-drain 69x (floor 11, seed 19); (spell) 29x (floor 7, seed 39)
+Top 5 traits by largest shred-enemy stack: (spell) 20x (floor 11, seed 40)
+Boss floors (policy run vs boss-aimed Pacify probe, same party, same floor):
+  floor 10 broodmother [first-visit] visits 26: policy clear 65.4%; probe n/a 10; where probed (16): policy 62.5% vs probe 31.3%; boss locked-turn share policy 25.5% (all 221 attack 110 cast 0) vs probe 50.9% (all 22 attack 478 cast 0); Pacify lands in 16/16 probe runs (346 landings)
+  floor 10 broodmother [all-visits] visits 2819: policy clear 79.7%; probe n/a 1026; where probed (1793): policy 74.6% vs probe 47.8%; boss locked-turn share policy 22.8% (all 15009 attack 11645 cast 70) vs probe 64.6% (all 2094 attack 73090 cast 687); Pacify lands in 1787/1793 probe runs (55156 landings)
+Rot Sovereign's Attrition (policy runs): 0 visits, 0 cleared, mean deaths n/a, max Attrition stacks 0, peak boss Attack 0.0
+ASSUMPTION 22: floor-1 clear >= 80%: 100.0% PASS; first soul median <= 30 floor runs: 3.0 PASS; a seed fights on floor 5+ in its first 20 floor runs: 37 seeds PASS
+
+ASSUMPTION 22 summary (reported, not asserted):
+  sorcerer: floor-1 PASS, first soul PASS, floor 5 PASS
+  brute: floor-1 PASS, first soul PASS, floor 5 PASS
+  shieldbarer: floor-1 PASS, first soul PASS, floor 5 PASS
+
+Runtime: 1086.1 s

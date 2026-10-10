@@ -24,6 +24,7 @@ import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { STATUS_REGISTRY } from '../../data/statuses'
+import { holdPotency } from '../__fixtures__/held-statuses'
 import type { CombatEvent, FightResult } from '../types'
 import type { Trait } from '../effect-types'
 
@@ -96,7 +97,9 @@ export const traits: ReadonlyMap<string, Trait> = new Map([
   [POISONER_TRAIT.id, POISONER_TRAIT],
   [SELF_POISON_TRAIT.id, SELF_POISON_TRAIT],
 ])
-export const statuses = STATUS_REGISTRY
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
+// never changes a mechanism golden). The status is otherwise the real one.
+export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 type Id = typeof A
 const turn = (who: Id, ...body: CombatEvent[]): CombatEvent[] => [

@@ -3496,3 +3496,67 @@ six comment-only; `corpus-digest.fixture.ts`. No living doc or content doc edite
 
 Fix round r1 (comment-only, from the PR review): the `data/statuses.ts` header points at 4.1-H2d, the scripted-intro
 comment in `state/integration.test.ts` has the current numbers, and this section's integration bullet is corrected.
+
+## 4.1-H2d -- The balancing pass (deliberate)
+
+Mailbox: `.claude/phases/4.1/H2d/` (kickoff amended at the plan review, brief, plan, plan review, `report-r1.md`,
+`evidence/`). Built against ASSUMPTIONS 147-155: the numbers were chosen at the H2d grill; this slice
+implemented them and chose none.
+
+### What was built
+
+- **Content:** Pollen Cloud loses its `deal-damage` (AoE, enemy-side, Sleep for 2 turns on every target, nothing
+  else); Snapback 30% -> 60% of Attack; Poison 20 -> 40% of Attack, Burn 25 -> 35% of Intelligence, Spore 15 -> 35% of
+  Speed, Regen stays 10% of Health; `data/statuses.ts` loses its "placeholder" wording. No engine change.
+- **Simulator (`state/balance-sim.ts`):** T2 and T3 are floor-read ceilings (ASSUMPTION 153): a completed soul at
+  the start of the seed's first run on floor 3, a full party (six) at the start of its first run on floor 6; a seed
+  that never runs the floor is "didn't reach", counted apart; reported as `met / reached (didn't reach N)`, never
+  asserted. New pure helpers `firstRunOnFloor`, `soulBySeedFloor`, `fullPartyBySeedFloor`, `tallyReads`,
+  `formatTally`; constants `SOUL_BY_FLOOR`, `FULL_PARTY_BY_FLOOR`, `CI_RUN_CAP` (= max of the first-soul and floor-5
+  windows, 30). Removed with the old T3: `FIRST_SESSION_RUNS`, `SeedResult.partySizeAfterSession` and
+  `deepestAfterSession`, `SpecReport.t3.partySizeCounts`. The first-soul median stays in the report (ASSUMPTION 22).
+- **CI threshold test (ASSUMPTIONS 148, 155):** `state/balance-ci-{sorcerer,brute,shieldbarer}.test.ts`, 40 seeds at
+  `CI_RUN_CAP`, probe off, through `runSeed` and `computeThresholds`, asserting the three verdicts; a guard in
+  `balance-sim.test.ts` pins the spec ids to the three files.
+- **Pins:** `engine/__fixtures__/held-statuses.ts` (`holdPotency`, the real `StatusDef` with only `potency.percent`
+  replaced) pins the 16 mechanism goldens that read Poison 20 (12) or Spore 15 (4), and
+  `engine/status-snapshot.test.ts` (Poison 20). Header notes (comment-only) on five goldens that apply a real DoT
+  but read none of it.
+- **Goldens:** `golden-h2c-snapback` re-derived at 60%; new `golden-h2d-pollen-cloud` and `golden-h2d-dot-ticks`.
+
+### Before / after
+
+See `report-r1.md` and `evidence/`. The stage-2 run (Pollen Cloud + Snapback) reproduced the grill exactly; the final
+tree passes all three ASSUMPTION 22 verdicts for all specs. First-try floor 1: Brute 35 -> 40, Shieldbarer 26 -> 40
+(of 40); Shieldbarer floor 5+ within 20 runs 26 -> 37 seeds; floor-10 first clear (median runs) 86 -> 106, 72 -> 71,
+213 -> 169 (14 Shieldbarer seeds never); round-cap draws 4.9 / 2.5 / 10.6% -> 5.9 / 2.7 / 12.4%. The minimum-of-1 share
+of DoT ticks on the corpus's generated fights (Parts A+B): 91.2% -> 54.2% (Poison 80.2 -> 22.8, Burn 92.4 -> 75.9,
+Spore 91.0 -> 42.0).
+
+### Corpus digest (regenerated once)
+
+275 of 527 fights changed. First changed by stage: Pollen Cloud 167, Snapback 17, DoT percentages 91 (fights whose
+log differs from the previous stage: 167, 24, 154).
+
+### Test count (main -> slice)
+
+Files 195 -> 201; tests 1333 (1332 passed, 1 skipped) -> 1357 (1356 passed, 1 skipped), +24: `balance-sim-report.test.ts`
++14, `spells/index.test.ts` +1, the three CI files +3, `held-statuses.test.ts` +4 (new), two new goldens +2.
+Suite wall time about +13 s.
+
+### Deviations and spec notes
+
+- `state/integration.test.ts` "Slice I ... descends floor 1": the revive count 1 -> 0 (first changed at stage 2 by
+  Snapback); no other assertion moved.
+- T3 at the CI's cap-30 on H2c's data reads Brute 37 / 37 and Shieldbarer 15 / 15 (didn't reach 3 / 25), not the
+  review's expected 40 / 40 / 28-of-28; the cap-400 report is as expected. Raised as a spec question.
+- Spec questions and stale doc lines for the design agent are in `report-r1.md`.
+
+### Files changed
+
+Data: `spells/overgrowth.ts`, `traits/overgrowth.ts`, `statuses.ts`. Simulator: `balance-sim.ts`. New:
+`__fixtures__/held-statuses.ts` (+ test), `golden-h2d-pollen-cloud`, `golden-h2d-dot-ticks`, the three
+`balance-ci-*.test.ts`. Tests: `statuses.test.ts`, `spells/index.test.ts`, `status-snapshot.test.ts`,
+`integration.test.ts`, `balance-sim.test.ts`, `balance-sim-report.test.ts`; goldens: 16 pinned fixtures, `golden-h2c-snapback`
+(re-derived), five comment-only, `golden-h2b2-tick-no-retaliation` (pin and comment); `corpus-digest.fixture.ts`. No
+living doc or content doc edited. Nothing deleted.

@@ -60,7 +60,8 @@ import {
   splitFights,
   stopReason,
   summonPass,
-  FIRST_SESSION_RUNS,
+  CI_RUN_CAP,
+  FIRST_SOUL_MAX_RUNS,
   FLOOR5_WINDOW_RUNS,
   INITIAL_PROGRESS,
   WALL_FAILED_PUSHES,
@@ -72,6 +73,8 @@ import {
 } from './balance-sim'
 
 const isSim = import.meta.env.MODE === 'sim'
+/** A short run cap for the smoke tests (they check shape and determinism, not a window). */
+const SMOKE_RUN_CAP = 10
 
 // ---- helpers ----
 
@@ -131,7 +134,7 @@ describe.skipIf(isSim)('balance simulator', () => {
   // ---- determinism and shape ----
 
   describe('determinism and report shape', () => {
-    const options = { seeds: SMOKE_SEEDS, runCap: FIRST_SESSION_RUNS }
+    const options = { seeds: SMOKE_SEEDS, runCap: SMOKE_RUN_CAP }
 
     it('same seeds give a deep-equal report, built twice', () => {
       expect(buildReport(options)).toEqual(buildReport(options))
@@ -152,7 +155,8 @@ describe.skipIf(isSim)('balance simulator', () => {
         expect(spec.thresholds).toHaveProperty('floor1Pass')
         expect(spec.thresholds).toHaveProperty('firstSoulPass')
         expect(spec.thresholds).toHaveProperty('floor5Pass')
-        expect(spec.t3.partySizeCounts).toBeDefined()
+        expect(spec.t2.atFloor3).toBeDefined()
+        expect(spec.t3.atFloor6).toBeDefined()
         expect(spec.t4).toHaveProperty('worstFailedPushesBelow10')
         expect(spec.t4).toHaveProperty('runsToFirstFloor10Clear')
         expect(spec).toHaveProperty('largestStacks')
@@ -161,12 +165,21 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
+  // ---- the CI threshold test's coverage (ASSUMPTIONS 148, 155) ----
+
+  it('every spec has a CI threshold file (balance-ci-<spec>.test.ts), and the CI run cap covers both windows', () => {
+    // Fails when a fourth spec ships without a file of its own.
+    expect(SPECIALIZATIONS.map((s) => s.id)).toEqual(['sorcerer', 'brute', 'shieldbarer'])
+    expect(CI_RUN_CAP).toBeGreaterThanOrEqual(FIRST_SOUL_MAX_RUNS)
+    expect(CI_RUN_CAP).toBeGreaterThanOrEqual(FLOOR5_WINDOW_RUNS)
+  })
+
   // ---- the inert registry ----
 
   it('a registered, unreferenced probe script is inert: the policy run equals the stock-registry run', () => {
     for (const specId of ['sorcerer', 'brute']) {
       for (const seed of [1, 2]) {
-        const base = { runCap: FIRST_SESSION_RUNS, probeBosses: false }
+        const base = { runCap: SMOKE_RUN_CAP, probeBosses: false }
         const stock = runSeed(specId, seed, {
           seeds: [seed],
           ...base,
@@ -794,8 +807,6 @@ describe.skipIf(isSim)('balance simulator', () => {
         firstTryFloor1Clear: false,
         clearsToFirstSoul: null,
         runsToFirstSoul: null,
-        partySizeAfterSession: null,
-        deepestAfterSession: null,
         reachedFloor5InWindow: false,
         earlyFights: [],
         fights: 0,
@@ -836,18 +847,9 @@ describe.skipIf(isSim)('balance simulator', () => {
         seedResult({}),
         seedResult({ clearsToFirstSoul: 2, runsToFirstSoul: 7 }),
       ])
-      expect(r.t2).toEqual({
-        clearsToFirstSoul: [1, 2],
-        runsToFirstSoul: [3, 7],
-        seedsWithoutSoul: 1,
-      })
-    })
-
-    it('T3: counts party sizes, skipping seeds that ended before the session', () => {
-      const r = report(
-        [6, 6, 4, null].map((n) => seedResult({ partySizeAfterSession: n })),
-      )
-      expect(r.t3.partySizeCounts).toEqual({ 6: 2, 4: 1 })
+      expect(r.t2.clearsToFirstSoul).toEqual([1, 2])
+      expect(r.t2.runsToFirstSoul).toEqual([3, 7])
+      expect(r.t2.seedsWithoutSoul).toBe(1)
     })
 
     it('T4: stop reasons, first-wall floors, and a wall AT floor 10 is not before it', () => {
@@ -1044,13 +1046,12 @@ describe.skipIf(isSim)('balance simulator', () => {
   describe('per-seed derivations hold on real runs (F1.2)', () => {
     for (const specId of SPECIALIZATIONS.map((s) => s.id)) {
       for (const seed of SMOKE_SEEDS) {
-        it(`${specId} seed ${seed}: the session readings match the run records`, () => {
+        it(`${specId} seed ${seed}: the run readings match the run records`, () => {
           const r = runSeed(specId, seed, {
             seeds: [seed],
-            runCap: FIRST_SESSION_RUNS + 1,
+            runCap: SMOKE_RUN_CAP + 1,
           })
-          expect(r.runs).toHaveLength(FIRST_SESSION_RUNS + 1)
-          const session = r.runs.slice(0, FIRST_SESSION_RUNS)
+          expect(r.runs).toHaveLength(SMOKE_RUN_CAP + 1)
           expect(r.runs[0]!.floor).toBe(1)
           expect(r.firstTryFloor1Clear).toBe(r.runs[0]!.cleared)
           if (r.runsToFirstSoul !== null) {
@@ -1059,15 +1060,8 @@ describe.skipIf(isSim)('balance simulator', () => {
           } else {
             expect(r.clearsToFirstSoul).toBeNull()
           }
-          expect(r.deepestAfterSession).toBe(
-            Math.max(0, ...session.filter((x) => x.cleared).map((x) => x.floor)),
-          )
-          // Run 11's party is the party after run 10's summon and re-order.
-          expect(r.partySizeAfterSession).toBe(
-            r.runs[FIRST_SESSION_RUNS]!.partyLevels.length,
-          )
           // ASSUMPTION 126: the floor-5 flag reads the finished runs at the 20-run window (here the
-          // run cap is 11, so it reads all of them), not the 10-run session.
+          // run cap is 11, so it reads all of them).
           expect(r.reachedFloor5InWindow).toBe(
             r.runs
               .slice(0, FLOOR5_WINDOW_RUNS)

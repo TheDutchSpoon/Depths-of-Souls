@@ -15,6 +15,9 @@
 // math. ALLY (also wit, 50 max HP, untouched) is BEARER's only living ally and does not carry
 // Spore, so it's the sole (deterministic, no-RNG) candidate for the spread.
 //
+// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned
+// (4.1-H2d).
+//
 //   on-attack fires BEFORE the attack's own damage (CONVENTIONS): SEEDER's Infest trait applies
 //     Spore to BEARER (duration 3) first.
 //   SEEDER->BEARER (off 16, def 0): core = max(16-0,0) = 16. chip = 0.01*16 = 0.16. raw = 16.16

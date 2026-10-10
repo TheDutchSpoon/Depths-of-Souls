@@ -268,9 +268,10 @@ export const SNAPJAW_LURE_TRAIT: Trait = {
   ],
 }
 
-/** Snapjaws' Jaws (payoff): a retaliate at 30% of its Attack, the Phase 3 representative RETALIATE
- * trait's number. It was 60% ("a big retaliate", species-locked.md) until 4.1-H2c (ASSUMPTION 124):
- * as indirect damage (a fifth of Defence) the 60% beat the Shieldbarer pair in every floor-1 fight. */
+/** Snapjaws' Jaws (payoff): a retaliate at 60% of its Attack ("a big retaliate", species-locked.md).
+ * It was 30% in 4.1-H2c (ASSUMPTION 124: as indirect damage the 60% beat the Shieldbarer pair in
+ * every floor-1 fight); 4.1-H2d put it back at 60% once Pollen Cloud no longer deals damage
+ * (ASSUMPTION 151). */
 export const SNAPJAW_JAWS_TRAIT: Trait = {
   id: 'snapjaw-jaws-snapback',
   name: 'Snapback',
@@ -282,7 +283,7 @@ export const SNAPJAW_JAWS_TRAIT: Trait = {
         kind: 'deal-damage',
         target: { kind: 'triggering-source' },
         offStat: 'attack',
-        spellPower: 0.3,
+        spellPower: 0.6,
       },
     },
   ],
