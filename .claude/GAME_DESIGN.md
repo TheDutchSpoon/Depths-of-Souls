@@ -722,8 +722,8 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   Defence. That still makes DoT a distinct answer to high-Defence enemies. The applier is the damage
   source while it lives (its on-kill and on-damage-dealt traits fire; retaliation never answers a
   tick, §6), else the bearer, which then fires no dealer traits. **Regen** heals its snapshot
-  potency, credited the same way. Numbers decided at the 4.1-H2d grill (they land in 4.1-H2d; placeholders
-  20 / 25 / 15 until then): **Poison 40% of Attack, Burn 35% of Intelligence, Spore 35% of Speed,
+  potency, credited the same way. Numbers decided at the 4.1-H2d grill (landed in 4.1-H2d; placeholders
+  20 / 25 / 15 before it): **Poison 40% of Attack, Burn 35% of Intelligence, Spore 35% of Speed,
   Regen 10% of the healer's Health**. A status that
   applies itself through its own effect passes its snapshot on (Spore spreading on death keeps the
   original strength); a creature that merely carries a status and applies it is an ordinary
@@ -1291,7 +1291,12 @@ the hot autosave path.
   answered only by perks and traits) and the steep climb past floor 100. Clean-path levelling
   (every floor cleared on the first try) keeps party level equal to the floor through floor 9,
   then lags (9 at floor 10, 25 at floor 30), mostly because a boss floor pays one fight of XP
-  (4.1-H2d grill, brief ASSUMPTION 154).
+  (4.1-H2d grill, brief ASSUMPTION 154). The floor-30 boss against the DoTs: the Brute's first-try
+  clear is 28 / 36 after 4.1-H2d (brief ASSUMPTIONS 152, 154).
+- **Status-only AoE recasts** (watch point, 4.1-H2d PR review, brief ASSUMPTION 154): a damage-free
+  Pollen Cloud recast only refreshes Sleep, and casters recast it on a side already all asleep,
+  which can hold a fight to the round cap. Accepted as part of the draw cost; the fix belongs in the
+  role scripts and Phase 6's conditions ("target lacks the status"), not in the engine.
 - **Fight count** (default 10 + (floor − 1), uncapped): floor success compounds per-fight win
   chance over many fights. **Revisited at the 4.1-H2 grill and kept** (brief ASSUMPTION 117): the
   compounding is real and a flat 10 measured faster, but the early floors are balanced through the
@@ -1308,7 +1313,7 @@ the hot autosave path.
   only — structure is decided in §4, numbers are not).
 - Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
   round-cap value (structure decided in §7, number TBD).
-- **DoT and Regen potencies** (decided at the 4.1-H2d grill, brief ASSUMPTION 152, landing in
+- **DoT and Regen potencies** (decided at the 4.1-H2d grill, brief ASSUMPTION 152, landed in
   4.1-H2d: Poison 40% of Attack, Burn 35% of Intelligence, Spore 35% of Speed, Regen 10% of the
   healer's Health; §6). The placeholders before it (Poison 20 / Burn 25 / Spore 15) put **93% of
   ticks on the minimum of 1** at the H2b2 PR review (a potency of 4–5 from a stat near 20, against

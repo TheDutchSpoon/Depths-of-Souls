@@ -3531,7 +3531,8 @@ tree passes all three ASSUMPTION 22 verdicts for all specs. First-try floor 1: B
 (of 40); Shieldbarer floor 5+ within 20 runs 26 -> 37 seeds; floor-10 first clear (median runs) 86 -> 106, 72 -> 71,
 213 -> 169 (14 Shieldbarer seeds never); round-cap draws 4.9 / 2.5 / 10.6% -> 5.9 / 2.7 / 12.4%. The minimum-of-1 share
 of DoT ticks on the corpus's generated fights (Parts A+B): 91.2% -> 54.2% (Poison 80.2 -> 22.8, Burn 92.4 -> 75.9,
-Spore 91.0 -> 42.0).
+Spore 91.0 -> 42.0). The DoT change (stage 2 -> 3) cost the Brute's floor-30 boss (the Rot Sovereign) its first-try
+clear: 38 / 38 -> 28 / 36 (35 / 36 on H2c's data); floors 21-29 move within a few seeds (PR review).
 
 ### Corpus digest (regenerated once)
 
@@ -3549,7 +3550,8 @@ Suite wall time about +13 s.
 - `state/integration.test.ts` "Slice I ... descends floor 1": the revive count 1 -> 0 (first changed at stage 2 by
   Snapback); no other assertion moved.
 - T3 at the CI's cap-30 on H2c's data reads Brute 37 / 37 and Shieldbarer 15 / 15 (didn't reach 3 / 25), not the
-  review's expected 40 / 40 / 28-of-28; the cap-400 report is as expected. Raised as a spec question.
+  review's expected 40 / 40 / 28-of-28; the cap-400 report is as expected. Raised as a spec question; resolved at the
+  PR review: the read is right, the "28 of 28" was the grill's cap-60 count (ASSUMPTION 153 corrected).
 - Spec questions and stale doc lines for the design agent are in `report-r1.md`.
 
 ### Files changed

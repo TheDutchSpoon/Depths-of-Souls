@@ -2030,6 +2030,9 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        is no draw band (ASSUMPTION 121).
      - **Rejected:** Sleep for 1 turn (Shieldbarer 33 of 40, one seed of margin); a single-target
        Pollen Cloud (40 / 40 / 40, but it stops being a cloud).
+     - **Found at the 4.1-H2d PR review:** with no damage, a recast only refreshes the Sleep, so a
+       caster can hold a side asleep and stall a fight to the round cap; accepted as part of the
+       draw cost above and kept as a watch point (ASSUMPTION 154).
      - **Considered, no watch point:** the Additional lands in full on every target of an AoE.
        It fades to 0 at attacker level 11 (enemies from floor 9), and the one AoE spell that also
        locked no longer deals damage.
@@ -2057,21 +2060,29 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        kept modest because biome 3's DoTs are mostly the enemy's (the floor-30 boss's first-try
        clear fell from 35 of 36 to 25 of 36 at the high set) and the player can't aim a DoT before
        Phase 6's scripts. 40 / 35 / 35 sits between the two higher sets measured.
+     - **Measured in 4.1-H2d, accepted at its PR review (design owner, 2026-10-10):** on top of
+       ASSUMPTIONS 150–151 the DoT change cost the Brute's floor-30 boss (the Rot Sovereign) its
+       first-try clear, 38 / 38 → 28 / 36 (35 / 36 on H2c's data), floor-30 failed pushes 0 → 12;
+       floors 21–29 moved within a few seeds and no verdict moved. 28 / 36 lands between the two
+       sets measured on either side, as the grill expected; floor 30 is a watch point (154).
      - **Why Regen stays:** a heal subtracts nothing, so 10% already does something.
 153. **Decided (H2d grill, 2026-10-10; design owner).** **T2 and T3 read floors, not floor runs,
      and are ceilings:** **T2**, a completed soul by each seed's first run on floor 3; **T3**, a
      full party (four souls beyond the two starters) by each seed's first run on floor 6, the
      floor where enemies first field six. A seed that never reaches the floor is reported apart
      as "didn't reach". Both are reported, never asserted; ASSUMPTION 22's first-soul threshold
-     (≤ 30 floor runs) is unchanged. On H2c's data both hold for every seed that reaches the floor
-     (T2 40 / 40 / 40; T3 40 / 40 / 28 of 28). Why: this is a team-building game, so souls coming
+     (≤ 30 floor runs) is unchanged. On H2c's data both hold for every seed that reaches the floor:
+     at the report's run cap (400) T2 and T3 are 40 / 40 / 40 with every seed reaching; at the CI
+     cap (30) T3 is 40 / 37 / 15 met of as many reached (3 and 25 didn't reach). *(Corrected at the
+     H2d PR review: the grill's "T3 40 / 40 / 28 of 28" was read at a run cap of 60, and the plan
+     review's "it is the cap-30 count" was wrong.)* Why: this is a team-building game, so souls coming
      fast is good; the bands guard against slow, not fast. They replace "first soul within ~10
      floor runs" and "a full party within the first 10 floor runs", which read the policy's
      farming as much as the game.
 154. **Decided (H2d grill, 2026-10-10; design owner).** **No other per-item fix in H2d**: it aims
      at the CI thresholds, which ASSUMPTIONS 150–152 meet (151 isn't needed for them; it restores
-     content). Two watch points, read on H2d's "after"
-     report and in the Phase 4.5 demo:
+     content). Four watch points, read on H2d's "after"
+     report and in the Phase 4.5 demo (the last two added at the H2d PR review, 2026-10-10):
      - **Floor 2 and the early walls.** First-try floor 2 is 1 / 15 / 2 of 40 after ASSUMPTIONS
        150 and 151 (2 / 10 / 0 before), and seeds first wall on floors 4–7.
      - **T5, party level against the floor.** The design owner's intent: player creatures level
@@ -2081,6 +2092,16 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        floors are most of the lag: one fight pays 89 / 174 / 282 XP on floors 10 / 20 / 30,
        against 1,800+ for a normal floor beside them. The XP curve may need tuning; not in H2d
        (ASSUMPTION 117 keeps it, and no threshold reads it).
+     - **The floor-30 boss against the DoTs.** The Brute's first-try floor 30 is 28 / 36 after
+       4.1-H2d (ASSUMPTION 152's measurement). Biome 3's DoTs are mostly the enemy's; the levers,
+       if it needs one, are Burn and Spore, or the player's scripts once Phase 6 lands.
+     - **A status-only AoE recast on a side that already carries it.** With no damage, a Pollen
+       Cloud recast only refreshes the Sleep, and casters recast it on an enemy side that is
+       already all asleep (the corpus's casts of that kind 59 → 94 in 4.1-H2d; the longest run of
+       one creature's skipped turns 15 → 35; one fight went from a win in 36 rounds to a round-cap
+       draw). Accepted as part of ASSUMPTION 150's draw cost. The fix's home is the role scripts
+       and Phase 6's conditions (a "target lacks the status" check), not an engine castability
+       rule.
 155. **Decided (H2d kickoff, 2026-10-10).** **The CI threshold test (ASSUMPTION 148) is one test
      file per spec**, so Vitest runs the three in parallel, each calling the simulator's own
      `runSeed` and `computeThresholds`. Measured at the kickoff (one machine, three specs in

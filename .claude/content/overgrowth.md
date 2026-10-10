@@ -96,7 +96,7 @@ the fight goes on, and it buffs the whole team, not just herself.
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Lure | Endurance | Enabler | Whenever this creature Provokes, it also Defends. |
-| Jaws | Violence | Payoff | Whenever this creature takes damage, it attacks back for **30% of its Attack**. This is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
+| Jaws | Violence | Payoff | Whenever this creature takes damage, it attacks back for **60% of its Attack**. This is **indirect damage**: only a fifth of the target's Defence applies to it, and it gets no chip floor and no Additional. |
 | Ironjaw | Violence | Amplifier | Every time this creature's own turn starts, its Defence permanently increases by **20%** — a self-ramping wall, distinct from both Lure's provoke-and-Defend and Jaws' retaliation. |
 
 ## Lullpollen (Wit/Instinct) — Sleep & Punish
@@ -165,7 +165,7 @@ third, plain-damage entry: Arcane Bolt).
 | Thorn Lash | Violence | A single-target hit dealing damage equal to **100% of the caster's Intelligence**. |
 | Weakening Bite | Violence | Permanently lowers a single enemy's Defence by **20%** for the rest of the fight. |
 | Vine Snare | Wit | A single-target hit dealing **85% of the caster's Intelligence**, and applies Web to its target for 3 turns. |
-| Pollen Cloud | Wit | Hits every enemy for **35% of the caster's Intelligence** each, and puts all of them to Sleep for 2 turns. |
+| Pollen Cloud | Wit | Puts every enemy to Sleep for **2 turns** and deals **no damage**: a control spell, like Pacify and Silence. Nothing in the cast hits, so the sleepers stay asleep until something else damages them, and a hit wakes only the creature it lands on. |
 | Arcane Bolt | Wit | A single-target hit dealing damage equal to **100% of the caster's Intelligence**. Also the Sorcerer starter's fixed granted gem. |
 | Root Grasp | Endurance | A single-target hit dealing damage equal to **100% of the caster's own Defence** (instead of Intelligence). |
 | Bramble Ward | Endurance | Permanently raises the whole team's Defence by **20%** for the rest of the fight. |
@@ -200,7 +200,7 @@ tagged `unlockedAtBiome: 1` and reachable at The Overgrowth and every deeper bio
 |---|---|---|
 | Ember Lance | Violence | A single-target hit dealing damage equal to **50% of the caster's Intelligence**. |
 | Cinder Nova | Violence | Hits every enemy for **30% of the caster's Intelligence** each. |
-| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns: each tick deals **20% of the caster's Attack** (measured when cast; a placeholder until 4.1-H2d) as indirect damage, only a fifth of the target's Defence applying. Re-poisoning refreshes the timer and keeps the stronger Poison. |
+| Venom Bolt | Instinct | A single-target hit dealing damage equal to **40% of the caster's Intelligence**, and applies Poison to its target for 3 turns: each tick deals **40% of the caster's Attack** (measured when cast) as indirect damage, only a fifth of the target's Defence applying. Re-poisoning refreshes the timer and keeps the stronger Poison. |
 
 ### Cumulative unlock
 
@@ -238,9 +238,9 @@ into the sections above. Poison from its applier landed in 4.1-H2b2 (the Venom B
 the Shieldbarer pair in every floor-1 fight), Arcane Bolt from 50% to 100% of the caster's
 Intelligence, and Health to the 20–45 range ("Reading this biome").
 
-**Decided at the 4.1-H2d grill** (brief ASSUMPTIONS 150, 152), landing in 4.1-H2d: **Pollen Cloud
-deals no damage**: it puts every enemy to Sleep for 2 turns and nothing else (cast on a small party
-at low level, its hit plus the Additional killed the whole party while it slept). Venom Bolt's
-Poison ticks **40% of the caster's Attack** (was 20%). The Jaws' Snapback goes **back to 60% of
-its Attack** (brief ASSUMPTION 151): the level-1 floor-1 enemies and the Warden that attacks made
-the 30% unnecessary.
+**Decided at the 4.1-H2d grill** (brief ASSUMPTIONS 150–152): every item landed in 4.1-H2d and is
+folded into the sections above. **Pollen Cloud deals no damage** (it dealt 35% of the caster's
+Intelligence: cast on a small party at low level, its hit plus the Additional killed the whole party
+while it slept). Venom Bolt's Poison ticks 40% of the caster's Attack (was 20%). The Jaws' Snapback
+is **back to 60% of its Attack** (30% in 4.1-H2c): the level-1 floor-1 enemies and the Warden that
+attacks made the 30% unnecessary.
