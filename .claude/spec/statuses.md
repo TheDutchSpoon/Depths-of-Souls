@@ -126,8 +126,9 @@ Confusion). They are defined in `src/data/statuses.ts`.
 - The turn's shape is `spec/combat.md` "Turn structure". In its bearer's turn-end cleanup, each
   status counts down by one and expires at 0 (`StatusExpired`); then comes the Web roll ("Turn
   order").
-- **Cleanup is bookkeeping only**: counting down, expiring, ending action states and the Web roll.
-  Anything that deals damage, heals or fires triggers is a hook.
+- **Cleanup is bookkeeping only**, at either end of the turn: the turn-start cleanup ends action
+  states; the turn-end cleanup counts down, expires and runs the Web roll. Anything that deals
+  damage, heals or fires triggers is a hook.
 
 ### Ticks are on-turn-end triggers
 

@@ -136,3 +136,73 @@ scope.
 - `phases/4.2/E/brief.md`, `F/brief.md`: "Known from earlier slices", 4.2-D's notes;
   `G/brief.md`: three stale `src/` comments added to the clean-up list.
 - `phases/4.2/D/inventory.md` (new, from `inventory-skeleton`) and this file.
+
+## Round 2
+
+Design agent → coding agent, after `verify-r1.md` (8 findings). All 8 are fixed; none was rejected.
+`npm run docs:check -- inventory D` passes: 172 units, 172 rows, base `b3ac8dd`. The slice id for
+the script is `D` (`4.2-d` is rejected, as round 1 noted).
+
+### Findings and what changed
+
+1. **acted-before-target: three random selectors peek to no target** (C:583). Stale doc (Duncan).
+   `spec/effects.md` "acted-before-target" now names `random-enemy`, `random-ally` and `random`, and
+   says a rule with a random target never satisfies the condition.
+2. **Response targets missing `all-allies-of-species`** (C:678). Stale doc (Duncan). Added to the
+   list in `spec/responses.md` "Response targets", plus a bullet beside `all-allies`: narrowed to
+   creatures sharing the firing creature's `speciesId`, empty for a firing creature without one
+   (`resolution.ts:697-702`). Recorded in row C:678's Reason, since no old unit carried it.
+3. **"Ending action states" under the turn-end heading** (C:1658). Placement fix: the bullet now
+   reads "Cleanup is bookkeeping only, at either end of the turn: the turn-start cleanup ends action
+   states; the turn-end cleanup counts down, expires and runs the Web roll" (`combat.ts:407-423,
+   500-506`).
+4. **"A heal spell's default, `'cast'`"** (C:327). Wording: "A heal spell that names `offStat` names
+   `'cast'`, remap-aware Intelligence." No default is claimed; `validateSpellEffects` lets a spell
+   heal name `'cast'` or a `scalingStat`.
+5. **`stacks: false` keys on the trait, not the effect** (C:755). Doc follows `main` (Duncan): "at
+   most one carrier of that effect's source (its trait, status or side-effect slot, matched by
+   `sourceTraitId`)". `sourceTraitId` is the trait id, the status id, or `perk-<n>` /
+   `enemy-effect-<n>` (`effects.ts:44-68`). The two cases where that differs from "per effect"
+   (two `stacks: false` triggers in one trait on one hook; the same trigger from two kinds of
+   source) are in no shipped content.
+6. **The Composition line floored for flat damage on another creature** (C:380). It now reads
+   `floor(stat) × percent × count / 100`, "the result is not floored here", "the numerator is exact
+   integer arithmetic", and "the floor happens once, later, in the cost, heal or damage formula that
+   takes the amount" (`resolveFlatTotal`, `calculateCost`, `applyHeal`, `calculateIndirectDamage`).
+7. **C:1823 only partly a duplicate.** No text change: the rest of the unit already has a home.
+   `OPEN_QUESTIONS.md` "Balance numbers (all parked — live in config, tune in playtest)" holds
+   the master difficulty lever (its first bullet) and the craft, augment, infuse, level and upgrade
+   costs (its "Costs:" bullet). The row's Reason now names that home.
+8. **ROADMAP Phase 7 circular pointer** (G:531). The parenthetical now says the hybrid would replace
+   the multiplicative fold in `spec/effects.md` "Category decides player-facing treatment", which
+   is what that section holds. The fallback itself lives only in the ROADMAP entry, as intended.
+
+### Check this round
+
+- The six sentences above against the code they cite; especially 3 (both cleanups) and 6 (no
+  floor claimed where there is none).
+- That the new `all-allies-of-species` bullet says nothing beyond `resolution.ts:697-702`.
+
+### Decisions Duncan made (round 2)
+
+- Findings 1, 2 and 5 are stale docs; the text follows `main`. On 5, any compounding across
+  different kinds of source (a trait and a perk or a Phase 8 infusion carrying the same
+  `stacks: false` trigger) is left for whoever adds a non-trait source of such a trigger to decide.
+
+### For later slices (round 2)
+
+- **4.2-G:** three new stale `src/` comments from `verify-r1.md`, added to `G/brief.md` Scope:
+  `engine/types.ts:130-135`, `engine/effect-types.ts:121-127`, `engine/effect-types.ts:277`. The
+  `species-locked.md` citations (including `effect-types.ts:327-338`) were already in G's scope.
+
+### Docs edited (round 2)
+
+- `spec/effects.md`: "acted-before-target" (finding 1), "stacks: false" (finding 5).
+- `spec/responses.md`: "Response targets" (finding 2), "Magnitude modes" (finding 4), "Flat mode"
+  (finding 6).
+- `spec/statuses.md`: "Turn-end cleanup" (finding 3).
+- `ROADMAP.md`: Phase 7 "Effective stats on screen" pointer (finding 8).
+- `phases/4.2/G/brief.md`: three stale `src/` comments added to Scope.
+- `phases/4.2/D/inventory.md`: Reasons of C:327, C:380, C:583, C:678, C:755, C:1658, C:1823 record
+  the round-2 changes.
+- `phases/4.2/D/verify-request.md`: this section.

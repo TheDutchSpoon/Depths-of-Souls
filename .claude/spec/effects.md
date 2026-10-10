@@ -326,9 +326,10 @@ status lifecycle in `spec/statuses.md`.
 - "This creature acts before its target this round": true iff the acting creature's index in the
   round's frozen turn queue is lower than its resolved target's.
 - In a script rule the target is the rule's own selector (`ruleTargeting`), resolved by
-  `peekTargetSelector`. That matches `resolveTargetSelector` for every selector except
-  `random-enemy`, which returns no target rather than drawing RNG (lookahead must never consume
-  randomness), so a rule targeted at `random-enemy` never satisfies the condition.
+  `peekTargetSelector`. That matches `resolveTargetSelector` for every selector except the random
+  ones (`random-enemy`, `random-ally`, `random`), which return no target rather than drawing RNG
+  (lookahead must never consume randomness), so a rule with a random target never satisfies the
+  condition.
 - Without a rule it falls back to the creature the effect is being resolved against, so it is a
   valid `conditional-damage-bonus` condition: the Blindclaws Striker is that bonus with `actionKind:
   'attack'`, a numeric trait rather than a bespoke script. RNG-free either way.
@@ -344,8 +345,9 @@ status lifecycle in `spec/statuses.md`.
 ### stacks: false
 
 - `TriggeredDef.stacks?: boolean`, default `true` (every matching effect fires on its own). With
-  `false`, across all living creatures **at most one** instance of that exact effect gets its
-  chance per firing of the hook; the claim comes before the roll, so more carriers don't raise the
+  `false`, across all living creatures **at most one** carrier of that effect's source (its
+  trait, status or side-effect slot, matched by `sourceTraitId`) gets its chance per firing of the
+  hook; the claim comes before the roll, so more carriers don't raise the
   aggregate chance. That keeps several Resonant Overtones from compounding the echo chance: the
   branching factor stays 1, so an echo chain is linear and ends on its own, and the depth cap is
   only the backstop for a pathological seed.

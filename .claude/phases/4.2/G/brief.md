@@ -24,7 +24,12 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
   `engine/effect-types.ts:670-673` says a trigger condition can't reference the triggering source
   (it can: the `'target'` subject resolves to the source in `fireHook`); `engine/effects.ts:434`
   says Splashing follows "Attack/Cast main hits" (attacks only); `engine/effects.ts:501-503` says
-  every creature lacks a `speciesId` (generation and `materializeCreature` set it).
+  every creature lacks a `speciesId` (generation and `materializeCreature` set it). From 4.2-D's
+  verify: `engine/types.ts:130-135` (`Creature.speciesId`) says `living-allies-of-species` is inert
+  until a later slice threads `speciesId` (it is threaded); `engine/effect-types.ts:121-127` calls
+  `all-allies-of-species` dormant until wired (only a creature without a `speciesId` gets an empty
+  list); `engine/effect-types.ts:277` calls `remove-status` "the final response verb" (the rule is
+  `spec/responses.md` "No side doors", not a verb ceiling).
 - The `citations` mode, blocking in CI, and the `budgets` mode, reported only (phase brief
   "Checks"). The budgets are set from the condensed sizes.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the

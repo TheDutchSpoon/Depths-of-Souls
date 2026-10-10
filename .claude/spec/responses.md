@@ -46,11 +46,13 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 ### Response targets
 
 - A response names its target: `self`, `triggering-source`, `triggering-ally`, `all-enemies`,
-  `all-allies`, a full `TargetSelector`, `random-dead-ally` ("revive"),
+  `all-allies`, `all-allies-of-species`, a full `TargetSelector`, `random-dead-ally` ("revive"),
   `random-ally-without-status`, `lowest-hp-injured-other-ally` (`spec/effects.md` "Trigger
   conditions") and, inside a spell, `cast-target`.
 - **`all-allies`** is the ally-side mirror of `all-enemies`, resolved through
   `livingAlliesOf(self)`, so it always includes the firing creature.
+- **`all-allies-of-species`** is `all-allies` narrowed to creatures sharing the firing creature's
+  `speciesId`; it is empty for a firing creature without one.
 - **`random-ally-without-status { statusId }`**: `livingAlliesOf(self)` minus those carrying the
   status, then one RNG draw, **only when the pool is non-empty**. No `TargetSelector` can filter by
   status, hence the variant. `livingAlliesOf` keys off `self.side`, not `self.alive`, so it
@@ -71,8 +73,8 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 
 - `deal-damage` and `heal` take one of three modes; setting more than one is a resolver-invariant
   error:
-  - **`offStat`** (`'attack'` or `'cast'`): the remap-aware formula slot. A heal spell's default,
-    `'cast'`, is remap-aware Intelligence.
+  - **`offStat`** (`'attack'` or `'cast'`): the remap-aware formula slot. A heal spell that names
+    `offStat` names `'cast'`, remap-aware Intelligence.
   - **`scalingStat`**: any stat, read directly with no remap, letting a response scale off any stat
     (Thorns and Shield Bash off Defence). A heal's `scalingStat` reads the **healer's** stat.
   - **flat**, `flatAmount` ("Flat mode").
@@ -92,12 +94,12 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 - A `StatPercent` (`{ ofStat, percent }`, `percent` a **positive integer**) is a percentage of the
   **firing creature's** (`context.self`) own effective stat: the Wick's burn and heal,
   `CATASTROPHIC_COLLAPSE`.
-- Composition: `floor(floor(stat) × percent × count / 100)`, `count` being the live
-  `magnitudeSource` count, else 1. The stat is read floored and `percent` and `count` are multiplied
-  in before dividing by 100, so the arithmetic is exact integer arithmetic: a float fraction can
-  land just below an integer and floor one too low (180 × 0.03 × 5 = 26.999999999999996 → 26
-  instead of 27), which is why `percent` is an integer, not a fraction. The floor happens once, in
-  the damage or heal itself.
+- Composition: `floor(stat) × percent × count / 100`, `count` being the live `magnitudeSource`
+  count, else 1, and the result is not floored here. The stat is read floored and `percent` and
+  `count` are multiplied in before dividing by 100, so the numerator is exact integer arithmetic: a
+  float fraction can land just below an integer and floor one too low (180 × 0.03 × 5 =
+  26.999999999999996 → 26 instead of 27), which is why `percent` is an integer, not a fraction. The
+  floor happens once, later, in the cost, heal or damage formula that takes the amount.
 - Heals have **no minimum**, unlike damage's 1, so a heal can be 0. That is accepted, not
   special-cased.
 - A percentage of a *different* creature's stat (anti-tank %-max-HP damage, a heal for a % of an

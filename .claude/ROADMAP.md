@@ -380,7 +380,8 @@ guardrails as every demo; own brief + phase record.
   detail; it never makes the player multiply factors. Known cost: scripting against a predicted
   post-debuff stat threshold means reasoning about compounding; if playtesting shows that confuses
   players, an additive-within-a-type, multiplicative-across-types hybrid is the documented
-  fallback (`spec/effects.md` "Category decides player-facing treatment").
+  fallback, replacing the multiplicative fold in `spec/effects.md` "Category decides
+  player-facing treatment".
 
 ## Phase 8 — Progression & incremental layers
 - **Facilities**: entrance-hub structures (Gem Forge, Equipment Forge, Fusion Chamber, Soul
