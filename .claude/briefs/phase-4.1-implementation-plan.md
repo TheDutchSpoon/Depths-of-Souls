@@ -1981,7 +1981,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      pass while no longer reaching the branch it was built for (a tick above the minimum of 1, a
      potency tie); and every later tuning pass would re-derive the same goldens again. Real content
      stays covered by the content goldens, the corpus and the data tests. Rejected: every golden
-     following the data; every golden pinned.
+     following the data; every golden pinned. *(4.1-H2d plan review, design owner: the same holds for a
+     unit test whose subject is a rule and which borrows real content, `status-snapshot.test.ts`.)*
 
 148. **Decided (H2c kickoff, 2026-10-09; design owner; lands in H2d, ASSUMPTION 149).** **The CI
      threshold test runs in the normal suite** (`npm run test`), over the full 40 seeds of each spec with the run cap at 30

@@ -85,7 +85,8 @@ design agent folds them at the PR review).
     `golden-rot-sovereign`, `golden-sporch-cinderlord-burn-refresh`, `golden-spore-spread`, the
     other `golden-h2b2-*` goldens.
   - No mechanism golden reads Pollen Cloud. `golden-h2b2-tick-no-retaliation` holds Snapback but
-    never evaluates it: a comment fix ("60% since 4.1-H2d"), no pin.
+    never evaluates it: a comment fix ("60% since 4.1-H2d"). *(Corrected at the plan review: it
+    logs a real Poison tick, so it also gets a Poison pin.)*
   - Show it by importing `main`'s and the branch's fixtures and deep-comparing every `expected*`
     export, `TURN_STEPS`, `EXPECTED_DRAWS` and `SEED`, as H2c did.
 - **Content goldens: re-derived by hand, each failing with its old number.**
@@ -140,8 +141,9 @@ design agent folds them at the PR review).
   how it reads each as an ASSUMPTION. New pure helpers, tested on hand-built runs like H2c's report
   code (including a seed that never reaches the floor, and a soul completing during the floor-3
   run itself, which doesn't count for that run).
-- **`FIRST_SESSION_RUNS`** is T3's old read point. Keep it if anything else reads it (the T4
-  "after session" fields); otherwise say so. Don't change `FLOOR5_WINDOW_RUNS`.
+- **`FIRST_SESSION_RUNS`** is T3's old read point. *(Decided at the plan review: nothing but
+  tests reads it or the "after session" fields once T3 moves, so they go in this slice; see
+  "Amended at the plan review".)* Don't change `FLOOR5_WINDOW_RUNS`.
 - **The CI test must not copy the threshold code.** It calls `computeThresholds` on `runSeed`'s
   results. Measure the suite's wall time on `main` and on the branch; ASSUMPTION 148's limit is
   about 2 minutes added (kickoff measurement: 49 s for all three specs in sequence on H2c's data,
@@ -163,7 +165,9 @@ All on 40 seeds; Sorcerer / Brute / Shieldbarer.
 - **40 / 35 / 35 is unmeasured.** It sits between two sets H2c measured that moved no verdict.
 
 If your "after" moves a verdict the other way, or differs materially from these, **stop and
-report it**. Don't tune.
+report it**. Don't tune. *(Made exact at the plan review: the stage-2 report must reproduce the
+"With Snapback 60% too" figures; the "after" stops only on a failing verdict. See "Amended at the
+plan review", item 2.)*
 
 ## Must stay green
 
@@ -186,6 +190,54 @@ weakened); the new CI threshold test; all five gates.
   (Pollen Cloud with its damage restored, Snapback at 30%, each DoT at its old percentage).
 - **The digest's stage attribution.**
 - **Content changes**, as built, for the design agent's fold.
+
+## Amended at the plan review (2026-10-10)
+
+Decided by Duncan on `plan-review.md` round 1. These bind the build alongside `plan.md`.
+
+1. **Header notes, per CONVENTIONS** ("Tuning never changes a mechanism golden": a borrowed number
+   no event reads gets a header note, not a pin). The mechanism goldens that apply a real Poison,
+   Burn or Spore with no tick in their events each get one line saying so (it applies the real
+   status, no tick lands, its potency isn't read and isn't pinned, 4.1-H2d):
+   `golden-f2-win-over-own-tick` (also correct its pre-H2b2 "Poison ticks 3% of max HP" line),
+   `golden-spore-spread`, `golden-spore-spread-filter`, `golden-spore-spread-fizzle`, and
+   `golden-sporch-cinderlord-burn-refresh` (its 25% arithmetic removed or marked as the pre-H2d
+   number). `golden-rot-sovereign` is a content golden: no edit. Comment-only, inside the
+   comments-stripped setup-only check.
+2. **Reproduce the grill at stage 2.** Run `npm run sim` once in the digest's stage-2 scratch clone
+   (Pollen Cloud + Snapback 0.6, DoTs at H2c's numbers). It must match "With Snapback 60% too" above
+   to the precision shown: first-try floor 1 40 / 40 / 40; floor 5 within 20 runs 40 / 40 / 37;
+   floor-10 first clear 106 / 71 / 166 with 14 Shieldbarer seeds never clearing; draws 5.9 / 2.7 /
+   12.6%. A mismatch is a stop. Keep it as `evidence/sim-stage2.txt`. The final tree's report is
+   stage 3: **stop if any of the three verdicts fails**; every other stage 2 → 3 difference is
+   reported as a delta (every band, the Sorcerer's floor-10 median, the draws, floors 21–30), not
+   a stop.
+3. **Check the "before" T2 / T3 against ASSUMPTION 153.** Fold the new T2 / T3 reads over the
+   cap-30 runs of the CI test on H2c's data (the "fails on H2c's data" scratch run) and reproduce
+   exactly T2 40 / 40 / 40 and T3 40 / 40 / 28 met of 28 reached (12 didn't reach). The cap-400
+   "before" must then show T2 met 40 / 40 / 40 with 0 didn't reach, T3 Sorcerer and Brute 40 / 40,
+   and Shieldbarer at least 28 met of 40 reached. A mismatch is a bug in the read. Report both.
+4. **The CI run cap:** export `CI_RUN_CAP = Math.max(FIRST_SOUL_MAX_RUNS, FLOOR5_WINDOW_RUNS)` (30)
+   beside the thresholds in `balance-sim.ts`, its comment carrying ASSUMPTION 148's reasoning; the
+   three CI files use it.
+5. **Delete what the new T3 orphans:** `SeedResult.partySizeAfterSession` and
+   `deepestAfterSession`, their lines in `runSeed`, and `FIRST_SESSION_RUNS`. In the tests: the
+   after-session assertions in `balance-sim.test.ts` (1050–1067; its `clearsToFirstSoul` check
+   stays), the `FIRST_SESSION_RUNS` pin in `balance-sim-report.test.ts:91`, and a test-local cap
+   of 10 for the smoke tests that used it as a run cap. `FLOOR5_WINDOW_RUNS`'s comment loses its
+   "T3's party size is still read after FIRST_SESSION_RUNS" sentence. No report line changes.
+6. **`status-snapshot.test.ts` is pinned** like a mechanism golden (expected values unchanged);
+   CONVENTIONS now says the rule covers a rule's unit test that borrows real content.
+7. **Corrections:** `golden-h2b2-tick-living-applier` imports `BONUS_VS_POISON` (a fixture trait),
+   not `POISON`: no build-time check, it reads the potency through `statuses` like the others. In
+   `golden-h2d-pollen-cloud` the caster's script is the fixture `always-cast` (slot 0), not
+   `cast-aoe`. `golden-h2c-snapback` is not renamed (its name carries no number): title and
+   comments only.
+8. **`golden-h2d-dot-ticks`:** the setup states everyone vitality (×1.0), level 11
+   (`DEFAULT_FIXTURE_LEVEL`), no taken factors, and applies the three statuses with
+   `applyStatus(bearer, A, { statusId, duration: 3 }, …)` in `setup`, as the Sporch golden does, so
+   each snapshot is computed from the real def (a hand-written snapshot wouldn't fail at the old
+   percentage).
 
 ## Docs edited at this kickoff
 
