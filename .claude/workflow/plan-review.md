@@ -24,7 +24,7 @@ One section per round (`## Round 1`, `## Round 2`, …), each with:
 - **Verdict:** approved, or changes needed;
 - **Plan fixes:** what the coding agent must change in the plan;
 - **Assumptions:** each checklist item with confirm / correct / decide-point;
-- **Decide-points:** 1–3 at most, each with your recommendation and why.
+- **Decide-points:** each with your recommendation and why.
 
 Then wait for Duncan's calls. Write his decisions into the round as **Decisions**, and into the
 living docs in place. End the round with **Docs edited** (file + one-line reason each).

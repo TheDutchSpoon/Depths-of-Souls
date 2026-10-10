@@ -6,10 +6,10 @@ Read this when changing collection, creatures or gems.
 
 ## 5. Creatures
 
-> **Seed roster catalogued in `.claude/species/`.** The 18 seed species (6 per biome), the 3
-> bosses, and the Unicorn intro-helper are authored in `.claude/species/species-locked.md` (locked
-> mechanics; the canonical roster the coding agent stamps into data). `.claude/species/_species-backlog.md`
-> holds **un-selected inspiration — not spec.**
+> **Seed roster catalogued in `.claude/content/`.** The 18 seed species (6 per biome) and the 3
+> bosses are described in the biome docs (`overgrowth.md`, `glimmerdark.md`, `rotcap-hollow.md`;
+> the Unicorn intro-helper in `overgrowth.md`), which describe what `main` ships.
+> `.claude/species/_species-backlog.md` holds **un-selected inspiration — not spec.**
 
 The game uses a **three-tier model**:
 

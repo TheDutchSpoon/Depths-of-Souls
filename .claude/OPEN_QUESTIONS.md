@@ -46,6 +46,7 @@ Read this when a slice touches a parked question, or at a grill.
 - **Behavioral traits** (scripting-altering / extra-action traits) — post-v1.
 - **Status effect naming** (Intelligence/Speed buff-debuff names) — data, name later.
 - **Lifeforce / Essence** possible rename if they feel too samey in UI.
+- **Sacrifice-revive** (idea): the Unicorn's revive opens it as a design space for future specs.
 - **Entrance-hub prelude** (idea, not committed): a short opening of a few fights vs. very weak
   **non-spawnable** creatures — "clearing the cave entrance to set up base" — doubling as a gentle
   tutorial at the shallow end of the onboarding ramp (§4). Would reuse the fixed-authored-encounter

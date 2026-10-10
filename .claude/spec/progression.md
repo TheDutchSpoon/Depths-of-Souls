@@ -12,9 +12,9 @@ All currencies are **unbounded** — no storage cap.
 
 > **The three v1 perk trees are catalogued in `.claude/specializations/`** — `sorcerer.md`,
 > `brute.md`, `shieldbarer.md`. Each is a flat pool of effect-carrier perks summing to exactly
-> **1000**. The spec docs' P4/P8 column is a **design-record annotation** of which perks work before
-> the Phase 8 gem/equipment systems; the code carries **no phase tag** (inert perks get a code
-> comment and a data-test list). The starters live there too.
+> **1000**. Each doc marks the perks that stay inert until the Phase 8 gem/equipment systems; the
+> code carries **no phase tag** (inert perks get a code comment and a data-test list). The starters
+> live there too.
 
 The player picks a **specialization** that shapes their own bonuses and playstyle (distinct
 from creature affinities). The game ships with **three** at launch; future specializations
@@ -32,6 +32,10 @@ player's single cold-start creature, see §5):
 
 **All content is accessible to every specialization** (same creatures, gems, equipment,
 biomes, facilities) — a spec changes *how you play*, never *what you can reach*.
+
+**Each spec has one control immunity** to an enemy-applied status: **Clear Mind** (Silenced),
+**Aggressive** (Pacified), **Lucidity** (Confused). Enemies apply all three through their generated
+gem sets, so each earns its keep in single-player.
 
 The three starter creatures (locked; names are **placeholders** in the "Species + Role" pattern,
 and both words may change once the deep biome is designed):

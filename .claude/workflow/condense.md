@@ -22,8 +22,10 @@ only by Phase 4.2's condensing slices (B to F); see `.claude/phases/4.2/brief.md
    `Decided in` comes from the old text's own tags.
 3. Run `npm run docs:check -- inventory <slice>` until it passes.
 4. Where the spec and the code disagree, don't pick a side in the text: bring each case to Duncan
-   with a recommendation, and write his decision in before the verify (the spec says what `main`
-   does; an intended change goes to a brief as "Decided, not built").
+   with a recommendation, and write his decision in before the verify. Ask first whether it is a
+   bug or a stale doc (phase brief, "Condensing rules"): for a stale doc the text says what `main`
+   does and an intended change goes to a brief as "Decided, not built"; for a bug the text keeps
+   the design and adds a `**Known bug:**` line pointing at the fix's listing.
 5. Write `verify-request.md` in the mailbox: the files condensed; the row counts per fate; what to
    check hardest (every `dropped` as superseded, every large merge, every number); the decisions
    Duncan made in step 4.
