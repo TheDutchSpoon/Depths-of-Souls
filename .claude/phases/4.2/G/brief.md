@@ -58,6 +58,10 @@ Everything marked `(Phase 4.2 only)` goes (phase brief "Phase-4.2-only text"). K
 | The "During the transition" note on old citations | `CLAUDE.md`, if 4.2-A added one | design agent |
 | Anything else marked `(Phase 4.2 only)` that B–F added | found by the grep | design agent lists it at the kickoff |
 
+The design agent also adds to `workflow/pr-review.md` the `## Not built` step (decided at 4.2-C;
+phase brief, rule 1): a PR that builds a Not built rule has its review move the rule into the
+file's `## Design` or `## Engine rules`.
+
 The design agent also adds the over-budget rule to `workflow/pr-review.md` and sets the ROADMAP's
 Phase 4.2 to closed. Kept, as history: this phase's briefs, inventories, verify requests and
 reports, and the records.

@@ -41,4 +41,8 @@ When a verify round has no findings, tell Duncan the slice is ready to merge.
 
 ## Finish
 
+A note for a later slice (a duplicate it should resolve, a link it must keep) goes into that
+slice's `brief.md` under `## Known from earlier slices`: the later slice reads its brief, not this
+mailbox. `verify-request.md` lists the notes and where each went.
+
 List every doc you edited, with a one-line reason each, at the end of `verify-request.md`.

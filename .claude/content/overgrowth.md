@@ -194,7 +194,7 @@ never Spiders, fill her side (`content/enemy-behaviour.md` "Boss floors").
 ### Unicorn Lightbearer
 
 Vitality · striker; the name is a placeholder. A unique, permanent party member that joins in the
-scripted intro (`spec/run.md` "Flow"); its own species is stubbed and returns with a real roster in
+scripted intro (`spec/run.md` "Scripted intro"); its own species is stubbed and returns with a real roster in
 a later biome.
 
 Whenever it attacks, it revives a random dead ally at **20% of that ally's baseline maximum HP**.
@@ -211,7 +211,7 @@ would deal about **50%**; one that also applies a status, about **30–40%**. A 
 its power coefficient through the normal damage formula (the target's Defence, affinity and every
 usual modifier), not a flat amount. An ally spell can target any living ally, the caster included.
 Every spell below, the core spells included, unlocks at biome 1 and stays rollable in every deeper
-biome (`spec/run.md` "Biome progression").
+biome (`spec/run.md` "Spells unlock cumulatively").
 
 ### Thorn Lash
 

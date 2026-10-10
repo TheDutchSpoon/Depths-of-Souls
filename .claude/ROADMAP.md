@@ -313,6 +313,12 @@ guardrails as every demo; own brief + phase record.
   when the lethal damage is more than 1 (today it rolls on any lethal damage, so a creature left at
   1 HP rolls again on a 1-damage hit). `specializations/shieldbarer.md` states the design, with a
   "Known bug" line on each perk that the fix's PR review removes.
+- **Level-ups after each fight** (found at the 4.2-C condense; the code doesn't match the design):
+  `descend` must apply each fight's XP before the floor's next fight, so the party fights it at its
+  new levels. Today it materializes the party once per descent and applies the floor's XP after the
+  whole floor. The fix moves balance, so the CI balance bands are re-checked in the same PR.
+  `spec/run.md` "Rewards" states the design, with a "Known bug" line that the fix's PR review
+  removes.
 
 ## Phase 5 — Persistence (large saves)
 - Versioned save/load with **IndexedDB as the primary store** (saves are large);

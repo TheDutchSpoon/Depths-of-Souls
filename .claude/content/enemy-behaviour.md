@@ -4,7 +4,7 @@ Read this when a slice touches role scripts, enemy gem sets or boss floors.
 
 Source: the role scripts in `src/data/scripts.ts`; every creature's role (`defaultScriptId`) in
 `src/data/species/*.ts`; the gem-set roll and the boss fill in `src/engine/generation.ts`. The rules
-behind them are in `spec/scripting.md` "Role scripts" and `spec/run.md` "Milestone bosses"; each
+behind them are in `spec/scripting.md` "Role scripts" and `spec/run.md` "Boss floors"; each
 biome doc gives its creatures' roles. This is the player-facing reference: where it disagrees with
 the source, the source is right.
 
@@ -87,7 +87,7 @@ biome on; a data test guards it.
 A boss floor is one 6v6 fight: the boss, then its **authored adds** (the creatures its fight
 needs), then random creatures from the biome's own pool, never the boss's own species, rerolled on
 every visit, with ordinary kill rewards. A boss has no immunity to control: a lock downgrades its
-turn like any enemy's. The rules, and why, are in `spec/run.md` "Milestone bosses".
+turn like any enemy's. The rules, and why, are in `spec/run.md` "Boss floors".
 
 | Boss | Role | Authored adds | Fill |
 |---|---|---|---|
