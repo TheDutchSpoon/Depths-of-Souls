@@ -319,6 +319,17 @@ guardrails as every demo; own brief + phase record.
   whole floor. The fix moves balance, so the CI balance bands are re-checked in the same PR.
   `spec/run.md` "Rewards" states the design, with a "Known bug" line that the fix's PR review
   removes.
+- **`on-death-observed`** (decided at the 4.2-D condense; a new direction, not a bug): death
+  observation joins the other two observation hooks. `on-ally-death` and `on-enemy-death` become
+  one `on-death-observed`, fired on every living creature when a creature dies, with the same
+  `ObservationFilter` `relationship` (`self`, `ally`, `enemy`, `any`), compared with the dead
+  creature, in the standard tie-break order (side → slot → id), like `on-action-observed` and
+  `on-damage-observed`. `on-death` and `on-kill` stay separate (actor-self hooks). The 8 trait
+  triggers on the two old hooks (`data/traits/core.ts`, `glimmerdark.ts`, `rotcap-hollow.ts`)
+  move over; the Rot Sovereign's pair becomes one `any` trigger. Deliberate golden change: the
+  hook name in `TriggerFired`, and the firing order on an enemy's death (today the dead creature's
+  allies all fire before its enemies). The PR review rewrites `spec/effects.md` "Hooks", "Damage-path
+  hook order" and "Action reactions: actor-self hooks or observation" to match (17 hooks become 16).
 
 ## Phase 5 — Persistence (large saves)
 - Versioned save/load with **IndexedDB as the primary store** (saves are large);
@@ -363,6 +374,14 @@ guardrails as every demo; own brief + phase record.
   presented as a story beat, the starter revived and the Unicorn gained. It is presentation only
   (HP resets every fight, so a revive changes nothing); `spec/run.md` "Scripted intro" describes
   the fight `main` runs.
+- **Effective stats on screen** (moved from the effects spec at the 4.2-D condense): stacked
+  multipliers aren't mentally computable (`0.8³ = 0.512`, not "−60%"), so the UI always shows the
+  computed effective stat and net multiplier first, with the per-factor breakdown on hover or in
+  detail; it never makes the player multiply factors. Known cost: scripting against a predicted
+  post-debuff stat threshold means reasoning about compounding; if playtesting shows that confuses
+  players, an additive-within-a-type, multiplicative-across-types hybrid is the documented
+  fallback, replacing the multiplicative fold in `spec/effects.md` "Category decides
+  player-facing treatment".
 
 ## Phase 8 — Progression & incremental layers
 - **Facilities**: entrance-hub structures (Gem Forge, Equipment Forge, Fusion Chamber, Soul

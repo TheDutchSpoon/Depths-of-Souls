@@ -3,8 +3,8 @@
 Read this when a slice touches Glimmerdark's creatures, statuses, spells or boss.
 
 Source: species and creatures in `src/data/species/glimmerdark.ts`; traits in
-`src/data/traits/glimmerdark.ts`; spells in `src/data/spells/glimmerdark.ts`; Grant Act First in
-`src/data/statuses.ts`. Each description is literal, exact numbers included, in the style of a
+`src/data/traits/glimmerdark.ts`; spells in `src/data/spells/glimmerdark.ts`; Grant Act First,
+Vulnerability and Regen in `src/data/statuses.ts`. Each description is literal, exact numbers included, in the style of a
 future in-game tooltip, and stands on its own. Where it disagrees with the source, the source is
 right; a change to a number updates this doc in the same change.
 
@@ -30,6 +30,18 @@ Flickerling Wick and the Sparkeater Voidmaw).
 
 Web's turn-order twin: its bearer acts at the **front** of the round's turn order instead of the
 back. Lasts **3** of its bearer's turns.
+
+### Vulnerability
+
+A Vulnerable creature takes **×1.5 damage**. Lasts **3** of its own turns; applying it again
+refreshes the timer and never compounds. Applied by **Blinding Flare** (Violence).
+
+### Regen
+
+At the end of each of its bearer's turns, heals **10% of the healer's Health**, measured when
+granted. Lasts **3** of the bearer's turns; granting it again refreshes the timer and keeps the
+stronger heal. While the healer lives the heal is credited to it, after that to the bearer. Applied
+by **Afterglow** (Vitality).
 
 ## Flickerlings (Vitality/Wit/Violence): the flame that feeds on itself
 

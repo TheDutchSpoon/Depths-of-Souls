@@ -32,7 +32,7 @@ bearer's turns per infection.
 ### Damage over time
 
 Spore, Burn and Poison tick as indirect damage from a snapshot of their applier, at the end of each
-of the bearer's turns (`spec/statuses.md` "Status effects"): Spore **35% of the infector's Speed**,
+of the bearer's turns (`spec/statuses.md` "DoT and Regen belong to their applier"): Spore **35% of the infector's Speed**,
 Burn **35% of the applier's Intelligence**, Poison **40% of the applier's Attack**.
 
 ### Confusion
