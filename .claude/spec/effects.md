@@ -73,8 +73,9 @@ status lifecycle in `spec/statuses.md`.
   (`spec/responses.md` "No side doors").
 - A trait may react by dealing damage, applying a status, changing a stat, or **granting an extra
   action** (the Sorcerer starter's turn-end cast, Resonant Overtone's echo). A granted action
-  always runs after the action that caused it, inside the same turn, and obeys every action rule:
-  a Stunned creature can't take one, a Silenced one can't cast. Traits that insert extra *turns*,
+  takes no turn of its own: it runs at the end of the step that raised it (`spec/responses.md`
+  "perform-action"), and obeys every action rule: a Stunned creature can't take one, a Silenced
+  one can't cast. Traits that insert extra *turns*,
   change scripting options or alter the creature's own decision-making are parked past v1
   (`OPEN_QUESTIONS.md` "Behavioral traits").
 - **"attack" and "cast" in a trait or spell mean the real actions**: the same damage formula,
@@ -114,7 +115,7 @@ status lifecycle in `spec/statuses.md`.
   Spore) carry `triggered` effects (`spec/statuses.md` "Action locks", "Turn order").
 - Armour penetration, cross-stat, action instances, provoke immunity and friendly-fire are damage
   and targeting rules (`spec/combat.md` "Armor penetration", "Cross-stat contribution", "Action
-  instance-list", "targeting-override").
+  instance-list", "Targeting override").
 - **Every effect is carrier-agnostic**: a status may carry any effect a trait carries, except what
   a validator rejects ("Validators").
 
@@ -437,13 +438,17 @@ status lifecycle in `spec/statuses.md`.
   the action kind already in scope where damage is dealt. Brute Force (`'attack'`) and Spell Focus
   (`'cast'`) are unconditional "+% damage" perks (`condition: always`) that must not leak onto the
   other action kind.
+- It lands as **one modified hit, never an `on-damage-dealt` follow-up**: a follow-up would be a
+  second hit that re-fires `on-damage-dealt`, re-splashes and double-counts on-hit effects. It is a
+  trait or perk passive, not a `DamageModifierDef` (the family statuses carry); a timed conditional
+  bonus would give `DamageModifierDef` a condition instead.
 
 ### Splashing and Annihilate
 
 - `{ category: 'splashing' }` and `{ category: 'annihilate' }` are permanent passives with no
   magnitude (perk effects, instantiated like innate traits, never runtime status instances).
 - After a single-target **Attack's** main hit (attacks only, never Cast), a Splashing bearer also
-  strikes each adjacent living enemy (`spec/combat.md` "adjacency targeting"), or with Annihilate
+  strikes each adjacent living enemy (`spec/combat.md` "Adjacency targeting"), or with Annihilate
   every other living enemy. Each splash hit is a full formula recompute against that target's own
   Defence, affinity and pools, never a copy of the main hit's number. No `TriggerFired`: it is the
   same action, not a trigger.

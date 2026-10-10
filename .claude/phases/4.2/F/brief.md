@@ -39,6 +39,13 @@ Phase brief: `.claude/phases/4.2/brief.md`. Loop: condense. Golden policy: **byt
 - **From 4.2-D:** ROADMAP gains two "Decided, not built" entries moved out of the effects spec:
   Phase 7 "Effective stats on screen" and Phase 4.5 `on-death-observed`. Condense them with the
   rest.
+- **From 4.2-E:** `CLAUDE.md`'s rule summary restates combat and scripting, whose homes are now
+  `spec/combat.md` and `spec/scripting.md`. `OPEN_QUESTIONS.md` "Balance numbers" cites "§7" for
+  the round cap (now `spec/combat.md` "Turn queue", `ROUND_CAP`), and its "Status-only AoE
+  recasts" item names the "target lacks the status" condition that `ROADMAP.md` Phase 6 and
+  `content/enemy-behaviour.md` "Known limit" also carry. ROADMAP Phase 4.5 gains "HP% qualifiers
+  pick by HP%" (a bug fix); Phase 6 is now the one home of the editor's candidate conditions and the
+  script-level default target, which `spec/scripting.md` links.
 
 ## Done when
 

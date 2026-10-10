@@ -29,7 +29,26 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
   until a later slice threads `speciesId` (it is threaded); `engine/effect-types.ts:121-127` calls
   `all-allies-of-species` dormant until wired (only a creature without a `speciesId` gets an empty
   list); `engine/effect-types.ts:277` calls `remove-status` "the final response verb" (the rule is
-  `spec/responses.md` "No side doors", not a verb ceiling).
+  `spec/responses.md` "No side doors", not a verb ceiling). From 4.2-E:
+  `engine/scripting-types.ts:9-22` repeats the `'target'` subject comment twice;
+  `engine/scripting-types.ts:78-89` says `acted-before-target` in a trigger "always evaluates
+  false" and names only `random-enemy` (it falls back to the creature being resolved against, and
+  all three random selectors peek to no target); `engine/target-selectors.ts:53-55` calls
+  `random-enemy` "the one blessed RNG draw site" (`random-ally` draws too); `data/scripts.ts:132`
+  lists the Stonehorn Warden as a `taunter` (it runs `warden`). From 4.2-E's verify:
+  `engine/scripting-types.ts:144-149` says `targetSelectorHasCandidate` still handles `'random'`
+  (it throws, `target-selectors.ts:36` and `:132`; `spec/combat.md` "One action pipeline");
+  `engine/types.ts:323-325` says a status tick skips Defence (only a cost does; a tick meets a fifth
+  of Defence, `resolution.ts` `calculateIndirectDamage`); `engine/effect-types.ts:760` names
+  `targeting.ts`'s `adjacentLivingTargets` as Splashing's lookup (production uses a private copy at
+  `actions.ts:458`, so `targeting.test.ts:326-368` tests code Splashing doesn't run: a decide-point
+  for the plan, not only a comment); `engine/config.ts:1-2` calls `ROUND_CAP` "exact number TBD";
+  `engine/combat.ts:160`, `:366`, `:385`, `:410`, `:500`, `actions.ts` (header, `:346`,
+  `:373-376`, `:397`) and `types.ts:33` cite `CONVENTIONS "…"` or `GAME_DESIGN §…`. From 4.2-E's
+  round-2 verify: `engine/types.ts:44-47` and `actions.ts:334`, `:390`, `:668` cite `GAME_DESIGN §7`
+  for the targeting-override rules (now `spec/combat.md` "Targeting override");
+  `data/scripts.ts:7-8` says every role ends in the same fallback (`caster` casts first and ends in
+  Attack; `spec/scripting.md` "Role scripts").
 - The `citations` mode, blocking in CI, and the `budgets` mode, reported only (phase brief
   "Checks"). The budgets are set from the condensed sizes.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the

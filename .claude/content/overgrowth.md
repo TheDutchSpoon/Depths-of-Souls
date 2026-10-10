@@ -30,8 +30,8 @@ Rarity only changes how often it spawns.
 ### Indirect damage
 
 A trait's hit marked *indirect* follows the indirect damage rule (`spec/combat.md` "Damage
-formula"): only a fifth of the target's Defence applies, and it gets no chip floor and no
-Additional.
+channels and the Additional"): only a fifth of the target's Defence applies, and it gets no chip
+floor and no Additional.
 
 ## Statuses
 

@@ -330,6 +330,25 @@ guardrails as every demo; own brief + phase record.
   hook name in `TriggerFired`, and the firing order on an enemy's death (today the dead creature's
   allies all fire before its enemies). The PR review rewrites `spec/effects.md` "Hooks", "Damage-path
   hook order" and "Action reactions: actor-self hooks or observation" to match (17 hooks become 16).
+- **HP% qualifiers pick by HP%** (found at the 4.2-E condense; the code doesn't match the design):
+  an `hp-percent` condition's `lowest` or `highest` qualifier must test the creature with the
+  lowest or highest HP%, compared by integer cross-multiplication with the shared tie-break. Today
+  `evaluateCondition` picks it by current HP. Users: the `warden` and `support` role scripts' first
+  rules, so the fix is a deliberate golden change for fights with either role, and the CI balance
+  bands are re-checked in the same PR. `spec/scripting.md` "Conditions in the engine" states the
+  design, with a "Known bug" line that the fix's PR review removes.
+- **A dead creature's turn is skipped entirely** (decided at the 4.2-E condense; a new direction,
+  not a bug): a creature that is dead when its slot in the frozen queue comes up gets no
+  `TurnStarted`/`TurnEnded` bracket, no turn-clock bump and no Web roll; nothing happens for it.
+  A creature that dies during its own turn keeps that turn's cleanup and Web roll, since the turn
+  happened. Web's break-free roll becomes "at every living creature's turn", so a Web gets
+  stickier as the board empties (about 72% per round only in a full 6v6), still capped by its
+  3-turn duration. Open for the 4.5 grill: whether anything else reads dead slots (the act-first
+  and act-last poles). Deliberate golden change for every fight where a creature dies before its
+  turn (the bracket events, the turn clock, the Web roll's RNG draws), and the CI balance bands are
+  re-checked in the same PR. The PR review rewrites `spec/combat.md` "Turn queue",
+  `spec/statuses.md` "Self-clearing statuses" (the 72%), "Born this turn" and "Turn order", and
+  `content/overgrowth.md`'s Web entry.
 
 ## Phase 5 — Persistence (large saves)
 - Versioned save/load with **IndexedDB as the primary store** (saves are large);
