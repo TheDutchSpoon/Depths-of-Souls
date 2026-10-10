@@ -72,10 +72,7 @@ State how each claim was checked:
 
 ## Phase record
 
-- If `.claude/phases/<phase>/brief.md` exists (new layout, Phase 4.5 onward): write the slice's
-  record to `record.md` in the slice folder.
-- Otherwise (Phase 4.1): append the slice's section to the phase record,
-  `.claude/phases/phase-4.1-fix-and-consolidation.md`, as before.
+Write the slice's record to `record.md` in the slice folder.
 
 A record is immutable once its slice merges. A content slice describes its content in the record
 and the report's **Content changes**; the design agent writes the content doc from them at the PR

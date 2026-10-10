@@ -204,7 +204,8 @@ grill); the **coding agent's implementation plan owns the slice breakdown** —
   enemies are ordinary creature instances at that level, not a separately-scaled stat block.
 
 ## Phase 4.1 — Fix & consolidation pass
-*Brief: `.claude/briefs/phase-4.1-implementation-plan.md`. Source: the Phase 4 close-out review,
+*Brief: `.claude/phases/4.1/brief.md`; record: `.claude/phases/4.1/record.md` (closed after H2d,
+PR #92). Source: the Phase 4 close-out review,
 every point decided with the design owner and synced into GAME_DESIGN / CONVENTIONS and the brief.*
 Phase 4 shipped green, but the review found that it wasn't done (Silenced/Pacified never authored,
 no creature names, the game crashing at the content frontier), several real bugs (enemy support

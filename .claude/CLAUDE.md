@@ -87,8 +87,8 @@ deepest). **Biome changes every 10 floors** (**10 in v1**, ≥6 species/biome, �
 ≈180+ total; specific creature = rarity-weighted RNG; boss every 10th floor, non-collectable). **No
 prestige, no resets** — forward-only.
 
-Items marked **(4.1)** are decided and land during Phase 4.1 (see ROADMAP); until the matching
-slice merges, the code still has the Phase 4 shape.
+Items marked **(4.1)** were decided at the Phase 4 close review and landed during Phase 4.1 (see
+ROADMAP).
 
 Full design: `.claude/GAME_DESIGN.md`. Read it before designing features.
 
@@ -136,9 +136,9 @@ mailbox and its commands): `.claude/WORKFLOWS.md` — read before starting or re
 `.claude/phases/<phase>/` = one folder per phase: `brief.md` (what we **intend**, written before
 work starts) and `record.md` (what was **built**), plus one folder per slice holding its brief,
 kickoff, plan, reviews, reports and record. Briefs are kept as historical artifacts, never deleted;
-a slice's `record.md` existing is what marks it shipped. Phase 4.1 is the transition: its brief and
-record are still `briefs/phase-4.1-implementation-plan.md` and
-`phases/phase-4.1-fix-and-consolidation.md` until 4.1 closes. Phases 0–4 live untouched in
+a slice's `record.md` existing is what marks it shipped. Phase 4.1 was the transition: its brief and
+record (`briefs/phase-4.1-implementation-plan.md`, `phases/phase-4.1-fix-and-consolidation.md`)
+moved unchanged to `phases/4.1/brief.md` and `phases/4.1/record.md` when it closed. Phases 0–4 live untouched in
 `.claude/archive/` — history, never current truth.
 
 ## Working agreement
