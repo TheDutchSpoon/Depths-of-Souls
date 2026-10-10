@@ -3479,8 +3479,9 @@ Files 193 -> 195; tests 1297 (1296 passed, 1 skipped) -> 1333 (1332 passed, 1 sk
 
 ### Deviations and spec notes
 
-- `state/integration.test.ts` moves in three tests, not two: the revive count (stage 4, Snapback), the Brute's
-  attacks per turn (stage 2, the Health remap) and the G2 gem draw (stage 2). The "Phase 4.1-A defaults" block does not move.
+- `state/integration.test.ts` moves in three assertions in two tests: "Slice I ... descends floor 1" (the revive
+  count, first changed at stage 4 by Snapback, and the Brute's attacks per turn, first changed at stage 2 by the Health
+  remap) and the G2 Pacified Unicorn test (the gem draw, stage 2). The "Phase 4.1-A defaults" block does not move.
 - The Health remap leaves `src/app/demoFight.ts` (a throwaway demo) on the old scale.
 - Spec questions for the design agent are in `report-r1.md`.
 
@@ -3492,3 +3493,6 @@ Engine: `curves.ts`. Data: `balance.ts`, the four species files (Health), `start
 `status-timing.test.ts`, `integration.test.ts`, `balance-sim.test.ts`, `balance-sim-report.test.ts` (new); goldens:
 `golden-sorcerer-starter`, `-resonant-overtone`, `-resonant-harmonize` (re-derived), `golden-h2c-snapback` (new),
 six comment-only; `corpus-digest.fixture.ts`. No living doc or content doc edited. Nothing deleted.
+
+Fix round r1 (comment-only, from the PR review): the `data/statuses.ts` header points at 4.1-H2d, the scripted-intro
+comment in `state/integration.test.ts` has the current numbers, and this section's integration bullet is corrected.

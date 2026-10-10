@@ -11,7 +11,7 @@ import type { StatusDef } from '../engine/effect-types'
 // effective stat, recorded once at application as the instance's snapshot (applier, affinity,
 // potency). Its tick is the `snapshot-potency` magnitude: indirect damage (or a heal) from that
 // snapshot, with the applier as its source while it lives. The percentages are PLACEHOLDERS
-// (4.1-H2b2); H2c tunes them.
+// (4.1-H2b2); 4.1-H2d tunes them, after its design grill.
 
 /** DoT: each bearer turn (on-turn-end) the bearer takes the instance's potency -- 20% of the
  * APPLIER's effective Attack when applied (placeholder) -- as INDIRECT damage from the applier's

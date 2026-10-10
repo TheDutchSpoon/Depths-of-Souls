@@ -105,11 +105,14 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     expect(intro.result).toBe('win')
     // The scripted intro is a run-layer special case (ASSUMPTION 23) -- the Unicorn joins
     // regardless of outcome, but this seed happens to win it: the scripted Unicorn stand-in
-    // (speed 20 > the Brute starter's 15) acts FIRST each round, chipping 1 dmg/round (a
-    // chip-floor-only hit, x1.25 affinity advantage but far below 1 raw damage either way); the
-    // Brute's double-strike (11+11) brings the stand-in from 25 HP to 3 in round 1, then kills
-    // it with round 2's first instance alone (3-11<0) -- instance 2 has no living target left
-    // and never fires (Slice B's action instance-list model, re-exercised here too).
+    // (speed 20 > the Brute starter's 15, 39 HP) acts FIRST each round, hitting for 7: raw
+    // damage 0.1875 (chip only, x1.25 affinity) floors to the minimum of 1, plus the Additional
+    // min(floor(0.2 x 33), 10) = 6 (the Brute starter has 33 HP), so the Brute goes 33 -> 26 ->
+    // 19; the Brute's double-strike hits for 18+18 (raw 11.475 at x0.75 affinity floors to 11,
+    // plus the Additional min(floor(0.2 x 39), 10) = 7), bringing the stand-in from 39 HP to 21
+    // to 3 in round 1, then kills it with round 2's first instance alone (3-18<0) -- instance 2
+    // has no living target left and never fires (Slice B's action instance-list model,
+    // re-exercised here too).
     const afterIntro = store.getState()
     // Phase 4.1-A (A6): instance ids are opaque ('inst-<ordinal>'), never embedding the creature
     // id -- the Brute starter is the first grant (setSpec), the Unicorn the second
