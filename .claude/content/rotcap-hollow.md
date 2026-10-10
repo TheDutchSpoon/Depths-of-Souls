@@ -187,3 +187,8 @@ player's lowest-HP creature, healing and buffing the player.
 **Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129): every item has landed and is folded
 into the sections above. The DoT, Spore-spread, Rotcore and Sporch items landed in 4.1-H2b2, and
 every creature's Health moved to the 20–45 range in 4.1-H2c ("Reading this biome").
+
+**Decided at the 4.1-H2d grill** (brief ASSUMPTION 152), landing in 4.1-H2d: the DoT numbers are no
+longer placeholders. Spore ticks **35% of the infector's Speed** (was 15%), Burn **35% of the
+applier's Intelligence** (was 25%: the Igniter, Withering Bolt) and Poison **40% of the applier's
+Attack** (was 20%: the Rotcore's burst).

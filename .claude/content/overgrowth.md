@@ -237,3 +237,10 @@ into the sections above. Poison from its applier landed in 4.1-H2b2 (the Venom B
 4.1-H2c the Jaws' Snapback went from 60% to 30% of their Attack (as indirect damage the 60% beat
 the Shieldbarer pair in every floor-1 fight), Arcane Bolt from 50% to 100% of the caster's
 Intelligence, and Health to the 20–45 range ("Reading this biome").
+
+**Decided at the 4.1-H2d grill** (brief ASSUMPTIONS 150, 152), landing in 4.1-H2d: **Pollen Cloud
+deals no damage**: it puts every enemy to Sleep for 2 turns and nothing else (cast on a small party
+at low level, its hit plus the Additional killed the whole party while it slept). Venom Bolt's
+Poison ticks **40% of the caster's Attack** (was 20%). The Jaws' Snapback goes **back to 60% of
+its Attack** (brief ASSUMPTION 151): the level-1 floor-1 enemies and the Warden that attacks made
+the 30% unnecessary.

@@ -722,8 +722,9 @@ already reaches; a hook needing newly-tracked state is a larger change (none of 
   Defence. That still makes DoT a distinct answer to high-Defence enemies. The applier is the damage
   source while it lives (its on-kill and on-damage-dealt traits fire; retaliation never answers a
   tick, §6), else the bearer, which then fires no dealer traits. **Regen** heals its snapshot
-  potency, credited the same way. Placeholder numbers, tuned in 4.1-H2d: **Poison 20% of Attack,
-  Burn 25% of Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed**. A status that
+  potency, credited the same way. Numbers decided at the 4.1-H2d grill (they land in 4.1-H2d; placeholders
+  20 / 25 / 15 until then): **Poison 40% of Attack, Burn 35% of Intelligence, Spore 35% of Speed,
+  Regen 10% of the healer's Health**. A status that
   applies itself through its own effect passes its snapshot on (Spore spreading on death keeps the
   original strength); a creature that merely carries a status and applies it is an ordinary
   applier and snapshots itself. *(Until 4.1-H2b2 a DoT was a percentage of the bearer's own max HP
@@ -1287,7 +1288,10 @@ the hot autosave path.
   width-growth rate) and XP/level growth pacing. *Targets are set (§4: party ≈ floor, enemy
   multiplier 1.25 → 2.0 by floor 100, +1pp per floor after); the exact parameters are tuned with
   the balance simulator.* Watch points: floors 20–30 before Phase 8 (about +40% enemy stats,
-  answered only by perks and traits) and the steep climb past floor 100.
+  answered only by perks and traits) and the steep climb past floor 100. Clean-path levelling
+  (every floor cleared on the first try) keeps party level equal to the floor through floor 9,
+  then lags (9 at floor 10, 25 at floor 30), mostly because a boss floor pays one fight of XP
+  (4.1-H2d grill, brief ASSUMPTION 154).
 - **Fight count** (default 10 + (floor − 1), uncapped): floor success compounds per-fight win
   chance over many fights. **Revisited at the 4.1-H2 grill and kept** (brief ASSUMPTION 117): the
   compounding is real and a flat 10 measured faster, but the early floors are balanced through the
@@ -1298,16 +1302,18 @@ the hot autosave path.
 - Costs: gem craft/augment/level (Essence), equipment craft/infuse/level (Ore), facility
   build/upgrade (Bricks), fusion + catch-up leveling (Lifeforce).
 - Soul-per-kill % per rarity tier (default 25 / 20 / 10 from Phase 4.1-A); status magnitudes/durations/
-  DoT and Regen percentages (placeholders from the 4.1-H2 grill, tuned in 4.1-H2d); affinity
+  DoT and Regen percentages (decided at the 4.1-H2d grill, open to later tuning); affinity
   already fixed (±25%).
 - Facility upgrade-tier counts and exact cap values (Gem Forge, Equipment Forge, Fusion Chamber
   only — structure is decided in §4, numbers are not).
 - Typical fight-length target (rounds per on-level fight) and the exact fight-length safety
   round-cap value (structure decided in §7, number TBD).
-- **DoT and Regen potencies** (placeholders since 4.1-H2b2, tuned in 4.1-H2d: Poison 20% of
-  Attack, Burn 25% of Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed; §6).
-  Measured at the H2b2 PR review on the corpus: **93% of ticks land on the minimum of 1** (a
-  potency of 4–5 from a stat near 20, against a fifth of a Defence near 20). *(They replaced the
+- **DoT and Regen potencies** (decided at the 4.1-H2d grill, brief ASSUMPTION 152, landing in
+  4.1-H2d: Poison 40% of Attack, Burn 35% of Intelligence, Spore 35% of Speed, Regen 10% of the
+  healer's Health; §6). The placeholders before it (Poison 20 / Burn 25 / Spore 15) put **93% of
+  ticks on the minimum of 1** at the H2b2 PR review (a potency of 4–5 from a stat near 20, against
+  a fifth of a Defence near 20). No set measured moved a CI verdict; 40 / 35 / 35 makes a DoT do
+  something, kept modest because biome 3's DoTs are mostly the enemy's. *(They replaced the
   Phase 4 percent-of-max-HP ticks, Regen 5% / Poison 3% / Burn 5% per stack.)*
 
 **Design items parked (decided to defer, not undecided):**

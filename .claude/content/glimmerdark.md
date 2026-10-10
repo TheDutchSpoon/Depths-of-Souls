@@ -192,3 +192,6 @@ into the sections above. The Flickerlings, Glow's deletion, Beacon Charge, Kindr
 affinity spread landed in 4.1-H2b1, single-instance Vulnerability and Afterglow's Regen in
 4.1-H2b2, and every other creature's Health moved to the 20–45 range in 4.1-H2c ("Reading this
 biome"; the Flickerlings were already on it).
+
+**Decided at the 4.1-H2d grill** (brief ASSUMPTION 152): Afterglow's Regen stays at **10% of the
+caster's Health**, no longer a placeholder; 4.1-H2d removes the placeholder wording.
