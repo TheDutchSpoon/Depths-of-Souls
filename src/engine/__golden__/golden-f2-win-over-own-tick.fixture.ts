@@ -3,7 +3,9 @@
 // ASSUMPTION 19) it is a WIN, with no tick; an end-only check made it a draw. Hand-derived.
 //
 // P (player, speed 20, max HP 100, wounded to 3 after fight setup) carries a fixture trait that
-// Poisons itself (3 turns) at fight start; Poison ticks 3% of max HP = 3 = lethal for P at 3 HP.
+// Poisons itself (3 turns) at fight start; a Poison tick would be lethal for P at 3 HP (the tick is
+// indirect damage from the applier's snapshot since 4.1-H2b2). It applies the real Poison, no tick
+// lands, so its potency isn't read and isn't pinned (4.1-H2d).
 // E (enemy, speed 10, health 5, defence 5) waits. P always-attacks: off 20, def 5 -> core 15,
 // chip 0.2 -> raw 15.2 -> final 15; E 5 -> 0, dies. The enemy side is empty: the fight ends at
 // once. P's turn-end hooks never run (so no tick), its cleanup never runs: TurnEnded, FightEnded.

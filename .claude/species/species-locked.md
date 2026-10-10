@@ -37,7 +37,7 @@ Makes death meaningful and revive a second chance, not a buff-preserving undo. A
 | **Swarmhive** | Violence | Strength in numbers | Drone (cheap body), Striker (scales per hive-mate **in the team**), Queen (anchor, scales hardest) | **Count-scaling** · needs `speciesId` wired + stat-modifier `magnitudeSource` (Slice E2) |
 | **Treants** | Vitality / Endurance | Health engine (grows over time) | Sapling (`on-round-end → permanent +max-HP / Regen`), Elder (huge sustained wall — heals the line / scales off own max HP) | — |
 | **Pollinators** | Wit / Vitality | Team-buff engine (non-health buffs) | Duster (spreads permanent non-health stat-buffs — Speed/Attack/etc.), Beneficiary (capitalizes on a buffed team) | Count-scaling (reuse) |
-| **Snapjaws** | Violence / Endurance | Bait & punish (carnivorous plants) | Lure (`on-provoke → grant self defending`, pulls aggro + tanks), Jaws (`on-damage-taken → retaliate`, 30% of Attack since 4.1-H2c, was 60%) | Grant-action-state; retaliate |
+| **Snapjaws** | Violence / Endurance | Bait & punish (carnivorous plants) | Lure (`on-provoke → grant self defending`, pulls aggro + tanks), Jaws (`on-damage-taken → retaliate`, 60% of Attack; 30% in 4.1-H2c, back to 60% from 4.1-H2d) | Grant-action-state; retaliate |
 | **Lullpollen** | Wit / Instinct | Sleep & punish (sleep-flowers) | Sleeper (`on-attack → Sleep`, chance), Reaper (`+% dmg to Sleeping`) | **Sleep** status (self-removal: Slice E2) · Sleeper needs chance-response + Reaper needs target-conditional damage (Slice E2) |
 
 **New this biome:**

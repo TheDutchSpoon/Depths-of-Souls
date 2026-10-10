@@ -39,6 +39,7 @@ import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { VENOM_BOLT } from '../../data/spells'
 import { STATUS_REGISTRY } from '../../data/statuses'
+import { holdPotency } from '../__fixtures__/held-statuses'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import type { CombatEvent, FightResult } from '../types'
 import type { Script } from '../scripting-types'
@@ -89,7 +90,9 @@ export const scripts: ReadonlyMap<string, Script> = new Map([
   ...FIXTURE_SCRIPTS_BY_ID,
   [castOnceThenWait.id, castOnceThenWait],
 ])
-export const statuses = STATUS_REGISTRY
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
+// never changes a mechanism golden). The status is otherwise the real one.
+export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 function dotTick(remainingHp: number): CombatEvent {
   return {

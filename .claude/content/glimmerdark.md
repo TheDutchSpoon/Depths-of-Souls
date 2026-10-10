@@ -154,7 +154,7 @@ already covers every affinity; these are spice on top of it, not a replacement k
 | Beacon Charge | Wit | Heals a single ally for **30% of the caster's effective Health**, and grants that ally **Grant Act First** (the same status Blindclaws' Setter and Vanguard grant) for **3 turns**. |
 | Disorient | Instinct | A single-target hit dealing damage equal to **85% of the caster's Intelligence**, and applies Web (act-last) to the target for **3 turns** — the same status Overgrowth's Vine Snare applies, reused rather than re-authored under a new name. |
 | Blinding Flare | Violence | A single-target hit dealing damage equal to **70% of the caster's Intelligence**, and leaves the target **Vulnerable** (takes ×1.5 damage, once: re-casting refreshes it, it never compounds) for **3 turns** — a light-burst setup debuff; no other spell applies Vulnerability. |
-| Afterglow | Vitality | Heals a single ally for **50% of the caster's effective Health**, and grants **Regen** (heals a further **10% of the caster's Health** at the end of each round, measured when cast; a placeholder until 4.1-H2d) for **3 turns** — a lingering-light sustain heal, distinct from Regrowth's plain burst. Regen never stacks: re-granting it refreshes the timer and keeps the stronger heal. While the caster lives the heal is credited to it, after that to the target. |
+| Afterglow | Vitality | Heals a single ally for **50% of the caster's effective Health**, and grants **Regen** (heals a further **10% of the caster's Health** at the end of each round, measured when cast) for **3 turns** — a lingering-light sustain heal, distinct from Regrowth's plain burst. Regen never stacks: re-granting it refreshes the timer and keeps the stronger heal. While the caster lives the heal is credited to it, after that to the target. |
 | Kindred Light | Wit | Heals **every ally** for **20% of the caster's effective Health** — a party-wide wave of light; the game's first AOE support spell. |
 
 Every ally-targeting entry above (Beacon Charge, Afterglow, Kindred Light) can be
@@ -192,3 +192,6 @@ into the sections above. The Flickerlings, Glow's deletion, Beacon Charge, Kindr
 affinity spread landed in 4.1-H2b1, single-instance Vulnerability and Afterglow's Regen in
 4.1-H2b2, and every other creature's Health moved to the 20–45 range in 4.1-H2c ("Reading this
 biome"; the Flickerlings were already on it).
+
+**Decided at the 4.1-H2d grill** (brief ASSUMPTION 152): Afterglow's Regen stays at **10% of the
+caster's Health**, no longer a placeholder; 4.1-H2d removed the placeholder wording (folded above).

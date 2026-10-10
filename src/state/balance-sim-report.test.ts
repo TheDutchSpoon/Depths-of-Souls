@@ -10,14 +10,20 @@ import {
   buildFirstTryRows,
   buildMatchupRows,
   buildSpecReport,
-  FIRST_SESSION_RUNS,
+  firstRunOnFloor,
   FLOOR5_WINDOW_RUNS,
   foldTraitStacks,
   formatReport,
+  formatTally,
+  fullPartyBySeedFloor,
+  FULL_PARTY_BY_FLOOR,
   MATCHUP_MAX_FLOOR,
   NO_STACKS,
   NO_TRAIT_STACKS,
   reachedFloorInWindow,
+  SOUL_BY_FLOOR,
+  soulBySeedFloor,
+  tallyReads,
   templateIdOf,
   topTraitStacks,
   traitStackMaxima,
@@ -61,8 +67,6 @@ function seedResult(o: Partial<SeedResult> = {}): SeedResult {
     firstTryFloor1Clear: false,
     clearsToFirstSoul: null,
     runsToFirstSoul: null,
-    partySizeAfterSession: null,
-    deepestAfterSession: null,
     reachedFloor5InWindow: false,
     earlyFights: [],
     fights: 0,
@@ -86,9 +90,8 @@ const fight = (
 ): EarlyFight => ({ floor, enemyTemplateIds, result, capDraw })
 
 describe('the floor-5 window (ASSUMPTION 126)', () => {
-  it("the window is 20 floor runs and T3's first session stays 10", () => {
+  it('the window is 20 floor runs', () => {
     expect(FLOOR5_WINDOW_RUNS).toBe(20)
-    expect(FIRST_SESSION_RUNS).toBe(10)
   })
 
   const onFloors = (floors: number[]): RunRecord[] =>
@@ -374,5 +377,134 @@ describe('the printed report carries the additions', () => {
     expect(text).toMatch(/spider-weaver\s+2\s+1\s+1\s+0\s+0\s+50\.0%/)
     expect(text).toContain('shieldbarer-starter-rally 7x (floor 2, seed 1)')
     expect(text).toContain('in its first 20 floor runs')
+  })
+})
+
+// ---- T2 and T3 as floor-read ceilings (ASSUMPTION 153) ----
+
+describe('T2 and T3 floor reads (ASSUMPTION 153)', () => {
+  const party = (n: number): number[] => Array.from({ length: n }, () => 1)
+  const runWith = (index: number, floor: number, size: number): RunRecord => ({
+    ...run(index, floor, true),
+    partyLevels: party(size),
+  })
+
+  it('the bands name floors 3 and 6', () => {
+    expect(SOUL_BY_FLOOR).toBe(3)
+    expect(FULL_PARTY_BY_FLOOR).toBe(6)
+  })
+
+  it('firstRunOnFloor is the FIRST run on the floor, or null', () => {
+    const runs = [run(1, 1, true), run(2, 3, false), run(3, 3, true)]
+    expect(firstRunOnFloor(runs, 3)?.index).toBe(2)
+    expect(firstRunOnFloor(runs, 6)).toBeNull()
+  })
+
+  describe('soulBySeedFloor (T2)', () => {
+    const runs = [run(1, 1, true), run(2, 2, true), run(3, 3, false), run(4, 3, true)]
+
+    it('a soul completed in an earlier run is met', () => {
+      expect(soulBySeedFloor({ runs, runsToFirstSoul: 2 }, 3)).toBe('met')
+    })
+    it('a soul completing DURING the first floor-3 run does not count', () => {
+      expect(soulBySeedFloor({ runs, runsToFirstSoul: 3 }, 3)).toBe('missed')
+    })
+    it('a soul completed between the first and a later floor-3 run is missed (reads the FIRST run)', () => {
+      expect(soulBySeedFloor({ runs, runsToFirstSoul: 4 }, 3)).toBe('missed')
+    })
+    it('a seed that never completes a soul is missed, not skipped', () => {
+      expect(soulBySeedFloor({ runs, runsToFirstSoul: null }, 3)).toBe('missed')
+    })
+    it('a seed that never runs the floor did not reach it, whatever its soul', () => {
+      const short = [run(1, 1, false), run(2, 1, false)]
+      expect(soulBySeedFloor({ runs: short, runsToFirstSoul: 1 }, 3)).toBe(
+        'did-not-reach',
+      )
+      expect(soulBySeedFloor({ runs: short, runsToFirstSoul: null }, 3)).toBe(
+        'did-not-reach',
+      )
+    })
+  })
+
+  describe('fullPartyBySeedFloor (T3)', () => {
+    it('a party of six on the first floor-6 run is met', () => {
+      expect(fullPartyBySeedFloor({ runs: [runWith(1, 6, 6)] }, 6)).toBe('met')
+    })
+    it('five is missed', () => {
+      expect(fullPartyBySeedFloor({ runs: [runWith(1, 6, 5)] }, 6)).toBe('missed')
+    })
+    it('full only on a LATER floor-6 run is missed (reads the first)', () => {
+      expect(
+        fullPartyBySeedFloor({ runs: [runWith(1, 6, 5), runWith(2, 6, 6)] }, 6),
+      ).toBe('missed')
+    })
+    it('no floor-6 run is did-not-reach, not missed', () => {
+      expect(fullPartyBySeedFloor({ runs: [runWith(1, 5, 6)] }, 6)).toBe('did-not-reach')
+    })
+  })
+
+  it('tallyReads: reached is met + missed, did-not-reach is apart', () => {
+    expect(
+      tallyReads([
+        'met',
+        'met',
+        'missed',
+        'did-not-reach',
+        'did-not-reach',
+        'did-not-reach',
+      ]),
+    ).toEqual({ met: 2, reached: 3, didNotReach: 3 })
+    expect(tallyReads([])).toEqual({ met: 0, reached: 0, didNotReach: 0 })
+  })
+
+  it('buildSpecReport folds both tallies from the seeds, keeping the first-soul lists', () => {
+    const r = buildSpecReport(
+      'sorcerer',
+      [
+        // soul done in run 1; party full at floor 6's first run: both met
+        seedResult({
+          runs: [run(1, 1, true), runWith(2, 3, 1), runWith(3, 6, 6)],
+          clearsToFirstSoul: 1,
+          runsToFirstSoul: 1,
+        }),
+        // no soul, five at floor 6: both missed
+        seedResult({ runs: [run(1, 1, true), runWith(2, 3, 1), runWith(3, 6, 5)] }),
+        // never leaves floor 1: didn't reach either
+        seedResult({ runs: [run(1, 1, false)] }),
+      ],
+      30,
+      DEFAULT_BALANCE_CONFIG,
+    )
+    expect(r.t2.atFloor3).toEqual({ met: 1, reached: 2, didNotReach: 1 })
+    expect(r.t3.atFloor6).toEqual({ met: 1, reached: 2, didNotReach: 1 })
+    expect(r.t2.runsToFirstSoul).toEqual([1])
+    expect(r.t2.seedsWithoutSoul).toBe(2)
+  })
+
+  it('the printer says met / reached with the did-not-reach count on the T2 and T3 lines', () => {
+    expect(formatTally({ met: 40, reached: 28, didNotReach: 12 })).toBe(
+      "40 / 28 (didn't reach 12)",
+    )
+    const spec = buildSpecReport(
+      'sorcerer',
+      [seedResult({ runs: [run(1, 1, false)] })],
+      30,
+      DEFAULT_BALANCE_CONFIG,
+    )
+    const lines = formatReport({
+      seeds: [1],
+      runCap: 30,
+      frontier: 30,
+      specs: [spec],
+    }).split('\n')
+    const t2 = lines.find((l) => l.startsWith('T2 '))!
+    const t3 = lines.find((l) => l.startsWith('T3 '))!
+    expect(t2).toContain(
+      "T2 a soul completed by the first run on floor 3 (ceiling: sooner is fine): met 0 / 0 (didn't reach 1);",
+    )
+    expect(t2).toContain('first soul (target ~10): floor runs, median over all seeds')
+    expect(t3).toBe(
+      "T3 a full party of 6 by the first run on floor 6 (ceiling): met 0 / 0 (didn't reach 1)",
+    )
   })
 })

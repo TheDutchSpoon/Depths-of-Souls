@@ -8,6 +8,9 @@
 // starting value) after the whole run -- if anything inside the run had consumed even one draw,
 // the bookmark would have advanced away from that value (Phase 4.1-B, B3).
 //
+// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned
+// (4.1-H2d).
+//
 // Hand-derived (independent `node -e` calculator, verified via Bash). Both BEARER and its only
 // living ally, ALLY, are pre-applied Spore before any turn resolves (a throwaway events array),
 // so `random-ally-without-status` relative to BEARER has zero candidates once BEARER dies. No

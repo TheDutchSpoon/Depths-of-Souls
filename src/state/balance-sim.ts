@@ -2,7 +2,9 @@
 // `setSpec`, `runScriptedIntro`, `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with the
 // documented player policy below, over a fixed list of seeds, and builds a plain-data report of the
 // design targets (T1-T5), the 4.1-H watch points and ASSUMPTION 22's thresholds. It REPORTS; it
-// asserts nothing (the CI threshold test is 4.1-H2d's). It changes no number and no file under src/.
+// asserts nothing: the CI threshold test (4.1-H2d, ASSUMPTION 148) is a separate set of test files
+// that calls `runSeed` and `computeThresholds` and asserts ASSUMPTION 22's three verdicts. It
+// changes no number and no file under src/.
 //
 // Run the full report with `npm run sim` (vitest in `--mode sim`, the corpus pattern).
 //
@@ -37,8 +39,8 @@
 // Read over the seeds of one spec: floor 1 = the first-try floor-1 clear rate (fails below 80%);
 // first soul = the median over EVERY seed of the floor runs until a soul first reaches 100%, a seed
 // that never completes one counting as infinite (fails above 30); floor 5 = some seed fought on
-// floor 5 or deeper in its first FLOOR5_WINDOW_RUNS (20) floor runs (ASSUMPTION 126; T3's "first
-// session" stays 10 floor runs). The walls' size (ASSUMPTION 108) is reported as the
+// floor 5 or deeper in its first FLOOR5_WINDOW_RUNS (20) floor runs (ASSUMPTION 126). T2 and T3 are
+// floor-read ceilings (ASSUMPTION 153), reported and never asserted. The walls' size (ASSUMPTION 108) is reported as the
 // most failed pushes on one floor below 10 and the floor runs to the first floor-10 clear.
 //
 // Nothing here is pinned to a balance value: the simulator runs the store's default config, and
@@ -91,11 +93,12 @@ export const SMOKE_SEEDS: readonly number[] = [1, 2, 3]
 export const RUN_CAP = 400
 /** A hard wall: this many failed pushes at one floor (ASSUMPTION 98). */
 export const WALL_FAILED_PUSHES = 5
-/** "The first session" = the first this many floor runs (T3, ASSUMPTION 22). */
-export const FIRST_SESSION_RUNS = 10
-/** ASSUMPTION 126: the window the floor-5 threshold reads (was FIRST_SESSION_RUNS, 10, until the H2
- * grill). It is NOT the session: T3's party size is still read after FIRST_SESSION_RUNS. */
+/** ASSUMPTION 126: the window the floor-5 threshold reads (10 floor runs until the H2 grill). */
 export const FLOOR5_WINDOW_RUNS = 20
+/** ASSUMPTION 153: T2 asks for a completed soul by the first run on this floor. */
+export const SOUL_BY_FLOOR = 3
+/** ASSUMPTION 153: T3 asks for a full party by the first run on this floor. */
+export const FULL_PARTY_BY_FLOOR = 6
 /** ASSUMPTION 127: the matchup table covers fights on floors 1 to this one. */
 export const MATCHUP_MAX_FLOOR = 5
 /** How many traits per stack bucket the report prints. */
@@ -786,8 +789,6 @@ export interface SeedResult {
   readonly firstTryFloor1Clear: boolean
   readonly clearsToFirstSoul: number | null
   readonly runsToFirstSoul: number | null
-  readonly partySizeAfterSession: number | null
-  readonly deepestAfterSession: number | null
   /** ASSUMPTIONS 107, 126: one of the first FLOOR5_WINDOW_RUNS floor runs was on floor
    * SESSION_TARGET_FLOOR or deeper (fighting on it, not clearing it). */
   readonly reachedFloor5InWindow: boolean
@@ -1055,8 +1056,6 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
   let clears = 0
   let clearsToFirstSoul: number | null = null
   let runsToFirstSoul: number | null = null
-  let partySizeAfterSession: number | null = null
-  let deepestAfterSession: number | null = null
   const earlyFights: EarlyFight[] = []
   let traitStacks: SeedTraitStacks = NO_TRAIT_STACKS
   let fights = 0
@@ -1090,8 +1089,6 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
         firstTryFloor1Clear,
         clearsToFirstSoul,
         runsToFirstSoul,
-        partySizeAfterSession,
-        deepestAfterSession,
         reachedFloor5InWindow: reachedFloorInWindow(runs),
         earlyFights,
         fights,
@@ -1151,12 +1148,6 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
       clearsToFirstSoul = clears
       runsToFirstSoul = progress.runs
     }
-    if (progress.runs === FIRST_SESSION_RUNS) {
-      partySizeAfterSession = store
-        .getState()
-        .activeParty.filter((id) => id !== null).length
-      deepestAfterSession = progress.deepestFloor
-    }
   }
 }
 
@@ -1213,6 +1204,11 @@ export interface AttritionRow {
 /** ASSUMPTION 22's loose CI thresholds, as read by ASSUMPTION 107. */
 export const FLOOR1_MIN_CLEAR_PCT = 80
 export const FIRST_SOUL_MAX_RUNS = 30
+/** ASSUMPTION 148: the run cap of the CI threshold test. No verdict reads past the larger of the two
+ * windows (the first-soul median reads up to FIRST_SOUL_MAX_RUNS runs, the floor-5 verdict the first
+ * FLOOR5_WINDOW_RUNS), so a seed capped here gets every verdict a 400-run seed would; deriving it
+ * from both means a longer window can't be truncated silently. */
+export const CI_RUN_CAP = Math.max(FIRST_SOUL_MAX_RUNS, FLOOR5_WINDOW_RUNS)
 
 /** ASSUMPTION 22 / 107, each value next to its verdict (H2's CI test asserts the verdicts). */
 export interface Thresholds {
@@ -1231,6 +1227,57 @@ export interface Thresholds {
   readonly floor5Pass: boolean
 }
 
+/** ASSUMPTION 153: how one seed reads a floor-read ceiling. A seed that never runs the floor
+ * "didn't reach" it: counted apart, never a miss. */
+export type FloorRead = 'met' | 'missed' | 'did-not-reach'
+
+/** The first run on `floor`, or null when the seed never ran it. */
+export function firstRunOnFloor(
+  runs: readonly RunRecord[],
+  floor: number,
+): RunRecord | null {
+  return runs.find((r) => r.floor === floor) ?? null
+}
+
+/** ASSUMPTION 153 (T2): a soul had completed at the START of the seed's first run on `floor`.
+ * `runsToFirstSoul` is the run count after the run in which the soul completed, i.e. that run's
+ * `index`, so `< index` means an EARLIER run: a soul that completes during the floor run itself
+ * doesn't count for it. */
+export function soulBySeedFloor(
+  seed: Pick<SeedResult, 'runs' | 'runsToFirstSoul'>,
+  floor: number,
+): FloorRead {
+  const run = firstRunOnFloor(seed.runs, floor)
+  if (run === null) return 'did-not-reach'
+  return seed.runsToFirstSoul !== null && seed.runsToFirstSoul < run.index
+    ? 'met'
+    : 'missed'
+}
+
+/** ASSUMPTION 153 (T3): the party is full (PARTY_SIZE) at the START of the seed's first run on
+ * `floor` (`partyLevels` is read from the active party before the descent). */
+export function fullPartyBySeedFloor(
+  seed: Pick<SeedResult, 'runs'>,
+  floor: number,
+): FloorRead {
+  const run = firstRunOnFloor(seed.runs, floor)
+  if (run === null) return 'did-not-reach'
+  return run.partyLevels.length >= PARTY_SIZE ? 'met' : 'missed'
+}
+
+/** A floor-read tally: `reached = met + missed`; seeds that didn't reach are apart. */
+export interface FloorReadTally {
+  readonly met: number
+  readonly reached: number
+  readonly didNotReach: number
+}
+
+export function tallyReads(reads: readonly FloorRead[]): FloorReadTally {
+  const met = reads.filter((r) => r === 'met').length
+  const missed = reads.filter((r) => r === 'missed').length
+  return { met, reached: met + missed, didNotReach: reads.length - met - missed }
+}
+
 export interface Spread {
   readonly min: number
   readonly median: number
@@ -1242,11 +1289,15 @@ export interface SpecReport {
   readonly seeds: number
   readonly t1: { readonly firstTryClears: number; readonly seeds: number }
   readonly t2: {
+    /** ASSUMPTION 153: a soul completed by the first run on SOUL_BY_FLOOR. */
+    readonly atFloor3: FloorReadTally
+    // The first-soul median in floor runs stays: it is ASSUMPTION 22's CI threshold.
     readonly clearsToFirstSoul: readonly number[]
     readonly runsToFirstSoul: readonly number[]
     readonly seedsWithoutSoul: number
   }
-  readonly t3: { readonly partySizeCounts: Readonly<Record<number, number>> }
+  /** ASSUMPTION 153: a full party by the first run on FULL_PARTY_BY_FLOOR. */
+  readonly t3: { readonly atFloor6: FloorReadTally }
   readonly t4: {
     readonly stopReasons: Readonly<Record<StopReason, number>>
     readonly deepestFloors: readonly number[]
@@ -1528,12 +1579,6 @@ export function buildSpecReport(
     r.runsToFirstSoul === null ? [] : [r.runsToFirstSoul],
   )
   const seedsWithoutSoul = results.length - soulClears.length
-  const partySizeCounts: Record<number, number> = {}
-  for (const r of results) {
-    if (r.partySizeAfterSession === null) continue
-    partySizeCounts[r.partySizeAfterSession] =
-      (partySizeCounts[r.partySizeAfterSession] ?? 0) + 1
-  }
   const firstWallFloors: Record<number, number> = {}
   const failedPushesByFloor: Record<number, number> = {}
   for (const r of results) {
@@ -1603,8 +1648,17 @@ export function buildSpecReport(
     specId,
     seeds: results.length,
     t1: { firstTryClears, seeds: results.length },
-    t2: { clearsToFirstSoul: soulClears, runsToFirstSoul: soulRuns, seedsWithoutSoul },
-    t3: { partySizeCounts },
+    t2: {
+      atFloor3: tallyReads(results.map((r) => soulBySeedFloor(r, SOUL_BY_FLOOR))),
+      clearsToFirstSoul: soulClears,
+      runsToFirstSoul: soulRuns,
+      seedsWithoutSoul,
+    },
+    t3: {
+      atFloor6: tallyReads(
+        results.map((r) => fullPartyBySeedFloor(r, FULL_PARTY_BY_FLOOR)),
+      ),
+    },
     t4: {
       stopReasons: {
         frontier: results.filter((r) => r.stop === 'frontier').length,
@@ -1703,6 +1757,11 @@ function pad(value: string | number, width: number): string {
   return String(value).padStart(width)
 }
 
+/** `met / reached (didn't reach N)` (ASSUMPTION 153). */
+export function formatTally(tally: FloorReadTally): string {
+  return `${tally.met} / ${tally.reached} (didn't reach ${tally.didNotReach})`
+}
+
 function verdict(pass: boolean): string {
   return pass ? 'PASS' : 'FAIL'
 }
@@ -1715,13 +1774,10 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     `T1 floor-1 first-try clear: ${spec.t1.firstTryClears}/${spec.t1.seeds} = ${pct(spec.t1.firstTryClears, spec.t1.seeds)} (target >= 95%)`,
   )
   out.push(
-    `T2 first soul (target ~10): floor runs, median over all seeds ${fmtMedian(t.medianRunsToFirstSoul)} (seeds that never complete one: ${spec.t2.seedsWithoutSoul}); clears among the completing seeds: median ${fmt(median(spec.t2.clearsToFirstSoul))}, max ${fmt(spec.t2.clearsToFirstSoul.length === 0 ? null : Math.max(...spec.t2.clearsToFirstSoul), 0)}`,
+    `T2 a soul completed by the first run on floor ${SOUL_BY_FLOOR} (ceiling: sooner is fine): met ${formatTally(spec.t2.atFloor3)}; first soul (target ~10): floor runs, median over all seeds ${fmtMedian(t.medianRunsToFirstSoul)} (seeds that never complete one: ${spec.t2.seedsWithoutSoul}); clears among the completing seeds: median ${fmt(median(spec.t2.clearsToFirstSoul))}, max ${fmt(spec.t2.clearsToFirstSoul.length === 0 ? null : Math.max(...spec.t2.clearsToFirstSoul), 0)}`,
   )
-  const sizes = Object.entries(spec.t3.partySizeCounts)
-    .map(([size, count]) => `${size}:${count}`)
-    .join(' ')
   out.push(
-    `T3 party size after ${FIRST_SESSION_RUNS} floor runs (size:seeds): ${sizes || 'n/a'} (target 6)`,
+    `T3 a full party of ${PARTY_SIZE} by the first run on floor ${FULL_PARTY_BY_FLOOR} (ceiling): met ${formatTally(spec.t3.atFloor6)}`,
   )
   const walls = Object.entries(spec.t4.firstWallFloors)
     .map(([floor, count]) => `f${floor}:${count}`)

@@ -10,17 +10,18 @@ import type { StatusDef } from '../engine/effect-types'
 // A TICKING status (Poison, Burn, Regen, Spore) declares a `potency`: a percent of the APPLIER's
 // effective stat, recorded once at application as the instance's snapshot (applier, affinity,
 // potency). Its tick is the `snapshot-potency` magnitude: indirect damage (or a heal) from that
-// snapshot, with the applier as its source while it lives. The percentages are PLACEHOLDERS
-// (4.1-H2b2); 4.1-H2d tunes them, after its design grill.
+// snapshot, with the applier as its source while it lives. The percentages were chosen at the
+// 4.1-H2d grill (ASSUMPTION 152): Poison 40% of Attack, Burn 35% of Intelligence, Spore 35% of
+// Speed, Regen 10% of Health.
 
 /** DoT: each bearer turn (on-turn-end) the bearer takes the instance's potency -- 20% of the
- * APPLIER's effective Attack when applied (placeholder) -- as INDIRECT damage from the applier's
+ * APPLIER's effective Attack when applied (decided at the 4.1-H2d grill; 20% before) -- as INDIRECT damage from the applier's
  * snapshot (affinity of the applier against the bearer, the bearer's Defence at a fifth, the
  * bearer's taken factors; no dealt pool). No TriggerFired per tick -- its StatusApplied already
  * announced it. */
 export const POISON: StatusDef = {
   statusId: 'poison',
-  potency: { ofStat: 'attack', percent: 20 },
+  potency: { ofStat: 'attack', percent: 40 },
   effects: [
     {
       category: 'triggered',
@@ -41,11 +42,11 @@ export const POISON: StatusDef = {
   defaultDuration: 3,
 }
 
-/** DoT: as POISON, but the potency is 25% of the APPLIER's effective Intelligence when applied
- * (placeholder). */
+/** DoT: as POISON, but the potency is 35% of the APPLIER's effective Intelligence when applied
+ * (decided at the 4.1-H2d grill; 25% before). */
 export const BURN: StatusDef = {
   statusId: 'burn',
-  potency: { ofStat: 'intelligence', percent: 25 },
+  potency: { ofStat: 'intelligence', percent: 35 },
   effects: [
     {
       category: 'triggered',
@@ -66,7 +67,7 @@ export const BURN: StatusDef = {
 }
 
 /** HoT: each bearer turn (on-turn-end) the bearer is healed the instance's potency -- 10% of the
- * HEALER's (the applier's) effective Health when applied (placeholder) -- clamped to the bearer's
+ * HEALER's (the applier's) effective Health when applied (kept at the 4.1-H2d grill) -- clamped to the bearer's
  * effective max Health (no auto-heal past it). The healer's snapshot, mirrored onto heal; the
  * HealApplied source is the healer while it lives, else the bearer. */
 export const REGEN: StatusDef = {
@@ -176,8 +177,8 @@ export const GRANT_ACT_FIRST: StatusDef = {
 }
 
 /** Phase 4 Slice H3 (Rotcap Hollow, Sporecloud): a DoT status with TWO triggers (the
- * Sleep-established pattern for a status needing more than one hook) -- a tick of 15% of the
- * APPLIER's effective Speed (placeholder; same snapshot mechanism as POISON/BURN) each bearer turn
+ * Sleep-established pattern for a status needing more than one hook) -- a tick of 35% of the
+ * APPLIER's effective Speed (decided at the 4.1-H2d grill; 15% before; same snapshot mechanism as POISON/BURN) each bearer turn
  * (on-turn-end), PLUS an
  * `on-death -> apply-status({kind:'random-ally-without-status', statusId:'spore'}, spore)` --
  * this trigger lives on the STATUS itself (not a species trait), so any Spore bearer spreads it
@@ -199,7 +200,7 @@ export const GRANT_ACT_FIRST: StatusDef = {
  * the new host's ticks are still the original applier's, not the dying bearer's. */
 export const SPORE: StatusDef = {
   statusId: 'spore',
-  potency: { ofStat: 'speed', percent: 15 },
+  potency: { ofStat: 'speed', percent: 35 },
   effects: [
     {
       category: 'triggered',

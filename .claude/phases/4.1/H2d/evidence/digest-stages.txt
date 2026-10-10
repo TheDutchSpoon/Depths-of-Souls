@@ -1,0 +1,12 @@
+fights [ 527, 527, 527, 527 ]
+stage 1: first changed 167; differs from previous stage 167; differs from main 167
+stage 2: first changed 17; differs from previous stage 24; differs from main 184
+stage 3: first changed 91; differs from previous stage 154; differs from main 275
+result flips main->stage3 {
+  'draw->loss': 3,
+  'draw->win': 4,
+  'win->draw': 2,
+  'loss->win': 2,
+  'win->loss': 3,
+  'loss->draw': 2
+}

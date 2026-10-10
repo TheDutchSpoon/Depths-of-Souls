@@ -25,6 +25,7 @@ import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { STATUS_REGISTRY } from '../../data/statuses'
+import { holdPotency } from '../__fixtures__/held-statuses'
 import { applyStatus, newCascade } from '../resolution'
 import { createResolutionContext } from '../actions'
 import type { CombatEvent, CombatState, FightResult } from '../types'
@@ -65,7 +66,9 @@ export const scripts = new Map([
   ...FIXTURE_SCRIPTS_BY_ID,
   [waitThenDefend.id, waitThenDefend],
 ])
-export const statuses = STATUS_REGISTRY
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
+// never changes a mechanism golden). The status is otherwise the real one.
+export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState => {
   const ctx = createResolutionContext([], newCascade())

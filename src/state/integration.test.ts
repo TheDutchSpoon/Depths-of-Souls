@@ -176,7 +176,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // one drone, killed once in its fight, so the trigger fires exactly once.
     expect(triggersFor(outcome.events, SWARMHIVE_DRONE_TRAIT.id)).toBe(1)
     // Snapjaw Jaws (content/overgrowth.md: "whenever this creature takes damage, it attacks back
-    // for 60% of its Attack"; 30% since 4.1-H2c) -- an on-damage-taken retaliation trigger, fires
+    // for 60% of its Attack"; 30% in 4.1-H2c, 60% again since 4.1-H2d) -- an on-damage-taken retaliation trigger, fires
     // once per hit landed on it before it dies.
     expect(triggersFor(outcome.events, SNAPJAW_JAWS_TRAIT.id)).toBeGreaterThan(0)
     // The Unicorn's own signature trait (species-locked.md: "whenever this creature attacks, it
@@ -200,8 +200,25 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // `on-attack` Guardian's Light revives the Brute at 7 HP. The revive response itself stays
     // pinned end to end by golden-revive, golden-unicorn-starter and the golden-d3-revive-cap-*
     // goldens.
+    //
+    // 4.1-H2d re-pin (1 -> 0; generated-then-checkpoint-verified). The count moved first at stage 2
+    // of the digest attribution (Snapback back at 60% of Attack, ASSUMPTION 151); Pollen Cloud and
+    // the DoT percentages leave this fight as it was. Fight 2 is the Snapjaw Jaws alone, effective
+    // Attack 30 against Defence 15 on both the Brute and the Unicorn. A counter is 30 x 0.6 = 18,
+    // times the affinity multiplier, minus a fifth of the Defence (3): on the Brute (x1) 15, on
+    // the Unicorn (x0.75) 13.5 - 3 = 10.5 -> 10. The Unicorn's opening attack draws the 10 counter
+    // (39 -> 29, 74% of its max HP), which takes it below 80%, so the striker's rule 1 ("any
+    // enemy below 80% HP -> attack the lowest-HP enemy") aims the Snapjaw's one attack (18) at the
+    // Unicorn (29 < the Brute's 33): Unicorn 29 -> 11. The Brute then takes only the two 15
+    // counters of its double strike, 33 -> 18 -> 3, alive, and the Snapjaw dies to the Unicorn's
+    // next attack. Nobody dies, so the Unicorn's `random-dead-ally` pool is empty: a targeting
+    // fizzle, no Revived event. At 30% the opening counter was 30 x 0.3 x 0.75 - 3 = 3.75 -> 3
+    // (Unicorn 39 -> 36, 92%), no enemy was below 80%, so rule 2's random pick drew the Brute: 21
+    // (33 -> 12), then two 6 counters (30 x 0.3 - 3) killed it (12 -> 6 -> 0) and the Unicorn's
+    // next attack revived it. The checkpoint loop below stays: it checks any Revived the fight
+    // produces.
     const revives = outcome.events.filter((e) => e.type === 'Revived')
-    expect(revives).toHaveLength(1)
+    expect(revives).toHaveLength(0)
     // Independent checkpoint: every Revived is the Unicorn's, on a creature that had died earlier
     // in the SAME fight (a revive can only follow a death), not a number read off this run.
     for (const revive of revives) {

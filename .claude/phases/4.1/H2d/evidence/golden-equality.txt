@@ -1,0 +1,13 @@
+# Golden fixtures: main vs this branch, every expected* export, TURN_STEPS, EXPECTED_DRAWS, SEED (util.inspect dump of each fixture module under vitest, diffed)
+# fixtures on main: 132; on branch: 134
+# differing lines (all other lines identical):
+< ./__golden__/golden-h2c-snapback.fixture.ts expectedEvents [ { type: 'FightStarted' }, { round: 1, type: 'Ro
+> ./__golden__/golden-h2c-snapback.fixture.ts expectedEvents [ { type: 'FightStarted' }, { round: 1, type: 'Ro
+> ./__golden__/golden-h2d-dot-ticks.fixture.ts SEED 8402
+> ./__golden__/golden-h2d-dot-ticks.fixture.ts TURN_STEPS 4
+> ./__golden__/golden-h2d-dot-ticks.fixture.ts expectedEvents [ { type: 'FightStarted' }, { round: 1, type: 'R
+> ./__golden__/golden-h2d-dot-ticks.fixture.ts (fixture present)
+> ./__golden__/golden-h2d-pollen-cloud.fixture.ts SEED 8401
+> ./__golden__/golden-h2d-pollen-cloud.fixture.ts TURN_STEPS 2
+> ./__golden__/golden-h2d-pollen-cloud.fixture.ts expectedEvents [ { type: 'FightStarted' }, { round: 1, type:
+> ./__golden__/golden-h2d-pollen-cloud.fixture.ts (fixture present)

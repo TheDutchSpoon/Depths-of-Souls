@@ -1,5 +1,5 @@
-// Golden: the real Snapjaw Jaws ("Snapback") at 30% of Attack (Phase 4.1-H2c, ASSUMPTION 124; it
-// was 60%). A content golden: its subject is one named trait's number, on real data. Snapback is a
+// Golden: the real Snapjaw Jaws ("Snapback") at 60% of Attack (Phase 4.1-H2d, ASSUMPTION 151; it
+// was 30% in 4.1-H2c, ASSUMPTION 124, and 60% before). Re-derived in 4.1-H2d. A content golden: its subject is one named trait's number, on real data. Snapback is a
 // trait response (`on-damage-taken` -> `deal-damage` at `triggering-source`, `offStat 'attack'`),
 // so its counter is INDIRECT damage (4.1-H2a): raw = magnitude x affinity x (1 + sum dealt) x
 // prod(taken) - 0.2 x Defence, then MAX(1, floor(raw)); no chip floor, no Additional.
@@ -12,9 +12,9 @@
 //   R1 P attacks E (the only enemy). A direct Attack: core = max(20 - 0, 0) = 20, chip =
 //     0.01 x 20 = 0.2, raw 20.2, final floor(20.2) = 20, no Additional. E 1000 -> 980.
 //   E takes damage: on-damage-taken -> Snapback fires (TriggerFired), resolving
-//     `triggering-source` = P. Magnitude = Attack 40 x spellPower 0.3 = 12; x1 x1 x1;
-//     - 0.2 x P's Defence 10 = 2 -> raw 10, final MAX(1, floor(10)) = 10 (above the minimum of 1).
-//     P 100 -> 90. (At 60% the magnitude is 24 and the counter 22, P -> 78.)
+//     `triggering-source` = P. Magnitude = Attack 40 x spellPower 0.6 = 24; x1 x1 x1;
+//     - 0.2 x P's Defence 10 = 2 -> raw 22, final MAX(1, floor(22)) = 22 (above the minimum of 1).
+//     P 100 -> 78. (At 30% the magnitude is 12 and the counter 10, P -> 90: this golden fails there.)
 // TURN_STEPS = 1 (P's turn only).
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -82,11 +82,11 @@ export const expectedEvents: CombatEvent[] = [
     type: 'DamageDealt',
     sourceId: E,
     targetId: P,
-    rawDamage: 10,
-    finalDamage: 10,
+    rawDamage: 22,
+    finalDamage: 22,
     affinityMultiplier: 1,
     wasChipOnly: false,
-    remainingHp: 90,
+    remainingHp: 78,
     damageSource: 'attack',
   },
   { type: 'TurnEnded', creatureId: P },

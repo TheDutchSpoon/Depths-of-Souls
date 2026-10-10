@@ -33,9 +33,8 @@ that breaks this under **To delete** or as a move for Duncan.
 
 Every decision a step makes is written into the living docs **in place**, in the working tree:
 edit the exact lines, never regenerate or rewrite a whole file. Duncan reviews your edits as a git
-diff and commits them. After editing, run `node node_modules/prettier/bin/prettier.cjs --check <the files you touched>`
-in the repo (the repo's own Prettier; `npx` may not resolve it from the session shell) and fix anything it
-flags. List every doc you edited, with a one-line reason each, at the end of the step's file.
+diff and commits them. List every doc you edited, with a one-line reason each, at the end of the
+step's file. (No Prettier check: `.claude` is in `.prettierignore`.)
 
 ## Writing
 

@@ -1,0 +1,20 @@
+Mutation proofs, in a scratch copy of the final tree outside the repo (each change alone; the failing tests are the ones named).
+
+Content numbers put back to their old value:
+  Pollen Cloud damage restored (deal-damage, cast, 0.35, before the Sleep)
+    FAIL golden-h2d-pollen-cloud.test.ts; FAIL data/spells/index.test.ts "Pollen Cloud is a control spell with no damage"
+  Snapback 0.6 -> 0.3
+    FAIL golden-h2c-snapback.test.ts; FAIL state/integration.test.ts "descends floor 1 ..." (revive count 0 -> 1)
+  Poison 40 -> 20   FAIL golden-h2d-dot-ticks.test.ts (E1 tick 10, not 30); FAIL data/statuses.test.ts
+  Burn 35 -> 25     FAIL golden-h2d-dot-ticks.test.ts (E2 tick 10, not 18); FAIL data/statuses.test.ts
+  Spore 35 -> 15    FAIL golden-h2d-dot-ticks.test.ts (E3 tick 1, not 11); FAIL data/statuses.test.ts
+
+Pins removed (statuses = STATUS_REGISTRY) with the data at the new numbers:
+  17 test files fail, 22 tests: the 16 pinned mechanism goldens (one test each) + status-snapshot.test.ts (6 tests):
+  golden-dot, f2-dot-one-turn, f2-turn-end-interaction, h2b2-carrier-fresh, h2b2-reapply, h2b2-spore-spread,
+  h2b2-tick-dead-applier, h2b2-tick-kill-on-death, h2b2-tick-living-applier, h2b2-tick-no-retaliation,
+  h2b2-tick-self-applied, h2b2-tick-taken-factors, hollowkin-wretch-self-dot, spore-spread-dot-kill,
+  turn-end-dot-kill-burst, turn-end-dot-kill-burst-refresh.
+  With the pins in, the whole suite is green on the new data.
+
+Burn: no mechanism golden reads its percentage (Burn alone moved only statuses.test.ts and the digest in the plan's scan); nothing to pin.

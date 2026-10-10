@@ -66,7 +66,10 @@ Green gates only prove the code agrees with its own fixtures. Proceed to reading
 ## 4. Verify claimed invariants mechanically
 
 - "Existing goldens byte-identical": import every `__golden__/*.fixture.ts` on both trees and
-  deep-compare every `expected*` export (a throwaway test with `import.meta.glob`). Then diff each
+  deep-compare **every export** (a throwaway test with `import.meta.glob`), not only `expected*`:
+  some fixtures export sub-fixtures with `*Expected` names (`golden-h2b1-wick-gates`,
+  `-last-gleam`), and a shared registry export (`traits`, `statuses`) moves with content, which is
+  expected and must be told apart from an expected-value change (4.1-H2d). Then diff each
   changed old fixture: only comments, exports or driving code may differ, as the PR claims.
 - Comment-only edits: with comments stripped, old and new are identical.
 - Corpus digest: diff the fixture against `main`'s; the number of changed rows and changed results

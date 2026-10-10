@@ -4,6 +4,7 @@ import {
   ALL_SPELLS,
   LIFE_SIPHON,
   PACIFY,
+  POLLEN_CLOUD,
   POUNCE,
   SILENCE,
   STIFLING_WEIGHT,
@@ -223,6 +224,23 @@ describe('Pounce, Stifling Weight and Life Siphon (Phase 4.1-G1, D4)', () => {
     ])
     // A status-only spell keys by its status ids (F3), so it never collides with a damage spell.
     expect(dedupKey(STIFLING_WEIGHT)).toBe('endurance|single|status:weaken')
+  })
+
+  it('Pollen Cloud is a control spell with no damage: an AoE Sleep for 2 turns on every enemy (4.1-H2d, ASSUMPTION 150)', () => {
+    expect(POLLEN_CLOUD).toMatchObject({
+      affinity: 'wit',
+      targetShape: 'aoe',
+      targetSide: 'enemy',
+      unlockedAtBiome: 1,
+    })
+    expect(POLLEN_CLOUD.effects).toEqual([
+      {
+        kind: 'apply-status',
+        target: { kind: 'cast-target' },
+        status: { statusId: 'sleep', duration: 2 },
+      },
+    ])
+    expect(dedupKey(POLLEN_CLOUD)).toBe('wit|aoe|status:sleep')
   })
 
   it('Life Siphon hits for 70% Intelligence and heals its own caster for 35% Intelligence', () => {

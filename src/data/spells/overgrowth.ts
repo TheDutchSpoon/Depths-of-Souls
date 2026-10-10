@@ -76,8 +76,8 @@ export const VINE_SNARE: Spell = {
 }
 
 /** Pollen Cloud: AOE, applies Sleep to everything it hits (a shorter duration than the
- * on-attack-chance route, since it lands on the WHOLE enemy side at once). AOE + upside -> ~30-40%
- * band. */
+ * on-attack-chance route, since it lands on the WHOLE enemy side at once). A control spell with NO
+ * damage, like Pacify and Silence (4.1-H2d, ASSUMPTION 150; it dealt 35% before). */
 export const POLLEN_CLOUD: Spell = {
   id: 'pollen-cloud',
   name: 'Pollen Cloud',
@@ -86,12 +86,6 @@ export const POLLEN_CLOUD: Spell = {
   unlockedAtBiome: 1,
   targetSide: 'enemy',
   effects: [
-    {
-      kind: 'deal-damage',
-      target: { kind: 'cast-target' },
-      offStat: 'cast',
-      spellPower: 0.35,
-    },
     {
       kind: 'apply-status',
       target: { kind: 'cast-target' },

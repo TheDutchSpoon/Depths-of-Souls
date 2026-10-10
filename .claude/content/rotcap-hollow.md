@@ -33,9 +33,8 @@ the end of each of the bearer's turns (see the last section).
 
 ## Statuses
 
-**Spore** — A festering infection. While active, the bearer takes damage every round worth **15%
-of the Speed of the creature that infected it**, measured at the moment of infection (a placeholder
-until 4.1-H2d). If the bearer *dies* while infected, the spores burst and infect one living,
+**Spore** — A festering infection. While active, the bearer takes damage every round worth **35%
+of the Speed of the creature that infected it**, measured at the moment of infection. If the bearer *dies* while infected, the spores burst and infect one living,
 still-healthy member of the bearer's own side, **carrying the same infection**: the new host takes
 the original infector's damage, not a share of the dying host's own Speed. The contagion keeps
 spreading through a population as it's whittled down, rather than clinging to whoever already has
@@ -76,7 +75,7 @@ attack or cast something harmful, there's a **50% chance** it strikes its own si
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
 | Warder | Endurance | Enabler | Whenever an ally of this creature dies, every surviving ally's Defence permanently rises by **15%**. |
-| Rotcore | Wit | Payoff | When this creature itself dies, it bursts a cloud of Poison across the entire enemy side. The Poison is measured from the Rotcore as it dies (20% of its Attack), and since it is already dead, every tick is logged as each bearer's own damage. |
+| Rotcore | Wit | Payoff | When this creature itself dies, it bursts a cloud of Poison across the entire enemy side. The Poison is measured from the Rotcore as it dies (40% of its Attack), and since it is already dead, every tick is logged as each bearer's own damage. |
 | Gravedigger | Endurance | Amplifier | Whenever an ally of this creature dies, it heals itself for **20% of its own maximum HP**. |
 
 ## Necromoss (Wit/Vitality) — Reclaim
@@ -102,7 +101,7 @@ Nothing happens until an ally has actually fallen.
 
 | Creature | Affinity | Role | Description |
 |---|---|---|---|
-| Igniter | Violence | Enabler | Every attack brands its target with Burn: each round, damage worth **25% of the Igniter's Intelligence**, measured when branded (a placeholder until 4.1-H2d). Re-branding refreshes the Burn and keeps the stronger one. |
+| Igniter | Violence | Enabler | Every attack brands its target with Burn: each round, damage worth **35% of the Igniter's Intelligence**, measured when branded. Re-branding refreshes the Burn and keeps the stronger one. |
 | Ashborn | Wit | Payoff | Deals **30% more damage** to any enemy currently Burning. |
 | Cinderlord | Violence | Amplifier | Every kill it personally lands applies **Burn to every remaining enemy**, measured from the Cinderlord's own Intelligence; an enemy already Burning keeps the stronger Burn and has its timer refreshed. |
 
@@ -187,3 +186,8 @@ player's lowest-HP creature, healing and buffing the player.
 **Decided at the 4.1-H2 grill** (brief ASSUMPTIONS 110–129): every item has landed and is folded
 into the sections above. The DoT, Spore-spread, Rotcore and Sporch items landed in 4.1-H2b2, and
 every creature's Health moved to the 20–45 range in 4.1-H2c ("Reading this biome").
+
+**Decided at the 4.1-H2d grill** (brief ASSUMPTION 152): landed in 4.1-H2d and folded into the
+sections above; the DoT numbers are no longer placeholders. Spore ticks **35% of the infector's Speed** (was 15%), Burn **35% of the
+applier's Intelligence** (was 25%: the Igniter, Withering Bolt) and Poison **40% of the applier's
+Attack** (was 20%: the Rotcore's burst).

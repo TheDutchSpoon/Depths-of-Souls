@@ -51,11 +51,11 @@ describe('stock statuses (representative Phase 3 content)', () => {
     })
   })
 
-  it("the four ticking statuses declare the placeholder potencies (percent of the APPLIER's stat; H2c tunes them)", () => {
-    expect(POISON.potency).toEqual({ ofStat: 'attack', percent: 20 })
-    expect(BURN.potency).toEqual({ ofStat: 'intelligence', percent: 25 })
+  it("the four ticking statuses declare the potencies decided at the 4.1-H2d grill (percent of the APPLIER's stat, ASSUMPTION 152)", () => {
+    expect(POISON.potency).toEqual({ ofStat: 'attack', percent: 40 })
+    expect(BURN.potency).toEqual({ ofStat: 'intelligence', percent: 35 })
     expect(REGEN.potency).toEqual({ ofStat: 'health', percent: 10 })
-    expect(SPORE.potency).toEqual({ ofStat: 'speed', percent: 15 })
+    expect(SPORE.potency).toEqual({ ofStat: 'speed', percent: 35 })
   })
 
   it('SPORE carries one tick and one spread: the spread is a plain apply-status of spore (the engine passes the snapshot on)', () => {

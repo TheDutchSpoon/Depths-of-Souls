@@ -252,7 +252,9 @@ finding labels B1, A4, … are a separate scheme.)
   - **H2c** the numbers the H2 grill decided (level range, boss level, Health 20–45, the Shieldbarer
     starter, Snapback, Arcane Bolt) and the report additions, with no balance number chosen;
   - **H2d** the balancing pass: a grill of the design owner on H2c's report decides the floor-1
-    fixes and the DoT percentages, then the CI thresholds are asserted.
+    fixes and the DoT percentages, then the CI thresholds are asserted. Decided at its grill:
+    Pollen Cloud deals no damage, Snapback back to 60%, the DoTs at 40 / 35 / 35, the T2 and T3
+    bands read by floor.
 - **No demo of its own** (a fix phase): the Phase 4.5 demo covers Phase 4 and 4.1 together
   (CONVENTIONS "Every feature phase ships a demo").
 

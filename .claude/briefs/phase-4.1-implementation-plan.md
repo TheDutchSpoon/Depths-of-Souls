@@ -1203,24 +1203,7 @@ Moved to .claude/phases/4.1/H2c/brief.md at its kickoff.
 
 ### 4.1-H2d — the balancing pass (deliberate)
 
-Added at the H2c plan review (2026-10-10; ASSUMPTION 149): choosing balance numbers is design work,
-so H2c ships only the numbers the H2 grill already decided, and this slice carries the rest.
-- **A grill first.** The design owner is grilled on H2c's "after" report and its DoT measurements:
-  which levers move each spec toward the CI thresholds (the floor-1 problem creatures in the floor
-  1–5 matchup table, the DoT percentages against floors 21–30). The rulings are the slice's
-  ASSUMPTIONS; the coding agent implements numbers, it doesn't choose them.
-- **The CI threshold test asserted** (ASSUMPTION 148): green on the tuned data, failing on H2c's.
-- **Goldens:** ASSUMPTION 147. The mechanism goldens that read a DoT percentage (`golden-dot`, the
-  `golden-f2-*` DoT goldens, the `golden-h2b2-*` goldens that read one, the
-  `golden-spore-spread-*` mechanism goldens, the `turn-end-dot-kill-burst` pair and
-  `golden-hollowkin-wretch-self-dot`) are pinned; each changed number is shown in a hand-derived
-  content golden on real data.
-- **Before/after report:** H2c's "after" is H2d's "before".
-- **Input from the H2c PR review** (`phases/4.1/H2c/review-r1.md`), for reading the matchup table
-  in the grill: a row counts **fights**, repeat visits to a floor included, not seeds; and a floor's
-  enemies come from the seed and the store's run counter, not from the spec. A spec that leaves
-  floor 1 sooner meets fewer templates there (after H2c the Brute meets 12 of floor 1's 18; none of
-  its rows is a Treant).
+Moved to .claude/phases/4.1/H2d/brief.md at its kickoff.
 
 ### Acceptance (4.1-H)
 - **H1:** the simulator is deterministic (same seeds → identical report, asserted); the report
@@ -1703,7 +1686,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        2026-10-08: DoT is the counter to Defence tanks, and most retaliators are those tanks);
      - **Regen heals** the potency (no Defence).
      Placeholder numbers (H2d tunes them, ASSUMPTIONS 129, 149): **Poison 20% of Attack, Burn 25% of
-     Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** A status that applies
+     Intelligence, Regen 10% of the healer's Health, Spore 15% of Speed.** *(Decided at the H2d
+     grill, ASSUMPTION 152: Poison 40%, Burn 35%, Spore 35%, Regen 10%.)* A status that applies
      itself through its own effect passes its snapshot on (Spore spreading on death keeps the
      original strength; ASSUMPTION 143). Integer percent, one floor (the percent-hp brief's float rule). This
      reverses the Phase 4 percent-of-max-HP model (`phase-4-percent-hp-condition-ticks.md`), whose
@@ -1799,7 +1783,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      its damage after floor 10.
 124. **Decided (H2 grill).** **Snapback (Snapjaw Jaws) 60% → 30% of Attack**, the generic
      Retaliate's number: as indirect damage it beat the Shieldbarer pair in every floor-1 fight at
-     60%. **Arcane Bolt spell power 0.5 → 1.0.**
+     60%. **Arcane Bolt spell power 0.5 → 1.0.** *(Snapback back to 60% at the H2d grill,
+     ASSUMPTION 151.)*
 125. **Decided (H2 grill).** **Health's base range is 20–45; the other four stats stay 10–30.**
      Every creature's Health is remapped linearly: `new = floor(20 + (old − 10) × 1.25 + 0.5)` (14 →
      25, 18 → 30, 20 → 33, 24 → 38, 25 → 39, 30 → 45). Max HP is still the Health stat; creatures
@@ -1996,7 +1981,8 @@ ASSUMPTION-tagged, and this list is what the design review checks.
      pass while no longer reaching the branch it was built for (a tick above the minimum of 1, a
      potency tie); and every later tuning pass would re-derive the same goldens again. Real content
      stays covered by the content goldens, the corpus and the data tests. Rejected: every golden
-     following the data; every golden pinned.
+     following the data; every golden pinned. *(4.1-H2d plan review, design owner: the same holds for a
+     unit test whose subject is a rule and which borrows real content, `status-snapshot.test.ts`.)*
 
 148. **Decided (H2c kickoff, 2026-10-09; design owner; lands in H2d, ASSUMPTION 149).** **The CI
      threshold test runs in the normal suite** (`npm run test`), over the full 40 seeds of each spec with the run cap at 30
@@ -2025,6 +2011,101 @@ ASSUMPTION-tagged, and this list is what the design review checks.
        by how much. It then implements the rulings and asserts the CI threshold test (148).
      Why: a tuning loop run by the coding agent would make design decisions inside an
      implementation plan; the grill is where balance has been decided so far (the H2 grill).
+
+150. **Decided (H2d grill, 2026-10-10; design owner).** **Pollen Cloud deals no damage:** it puts
+     every enemy to Sleep for 2 turns and nothing else, a control spell like Pacify and Silence.
+     - **Evidence** (H2c's "after" data, 40 seeds per spec, run cap 30): every first-try floor-1
+       loss (Shieldbarer 14 seeds, Brute 5) was a Wit creature casting Pollen Cloud on the
+       two-creature party. Each cast put both to Sleep and hit both for 8: a raw hit under 0.1,
+       the minimum of 1, plus the full Additional (7), which no spell power scales. Recast about
+       every third turn, it kept the party asleep until it died. Every enemy rolls a full gem set,
+       so 75% of biome-1 Wit creatures hold it (50% in biome 2, 43% in biome 3). The three "Wit
+       caster" problem creatures in the matchup table were this one spell.
+     - **Measured:** first-try floor 1 (Sorcerer / Brute / Shieldbarer) 40 / 35 / 26 → 40 / 40 /
+       40. Full report (cap 400, probe off) against H2c's: floor-10 first clear, median floor
+       runs, 86 / 72 / 213 → 104 / 68 / 154 (13 Shieldbarer seeds still never clear it); seeds
+       fighting on floor 5 within 20 runs 40 / 40 / 26 → 40 / 40 / 38; round-cap draws 4.9 / 2.5 /
+       10.6% → 5.9 / 2.6 / 12.9%; the Brute's floors 21–30 unchanged within noise. The Sorcerer's
+       slower mid-game and the extra draws are accepted costs: no threshold reads them, and there
+       is no draw band (ASSUMPTION 121).
+     - **Rejected:** Sleep for 1 turn (Shieldbarer 33 of 40, one seed of margin); a single-target
+       Pollen Cloud (40 / 40 / 40, but it stops being a cloud).
+     - **Found at the 4.1-H2d PR review:** with no damage, a recast only refreshes the Sleep, so a
+       caster can hold a side asleep and stall a fight to the round cap; accepted as part of the
+       draw cost above and kept as a watch point (ASSUMPTION 154).
+     - **Considered, no watch point:** the Additional lands in full on every target of an AoE.
+       It fades to 0 at attacker level 11 (enemies from floor 9), and the one AoE spell that also
+       locked no longer deals damage.
+151. **Decided (H2d grill, 2026-10-10; design owner).** **Snapback (Snapjaw Jaws) back to 60% of
+     Attack** (amends ASSUMPTION 124), restoring the Snapjaws' "bait & punish" retaliation.
+     - **Why it can go back:** at 60% the Jaws beat the Shieldbarer pair in every floor-1 fight on
+       the H2 grill's config. Two other H2c changes removed that: floor-1 enemies are now level 1 (they
+       were 1–3, ASSUMPTION 118), and the Stonehorn Warden attacks (ASSUMPTION 123). On H2c's data
+       with only Snapback at 60% the Jaws loses every floor-1 fight it is in (Sorcerer 34 of 34,
+       Shieldbarer 65 of 65; the Brute meets none there).
+     - **Measured with ASSUMPTION 150** (full report, cap 400, probe off; against Pollen Cloud
+       alone): verdicts unchanged; floor 5 within 20 runs 40 / 40 / 38 → 40 / 40 / 37; floor-10
+       first clear, median floor runs, 104 / 68 / 154 → 106 / 71 / 166 (Shieldbarer seeds never
+       clearing it 13 → 14); round-cap draws 5.9 / 2.6 / 12.9% → 5.9 / 2.7 / 12.6%. Its cost sits on
+       floor 2, where fights containing the Jaws are won 81 / 77 / 83% of the time (89 / 82 / 94%
+       at 30%). No new wall: the first-wall floors keep their spread. The condition set at the
+       grill ("restore it unless the Jaws becomes a wall on floors 2–9") holds.
+152. **Decided (H2d grill, 2026-10-10; design owner).** **DoT potencies: Poison 40% of Attack,
+     Burn 35% of Intelligence, Spore 35% of Speed. Regen stays at 10% of the healer's Health.**
+     None is a placeholder any more; like every number, each stays open to later balancing.
+     - **Why the DoTs move:** a tick is indirect damage, so it subtracts a fifth of the bearer's
+       Defence. At 20%, an applier whose stat equals the bearer's Defence ticks 0, the minimum of
+       1: 91% of the corpus's ticks after H2c. No set H2c measured (20 / 25 / 15, 35 / 30 / 30,
+       50 / 40 / 45) moved a verdict, so the numbers are a design choice: DoTs that do something,
+       kept modest because biome 3's DoTs are mostly the enemy's (the floor-30 boss's first-try
+       clear fell from 35 of 36 to 25 of 36 at the high set) and the player can't aim a DoT before
+       Phase 6's scripts. 40 / 35 / 35 sits between the two higher sets measured.
+     - **Measured in 4.1-H2d, accepted at its PR review (design owner, 2026-10-10):** on top of
+       ASSUMPTIONS 150–151 the DoT change cost the Brute's floor-30 boss (the Rot Sovereign) its
+       first-try clear, 38 / 38 → 28 / 36 (35 / 36 on H2c's data), floor-30 failed pushes 0 → 12;
+       floors 21–29 moved within a few seeds and no verdict moved. 28 / 36 lands between the two
+       sets measured on either side, as the grill expected; floor 30 is a watch point (154).
+     - **Why Regen stays:** a heal subtracts nothing, so 10% already does something.
+153. **Decided (H2d grill, 2026-10-10; design owner).** **T2 and T3 read floors, not floor runs,
+     and are ceilings:** **T2**, a completed soul by each seed's first run on floor 3; **T3**, a
+     full party (four souls beyond the two starters) by each seed's first run on floor 6, the
+     floor where enemies first field six. A seed that never reaches the floor is reported apart
+     as "didn't reach". Both are reported, never asserted; ASSUMPTION 22's first-soul threshold
+     (≤ 30 floor runs) is unchanged. On H2c's data both hold for every seed that reaches the floor:
+     at the report's run cap (400) T2 and T3 are 40 / 40 / 40 with every seed reaching; at the CI
+     cap (30) T3 is 40 / 37 / 15 met of as many reached (3 and 25 didn't reach). *(Corrected at the
+     H2d PR review: the grill's "T3 40 / 40 / 28 of 28" was read at a run cap of 60, and the plan
+     review's "it is the cap-30 count" was wrong.)* Why: this is a team-building game, so souls coming
+     fast is good; the bands guard against slow, not fast. They replace "first soul within ~10
+     floor runs" and "a full party within the first 10 floor runs", which read the policy's
+     farming as much as the game.
+154. **Decided (H2d grill, 2026-10-10; design owner).** **No other per-item fix in H2d**: it aims
+     at the CI thresholds, which ASSUMPTIONS 150–152 meet (151 isn't needed for them; it restores
+     content). Four watch points, read on H2d's "after"
+     report and in the Phase 4.5 demo (the last two added at the H2d PR review, 2026-10-10):
+     - **Floor 2 and the early walls.** First-try floor 2 is 1 / 15 / 2 of 40 after ASSUMPTIONS
+       150 and 151 (2 / 10 / 0 before), and seeds first wall on floors 4–7.
+     - **T5, party level against the floor.** The design owner's intent: player creatures level
+       about as fast as the floor number when every floor is cleared on the first try. On the
+       clean path (one creature, every floor cleared first time, every kill's XP) the level
+       equals the floor through floor 9, then lags: 9 at floor 10, 17 at 20, 25 at 30. Boss
+       floors are most of the lag: one fight pays 89 / 174 / 282 XP on floors 10 / 20 / 30,
+       against 1,800+ for a normal floor beside them. The XP curve may need tuning; not in H2d
+       (ASSUMPTION 117 keeps it, and no threshold reads it).
+     - **The floor-30 boss against the DoTs.** The Brute's first-try floor 30 is 28 / 36 after
+       4.1-H2d (ASSUMPTION 152's measurement). Biome 3's DoTs are mostly the enemy's; the levers,
+       if it needs one, are Burn and Spore, or the player's scripts once Phase 6 lands.
+     - **A status-only AoE recast on a side that already carries it.** With no damage, a Pollen
+       Cloud recast only refreshes the Sleep, and casters recast it on an enemy side that is
+       already all asleep (the corpus's casts of that kind 59 → 94 in 4.1-H2d; the longest run of
+       one creature's skipped turns 15 → 35; one fight went from a win in 36 rounds to a round-cap
+       draw). Accepted as part of ASSUMPTION 150's draw cost. The fix's home is the role scripts
+       and Phase 6's conditions (a "target lacks the status" check), not an engine castability
+       rule.
+155. **Decided (H2d kickoff, 2026-10-10).** **The CI threshold test (ASSUMPTION 148) is one test
+     file per spec**, so Vitest runs the three in parallel, each calling the simulator's own
+     `runSeed` and `computeThresholds`. Measured at the kickoff (one machine, three specs in
+     sequence, cap 30, probe off): 49 s on H2c's data, about 70 s with ASSUMPTION 150.
 
 ## Sequencing summary
 

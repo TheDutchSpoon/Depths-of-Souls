@@ -38,6 +38,7 @@ import { createCreatureId } from '../ids'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
 import { TRAIT_REGISTRY } from '../../data/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
+import { holdPotency } from '../__fixtures__/held-statuses'
 import type { CombatEvent } from '../types'
 import { updateCreature } from '../creature-lookup'
 import { applyStatus, newCascade } from '../resolution'
@@ -64,7 +65,9 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-export const statuses = STATUS_REGISTRY
+// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
+// never changes a mechanism golden). The status is otherwise the real one.
+export const statuses = holdPotency(STATUS_REGISTRY, { spore: 15 })
 
 export const TURN_STEPS = 4 // P, BEARER and MATE's round-1 turns, then round 2's setup and P's turn.
 

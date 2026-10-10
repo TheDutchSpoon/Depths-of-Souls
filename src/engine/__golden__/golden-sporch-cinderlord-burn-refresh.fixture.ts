@@ -25,9 +25,12 @@
 //       events array): the same instance is kept and refreshed -- StatusApplied(ENEMY_B, burn,
 //       duration REFRESHED 1 -> 3, per applyStatus's own re-application rule (the NEW
 //       application carries no explicit duration, so it inherits Burn's own defaultDuration: 3,
-//       overwriting the pre-existing 1). Its snapshot stays ENEMY_B's own (Intelligence 20 x 25% = 5,
-//       stronger than Cinderlord's 12 x 25% = 3), but no tick lands in this one step, so neither
-//       is visible in the events.
+//       overwriting the pre-existing 1). Its snapshot stays ENEMY_B's own (the stronger one:
+//       Intelligence 20 against Cinderlord's 12, at the same percentage), but no tick lands in
+//       this one step, so neither is visible in the events.
+//
+// It applies the real Burn, no tick lands, so its potency isn't read and isn't pinned (4.1-H2d;
+// the percentage was 25% when this was written).
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'

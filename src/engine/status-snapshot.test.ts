@@ -11,6 +11,7 @@ import { createCreatureId } from './ids'
 import { updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
 import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
+import { holdPotency } from './__fixtures__/held-statuses'
 import { snapshotFor } from './effects'
 import { applyStatus, executeResponse, fireHook, newCascade } from './resolution'
 import {
@@ -25,6 +26,11 @@ import { validateSpecialization } from '../data/specializations'
 import { validateTrait } from '../data/traits'
 import type { CombatEvent, CombatState, Creature, Spell } from './types'
 import type { EffectDef, StatusDef, StatusEffect, StatusSnapshot } from './effect-types'
+
+// This file's subject is the snapshot RULE, not Poison's number: it borrows the real Poison and pins
+// its percentage at the 20% its arithmetic uses (4.1-H2d, ASSUMPTION 147, extended to a rule's unit
+// test), so a tuning pass never changes its expected values.
+const STATUSES = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 const A = createCreatureId('a')
 const A2 = createCreatureId('a2')
@@ -42,7 +48,7 @@ function world(extra: Partial<Record<'a' | 'a2' | 'b', object>> = {}): CombatSta
       ]),
     },
     enemy: { party: makeParty('enemy', [{ id: 'b', health: 1000, ...extra.b }]) },
-    registries: { scripts: FIXTURE_SCRIPTS_BY_ID, statuses: STATUS_REGISTRY },
+    registries: { scripts: FIXTURE_SCRIPTS_BY_ID, statuses: STATUSES },
   })
 }
 
@@ -273,7 +279,7 @@ describe('pass-on rule: only the SAME status inherits the firing instance’s sn
     const base = world()
     const state0: CombatState = {
       ...base,
-      statuses: new Map([...STATUS_REGISTRY, [x.statusId, x]]),
+      statuses: new Map([...STATUSES, [x.statusId, x]]),
     }
     // A (Attack 50) applies X to B: X's snapshot = applier A, potency floor(50 x 20 / 100) = 10.
     let state = apply(state0, A, x.statusId, 3)

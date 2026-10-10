@@ -372,8 +372,9 @@ attack executor is correct.
     one tick response (`deal-damage` or `heal`, on `self`) takes the magnitude `{ kind:
     'snapshot-potency' }`. That marker is what makes it a tick; any other damage a status deals
     its bearer is a cost, and any other heal an ordinary heal from the bearer. An instance holds `snapshot` iff its status declares a potency.
-  - Placeholder numbers (tuned in 4.1-H2d): Poison 20% of Attack, Burn 25% of Intelligence, Regen
-    10% of the healer's Health, Spore 15% of Speed.
+  - Numbers (4.1-H2d grill, brief ASSUMPTION 152; they land in 4.1-H2d, the placeholders 20 / 25 /
+    15 until then): Poison 40% of Attack, Burn 35% of Intelligence, Spore 35% of Speed, Regen 10% of
+    the healer's Health.
   - Why: the percent-hp brief rejected stat-scaling only because a DoT's `context.self` is the
     victim; the snapshot reads the applier, and a DoT now belongs to its applier's build.
 - **Flat-mode stat-derived magnitude** (percent-hp-condition-ticks brief; it carried the status
@@ -1837,12 +1838,16 @@ radius) with no locked consumer to justify it yet — same "wait for a real cont
     instead of inheriting tuning changes.
 - **Balance simulator** (Phase 4.1-H, D1): a **deterministic**, permanent tool that drives the
   **real store** with a documented simple player policy over many seeds and reports the design
-  targets as **bands**, not hard rules: T1 floor 1 cleared on ≥95% of seeds; T2 first soul within
-  ~10 floor runs; T3 a full party of 6 within the first session (the first 10 floor runs); T4 no
+  targets as **bands**, not hard rules: T1 floor 1 cleared on ≥95% of seeds; T2 a soul completed by
+  each seed's first run on floor 3; T3 a full party of 6 by its first run on floor 6, where enemies
+  first field six (both ceilings: sooner is fine; 4.1-H2d grill, brief ASSUMPTION 153; until
+  4.1-H2d the report reads ~10 floor runs and the first 10 floor runs); T4 no
   hard wall before the floor-10 boss; T5 the level curve above (party ≈ floor).
   - **T2 counts floor runs, not clears** (PR #84 review): a kill banks soul whether the floor is won
-    or lost, so a soul can complete before any clear. Floor runs are the player's time, the same
-    unit as T3's session.
+    or lost, so a soul can complete before any clear. Floor runs are the player's time; ASSUMPTION 22's
+    first-soul threshold keeps that unit. From 4.1-H2d the T2 and T3 bands read a seed's first run
+    on floor 3 and floor 6 instead, so the policy's farming doesn't move them (brief ASSUMPTION
+    153).
   - **A hard wall** (T4) is 5 failed pushes in a row at one floor (re-farm runs between them don't
     reset the count): with a re-farm after each failed push, about one session spent stuck on one
     floor. The simulator records the first wall and keeps going. Decided at the 4.1-H1 plan
@@ -1986,7 +1991,9 @@ demo slice (their goldens stay byte-identical).
   that number held; for a creature, a base stat), so a tuning PR leaves its expected values
   byte-identical. That byte-identity is the PR's proof that only numbers moved. Only a number the
   golden reads is pinned: a borrowed number no event of the fight reads gets a header note, not a
-  pin (4.1-H2c: the Leech Sovereign golden reads none of her Health).
+  pin (4.1-H2c: the Leech Sovereign golden reads none of her Health). The same holds for a
+  **unit test** whose subject is a rule and which borrows real content (4.1-H2d plan review:
+  `status-snapshot.test.ts` holds Poison at 20%).
 - A golden whose subject is a **named content item** (a creature, trait or spell) is a content
   golden: it reads real data and is re-derived by hand when a tuning PR moves a number it reads.
 - A tuning PR shows each effect number it changes (a status potency, a spell's power, a trait's
