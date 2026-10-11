@@ -75,11 +75,14 @@ new tests only.
 - **Pragmas are matched at the start of the comment body** (fix 7), as TypeScript and ESLint read
   them; prose that mentions "eslint-disable" is not a pragma. `@vitest-environment` may sit
   anywhere in the leading docblock.
-- **A mask is exact or it fails.** Each `{ file, old, new, count? }` entry is consumed exactly
-  `count` times on both sides, matched on the literal's cooked text, so a requoted title (Prettier
-  switches quotes when an apostrophe goes, as in 4.2-G) still passes. A non-title literal (the
-  `renderFixture` template part) is masked the same way and printed in the report. A changed
-  literal that isn't listed fails.
+- **A mask is exact or it fails.** Each `{ file, old, new, count? }` entry's `old` occurs exactly
+  `count` times in the base; a file's entries are grouped by `new`, and `new` occurs in the head
+  exactly as often as in the base plus the group's summed counts, so a new text may already exist
+  in the file, and titles that converge are left to the duplicate-name check. Literals match on
+  their cooked text, so a requoted title (Prettier switches quotes when an apostrophe goes, as in
+  4.2-G) still passes. A non-title literal (the `renderFixture` template part) is masked the same
+  way and printed in the report. A changed literal that isn't listed fails; two entries with the
+  same `file` and `old`, or one whose `new` is another's `old` (a chain or swap), are exit 2.
 - **`comment-proof` fails on more than a changed print**: an added, deleted or renamed file in
   scope, a changed pragma (`removeComments` strips pragmas, so they are compared apart), and a new
   duplicate full test name in a file (A9; two titles that converge fail closed). A file git

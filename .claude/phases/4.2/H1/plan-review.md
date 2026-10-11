@@ -135,3 +135,123 @@ built" for 4.2-H3.
 
 - `phases/4.2/H/brief.md`, Scope, the `comment-proof` bullet: a changed pragma is one whose text or
   governed token changed (D1).
+
+## Round 2
+
+Reviewed `plan.md` at `3eac01e` (Revision 1) against Round 1, `kickoff.md`,
+`phases/4.2/H/brief.md` and `scripts/docs-check/test-utils.ts`, with read-only TypeScript probes over
+the working tree (typescript 6.0.3, Node 22.23.2, run outside the repo).
+
+**Verdict: changes needed, and both are small and fully specified.** Revision 1 lands every Round 1
+fix as asked: both comment-range reads at the token's full start with the end-before-start filter
+(fix 1), `Title.chain` built from a stack during the walk (fix 2), `-z`, asserted reasons and the two
+new mutation runs (fix 3), the duplicate-`old` usage error (fix 4), the rehearsal invocation (fix 5),
+`[Pp]lan review` and `[Ss]ign-off` (fix 6), and pragmas as (text, `tokenIndex`) with a test and a
+mutation run (fix 7). Plan fix 1 below is needed either way. Plan fix 2 applies only if Duncan takes
+the decide-point. Neither opens a design question, so a Round 3 would only check that the two edits
+landed. That isn't the "pull it back into a design pass" signal.
+
+### Plan fixes
+
+1. **§4, the non-ASCII file-set test pins `core.quotePath`.** The test that catches the "drop `-z`"
+   mutation only fails if git quotes the path. `gitIn` passes only an identity, so the scratch repo
+   inherits the user's global git config. With `core.quotePath false`, which is common on Windows,
+   git doesn't quote the path, and the mutation survives. Fix: the test runs
+   `gitIn(root, 'config', 'core.quotePath', 'true')` in its scratch repo, since a repo-local setting
+   beats the global one. The mutation run is "back to newline splitting without `-z`", not "drop the
+   flag but keep splitting on NUL": that second version breaks every path, not just the non-ASCII
+   one, so it proves nothing about `-z`.
+
+If the decide-point below is taken:
+
+2. **§2 `comment-proof` step 4, masks are keyed by the new text.** In each file, group the entries by
+   `new`, and give each group one mask token. In the base, every literal whose cooked text equals
+   one of the group's `old` texts **or** its `new` text gets that token. In the head, every literal
+   whose cooked text equals `new` gets it. Counts: each entry's `old` occurs exactly `count` times in
+   the base. `new` occurs in the head exactly (its occurrences in the base) + (the group's summed
+   counts). The print comparison then pins every masked position. Two new usage errors (exit 2),
+   checked before any file is read: two entries with the same `file` and `old` (as in Revision 1),
+   and an entry whose `new` is another entry's `old` in the same file (a chain or swap can't be
+   masked). A9 changes with it: titles converging in different `describe`s pass the mask, and the
+   duplicate-name check alone decides. Add to §4:
+   - `describe('cheat-death (Phase 4 Slice D, Last Stand)')` → `'cheat-death'`, in a file that also
+     has `kind: 'cheat-death'`, passes;
+   - the same diff that also changes that `kind` literal fails;
+   - two different old titles mapped to one new title pass in two `describe`s and fail in one, as a
+     duplicate name;
+   - A→B plus B→C exits 2.
+
+   Mutation run: check the head count against `count` alone (today's rule); the first test fails.
+
+### Assumptions
+
+| # | Call | Note |
+| --- | --- | --- |
+| A1–A7, A10, A11 | **confirm** | unchanged from Round 1 |
+| A8 | **confirm** | as restated: anchored, (text, `tokenIndex`), in order |
+| A9 | **confirm**, or **correct** with plan fix 2 | `chain` as built answers Round 1 fix 2. No `describe` in the tree has a non-literal title, so a chain never loses a level today. If plan fix 2 is taken, drop "converging in different `describe`s fail the mask count check" |
+| N1 | **confirm** | now covers 14–17 |
+| N2 | **confirm** | with plan fix 1 for its test |
+| N3 | **confirm**, or **correct** with plan fix 2 | span edit on cooked text stands; what the mask token covers changes |
+| N4 | **confirm** | |
+
+**Bring-it-back check:** the plan changes nothing in the brief. The decide-point below would change a
+rule **the kickoff** sets ("each entry consumed exactly `count` times on both sides"), so it is
+Duncan's call, not an inline correction.
+
+**Golden policy:** matches the kickoff.
+
+**Mechanism coverage:** every Round 1 mechanism has its test and mutation run. Fix 1's mutation (read
+trailing ranges at `token.end`), fix 7's mutation (text-only comparison) and fix 3's two mutations
+are all listed. The `-z` mutation needs plan fix 1 to be deterministic.
+
+**Checked, no change:**
+- **Pragma position, trailing vs. own-line.** `tokenIndex` doesn't record whether a pragma is
+  trailing or on its own line, so a standalone `// eslint-disable-line` moved to the end of the line
+  above, without crossing a token, would pass. I recommend not keying on it. A useless standalone
+  `-line` pragma is contrived. Worse, Prettier re-wraps lines when a title shortens (4.2-G re-wrapped
+  four files), and that can flip a comment between trailing and own-line with no token moving. So
+  keying on it would fail legitimate 4.2-H2 diffs.
+- **The tree's one pragma** (`injured-allies.test.ts:149`, `@ts-expect-error -- 'other-ally-injured'
+  is a TriggerCondition kind, …`): its description carries no provenance, so comparing exact text
+  costs 4.2-H2 nothing. The provenance is in the enclosing `describe` title, which is a maskable
+  title.
+- **Line endings:** `.gitattributes` is `* text=auto eol=lf`, so the working tree and `git show` agree
+  and the byte-identical rule for non-code files (`src/index.css`, `.gitkeep`) is safe on Windows.
+- **4.2-G rehearsal:** none of the 10 new titles in `retitled-tests.md` already occurs as a literal in
+  its file, so the rehearsal's 88 OK holds under today's rule and under plan fix 2.
+
+### Decide-points
+
+**Should a mask entry's new text be allowed to already exist in the file?** As specified (kickoff
+trap, plan §2 step 4), every literal whose cooked text equals `new` counts against the entry. If
+4.2-H2 rewrites a title to text that already occurs anywhere in the file, as another title or as
+any string, the head count comes out at `count + n`, and the file fails as "consumed 3 times". That
+is a legitimate comment-only change, failed with a misleading reason. A probe over today's tree
+(291 titles carrying a tag) found two titles where the obvious rewrite hits this:
+`resolution.test.ts:1305` `'conditional-damage-bonus (Phase 4 Slice E2, …)'` and `:1893`
+`'cheat-death (Phase 4 Slice D, Last Stand)'`. Stripping each whole parenthetical leaves the effect
+kind, and the file already uses that kind as a string twice. If only the tag words are stripped,
+nothing collides. The same rule also fails titles that converge in different `describe`s (A9
+accepts that today).
+
+**Recommend: yes, plan fix 2, in this slice.** The brief splits the work "so 4.2-H2 never changes the
+tool that proves it". Under today's rule, H2's only way round a collision is to reword the title to
+suit the tool. That's the tool deciding content, and a later comment-only change or 4.2-H3's rename
+option hits the same wall. The fix stays sound: masked positions still have to line up in the
+print, every `old` has to be consumed exactly, and a change to a pre-existing `new` literal still
+fails on the count. It costs one grouping step, one usage error, four tests and a mutation run.
+Against: today the collision is avoidable by wording, H2 hasn't hit it yet, and "exact or it fails"
+is the simpler rule to explain. If you'd rather keep it, I'll put a line in H2's kickoff saying a
+new title must not equal another literal in its file.
+
+### Decisions (Duncan, 2026-10-11)
+
+- **Masks keyed by new text:** taken. Plan fix 2 applies; A9 and N3 are corrected with it.
+- Plan fix 1 and the assumption calls stand as written.
+
+### Docs edited
+
+- `phases/4.2/H1/kickoff.md`, Traps, the mask bullet: an entry's `old` is consumed exactly `count`
+  times in the base and `new` is counted per group against the base's own occurrences; same
+  `file`+`old` and chains or swaps are exit 2 (the decide-point).
