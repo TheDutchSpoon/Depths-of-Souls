@@ -1,17 +1,17 @@
-// Phase 4 Slice H3: Rotcap Hollow (floors 21-30, GAME_DESIGN §4's decade cadence / ASSUMPTION
-// 29) -- Biome 3's real roster, against `.claude/species/species-locked.md`'s own table, built
+// Phase 4 Slice H3: Rotcap Hollow (floors 21-30, `spec/run.md#biomes`'s decade cadence / ASSUMPTION
+// 29) -- Biome 3's real roster, against `content/rotcap-hollow.md#rotcap-hollow-biome-3-floors-2130` own table, built
 // entirely on primitives already proven through Slice E2/H2 (no new engine work needed for any
 // TRAIT here -- see traits/rotcap-hollow.ts's own header comment for the one genuinely new
 // piece, Spore's `random-ally-without-status` target, which lives in data/statuses.ts, not a
 // species trait).
 //
-// Six species x three creatures each (18 total), following species-locked.md's own "roles ...
+// Six species x three creatures each (18 total), following `content/rotcap-hollow.md#species-roles` own "roles ...
 // enabler / payoff / amplifier" framing, except Necromoss (like Resonants, H2) shares ONE
 // mechanic across all three creatures, escalating scope/strength by rarity.
 //
 // ASSUMPTION (Slice H3, mirrors H1/H2's own): exact base stats (10-30/stat) and every
-// percent/factor balance number are parked balance (GAME_DESIGN §13), picked only to be
-// flavorful and internally consistent. Per-creature affinity mostly follows species-locked.md's
+// percent/factor balance number are parked balance (`OPEN_QUESTIONS.md#content-numbers`), picked only to be
+// flavorful and internally consistent. Per-creature affinity mostly follows `content/rotcap-hollow.md#species-roles`
 // own dual leans (Necromoss: Wit/Vitality, Hollowkin: Endurance/Instinct, Sporch: Violence/Wit),
 // with four content-review revisions off the family default -- see each creature's own doc
 // comment: Rotfeeder Gorgemaw is Vitality (its identity is HP growth, not a raw Violence hit);
@@ -24,8 +24,7 @@
 // (unlike H1/H2, whose single-lean species needed one).
 //
 // Composition ONLY (Species/SpeciesCreature/BiomeData + boss data) -- Trait/Spell objects live in
-// the central `../traits`/`../spells` library (CONVENTIONS "Data layer -- carriers vs.
-// composition"), same as `../species/overgrowth.ts`/`../species/glimmerdark.ts`.
+// the central `../traits`/`../spells` library (`CONVENTIONS.md#composition-files-only-reference-carriers`), same as `../species/overgrowth.ts`/`../species/glimmerdark.ts`.
 
 import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
@@ -344,7 +343,7 @@ export const ROTCAP_HOLLOW_SPECIES_POOL: readonly Species[] = [
 ]
 
 // ---- Boss (floor 30): the Rot Sovereign ----
-// species-locked.md: "Attrition-management (finale) ... Grows via count-scaling off deaths (any
+// `content/rotcap-hollow.md#rot-sovereign`: "Attrition-management (finale) ... Grows via count-scaling off deaths (any
 // creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it +
 // out-manage the rot, not pure DPS." Adds drawn from this biome's own spawn pool (the
 // fixed-authored-encounter path, same mechanism as the Unicorn's scripted intro and the
@@ -354,7 +353,7 @@ export const ROTCAP_HOLLOW_SPECIES_POOL: readonly Species[] = [
 //
 // The boss floor itself (materializing her + her adds on floor 30, banking rewards, recording
 // bossesCleared) is wired through `BiomeData.boss` below (Phase 4 Slice I, PR #65 review) -- see
-// `generation.ts`'s `generateFloor` boss branch and CONVENTIONS' "Boss floors". H3 authored her
+// `generation.ts`'s `generateFloor` boss branch and `spec/run.md#boss-floor-generation`. H3 authored her
 // as data only and deliberately left the runner unbuilt, mirroring H1/H2's own bosses; that gap
 // is what Slice I closes.
 
@@ -369,7 +368,7 @@ export const ROT_SOVEREIGN: SpeciesCreature = {
 }
 
 /** The adds accompanying her fight -- real Rotcap Hollow roster members, per the boss-authoring
- * checklist's "adds drawn from the biome's own spawn pool" (species-locked.md names no specific
+ * checklist's "adds drawn from the biome's own spawn pool" (`content/rotcap-hollow.md#rot-sovereign` names no specific
  * pair for this boss, unlike the Broodmother's explicit "spiderlings"). */
 export const ROT_SOVEREIGN_ADDS: readonly SpeciesCreature[] = [
   SPORECLOUD_SEEDER,

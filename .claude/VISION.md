@@ -20,7 +20,7 @@ The incremental layer comes from:
   party can't, then strengthen and push deeper.
 - A **fusion** economy that compounds (recombining creatures into stronger ones).
 - **Biomes**: the cave changes biome as it descends, each with its own creatures to encounter and
-  collect (`spec/run.md` "Biomes").
+  collect (`spec/run.md#biomes`).
 - **Facilities** built at the cave entrance that grant permanent upgrades and services.
 - Many small multiplicative bonuses (traits, gem augments, equipment infusions, spec perks) that
   stack.
@@ -39,8 +39,7 @@ The incremental layer comes from:
 2. **Automation, not idleness.** The game plays combat automatically, but the player is actively
    engaged in *tuning*, not just waiting for numbers to rise.
 3. **Legible systems.** A player can reason about *why* something happened. Combat is
-   deterministic given the same seed, party and scripts (`CONVENTIONS.md` "Combat is reproducible
-   from its inputs").
+   deterministic given the same seed, party and scripts (`CONVENTIONS.md#combat-is-reproducible-from-its-inputs`).
 4. **Compounding builds.** Progression is about discovering synergies that multiply, not linear
    stat increases.
 5. **No backend.** Everything runs client-side. Saves are local, with manual export and import.
@@ -57,7 +56,7 @@ Descend a cave floor  ->  Auto-battle the floor's creatures  ->  Earn XP & drops
    Return to entrance  ->  Use facilities (fuse / summon / store)  --------+
 ```
 
-There is no run that resets: depth is persistent (`spec/run.md` "The cave"), so descending is gated
+There is no run that resets: depth is persistent (`spec/run.md#the-cave`), so descending is gated
 only by whether the party survives the next floor. When it can't, the player goes back up,
 strengthens it (fuse, level, rescript, build and upgrade facilities) and descends again past the
 wall.

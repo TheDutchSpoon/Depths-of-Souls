@@ -15,16 +15,16 @@ is client-side and statically deployed. The pitch, pillars and loop are in `VISI
 ## The rules that matter most
 
 1. **Determinism**: the same party, scripts and seed give the same fight, always; seeded RNG only
-   (`CONVENTIONS.md` "Combat is reproducible from its inputs").
+   (`CONVENTIONS.md#combat-is-reproducible-from-its-inputs`).
 2. **Engine purity**: no React, DOM, wall clock or global random inside `src/engine`
-   (`CONVENTIONS.md` "The engine is pure and deterministic").
+   (`CONVENTIONS.md#the-engine-is-pure-and-deterministic`).
 3. **Data over code**: creatures, traits, spells and balance numbers are data; new content is a
-   data entry, plus at most one reusable primitive (`spec/effects.md` "One effect framework",
-   `CONVENTIONS.md` "No magic numbers").
+   data entry, plus at most one reusable primitive (`spec/effects.md#one-effect-framework`,
+   `CONVENTIONS.md#no-magic-numbers`).
 4. **Scripts are serializable data**: the player's rules are JSON-shaped, saved and replayable
-   (`spec/scripting.md` "Scripts are ordered rules").
+   (`spec/scripting.md#scripts-are-ordered-rules`).
 5. **Versioned saves**: every save has a version, and a shape change adds a migration
-   (`spec/saves.md` "Versions and migrations").
+   (`spec/saves.md#versions-and-migrations`).
 
 ## Where things live
 
@@ -78,8 +78,8 @@ opens with a "Read this when …" line.
 - **TypeScript** (strict): non-negotiable; types are the contract we build against.
 - **React** and **Vite**: a reactive UI over the game-state store; Vite for dev and the static
   build.
-- **State**: one typed **Zustand** store (`spec/store.md` "One store").
+- **State**: one typed **Zustand** store (`spec/store.md#one-store`).
 - **Persistence**: IndexedDB, from Phase 5 (`spec/saves.md`).
-- **Deploy**: GitHub Pages, from `vite build` (`CONVENTIONS.md` "GitHub Pages, from a subpath").
+- **Deploy**: GitHub Pages, from `vite build` (`CONVENTIONS.md#github-pages-from-a-subpath`).
 - **No backend, no accounts, no network calls in gameplay.** Don't introduce a backend, a new
   framework or a second state library without saying so.

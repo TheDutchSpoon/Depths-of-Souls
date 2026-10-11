@@ -1,31 +1,14 @@
 import type { Spell } from '../../engine/types'
 
-// ---- Phase 4 interstitial slice (cumulative spell unlock) ----
-// H2 originally shipped 10 spells here (two per affinity, mirroring Overgrowth's density). Once
-// spell unlock became cumulative (generateFloor rolls from the GLOBAL spell list, filtered to
-// `unlockedAtBiome <= currentBiomeIndex`, then by affinity -- see engine/generation.ts's
-// `spellsUnlockedAt`), 8 of those 10 turned out to be exact mechanical reskins of an Overgrowth
-// spell (same affinity + targetShape + effect kind + magnitude, only the name
-// differed) and a 9th (Glowspark Bolt) was a near-dup of Arcane Bolt violating this biome's own
-// "no affinity carries two plain damage spells" convention. All 9 are deleted -- Overgrowth's
-// biome-1 kit is inherited by every deeper biome now, so re-authoring it here was always
-// redundant. Deleted: Crystal Shard (=Thorn Lash), Fracture Strike (=Weakening Bite), Glowspark
-// Bolt (near-dup of Arcane Bolt), Stoneshell Bash (=Root Grasp), Bastion Chant (=Bramble Ward),
-// Echo Fang (=Stinger Swarm), Pack Howl (=Howling Instinct), Bioglow Mend (=Regrowth), Luminous
-// Vigor (=Wild Vigor). Only Beacon Charge was genuinely Glimmerdark's own (a heal plus a status, no
-// Overgrowth equivalent) -- kept, retagged `unlockedAtBiome: 2`. Five new spells (Overcharge,
-// Disorient, Blinding Flare, Afterglow, Luminous Tide -- all ASSUMPTION-tagged below) joined it,
-// for 6 Glimmerdark-own spells total, meeting the design owner's >=4-5-own-spells-per-biome bar
-// (GAME_DESIGN §4) as spice on top of the inherited biome-1 base, not a re-authored kit -- each
-// on a mechanic no biome-1 spell already uses.
-//
-// Phase 4.1-H2b1 (ASSUMPTION 116): Glow is deleted, so Overcharge (its only reason to exist) is
-// deleted, Beacon Charge grants Grant Act First instead, and Luminous Tide becomes Kindred Light
-// (a plain team heal) -- 5 Glimmerdark-own spells.
+// This biome authors only its own spells. Spell unlock is cumulative: `generateFloor` rolls from
+// the global spell list filtered to `unlockedAtBiome <= currentBiomeIndex`, so every deeper biome
+// inherits the biome-1 kit and a reskin of one of its spells here would only duplicate it
+// (`spec/run.md#spells-unlock-cumulatively`). Each spell below is on a mechanic no biome-1 spell
+// already uses, and no affinity carries two plain damage spells.
 
 /** Beacon Charge: a small heal that ALSO grants the target Grant Act First (a `heal` effect, then an
  * `apply-status` effect, at the status's own default duration) -- the support spell that lets an
- * ally open the next round, per species-locked.md's own "a spell may apply any status, including
+ * ally open the next round, per `spec/run.md#the-onboarding-ramp` own "a spell may apply any status, including
  * another species' signature one" rule (Blindclaws' Setter grants the same status). Single-target
  * + upside -> ~80-90% band. */
 export const BEACON_CHARGE: Spell = {
@@ -54,8 +37,8 @@ export const BEACON_CHARGE: Spell = {
  * ASSUMPTION (interstitial slice, NEW CONTENT -- surfaced for sign-off): Disorient, suggested by
  * the brief as "apply act-last to an enemy, reusing the turn-order primitive." The turn-order
  * primitive's act-last pole is already the `web` StatusDef (a `turn-order` effect,
- * position: 'last'`, data/statuses.ts) -- per CONVENTIONS' "statuses are shared primitives" and
- * species-locked.md's own "a spell may apply any status, including another species' signature
+ * position: 'last'`, data/statuses.ts) -- per `spec/statuses.md#a-status-is-a-timed-effect` and
+ * `spec/run.md#the-onboarding-ramp` own "a spell may apply any status, including another species' signature
  * one" rule (already precedented: Overgrowth's own Vine Snare applies `web` too), Disorient
  * reuses that SAME statusId rather than authoring a new near-identical StatusDef, which would
  * just be Web-with-a-new-name -- the exact anti-pattern this slice exists to undo. Authored as

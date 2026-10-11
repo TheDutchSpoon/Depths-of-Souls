@@ -51,8 +51,9 @@ export function targetSelectorHasCandidate(
 }
 
 /**
- * The real resolution. `random-enemy` is the one blessed RNG draw site in this module --
- * callers must only reach it for the winning rule (see interpreter.ts).
+ * The real resolution. `random-enemy` and `random-ally` draw from the seeded RNG here, so callers
+ * must only reach them for the winning rule (`spec/scripting.md#target-selectors-in-the-engine`;
+ * see interpreter.ts).
  */
 export function resolveTargetSelector(
   selector: TargetSelector,

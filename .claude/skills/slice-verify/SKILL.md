@@ -8,8 +8,7 @@ argument-hint: <slice-id> <round, e.g. 4.2-B 1>
 Slice and round: $ARGUMENTS (`<slice-id> <N>`). If either is missing, ask for it and stop.
 
 1. Read `.claude/workflow/coding-rules.md` (its reading list does not apply here: read what this
-   command names) and `.claude/phases/4.2/brief.md` ("Rules for the new spec", "Condensing rules",
-   "Inventory format").
+   command names) and `phases/4.2/brief.md#rules-for-the-new-spec`, `phases/4.2/brief.md#condensing-rules-42-b-to-f`, `phases/4.2/brief.md#inventory-format`.
 2. Read `verify-request.md` in the mailbox, the latest round. It names the files condensed and
    anything to check specially.
 3. Run `npm run docs:check -- inventory <slice>` and record the result.

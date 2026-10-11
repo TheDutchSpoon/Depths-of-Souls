@@ -13,16 +13,14 @@ Confusion). They are defined in `src/data/statuses.ts`.
 
 - A status is applied in a fight, by a spell, a trait or a perk, and lasts a fixed number of its
   **bearer's own turns**. Every status shows as an icon with its remaining duration.
-- A status is a container of the same effects a trait carries (`spec/effects.md` "Effects and
-  carriers"): Poison carries a damage trigger, Weaken a damage-dealt reduction, Web "act last",
+- A status is a container of the same effects a trait carries (`spec/effects.md#effects-and-carriers`): Poison carries a damage trigger, Weaken a damage-dealt reduction, Web "act last",
   Stun "can't act".
 - **New statuses are data**: a status can carry any passive or trigger a trait can, except a
-  stat-modifier (`spec/effects.md` "No temporary stat-modifier"), so the shipped set is not a
+  stat-modifier (`spec/effects.md#no-temporary-stat-modifier`), so the shipped set is not a
   ceiling.
 - **Every status has an intrinsic effect**: no inert markers.
 - **Raw stat changes are not statuses.** Raising or lowering Attack, Defence, Intelligence, Speed
-  or Health is a permanent-for-fight stat-modifier (`spec/effects.md` "Category decides
-  player-facing treatment"). So "make them weaker" has two tools: a stat-modifier (grind their
+  or Health is a permanent-for-fight stat-modifier (`spec/effects.md#category-decides-player-facing-treatment`). So "make them weaker" has two tools: a stat-modifier (grind their
   Attack down, uncapped) or a timed Weaken (a tactical cut to damage dealt).
 
 ### No stacking
@@ -36,20 +34,19 @@ Confusion). They are defined in `src/data/statuses.ts`.
 - Stun carries a passive "can't act" lock, so when its bearer's turn comes up the turn is skipped.
   Sleep carries the same lock; **Silenced** locks only casting and **Pacified** only attacking. A
   lock stops every action, chosen or granted by a trait. A Stun applied earlier in the round lands,
-  because the lock is read when the turn comes up. No special resolver branch ("Action locks").
+  because the lock is read when the turn comes up. No special resolver branch (`spec/statuses.md#action-locks`).
 
 ### DoT and Regen belong to their applier
 
 - At application a DoT or Regen records a **snapshot** of its applier: who it is, its affinity, and
   a potency, a percentage of one of its stats (each status's stat and percentage are in the content
   docs).
-- Each DoT tick deals that potency as **indirect damage** (`spec/combat.md` "Damage channels and
-  the Additional"): the applier's affinity, the bearer's taken pool, and a fifth of the bearer's
+- Each DoT tick deals that potency as **indirect damage** (`spec/combat.md#damage-channels-and-the-additional`): the applier's affinity, the bearer's taken pool, and a fifth of the bearer's
   Defence. So a DoT is still the answer to high-Defence enemies, and it belongs to its applier's
   build.
 - The applier is the damage source while it lives (its on-kill and on-damage-dealt traits fire),
   else the bearer, which then fires no dealer traits. Retaliation never answers a tick
-  (`spec/responses.md` "triggering-source is never the firing creature").
+  (`spec/responses.md#triggering-source-is-never-the-firing-creature`).
 - **Regen** heals its snapshot potency, credited the same way.
 - A status that applies itself through its own effect passes its snapshot on: Spore spreading on
   death keeps the original strength. A creature that merely carries a status and applies it is an
@@ -59,7 +56,7 @@ Confusion). They are defined in `src/data/statuses.ts`.
 
 - Every status is a **buff** or a **debuff**. That is what a cleanse (remove an ally's debuffs) or
   a dispel (remove an enemy's buffs) will read, through the general status-removal response
-  (`spec/responses.md` "remove-status"). Removal targets statuses; removing stat-modifiers is a
+  (`spec/responses.md#remove-status`). Removal targets statuses; removing stat-modifiers is a
   later extension.
 
 ### Self-clearing statuses
@@ -82,7 +79,7 @@ Confusion). They are defined in `src/data/statuses.ts`.
 
 - An immune creature still receives the status, so it still counts for "target is X" payoffs and
   for `has-status`; it ignores what the status does. Each specialization's control immunity works
-  this way (`spec/progression.md` "Specializations"; mechanism in `spec/effects.md` "Immunity").
+  this way (`spec/progression.md#specializations`; mechanism in `spec/effects.md#immunity`).
 
 ### Timing
 
@@ -106,11 +103,11 @@ Confusion). They are defined in `src/data/statuses.ts`.
 - `StatusDef { statusId, polarity: 'buff' | 'debuff', defaultDuration, effects: EffectDef[],
   potency? }` is a **timed, single-instance container** of the effects a trait carries. The status
   owns the lifecycle (apply, refresh, count down, expire, `has-status`); its effects own the
-  behaviour, read through the one effect iterator (`spec/effects.md` "The effect iterator"). A
+  behaviour, read through the one effect iterator (`spec/effects.md#the-effect-iterator`). A
   status's effects take a count of 1.
 - `polarity` is declared on every status because it can't be derived from the effects.
-- `potency: { ofStat, percent }` is declared by a ticking status ("The applier snapshot").
-- What a status may carry is checked at load (`spec/effects.md` "Validators").
+- `potency: { ofStat, percent }` is declared by a ticking status (`spec/statuses.md#the-applier-snapshot`).
+- What a status may carry is checked at load (`spec/effects.md#validators`).
 
 ### Applying and refreshing
 
@@ -123,7 +120,7 @@ Confusion). They are defined in `src/data/statuses.ts`.
 
 ### Turn-end cleanup
 
-- The turn's shape is `spec/combat.md` "Turn structure". In its bearer's turn-end cleanup, each
+- The turn's shape is `spec/combat.md#turn-structure`. In its bearer's turn-end cleanup, each
   status counts down by one and expires at 0 (`StatusExpired`); then comes the Web roll ("Turn
   order").
 - **Cleanup is bookkeeping only**, at either end of the turn: the turn-start cleanup ends action
@@ -145,7 +142,7 @@ Confusion). They are defined in `src/data/statuses.ts`.
   born: it neither ticks, counts down nor (a Web) rolls that turn, and starts next turn. One applied
   earlier in the turn (turn-start hooks, turn-start cleanup, turn-start grants) was present for the
   action slot, so it ticks, counts down and rolls this turn: a Stun 1 gained at turn start skips
-  this turn ("Action locks") and expires at its end, exactly one turn. Applied during another
+  this turn (`spec/statuses.md#action-locks`) and expires at its end, exactly one turn. Applied during another
   creature's turn, a status ticks and counts down at its bearer's next turn end as normal.
 - **Authoring: pick the hook for when the status should start.** Applied before the bearer acts
   (`on-turn-start`), it counts this turn: right for a status meant to shape this turn's action.
@@ -168,10 +165,9 @@ Confusion). They are defined in `src/data/statuses.ts`.
 
 - A creature that dies fires only `on-death`; its own not-yet-reached hooks are skipped. A DoT tick
   that kills its bearer is still followed by the status's own `on-death` trigger, because each
-  status trigger is its own guard instance ("Several triggers"). Win and loss are checked after
-  every top-level step, each turn-end hook firing included (`spec/combat.md` "Resolution &
-  timing").
-- A corpse's statuses are inert (`spec/effects.md` "Death-reset").
+  status trigger is its own guard instance (`spec/statuses.md#several-triggers`). Win and loss are checked after
+  every top-level step, each turn-end hook firing included (`spec/combat.md#resolution--timing`).
+- A corpse's statuses are inert (`spec/effects.md#death-reset`).
 
 ### Several triggers
 
@@ -190,14 +186,13 @@ Confusion). They are defined in `src/data/statuses.ts`.
 
 - At application, an instance of a status that declares `potency` records `snapshot: { applierId,
   affinity, potency }`, the potency being `floor(floor(applier's effective ofStat) × percent /
-  100)` (an integer percent, one floor; `spec/responses.md` "Flat mode"). An instance holds a
+  100)` (an integer percent, one floor; `spec/responses.md#flat-mode`). An instance holds a
   snapshot iff its status declares a potency. A tick is that potency: there is no stack count.
 - **The tick.** The status's one tick response (`deal-damage` or `heal`, on `self`) takes the
   magnitude `{ kind: 'snapshot-potency' }`; that marker is what makes it a tick. Any other damage a
   status deals its bearer is a cost, and any other heal an ordinary heal from the bearer.
 - **A damage tick is indirect damage**: `potency × affinity(snapshot vs bearer) × Π(bearer's taken
-  factors) − 0.2 × bearer's effective Defence`, then `MAX(1, floor(...))` (`spec/combat.md`
-  "Damage channels and the Additional").
+  factors) − 0.2 × bearer's effective Defence`, then `MAX(1, floor(...))` (`spec/combat.md#damage-channels-and-the-additional`).
 - **The source** is the applier while it is alive at tick time, else the bearer. Only a living
   applier is the tick's **dealer**: its `on-damage-dealt` and `on-kill` fire. On the fallback the
   bearer is the logged source and no dealer-side hook fires; a self-applied tick's living bearer is
@@ -225,7 +220,7 @@ Confusion). They are defined in `src/data/statuses.ts`.
 - **The skip.** A turn is skipped when an `'all'` lock is active **right after the turn-start hook
   pass**, or **at the action slot**. The first read is what the turn-start grants need: they run
   after it and must already know the turn is skipped (the actor's own grant is refused,
-  `spec/combat.md` "Every action source obeys the same rules"). The second keeps a lock gained
+  `spec/combat.md#every-action-source-obeys-the-same-rules`). The second keeps a lock gained
   during the turn-start grants from reaching the decide step. A lock gained during the actor's own
   turn-start hooks therefore skips that same turn.
 - **Neither read is redundant with `checkLegality`.** The turn-start drain can hold other

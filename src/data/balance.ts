@@ -1,7 +1,6 @@
-// Phase 4.1-A (A7 + D1 defaults): the real BalanceConfig values (the engine owns the shape, see
-// engine/balance-types.ts). 4.1-H2c applied the H2 grill's run-structure rulings (the level-range
-// width and the boss offset below, ASSUMPTIONS 118, 119); the balancing pass (4.1-H2d) tunes the
-// rest. Every number here is parked balance (GAME_DESIGN §13) until then.
+// The real BalanceConfig values (the engine owns the shape, see engine/balance-types.ts). The
+// numbers were tuned by the balancing pass; what is still open is in
+// `OPEN_QUESTIONS.md#balance-numbers`.
 
 import type { BalanceConfig } from '../engine/balance-types'
 

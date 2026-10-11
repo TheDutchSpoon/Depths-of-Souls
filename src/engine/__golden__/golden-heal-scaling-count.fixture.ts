@@ -5,7 +5,7 @@
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // FOE (speed 20) acts before NECROMOSS (speed 10) in round 1. DEAD-ALLY starts the fight already
-// dead (a pre-wiped party member, per CONVENTIONS "duplicate/dead slots" -- never gets a turn,
+// dead (a pre-wiped party member, per `spec/combat.md#turn-queue` -- never gets a turn,
 // buildTurnQueue filters it out) -- resolveCount's dead-allies reads it directly, no in-fight
 // death needed for this fixture.
 //

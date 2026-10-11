@@ -1,5 +1,5 @@
 // Golden: Spore's spread-on-death fizzles when every living member of the dying host's own side
-// is already Spored -- species-locked.md's own "fizzles if none [qualify]" loop-guard. The
+// is already Spored -- `content/rotcap-hollow.md#spore` own "fizzles if none [qualify]" loop-guard. The
 // trigger's own `TriggerFired` still fires (it's a targeting fizzle, not a suppressed trigger),
 // but nothing follows it: no `StatusApplied`, and NO RNG DRAW AT ALL (the empty-pool check in
 // `resolveResponseTargets`'s `random-ally-without-status` case returns before ever calling

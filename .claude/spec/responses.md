@@ -18,7 +18,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
   `apply-status`, `apply-stat-modifier`, `heal`, `revive`, `grant-action-state`, `remove-status`
   and `perform-action`.
 - Skipping a turn is not a verb: it is a passive lock inside a status, and "interrupt one action"
-  is simply `apply-status(stun, 1)` (`spec/statuses.md` "Action locks").
+  is simply `apply-status(stun, 1)` (`spec/statuses.md#action-locks`).
 
 ## Engine rules
 
@@ -28,8 +28,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
   `triggering-source`, a selector, `cast-target`): `deal-damage`, `heal`, `apply-status`,
   `apply-stat-modifier`, `remove-status` and `grant-action-state` today, and every future targeted
   verb by default. No event is emitted for the skip.
-- It is the verb-level half of "dead creatures fire only `on-death`" (`spec/effects.md` "Dead
-  creatures"): a corpse neither reacts nor is acted on. A revive resets a creature's effects and
+- It is the verb-level half of "dead creatures fire only `on-death`" (`spec/effects.md#dead-creatures`): a corpse neither reacts nor is acted on. A revive resets a creature's effects and
   action state anyway, so nothing done to a corpse could matter; the rule keeps the log honest.
 
 ### Fizzles
@@ -46,9 +45,8 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 ### Response targets
 
 - A response names its target: `self`, `triggering-source`, `triggering-ally`, `all-enemies`,
-  `all-allies`, `all-allies-of-species`, a full `TargetSelector`, `random-dead-ally` ("revive"),
-  `random-ally-without-status`, `lowest-hp-injured-other-ally` (`spec/effects.md` "Trigger
-  conditions") and, inside a spell, `cast-target`.
+  `all-allies`, `all-allies-of-species`, a full `TargetSelector`, `random-dead-ally` (`spec/responses.md#revive`),
+  `random-ally-without-status`, `lowest-hp-injured-other-ally` (`spec/effects.md#trigger-conditions`) and, inside a spell, `cast-target`.
 - **`all-allies`** is the ally-side mirror of `all-enemies`, resolved through
   `livingAlliesOf(self)`, so it always includes the firing creature.
 - **`all-allies-of-species`** is `all-allies` narrowed to creatures sharing the firing creature's
@@ -63,7 +61,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 - `triggering-source` resolves to **no target** when the hook's source is the firing creature
   itself (a creature's own cost reaching its `on-damage-taken`). The hook still fires, and the
   fizzle emits `TriggerFired` only.
-- A status tick offers no source at all (`spec/statuses.md` "The applier snapshot"), so on a tick
+- A status tick offers no source at all (`spec/statuses.md#the-applier-snapshot`), so on a tick
   `triggering-source` also resolves to no target, even while the applier lives: **retaliation
   never answers a tick**. The hook itself still fires (a DoT still wakes a sleeper).
 - The rule is about response targets: `perform-action`'s `actor: 'triggering-source'` is not a
@@ -77,7 +75,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
     `offStat` names `'cast'`, remap-aware Intelligence.
   - **`scalingStat`**: any stat, read directly with no remap, letting a response scale off any stat
     (Thorns and Shield Bash off Defence). A heal's `scalingStat` reads the **healer's** stat.
-  - **flat**, `flatAmount` ("Flat mode").
+  - **flat**, `flatAmount` (`spec/responses.md#flat-mode`).
 - `deal-damage`'s default stat is Attack (`offStat: 'attack'`).
 - **One formula for every formula-mode magnitude**: `deal-damage` and `heal`, `offStat` or
   `scalingStat`, fired by a trait or a spell, all compute **stat × (spellPower × multiplier)**.
@@ -90,7 +88,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 ### Flat mode
 
 - `flatAmount` is a literal number, a **`StatPercent`** or a status tick's `snapshot-potency` marker
-  (`spec/statuses.md` "The applier snapshot").
+  (`spec/statuses.md#the-applier-snapshot`).
 - A `StatPercent` (`{ ofStat, percent }`, `percent` a **positive integer**) is a percentage of the
   **firing creature's** (`context.self`) own effective stat: the Wick's burn and heal,
   `CATASTROPHIC_COLLAPSE`.
@@ -114,13 +112,12 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 ### apply-status
 
 - `apply-status { target, status: { statusId, duration? } }`; an omitted duration is the status's
-  `defaultDuration` (`spec/statuses.md` "Applying and refreshing").
+  `defaultDuration` (`spec/statuses.md#applying-and-refreshing`).
 
 ### apply-stat-modifier
 
 - `apply-stat-modifier { target, stat, factor, magnitudeSource? }` adds a stat-modifier, permanent
-  for the fight; a `magnitudeSource` count is frozen at application (`spec/effects.md`
-  "Stat-modifier counts freeze at application").
+  for the fight; a `magnitudeSource` count is frozen at application (`spec/effects.md#stat-modifier-counts-freeze-at-application`).
 
 ### grant-action-state
 
@@ -133,15 +130,13 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 - `remove-status { target, filter: { statusId } }` clears a status from a target, reusing the
   `StatusExpired` path, so death-reset and turn-end cleanup stay consistent. It is invoked on
   *other* creatures, which is what spell-driven cleanse and dispel need.
-- The filter names one status. A **polarity** filter (`buff` or `debuff`, `spec/statuses.md`
-  "Polarity, cleanse and dispel") comes with the first cleanse or dispel spell.
+- The filter names one status. A **polarity** filter (`buff` or `debuff`, `spec/statuses.md#polarity-cleanse-and-dispel`) comes with the first cleanse or dispel spell.
 - Removing stat-modifiers is out of scope, and deferrable with no migration: a stat-modifier's
   polarity is derivable (`factor > 1` is a buff, uniformly).
 
 ### revive
 
-- `revive` returns a **dead** creature to its slot at its battle-start baseline (`spec/effects.md`
-  "Death-reset") with `currentHp = round(baseline max HP × pct)`.
+- `revive` returns a **dead** creature to its slot at its battle-start baseline (`spec/effects.md#death-reset`) with `currentHp = round(baseline max HP × pct)`.
 - **Bounded**: a creature can be revived at most **`MAX_REVIVES_PER_CREATURE = 10`** times per
   fight (`engine/config.ts`; `Creature.revivesUsed` counts). Dead allies at the cap are excluded
   from revive targeting; if none qualify, the revive fizzles and draws **no** random number. Revive
@@ -153,7 +148,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
   rule-shaped intent the action pipeline takes (`{ action, targeting? }`, with `gemSlot: 'random'`
   and a `'random'` target available). It makes the actor take a **real action** through the one
   pipeline (via `ctx.runAction`), so every action rule applies: can't-act, Silenced, Confusion,
-  Tunnel Vision, Provoke (`spec/combat.md` "One action pipeline").
+  Tunnel Vision, Provoke (`spec/combat.md#one-action-pipeline`).
 - **Actions are atomic**: no action starts while another is resolving. The response only queues a
   grant on the `ResolutionContext` (its `grants`), which runs **after the granting action, all its
   instances, completes**. Responses stay nested and immediate.
@@ -172,7 +167,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
   trigger's depth (which already includes its +1), and the granted action runs at that depth. The
   granting trigger has unwound before its grant runs, so the guard never sees an echo chain: a chain
   can pass through the same Overtone again and still truncates at `MAX_TRIGGER_CASCADE_DEPTH`
-  (`spec/effects.md` "Loop safety").
+  (`spec/effects.md#loop-safety`).
 - **Where it may appear**: trait effects, perk effects and status triggers; a spell's effect list
   rejects it at load. A **data test** reads every registry and requires each `perform-action`
   trigger to carry a real guard: a `chancePercent` below 100, or a `condition` other than `always`.
@@ -188,8 +183,8 @@ Read this with `spec/effects.md`, for any triggered behaviour.
   casts.
 - **Only the actor's state decides a grant.** The bearer dying after its trigger fired doesn't
   cancel it; the actor being dead, on a skipped turn or locked when the grant runs does
-  (`spec/combat.md` "Every action source obeys the same rules").
+  (`spec/combat.md#every-action-source-obeys-the-same-rules`).
 - **RNG draw order**: the chance roll at trigger time; then, when the grant runs, the gem, the
   target, and any Confusion or Provoke draws.
 - An "insert an extra turn" primitive is a different concept from a granted action, and not built
-  (`spec/effects.md` "Traits").
+  (`spec/effects.md#traits`).

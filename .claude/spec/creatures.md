@@ -13,13 +13,13 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 
 - **Species**: a grouping of related creatures (the Spiders). A species spans several creatures and
   several affinities, and its creatures' traits generally synergize, by design. Biomes spawn
-  species; the creature is drawn within the species (`spec/run.md` "Spawning").
+  species; the creature is drawn within the species (`spec/run.md#spawning`).
 - **Creature**: the unit, a data template, and the thing you collect, with its own soul bar. It has
   a name, an affinity, base stats, one innate trait, a rarity, a parent species and a **role**: its
-  default script, one of the seven role scripts (`spec/scripting.md` "Role scripts"). It runs its
+  default script, one of the seven role scripts (`spec/scripting.md#role-scripts`). It runs its
   role as an enemy, and an owned instance runs it until a script is assigned.
 - **Instance**: a copy of a creature the player owns. It stores only what can't be derived
-  (Engine rules, "Instance").
+  (Engine rules, `spec/creatures.md#instance`).
 - There is no "class": affinity is the only such axis.
 
 ### Identity and rarity
@@ -39,7 +39,7 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   Wit→Intelligence, Endurance→Defence, Instinct→Speed. It is a flavour lean and a trait hook
   (a trait may scale off its affinity's stat), never a constraint on the creature's stats: an
   off-lean creature is a legitimate surprise.
-- The affinity cycle that drives damage is `spec/combat.md` "Affinity advantage".
+- The affinity cycle that drives damage is `spec/combat.md#affinity-advantage`.
 
 ### Core stats
 
@@ -52,7 +52,7 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 
 - A creature has **one innate trait**.
 - It has **3 regular gem slots** (`DEFAULT_GEM_SLOT_COUNT`). Its innate spells, if any, sit in extra
-  slots before them ("Innate spells"). Spells aren't gated by role: every creature has gem slots,
+  slots before them (`spec/creatures.md#innate-spells`). Spells aren't gated by role: every creature has gem slots,
   and its script chooses which gem to cast.
 
 ### Levels and XP
@@ -66,16 +66,15 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   base (base 20 gains 5 a level, 65 at level 10). It is recomputed from base at every level, never
   accumulated, so there is no rounding drift, and the exact-quarter inputs keep it deterministic.
   There is no growth-rate field.
-- **Level is uncapped.** It climbs with depth (`spec/run.md` "Enemy levels"), and the formula holds
+- **Level is uncapped.** It climbs with depth (`spec/run.md#enemy-levels`), and the formula holds
   at any level.
 - Levels keep stats in a sane range for the subtractive damage formula; the power curve comes from
-  build sources (`spec/progression.md` "Build power is the incremental curve").
+  build sources (`spec/progression.md#build-power-is-the-incremental-curve`).
 
 ### Souls
 
 - Defeating a creature grants a **percentage of its soul**, tracked **per creature**, not per
-  species. It banks the instant the creature dies (`spec/combat.md` "Encounters, rewards &
-  wipes").
+  species. It banks the instant the creature dies (`spec/combat.md#encounters-rewards--wipes`).
 - Soul gain is a **flat percentage per rarity**: **25% Common, 20% Uncommon, 10% Rare** (config),
   with no variance and no diminishing returns. Rarer creatures take longer; depth doesn't change
   the gain.
@@ -84,21 +83,21 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   the hub, free, as many duplicates as wanted. A summon drops into the first free party slot, if
   there is one.
 - Which creature spawns can't be steered beyond choosing a biome, by floor or by pin
-  (`spec/run.md` "Spawning"): the soul hunt is a deliberate grind.
+  (`spec/run.md#spawning`): the soul hunt is a deliberate grind.
 
 ### Cold start
 
 - The player begins with **exactly one creature**, the starter of the chosen specialization
-  (`spec/progression.md` "Specializations"), and the **Unicorn** joins in the scripted intro
-  (`spec/run.md` "Scripted intro").
+  (`spec/progression.md#specializations`), and the **Unicorn** joins in the scripted intro
+  (`spec/run.md#scripted-intro`).
 - **Floor 1 is solo-clearable** with the starter, and the first soul completes fast: the opening
   aims at **a full party of 6 within the first session** (the first 10 floor runs). Enemy count
-  ramps toward 6v6 alongside it (`spec/run.md` "Enemy count").
+  ramps toward 6v6 alongside it (`spec/run.md#enemy-count`).
 
 ### Roster and party
 
 - The collection is **unlimited**; the active **party is 6**, arranged freely at the hub: any
-  instance into any slot (`spec/store.md` "Store actions" for a move onto an occupied slot).
+  instance into any slot (`spec/store.md#store-actions` for a move onto an occupied slot).
 - **Duplicates** may share the party: instances are independent.
 - The Unicorn is **permanently owned** but can be benched like any creature.
 
@@ -111,10 +110,9 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 - **Spell affinity:** every spell carries an affinity, and a creature can hold a spell only of its
   own affinity. The gate governs **holding only**: the damage cycle stays keyed on the **caster's**
   affinity. Innate spells are outside the gate. On `main` the gate has no exception; the
-  Sorcerer's Mastery perks lift it per affinity once Phase 8 builds equipping ("Gems as items").
-- **Gem sets:** every enemy rolls a full set of distinct spells at spawn (`spec/run.md` "Enemy
-  script and gem set"); every player instance rolls one when it is created and keeps it (Engine
-  rules, "Player gem sets").
+  Sorcerer's Mastery perks lift it per affinity once Phase 8 builds equipping (`spec/creatures.md#gems-as-items`).
+- **Gem sets:** every enemy rolls a full set of distinct spells at spawn (`spec/run.md#enemy-script-and-gem-set`); every player instance rolls one when it is created and keeps it (Engine
+  rules, `spec/creatures.md#player-gem-sets`).
 - **Innate spells:** a trait may give a creature a spell of its own (the Glyphmoth Seer's Arcane
   Bolt). It is not a gem: it can't be levelled or augmented, it needs no matching affinity, and it
   sits in an extra slot before the regular gem slots. The same spell can also exist as an ordinary
@@ -128,7 +126,7 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 - **Wit** spells are the most *potent* damage (not the most numerous), since Wit maps to
   Intelligence and spells scale off it.
 - A spell **scales off Intelligence by default**, a minority off their affinity's mapped stat,
-  another stat rarely (the mechanism: `spec/combat.md` "The stat a spell's magnitude scales off").
+  another stat rarely (the mechanism: `spec/combat.md#the-stat-a-spells-magnitude-scales-off`).
   A pure-utility spell (a status only, a cleanse) has no damage or heal effect.
 - A spell's **flavour and affinity are independent**: an elementally named spell can carry any
   affinity.
@@ -146,7 +144,7 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   carries `id`, a required `name`, `affinity`, `baseStats`, `defaultScriptId` (its role),
   `innateTraitIds` and `rarity`. Its species is the one whose list holds it.
 - Identity (species and name) and affinity are separate fields, so a fusion can take them from
-  different parents ("Fusion").
+  different parents (`spec/creatures.md#fusion`).
 
 ### Instance
 
@@ -161,7 +159,7 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
     Materialization resolves each id through the spell registry, and an unknown id **throws** (data
     drift fails loudly).
 - Affinity, traits, base stats and fused-ness are **derived** from `source`, never stored.
-  Materializing a fusion-sourced instance throws: fusion isn't built ("Fusion").
+  Materializing a fusion-sourced instance throws: fusion isn't built (`spec/creatures.md#fusion`).
 
 ### materializeCreature
 
@@ -197,10 +195,10 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 
 - Every new player instance (the starter grant, the Unicorn, a summon) rolls its gems **once, at
   creation**, through the enemy's own roll (`rollLoadout`: distinct picks, the safety net, the
-  cast-role throw; `spec/run.md` "Enemy script and gem set"), and stores them on the instance.
+  cast-role throw; `spec/run.md#enemy-script-and-gem-set`), and stores them on the instance.
 - **A stored set never changes**: nothing re-rolls it, so a set reflects the depth at which it was
   made. The starter chosen at a new game and the Unicorn are granted at floor 0, so they keep a
-  biome-1 set; a starter granted by a later swap (`spec/progression.md` "Swapping specialization")
+  biome-1 set; a starter granted by a later swap (`spec/progression.md#swapping-specialization`)
   rolls at the depth of the swap. Neither can be summoned (they bank no soul), so neither re-rolls;
   a creature summoned again deeper can roll a deeper spell.
 - **Its own RNG:** the roll draws from `createRng(hashGemDraw(runSeed, instance ordinal))`, a hash
@@ -221,7 +219,7 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   canonical order and prepends their spells to `equippedSpells`. A materialized creature carries
   **regular gem slots only**; the Seer fights with Arcane Bolt at index 0 and its three regular
   slots after it. Fight setup refuses already-set-up creatures, so innate slots can't be doubled
-  (`spec/combat.md` "Fight setup").
+  (`spec/combat.md#fight-setup`).
 - No equip gate applies, because the spell isn't equipped.
 - A creature may also hold the same `Spell` as an ordinary gem.
 
@@ -237,13 +235,13 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   spell's `effects` list (an extra target, an added or stronger status, a buff on cast, …). They
   are the same effect-framework objects as traits and infusions.
 - Gems are crafted and augmented at the **Gem Forge** with Essence; gem and augment **recipes** drop
-  from floors (`spec/run.md` "Recipe drops and currency sinks").
+  from floors (`spec/run.md#recipe-drops-and-currency-sinks`).
 - The spells on offer come from the same cumulative pool as a gem set: every spell with
-  `unlockedAtBiome` ≤ the current biome (`spec/run.md` "Spells unlock cumulatively").
+  `unlockedAtBiome` ≤ the current biome (`spec/run.md#spells-unlock-cumulatively`).
 - Gems are a **shared, finite inventory**. A gem is equipped on one creature at a time, **free and
-  instant** to equip or unequip, gated by the spell's affinity ("Spell affinity gate"). The one
+  instant** to equip or unequip, gated by the spell's affinity (`spec/creatures.md#spell-affinity-gate`). The one
   exception: each of the Sorcerer's five Mastery perks lets your creatures equip that affinity's
-  gems regardless of their own (`specializations/sorcerer.md` "Wit Mastery" and the four after it).
+  gems regardless of their own (`specializations/sorcerer.md#wit-mastery` and the four after it).
 - Traits and effects can change a creature's gem-slot count (the Sorcerer's True Wit).
 - When gems become objects, an innate spell no longer fits the gem array: expect innate slots to
   become a separate list the cast pipeline reads ahead of the gem slots.
@@ -266,7 +264,7 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
     it doesn't stack stats (two high-Attack parents can't make a higher one); growth follows from
     the new bases;
   - **traits**: both parents' innate traits (2), and an innate spell travels with its trait;
-  - **level 1**, brought up by catch-up levelling ("Catch-up levelling");
+  - **level 1**, brought up by catch-up levelling (`spec/creatures.md#catch-up-levelling`);
   - **no rarity**: a fusion result is neither spawned nor collected.
 - The player chooses which parent is parent 1.
 - **A fused instance is stored as its recipe and derived on load** from static data: identity,
@@ -297,4 +295,4 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 
 ### Summoning at the Soul Altar
 
-- Phase 8 builds the Soul Altar (`spec/run.md` "Facilities"), and summoning then requires it.
+- Phase 8 builds the Soul Altar (`spec/run.md#facilities`), and summoning then requires it.

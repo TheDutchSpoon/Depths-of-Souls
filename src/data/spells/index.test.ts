@@ -126,8 +126,7 @@ describe('dedupKey for status-only spells (Phase 4.1-F3)', () => {
 })
 
 describe('Silence and Pacify (Phase 4.1-F3, G2)', () => {
-  // Append-only: the registry order maps RNG rolls to spells (CONVENTIONS "determinism is
-  // sacred"), so the first ids are pinned in order and the two new spells come last. Phase 4.1-H2b1
+  // Append-only: the registry order maps RNG rolls to spells (`CONVENTIONS.md#combat-is-reproducible-from-its-inputs`), so the first ids are pinned in order and the two new spells come last. Phase 4.1-H2b1
   // deliberately deleted Overcharge (index 15) and renamed Luminous Tide to Kindred Light in place, so
   // the pin is now 24 ids.
   const FIRST_24 = [

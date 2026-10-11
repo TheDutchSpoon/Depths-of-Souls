@@ -1,4 +1,4 @@
-// Golden: the Leech Sovereign, Glimmerdark's floor-20 boss (species-locked.md) -- "every hit
+// Golden: the Leech Sovereign, Glimmerdark's floor-20 boss (`content/glimmerdark.md#leech-sovereign`) -- "every hit
 // steals a stat (permanent -you/+it, same as Sparkeaters); you hollow out over time" -- against
 // REAL shipped content (data/species/glimmerdark.ts's real LEECH_SOVEREIGN_TRAIT). Proves the
 // snowball across TWO hits: each attack both shrinks the target's Attack and grows the

@@ -1,4 +1,4 @@
-// Golden: Glimmerdark's Resonants signature mechanic (species-locked.md) -- "members
+// Golden: Glimmerdark's Resonants signature mechanic (`content/glimmerdark.md#resonants-wit-caster-synergy`) -- "members
 // on-ally-action(cast) -> gain Attack/Int", built on the general `on-action-observed` system
 // (Slice E2) against REAL shipped content (data/species/glimmerdark.ts's real
 // RESONANT_CHORUS_TRAIT/RESONANT_ADEPT_TRAIT). Proves the "ally includes self" rule concretely:

@@ -455,7 +455,7 @@ describe('routing: a damage event never reaches an action observer, an action ne
   })
 })
 
-describe('hook order in the damage path (4.1-H2b1; CONVENTIONS "Hook execution model")', () => {
+describe('hook order in the damage path (4.1-H2b1; spec/effects.md#hook-execution)', () => {
   const ON_TAKEN: Trait = {
     id: 'on-taken',
     name: 'On taken (fixture)',

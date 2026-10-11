@@ -4,7 +4,7 @@
 //
 // This module imports `src/data`, exactly like `__golden__` fixtures do. Engine SOURCE must
 // never import it (it lives outside `src/engine`'s own files, in a leaf-only, test-facing
-// directory) -- `src/engine` stays pure per CONVENTIONS' "engine purity" rule. It sits outside
+// directory) -- `src/engine` stays pure per `CONVENTIONS.md#the-engine-is-pure-and-deterministic` rule. It sits outside
 // `__golden__/` on purpose, so `frozen-replay-sweep.test.ts`'s fixture glob doesn't pick it up.
 
 import { generateFloor, materializeCreature } from '../generation'

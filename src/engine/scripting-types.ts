@@ -6,20 +6,11 @@ export type ComparatorOp = '<' | '<=' | '>' | '>=' | '==' | '!='
 
 // ---- Conditions ----
 
-// Phase 4 Slice E2: 'target' -- "the creature this effect is being resolved against" --
-// supplied by the trigger's source (fireHook) or the current damage target (a
-// conditional-damage-bonus's own gathering). Absent in scripting-rule lookahead (no such
-// creature exists there), so a 'target'-subject condition is always false in that context --
-// same precedent as acted-before-target (ASSUMPTION 11). The qualifier is ignored for 'target'
-// (a single creature, not a pool) -- subjectPool naturally degenerates any/lowest/highest to the
-// same one-element check.
-// Phase 4 Slice E2: 'target' -- "the creature this effect is being resolved against" --
-// supplied by the trigger's source (fireHook) or the current damage target (a
-// conditional-damage-bonus's own gathering). Absent in scripting-rule lookahead (no such
-// creature exists there), so a 'target'-subject condition is always false in that context --
-// same precedent as acted-before-target (ASSUMPTION 11). The qualifier is ignored for 'target'
-// (a single creature, not a pool) -- subjectPool naturally degenerates any/lowest/highest to the
-// same one-element check.
+// 'target' is the creature an effect is being resolved against (`spec/scripting.md#conditions-in-the-engine`):
+// the trigger's source (fireHook) or the current damage target (a conditional-damage-bonus's own
+// gathering). Scripting-rule lookahead has no such creature, so a 'target'-subject condition is
+// false there. The qualifier is ignored for 'target' (a single creature, not a pool): any/lowest/
+// highest degenerate to the same one-element check.
 export type HpSubject = 'self' | 'ally' | 'enemy' | 'target'
 export type HpQualifier = 'any' | 'lowest' | 'highest'
 
@@ -54,7 +45,7 @@ export interface RoundNumberCondition {
 }
 
 /**
- * GAME_DESIGN §8's "affinity advantage vs a target" condition -- deliberately existential
+ * `spec/scripting.md#conditions`'s "affinity advantage vs a target" condition -- deliberately existential
  * and decoupled from targeting: true iff >=1 living enemy is weak to the acting
  * creature's affinity. No embedded TargetSelector/qualifier; conditions describe board
  * state, selectors describe targeting, and the two never couple. Named for that
@@ -76,16 +67,14 @@ export interface HasStatusCondition {
 }
 
 /**
- * Blindclaws' Striker payoff ("+% while acting before its target"). Phase 4 Slice C.
- * ASSUMPTION 11: scoped self-only (no explicit target parameter) -- evaluated against the
- * RULE'S OWN `targeting` selector, resolved first (existence + selection, no RNG per the
- * lookahead-purity rule -- see target-selectors.ts's peekTargetSelector), then checks the
- * frozen round's turn-queue index ordering between self and that resolved target. A rule
- * lacking `targeting`, or one whose selector can't be peeked without RNG (random-enemy), or
- * one whose target isn't in the current queue (e.g. dead), evaluates false -- a small,
- * documented deviation from every other v1 condition (which are target-independent), since
- * this one needs the rule's own targeting to evaluate at all. When used as a TriggeredDef's
- * condition (no rule/targeting context), always evaluates false.
+ * True while the creature acts before its target in the frozen round's turn queue (Blindclaws'
+ * Striker payoff). Evaluated against the RULE'S OWN `targeting` selector, peeked without RNG
+ * (`peekTargetSelector`, target-selectors.ts); with no rule (a trigger's or a
+ * conditional-damage-bonus's condition) it falls back to the creature being resolved against.
+ * False when there is no target to compare: a selector that peeks to none (`random-enemy`,
+ * `random-ally`, `random`), no resolving-against creature, or a target not in the queue (e.g.
+ * dead). Unlike every other v1 condition it is not target-independent, because it needs a target
+ * to evaluate at all.
  */
 export interface ActedBeforeTargetCondition {
   readonly kind: 'acted-before-target'
@@ -102,7 +91,7 @@ export type Condition =
   | ActedBeforeTargetCondition
 
 // ---- Target selectors ----
-// The v1 set from GAME_DESIGN §8: the 5-member enemy set (lowest/highest-hp, highest-attack,
+// The v1 set from `spec/scripting.md#target-selectors`: the 5-member enemy set (lowest/highest-hp, highest-attack,
 // highest-intelligence, random) plus `self` shipped in Phase 2; Phase 4 Slice E completed the
 // one-for-one ally mirror (highest-hp/highest-attack/highest-intelligence/random-ally alongside
 // the already-existing lowest-hp-ally) so ally-targeting spells/trait responses (the Slice E
@@ -141,12 +130,11 @@ export interface HighestIntelligenceEnemySelector {
 export interface RandomEnemySelector {
   readonly kind: 'random-enemy'
 }
-/** Phase 4.1-C2a (A1): uniform among living creatures on the ACTION'S OWN intended side (not
- * fixed to ally/enemy like the two selectors above) -- resolving it needs that side, which only
- * the action layer knows, so `resolveTargetSelector` (target-selectors.ts) throws on it and
- * `actions.ts`'s `resolveIntent` resolves it directly instead. `targetSelectorHasCandidate` and
- * `peekTargetSelector` still handle it (existence check / no-RNG-peek, same discipline as
- * `random-enemy`/`random-ally`). */
+/** Uniform among living creatures on the ACTION'S OWN intended side (not fixed to ally/enemy like
+ * the two selectors above). Resolving it needs that side, which only the action layer knows, so
+ * `resolveTargetSelector` and `targetSelectorHasCandidate` (target-selectors.ts) throw on it and
+ * `actions.ts` resolves it directly (`spec/combat.md#one-action-pipeline`).
+ * `peekTargetSelector` returns no target for it, as for `random-enemy`/`random-ally`. */
 export interface RandomSelector {
   readonly kind: 'random'
 }

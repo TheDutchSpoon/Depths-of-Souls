@@ -14,7 +14,7 @@ import {
 } from '../data/traits'
 
 // Hardcoded demo fight data -- not real game content (species/creature data doesn't
-// exist yet, see GAME_DESIGN.md §13), just enough to run the real engine and show its
+// exist yet, see `OPEN_QUESTIONS.md#balance-numbers`), just enough to run the real engine and show its
 // output. This file and CombatDemo.tsx are a throwaway harness; Phase 7 replaces them.
 // Successor to the Phase 2.5 harness: Phase 3.5 wires real trait/status/spell content
 // (src/data/traits/, src/data/statuses.ts, src/data/spells/) onto the same scripted

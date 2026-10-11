@@ -94,7 +94,7 @@ export interface ResolutionContext {
    * (if given) then executes it. A no-op (returns `state` unchanged, nothing drawn, nothing pushed)
    * if the actor is dead or unknown, the intent is illegal (a lock, no castable gem, no valid
    * target), or it fails to resolve -- a refused granted action emits nothing of its own
-   * (CONVENTIONS B2 rule 2). */
+   * (`spec/responses.md#perform-action` B2 rule 2). */
   readonly runAction: (
     actorId: CreatureId,
     intent: Intent,

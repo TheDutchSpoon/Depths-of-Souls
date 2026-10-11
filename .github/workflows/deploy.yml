@@ -29,6 +29,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
+      - run: npm run docs:check -- citations
+      - run: npm run docs:check -- budgets
       - run: npm run test
 
   build:

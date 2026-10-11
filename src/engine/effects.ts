@@ -146,7 +146,7 @@ function withInstance(
  * (`statusId` and `sourceInstanceId`) and given its own guard identity `${statusInstanceId}#effect#${index}`
  * (PR #64: a trigger's self-re-entry guard is scoped to ONE trigger, never the whole status).
  *
- * **Immunity is checked here, once** (CONVENTIONS "Immunity"): every effect, of every kind, of a
+ * **Immunity is checked here, once** (`spec/effects.md#immunity`): every effect, of every kind, of a
  * status the bearer is immune to is skipped -- locks, friendly-fire, triggers (a tick included),
  * damage-modifiers, turn-order (so the Web roll draws nothing). The status itself still exists,
  * refreshes, counts down and counts for `has-status` (those read `activeEffects` directly, never
@@ -276,8 +276,7 @@ export function gatherDealtMods(creature: Creature, state: CombatState): number[
 }
 
 /** Phase 4 Slice D, PR #47 review amendment: collapses one `taken`-direction modifier to its
- * single contributed factor, per its `accumulation` mode (CONVENTIONS' "Taken-reduction
- * accumulation"). `'multiplicative'` (default/absent): `magnitude ** count`, asymptoting toward
+ * single contributed factor, per its `accumulation` mode (`spec/effects.md#taken-reduction-accumulation`). `'multiplicative'` (default/absent): `magnitude ** count`, asymptoting toward
  * 0, never clamped. `'additive'` (Bulwark): the per-unit reduction `(1 - magnitude)` summed ×
  * count, hard-clamped at `reductionCap` (default 1 -- unclamped -- if somehow omitted). The
  * collapsed factor enters the multiplicative `Π(takenFactors)` pool alongside every other source
@@ -431,8 +430,9 @@ export function hasProvokeImmunity(creature: Creature): boolean {
   return flatEffects(creature).some((e) => e.category === 'provoke-immunity')
 }
 
-/** Proficient Warrior: true iff `creature`'s single-target Attack/Cast main hits also splash
- * onto adjacent (or, with Annihilate, all other living) enemies. */
+/** Proficient Warrior: true iff `creature`'s single-target Attack main hit also splashes onto
+ * adjacent (or, with Annihilate, all other living) enemies. A Cast never splashes
+ * (`specializations/brute.md#proficient-warrior`). */
 export function hasSplashing(creature: Creature): boolean {
   return flatEffects(creature).some((e) => e.category === 'splashing')
 }
@@ -462,7 +462,7 @@ export function activeFriendlyFireStatus(
 export type LockableKind = 'attack' | 'cast' | 'defend' | 'provoke' | 'wait'
 
 /**
- * Phase 4.1-F1 (A3, CONVENTIONS "Action locks"): true iff an active `action-lock` makes `kind`
+ * Phase 4.1-F1 (A3, `spec/statuses.md#action-locks`): true iff an active `action-lock` makes `kind`
  * illegal for `creature` -- an `'all'` lock refuses EVERY kind (Attack, Cast, Defend, Provoke,
  * Wait), a scoped lock only its own. Read through the iterator, so an immune bearer's status lock
  * doesn't count. `checkLegality` (actions.ts) is the one caller on the action path.
@@ -493,15 +493,15 @@ export function firstAllLock(
 // ---- Phase 4 Slice D: resource & counter primitives ----
 
 /**
- * CONVENTIONS' count-scaling primitive: one of the six live "board counts" a `magnitudeSource`
- * of kind 'count' can read, resolved relative to `bearer`'s OWN side/affinity/species and
- * recomputed fresh on every call (never cached -- killing an ally mid-fight changes the reading
- * on the very next read, same fight). `living-allies`/`-of-affinity`/`-of-species` INCLUDE
- * `bearer` itself while it's alive, matching targeting.ts's livingAlliesOf convention ("ally"
- * includes the acting creature). `living-allies-of-species` is inert (0) for any creature with no
- * `speciesId` set -- true of every Phase 1-3/Slice A-D creature today (see Creature.speciesId's
- * own doc comment). `enemies-with-status` requires `statusId` (thrown otherwise, mirroring
- * applyStatus's unknown-statusId invariant throw).
+ * The count-scaling primitive (`spec/effects.md#count-scaling`): one of the six live "board counts"
+ * a `magnitudeSource` of kind 'count' can read, resolved relative to `bearer`'s OWN
+ * side/affinity/species and recomputed fresh on every call (never cached -- killing an ally
+ * mid-fight changes the reading on the very next read, same fight). `living-allies`/`-of-affinity`/
+ * `-of-species` INCLUDE `bearer` itself while it's alive, matching targeting.ts's livingAlliesOf
+ * convention ("ally" includes the acting creature). `living-allies-of-species` is 0 for a creature
+ * with no `speciesId`; `materializeCreature` always sets it, so only a hand-built creature reads 0
+ * (see `Creature.speciesId`). `enemies-with-status` requires `statusId` (thrown otherwise,
+ * mirroring applyStatus's unknown-statusId invariant throw).
  */
 export function resolveCount(
   bearer: Creature,
@@ -542,7 +542,7 @@ export function resolveCount(
 
 /**
  * Resolves a MagnitudeSource to a live number. 'flat' is "the existing implicit behavior, made
- * explicit" (CONVENTIONS); 'count' delegates to resolveCount above.
+ * explicit" (`spec/effects.md#count-scaling`); 'count' delegates to resolveCount above.
  */
 export function resolveMagnitudeCount(
   bearer: Creature,

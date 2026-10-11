@@ -9,7 +9,7 @@ import type { Trait } from '../../engine/effect-types'
 //
 // Same enabler/payoff/amplifier framing (common/uncommon/rare) as Overgrowth/Glimmerdark, except
 // Necromoss -- like Resonants (H2) -- shares ONE mechanic across all three creatures, escalating
-// scope/strength by rarity (species-locked.md's own "heal/buff scaling off dead-ally count" is a
+// scope/strength by rarity (`content/rotcap-hollow.md#myconet-endurancewit-death-network` own "heal/buff scaling off dead-ally count" is a
 // single closed mechanic, not a two-role enabler/payoff chain).
 
 // ---- Sporecloud (Wit) -- closed mechanic: Contagion (Spore) ----
@@ -211,7 +211,7 @@ export const MYCONET_GRAVEDIGGER_TRAIT: Trait = {
 }
 
 // ---- Necromoss (Wit/Vitality) -- closed mechanic: Reclaim (grim sustain, one shared mechanic
-// escalating by rarity, the Resonants/H2 pattern -- species-locked.md names ONE closed mechanic,
+// escalating by rarity, the Resonants/H2 pattern -- `content/rotcap-hollow.md#necromoss-witvitality-reclaim` names ONE closed mechanic,
 // "heal/buff scaling off dead-ally count", not a two-role enabler/payoff chain) ----
 
 /** Necromoss Wisp (common): every turn, heals itself scaled by the LIVE count of its own dead
@@ -341,7 +341,7 @@ export const HOLLOWKIN_PUPPETEER_TRAIT: Trait = {
 
 /** Sporch Igniter (enabler, common): every attack brands its target with a Burn (one instance:
  * 4.1-H2b2 retired the 2-stack brand; the Burn's potency is the Igniter's own Intelligence) --
- * deliberately no spread mechanic on the status itself (unlike Spore), per species-locked.md's own
+ * deliberately no spread mechanic on the status itself (unlike Spore), per `content/rotcap-hollow.md#sporch-violencewit-strong-non-spreading-burn` own
  * "strong non-spreading Burn". */
 export const SPORCH_IGNITER_TRAIT: Trait = {
   id: 'sporch-igniter-brand',
@@ -359,7 +359,7 @@ export const SPORCH_IGNITER_TRAIT: Trait = {
   ],
 }
 
-/** Sporch Ashborn (payoff, uncommon): "+% to Burning" (species-locked.md), the target-conditional
+/** Sporch Ashborn (payoff, uncommon): "+% to Burning" (`content/rotcap-hollow.md#sporch-ashborn`), the target-conditional
  * damage-modifier this species needed Slice E2 for -- +% damage to any enemy currently Burning. */
 export const SPORCH_ASHBORN_TRAIT: Trait = {
   id: 'sporch-ashborn-fan-the-flames',
@@ -397,7 +397,7 @@ export const SPORCH_CINDERLORD_TRAIT: Trait = {
 }
 
 // ---- The Rot Sovereign (floor-30 boss, the biome-3 finale) ----
-// species-locked.md: "Attrition-management (finale) ... Grows via count-scaling off deaths (any
+// `content/rotcap-hollow.md#rot-sovereign`: "Attrition-management (finale) ... Grows via count-scaling off deaths (any
 // creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it +
 // out-manage the rot, not pure DPS." Two death-reactive growth hooks, BOTH a flat +10% Attack per
 // death -- `on-ally-death` (her own adds dying) and `on-enemy-death` (the player's own creatures

@@ -157,7 +157,7 @@ function isBornThisTurn(state: CombatState, effect: ActiveEffect): boolean {
 }
 
 /**
- * Turn-end cleanup, part 1 (CONVENTIONS "Status lifecycle", Phase 4.1-F2): the BEARER's own
+ * Turn-end cleanup, part 1 (`spec/statuses.md#turn-end-cleanup`, Phase 4.1-F2): the BEARER's own
  * statuses count down by one and expire at 0 (`StatusExpired`), in canonical (activeEffects)
  * order. Bookkeeping only. Skips a status born this turn. Only ever called for a LIVING bearer: a
  * corpse's statuses are inert (ASSUMPTION 51 -- no countdown, no StatusExpired).
@@ -364,7 +364,7 @@ export function resolveTurn(state: CombatState): {
   // Turn body -- the TurnStarted/TurnEnded bracket is ALWAYS emitted for a dequeued slot;
   // only the action and the turn-start/turn-end hooks are gated on the actor being alive.
   // A dead-before-turn creature still gets an (empty) bracket -- that IS the skip signal,
-  // per CONVENTIONS' "explicit boundary even for no-op turns". A dead creature must not
+  // per `spec/combat.md#turn-structure`. A dead creature must not
   // trigger start-of-turn effects, hence the hooks (not the events) are alive-gated.
   events.push({ type: 'TurnStarted', creatureId: actor.id })
 
@@ -382,7 +382,7 @@ export function resolveTurn(state: CombatState): {
   }
 
   // Turn-start hooks fire on the acting creature (if it entered the turn alive), after the
-  // TurnStarted boundary. The skip (4.1-F1, CONVENTIONS "Action locks"): a turn is skipped if an
+  // TurnStarted boundary. The skip (4.1-F1, `spec/statuses.md#action-locks`): a turn is skipped if an
   // 'all' action-lock is active right after the turn-start hook pass (read 1, below -- the
   // turn-start grants need it) or at the action slot (read 2). `skipped` is the first read's
   // carrier id, if any; the combined value (`skipEffectId`) is fixed at the action slot.
@@ -407,8 +407,8 @@ export function resolveTurn(state: CombatState): {
     // Turn-start cleanup (Phase 4.1-C, D6): "until its next turn" expires HERE, right after
     // turn-start hooks, UNCONDITIONALLY on a skip -- runs on a Stunned/skipped turn too
     // (fixes B6). Gated only on the actor being alive AT THIS POINT (re-checked fresh -- a
-    // turn-start hook may have killed it). Cleanup is bookkeeping only (CONVENTIONS' "Turn
-    // structure": it ends things, never deals damage/heals/fires triggers).
+    // turn-start hook may have killed it). Cleanup is bookkeeping only (`spec/combat.md#turn-structure`: it ends
+    // things, never deals damage/heals/fires triggers).
     const afterStartHooks = getCreature(working, actor.id)
     if (afterStartHooks.alive) {
       working = clearOwnTransientStatus(working, actor.id)
@@ -497,7 +497,7 @@ export function resolveTurn(state: CombatState): {
     if (wipedByTurnEndGrants) return wipedByTurnEndGrants
   }
 
-  // TURN-END CLEANUP (CONVENTIONS' "Turn structure", 4.1-F2): bookkeeping only. The bearer's own
+  // TURN-END CLEANUP (`spec/combat.md#turn-structure`, 4.1-F2): bookkeeping only. The bearer's own
   // statuses count down (a LIVING actor only -- a corpse's statuses are inert, ASSUMPTION 51),
   // then the Web roll runs for every dequeued turn (a dead actor's bracket included).
   if (getCreature(working, actor.id).alive) {

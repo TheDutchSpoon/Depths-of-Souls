@@ -1,13 +1,13 @@
 import type { Spell } from '../../engine/types'
 
 // ---- Phase 4 Slice H3: Rotcap Hollow (floors 21-30) -- 5 new, genuinely-own spells (one per
-// affinity), meeting the design owner's >=4-5-own-spells-per-biome bar (GAME_DESIGN §4) the same
+// affinity), meeting the design owner's >=4-5-own-spells-per-biome bar (`spec/run.md#spells-unlock-cumulatively`) the same
 // way H2's post-interstitial-slice kit does: spice on top of the inherited Overgrowth/Glimmerdark
 // base (cumulative unlock -- see data/spells/index.ts's ALL_SPELLS), never a re-skinned dup. Each
 // is unique under the dedup guard's (affinity, targetShape, effect kind, spellPower) key
 // (data/spells/index.test.ts) -- checked by hand against every pre-existing spell below.
 
-/** Spore Cyst: the first spell-authored producer of Spore (species-locked.md: "a spell may
+/** Spore Cyst: the first spell-authored producer of Spore (`spec/run.md#the-onboarding-ramp`: "a spell may
  * apply any status, including another species' signature one" -- statuses are shared
  * primitives, precedented by Vine Snare/Web and Disorient/Web). PR #64 review: `spellPower`
  * lowered 0.9 -> 0.45 -- the "~80-90% band" reasoning below no longer applies. A DoT-applying

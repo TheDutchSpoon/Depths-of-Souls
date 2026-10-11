@@ -2,7 +2,7 @@
 
 Command in Cowork: `/slice-condense <slice-id>` for round 1, then `/slice-condense <slice-id> <N>`
 after the coding agent's `verify-r<N-1>.md`, in the same chat. Read `design-rules.md` first. Used
-only by Phase 4.2's condensing slices (B to F); see `.claude/phases/4.2/brief.md` "Process for 4.2".
+only by Phase 4.2's condensing slices (B to F); see `phases/4.2/brief.md#process-for-42`.
 
 ## Pre-flight
 

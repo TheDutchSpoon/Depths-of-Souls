@@ -12,7 +12,7 @@ Read this when changing descent, generation or the hub.
 - **Depth is persistent**: the player keeps their deepest cleared floor, with no per-run reset, and
   can **fast-travel** from the hub to any floor up to one past it, so reaching a deep floor never
   means re-walking the floors above it. Floor selection is a UI feature.
-- **No prestige and no resets**: progress only goes forward (`VISION.md` "Explicit non-goals").
+- **No prestige and no resets**: progress only goes forward (`VISION.md#explicit-non-goals`).
 
 ### A descent is atomic
 
@@ -21,7 +21,7 @@ Read this when changing descent, generation or the hub.
   fought and pre-selects it next time.
 - Clearing the floor (winning every fight) advances the deepest cleared floor. A loss or draw ends
   the descent at that fight and returns the party to the hub with everything banked so far
-  (`spec/combat.md` "Encounters, rewards & wipes").
+  (`spec/combat.md#encounters-rewards--wipes`).
 
 ### Content frontier
 
@@ -32,7 +32,7 @@ Read this when changing descent, generation or the hub.
 
 - The biome changes **every 10 floors**. v1 ships **10 biomes**: floors 1–10 are biome 1, 11–20
   biome 2, …, 91–100 biome 10. Past floor 100, each floor's biome is a **seeded draw from all 10**,
-  unless the floor is pinned ("Pins").
+  unless the floor is pinned (`spec/run.md#pins`).
 - A biome is data: a name, a **spawn pool of species**, and a boss.
 - **Content target per biome: 6 or more species, each with 3 or more creatures** (18+ per biome,
   about 180 across the ten): the largest authoring task in the project, and why creatures and
@@ -103,8 +103,7 @@ Read this when changing descent, generation or the hub.
 ### Enemy levels
 
 - Difficulty is an **enemy level range per floor**, not a separate stat multiplier: enemies are
-  ordinary creatures at a level, grown by the same formula as the player's (`spec/creatures.md`
-  "Levels and XP"). Enemy level grows **faster than the floor number**, and that gap is the
+  ordinary creatures at a level, grown by the same formula as the player's (`spec/creatures.md#levels-and-xp`). Enemy level grows **faster than the floor number**, and that gap is the
   pressure. HP resets every fight, so a deeper floor is harder only because enemy level outpaces the
   party's; a wall is where the gap outpaces level and build. The floor → level-range curve is the
   **most important balance lever** in the game.
@@ -115,12 +114,12 @@ Read this when changing descent, generation or the hub.
 - The range's minimum is **`floor(floor × multiplier)`**, rounded down; its width starts at **0**
   and grows by **one level per ten floors**. Floors 1–9 spawn at exactly levels 1, 2, 3, 5, 6, 7, 9,
   10 and 11; floor 10 at 13–14; floor 30 at 44–47.
-- Watch points for tuning are in `OPEN_QUESTIONS.md` "Balance numbers".
+- Watch points for tuning are in `OPEN_QUESTIONS.md#balance-numbers`.
 
 ### Boss floors
 
 - Every 10th floor is a **boss floor**: a difficulty checkpoint and reward spike, and the **only
-  source of perk points** (`spec/progression.md` "Perk points"). A boss floor is **one fight**, no
+  source of perk points** (`spec/progression.md#perk-points`). A boss floor is **one fight**, no
   ordinary fights.
 - **Each boss is a set piece with one clear signature.** A boss may carry more than a roster
   creature's single trait, but keeps one clear signature mechanic for legibility, and the bosses
@@ -131,7 +130,7 @@ Read this when changing descent, generation or the hub.
   authored adds gets five random ones. The adds are ordinary kills with ordinary rewards; each
   boss's adds are in its biome's content doc.
 - The boss sits **5 levels above the floor's range**.
-- Bosses are unique and can't be collected ("Rewards").
+- Bosses are unique and can't be collected (`spec/run.md#rewards`).
 
 ### Bosses take control like any enemy
 
@@ -154,9 +153,8 @@ Read this when changing descent, generation or the hub.
 
 ### Rewards
 
-- Rewards **bank per kill** (`spec/combat.md` "Encounters, rewards & wipes"): XP to the whole active
-  party (`spec/creatures.md` "Levels and XP"), soul% to the creature's bar (`spec/creatures.md`
-  "Souls") and currency. A wipe keeps them.
+- Rewards **bank per kill** (`spec/combat.md#encounters-rewards--wipes`): XP to the whole active
+  party (`spec/creatures.md#levels-and-xp`), soul% to the creature's bar (`spec/creatures.md#souls`) and currency. A wipe keeps them.
 - **Level-ups apply after each fight**: the engine never sees a level change mid-fight, and the
   party fights the floor's next fight at its new levels.
   **Known bug:** `main` materializes the party once per descent and applies the floor's XP after the
@@ -171,7 +169,7 @@ Read this when changing descent, generation or the hub.
 
 - Floors drop **Essence** (gems), **Ore** (equipment), **Bricks** (facilities; rarer) and
   **Lifeforce** (levelling and fusion), per kill, scaled by depth (config). **Perk points** are a
-  separate, non-dropped currency (`spec/progression.md` "Perk points").
+  separate, non-dropped currency (`spec/progression.md#perk-points`).
 - Every currency is **unbounded**: no storage cap.
 
 ### Pins
@@ -199,7 +197,7 @@ Read this when changing descent, generation or the hub.
 - The cave is generated in `src/engine/` under combat's discipline: `generateFloor(floor, biome,
   biomeIndex, allSpells, runRng, balanceConfig) -> Fight[]`, the floor's fights as enemy
   `Creature[]`, golden-testable from a fixed seed. The store calls it and never derives a floor's
-  contents itself (`spec/store.md` "The store owns navigation and ownership").
+  contents itself (`spec/store.md#the-store-owns-navigation-and-ownership`).
 - Every curve (`fightCount`, `enemyPartySize`, `enemyLevelRange`, `bossLevel`) is a pure function
   of `(floor, BalanceConfig)`, never a literal; the values live in `src/data/balance.ts`.
 - `FLOORS_PER_BIOME` and `BIOME_COUNT` are config constants (10 and 10).
@@ -252,7 +250,7 @@ Read this when changing descent, generation or the hub.
 ### Enemy script and gem set
 
 - Generation leaves the enemy's `scriptId` unset, so `materializeCreature` gives it the creature's
-  `defaultScriptId`, its role script (`spec/scripting.md` "Role scripts").
+  `defaultScriptId`, its role script (`spec/scripting.md#role-scripts`).
 - **Every enemy rolls a full set of distinct spells** (`rollLoadout`, one per regular gem slot) from
   the spells of its affinity with `unlockedAtBiome` ≤ the current biome. Duplicates appear only as
   a safety net when that pool is smaller than the slot count; a data test requires **≥3 spells per
@@ -281,15 +279,13 @@ Read this when changing descent, generation or the hub.
   may follow). The others are **one-time builds**: they have no throughput to upgrade.
 - The v1 list:
   - **Gem Forge**: craft gems (dropped recipes and Essence), augment and level them (Essence)
-    (`spec/creatures.md` "Gems as items").
-  - **Equipment Forge**: craft, infuse and level equipment with Ore (`spec/creatures.md`
-    "Equipment").
-  - **Fusion Chamber**: fusion and catch-up levelling, for Lifeforce (`spec/creatures.md` "Fusion",
-    "Catch-up levelling").
+    (`spec/creatures.md#gems-as-items`).
+  - **Equipment Forge**: craft, infuse and level equipment with Ore (`spec/creatures.md#equipment`).
+  - **Fusion Chamber**: fusion and catch-up levelling, for Lifeforce (`spec/creatures.md#fusion`, `spec/creatures.md#catch-up-levelling`).
   - **Soul Altar**: summoning happens there once it exists.
   - **Storage / Vault**: manages the collection and the party; whether party arrangement then needs
     it is Phase 8's call.
-  - **Biome Atlas**: pinning ("Pins") then needs it, and it unlocks once **all 10 biomes are
+  - **Biome Atlas**: pinning (`spec/run.md#pins`) then needs it, and it unlocks once **all 10 biomes are
     discovered**.
 - No healing facility: HP resets every fight, so there is nothing persistent to heal.
 

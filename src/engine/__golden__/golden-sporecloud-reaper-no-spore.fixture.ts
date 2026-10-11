@@ -11,7 +11,7 @@
 // step). Wit-vs-Wit is always neutral (same affinity) -- x1.0, no complication. No random
 // selectors anywhere -- SEED is inert.
 //
-//   on-attack fires BEFORE the attack's own damage (CONVENTIONS): Bloomburst's bonus rider rolls
+//   on-attack fires BEFORE the attack's own damage (`spec/effects.md#hook-execution`): Bloomburst's bonus rider rolls
 //     magnitudeSource count of enemies-with-status(spore) -> 0 (TARGET carries no Spore, and
 //     nothing else on the board applies it in this fixture) -> fix 4: TriggerFired still fires
 //     (fireHook emits it before executeResponse runs), but the response itself is a full no-op --

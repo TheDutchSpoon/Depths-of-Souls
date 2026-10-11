@@ -1,5 +1,5 @@
 // Phase 4.1-C2a (PR #71 review): the corpus digest -- a behaviour tripwire, not a spec
-// (CONVENTIONS "Testing"). Resolves every fight in the pinned corpus (`__corpus__/corpus.ts`)
+// (`CONVENTIONS.md#corpus-digest`). Resolves every fight in the pinned corpus (`__corpus__/corpus.ts`)
 // and compares each fight's event-log hash/count/result against the committed, GENERATED
 // fixture (`__corpus__/corpus-digest.fixture.ts`). Byte-identical PRs leave the fixture
 // unchanged; a deliberate-change PR regenerates it (`npm run corpus:update`) and attributes
@@ -51,7 +51,7 @@ function renderFixture(entries: readonly CorpusDigestEntry[]): string {
     .join('\n')
   return `// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via
 // \`npm run corpus:update\`, and only in a deliberate-change PR that attributes every changed
-// fight (CONVENTIONS "Testing", corpus digest).
+// fight (\`CONVENTIONS.md#corpus-digest\`, corpus digest).
 
 export interface CorpusDigestEntry {
   readonly hash: string

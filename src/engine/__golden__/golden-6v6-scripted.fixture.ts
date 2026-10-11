@@ -6,7 +6,7 @@ import type { CreatureId } from '../ids'
 import type { CombatEvent, FightResult } from '../types'
 
 // GENERATED then CHECKPOINT-VERIFIED -- an integration/regression golden per
-// CONVENTIONS' two-tier golden discipline. Per-mechanism correctness rests on the five
+// `CONVENTIONS.md#two-tier-golden-discipline` two-tier golden discipline. Per-mechanism correctness rests on the five
 // focused hand-derived goldens (golden-scripted-1v1, golden-aoe-cast,
 // golden-provoke-redirect, golden-random-selector, golden-skip-on-invalid), not on this
 // fixture. This fixture only checkpoints structural properties of one real run (round-1

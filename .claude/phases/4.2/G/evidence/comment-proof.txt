@@ -1,0 +1,107 @@
+$ node proof.mjs   (scratchpad script; rules in the report)
+OK   eslint.config.js
+OK   src/app/demoFight.ts
+OK   src/data/balance.ts
+OK   src/data/biomes.test.ts (masked 19)
+OK   src/data/biomes.ts
+OK   src/data/perform-action.data.test.ts (masked 5)
+OK   src/data/scripts.test.ts (masked 31)
+OK   src/data/scripts.ts
+OK   src/data/specializations.ts
+OK   src/data/species/glimmerdark.test.ts (masked 17)
+OK   src/data/species/glimmerdark.ts
+OK   src/data/species/overgrowth.test.ts (masked 15)
+OK   src/data/species/overgrowth.ts
+OK   src/data/species/rotcap-hollow.test.ts (masked 16)
+OK   src/data/species/rotcap-hollow.ts
+OK   src/data/species/starters.test.ts (masked 20)
+OK   src/data/species/starters.ts
+OK   src/data/spells/core.ts
+OK   src/data/spells/glimmerdark.ts
+OK   src/data/spells/index.test.ts (masked 18)
+OK   src/data/spells/index.ts
+OK   src/data/spells/rotcap-hollow.ts
+OK   src/data/statuses.ts
+OK   src/data/traits/core.test.ts (masked 11)
+OK   src/data/traits/glimmerdark.ts
+OK   src/data/traits/index.ts
+OK   src/data/traits/overgrowth.ts
+OK   src/data/traits/rotcap-hollow.ts
+OK   src/data/traits/starters.ts
+OK   src/engine/__corpus__/corpus-digest.fixture.ts
+OK   src/engine/__corpus__/corpus.ts
+OK   src/engine/__fixtures__/biomes.ts
+OK   src/engine/__golden__/golden-6v6-scripted.fixture.ts
+OK   src/engine/__golden__/golden-action-observed.fixture.ts
+OK   src/engine/__golden__/golden-blindclaws-striker.fixture.ts
+OK   src/engine/__golden__/golden-broodmother.fixture.ts
+OK   src/engine/__golden__/golden-brute-starter.fixture.ts
+OK   src/engine/__golden__/golden-defend-count-additive-cap.fixture.ts
+OK   src/engine/__golden__/golden-defend-count.fixture.ts
+OK   src/engine/__golden__/golden-dot.fixture.ts
+OK   src/engine/__golden__/golden-f2-stun-one-turn.fixture.ts
+OK   src/engine/__golden__/golden-f2-weaken-three-turns.fixture.ts
+OK   src/engine/__golden__/golden-g1-leech-sovereign-pacified.fixture.ts
+OK   src/engine/__golden__/golden-gloomjaw-ravager.fixture.ts
+OK   src/engine/__golden__/golden-gloomjaw-stalker.fixture.ts
+OK   src/engine/__golden__/golden-h2b1-observed-lethal.fixture.ts
+OK   src/engine/__golden__/golden-h2b2-tick-no-retaliation.fixture.ts
+OK   src/engine/__golden__/golden-heal-scaling-count.fixture.ts
+OK   src/engine/__golden__/golden-hollowkin-wretch.fixture.ts
+OK   src/engine/__golden__/golden-leech-sovereign.fixture.ts
+OK   src/engine/__golden__/golden-necromoss-reclaim.fixture.ts
+OK   src/engine/__golden__/golden-overgrowth-web-exploit.fixture.ts
+OK   src/engine/__golden__/golden-resonant-harmonize.fixture.ts
+OK   src/engine/__golden__/golden-revive.fixture.ts
+OK   src/engine/__golden__/golden-rot-sovereign.fixture.ts
+OK   src/engine/__golden__/golden-shieldbarer-starter.fixture.ts
+OK   src/engine/__golden__/golden-spore-spread-fizzle.fixture.ts
+OK   src/engine/__golden__/golden-spore-spread.fixture.ts
+OK   src/engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts
+OK   src/engine/actions.ts
+OK   src/engine/actor-death.test.ts (masked 7)
+OK   src/engine/balance-types.ts
+OK   src/engine/combat.ts
+OK   src/engine/config.ts
+OK   src/engine/corpus-digest.test.ts (masked 3)
+OK   src/engine/curves.ts
+OK   src/engine/damage-observation.test.ts (masked 27)
+OK   src/engine/effect-types.ts
+OK   src/engine/effects.ts
+OK   src/engine/environment.test.ts (masked 2)
+OK   src/engine/generation.ts
+OK   src/engine/leveling.test.ts (masked 11)
+OK   src/engine/leveling.ts
+OK   src/engine/resolution-types.ts
+OK   src/engine/resolution.ts
+OK   src/engine/rng.ts
+OK   src/engine/scripting-types.ts
+OK   src/engine/status-snapshot.test.ts (masked 29)
+OK   src/engine/support-spells.test.ts (masked 6)
+OK   src/engine/target-selectors.ts
+OK   src/engine/targeting.ts
+OK   src/engine/test-utils/golden-runner.ts
+OK   src/engine/turn-order.test.ts (masked 11)
+OK   src/engine/types.ts
+OK   src/state/integration.test.ts (masked 9)
+OK   src/state/rewards.ts
+OK   src/state/store.test.ts (masked 33)
+OK   src/state/store.ts
+
+88 changed files, 0 failing, 290 masked strings (test titles and the corpus template)
+
+## Planted faults (the proof run on a scratch version of src/engine/rng.ts; exit code 1 each)
+
+$ node proof.mjs --plant   (a code change: an added export and a spacing change)
+FAIL src/engine/rng.ts code differs
+     first difference at printed line 24:
+       main:   
+       branch: export const PLANTED = 1;
+--
+88 changed files, 1 failing, 290 masked strings (test titles and the corpus template)
+
+$ node proof.mjs --plant-pragma   (a comment-only change: an added // @ts-ignore)
+FAIL src/engine/rng.ts pragma differs
+OK   src/engine/scripting-types.ts
+--
+88 changed files, 1 failing, 290 masked strings (test titles and the corpus template)

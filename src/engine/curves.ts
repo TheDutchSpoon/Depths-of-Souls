@@ -1,6 +1,6 @@
 // Phase 4 Slice A; reworked Phase 4.1-A (A7 + D1 defaults) -- depth-scaling curves for the run
 // layer, now PARAMETERIZED by an injected BalanceConfig instead of hardcoded literals. Every
-// number is still explicitly parked balance (GAME_DESIGN §13); retuning happens in
+// number is still explicitly parked balance (`OPEN_QUESTIONS.md#balance-numbers`); retuning happens in
 // data/balance.ts, never here.
 
 import type { BalanceConfig } from './balance-types'
@@ -45,7 +45,7 @@ export function enemyLevelRange(floor: number, config: BalanceConfig): LevelRang
   return { min, max }
 }
 
-/** Deterministic; NOT rolled -- CONVENTIONS "Generation & the run layer": the fight *count* is
+/** Deterministic; NOT rolled -- `spec/run.md#fights-per-floor`: the fight *count* is
  * stable across visits, only the creatures/levels re-roll per visit. Default (data/balance.ts):
  * 10 + (floor - 1), uncapped (floor 1 = 10 fights, +1/floor). */
 export function fightCount(floor: number, config: BalanceConfig): number {

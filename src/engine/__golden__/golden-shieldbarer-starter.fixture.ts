@@ -6,7 +6,7 @@
 // Hand-derived (independent `node -e` calculator; no damage formula involved, just
 // getEffectiveStat's multiplicative fold). PROVOKER (defence 30) acts first (speed 20); ALLY
 // (defence 20, speed 10) and FOE (speed 1, always-wait) never get a turn in this one-step trace
-// -- driven via a single explicit `resolveTurn` call, per CONVENTIONS' precedent for goldens
+// -- driven via a single explicit `resolveTurn` call, per `CONVENTIONS.md#golden-replay-tests` precedent for goldens
 // whose target never dies (golden-on-action-hooks).
 //
 //   PROVOKER's own effective Defence: 30 * 1.35 = 40.5.

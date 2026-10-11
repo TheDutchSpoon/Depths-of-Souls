@@ -36,7 +36,7 @@ describe('starter + Unicorn shape', () => {
     }
   })
 
-  it("base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat", () => {
+  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat', () => {
     for (const creature of STARTERS) {
       for (const [stat, value] of Object.entries(creature.baseStats)) {
         expect(value, creature.id + ' ' + stat).toBeGreaterThanOrEqual(
@@ -49,7 +49,7 @@ describe('starter + Unicorn shape', () => {
     }
   })
 
-  it('the three specs settle on distinct affinities (species-locked.md: "ideally distinct")', () => {
+  it('the three specs settle on distinct affinities (spec/progression.md#specializations)', () => {
     const affinities = new Set(
       [SORCERER_STARTER, BRUTE_STARTER, SHIELDBARER_STARTER].map((c) => c.affinity),
     )
@@ -180,7 +180,7 @@ describe('signature traits', () => {
     ])
   })
 
-  it('Brute starter: a second FULL-power attack instance (species-locked.md: "twice at 100%")', () => {
+  it('Brute starter: a second FULL-power attack instance (specializations/brute.md#starter-cragfang-mauler: "twice at 100%")', () => {
     expect(BRUTE_STARTER_TRAIT.effects).toEqual([
       { category: 'action-instance', actionKind: 'attack', powerPercent: 100 },
     ])

@@ -1,5 +1,6 @@
-export const ROUND_CAP = 100 // N full rounds complete, then the fight ends as a draw.
-// Placeholder per GAME_DESIGN §13 (exact number TBD).
+// N full rounds complete, then the fight ends as a draw: a backstop for a fight that never ends
+// (`spec/combat.md#turn-queue`). Whether 100 is the right cap is open (`OPEN_QUESTIONS.md#fight-length`).
+export const ROUND_CAP = 100
 
 export const AFFINITY_ADVANTAGE_MULTIPLIER = 1.25
 export const AFFINITY_DISADVANTAGE_MULTIPLIER = 0.75

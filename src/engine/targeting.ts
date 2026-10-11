@@ -104,7 +104,7 @@ type ConfusionOutcome =
  * returns `{redirected: false}` WITHOUT touching state.rng at all (an unconfused or Lucidity-
  * immune actor's harmful action never rolls). Otherwise draws exactly one RNG value for the
  * chancePercent roll (always drawn for a confused, non-immune actor's harmful action -- win
- * or lose, per species-locked.md's "Confusion consumes combat RNG"); on success, draws a
+ * or lose, per `content/rotcap-hollow.md#confusion` "Confusion consumes combat RNG"); on success, draws a
  * second RNG value to pick which living ally is hit instead, returning that (or null in the
  * defensively-unreachable case of zero living allies -- livingAlliesOf always includes the
  * acting creature itself while alive).

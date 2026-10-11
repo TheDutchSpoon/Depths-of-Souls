@@ -148,7 +148,7 @@ export const FIXTURE_BIOME_SEQUENCE: readonly BiomeData[] = Array.from(
 // ---- Boss floors (Phase 4 Slice I, PR #65 review) ----
 // A SEPARATE fixture biome, deliberately never merged into FIXTURE_BIOME itself -- "every fixture
 // biome is boss-less" is the invariant that keeps every pre-Slice-I generateFloor golden/test
-// byte-identical (see CONVENTIONS "Boss floors").
+// byte-identical (see `spec/run.md#boss-floor-generation`).
 
 export const FIXTURE_BOSS_CREATURE: SpeciesCreature = {
   id: 'fixture-boss',

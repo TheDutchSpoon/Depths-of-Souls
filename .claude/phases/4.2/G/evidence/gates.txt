@@ -1,0 +1,28 @@
+# Gates, final run (Node 24.19.0, TypeScript 6.0.3; lockfile ~6.0.2)
+
+== test
+
+
+ Test Files  207 passed (207)
+      Tests  1476 passed | 1 skipped (1477)
+   Start at  13:47:27
+   Duration  18.65s (tests 64%, import 19%, transform 14%, worker 2%, environment 1%)
+
+== lint
+> depths-of-souls@0.0.0 lint
+> eslint .
+
+== format:check
+Checking formatting...
+All matched files use Prettier code style!
+== build
+dist/assets/index-CPteU_Xa.js   295.23 kB │ gzip: 86.22 kB
+
+[32m✓ built in 97ms[39m
+== tsc -b
+exit 0
+== citations
+citations: PASS, 532 citations in 436 files
+== budgets
+spec/store.md        2.8 KB   4 KB    70%   ok
+budgets: 12 files, 0 over budget

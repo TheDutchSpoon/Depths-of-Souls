@@ -110,7 +110,7 @@ Duncan can merge steps when a slice is small (for example, skip a separate plan 
 docs or tooling change), but the review → sync → next-slice order never changes.
 
 (Phase 4.2 only) Phase 4.2, the docs restructure, runs a variant loop for its condensing slices: the design agent
-writes, the coding agent verifies (`/slice-verify`). See `phases/4.2/brief.md` "Process for 4.2".
+writes, the coding agent verifies (`/slice-verify`). See `phases/4.2/brief.md#process-for-42`.
 
 ## Golden policy: one per PR
 
@@ -123,8 +123,7 @@ Every slice declares its golden policy in the brief, and a PR never mixes two:
   through `npm run corpus:update`, and every changed fight is attributed to a listed change.
 
 In both cases every new behaviour lands with a new hand-derived test that is shown failing with
-its mechanism removed, at every site (CONVENTIONS "A mechanism at more than one site is tested at
-each site").
+its mechanism removed, at every site (`CONVENTIONS.md#a-mechanism-at-more-than-one-site-is-tested-at-each-site`).
 
 ## When a slice is too big
 
@@ -135,7 +134,7 @@ brief records the split when it's decided.
 ## Docs and records
 
 - The living docs are the mutable source of truth; records are immutable once merged. How doc
-  edits are made and reviewed: `workflow/design-rules.md` "Doc edits".
+  edits are made and reviewed: `workflow/design-rules.md#doc-edits`.
 - **Changing the process** is a normal doc change: edit `WORKFLOWS.md`, `workflow/` or
   `skills/`, in its own commit.
 

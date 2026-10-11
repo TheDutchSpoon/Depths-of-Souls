@@ -31,8 +31,7 @@ describe('stock traits (representative Phase 3 content)', () => {
     )
   })
 
-  // Guardrail against an unwired library grouping (CONVENTIONS "Data layer — carriers vs.
-  // composition"): a representative const from each of core/starters/overgrowth must actually
+  // Guardrail against an unwired library grouping (`CONVENTIONS.md#effect-carriers-live-in-libraries`): a representative const from each of core/starters/overgrowth must actually
   // land in STOCK_TRAITS, not just exist in its own file.
   it('every library grouping (core/starters/overgrowth) is actually spread into STOCK_TRAITS', () => {
     expect(STOCK_TRAITS).toContain(BRUTISH)

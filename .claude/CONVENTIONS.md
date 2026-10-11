@@ -83,7 +83,7 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
   - **T2**: a soul completed by each seed's first run on floor 3;
   - **T3**: a full party of 6 by its first run on floor 6, where enemies first field six;
   - **T4**: no hard wall before the floor-10 boss;
-  - **T5**: the party's level tracks the floor (`spec/run.md` "Enemy levels").
+  - **T5**: the party's level tracks the floor (`spec/run.md#enemy-levels`).
   - T2 and T3 are ceilings (sooner is fine). They read a seed's first run on a floor, so the
     policy's farming doesn't move them, and they count floor runs, not clears: a kill banks soul
     whether the floor is won or lost.
@@ -212,7 +212,7 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - Golden fixtures are layered by capability and additive across phases: each phase keeps prior
   fixtures **stable** (they pin already-verified behaviour) and **adds** fixtures for the new
   capability. An old golden changes only when a feature *deliberately* changes that behaviour, as a
-  conscious, reviewed decision (`WORKFLOWS.md` "Golden policy: one per PR").
+  conscious, reviewed decision (`WORKFLOWS.md#golden-policy-one-per-pr`).
 
 ### Comment-only golden edits are allowed
 
@@ -334,7 +334,7 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 
 ### Saves are per-browser, per-origin
 
-- Export to file (`spec/saves.md` "Slot and file operations") is the cross-device and eviction
+- Export to file (`spec/saves.md#slot-and-file-operations`) is the cross-device and eviction
   backstop, not a sync layer.
 
 ## Project layout
@@ -354,7 +354,7 @@ src/
 ### Effect carriers live in libraries
 
 - Effect-carrier definitions (traits and spells; later gem augments and equipment infusions, all
-  instances of the one effect framework, `spec/effects.md` "One effect framework") live in a
+  instances of the one effect framework, `spec/effects.md#one-effect-framework`) live in a
   **library** directory per carrier type: `data/traits/`, `data/spells/`.
 - Each is split by grouping, `core.ts` (cross-cutting) and **one file per biome**
   (`overgrowth.ts`, …), plus `starters.ts` for the starters' and the Unicorn's signature traits (no
@@ -422,10 +422,10 @@ src/
   it only goes stale.
 - **Don't restate a spec rule.** Cite it by anchor (`spec/<file>.md#<anchor>`) and say only what
   this code adds to it. A restated rule rots silently when the spec changes.
-- `// ASSUMPTION:` is kept for a live open question only ("Open questions get an interface"), not
+- `// ASSUMPTION:` is kept for a live open question only (`CONVENTIONS.md#open-questions-get-an-interface`), not
   as a record of a decision a plan once made.
 - A golden fixture's setup, arithmetic and random draws are not commentary: they are required
-  ("Two-tier golden discipline").
+  (`CONVENTIONS.md#two-tier-golden-discipline`).
 
 ### Open questions get an interface
 

@@ -1,0 +1,12 @@
+$ node header.mjs   (plan-review fix 2: the header renderFixture writes vs the committed fixture header)
+rendered header:
+// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via
+// `npm run corpus:update`, and only in a deliberate-change PR that attributes every changed
+// fight (`CONVENTIONS.md#corpus-digest`, corpus digest).
+
+committed header:
+// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via
+// `npm run corpus:update`, and only in a deliberate-change PR that attributes every changed
+// fight (`CONVENTIONS.md#corpus-digest`, corpus digest).
+
+byte-identical: true

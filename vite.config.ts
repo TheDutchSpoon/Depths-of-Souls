@@ -36,6 +36,16 @@ export default defineConfig(({ mode }) => ({
           include: ['src/ui/**/*.test.{ts,tsx}', 'src/app/**/*.test.{ts,tsx}'],
         },
       },
+      {
+        // The docs checks (`scripts/docs-check/`) run in Node and are tested apart from `src/`, so
+        // neither project above gains a test.
+        extends: true,
+        test: {
+          name: 'docs-check',
+          environment: 'node',
+          include: ['scripts/**/*.test.ts'],
+        },
+      },
     ],
   },
 }))

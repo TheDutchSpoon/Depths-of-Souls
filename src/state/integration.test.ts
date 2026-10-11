@@ -1,7 +1,7 @@
 // Phase 4 Slice I: the phase's end-to-end integration tests, run against REAL content -- the
 // default, zero-override store (`createGameStore()`, real biomes/specializations/starters, the
-// fixed DEFAULT_RUN_SEED), never store.test.ts's fixture biome/spec data. Per CONVENTIONS'
-// "two-tier golden discipline," these are the explicitly-labeled **generated-then-checkpoint-
+// fixed DEFAULT_RUN_SEED), never store.test.ts's fixture biome/spec data. Per `CONVENTIONS.md#two-tier-golden-discipline`,
+// these are the explicitly-labeled **generated-then-checkpoint-
 // verified** cases: each scenario was run once, its actual output inspected, and the assertions
 // below pin exactly what came back -- not a hand-traced log the way store.test.ts's own
 // fixture-scoped goldens are. Per-mechanism correctness (the action instance-list, revive,
@@ -32,7 +32,7 @@
 //
 // Two cases: floor 1 (the original Slice I scenario, unchanged by the PR #65 review) and floor
 // 10 -- the real Broodmother boss floor, added by that review to close the "boss-encounter
-// runner" gap H1-H3 each deferred (see CONVENTIONS "Boss floors" and the Slice I phase-record
+// runner" gap H1-H3 each deferred (see `spec/run.md#boss-floor-generation` and the Slice I phase-record
 // section for the full history).
 
 import { describe, expect, test } from 'vitest'
@@ -179,7 +179,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // for 60% of its Attack"; 30% in 4.1-H2c, 60% again since 4.1-H2d) -- an on-damage-taken retaliation trigger, fires
     // once per hit landed on it before it dies.
     expect(triggersFor(outcome.events, SNAPJAW_JAWS_TRAIT.id)).toBeGreaterThan(0)
-    // The Unicorn's own signature trait (species-locked.md: "whenever this creature attacks, it
+    // The Unicorn's own signature trait (`content/overgrowth.md#unicorn-lightbearer`: "whenever this creature attacks, it
     // resurrects a random dead ally at 20% of its baseline max HP") -- Slice B's `revive`
     // response/on-attack hook against real content, firing per attack instance across the floor.
     const unicornTriggers = triggersFor(outcome.events, UNICORN_TRAIT.id)
@@ -189,7 +189,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // in which the Brute kept dying and the Unicorn kept reviving it; with the Additional the same
     // seed's fights end in 5, 6 and 5 hits and nobody is ever dead when the Unicorn attacks (the
     // fight-2 Unicorn dies, and a dead Unicorn revives no one). So the trigger still fires on
-    // every Unicorn attack but its `random-dead-ally` pool is empty: a targeting fizzle (CONVENTIONS),
+    // every Unicorn attack but its `random-dead-ally` pool is empty: a targeting fizzle (`spec/responses.md#fizzles`),
     // not a suppressed trigger, and no Revived event (`revivedCount` was 0).
     //
     // 4.1-H2c re-pin (0 -> 1; generated-then-checkpoint-verified; first changed by Snapback at 30%
@@ -323,11 +323,11 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // in isolation) actually fires against this real, generated encounter ----
     expect(triggersFor(outcome.events, 'broodmother-swarm-call')).toBeGreaterThan(0)
 
-    // ---- Boss-floor reward banking (CONVENTIONS: boss kill = XP/currency, no soul%; adds are
+    // ---- Boss-floor reward banking (`spec/run.md#rewards`: boss kill = XP/currency, no soul%; adds are
     // ordinary spawn-pool kills, soul% included) ----
     expect(outcome.bossDefeated).toBe('broodmother')
     expect(store.getState().bossesCleared).toEqual(new Set(['broodmother']))
-    // bossesCleared.size(1) * 100 = 100 perk points (GAME_DESIGN §9), derived, never stored.
+    // bossesCleared.size(1) * 100 = 100 perk points (`spec/progression.md#perk-points`), derived, never stored.
     expect(store.getState().bossesCleared.size * 100).toBe(100)
     // (Fill creatures are ordinary spawns with ordinary per-kill rewards, soul% included --
     // ASSUMPTION 80.)
@@ -394,9 +394,9 @@ describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig'
 
     // Generated-then-checkpoint-verified (this describe block's own header comment): under the
     // real default config, floor 1 is 10 fights (not CFG's 3). Before 4.1-G1 the level-1 Brute/
-    // Unicorn party lost the 10th (CONVENTIONS' accepted "per-fight loss rate compounds" risk);
+    // Unicorn party lost the 10th (`spec/run.md#fights-per-floor` accepted "per-fight loss rate compounds" risk);
     // with this draw (roles and full gem sets shifted the stream) it wins all ten. `fightResults`
-    // stops at the first non-win per CONVENTIONS, so ten wins means a cleared floor. Checkpoint:
+    // stops at the first non-win per `spec/run.md#a-descent-is-atomic`, so ten wins means a cleared floor. Checkpoint:
     // one result per fight, ten fights.
     expect(outcome.fightResults).toEqual(Array.from({ length: 10 }, () => 'win'))
     expect(outcome.cleared).toBe(true)

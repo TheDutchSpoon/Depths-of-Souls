@@ -56,9 +56,8 @@ export function staticCreatureIdFor(instance: Instance): string {
 }
 
 /**
- * Applies a flat XP gain (banked once per descend() call, per CONVENTIONS "XP goes to the
- * whole active party regardless of survival") and resolves any resulting level-ups purely via
- * xpForNextLevel -- level-ups NEVER happen mid-fight (CONVENTIONS: "the engine never sees a
+ * Applies a flat XP gain (banked once per descend() call, per `spec/run.md#rewards`) and resolves any resulting level-ups purely via
+ * xpForNextLevel -- level-ups NEVER happen mid-fight (`spec/run.md#rewards`: "the engine never sees a
  * mid-fight level change"); this is the POST-fight application the run layer owns.
  */
 export function applyXpGain(
@@ -76,7 +75,7 @@ export function applyXpGain(
 }
 
 // ---- Currencies ----
-// GAME_DESIGN §4/§10: Essence (gems), Ore (equipment), Bricks (facilities, rarer), Lifeforce
+// `spec/run.md#currencies`: Essence (gems), Ore (equipment), Bricks (facilities, rarer), Lifeforce
 // (leveling + fusion). Nothing spends them until Phase 8 (ASSUMPTION 26, the brief) -- tracked
 // now, unbounded, no cap logic.
 
@@ -99,13 +98,13 @@ export function addCurrencies(a: Currencies, b: Currencies): Currencies {
 }
 
 /**
- * Banks per KILL (per CreatureDied enemy) -- the same treatment as soul%/XP, per GAME_DESIGN §7
- * and CONVENTIONS both grouping soul%/XP/currency together as banking per kill-event, never
- * held pending the fight's outcome. Creature-INDEPENDENT (GAME_DESIGN §4's "global depth-scaled
+ * Banks per KILL (per CreatureDied enemy) -- the same treatment as soul%/XP, per `spec/combat.md#encounters-rewards--wipes`
+ * and `spec/run.md#rewards` both grouping soul%/XP/currency together as banking per kill-event, never
+ * held pending the fight's outcome. Creature-INDEPENDENT (`spec/run.md#currencies`'s "global depth-scaled
  * drop table... independent of which specific creature was defeated" -- that clause scopes to
  * recipe drops, but the creature-independence itself still applies here: a flat per-kill amount,
  * unlike soul%, doesn't skew by rarity). A flat, floor-scaled placeholder; exact drop rates are
- * parked balance (GAME_DESIGN §13). Parameterized by BalanceConfig (Phase 4.1-A, A7) -- values
+ * parked balance (`OPEN_QUESTIONS.md#drops-and-costs`). Parameterized by BalanceConfig (Phase 4.1-A, A7) -- values
  * unchanged from Phase 4.
  */
 export function currencyDropForKill(floor: number, config: BalanceConfig): Currencies {
@@ -115,13 +114,13 @@ export function currencyDropForKill(floor: number, config: BalanceConfig): Curre
     bricks: Math.max(
       config.bricksMinimum,
       Math.floor(floor / 10) * config.bricksPerTenFloors,
-    ), // "rarer" per GAME_DESIGN §4
+    ), // "rarer" per `spec/run.md#currencies`
     lifeforce: floor * config.currencyPerFloor,
   }
 }
 
 // ---- Perk points ----
-// GAME_DESIGN §9: "100 points per boss... perk points are NOT dropped -- derived, never stored."
+// `spec/progression.md#perk-points`: "100 points per boss... perk points are NOT dropped -- derived, never stored."
 
 export function perkPointsFor(bossesCleared: ReadonlySet<string>): number {
   return bossesCleared.size * 100

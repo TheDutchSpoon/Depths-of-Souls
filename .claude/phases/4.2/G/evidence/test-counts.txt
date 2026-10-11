@@ -1,0 +1,18 @@
+# Test count, main -> this branch (vitest run --reporter=json, both runs 0 failed)
+
+main:   1357 tests in 201 files
+branch: 1477 tests in 207 files
+
+Files under src/ whose count changed: 0
+(none)
+Files under src/ added or removed: 0 added, 0 removed
+
+New files (the third Vitest project, docs-check; 120 tests):
+  scripts/docs-check/anchors.test.ts: 5
+  scripts/docs-check/budgets.test.ts: 9
+  scripts/docs-check/ci.test.ts: 2
+  scripts/docs-check/citations.test.ts: 59
+  scripts/docs-check/cli.test.ts: 18
+  scripts/docs-check/inventory.test.ts: 27
+
+Reconciliation: 1357 + 120 = 1477 (branch total 1477); every src/ file keeps its count.

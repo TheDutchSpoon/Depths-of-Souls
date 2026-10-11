@@ -12,10 +12,8 @@ the source, the source is right; a change to a number updates this doc in the sa
 
 ### Species roles
 
-Most species follow The Overgrowth's enabler, payoff and amplifier roles (`content/overgrowth.md`
-"Enabler, payoff, amplifier"). The Necromoss don't: all three share one mechanic, at a bigger scope
-or a bigger number as rarity rises. A hit marked *indirect* follows `content/overgrowth.md`
-"Indirect damage".
+Most species follow The Overgrowth's enabler, payoff and amplifier roles (`content/overgrowth.md#enabler-payoff-amplifier`). The Necromoss don't: all three share one mechanic, at a bigger scope
+or a bigger number as rarity rises. A hit marked *indirect* follows `content/overgrowth.md#indirect-damage`.
 
 ## Statuses
 
@@ -32,7 +30,7 @@ bearer's turns per infection.
 ### Damage over time
 
 Spore, Burn and Poison tick as indirect damage from a snapshot of their applier, at the end of each
-of the bearer's turns (`spec/statuses.md` "DoT and Regen belong to their applier"): Spore **35% of the infector's Speed**,
+of the bearer's turns (`spec/statuses.md#dot-and-regen-belong-to-their-applier`): Spore **35% of the infector's Speed**,
 Burn **35% of the applier's Intelligence**, Poison **40% of the applier's Attack**.
 
 ### Confusion
@@ -158,14 +156,14 @@ finale: the puzzle is managing attrition, not racing damage.
 - At the start of each of her own turns, she blankets the entire opposing side with Spore.
 
 Her authored adds are a Sporecloud Seeder and a Rotfeeder Scavenger; three random Rotcap Hollow
-creatures fill her side (`content/enemy-behaviour.md` "Boss floors"), and every one of them that
+creatures fill her side (`content/enemy-behaviour.md#boss-floors`), and every one of them that
 dies feeds her too.
 
 ## Spells
 
 These unlock at biome 3, one per affinity, each bringing something the earlier pool lacks; Rotcap
-Hollow's casters also roll every biome-1 and biome-2 spell (`content/overgrowth.md` "Spells",
-`content/glimmerdark.md` "Spells"). Spore Cyst and Withering Bolt deal deliberately low upfront
+Hollow's casters also roll every biome-1 and biome-2 spell (`content/overgrowth.md#spells`,
+`content/glimmerdark.md#spells`). Spore Cyst and Withering Bolt deal deliberately low upfront
 damage for a single-target spell: a status-applying spell's damage is not its headline number.
 
 ### Spore Cyst

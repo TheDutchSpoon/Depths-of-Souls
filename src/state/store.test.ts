@@ -1054,7 +1054,7 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     const { outcome } = expectOk(store.getState().descend(10))
 
     // HERO (speed 50) still acts first and kills the ADD (round 1) -- rewards bank per kill,
-    // immediately, regardless of the fight's eventual outcome (CONVENTIONS). The boss then
+    // immediately, regardless of the fight's eventual outcome (`spec/run.md#rewards`). The boss then
     // one-shots HERO on its own turn, later in the SAME round -- a loss, zero further turns.
     expect(outcome.fightResults).toEqual(['loss'])
     expect(outcome.cleared).toBe(false)

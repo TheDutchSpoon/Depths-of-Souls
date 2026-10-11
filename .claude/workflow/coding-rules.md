@@ -8,12 +8,11 @@ stop and say so.
 
 A slice id like `4.1-H2b2` maps to the mailbox folder `.claude/phases/4.1/H2b2/` (phase = the text
 before the first `-`, slice = the text after it). Everything you produce for the slice goes in that
-folder, except code and the phase record (see "Phase record" below).
+folder, except code and the phase record (see `workflow/coding-rules.md#phase-record` below).
 
 The folder holds only your step files (`plan.md`, `report-r<N>.md`), all Markdown. Output your
 report cites as evidence (simulator reports, corpus scans, a table a script printed) goes in the
-slice's `evidence/` folder, and the report names it by that path (WORKFLOWS "What a mailbox
-keeps"). Don't leave marker files, logs or duplicate runs there, and don't keep a one-off script
+slice's `evidence/` folder, and the report names it by that path (`WORKFLOWS.md#what-a-mailbox-keeps`). Don't leave marker files, logs or duplicate runs there, and don't keep a one-off script
 that rewrites `src/`: keep its printed table and quote its rule in the report. Background runs
 write their scratch output outside the repo.
 
@@ -31,15 +30,14 @@ Don't read `.claude/archive/` unless the kickoff points you there.
 
 ## Toolchain
 
-`npm ci`; your Node and tool versions match the lockfile (CONVENTIONS "Local runs match CI's
-toolchain"). If a tool behaves unexpectedly, check its `--version` against `package-lock.json`
+`npm ci`; your Node and tool versions match the lockfile (`CONVENTIONS.md#local-runs-match-cis-toolchain`). If a tool behaves unexpectedly, check its `--version` against `package-lock.json`
 before designing around it.
 
 ## Rules
 
 - Stay in this slice's scope; if it depends on an unbuilt slice, stop and say so.
 - Every ASSUMPTION in scope: mark it inline AND collect it in the plan's checklist.
-- Golden policy: as the kickoff declares it (WORKFLOWS "Golden policy").
+- Golden policy: as the kickoff declares it (`WORKFLOWS.md#golden-policy-one-per-pr`).
 - Goldens hand-derived (setup, arithmetic and random draws in comments) for focused cases; big
   integration goldens labeled generated-then-checkpoint-verified. No run-then-pasted goldens. New
   goldens replay through the shared golden runner.

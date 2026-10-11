@@ -1,0 +1,3 @@
+inventory C: PASS, 154 units and 154 rows checked (base 3fd6a8fe8b70fba9573346e8d8c10014b231ff85)
+inventory D: PASS, 172 units and 172 rows checked (base 3fd6a8fe8b70fba9573346e8d8c10014b231ff85)
+inventory E: PASS, 87 units and 87 rows checked (base 3fd6a8fe8b70fba9573346e8d8c10014b231ff85)

@@ -1,0 +1,35 @@
+# Old forms and label forms, before (main) and after (this branch)
+# 'before' = the new citations mode run on a git-archive of main (--root); 'after' = this branch.
+
+## before
+
+| Where | Form | Count |
+| --- | --- | --- |
+| src/ | old form: CONVENTIONS "…" | 76 |
+| src/ | names species-locked, a deleted doc | 69 |
+| src/ | names CONVENTIONS without an anchor | 45 |
+| src/ | old form: GAME_DESIGN §… | 43 |
+| src/ | names GAME_DESIGN, a deleted doc | 9 |
+| src/ | label form: `<path>.md` ("Label", …) | 2 |
+| .claude/ | label form: `<path>.md` "Label" | 214 |
+| .claude/ | label form: <NAME> "Label" | 4 |
+| .claude/ | old form: CONVENTIONS "…" | 3 |
+| .claude/ | label form: `<path>.md` ("Label", …) | 2 |
+| .claude/ | old form: GAME_DESIGN §… | 1 |
+
+citations: FAIL, 468 problems
+
+## after
+
+| Where | Form | Count |
+| --- | --- | --- |
+
+citations: PASS, 532 citations in 436 files
+
+## Raw token counts in src/ (grep -c of the three names, lines)
+
+| Name | before (main) | after |
+| --- | --- | --- |
+| CONVENTIONS | 121 | 20 |
+| GAME_DESIGN | 52 | 0 |
+| species-locked | 70 | 0 |

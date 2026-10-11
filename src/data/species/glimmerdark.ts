@@ -1,22 +1,21 @@
-// Phase 4 Slice H2: Glimmerdark (floors 11-20, GAME_DESIGN §4's decade cadence / ASSUMPTION 29)
-// -- Biome 2's real roster, against `.claude/species/species-locked.md`'s own table, built
+// Phase 4 Slice H2: Glimmerdark (floors 11-20, `spec/run.md#biomes`'s decade cadence / ASSUMPTION 29)
+// -- Biome 2's real roster, against `content/glimmerdark.md#glimmerdark-biome-2-floors-1120` own table, built
 // entirely on primitives already proven through Slice E2 (no new engine work needed -- verified
 // while authoring: `acted-before-target`'s own real-content shape is a new SCRIPT, not a new
 // primitive; see `data/traits/glimmerdark.ts`'s Blindclaws Striker doc comment).
 //
 // Same enabler/payoff/amplifier (common/uncommon/rare) framing as Overgrowth, except where
-// species-locked.md names one shared mechanic instead of a two-role chain (Resonants, Gloomjaws)
+// `content/glimmerdark.md#resonants-wit-caster-synergy` names one shared mechanic instead of a two-role chain (Resonants, Gloomjaws)
 // -- see `data/traits/glimmerdark.ts`'s own per-species doc comments.
 //
 // ASSUMPTION (Slice H2, mirrors H1's own): exact base stats (10-30/stat) and every percent/factor
-// balance number are parked balance (GAME_DESIGN §13), picked only to be flavorful and internally
-// consistent. species-locked.md's own "Coverage" note for this biome: "Vitality absent at species
+// balance number are parked balance (`OPEN_QUESTIONS.md#content-numbers`), picked only to be flavorful and internally
+// consistent. `content/glimmerdark.md#affinity-spread` own "Coverage" note for this biome: "Vitality absent at species
 // level -- resolved by sprinkling Vitality creatures into these species at stamping (agreed)" --
 // applied here to the Flickerlings' Wick and Sparkeaters' Voidmaw.
 //
 // Composition ONLY (Species/SpeciesCreature/BiomeData + boss data) -- Trait/Spell objects live in
-// the central `../traits`/`../spells` library (CONVENTIONS "Data layer -- carriers vs.
-// composition"), same as `../species/overgrowth.ts`.
+// the central `../traits`/`../spells` library (`CONVENTIONS.md#composition-files-only-reference-carriers`), same as `../species/overgrowth.ts`.
 
 import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
@@ -60,7 +59,7 @@ import {
 // near-complete reskinned kit); 9 were deleted as exact-or-near reskins of Overgrowth spells
 // once unlock became cumulative (see data/spells/glimmerdark.ts's own header comment for the
 // full list). Five new spells were added to meet the design owner's >=4-5-own-spells-per-biome
-// bar (GAME_DESIGN §4). This grouping is no longer fed into `BiomeData` (see overgrowth.ts's own
+// bar (`spec/run.md#spells-unlock-cumulatively`). This grouping is no longer fed into `BiomeData` (see overgrowth.ts's own
 // comment on the same change) -- kept purely as "the spells this biome introduces" documentation,
 // every entry here tagged `unlockedAtBiome: 2`.
 
@@ -200,7 +199,7 @@ export const RESONANTS: Species = {
   creatures: [RESONANT_CHORUS, RESONANT_ADEPT, RESONANT_OVERTONE],
 }
 
-// ---- Sparkeaters (Wit/Violence lean per species-locked.md) -- closed mechanic: stat parasites ----
+// ---- Sparkeaters (Wit/Violence lean per `content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites`) -- closed mechanic: stat parasites ----
 // PR #60 review (C2): per-creature affinity stamped to match the stat each one steals, not the
 // species-level lean -- see traits/glimmerdark.ts's own header comment for the full rationale.
 
@@ -341,14 +340,14 @@ export const GLIMMERDARK_SPECIES_POOL: readonly Species[] = [
 ]
 
 // ---- Boss (floor 20): the Leech Sovereign ----
-// species-locked.md: "Fast steal-race ... Every hit steals a stat (permanent -you/+it, same as
+// `content/glimmerdark.md#leech-sovereign`: "Fast steal-race ... Every hit steals a stat (permanent -you/+it, same as
 // Sparkeaters); you hollow out over time -- answer is raw burst. Lean identity (no heavy add
 // layer)." Deliberately no `_ADDS` export (unlike the Broodmother) -- the design doc explicitly
 // calls out this boss as lean, single-mechanic, no add layer.
 //
 // The boss floor itself (materializing her on floor 20, banking rewards, recording bossesCleared)
 // is wired through `BiomeData.boss` below (Phase 4 Slice I, PR #65 review) -- see
-// `generation.ts`'s `generateFloor` boss branch and CONVENTIONS' "Boss floors". H2 authored her
+// `generation.ts`'s `generateFloor` boss branch and `spec/run.md#boss-floor-generation`. H2 authored her
 // as data only and deliberately left the runner unbuilt, mirroring H1's own Broodmother; that gap
 // is what Slice I closes.
 

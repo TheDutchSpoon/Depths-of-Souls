@@ -1,5 +1,5 @@
 // Golden: a Pacified Leech Sovereign casts instead of waiting (Phase 4.1-G1, 6v6 boss floors and
-// boss loadouts; CONVENTIONS "Role scripts"). Real content: the real LEECH_SOVEREIGN, on her real
+// boss loadouts; `spec/scripting.md#role-scripts`). Real content: the real LEECH_SOVEREIGN, on her real
 // role script (`striker`, from `defaultScriptId`), holding one gem (Stinger Swarm: she is Instinct),
 // Pacified by the real Pacify spell.
 //

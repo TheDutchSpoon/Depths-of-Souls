@@ -21,24 +21,23 @@ fight is `spec/effects.md`, `spec/responses.md` and `spec/statuses.md`.
 
 - **One round = every living creature acts once**, in descending **Speed** order, rebuilt every
   round, so a Speed change reorders the next round. Ties go **player side → slot → creature id**.
-- A creature gets **one turn per round**. A trait may grant an extra *action* (`spec/effects.md`
-  "Traits"). It takes no turn of its own: it runs at the end of the step that raised it
-  (`spec/responses.md` "perform-action").
+- A creature gets **one turn per round**. A trait may grant an extra *action* (`spec/effects.md#traits`). It takes no turn of its own: it runs at the end of the step that raised it
+  (`spec/responses.md#perform-action`).
 - Every fight has a hard **round cap** (config): a fight that reaches it (a pathological
   all-Defend or all-Wait standoff) ends at once as a **draw**, so no fight runs unbounded.
 
 ### Actions
 
 - The starting set is **Attack, Cast, Defend, Provoke and Wait**; more may be added.
-- **Attack**: a physical strike, Attack against the target's Defence ("Damage formula").
+- **Attack**: a physical strike, Attack against the target's Defence (`spec/combat.md#damage-formula`).
 - **Cast**: cast an equipped spell, with no cost. A script picks *which* gem slot to cast, or a
   random castable gem. The spell's **target shape** (single or all) and **intended side** are
-  properties of the spell, not of the rule (`spec/creatures.md` "Spells").
+  properties of the spell, not of the rule (`spec/creatures.md#spells`).
 - **Defend**: until the creature's next turn it takes **35% less damage** (a ×0.65 factor in its
   taken pool) **and** has **+50% Defence** (×1.5 on its effective Defence, inside the subtractive
   core). Both apply together: the Defence bonus scales with a creature's Defence, so it is
   strongest on creatures that are already tanky, while the flat 35% helps squishier ones too.
-- **Provoke**: the creature is *provoking* (taunting) **until its next turn** ("Provoke").
+- **Provoke**: the creature is *provoking* (taunting) **until its next turn** (`spec/combat.md#provoke`).
   Re-provoking every turn costs the creature its attack, which makes dedicated tanking a real
   choice.
 - **Wait**: no action this turn.
@@ -48,9 +47,9 @@ fight is `spec/effects.md`, `spec/responses.md` and `spec/statuses.md`.
 
 - Whatever produced an action (the script, the fallback, or a trait granting one), the same rules
   decide whether it is allowed (locks), how its target is chosen, and the Confusion and Provoke
-  overrides ("One action pipeline").
+  overrides (`spec/combat.md#one-action-pipeline`).
 - When the script yields no valid action, the creature falls back to an Attack on the lowest-HP
-  enemy, else Wait (`spec/scripting.md` "The fallback").
+  enemy, else Wait (`spec/scripting.md#the-fallback`).
 
 ### Provoke
 
@@ -58,7 +57,7 @@ fight is `spec/effects.md`, `spec/responses.md` and `spec/statuses.md`.
   against the enemy side and one or more enemies are **provoking**, it targets a **random**
   provoker, drawn from the seeded combat RNG, whatever its rule's selector says. With no provoker
   it targets by its selector or, when the rule names none, by the default for the action's
-  intended side ("Default targeting is side-aware").
+  intended side (`spec/combat.md#default-targeting-is-side-aware`).
 - Provoke is an **override applied after** the action is chosen: it narrows the target and never
   changes the action.
 - **Exempt**: ally-side actions (a support spell on an ally), and **AOE**, which always hits its
@@ -77,7 +76,7 @@ fight is `spec/effects.md`, `spec/responses.md` and `spec/statuses.md`.
 
 ### Damage formula
 
-Direct damage, an Attack or Cast action ("Damage channels and the Additional"):
+Direct damage, an Attack or Cast action (`spec/combat.md#damage-channels-and-the-additional`):
 
 ```
 effOffStat = getOffensiveStat(creature, actionKind, spellPower)   // remap → effective → × spellPower
@@ -87,7 +86,7 @@ damage     = MAX(1, floor(raw))
 
 - **effOffStat**: the offensive stat is **Attack** for Attack and **Intelligence** for Cast, read
   through a **remap-aware lookup** (a `stat-remap` such as "use Speed as Attack" needs no formula
-  change, `spec/effects.md` "Category decides player-facing treatment"), as an **effective** stat
+  change, `spec/effects.md#category-decides-player-facing-treatment`), as an **effective** stat
   (`getEffectiveStat`, never raw base), then × the action's **`spellPower`**. Order: remap →
   effective → × spellPower. `Defence` is effective too. There is no separate magic resist: both
   actions meet the target's one Defence.
@@ -106,7 +105,7 @@ damage     = MAX(1, floor(raw))
   stalemates and the round cap is only a pathological backstop. Never round per term: that
   compounds error and risks cross-platform float drift, which breaks golden replay.
 - **Two modifier pools, deliberately asymmetric** (where build power compounds; base stats grow
-  linearly, `spec/creatures.md` "Levels and XP"):
+  linearly, `spec/creatures.md#levels-and-xp`):
   - the attacker's **dealt pool is additive**, `1 + Σ dealtMods` (empty = 1.0): many "+X% damage"
     sources sum, so stacking many of them stays tractable instead of exploding;
   - the defender's **taken pool is multiplicative**, `Π(takenFactors)` (empty = 1.0): each
@@ -135,7 +134,7 @@ damage     = MAX(1, floor(raw))
   `MAX(1, floor(magnitude × Affinity × (1 + Σ dealtMods) × Π(takenFactors) − 0.2 × Defence))`.
   No chip floor and no Additional. It meets only **a fifth of Defence**: that is the counter to
   Defence-based creatures, and why reactive traits matter against tanks. A DoT tick's magnitude is
-  its applier's snapshot, with no dealt pool (`spec/statuses.md` "The applier snapshot").
+  its applier's snapshot, with no dealt pool (`spec/statuses.md#the-applier-snapshot`).
 - **A cost**: damage a creature's own trait, status or perk response deals to that same creature
   is the exact amount, with no Defence, affinity, pools or Additional. It is still a damage event
   and can kill.
@@ -143,25 +142,25 @@ damage     = MAX(1, floor(raw))
 
 ### Encounters, rewards & wipes
 
-- A fight is one of a floor's encounters (`spec/run.md` "A descent is atomic").
+- A fight is one of a floor's encounters (`spec/run.md#a-descent-is-atomic`).
 - **Rewards bank per kill, the instant an enemy dies**: soul%, XP and currency are never held
   pending the fight's outcome, so a wipe after some kills keeps everything earned so far
-  (`spec/run.md` "Rewards").
+  (`spec/run.md#rewards`).
 - **The result is `win`, `loss` or `draw`**: the player side wins when it is the side left
   standing. A round-cap timeout is a draw, and so is both sides falling at once. A draw resolves
   like a loss: back to the hub, no floor cleared, banked rewards kept.
 - **A wipe costs nothing**: no run reset, and no creature, XP or facility is lost. Depth is
-  persistent; the party returns to the entrance hub (`spec/run.md` "The cave").
+  persistent; the party returns to the entrance hub (`spec/run.md#the-cave`).
 
 ## Engine rules
 
 ### Resolver shape
 
-- `createCombat(input) → CombatState` sets up a fight ("Fight setup"). `resolveTurn(state) →
+- `createCombat(input) → CombatState` sets up a fight (`spec/combat.md#fight-setup`). `resolveTurn(state) →
   { state, events }` is the pure **stepper**: it resolves one dequeued turn and crosses round
   boundaries itself (round end, the next round's queue). `resolveFight(state)` runs it until a
   result is set. Manual mode and playback step with `resolveTurn`.
-- Every step emits typed events ("Event log"); the UI renders from events, never from resolver
+- Every step emits typed events (`spec/combat.md#event-log`); the UI renders from events, never from resolver
   internals.
 - **The RNG state lives in `CombatState`**, threaded state in, state out, so a step stays a pure
   `state → { state, events }`. Sides are labelled player and enemy.
@@ -177,24 +176,22 @@ damage     = MAX(1, floor(raw))
   from the trait registry **throws**: setup never silently skips a trait. An empty party throws.
 - **Fresh creatures only**: an input creature already carrying setup output (non-empty
   `baselineEffects` or `activeEffects`, taken from a previous `CombatState`) throws, because
-  re-feeding it would double its innate spell slots (`spec/creatures.md` "Innate spells").
+  re-feeding it would double its innate spell slots (`spec/creatures.md#innate-spells`).
 - Each creature stores its resolved starting effect list, **`baselineEffects`**: its innate
-  traits' effects, then its side's, in the canonical effect order (`spec/effects.md` "Effect
-  order"). `revive` restores exactly that list (`spec/effects.md` "Death-reset"), so nothing is
+  traits' effects, then its side's, in the canonical effect order (`spec/effects.md#effect-order`). `revive` restores exactly that list (`spec/effects.md#death-reset`), so nothing is
   re-derived mid-fight.
 
 ### Turn queue
 
 - At each round start the acting order is built **once**, as a frozen list of creature ids, from
   current effective Speed, ties player side → slot → id (`buildTurnQueue`; act-first and act-last
-  statuses split it into poles, `spec/statuses.md` "Turn order"). It is **never recomputed
+  statuses split it into poles, `spec/statuses.md#turn-order`). It is **never recomputed
   mid-round**: Speed changes wait for the next round's rebuild.
 - A creature that dies before its turn keeps its slot as a `TurnStarted`/`TurnEnded` bracket with
-  no hooks, no action and no countdown; the Web roll still runs in it (`spec/statuses.md` "Turn
-  order").
+  no hooks, no action and no countdown; the Web roll still runs in it (`spec/statuses.md#turn-order`).
 - A granted extra action takes no queue slot: it runs at the end of the step that raised it,
   inside the current turn, or at round level for a fight-start or round-end grant
-  (`spec/responses.md` "perform-action"). An "insert an extra turn" effect would be a separate
+  (`spec/responses.md#perform-action`). An "insert an extra turn" effect would be a separate
   primitive, never a re-sort of the queue.
 - **Round cap**: after `ROUND_CAP` (`engine/config.ts`) full rounds the fight ends as a draw,
   checked before a new round starts.
@@ -206,8 +203,7 @@ damage     = MAX(1, floor(raw))
   `on-round-end`) and emitting the lifecycle events (`FightStarted`, `RoundStarted`,
   `TurnStarted`/`TurnEnded`, `FightEnded`). There is no round-start or fight-end hook and no
   round-end event: a round boundary is implied by the next `RoundStarted` or `FightEnded`.
-- Status work is turn cleanup and hook triggers, never a separate round pass (`spec/statuses.md`
-  "Ticks are on-turn-end triggers").
+- Status work is turn cleanup and hook triggers, never a separate round pass (`spec/statuses.md#ticks-are-on-turn-end-triggers`).
 
 ### Turn structure
 
@@ -232,13 +228,13 @@ TurnStarted
   the turn's last event.**
 - **A mid-turn wipe ends the turn there**: the rest (later hook firings, grants, cleanup, the Web
   roll) is skipped, `TurnEnded` is still emitted so the brackets balance, and `FightEnded` follows
-  ("Resolution & timing").
+  (`spec/combat.md#resolution--timing`).
 - The hooks, the grants and the countdown run for a living actor only. Both cleanups are
-  bookkeeping only (`spec/statuses.md` "Turn-end cleanup"). The turn-start cleanup runs on a
+  bookkeeping only (`spec/statuses.md#turn-end-cleanup`). The turn-start cleanup runs on a
   skipped turn too, so a Stunned or Sleeping creature stops defending and provoking on schedule;
   **`ActionStateEnded { creatureId, defending, provoking }`** (which flags just ended) shows it.
-- Where a turn is skipped is `spec/statuses.md` "Action locks"; when statuses tick and count down
-  is `spec/statuses.md` "Timing".
+- Where a turn is skipped is `spec/statuses.md#action-locks`; when statuses tick and count down
+  is `spec/statuses.md#timing`.
 
 ### Resolution & timing
 
@@ -270,11 +266,10 @@ TurnStarted
   `deal-damage` in a spell's list, and granted actions.
 - In indirect damage, `Defence` is effective and includes Defend's ×1.5; Defend's ×0.65 is in the
   taken pool as usual. Cross-stat contribution is direct only.
-  - A response: `magnitude` is its own (`spec/responses.md` "Magnitude modes"), `Defence` is after
+  - A response: `magnitude` is its own (`spec/responses.md#magnitude-modes`), `Defence` is after
     armour penetration, and the dealt pool includes `conditional-damage-bonus`.
   - A DoT tick: `magnitude` is its snapshot potency, with no dealt pool and no armour penetration:
-    the snapshot holds the applier's stat, not its live build (`spec/statuses.md` "The applier
-    snapshot").
+    the snapshot holds the applier's stat, not its live build (`spec/statuses.md#the-applier-snapshot`).
 - A DoT tick is recognised by its `snapshot-potency` magnitude, never by its `'dot'` label.
 - Flat-mode response damage (`flatAmount`) on another creature is indirect like any other response:
   the flat amount is the magnitude. There is no Defence bypass and no true-damage channel.
@@ -284,7 +279,7 @@ TurnStarted
 - **A cost** is judged on the **resolved** target id. It floors once with **no minimum**, and a
   cost of 0 is a full no-op (no event, no hooks), though the `TriggerFired` emitted first stands.
   Its source is the creature itself: damage observers see it and its `on-damage-taken` fires
-  (`spec/effects.md` "Damage observation").
+  (`spec/effects.md#damage-observation`).
 
 ### Armor penetration
 
@@ -319,7 +314,7 @@ TurnStarted
   damage equal to X% of Attack" is a plain `deal-damage` response, not an attack, and fires
   nothing.
 - **Every instance after the first targets the same creature**, without re-running the selector,
-  unless that creature has died ("Every action source obeys the same rules", rule 4).
+  unless that creature has died (`spec/combat.md#every-action-source-obeys-the-same-rules`, rule 4).
 - `powerPercent` is a flat number by design: no content scales the number or power of instances off
   fight state. When content first does, the category grows an optional `magnitudeSource` beside
   `powerPercent`, never a parallel mechanism.
@@ -333,16 +328,16 @@ TurnStarted
   one gem is castable. A gem is castable when its slot holds a spell and, for a single-target spell,
   its intended side has a living creature; an AOE spell is always castable.
 - `Creature.equippedSpells: readonly (Spell | null)[]` holds bare spells, not Phase 8's gems
-  (`spec/creatures.md` "Gems as items"), in a variable-length array so slot-count changes need no
-  retype. Innate spells come first (`spec/creatures.md` "Innate spells").
+  (`spec/creatures.md#gems-as-items`), in a variable-length array so slot-count changes need no
+  retype. Innate spells come first (`spec/creatures.md#innate-spells`).
 - **Defend** sets `defending` (×1.5 effective Defence, ×0.65 in the taken pool) and **Provoke** sets
-  `provoking`, each until the creature's next turn-start cleanup ("Turn structure").
+  `provoking`, each until the creature's next turn-start cleanup (`spec/combat.md#turn-structure`).
 
 ### AOE Cast
 
 - Each instance freezes its own target set at its cast-start: every living creature of the side it
   hits, in slot order. An ally-side AOE hits the caster's side; an enemy-side AOE hits the enemy
-  side, unless its Confusion roll turns it on the caster's own ("Targeting override").
+  side, unless its Confusion roll turns it on the caster's own (`spec/combat.md#targeting-override`).
 - A frozen target that has died by the time its hit comes is skipped; the set itself doesn't
   change.
 
@@ -370,9 +365,9 @@ TurnStarted
   gets nothing more (no verb acts on a corpse), but the rest of the list runs, so its `self` effects
   still land: Life Siphon heals for a killing blow. If a retaliation kills the caster mid-list, the
   rest of that target's list still runs, and a `self` effect in it lands nowhere. The dead-actor
-  checks sit between landed targets and between instances ("An action ends when its actor dies").
+  checks sit between landed targets and between instances (`spec/combat.md#an-action-ends-when-its-actor-dies`).
 - The guards around a list skip **the whole list**, `self` effects included: a target that died in
-  its own pre-hit hooks ("A target killed by its pre-hit hooks fizzles") or an AOE member already
+  its own pre-hit hooks (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`) or an AOE member already
   dead gets none of it.
 - **Magnitudes read the caster's live stats** when each effect runs, as Attack and every response
   do.
@@ -383,7 +378,7 @@ TurnStarted
 
 - It is set on the spell's `deal-damage` or `heal` effect, not on the spell: `offStat: 'cast'`
   (remap-aware Intelligence), or a `scalingStat` (Intelligence, Health, Attack, Defence or Speed,
-  read directly, no remap; `spec/responses.md` "Magnitude modes").
+  read directly, no remap; `spec/responses.md#magnitude-modes`).
 - A pure-utility spell (a status only, a cleanse) has no `deal-damage` or `heal` effect.
 
 ### One action pipeline
@@ -391,9 +386,9 @@ TurnStarted
 - Every action, whatever produced it (a script rule, the fallback, a `perform-action` grant, later
   manual input), goes through `src/engine/actions.ts`.
 - **The intent is rule-shaped**: `Intent = { action: RuleAction, targeting?: TargetSelector }`, a
-  script `Rule` without its condition (`spec/scripting.md` "Scripts and rules"), with two random
+  script `Rule` without its condition (`spec/scripting.md#scripts-and-rules`), with two random
   forms: **`gemSlot: 'random'`** (uniformly among the actor's castable gems, optionally narrowed by
-  `gemSide`, `spec/scripting.md` "Stock scripts") and the **`'random'` target** (uniformly among
+  `gemSide`, `spec/scripting.md#stock-scripts`) and the **`'random'` target** (uniformly among
   the living creatures on the action's intended side).
 - **`'random'` is an intent-only target.** It needs the action's intended side, which only an
   intent has. A response's target (`{ kind: 'selector', selector }`) has none, so `'random'` there
@@ -404,8 +399,8 @@ TurnStarted
   The interpreter's lookahead uses it.
 - **`resolveIntent(actor, intent, state)`** is the **single place action-level random draws
   happen**: the gem first, for a random cast, then the target: the explicit selector, else the
-  side-aware default ("Default targeting is side-aware"), then, for an enemy-side single target,
-  the targeting override ("Targeting override").
+  side-aware default (`spec/combat.md#default-targeting-is-side-aware`), then, for an enemy-side single target,
+  the targeting override (`spec/combat.md#targeting-override`).
 - **`executeAction`** runs the executors.
 - **`runAction`** chains them for every source: `checkLegality`, then `resolveIntent`, then
   `executeAction`. A dead actor, an illegal intent or one that resolves to nothing is a silent
@@ -432,7 +427,7 @@ TurnStarted
   has no default target, and neither has an AOE or a self-only rule. The interpreter supplies the
   default to `acted-before-target`'s peek, so `conditions.ts` never imports `actions.ts` (a cycle,
   since `resolution.ts` imports `conditions.ts`); with no default the condition is false
-  (`spec/effects.md` "acted-before-target").
+  (`spec/effects.md#acted-before-target`).
 - The side default is the engine's own fallback; whether a script-level default overrides it is a
   Phase 6 decision (`ROADMAP.md` Phase 6).
 
@@ -444,8 +439,7 @@ TurnStarted
    its chance first, so the RNG stream doesn't depend on the skip; only then is it refused.
 2. **An active lock refuses every action it covers, chosen or granted, whenever the action is
    checked**: Silenced blocks every cast, and an `'all'` lock that lands mid-turn refuses that
-   turn's later grants. Immunity applies as usual (`spec/statuses.md` "Immunity suppresses the
-   effect, not the application").
+   turn's later grants. Immunity applies as usual (`spec/statuses.md#immunity-suppresses-the-effect-not-the-application`).
    - `runAction` checks legality before resolving, for every source, so a refused action **draws
      nothing**, the gem draw included.
    - The locks checked are **the acting creature's**: for an echo, the caster's. The granting
@@ -477,10 +471,10 @@ TurnStarted
   4. before each AOE member's hit.
 - If it has died, the rest of the action is dropped: no further events from it and no fizzle
   event; events already emitted stay. This is the actor's mirror of "death pre-empts the victim's
-  reaction" (`spec/effects.md` "Dead creatures"). A granted action checks its actor is alive when
+  reaction" (`spec/effects.md#dead-creatures`). A granted action checks its actor is alive when
   it starts.
 - The checks sit **between hits, never inside one**: one landed target's spell list runs to
-  completion ("Spells carry responses").
+  completion (`spec/combat.md#spells-carry-responses`).
 
 ### Targeting override
 
@@ -507,7 +501,7 @@ TurnStarted
 - `adjacentLivingTargets(target, party)`: the target's neighbours in slot order within the
   **living** list, up to two. Living adjacency, not raw slot adjacency: a dead slot-neighbour would
   make Splashing whiff for no visible reason.
-- Splashing is attacks only (`spec/effects.md` "Splashing and Annihilate"). `executeAttack` computes
+- Splashing is attacks only (`spec/effects.md#splashing-and-annihilate`). `executeAttack` computes
   an instance's splash targets before its pre-hit hooks, while the main target is still in the
   living list, and strikes them after the main hit.
 

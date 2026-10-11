@@ -24,7 +24,7 @@ export const EMBER_LANCE: Spell = {
   ],
 }
 
-// The "30%-Intelligence" spell anchor from GAME_DESIGN.md §7's own example.
+// The "30%-Intelligence" spell anchor from `content/overgrowth.md#spell-power-convention`'s own example.
 export const CINDER_NOVA: Spell = {
   id: 'cinder-nova',
   name: 'Cinder Nova',
@@ -42,7 +42,7 @@ export const CINDER_NOVA: Spell = {
   ],
 }
 
-// Slice C: a spell-applied status, per CONVENTIONS' "Spell gains an optional status-application."
+// Slice C: a spell-applied status, per `spec/combat.md#spells-carry-responses`
 export const VENOM_BOLT: Spell = {
   id: 'venom-bolt',
   name: 'Venom Bolt',

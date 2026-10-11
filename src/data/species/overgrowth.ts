@@ -1,10 +1,10 @@
-// Phase 4 Slice H1: The Overgrowth (floors 1-10, GAME_DESIGN §4's decade cadence / ASSUMPTION
-// 29) -- Biome 1's real roster, against `.claude/species/species-locked.md`'s own table, built
+// Phase 4 Slice H1: The Overgrowth (floors 1-10, `spec/run.md#biomes`'s decade cadence / ASSUMPTION
+// 29) -- Biome 1's real roster, against `content/overgrowth.md#the-overgrowth-biome-1-floors-110` own table, built
 // entirely on primitives already proven through Slice E2 (no new engine work needed -- per the
 // project's own "stop and amend the relevant earlier slice" discipline, confirmed while
 // authoring: nothing here needed anything not already built).
 //
-// Six species x three creatures each (18 total), following species-locked.md's own "roles ...
+// Six species x three creatures each (18 total), following `content/overgrowth.md#enabler-payoff-amplifier` own "roles ...
 // enabler / payoff / amplifier" framing uniformly: the common creature ENABLES its species'
 // closed mechanic (creates the status/sets up the condition), the uncommon creature is the
 // PAYOFF (benefits from it), and the rare creature is an AMPLIFIER (usually combines both halves
@@ -12,11 +12,11 @@
 // only, NOT power"), each creature's own stat BUDGET is kept comparable across a species'
 // rarity tiers -- only the role differs, never raw strength.
 //
-// ASSUMPTION (Slice H1): exact base stats (10-30/stat, GAME_DESIGN §5) and every percent/factor
-// balance number are parked balance (GAME_DESIGN §13), picked only to be flavorful and
+// ASSUMPTION (Slice H1): exact base stats (10-30/stat, `spec/creatures.md#core-stats`) and every percent/factor
+// balance number are parked balance (`OPEN_QUESTIONS.md#content-numbers`), picked only to be flavorful and
 // internally consistent -- not derived from any locked design number. Per-creature affinity
 // deliberately departs from a species' own "lean" in a few places (documented inline) per
-// species-locked.md's own "Coverage" note: "balance at creature-stamping (affinity is
+// `content/overgrowth.md#reading-this-biome` own "Coverage" note: "balance at creature-stamping (affinity is
 // per-creature)" -- Endurance/Instinct are thin at the LEAN level across this biome's table, so
 // individual creatures are stamped into those affinities to round out the full 5-affinity spread.
 //
@@ -360,19 +360,12 @@ export const OVERGROWTH_SPECIES_POOL: readonly Species[] = [
 ]
 
 // ---- Boss (floor 10): the Broodmother ----
-// species-locked.md: "Target-priority ... Count-scales off living spiderling adds +
-// periodically Webs the party (act-last). Kill adds to weaken her. Adds: spiderlings (Spider
-// pool)." An elevated Instance (not spawn-pool-drawn), sharing the Spiders' own speciesId so
-// living-allies-of-species counts her together with her adds -- authored as DATA here (the
-// SpeciesCreature + which real Spider-roster members serve as her adds; her signature trait,
-// BROODMOTHER_TRAIT, lives in ../traits alongside every other trait), per the fixed-authored-
-// encounter path (same mechanism as the Unicorn's scripted intro).
-//
-// The boss floor itself (materializing her + her adds on floor 10, banking rewards, recording
-// bossesCleared) is wired through `BiomeData.boss` below (Phase 4 Slice I, PR #65 review) -- see
-// `generation.ts`'s `generateFloor` boss branch and CONVENTIONS' "Boss floors". H1 authored her
-// as data only and deliberately left the runner unbuilt (no such mechanism existed for ANY boss
-// yet); that gap is what Slice I closes.
+// An elevated Instance, not spawn-pool-drawn (`content/overgrowth.md#broodmother`). She shares the
+// Spiders' speciesId so `living-allies-of-species` counts her together with her adds. The
+// SpeciesCreature and the Spider-roster members that serve as her adds are data here; her
+// signature trait, BROODMOTHER_TRAIT, lives in ../traits with every other trait. The boss floor
+// itself (materializing her and her adds, banking rewards, recording bossesCleared) is wired
+// through `BiomeData.boss` (OVERGROWTH_BOSS, below); see `spec/run.md#boss-floor-generation`.
 
 export const BROODMOTHER: SpeciesCreature = {
   id: 'broodmother',
@@ -385,7 +378,7 @@ export const BROODMOTHER: SpeciesCreature = {
 }
 
 /** The spiderling adds accompanying her fight -- real Spider-roster members, per
- * species-locked.md's "adds: spiderlings (Spider pool)"; both already share SPIDERS_SPECIES_ID. */
+ * `content/overgrowth.md#broodmother` "adds: spiderlings (Spider pool)"; both already share SPIDERS_SPECIES_ID. */
 export const BROODMOTHER_ADDS: readonly SpeciesCreature[] = [
   SPIDER_WEAVER,
   SPIDER_AMBUSHER,

@@ -29,8 +29,7 @@ Rarity only changes how often it spawns.
 
 ### Indirect damage
 
-A trait's hit marked *indirect* follows the indirect damage rule (`spec/combat.md` "Damage
-channels and the Additional"): only a fifth of the target's Defence applies, and it gets no chip
+A trait's hit marked *indirect* follows the indirect damage rule (`spec/combat.md#damage-channels-and-the-additional`): only a fifth of the target's Defence applies, and it gets no chip
 floor and no Additional.
 
 ## Statuses
@@ -71,7 +70,7 @@ design. Lasts up to **3** of its turns if it is never hit.
 
 ### Stun
 
-Skips its bearer's turn (`spec/statuses.md` "Stun is just a status"). No trait or spell in the
+Skips its bearer's turn (`spec/statuses.md#stun-is-just-a-status`). No trait or spell in the
 seed content applies it.
 
 ### Weaken
@@ -193,14 +192,14 @@ Wit · striker; floor 10. Unique and non-collectable, never in the spawn pool.
 - At the end of every round, she has a **40% chance** to Web the entire enemy party at once.
 
 Her authored adds are a Spider Weaver and a Spider Ambusher; three random Overgrowth creatures,
-never Spiders, fill her side (`content/enemy-behaviour.md` "Boss floors").
+never Spiders, fill her side (`content/enemy-behaviour.md#boss-floors`).
 
 ## Intro: Unicorn Lightbearer
 
 ### Unicorn Lightbearer
 
 Vitality · striker; the name is a placeholder. A unique, permanent party member that joins in the
-scripted intro (`spec/run.md` "Scripted intro"); its own species is stubbed and returns with a real roster in
+scripted intro (`spec/run.md#scripted-intro`); its own species is stubbed and returns with a real roster in
 a later biome.
 
 Whenever it attacks, it revives a random dead ally at **20% of that ally's baseline maximum HP**.
@@ -217,7 +216,7 @@ would deal about **50%**; one that also applies a status, about **30–40%**. A 
 its power coefficient through the normal damage formula (the target's Defence, affinity and every
 usual modifier), not a flat amount. An ally spell can target any living ally, the caster included.
 Every spell below, the core spells included, unlocks at biome 1 and stays rollable in every deeper
-biome (`spec/run.md` "Spells unlock cumulatively").
+biome (`spec/run.md#spells-unlock-cumulatively`).
 
 ### Thorn Lash
 

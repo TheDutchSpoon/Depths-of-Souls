@@ -1,6 +1,6 @@
 // Golden: a tick from a LIVING applier offers no `triggering-source`, so no retaliator answers it,
-// while `on-damage-taken` itself still fires (Phase 4.1-H2b2, CONVENTIONS "`triggering-source`
-// never resolves to the firing creature itself", ASSUMPTIONS 113, 146). Moving a tick's source to
+// while `on-damage-taken` itself still fires (Phase 4.1-H2b2, `spec/responses.md#triggering-source-is-never-the-firing-creature`,
+// ASSUMPTIONS 113, 146). Moving a tick's source to
 // the applier would otherwise open retaliation: Snapback (the real Snapjaw Jaws) would strike the
 // applier on every tick and the Wretch's Madness Touch would confuse it.
 //

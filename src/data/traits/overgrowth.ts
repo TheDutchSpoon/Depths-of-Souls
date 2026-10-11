@@ -67,7 +67,7 @@ export const SPIDER_BROODWARDEN_TRAIT: Trait = {
   ],
 }
 
-/** Swarmhive's Drone (enabler): species-locked.md calls it a "cheap body," but every creature
+/** Swarmhive's Drone (enabler): `content/overgrowth.md#swarmhive-drone` calls it a "cheap body," but every creature
  * needs its own real mechanic (no trait-less filler) -- a small on-death parting sting fits a
  * cheap, expendable swarm body without stepping on Striker/Queen's own count-scaling payoff.
  * Strikes a RANDOM living enemy, not necessarily its own killer. */
@@ -89,7 +89,7 @@ export const SWARMHIVE_DRONE_TRAIT: Trait = {
 }
 
 /** Swarmhive's Striker (payoff): "scales per hive-mate in the team" -- the Slice E2-DECIDED
- * shape for this exact species (CONVENTIONS' own Phase 4 addenda names Swarmhive Striker as
+ * shape for this exact species (`spec/effects.md#count-scaling` own Phase 4 addenda names Swarmhive Striker as
  * apply-stat-modifier's magnitudeSource consumer): fires once on-fight-start, freeze-at-
  * application, count = living-allies-of-species (INCLUDES self) at that moment -- never
  * re-reads live after. */
@@ -268,7 +268,7 @@ export const SNAPJAW_LURE_TRAIT: Trait = {
   ],
 }
 
-/** Snapjaws' Jaws (payoff): a retaliate at 60% of its Attack ("a big retaliate", species-locked.md).
+/** Snapjaws' Jaws (payoff): a retaliate at 60% of its Attack ("a big retaliate", `content/overgrowth.md#snapjaw-jaws`).
  * It was 30% in 4.1-H2c (ASSUMPTION 124: as indirect damage the 60% beat the Shieldbarer pair in
  * every floor-1 fight); 4.1-H2d put it back at 60% once Pollen Cloud no longer deals damage
  * (ASSUMPTION 151). */
@@ -310,7 +310,7 @@ export const SNAPJAW_IRONJAW_TRAIT: Trait = {
 }
 
 /** Lullpollen's Sleeper (enabler): a CHANCE (unlike Spiders' unconditional Web) to Sleep its
- * target on attack -- species-locked.md explicitly calls out "chance" for Sleeper, unlike
+ * target on attack -- `content/overgrowth.md#lullpollen-sleeper` explicitly calls out "chance" for Sleeper, unlike
  * Weaver. */
 export const LULLPOLLEN_SLEEPER_TRAIT: Trait = {
   id: 'lullpollen-sleeper-lulling-touch',

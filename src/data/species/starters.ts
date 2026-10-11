@@ -1,25 +1,25 @@
-// Phase 4 Slice F: the three spec starter creatures + the Unicorn (species-locked.md's "Starter
+// Phase 4 Slice F: the three spec starter creatures + the Unicorn (`spec/progression.md#starter-species-are-stubs` "Starter
 // species (stubbed -- rosters deferred)" section). Real, shipped content -- authored directly as
 // `SpeciesCreature`s (generation.ts's own static-content shape), so a future Slice G store can
 // materialize a starter through the EXACT same `materializeCreature` path any spawned enemy goes
-// through, per CONVENTIONS.
+// through, per `spec/creatures.md#materializecreature`.
 //
-// Composition only (CONVENTIONS "Data layer — carriers vs. composition"): the starter traits and
+// Composition only (`CONVENTIONS.md#composition-files-only-reference-carriers`): the starter traits and
 // Arcane Bolt are shared library carriers, defined in `../traits`/`../spells` and referenced here
 // by id/object, never redefined.
 //
-// ASSUMPTION (Slice F): each starter/Unicorn's own species is stubbed (species-locked.md: "for
+// ASSUMPTION (Slice F): each starter/Unicorn's own species is stubbed (`spec/progression.md#starter-species-are-stubs`: "for
 // now only the starter creature exists -- species sits below the >=3-creature minimum on
 // purpose"), so a placeholder `speciesId` string stands in below (never a real Species grouping,
 // never drawn from a biome spawn pool). `rarity` is likewise a required SpeciesCreature field
 // that is mechanically meaningless here (starters/the Unicorn are never rarity-weighted-drawn);
 // set to 'rare' as a flavor-only placeholder.
 //
-// ASSUMPTION (Slice F): exact base stats (10-30 per GAME_DESIGN) are parked balance, picked only
-// to satisfy each starter's qualitative "high X" description (species-locked.md/the spec docs) --
+// ASSUMPTION (Slice F): exact base stats (10-30 per `spec/creatures.md#core-stats`) are parked balance, picked only
+// to satisfy each starter's qualitative "high X" description (`spec/progression.md#starter-species-are-stubs`/the spec docs) --
 // not exercised by any locked design number.
 //
-// ASSUMPTION (Slice F): species-locked.md explicitly left the Brute/Shieldbarer starters'
+// ASSUMPTION (Slice F): `spec/progression.md#starter-species-are-stubs` explicitly left the Brute/Shieldbarer starters'
 // affinity unpinned ("affinities settle when their species are authored -- ideally distinct").
 // Resolved here via CLAUDE.md's own affinity->stat soft-mapping (Violence->Attack, Wit->
 // Intelligence, Endurance->Defence): Sorcerer starter = wit (already pinned), Brute starter =
@@ -38,14 +38,14 @@ import {
 
 // ---- Sorcerer starter ----
 // "Wit affinity, high Intelligence. Trait: grants one spell as a permanent extra gem + 50%
-// chance on-turn-end to cast a random equipped spell" (species-locked.md / sorcerer.md). Its
+// chance on-turn-end to cast a random equipped spell" (`specializations/sorcerer.md#starter-glyphmoth-seer` / sorcerer.md). Its
 // own signature trait (SORCERER_STARTER_TRAIT) and granted gem (ARCANE_BOLT) live in the
 // library -- see `../traits`/`../spells`.
 
 export const SORCERER_STARTER: SpeciesCreature = {
   id: 'sorcerer-starter',
   // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- the Sorcerer starter's real species
-  // (species-locked.md) is authored in a later biome; this stands in until then.
+  // (`spec/progression.md#starter-species-are-stubs`) is authored in a later biome; this stands in until then.
   name: 'Glyphmoth Seer',
   affinity: 'wit',
   baseStats: { health: 33, attack: 10, intelligence: 30, defence: 10, speed: 20 },
@@ -103,7 +103,7 @@ export const SHIELDBARER_STARTER_SPECIES_ID = 'shieldbarer-starter-species'
 
 // ---- The Unicorn ----
 // "Whenever this creature attacks, it resurrects a random dead ally at 20% of its baseline max
-// HP. Fires per attack hit." Unique, permanent intro-helper party member (species-locked.md);
+// HP. Fires per attack hit." Unique, permanent intro-helper party member (`content/overgrowth.md#unicorn-lightbearer`);
 // joins via the scripted-intro encounter, a Slice G/run-layer concern -- this slice only authors
 // the creature content itself. Its signature trait (UNICORN_TRAIT) lives in the library -- see
 // `../traits`.
