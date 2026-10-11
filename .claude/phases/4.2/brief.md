@@ -1,8 +1,8 @@
 # Phase 4.2 — Docs restructure: the context diet
 
 **Status: planned.** Docs only. Decided with the design owner on 2026-10-10 (ROADMAP "Phase 4.2").
-Golden policy for every slice: **byte-identical**. `src/` is untouched except in 4.2-G, and there
-only in comments.
+Golden policy for every slice: **byte-identical**. `src/` is untouched except in 4.2-G and 4.2-H,
+and there only in comments (plus 4.2-G's 10 test titles).
 
 ## Why
 
@@ -181,7 +181,8 @@ number lives and the Balance simulator go to `CONVENTIONS.md`; Unspecified magni
 ## Checks
 
 All checks are modes of one Node script (no new dependencies), run as `npm run docs:check --
-<mode>`, written in 4.2-A. The 4.2-only modes are removed in 4.2-G.
+<mode>`, written in 4.2-A. 4.2-G removes `move` and `line-proof`, and generalizes the
+inventory modes for condensing a file that goes over its budget (4.2-G brief).
 
 ### Line-proof (4.2-A)
 
@@ -233,8 +234,9 @@ copies.
 - **Citations, blocking:** every citation of the form `<path>.md#<anchor>` in `src/` and in the living docs resolves to
   exactly one heading. A citation of `CONVENTIONS "…"` or `GAME_DESIGN §…` outside `phases/` and
   `archive/` fails.
-- **Budgets, reported:** `docs:check` prints each spec file's size against its budget (its size
-  after condensing, plus 20%, rounded up to a whole KB). It never fails CI: only the design agent
+- **Budgets, reported:** `docs:check` prints the size of each spec file, `CLAUDE.md` and
+  `CONVENTIONS.md` against its budget in `workflow/budgets.md` (its size after condensing, plus
+  20%, rounded up to a whole KB). It never fails CI: only the design agent
   edits the spec, so a blocking check would fail an unrelated PR whose author can't fix it.
 - **Over budget:** if a review's doc sync takes a spec file over its budget, that same review
   resolves it (`workflow/pr-review.md`, added in 4.2-G): **condense** if the growth is accretion
@@ -296,8 +298,8 @@ comes from the old text's own tags (blank when it has none).
 
 ## Process for 4.2
 
-- **4.2-A and 4.2-G** run the normal loop (WORKFLOWS "The loop, per slice"). The coding agent writes
-  the living docs **by script**, under the 4.2 exception in `workflow/coding-rules.md`, exactly as
+- **4.2-A, 4.2-G and 4.2-H** run the normal loop (WORKFLOWS "The loop, per slice"). In A and G the
+  coding agent writes the living docs **by script**, under the 4.2 exception in `workflow/coding-rules.md`, exactly as
   the slice brief says and nothing else.
 - **4.2-B to F** swap the roles, because the spec is the design agent's and the coding agent knows
   the code:
@@ -341,6 +343,7 @@ a stale citation.
 | [4.2-E](E/brief.md) | `combat`, `scripting` condensed | condense |
 | [4.2-F](F/brief.md) | The top-level docs: `CONVENTIONS`, `VISION`, `OPEN_QUESTIONS`, `CLAUDE.md`, `ROADMAP`, `WORKFLOWS` | condense |
 | [4.2-G](G/brief.md) | Citations to anchors, budgets, CI, clean-up | normal |
+| [4.2-H](H/brief.md) | Code comments: provenance stripped, restated rules replaced by anchors, a blocking check | normal |
 
 Strictly in order. B comes first because once the content docs are the home of content, the spec
 slices can drop GAME_DESIGN's content copies as duplicates; it is also the pilot, settling the

@@ -49,7 +49,7 @@ describe('The Overgrowth: shape', () => {
     }
   })
 
-  it("base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat", () => {
+  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat', () => {
     for (const creature of ALL_CREATURES) {
       for (const [stat, value] of Object.entries(creature.baseStats)) {
         expect(value, creature.id + ' ' + stat).toBeGreaterThanOrEqual(
@@ -122,7 +122,7 @@ describe('Broodmother (floor-10 boss)', () => {
     }
   })
 
-  it('her adds are real Spider-roster members (species-locked.md: "adds: spiderlings")', () => {
+  it('her adds are real Spider-roster members (content/overgrowth.md#broodmother: "adds: spiderlings")', () => {
     for (const add of BROODMOTHER_ADDS) {
       expect(SPIDERS.creatures).toContain(add)
     }

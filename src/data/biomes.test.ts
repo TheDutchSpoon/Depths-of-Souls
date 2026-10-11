@@ -24,7 +24,7 @@ import { ROTCAP_HOLLOW_BIOME_ID } from './species/rotcap-hollow'
 // rest.
 
 describe('BIOMES (Slice A shape + Slice H1/H2/H3 real content)', () => {
-  it('ships exactly 10 slots (GAME_DESIGN §4 decade cadence)', () => {
+  it('ships exactly 10 slots (spec/run.md#biomes decade cadence)', () => {
     expect(BIOMES).toHaveLength(10)
   })
 

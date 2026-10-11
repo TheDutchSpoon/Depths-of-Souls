@@ -15,12 +15,11 @@ Read this when changing the store or the state the UI reads.
   `chosenSpec`, `perkSpend`, `bossesCleared`, `currencies`, and the run's RNG position (`runSeed`,
   `runCounter`) and `nextInstanceOrdinal`.
 - It **calls** the generator and never owns the deterministic derivation of a floor's contents
-  (`spec/run.md` "Generation is a pure seeded module").
+  (`spec/run.md#generation-is-a-pure-seeded-module`).
 
 ### Collection shape
 
-- `collection: Map<InstanceId, Instance>`, keyed by opaque instance ids (`spec/creatures.md`
-  "Instance"), not buckets keyed by static creature id.
+- `collection: Map<InstanceId, Instance>`, keyed by opaque instance ids (`spec/creatures.md#instance`), not buckets keyed by static creature id.
 
 ### newGame
 
@@ -36,7 +35,7 @@ Read this when changing the store or the state the UI reads.
 - `descend` returns `{ ok: true, outcome } | { ok: false, reason }`, with reasons `no-spec`,
   `empty-party`, `floor-out-of-reach` and `beyond-content-frontier`. `pinBiome` returns `{ ok:
   true } | { ok: false, reason }`, with reasons `floor-out-of-range`, `unknown-biome` and
-  `biome-has-no-content` (`spec/run.md` "Content frontier and pins"). `setPerkLevel` returns `{ ok:
+  `biome-has-no-content` (`spec/run.md#content-frontier-and-pins`). `setPerkLevel` returns `{ ok:
   false, reason }` with `no-spec`, `perk-not-in-spec`, `invalid-level` (not a whole number in
   `0..maxLevel`) or `over-budget` (total spend over `bossesCleared × 100`). `summon` and
   `setPartySlot` follow the same rule.
@@ -47,7 +46,7 @@ Read this when changing the store or the state the UI reads.
   `setPerkLevel`, `refundAllPerks`, `summon(creatureId)` and `setPartySlot(slot, instanceId |
   null)`, plus the `can…` queries.
 - `setPerkLevel(perkId, level)` sets an absolute level, so buying and refunding are one call;
-  `refundAllPerks()` clears the whole spend (`spec/progression.md` "Specializations are data").
+  `refundAllPerks()` clears the whole spend (`spec/progression.md#specializations-are-data`).
 - `setPartySlot` swaps: placing an instance on an occupied slot sends the occupant to the placed
   instance's old place (its slot if it was in the party, the bench if it wasn't), so the party can
   be freely adjusted and reordered.

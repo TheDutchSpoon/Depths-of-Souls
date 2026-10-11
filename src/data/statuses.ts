@@ -14,11 +14,11 @@ import type { StatusDef } from '../engine/effect-types'
 // 4.1-H2d grill (ASSUMPTION 152): Poison 40% of Attack, Burn 35% of Intelligence, Spore 35% of
 // Speed, Regen 10% of Health.
 
-/** DoT: each bearer turn (on-turn-end) the bearer takes the instance's potency -- 20% of the
- * APPLIER's effective Attack when applied (decided at the 4.1-H2d grill; 20% before) -- as INDIRECT damage from the applier's
- * snapshot (affinity of the applier against the bearer, the bearer's Defence at a fifth, the
- * bearer's taken factors; no dealt pool). No TriggerFired per tick -- its StatusApplied already
- * announced it. */
+/** DoT: each bearer turn (on-turn-end) the bearer takes the instance's potency (a percent of the
+ * APPLIER's effective Attack, below) as INDIRECT damage from the applier's snapshot: the
+ * applier's affinity against the bearer, a fifth of the bearer's Defence, the bearer's taken
+ * factors, no dealt pool (`spec/statuses.md#dot-and-regen-belong-to-their-applier`). No
+ * TriggerFired per tick: its StatusApplied already announced it. */
 export const POISON: StatusDef = {
   statusId: 'poison',
   potency: { ofStat: 'attack', percent: 40 },
@@ -102,7 +102,7 @@ export const STUN: StatusDef = {
 }
 
 /** Damage-modifier: -20% damage DEALT, additive into (1 + Σ dealtMods). One instance
- * (GAME_DESIGN: "one instance + duration"). */
+ * (`spec/statuses.md#no-stacking`: "one instance + duration"). */
 export const WEAKEN: StatusDef = {
   statusId: 'weaken',
   effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: -0.2 }],
@@ -122,15 +122,13 @@ export const VULNERABILITY: StatusDef = {
   defaultDuration: 3,
 }
 
-/** Phase 4 Slice H1 (The Overgrowth, Spiders): a Webbed creature acts LAST until it breaks free
- * -- a `turn-order` effect at `position: 'last'` (Blindclaws' H2 act-first grant-act-first status
- * will be the SAME primitive at the opposite pole -- "same tool, opposite pole" per
- * species-locked.md). Deliberately light per the design doc: a 10%/turn break-free roll
- * (`breakChancePercent`, Slice E2's already-built mechanism -- rolled at every creature's
- * turn-end cleanup against every Web-bearer, ~72% free within one round) with a 3-turn duration as a
- * bad-luck backstop (`defaultDuration`) -- the reward lives in Spiders' Ambusher exploit
- * (+% damage to Webbed), not in the status itself lasting long. Re-applying Web to an
- * already-Webbed target just refreshes it. */
+/** A Webbed creature acts LAST until it breaks free: a `turn-order` effect at
+ * `position: 'last'`. GRANT_ACT_FIRST is the same primitive at the opposite pole
+ * (`content/glimmerdark.md#grant-act-first`). Deliberately light: a 10% break-free roll
+ * (`breakChancePercent`, rolled at every creature's turn-end cleanup against every Web-bearer,
+ * ~72% free within one round) with a 3-turn duration as a bad-luck backstop. The reward lives in
+ * the Spiders' Ambusher exploit (+% damage to Webbed), not in the status lasting long. Re-applying
+ * Web refreshes it. */
 export const WEB: StatusDef = {
   statusId: 'web',
   effects: [{ category: 'turn-order', position: 'last', breakChancePercent: 10 }],
@@ -167,7 +165,7 @@ export const SLEEP: StatusDef = {
 
 /** Phase 4 Slice H2 (Glimmerdark, Blindclaws): the act-FIRST pole of the same `turn-order`
  * primitive Web (act-last, H1) already proved -- "same tool, opposite pole"
- * (species-locked.md). No `breakChancePercent` -- unlike Web, nothing breaks this early; it just
+ * (`content/glimmerdark.md#grant-act-first`). No `breakChancePercent` -- unlike Web, nothing breaks this early; it just
  * runs its duration. Re-applying just refreshes it. */
 export const GRANT_ACT_FIRST: StatusDef = {
   statusId: 'grant-act-first',
@@ -186,7 +184,7 @@ export const GRANT_ACT_FIRST: StatusDef = {
  * contagion spreads to one living, still-healthy member of the BEARER'S OWN side -- host-relative
  * (ratified reading of "spreads to a living, non-Spored enemy": a fungal contagion spreading
  * through the population it already infected, matching the mood "colonies, spores, decay ...
- * spread", GAME_DESIGN §4). No existing `ResponseTarget` could express "exclude a status" for
+ * spread", `spec/run.md#biomes`). No existing `ResponseTarget` could express "exclude a status" for
  * this pick, so `random-ally-without-status` (effect-types.ts) is a genuinely new
  * `ResponseTarget` variant (PR #64 review: ASSUMPTION 30's original "no new engine primitive"
  * framing did not hold -- see the Slice H3 phase record). It resolves relative to `self` (the
@@ -229,7 +227,7 @@ export const SPORE: StatusDef = {
 
 /** Phase 4 Slice H3 (Rotcap Hollow, Hollowkin): a `friendly-fire` effect (built in Slice C,
  * given its first real producer/consumer here) -- a 50% roll, consulted once per the bearer's
- * harmful offensive action (species-locked.md's own "3-turn default ... 50% chance it strikes
+ * harmful offensive action (`content/rotcap-hollow.md#confusion` own "3-turn default ... 50% chance it strikes
  * its own side"), that redirects the whole action to the bearer's own living side instead. */
 export const CONFUSION: StatusDef = {
   statusId: 'confusion',

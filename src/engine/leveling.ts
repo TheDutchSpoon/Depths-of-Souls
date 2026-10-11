@@ -1,5 +1,5 @@
 // Phase 4 Slice A; XP curve reworked Phase 4.1-A (A7, ASSUMPTION 5) -- creature leveling. Pure,
-// no RNG. GAME_DESIGN §5 / CONVENTIONS "Stat growth is linear and derived from base stats."
+// no RNG. `spec/creatures.md#levels-and-xp`
 
 import type { CreatureStats } from './types'
 import type { BalanceConfig } from './balance-types'
@@ -23,7 +23,7 @@ export function scaleStatsToLevel(base: CreatureStats, level: number): CreatureS
 /**
  * Phase 4.1-A (A7, ASSUMPTION 5): parameters, not a function -- xpCurveCoefficient/
  * xpCurveExponent live in BalanceConfig so retuning happens in data/balance.ts. Default
- * `20 * level^2` (quadratic, GAME_DESIGN §5): XP per floor clear grows with floor^2 (kills ∝
+ * `20 * level^2` (quadratic, `spec/creatures.md#levels-and-xp`): XP per floor clear grows with floor^2 (kills ∝
  * floor at victim levels ∝ floor), so a quadratic curve keeps party level ≈ floor at every
  * depth. Replaces Phase 4's linear `100 * level` placeholder.
  */

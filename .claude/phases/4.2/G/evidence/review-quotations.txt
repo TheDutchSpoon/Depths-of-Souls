@@ -1,0 +1,50 @@
+# Quotations beside an anchor that the anchor's section doesn't contain (4.2-G PR review, round 1)
+#
+# A regex scan of src/ on the branch at e53ce62: every `<path>.md#<anchor>` followed (within a few
+# words, across one comment wrap) by a "quoted" string, where the quote's first 40 characters,
+# normalised (markup stripped, lowercased, whitespace collapsed), don't occur in the anchor's section
+# (its heading through its sub-headings). Approximate: a quote that spans a comment wrap is cut at
+# the wrap, and a quote the regex doesn't reach is missed. 4.2-H re-derives the list with its
+# comment scanner. 40 rows, one of them a test title (overgrowth.test.ts:125).
+#
+# file:line: anchor "quote, as far as the scan read it"
+src/data/species/glimmerdark.ts:13: content/glimmerdark.md#affinity-spread "Coverage"
+src/data/species/glimmerdark.ts:343: content/glimmerdark.md#leech-sovereign "Fast steal-race ... Every hit steals a stat (permanent -you/+it, same "
+src/data/species/overgrowth.test.ts:125: content/overgrowth.md#broodmother "adds: spiderlings"
+src/data/species/overgrowth.ts:19: content/overgrowth.md#reading-this-biome "Coverage"
+src/data/species/overgrowth.ts:381: content/overgrowth.md#broodmother "adds: spiderlings (Spider pool)"
+src/data/species/rotcap-hollow.ts:346: content/rotcap-hollow.md#rot-sovereign "Attrition-management (finale) ... Grows via count-scaling off deaths ("
+src/data/species/starters.ts:1: spec/progression.md#starter-species-are-stubs "Starter
+src/data/species/starters.ts:11: spec/progression.md#starter-species-are-stubs "for
+src/data/spells/glimmerdark.ts:11: spec/run.md#the-onboarding-ramp "a spell may apply any status, including
+src/data/spells/glimmerdark.ts:41: spec/run.md#the-onboarding-ramp "a spell may apply any status, including another species' signature
+src/data/spells/rotcap-hollow.ts:10: spec/run.md#the-onboarding-ramp "a spell may
+src/data/statuses.ts:105: spec/statuses.md#no-stacking "one instance + duration"
+src/data/statuses.ts:230: content/rotcap-hollow.md#confusion "3-turn default ... 50% chance it strikes
+src/data/traits/glimmerdark.ts:248: content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites "Drainers (on-attack -> -stat enemy + same +stat self, both
+src/data/traits/glimmerdark.ts:426: content/glimmerdark.md#shellback-brawler "attacker uses stat-remap
+src/data/traits/glimmerdark.ts:458: content/glimmerdark.md#leech-sovereign "Every hit steals a stat (permanent -you/+it, same as Sparkeaters); you"
+src/data/traits/overgrowth.ts:70: content/overgrowth.md#swarmhive-drone "cheap body,"
+src/data/traits/rotcap-hollow.ts:12: content/rotcap-hollow.md#myconet-endurancewit-death-network "heal/buff scaling off dead-ally count"
+src/data/traits/rotcap-hollow.ts:214: content/rotcap-hollow.md#necromoss-witvitality-reclaim "heal/buff scaling off dead-ally count"
+src/data/traits/rotcap-hollow.ts:344: content/rotcap-hollow.md#sporch-violencewit-strong-non-spreading-burn "strong non-spreading Burn"
+src/data/traits/rotcap-hollow.ts:400: content/rotcap-hollow.md#rot-sovereign "Attrition-management (finale) ... Grows via count-scaling off deaths ("
+src/data/traits/starters.ts:56: specializations/shieldbarer.md#starter-stonehorn-warden "ramping team-Defence
+src/engine/__golden__/golden-broodmother.fixture.ts:1: content/overgrowth.md#broodmother "Count-scales off
+src/engine/__golden__/golden-defend-count.fixture.ts:14: spec/effects.md#taken-reduction-accumulation "reductions trend toward
+src/engine/__golden__/golden-dot.fixture.ts:15: spec/combat.md#fight-setup "currentHp inits to effective max
+src/engine/__golden__/golden-hollowkin-wretch.fixture.ts:1: content/rotcap-hollow.md#hollowkin-wretch "Puppet"
+src/engine/__golden__/golden-necromoss-reclaim.fixture.ts:1: content/rotcap-hollow.md#necromoss-wisp "Reclaim"
+src/engine/__golden__/golden-rot-sovereign.fixture.ts:1: content/rotcap-hollow.md#rot-sovereign "Attrition-
+src/engine/__golden__/golden-spore-spread-fizzle.fixture.ts:2: content/rotcap-hollow.md#spore "fizzles if none [qualify]"
+src/engine/effect-types.ts:781: spec/effects.md#splashing-and-annihilate "option a"
+src/engine/scripting-types.ts:48: spec/scripting.md#conditions "affinity advantage vs a target"
+src/engine/support-spells.test.ts:73: spec/combat.md#provoke "Provoke applies only to enemy-targeting offensive actions; ally-target"
+src/engine/targeting.ts:107: content/rotcap-hollow.md#confusion "Confusion consumes combat RNG"
+src/engine/types.ts:47: spec/combat.md#targeting-override "Provoke applies only to enemy-targeting offensive actions;
+src/state/integration.test.ts:182: content/overgrowth.md#unicorn-lightbearer "whenever this creature attacks, it
+src/state/integration.test.ts:397: spec/run.md#fights-per-floor "per-fight loss rate compounds"
+src/state/rewards.ts:60: spec/run.md#rewards "the engine never sees a
+src/state/rewards.ts:103: spec/run.md#currencies "global depth-scaled
+src/state/rewards.ts:123: spec/progression.md#perk-points "100 points per boss... perk points are NOT dropped -- derived, never s"
+src/state/store.ts:786: spec/run.md#rewards "never held pending fight outcome"

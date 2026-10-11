@@ -1,4 +1,4 @@
-// Phase 4.1-E (A2): the loop-safety lint for `perform-action` grants (CONVENTIONS "perform-action").
+// Phase 4.1-E (A2): the loop-safety lint for `perform-action` grants (`spec/responses.md#perform-action`).
 // Every `perform-action` trigger in every registry -- traits, specialization perks (at every level)
 // and status triggers -- must carry a REAL guard: a `chancePercent` below 100, or a `condition`
 // other than `always`. The depth bound is what guarantees termination; this is a lint against

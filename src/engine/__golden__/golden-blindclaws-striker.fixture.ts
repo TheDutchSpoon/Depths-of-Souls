@@ -1,4 +1,4 @@
-// Golden: Glimmerdark's Blindclaws signature combo (species-locked.md) -- Setter grants the
+// Golden: Glimmerdark's Blindclaws signature combo (`content/glimmerdark.md#blindclaws-instinct-ambush-via-turn-order`) -- Setter grants the
 // team's hardest hitter the initiative (`grant-act-first`) -> Striker's real, shipped
 // `conditional-damage-bonus` on `acted-before-target` (PR #60 review, C1/E1 -- superseding the
 // initial submission's `ambush-strike` script, which wrongly put a creature's signature mechanic

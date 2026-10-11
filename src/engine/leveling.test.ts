@@ -9,7 +9,7 @@ describe('scaleStatsToLevel', () => {
     expect(scaleStatsToLevel(base, 1)).toEqual(base)
   })
 
-  // Hand-derived, GAME_DESIGN §5's own worked example: base 20, +25% of base per level ->
+  // Hand-derived, `spec/creatures.md#levels-and-xp`'s own worked example: base 20, +25% of base per level ->
   // +5/level -> level 10 = base * (1 + 0.25*9) = 20 * 3.25 = 65.
   it('matches the documented base-20 worked example at level 10', () => {
     const base = { health: 20, attack: 20, intelligence: 20, defence: 20, speed: 20 }

@@ -1,0 +1,13 @@
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 6377f39..5316346 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -29,6 +29,8 @@ jobs:
+       - run: npm ci
+       - run: npm run lint
+       - run: npm run format:check
++      - run: npm run docs:check -- citations
++      - run: npm run docs:check -- budgets
+       - run: npm run test
+ 
+   build:

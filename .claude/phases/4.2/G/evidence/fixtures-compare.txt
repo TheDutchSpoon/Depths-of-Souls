@@ -1,0 +1,40 @@
+# Expected values compared by importing: each changed fixture module is imported from a git archive of main and from this branch, and its exports deep-compared (functions by comment-free source). Scratch Vitest config; not committed.
+ ✓ src/engine/__corpus__/corpus-digest.fixture.ts
+ ✓ src/engine/__corpus__/corpus.ts
+ ✓ src/engine/__fixtures__/biomes.ts
+ ✓ src/engine/__golden__/golden-6v6-scripted.fixture.ts
+ ✓ src/engine/__golden__/golden-action-observed.fixture.ts
+ ✓ src/engine/__golden__/golden-blindclaws-striker.fixture.ts
+ ✓ src/engine/__golden__/golden-broodmother.fixture.ts
+ ✓ src/engine/__golden__/golden-brute-starter.fixture.ts
+ ✓ src/engine/__golden__/golden-defend-count-additive-cap.fixture.ts
+ ✓ src/engine/__golden__/golden-defend-count.fixture.ts
+ ✓ src/engine/__golden__/golden-dot.fixture.ts
+ ✓ src/engine/__golden__/golden-f2-stun-one-turn.fixture.ts
+ ✓ src/engine/__golden__/golden-f2-weaken-three-turns.fixture.ts
+ ✓ src/engine/__golden__/golden-g1-leech-sovereign-pacified.fixture.ts
+ ✓ src/engine/__golden__/golden-gloomjaw-ravager.fixture.ts
+ ✓ src/engine/__golden__/golden-gloomjaw-stalker.fixture.ts
+ ✓ src/engine/__golden__/golden-h2b1-observed-lethal.fixture.ts
+ ✓ src/engine/__golden__/golden-h2b2-tick-no-retaliation.fixture.ts
+ ✓ src/engine/__golden__/golden-heal-scaling-count.fixture.ts
+ ✓ src/engine/__golden__/golden-hollowkin-wretch.fixture.ts
+ ✓ src/engine/__golden__/golden-leech-sovereign.fixture.ts
+ ✓ src/engine/__golden__/golden-necromoss-reclaim.fixture.ts
+ ✓ src/engine/__golden__/golden-overgrowth-web-exploit.fixture.ts
+ ✓ src/engine/__golden__/golden-resonant-harmonize.fixture.ts
+ ✓ src/engine/__golden__/golden-revive.fixture.ts
+ ✓ src/engine/__golden__/golden-rot-sovereign.fixture.ts
+ ✓ src/engine/__golden__/golden-shieldbarer-starter.fixture.ts
+ ✓ src/engine/__golden__/golden-spore-spread-fizzle.fixture.ts
+ ✓ src/engine/__golden__/golden-spore-spread.fixture.ts
+ ✓ src/engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts
+ Test Files  1 passed (1)
+      Tests  30 passed (30)
+
+# Round 2: the four golden fixtures this round touches, imported from main and from the branch (same compare, fixtures list narrowed to these four)
+ ✓ src/engine/__golden__/golden-dot.fixture.ts
+ ✓ src/engine/__golden__/golden-spore-spread.fixture.ts
+ ✓ src/engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts
+ ✓ src/engine/__golden__/golden-shieldbarer-starter.fixture.ts
+ Tests  4 passed (4)

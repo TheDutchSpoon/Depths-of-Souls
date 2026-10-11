@@ -1,0 +1,33 @@
+$ npm run docs:check -- budgets   (this branch)
+file                 size     budget  used  status
+CLAUDE.md            5.2 KB   7 KB    74%   ok
+CONVENTIONS.md       24.1 KB  29 KB   83%   ok
+spec/combat.md       35.7 KB  43 KB   83%   ok
+spec/creatures.md    18.1 KB  22 KB   82%   ok
+spec/effects.md      32.0 KB  39 KB   82%   ok
+spec/progression.md  4.6 KB   6 KB    77%   ok
+spec/responses.md    12.1 KB  15 KB   81%   ok
+spec/run.md          17.6 KB  22 KB   80%   ok
+spec/saves.md        3.9 KB   5 KB    78%   ok
+spec/scripting.md    11.6 KB  14 KB   83%   ok
+spec/statuses.md     17.1 KB  21 KB   82%   ok
+spec/store.md        2.8 KB   4 KB    70%   ok
+budgets: 12 files, 0 over budget
+exit code: 0
+
+$ node scripts/docs-check.ts budgets --root <scratch copy with 12 KB appended to spec/store.md (budget 4 KB)>
+file                 size     budget  used  status
+CLAUDE.md            5.2 KB   7 KB    74%   ok
+CONVENTIONS.md       24.1 KB  29 KB   83%   ok
+spec/combat.md       35.7 KB  43 KB   83%   ok
+spec/creatures.md    18.1 KB  22 KB   82%   ok
+spec/effects.md      32.0 KB  39 KB   82%   ok
+spec/progression.md  4.6 KB   6 KB    77%   ok
+spec/responses.md    12.1 KB  15 KB   81%   ok
+spec/run.md          17.6 KB  22 KB   80%   ok
+spec/saves.md        3.9 KB   5 KB    78%   ok
+spec/scripting.md    11.6 KB  14 KB   83%   ok
+spec/statuses.md     17.1 KB  21 KB   82%   ok
+spec/store.md        14.8 KB  4 KB    370%  OVER
+budgets: 12 files, 1 over budget
+exit code: 0

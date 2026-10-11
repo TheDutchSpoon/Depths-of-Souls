@@ -1,4 +1,4 @@
-// Phase 4 Slice G: src/state's first file (CONVENTIONS "Generation & the run layer" -- "the
+// Phase 4 Slice G: src/state's first file (`spec/run.md#generation-is-a-pure-seeded-module` -- "the
 // Zustand store owns navigation + ownership only... and CALLS the generator. It never owns the
 // deterministic derivation of a floor's contents."). In-memory only -- no persistence middleware,
 // no idb/Dexie (Phase 5, wholesale, per the brief's scope boundary).
@@ -158,7 +158,7 @@ export interface GameState {
 
 export interface FloorOutcome {
   readonly floor: number
-  /** One result per fight actually resolved -- stops at the first non-win (CONVENTIONS: "the
+  /** One result per fight actually resolved -- stops at the first non-win (`spec/combat.md#resolution--timing`: "the
    * fight ends the instant a side has no living creatures"; a floor's remaining fights are
    * simply never attempted after a wipe). */
   readonly fightResults: readonly FightResult[]
@@ -178,7 +178,7 @@ export interface FloorOutcome {
   readonly bossDefeated: string | null
 }
 
-/** Phase 4.1-A (G5, S5): reasons `descend` can refuse -- see CONVENTIONS "State & persistence".
+/** Phase 4.1-A (G5, S5): reasons `descend` can refuse -- see `spec/store.md#how-store-actions-fail`.
  * `beyond-content-frontier` wins over `floor-out-of-reach` when both apply (ASSUMPTION 23). */
 export type DescendFailureReason =
   'no-spec' | 'empty-party' | 'floor-out-of-reach' | 'beyond-content-frontier'
@@ -213,7 +213,7 @@ export type SetPartySlotResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly reason: SetPartySlotFailureReason }
 
-/** Phase 4.1-G2 (G4): in this order, per CONVENTIONS "Specializations". */
+/** Phase 4.1-G2 (G4): in this order, per `spec/progression.md#specializations`. */
 export type SetPerkLevelFailureReason =
   'no-spec' | 'perk-not-in-spec' | 'invalid-level' | 'over-budget'
 
@@ -251,11 +251,11 @@ export interface GameActions {
    * spec id (ASSUMPTION 9: the UI only offers real specs, so this is an impossible state, not a
    * player-reachable failure). */
   setSpec(specId: string): void
-  /** Idempotent: a boss already in bossesCleared is a no-op (first-clear-only per GAME_DESIGN
+  /** Idempotent: a boss already in bossesCleared is a no-op (first-clear-only per `spec/progression.md#perk-points`
    * §9). Own addition (not named by the brief) -- needed for bossesCleared to ever become
    * non-empty; perk points are `bossesCleared.size * 100`, derived, never stored separately. */
   recordBossKill(bossId: string): void
-  /** Own addition (not named by the brief, but directly described by CONVENTIONS' Biome Atlas
+  /** Own addition (not named by the brief, but directly described by `spec/run.md#facilities` Biome Atlas
    * facility). No facility-unlock gating here (Phase 8/facilities scope). Player-reachable
    * failure per G5/S5: returns `{ ok: false, reason }` instead of throwing. Reasons:
    * `floor-out-of-range` (floor < 1), `unknown-biome`, `biome-has-no-content` (review fix F1 --
@@ -456,7 +456,7 @@ function grantCreatureIfUnowned(
 }
 
 /** Idempotent add -- a boss already in `bossesCleared` returns the SAME Set reference (a no-op,
- * first-clear-only per GAME_DESIGN §9). Shared by `recordBossKill` and `descend()`'s own
+ * first-clear-only per `spec/progression.md#perk-points`). Shared by `recordBossKill` and `descend()`'s own
  * boss-floor-win path (Phase 4 Slice I, PR #65 review) so the two never drift. */
 function withBossCleared(
   bossesCleared: ReadonlySet<string>,
@@ -738,8 +738,8 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         throw new Error(`descend: no biome data for resolved biome id ${String(biomeId)}`)
       }
       // Phase 4 interstitial slice (cumulative spell unlock): the biome's 1-based number is its
-      // position in the caller's own ordered `deps.biomes` list (CONVENTIONS'
-      // "biomeForFloor's fixed 1-100 sequence is positional" -- generation.ts stays ignorant of
+      // position in the caller's own ordered `deps.biomes` list (`spec/run.md#biomeforfloor`:
+      // the 1-100 sequence is positional) -- generation.ts stays ignorant of
       // array position itself, it just receives the number).
       const biomeIndex = deps.biomes.findIndex((b) => b.id === biomeId) + 1
 
@@ -761,8 +761,8 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       const allEvents: CombatEvent[] = []
       let cleared = true
       // Phase 4 Slice I (PR #65 review, boss floors): set iff this floor's (single) fight is a
-      // boss encounter AND it's won -- CONVENTIONS "winning a boss fight adds its bossId to
-      // bossesCleared."
+      // boss encounter AND it's won -- `spec/run.md#rewards-are-a-run-layer-consumer-of-the-event-log`: winning a boss fight adds its
+      // bossId to bossesCleared.
       let bossDefeated: string | null = null
 
       for (let i = 0; i < fights.length; i++) {
@@ -783,14 +783,14 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         fightResults.push(finalState.result as FightResult)
 
         // Rewards bank per kill-event, immediately, regardless of how this fight (or the floor)
-        // ultimately ends (CONVENTIONS: "never held pending fight outcome").
+        // ultimately ends (`spec/run.md#rewards`: "never held pending fight outcome").
         for (const event of events) {
           if (event.type !== 'CreatureDied') continue
           const deadEnemy = fight.enemyParty.find((c) => c.id === event.creatureId)
           if (!deadEnemy) continue // a player-side death, not a reward source
 
           // A boss kill banks XP/currency through the same per-kill path but NO soul% (bosses
-          // are not collectable, CONVENTIONS' Rewards clause) -- and isn't looked up via
+          // are not collectable, `spec/run.md#rewards` Rewards clause) -- and isn't looked up via
           // findStaticCreature at all: she isn't spawn-pool-drawn, so there's no static entry to
           // find (an add's death still falls through to the ordinary path below and DOES get
           // soul%, per the same clause).

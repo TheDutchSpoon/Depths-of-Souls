@@ -3,7 +3,7 @@
 // per action INSTANCE. CASTER carries an Echo-shaped extra-cast-instance passive (reusing the
 // already-built action-instance-list mechanism, Slice B) so its Cast resolves as TWO instances;
 // RESONANT (an ally observer, not the actor) reacts to EACH instance independently, proving
-// "an ally's Echo/Flurry multi-cast is observed once per instance" (CONVENTIONS).
+// "an ally's Echo/Flurry multi-cast is observed once per instance" (`spec/effects.md#action-reactions-actor-self-hooks-or-observation`).
 //
 // Hand-derived (independent `node -e` calculator). All vitality -> neutral affinity x1.0.
 // CASTER (speed 20) acts; RESONANT/ENEMY never act this turn (RESONANT has no script needed --

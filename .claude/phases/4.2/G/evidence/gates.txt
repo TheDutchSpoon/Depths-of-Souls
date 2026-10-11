@@ -1,0 +1,89 @@
+# Gates, final run (Node 24.19.0, TypeScript 6.0.3; lockfile ~6.0.2)
+
+== test
+
+
+ Test Files  207 passed (207)
+      Tests  1476 passed | 1 skipped (1477)
+   Start at  13:47:27
+   Duration  18.65s (tests 64%, import 19%, transform 14%, worker 2%, environment 1%)
+
+== lint
+> depths-of-souls@0.0.0 lint
+> eslint .
+
+== format:check
+Checking formatting...
+All matched files use Prettier code style!
+== build
+dist/assets/index-CPteU_Xa.js   295.23 kB │ gzip: 86.22 kB
+
+[32m✓ built in 97ms[39m
+== tsc -b
+exit 0
+== citations
+citations: PASS, 532 citations in 436 files
+== budgets
+spec/store.md        2.8 KB   4 KB    70%   ok
+budgets: 12 files, 0 over budget
+
+# Round 2 (after review-r1 fixes; HEAD 1068845 had 542 citations, +3 from the starters.ts comment's extra anchors)
+=== npm run test
+
+ Test Files  207 passed (207)
+      Tests  1477 passed | 1 skipped (1478)
+   Start at  15:12:54
+   Duration  18.82s (tests 62%, import 19%, transform 15%, worker 2%, environment 2%)
+
+exit 0
+=== npm run lint
+
+> depths-of-souls@0.0.0 lint
+> eslint .
+
+exit 0
+=== npm run format:check
+
+> depths-of-souls@0.0.0 format:check
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+exit 0
+=== npm run build
+> tsc -b && vite build
+
+[36mvite v8.3.2 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 48 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.51 kB │ gzip:  0.31 kB
+dist/assets/index-CpQxvG1H.css    0.32 kB │ gzip:  0.20 kB
+dist/assets/index-CPteU_Xa.js   295.23 kB │ gzip: 86.22 kB
+
+[32m✓ built in 97ms[39m
+exit 0
+=== npx tsc -b
+exit 0
+=== npm run docs:check -- citations
+
+> depths-of-souls@0.0.0 docs:check
+> node scripts/docs-check.ts citations
+
+citations: PASS, 545 citations in 436 files
+exit 0
+=== npm run docs:check -- budgets
+CONVENTIONS.md       24.3 KB  29 KB   84%   ok
+spec/combat.md       35.7 KB  43 KB   83%   ok
+spec/creatures.md    18.1 KB  22 KB   82%   ok
+spec/effects.md      32.0 KB  39 KB   82%   ok
+spec/progression.md  4.6 KB   6 KB    77%   ok
+spec/responses.md    12.1 KB  15 KB   81%   ok
+spec/run.md          17.6 KB  22 KB   80%   ok
+spec/saves.md        3.9 KB   5 KB    78%   ok
+spec/scripting.md    11.6 KB  14 KB   83%   ok
+spec/statuses.md     17.1 KB  21 KB   82%   ok
+spec/store.md        2.8 KB   4 KB    70%   ok
+budgets: 12 files, 0 over budget
+exit 0

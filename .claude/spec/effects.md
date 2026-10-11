@@ -11,8 +11,7 @@ status lifecycle in `spec/statuses.md`.
 ### One effect framework
 
 - **Traits, statuses and perks are instances of one data-driven, hook-based effect framework**, as
-  Phase 8's gem augments and equipment infusions will be (`spec/creatures.md` "Gems as items",
-  "Equipment"). They differ only in how they attach to a creature and which hooks they use, never
+  Phase 8's gem augments and equipment infusions will be (`spec/creatures.md#gems-as-items`, `spec/creatures.md#equipment`). They differ only in how they attach to a creature and which hooks they use, never
   in their machinery: never build them as separate subsystems.
 - New content is a data entry. Genuinely novel behaviour is at most one new reusable primitive,
   then reused; never special-case one trait or status in the resolver.
@@ -23,10 +22,9 @@ status lifecycle in `spec/statuses.md`.
   "ignores 30% of Defence", "acts last") or a **trigger** (a hook, an optional condition or chance,
   and a response).
 - A **carrier** attaches a list of effects to a creature: a **trait** or a **perk**, permanent for
-  the fight, or a **status**, a timed container of the same kinds of effects (`spec/statuses.md` "A
-  status is a timed effect").
+  the fight, or a **status**, a timed container of the same kinds of effects (`spec/statuses.md#a-status-is-a-timed-effect`).
 - So any timed version of a trait's effect is data, not engine work. One deliberate limit: a status
-  may not carry a stat-modifier ("No temporary stat-modifier").
+  may not carry a stat-modifier (`spec/effects.md#no-temporary-stat-modifier`).
 
 ### Category decides player-facing treatment
 
@@ -41,7 +39,7 @@ status lifecycle in `spec/statuses.md`.
    action"). It reads the source stat's effective value; Attack-slot stat-modifiers don't transfer
    to it (a Speed-attacker wants +Speed, not +Attack).
 3. **`damage-modifier`** folds into the damage formula's pools: the attacker's additive dealt pool
-   or the defender's multiplicative taken pool (`spec/combat.md` "Damage formula"). These **are**
+   or the defender's multiplicative taken pool (`spec/combat.md#damage-formula`). These **are**
    shown as timed statuses: Weaken (−% damage dealt) and Vulnerability (+% damage taken). A
    "−Attack" stat change and a "−damage dealt" Weaken are different categories with different
    treatment and never double-count.
@@ -61,7 +59,7 @@ status lifecycle in `spec/statuses.md`.
 ### Traits
 
 - A trait is a named set of effects. Each creature has one innate trait, fixed in its data
-  (`spec/creatures.md` "Trait and gem slots").
+  (`spec/creatures.md#trait-and-gem-slots`).
 - **Passive traits** are always-on or conditionally-on modifiers ("+25% Attack at full HP").
   **Triggered traits** fire on a hook and produce an effect.
 - **No keywords, no implicit targets.** There is no "Retaliate": every trait is an explicit
@@ -70,22 +68,21 @@ status lifecycle in `spec/statuses.md`.
   reference creatures (self, the source); the response names its target.
 - Design breadth comes from the **hook × condition × parameter cross-product**, not from more
   response types: every triggered behaviour goes through the one response vocabulary
-  (`spec/responses.md` "No side doors").
+  (`spec/responses.md#no-side-doors`).
 - A trait may react by dealing damage, applying a status, changing a stat, or **granting an extra
   action** (the Sorcerer starter's turn-end cast, Resonant Overtone's echo). A granted action
-  takes no turn of its own: it runs at the end of the step that raised it (`spec/responses.md`
-  "perform-action"), and obeys every action rule: a Stunned creature can't take one, a Silenced
+  takes no turn of its own: it runs at the end of the step that raised it (`spec/responses.md#perform-action`), and obeys every action rule: a Stunned creature can't take one, a Silenced
   one can't cast. Traits that insert extra *turns*,
   change scripting options or alter the creature's own decision-making are parked past v1
-  (`OPEN_QUESTIONS.md` "Behavioral traits").
+  (`OPEN_QUESTIONS.md#behavioral-traits`).
 - **"attack" and "cast" in a trait or spell mean the real actions**: the same damage formula,
   OffStat, affinity, Defence, pools and floor as a creature choosing that action; the trait or
   spell supplies only the coefficient and the target. A trait-granted Attack or Cast is **direct**
   damage. Every other damage a trait, status or perk deals (a retaliation, an on-death burst, a
   DoT tick) is **indirect**, meeting only a fifth of Defence, and a creature's own response
-  damaging itself is an exact **cost** (`spec/combat.md` "Damage channels and the Additional").
+  damaging itself is an exact **cost** (`spec/combat.md#damage-channels-and-the-additional`).
 - **Retaliation never answers a tick**: DoT is the counter to Defence tanks, and most retaliators
-  are those tanks (`spec/responses.md` "triggering-source is never the firing creature").
+  are those tanks (`spec/responses.md#triggering-source-is-never-the-firing-creature`).
 
 ## Engine rules
 
@@ -97,9 +94,9 @@ status lifecycle in `spec/statuses.md`.
   - **`Trait { id, name, effects }`**, permanent for the fight, a named wrapper (identity and
     flavour for the UI) over one or more effects. Definitions live in `src/data/`; a creature
     references its traits by `innateTraitIds`, resolved from the trait registry at fight setup,
-    where their effects are instantiated (`spec/combat.md` "Fight setup").
-  - **Perks** are carried the same way, as the player side's side effects ("Effect order").
-  - **`StatusDef`**, a timed single-instance container (`spec/statuses.md` "StatusDef").
+    where their effects are instantiated (`spec/combat.md#fight-setup`).
+  - **Perks** are carried the same way, as the player side's side effects (`spec/effects.md#effect-order`).
+  - **`StatusDef`**, a timed single-instance container (`spec/statuses.md#statusdef`).
 - Trait and Status stay separate carriers because their lifecycles really differ; sharing the
   effect payload gives the reuse without blurring them. An ECS was rejected as a paradigm cost.
 
@@ -107,23 +104,22 @@ status lifecycle in `spec/statuses.md`.
 
 - Passives: `stat-modifier`, `stat-remap`, `armor-penetration`, `cross-stat`, `action-instance`,
   `status-immunity`, `provoke-immunity`, `splashing`, `annihilate`, `conditional-damage-bonus`,
-  `taken-reduction`, `cheat-death`, `innate-spell` (`spec/creatures.md` "Innate spells"),
+  `taken-reduction`, `cheat-death`, `innate-spell` (`spec/creatures.md#innate-spells`),
   `damage-modifier`, `turn-order`, `friendly-fire` and `action-lock`. Trigger: `triggered`.
 - The last four are what statuses carry in content: `damage-modifier` (Weaken, Vulnerability),
   `turn-order` (Web, Grant Act First), `friendly-fire { chancePercent }` (Confusion) and
   `action-lock` (Stun, Sleep, Silenced, Pacified); DoT and Regen statuses (Poison, Burn, Regen,
-  Spore) carry `triggered` effects (`spec/statuses.md` "Action locks", "Turn order").
+  Spore) carry `triggered` effects (`spec/statuses.md#action-locks`, `spec/statuses.md#turn-order`).
 - Armour penetration, cross-stat, action instances, provoke immunity and friendly-fire are damage
-  and targeting rules (`spec/combat.md` "Armor penetration", "Cross-stat contribution", "Action
-  instance-list", "Targeting override").
+  and targeting rules (`spec/combat.md#armor-penetration`, `spec/combat.md#cross-stat-contribution`, `spec/combat.md#action-instance-list`, `spec/combat.md#targeting-override`).
 - **Every effect is carrier-agnostic**: a status may carry any effect a trait carries, except what
-  a validator rejects ("Validators").
+  a validator rejects (`spec/effects.md#validators`).
 
 ### The effect iterator
 
 - Every reader sees a creature's effects through one iterator (`flatEffects`). A trait or perk
   effect is yielded as is; a status is flattened in place into its own effects, each tagged with
-  its status and given its own guard identity (`spec/statuses.md` "Several triggers").
+  its status and given its own guard identity (`spec/statuses.md#several-triggers`).
 - Two readers read the raw effect list on purpose: `getEffectiveStat` and the stat remap, because a
   status may not carry `stat-modifier` or `stat-remap`. The status lifecycle reads the containers
   themselves: `has-status`, applying and refreshing, `remove-status`, counting down, and the
@@ -137,14 +133,14 @@ status lifecycle in `spec/statuses.md`.
   triggers (a tick included), its damage-modifiers and its turn-order (so the Web roll skips it and
   draws nothing).
 - It is never checked at `applyStatus`: the status still applies, refreshes, counts down and counts
-  for `has-status` (`spec/statuses.md` "Immunity suppresses the effect, not the application").
+  for `has-status` (`spec/statuses.md#immunity-suppresses-the-effect-not-the-application`).
 - Immunity is read only from carriers that aren't statuses (traits, perks); a status may not carry
   `status-immunity`, so immunity can't depend on itself.
 
 ### Validators
 
 - A load-time validator (`validateStatusDef`) rejects, inside a status: `stat-modifier` and
-  `stat-remap` ("No temporary stat-modifier"), `status-immunity` ("Immunity"), `innate-spell`
+  `stat-remap` (`spec/effects.md#no-temporary-stat-modifier`), `status-immunity` (`spec/effects.md#immunity`), `innate-spell`
   (innate spells are placed at fight setup, so a status's could never take effect) and a trigger on
   `on-round-end` (round end has no status work). It runs over the stock statuses at import **and**
   over the status registry `createCombat` is given, so a test fixture's status is held to the same
@@ -159,7 +155,7 @@ status lifecycle in `spec/statuses.md`.
 - One per-creature effect order is used everywhere effects are iterated: stat folding, hook firing
   and remap resolution. It is innate traits → side effects (the player side's perks) → effects
   gained in the fight, in the order gained (statuses, stat-modifiers). Phase 8's equipment
-  infusions go after the side effects (`spec/creatures.md` "Equipment").
+  infusions go after the side effects (`spec/creatures.md#equipment`).
 - Multiple remaps on one slot resolve by that order, last writer wins. The damage formula reads its
   OffStat through a remap-aware lookup, so a remap needs no formula change.
 
@@ -190,8 +186,7 @@ status lifecycle in `spec/statuses.md`.
 - A hook is a firing point plus a context: the firing creature and, where the hook has one, the
   other creature involved (the attacker for `on-damage-taken`, the victim for `on-kill`, the dead
   ally for `on-ally-death`).
-- The actor-self hooks fire **once per action instance** (`spec/combat.md` "Action
-  instance-list"): an Attack resolving as three instances fires `on-attack` three times. They fire
+- The actor-self hooks fire **once per action instance** (`spec/combat.md#action-instance-list`): an Attack resolving as three instances fires `on-attack` three times. They fire
   on the action, not on its damage.
 - Adding a hook is additive and golden-safe (a firing point nothing listens to emits nothing),
   provided it fires where the resolver already reaches; a hook that needs newly tracked state is a
@@ -209,8 +204,7 @@ status lifecycle in `spec/statuses.md`.
   paths and emits the same consequence events (`DamageDealt`, `CreatureDied`, `StatusApplied`) as a
   chosen action: a hook is a new trigger origin, not new consequence vocabulary.
 - **`TriggerFired`** precedes a trigger's consequences, as `AttackDeclared` precedes `DamageDealt`,
-  so the log explains why they happened. A tick is the exception (`spec/statuses.md` "Ticks are
-  on-turn-end triggers").
+  so the log explains why they happened. A tick is the exception (`spec/statuses.md#ticks-are-on-turn-end-triggers`).
 
 ### Effect instances
 
@@ -228,12 +222,11 @@ status lifecycle in `spec/statuses.md`.
 - **Dead creatures fire only `on-death`**, once, *as* the creature dies, even mid-cascade.
   `fireHook` gates on `alive` per effect; `effectsForHook` is a pure scan and does no alive-gating.
   Lethal damage fires `on-death`, not `on-damage-taken`: death pre-empts the victim's reaction.
-- **Nothing is done to a corpse** except a revive (`spec/responses.md` "No response acts on a dead
-  target"): no damage, heal, status, stat change or cleanse. A spell whose first effect kills its
+- **Nothing is done to a corpse** except a revive (`spec/responses.md#no-response-acts-on-a-dead-target`): no damage, heal, status, stat change or cleanse. A spell whose first effect kills its
   target puts nothing more on it, and a spell effect aimed at a caster killed mid-cast is dropped.
 - **The same holds for the actor**: a creature killed inside its own action, say by a retaliation
   after its first hit, does nothing more in that action (no further hit, splash hit or AOE hit);
-  what it already did stays (`spec/combat.md` "An action ends when its actor dies").
+  what it already did stays (`spec/combat.md#an-action-ends-when-its-actor-dies`).
 
 ### Damage-path hook order
 
@@ -275,7 +268,7 @@ status lifecycle in `spec/statuses.md`.
   `cast`, `defend`, `provoke`) and `excludeActor?`. Its context is the actor, the action kind and
   the instance index. It rides the cascade-depth cap and the re-entry guard.
 - The Resonants are the only action observers in content, and the Flickerling Flare the only damage
-  observer ("Damage observation"); every other action-reactive trait is actor-self. Observation is
+  observer (`spec/effects.md#damage-observation`); every other action-reactive trait is actor-self. Observation is
   built as the general primitive because it carries future content, not the seed's.
 
 ### Damage observation
@@ -305,7 +298,7 @@ status lifecycle in `spec/statuses.md`.
   action details, or on `on-damage-observed` without the damage details, is skipped, never fired
   unfiltered.
 - No hook-type index: the fan-out scans every living creature per damage event, as
-  `on-action-observed` does per action instance ("Hook execution").
+  `on-action-observed` does per action instance (`spec/effects.md#hook-execution`).
 
 ### Trigger conditions
 
@@ -371,8 +364,7 @@ status lifecycle in `spec/statuses.md`.
 - **Depth is transient**: it lives on the transient `ResolutionContext`, resets per top-level
   action or hook point, and is never stored in `CombatState` or serialized (like effective stats,
   a momentary value doesn't live in authoritative state).
-- **Granted actions are bounded by depth, not by the guard** (`spec/responses.md`
-  "perform-action").
+- **Granted actions are bounded by depth, not by the guard** (`spec/responses.md#perform-action`).
 
 ### Count-scaling
 
@@ -391,7 +383,7 @@ status lifecycle in `spec/statuses.md`.
   per-event trigger uses a flat per-event factor; `magnitudeSource` belongs on fire-once hosts (an
   `on-fight-start` trigger) or on instantaneous responses read fresh each firing (a `heal` or
   `deal-damage`: nothing accumulates).
-- A count of 0 makes a `deal-damage` or `heal` a full no-op (`spec/responses.md` "Fizzles").
+- A count of 0 makes a `deal-damage` or `heal` a full no-op (`spec/responses.md#fizzles`).
 
 ### Stat-modifier counts freeze at application
 
@@ -432,7 +424,7 @@ status lifecycle in `spec/statuses.md`.
 - `conditional-damage-bonus` is a permanent dealt-pool passive, "+% damage to targets that are
   Weakened, Webbed, Sleeping or low on HP" (the trap-then-exploit and execute archetypes), applied
   as extra damage on the one hit. Its condition is evaluated against the current damage target
-  ("Trigger conditions").
+  (`spec/effects.md#trigger-conditions`).
 - **`actionKind?: 'attack' | 'cast' | 'both'`** (absent: `'both'`), mirroring
   `CrossStatDef.appliesTo`, scopes it to one action kind: `gatherConditionalDamageBonus` filters on
   the action kind already in scope where damage is dealt. Brute Force (`'attack'`) and Spell Focus
@@ -448,7 +440,7 @@ status lifecycle in `spec/statuses.md`.
 - `{ category: 'splashing' }` and `{ category: 'annihilate' }` are permanent passives with no
   magnitude (perk effects, instantiated like innate traits, never runtime status instances).
 - After a single-target **Attack's** main hit (attacks only, never Cast), a Splashing bearer also
-  strikes each adjacent living enemy (`spec/combat.md` "Adjacency targeting"), or with Annihilate
+  strikes each adjacent living enemy (`spec/combat.md#adjacency-targeting`), or with Annihilate
   every other living enemy. Each splash hit is a full formula recompute against that target's own
   Defence, affinity and pools, never a copy of the main hit's number. No `TriggerFired`: it is the
   same action, not a trigger.
@@ -470,6 +462,6 @@ status lifecycle in `spec/statuses.md`.
   and nothing reads them, except the corpse's own `on-death` triggers, which fire right after
   `CreatureDied` (Spore's spread).
 - A revive **replaces them all**: the creature returns at its battle-start baseline, its
-  `baselineEffects` (innate traits and perks) re-instantiated (`spec/combat.md` "Fight setup").
+  `baselineEffects` (innate traits and perks) re-instantiated (`spec/combat.md#fight-setup`).
   Death is meaningful; a revive is a second chance, not a buff-preserving undo. It applies to every
-  death, and revives are bounded (`spec/responses.md` "revive").
+  death, and revives are bounded (`spec/responses.md#revive`).

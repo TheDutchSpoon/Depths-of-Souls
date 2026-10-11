@@ -1,4 +1,4 @@
-// Golden: Rotcap Hollow's Necromoss Wisp (species-locked.md's "Reclaim" mechanic) -- the real,
+// Golden: Rotcap Hollow's Necromoss Wisp (`content/rotcap-hollow.md#necromoss-wisp` "Reclaim" mechanic) -- the real,
 // shipped `NECROMOSS_WISP_TRAIT` heals itself every turn scaled by the LIVE count of its own
 // dead allies, proving `heal`'s `magnitudeSource` mode (Slice E2, named for Necromoss in
 // effect-types.ts's own doc comment) against real content for the first time.

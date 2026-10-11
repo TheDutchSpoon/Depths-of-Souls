@@ -1,6 +1,6 @@
 // GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via
 // `npm run corpus:update`, and only in a deliberate-change PR that attributes every changed
-// fight (CONVENTIONS "Testing", corpus digest).
+// fight (`CONVENTIONS.md#corpus-digest`, corpus digest).
 
 export interface CorpusDigestEntry {
   readonly hash: string

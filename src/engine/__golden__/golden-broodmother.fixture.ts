@@ -1,4 +1,4 @@
-// Golden: Overgrowth's floor-10 boss, the Broodmother (species-locked.md's "Count-scales off
+// Golden: Overgrowth's floor-10 boss, the Broodmother (`content/overgrowth.md#broodmother` "Count-scales off
 // living spiderling adds + periodically Webs the party") -- the real, shipped BROODMOTHER_TRAIT
 // (Swarm Call) proving its `magnitudeSource: {kind:'count', of:'living-allies-of-species'}`
 // count-scaling end to end against real content: 3 while every spiderling is alive, 2 the moment

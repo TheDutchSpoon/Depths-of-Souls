@@ -1,4 +1,4 @@
-// Phase 4.1-C2c (PR #73 review, CONVENTIONS "Every golden replays through one shared runner"):
+// Phase 4.1-C2c (PR #73 review, `CONVENTIONS.md#every-golden-replays-through-one-shared-runner`):
 // the ONE way a golden test builds its starting state and replays it. Every turn is resolved from a
 // deep-frozen state (`stepFrozen`), so every golden also proves the engine never writes to its
 // input -- there is no separate sweep and no list of excluded goldens.

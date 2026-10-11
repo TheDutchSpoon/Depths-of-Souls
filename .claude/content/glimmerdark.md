@@ -12,10 +12,9 @@ right; a change to a number updates this doc in the same change.
 
 ### Species roles
 
-Most species follow The Overgrowth's enabler, payoff and amplifier roles (`content/overgrowth.md`
-"Enabler, payoff, amplifier"). Three don't chain a trick: the Resonants and the Sparkeaters each
+Most species follow The Overgrowth's enabler, payoff and amplifier roles (`content/overgrowth.md#enabler-payoff-amplifier`). Three don't chain a trick: the Resonants and the Sparkeaters each
 share one mechanic, and the Gloomjaws take three distinct verbs toward one theme. A hit marked
-*indirect* follows `content/overgrowth.md` "Indirect damage".
+*indirect* follows `content/overgrowth.md#indirect-damage`.
 
 ### Affinity spread
 
@@ -61,7 +60,7 @@ it; the heal then proceeds).
 Wit · payoff · caster. Whenever an ally damages **itself** (a cost, like the Wick's burn; never an
 ordinary hit or a damage-over-time tick), **every living ally** permanently gains **15% Speed**. It
 counts itself as an ally, and two Flares both react, so their bonuses multiply. It watches damage,
-not actions (`spec/effects.md` "Damage observation"). On a lethal burn the order is: the burn's
+not actions (`spec/effects.md#damage-observation`). On a lethal burn the order is: the burn's
 damage, the Flare's reaction, the Wick's death, the Last Gleam's reaction.
 
 ### Flickerling Last Gleam
@@ -173,7 +172,7 @@ damage, it strikes back for **50% of its own Defence**, as indirect damage.
 
 Instinct · striker; floor 20. Unique and non-collectable, never in the spawn pool. A lean fight with
 one mechanic and no authored adds: five random Glimmerdark creatures fill her side
-(`content/enemy-behaviour.md` "Boss floors").
+(`content/enemy-behaviour.md#boss-floors`).
 
 - Every time she attacks, she permanently steals **20% of her target's Attack**: the target's
   Attack falls by 20% and hers rises by 20%, on every hit. The party hollows out while she
@@ -181,8 +180,7 @@ one mechanic and no authored adds: five random Glimmerdark creatures fill her si
 
 ## Spells
 
-These unlock at biome 2; Glimmerdark's casters also roll every biome-1 spell (`content/overgrowth.md`
-"Spells"). An ally spell can target any living ally, the caster included.
+These unlock at biome 2; Glimmerdark's casters also roll every biome-1 spell (`content/overgrowth.md#spells`). An ally spell can target any living ally, the caster included.
 
 ### Beacon Charge
 

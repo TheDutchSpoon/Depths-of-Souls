@@ -1,5 +1,5 @@
 // Golden: Stun 1 skips exactly ONE turn of its bearer, whichever side of the applier the bearer
-// acts on (Phase 4.1-F2; CONVENTIONS "Status lifecycle": durations count the bearer's own turns).
+// acts on (Phase 4.1-F2; `spec/statuses.md#timing`: durations count the bearer's own turns).
 // Hand-derived.
 //
 // STRIKER (player, speed 30) carries a fixture trait: on-turn-start, round 1 only, apply Stun for

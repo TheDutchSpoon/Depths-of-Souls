@@ -55,7 +55,7 @@ describe('Rotcap Hollow: shape', () => {
     }
   })
 
-  it("base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat", () => {
+  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat', () => {
     for (const creature of ALL_CREATURES) {
       for (const [stat, value] of Object.entries(creature.baseStats)) {
         expect(value, creature.id + ' ' + stat).toBeGreaterThanOrEqual(

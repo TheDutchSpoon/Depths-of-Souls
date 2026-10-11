@@ -331,7 +331,7 @@ function resolveEnemySingleTarget(
  * selector (including `'random'`) -> the side-aware default of the RESOLVED action
  * (`defaultTargetingFor`) -> for an enemy-side single target, Confusion -> Tunnel Vision -> Provoke
  * (`resolveOffensiveTarget`). An ally-side single target skips that override pipeline entirely
- * (GAME_DESIGN §7). Returns `null` when no legal action results. Legality (locks) is NOT checked
+ * (`spec/combat.md#targeting-override`). Returns `null` when no legal action results. Legality (locks) is NOT checked
  * here: `runAction` calls `checkLegality` first, so a refused action never reaches a draw.
  */
 export function resolveIntent(
@@ -380,14 +380,14 @@ export function resolveIntent(
 /**
  * ASSUMPTION 31: every instance after the first targets the SAME resolved target as instance 1
  * (the selector is not re-run per instance) -- except when that target has since died. Rule 4
- * (CONVENTIONS "Every action source obeys the same rules", 4.1-C2c): a dead previous target
+ * (`spec/combat.md#every-action-source-obeys-the-same-rules`, 4.1-C2c): a dead previous target
  * falls back to the side-aware default of the instance's own action (`defaultTargetingFor`, the
  * same function B1 uses), then Provoke -- one draw even for a single provoker, skipped under Tunnel
  * Vision and for an ally-side instance. It never rolls Confusion. Returns null once no living
  * target remains (nothing further in the list can resolve).
  *
  * `targetSide` (Attack passes the default 'enemy'; a support spell's instances pass 'ally') says
- * whether the Provoke step applies (GAME_DESIGN §7: ally-side actions are exempt).
+ * whether the Provoke step applies (`spec/combat.md#provoke`: ally-side actions are exempt).
  */
 function resolveInstanceTarget(
   actor: Creature,
@@ -408,7 +408,7 @@ function resolveInstanceTarget(
 }
 
 /**
- * The action instance-list model (CONVENTIONS' "action instance-list", locked): an Attack or
+ * The action instance-list model (`spec/combat.md#action-instance-list`, locked): an Attack or
  * Cast resolves as a list of powerPercent entries, assembled ONCE, up front, before any instance
  * resolves -- base [100], plus one entry per active action-instance passive matching
  * `actionKind` (or 'both'), in canonical active-effects order. Composition is LINEAR
@@ -468,7 +468,7 @@ function adjacentLivingTargets(target: Creature, party: readonly Creature[]): Cr
 }
 
 /**
- * CONVENTIONS "An action ends when its actor dies" (4.1-C2c, PR #73 review): true once the actor
+ * `spec/combat.md#an-action-ends-when-its-actor-dies` (4.1-C2c, PR #73 review): true once the actor
  * has died inside its own action (a retaliation after one of its hits, or a response nested in
  * its own pre-hit hooks). Read fresh from `working`, never from the `actor` snapshot the executor
  * was handed. Callers drop the rest of the action: no further events, no fizzle event.
@@ -506,11 +506,11 @@ function executeAttack(
     working = fireHook('on-attack', [actor.id], thisTargetId, working, ctx).state
     // Phase 4 Slice E2 (general action-observation system): fires on ALL living creatures
     // (cheap -- effectsForHook returns nothing for non-observers), per instance, alongside the
-    // actor's own on-attack hook above -- see CONVENTIONS' actor-vs-observer routing table.
+    // actor's own on-attack hook above -- see `spec/effects.md#action-reactions-actor-self-hooks-or-observation` actor-vs-observer routing table.
     working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
       observed: { actionKind: 'attack', instanceIndex },
     }).state
-    // B5 (CONVENTIONS): the pre-hit hooks may have killed the target -- that hit fizzles (no
+    // B5 (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`): the pre-hit hooks may have killed the target -- that hit fizzles (no
     // damage, no Splashing for this instance). AttackDeclared stays in the log; no fizzle event.
     // The next instance re-targets per rule 4. A dead ACTOR ends the whole action instead (site 2).
     if (actorDied(actor, working)) break
@@ -630,7 +630,7 @@ function executeCastSingle(
     })
     working = fireHook('on-cast', [actor.id], thisTargetId, working, ctx).state
     // Phase 4 Slice E2 (general action-observation system): Resonants' own consumer shape
-    // (relationship 'ally', actionKind 'cast') -- see CONVENTIONS' actor-vs-observer routing. An
+    // (relationship 'ally', actionKind 'cast') -- see `spec/effects.md#action-reactions-actor-self-hooks-or-observation` actor-vs-observer routing. An
     // echo (a `perform-action` grant) raised here is queued, and runs after this whole action.
     working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
       observed: { actionKind: 'cast', instanceIndex },
@@ -663,9 +663,9 @@ function executeCastAoe(
     if (actorDied(actor, working)) break // site 1: before target freezing / SpellCast
     // Phase 4 Slice E: an ally-targeting AOE spell always freezes the caster's OWN living side
     // -- no Confusion roll at all (Confusion's redirect is scoped to a "harmful action" per
-    // CONVENTIONS; a support cast on your own side is never one, so it must never touch
+    // `spec/combat.md#targeting-override`; a support cast on your own side is never one, so it must never touch
     // state.rng here, mirroring targeting.ts's "draws nothing when inactive" discipline).
-    // Provoke was already exempt for every AOE regardless of side (GAME_DESIGN §7).
+    // Provoke was already exempt for every AOE regardless of side (`spec/combat.md#provoke`).
     let resolvedParty: 'player' | 'enemy'
     if (targetSide === 'ally') {
       resolvedParty = actor.side

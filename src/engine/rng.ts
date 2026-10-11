@@ -1,9 +1,9 @@
 // mulberry32 — small, fast, deterministic PRNG. The only source of randomness allowed in
-// src/engine: never Math.random() (see CONVENTIONS.md).
+// src/engine: never Math.random() (see `CONVENTIONS.md#the-engine-is-pure-and-deterministic`).
 //
 // Phase 4.1-B (B3): CombatState.rng is plain data, a bookmark { position: number } -- not a
 // closure. `nextRandom(rng)` draws a value and ADVANCES `rng.position` IN PLACE (a deliberate,
-// narrow exception to "never mutate" -- CONVENTIONS calls this out explicitly: rolls "advance
+// narrow exception to "never mutate" -- `CONVENTIONS.md#combat-is-reproducible-from-its-inputs` calls this out explicitly: rolls "advance
 // the working copy's bookmark"). This is safe exactly because CALLERS are responsible for never
 // handing `nextRandom` an rng object that's still shared with an input snapshot someone else
 // might resolve again -- see combat.ts's `resolveTurn`, which clones `state.rng` into a fresh

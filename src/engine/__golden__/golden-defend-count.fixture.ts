@@ -11,7 +11,7 @@
 // damage-modifier ONCE at fight-start, whose `magnitude` (0.95) is raised to the power of a LIVE
 // `self-defend-count` reading instead of the status's own count (a status is single-instance: 1) -- so the taken
 // factor keeps shrinking round-over-round purely from BEARER defending again, with no
-// re-application needed. Multiplicative mode never clamps (CONVENTIONS: "reductions trend toward
+// re-application needed. Multiplicative mode never clamps (`spec/effects.md#taken-reduction-accumulation`: "reductions trend toward
 // but never reach 0") -- contrast the additive-with-cap fixture, which hard-clamps.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.

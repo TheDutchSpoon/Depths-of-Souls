@@ -1,4 +1,4 @@
-// Phase 4.1-C2c (PR #73 review): "An action ends when its actor dies" (CONVENTIONS). The actor is
+// Phase 4.1-C2c (PR #73 review): "An action ends when its actor dies" (`spec/combat.md#an-action-ends-when-its-actor-dies`). The actor is
 // re-checked at four sites in the executors; each test here kills the actor at exactly one of
 // them and asserts nothing further comes from the action. The main case (attack, site 1) is the
 // hand-derived golden `golden-actor-dies-attack`.
@@ -120,7 +120,7 @@ function run(
   return events
 }
 
-describe('an action ends when its actor dies (CONVENTIONS, 4.1-C2c)', () => {
+describe('an action ends when its actor dies (spec/combat.md#an-action-ends-when-its-actor-dies, 4.1-C2c)', () => {
   it('site 1, single-target Cast: no second SpellCast after the retaliation kills the caster', () => {
     const player = makeParty('player', [
       {

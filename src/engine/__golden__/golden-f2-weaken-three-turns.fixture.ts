@@ -1,5 +1,5 @@
 // Golden: a 3-turn Weaken covers its bearer's next three turns whether it was applied before or
-// after the bearer acted that round (Phase 4.1-F2, CONVENTIONS "Status lifecycle"). Under round-end
+// after the bearer acted that round (Phase 4.1-F2, `spec/statuses.md#timing`). Under round-end
 // counting a Weaken applied after the bearer acted covered only two of its three turns. The
 // modifier math is unchanged (Weaken -20% dealt, additive into the dealt pool); only WHICH turns it
 // covers moves. Hand-derived.

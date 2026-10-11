@@ -34,7 +34,7 @@ import {
   WITHERING_BOLT,
 } from './rotcap-hollow'
 
-// The library barrel (CONVENTIONS "Data layer — carriers vs. composition"): re-exports every
+// The library barrel (`CONVENTIONS.md#effect-carriers-live-in-libraries`): re-exports every
 // individual spell const from its grouping file.
 export * from './core'
 export * from './overgrowth'

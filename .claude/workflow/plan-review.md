@@ -15,7 +15,7 @@ docs from the working tree.
 - Check the plan names, for each mechanism, the test that fails with it removed, at every site.
 - Check the golden policy matches the kickoff.
 - Anything in the brief's Assumptions checklist the plan wants to **change** (not merely confirm) is
-  a "bring it back" signal (WORKFLOWS "The human's judgment call"): say so, don't resolve it inline.
+  a "bring it back" signal (`WORKFLOWS.md#the-humans-judgment-call-these-dont-remove`): say so, don't resolve it inline.
 
 ## Output: `plan-review.md` in the mailbox
 

@@ -7,7 +7,7 @@ import { ARCANE_BOLT } from '../spells'
 
 // ---- Sorcerer starter ----
 // "Wit affinity, high Intelligence. Trait: grants one spell as a permanent extra gem + 50%
-// chance on-turn-end to cast a random equipped spell" (species-locked.md / sorcerer.md).
+// chance on-turn-end to cast a random equipped spell" (`specializations/sorcerer.md#starter-glyphmoth-seer` / sorcerer.md).
 
 /** "50% chance on-turn-end to cast a random equipped spell." Phase 4.1-E (A2): an ordinary
  * `on-turn-end` trigger whose `perform-action(self, cast gemSlot 'random')` response queues the
@@ -53,7 +53,7 @@ export const BRUTE_STARTER_TRAIT: Trait = {
 // "high Defence. Trait: on-provoke -> your creatures gain +35% Defence (team-wide)." A
 // stat-modifier (ASSUMPTION 22, not grant-action-state -- it's a stat buff, not an action-state
 // flag), targeted at the new `all-allies` ResponseTarget. Permanent-for-fight and re-fired on
-// every Provoke, so repeated provokes stack (species-locked.md's own "ramping team-Defence
+// every Provoke, so repeated provokes stack (`specializations/shieldbarer.md#starter-stonehorn-warden` own "ramping team-Defence
 // engine" framing).
 
 export const SHIELDBARER_STARTER_TRAIT: Trait = {
@@ -75,7 +75,7 @@ export const SHIELDBARER_STARTER_TRAIT: Trait = {
 
 // ---- The Unicorn ----
 // "Whenever this creature attacks, it resurrects a random dead ally at 20% of its baseline max
-// HP. Fires per attack hit." Unique, permanent intro-helper party member (species-locked.md);
+// HP. Fires per attack hit." Unique, permanent intro-helper party member (`content/overgrowth.md#unicorn-lightbearer`);
 // joins via the scripted-intro encounter, a Slice G/run-layer concern -- this slice only authors
 // the creature + trait content itself.
 

@@ -1,5 +1,5 @@
-// The unified effect framework's type surface (GAME_DESIGN §6, CONVENTIONS "Unified effect
-// framework"). Traits, statuses, and (later) gem augments / artifact infusions are all
+// The unified effect framework's type surface (`spec/effects.md#one-effect-framework`).
+// Traits, statuses, and (later) gem augments / artifact infusions are all
 // instances of this ONE data-driven, hook-based model.
 //
 // Phase 4.1-F1 (A3): statuses are containers of these same effects (`StatusDef.effects`), read
@@ -20,10 +20,10 @@ export function createEffectInstanceId(value: string): EffectInstanceId {
 // The v1 hook vocabulary (13, pinned) plus Phase 4 Slice B's on-[action] family (+4, -> 17), one
 // fewer after Slice E2 (below: the never-wired pair out, on-action-observed in, -> 16), plus Phase
 // 4.1-H2b1's on-damage-observed (+1), 17 in all.
-// on-wait is deliberately omitted (CONVENTIONS' Phase 4 addenda). Phase 4 Slice E2: the
+// on-wait is deliberately omitted (`spec/effects.md#hooks` Phase 4 addenda). Phase 4 Slice E2: the
 // originally-listed on-ally-action/on-enemy-action pair was NEVER WIRED (confirmed dead -- no
 // fireHook call site anywhere referenced them) and is superseded here by a single general
-// on-action-observed (see the actor-vs-observer routing rule, CONVENTIONS).
+// on-action-observed (see the actor-vs-observer routing rule, `spec/effects.md#action-reactions-actor-self-hooks-or-observation`).
 export type Hook =
   | 'on-fight-start'
   | 'on-turn-start'
@@ -80,7 +80,7 @@ export type StatusSnapshot = {
 // ---- Forward surface for Slices B/C (declared, not yet consumed) ----
 
 // ---- Phase 4 Slice D: the count-scaling / resource-primitive vocabulary ----
-// CONVENTIONS "count-scaling" + the brief's magnitudeSource vocabulary-table row.
+// `spec/effects.md#count-scaling` + the brief's magnitudeSource vocabulary-table row.
 
 /** The six live "board counts" resolveCount (effects.ts) reads, all resolved relative to the
  * READING creature's own side/affinity/species (matching targeting.ts's livingAlliesOf
@@ -95,14 +95,14 @@ export type CountOf =
   | 'dead-allies'
   | 'self-defend-count'
 
-/** ASSUMPTION (Slice D, not literally shaped by the brief -- CONVENTIONS/the vocabulary table
+/** ASSUMPTION (Slice D, not literally shaped by the brief -- `spec/effects.md#count-scaling`/the vocabulary table
  * name the mechanism, "a modifier... may declare magnitudeSource... instead of a flat number,"
  * but not how it composes with a host's formula). Interpreted here as the SOURCE of the
  * repetition count a host field multiplies/exponentiates its own authored rate by (deal-damage's
  * spellPower, damage-modifier's magnitude×count or magnitude**count). Absent means a count of
  * one, so every call site is byte-identical when magnitudeSource is absent (ASSUMPTION 16). The
  * count is a LIVE board count, recomputed on every read. `flat` is "the existing implicit
- * behavior, made explicit" (CONVENTIONS). Flagged for review: `stat-modifier`'s `factor` is NOT
+ * behavior, made explicit" (`spec/effects.md#count-scaling`). Flagged for review: `stat-modifier`'s `factor` is NOT
  * wired to this source in this slice (see StatModifierDef's own comment) -- deferred to whichever
  * slice first authors a count-scaled stat-modifier (H1's Swarmhive Striker). */
 export type MagnitudeSource =
@@ -118,12 +118,11 @@ export type ResponseTarget =
   // team-wide buff): the ally-side mirror of all-enemies, resolved via livingAlliesOf(self) --
   // "ally" includes the firing creature itself, matching every other ally-side convention.
   | { readonly kind: 'all-allies' }
-  // Phase 4 Slice H1 (Swarmhive Queen's "increase Attack of every Swarmhive ally every turn"):
-  // the species-scoped mirror of all-allies -- resolved via livingAlliesOf(self) further filtered
-  // to creatures sharing the firing creature's own speciesId (same filter resolveCount's
-  // 'living-allies-of-species' count kind already uses, now as a target list instead of a count).
-  // Includes the firing creature itself, matching every other ally-side convention. Inert (empty)
-  // for a bearer with no speciesId set, same dormant-until-wired precedent as the count kind.
+  // The species-scoped mirror of all-allies: resolved via livingAlliesOf(self) further filtered to
+  // creatures sharing the firing creature's own speciesId (the filter resolveCount's
+  // 'living-allies-of-species' count kind uses, now as a target list). Includes the firing
+  // creature itself, matching every other ally-side convention. Empty only for a bearer with no
+  // speciesId (a hand-built creature; `materializeCreature` sets it).
   | { readonly kind: 'all-allies-of-species' }
   | { readonly kind: 'selector'; readonly selector: TargetSelector }
   // Phase 4 Slice B / ASSUMPTION 7: v1 TargetSelectors are alive-only, so `revive` (whose target
@@ -274,15 +273,15 @@ export type EffectResponse =
       readonly defending?: boolean
       readonly provoking?: boolean
     }
-  // Phase 4 Slice E2. The final response verb (per CONVENTIONS' "hold the line"): clear a status
-  // from a target, reusing the existing StatusExpired path (death-reset and
+  // Clears a status from a target, reusing the existing StatusExpired path (death-reset and
   // turn-end cleanup stay consistent) -- a no-op, no-event when the target doesn't carry it
-  // (mirrors revive's "target must be dead" skip style). `target`
-  // reuses the full ResponseTarget vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies"
-  // get targeting for free. `filter` is a plain statusId for now -- a polarity-based filter
-  // (`'buff' | 'debuff'`, reading StatusDef.polarity) is a natural future widening for the first
-  // cleanse/dispel spell, deliberately not built until there's a real producer/consumer to test
-  // against (no dead union branch).
+  // (mirrors revive's "target must be dead" skip style). `target` reuses the full ResponseTarget
+  // vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies" get targeting for free. The
+  // verb set is not closed: a new verb needs a review, and must route through the one response
+  // path (`spec/responses.md#no-side-doors`). `filter` is a plain statusId for now -- a
+  // polarity-based filter (`'buff' | 'debuff'`, reading StatusDef.polarity) is a natural future
+  // widening for the first cleanse/dispel spell, not built until there's a real producer/consumer
+  // to test against (no dead union branch).
   | {
       readonly kind: 'remove-status'
       readonly target: ResponseTarget
@@ -324,9 +323,9 @@ export type SelfCondition =
     }
   | { readonly kind: 'has-status'; readonly statusId: string }
 
-// NOTE (Phase 4 Slice D, resolved in Slice E2): CONVENTIONS' count-scaling primitive names
+// NOTE (Phase 4 Slice D, resolved in Slice E2): `spec/effects.md#count-scaling` count-scaling primitive names
 // stat-modifier as an eligible magnitudeSource host too ("a stat/damage-modifier whose factor
-// reads a live board count", species-locked.md's Swarmhive Striker). Deliberately NOT wired
+// reads a live board count", `content/overgrowth.md#swarmhive-striker` Swarmhive Striker). Deliberately NOT wired
 // HERE, on the standalone EffectDef -- getEffectiveStat(creature, stat) is a pure (creature,
 // stat) function called from ~15+ sites across the codebase (conditions.ts, turn-order.ts,
 // target-selectors.ts, ...), several of which have no CombatState in scope at all; giving it
@@ -366,7 +365,7 @@ export function validateStatModifierConditions(defs: readonly EffectDef[]): void
   }
 }
 
-/** Phase 4.1-H2b1 (CONVENTIONS "Damage observation"): the load-time validator for observation
+/** Phase 4.1-H2b1 (`spec/effects.md#damage-observation`): the load-time validator for observation
  * filters -- throws if `actionKind`/`excludeActor` sit on a trigger that is not
  * `on-action-observed`, `selfInflicted` on one that is not `on-damage-observed`, or an
  * `observationFilter` of any kind on a hook that is neither. Absent fields stay permissive.
@@ -403,7 +402,7 @@ export function validateObservationFilters(
 }
 
 /**
- * Phase 4.1-C2a (PR #71 review, CONVENTIONS "One action pipeline"): `'random'` is an INTENT-only
+ * Phase 4.1-C2a (PR #71 review, `spec/combat.md#one-action-pipeline`): `'random'` is an INTENT-only
  * `TargetSelector` variant -- it needs the action's intended side, which only an intent (a rule,
  * the fallback, a grant) carries; a response target (`{ kind: 'selector', selector }` on a trait,
  * status, or perk effect) has no such side to resolve it against. `resolveTargetSelector` throws
@@ -478,7 +477,7 @@ export function validateStatusNoRandomSelectorInResponseTargets(def: StatusDef):
   }
 }
 
-/** Phase 4.1-F1 (CONVENTIONS "The bright line"): the load-time validator for a status's effects.
+/** Phase 4.1-F1 (`spec/effects.md#no-temporary-stat-modifier`): the load-time validator for a status's effects.
  * Throws if a status carries `stat-modifier` / `stat-remap` (no temporary stat-modifier),
  * `status-immunity` (immunity is read only from non-status carriers, so it can't depend on
  * itself) or `innate-spell` (innate spells are placed at fight setup, so a status's could never
@@ -585,7 +584,7 @@ export function validateNoBreakChanceOutsideStatus(defs: readonly EffectDef[]): 
   }
 }
 
-/** Phase 4.1-E (A2): the "real guard" a `perform-action` trigger must carry (CONVENTIONS): a
+/** Phase 4.1-E (A2): the "real guard" a `perform-action` trigger must carry (`spec/responses.md#perform-action`): a
  * `chancePercent` strictly below 100, or a `condition` other than `{ kind: 'always' }`. A lint
  * against unconditional self-perpetuating grants -- termination is guaranteed by the cascade-depth
  * bound, not by this. `chancePercent: 100` and `always` are trivially-true guards, so they don't count. */
@@ -648,8 +647,7 @@ export type CrossStatDef = {
   readonly appliesTo: 'attack' | 'cast' | 'both'
 }
 
-// Phase 4 Slice B: the action instance-list model's own gather primitive (CONVENTIONS' "action
-// instance-list", locked). NOT explicitly named/shaped by the brief -- its prose only specifies
+// Phase 4 Slice B: the action instance-list model's own gather primitive (`spec/combat.md#action-instance-list`). NOT explicitly named/shaped by the brief -- its prose only specifies
 // the RESOLVER mechanism (assemble a [{powerPercent}] list once, up front, from the actor's
 // "active count/power modifiers"), leaving the authoring shape open. ASSUMPTION (Slice B,
 // inline): a permanent-for-fight passive, structurally identical to armor-penetration/cross-stat
@@ -666,11 +664,10 @@ export type ActionInstanceDef = {
   readonly powerPercent: number
 }
 
-// A triggered effect fires its response on `hook` (Slice B). An optional `condition` gates it,
-// reusing the serializable scripting `Condition` union — evaluated SELF-scoped against live state
-// at fire time (omission = unconditional). This union is self/global-scoped, so it cannot yet
-// reference the triggering source (e.g. "retaliate only if the attacker is Vitality"); that needs a
-// hook-context condition variant, deferred until content requires it.
+// A triggered effect fires its response on `hook`. An optional `condition` gates it, reusing the
+// serializable scripting `Condition` union, evaluated against live state at fire time (omission =
+// unconditional). A condition can reference the triggering source through the `'target'` subject,
+// which `fireHook` resolves to that source (e.g. "retaliate only if the attacker is Vitality").
 /** Phase 4 Slice E2 (`on-action-observed`) and Phase 4.1-H2b1 (`on-damage-observed`): the filter
  * of an observation hook's candidate. Reacting effects filter on THEMSELVES, not on the hook name
  * -- absent fields match everything (permissive default, matching this project's "unspecified
@@ -740,7 +737,7 @@ export type TriggeredDef = {
 /** Clear Mind / Aggressive / Lucidity: since 4.1-F1 consulted in ONE place, the effect iterator
  * (effects.ts `flatEffects`), which skips every effect of an immune status -- its locks,
  * friendly-fire, triggers, damage-modifiers and turn-order -- never at applyStatus. Per
- * CONVENTIONS' "immunity suppresses the effect, not the application": the status still
+ * `spec/statuses.md#immunity-suppresses-the-effect-not-the-application`: the status still
  * applies/refreshes/counts down/counts for has-status; only its effects are skipped for an immune
  * bearer. Read only from non-status carriers (a status may not carry one). */
 export type StatusImmunityDef = {
@@ -757,12 +754,13 @@ export type ProvokeImmunityDef = {
 }
 
 /** Proficient Warrior: after a single-target Attack's main hit resolves, also strike each
- * living enemy ADJACENT to that target (targeting.ts's adjacentLivingTargets) for its own
- * recomputed damage -- own Defence/affinity/pools, never a copy of the main hit's number
- * (ASSUMPTION 15). Attacks only -- brute.md: "attacks deal 100% of their damage to enemies
- * adjacent to the target"; Cast never splashes. Upgraded to all-other-living-enemies by a
- * simultaneously-active AnnihilateDef. Never emits TriggerFired -- it's the same action, not
- * a triggered response. */
+ * living enemy ADJACENT to that target for its own recomputed damage -- own Defence/affinity/
+ * pools, never a copy of the main hit's number. Attacks only; a Cast never splashes
+ * (`specializations/brute.md#proficient-warrior`). Upgraded to all-other-living-enemies by a
+ * simultaneously-active AnnihilateDef. The adjacency lookup is `actions.ts`'s private
+ * `adjacentLivingTargets`; `targeting.ts` exports a second copy that Splashing does not use
+ * (`ROADMAP.md#phase-45--run-loop-demo-interlude` dedupes them). Never emits TriggerFired --
+ * it's the same action, not a triggered response. */
 export type SplashingDef = {
   readonly category: 'splashing'
 }
@@ -780,7 +778,7 @@ export type AnnihilateDef = {
  * the CURRENT damage target (gatherConditionalDamageBonus, effects.ts) -- this is what lets the
  * bonus land as ONE clean modified hit (folded into dealtMods alongside gatherDealtMods) rather
  * than a second on-damage-dealt follow-up instance, which would re-fire on-damage-dealt,
- * re-splash, and double-count on-hit effects (CONVENTIONS' locked "option a" consumption model). */
+ * re-splash, and double-count on-hit effects (`spec/effects.md#splashing-and-annihilate` locked "option a" consumption model). */
 export type ConditionalDamageBonusDef = {
   readonly category: 'conditional-damage-bonus'
   readonly percent: number
@@ -846,7 +844,7 @@ export type InnateSpellDef = {
 // ---- Phase 4.1-F1 (A3): the passives statuses carry. Like every effect they are carrier-agnostic
 // (a trait or perk may carry one; a status carries them in `StatusDef.effects`). ----
 
-/** CONVENTIONS "Action locks": read by `checkLegality` (every action source) and by
+/** `spec/statuses.md#action-locks`: read by `checkLegality` (every action source) and by
  * `resolveTurn`'s skip read. `'all'` makes every action kind illegal and skips the turn; a
  * scoped lock makes only its own kind illegal. */
 export type ActionLockDef = {

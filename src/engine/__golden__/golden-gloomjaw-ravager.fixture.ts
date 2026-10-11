@@ -12,7 +12,7 @@
 // (x1.0, same-affinity).
 //
 //   RAVAGER->TARGET: effective Defence for the core = 20 x (1 - 0.3) = 14 (armor-penetration
-//     applied before the subtractive core, per CONVENTIONS). off 26: core max(26-14,0)=12, chip
+//     applied before the subtractive core, per `spec/combat.md#armor-penetration`). off 26: core max(26-14,0)=12, chip
 //     0.26 -> raw 12.26 -> final 12. TARGET 100-12=88, survives. (Without armor-pen this would
 //     have been core max(26-20,0)=6, chip 0.26, raw 6.26, final 6 -- less than half.)
 

@@ -1,5 +1,5 @@
 // Golden: the Brute starter's real signature trait (data/traits/starters.ts's
-// BRUTE_STARTER_TRAIT) -- "Attack resolves one additional instance" (species-locked.md /
+// BRUTE_STARTER_TRAIT) -- "Attack resolves one additional instance" (`specializations/brute.md#starter-cragfang-mauler` /
 // brute.md: "Attack executes TWICE AT 100%"). A direct, content-level exercise of Slice B's
 // action instance-list model (golden-attack-instance-list.fixture.ts's own mechanism), not a
 // new one -- this golden proves the REAL shipped content, not a fixture stand-in.
@@ -8,10 +8,9 @@
 // kickoff instructions -- "docs win over anything in the brief if they disagree"):
 // `.claude/archive/briefs/phase-4-implementation-plan.md`'s own Slice B vocabulary table and Slice F
 // prose repeatedly describe the Brute starter's second instance as `[100%, 30%]` ("attack again
-// for 30%"). But BOTH content docs -- `.claude/species/species-locked.md` ("Attack executes
-// twice at 100%") and `.claude/specializations/brute.md` ("Attack executes twice at 100%") --
-// agree the second instance is FULL power, [100%, 100%]. This golden (and
-// BRUTE_STARTER_TRAIT itself) follows the two content docs, not the brief; the brief's own
+// for 30%"). But the content doc, `specializations/brute.md#starter-cragfang-mauler` ("Attack
+// executes twice at 100%"), says the second instance is FULL power, [100%, 100%]. This golden (and
+// BRUTE_STARTER_TRAIT itself) follows the content doc, not the brief; the brief's own
 // prose needs a correction before it's read again in a future slice's chat.
 //
 // Hand-derived (independent `node -e` calculator). ATTACKER (BRUTE_STARTER-shaped: Attack 30,

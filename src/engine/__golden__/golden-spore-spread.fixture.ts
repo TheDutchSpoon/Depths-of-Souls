@@ -1,4 +1,4 @@
-// Golden: Rotcap Hollow's Spore contagion end-to-end (species-locked.md) -- Sporecloud Seeder's
+// Golden: Rotcap Hollow's Spore contagion end-to-end (`content/rotcap-hollow.md#sporecloud-seeder`) -- Sporecloud Seeder's
 // real, shipped trait (`SPORECLOUD_SEEDER_TRAIT`) infects its target with Spore mid-attack, that
 // same attack's damage kills the (pre-wounded) target, and Spore's own `on-death` trigger
 // (data/statuses.ts's SPORE) spreads it to the dying creature's only living, still-healthy ally
@@ -18,7 +18,7 @@
 // It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned
 // (4.1-H2d).
 //
-//   on-attack fires BEFORE the attack's own damage (CONVENTIONS): SEEDER's Infest trait applies
+//   on-attack fires BEFORE the attack's own damage (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`): SEEDER's Infest trait applies
 //     Spore to BEARER (duration 3) first.
 //   SEEDER->BEARER (off 16, def 0): core = max(16-0,0) = 16. chip = 0.01*16 = 0.16. raw = 16.16
 //     (wit-vs-wit affinity x1.0, no dealt/taken mods) -> final = floor(16.16) = 16.

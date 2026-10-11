@@ -70,7 +70,7 @@ describe('interpreter -- ally-targeting single Cast (Phase 4 Slice E)', () => {
     ])
     // If ally casts were routed through resolveOffensiveTarget (the enemy-cast pipeline), this
     // provoking foe would hijack the target to ITSELF -- an enemy id, not the wounded ally.
-    // GAME_DESIGN §7: "Provoke applies only to enemy-targeting offensive actions; ally-targeting
+    // `spec/combat.md#provoke`: "Provoke applies only to enemy-targeting offensive actions; ally-targeting
     // actions... are unaffected."
     const enemy = makeParty('enemy', [{ id: 'foe', provoking: true }])
     const script: Script = {

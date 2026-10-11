@@ -1,0 +1,5 @@
+$ grep -rn "Phase 4.2 only" .claude src scripts --exclude-dir=phases
+.claude/skills/slice-verify/SKILL.md:3:description: (Phase 4.2 only) Verify a Depths of Souls Phase 4.2 condensing slice against the old doc
+.claude/workflow/coding-rules.md:56:- **Phase 4.2 exception** (Phase 4.2 only). In 4.2-A and 4.2-G you write living docs **by script**, exac
+.claude/workflow/condense.md:1:# Step — Condense (design agent) (Phase 4.2 only)
+.claude/WORKFLOWS.md:112:(Phase 4.2 only) Phase 4.2, the docs restructure, runs a variant loop for its condensing slices: the design agent

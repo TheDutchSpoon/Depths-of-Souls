@@ -1,0 +1,25 @@
+# Mechanism removed -> the docs-check tests that fail (scratchpad script mutates one rule, runs the project, restores the file; 21 mutations, 21 fail)
+FAILS    slug dedupe (GitHub loop -> first-repeat counter): 5 test(s) e.g. resolveAnchors gives a, a, a-1 the anchors a, a-1, a-1-1 | resolveAnchors gives a-1, a, a the anchors a-1, a, a-2
+FAILS    (a) unresolved anchor not reported: 6 test(s) e.g. citations in src/ (a) unresolved anchors fails a heading that does not exist, with file:line | citations in src/ (a) unresolved anchors fails a wrong-case anchor
+FAILS    (a) missing file not reported: 2 test(s) e.g. citations in src/ (a) unresolved anchors fails a file that does not exist | citations in .claude/ (a) unresolved anchors fails a file that does not exist
+FAILS    (a) ".." segment not reported: 2 test(s) e.g. citations in src/ (a) unresolved anchors fails a path with a ".." segment | citations in .claude/ (a) unresolved anchors fails a path with a ".." segment
+FAILS    (b) CONVENTIONS "…" old form not detected: 11 test(s) e.g. citations in src/ (b) old forms fails CONVENTIONS "Testing" | citations in src/ (b) old forms fails CONVENTIONS' "Testing"
+FAILS    (b) GAME_DESIGN § old form not detected: 5 test(s) e.g. citations in src/ (b) old forms fails GAME_DESIGN §4 | citations in src/ (b) old forms fails GAME_DESIGN.md §13
+FAILS    (b) src/ names of deleted docs allowed: 1 test(s) e.g. citations: where it looks names a deleted doc as a problem in src/ only
+FAILS    (c) backticked-path label form not detected: 8 test(s) e.g. citations in src/ (c) label forms fails `spec/combat.md` "Damage formula" | citations in src/ (c) label forms fails `spec/combat.md`, "Damage formula"
+FAILS    (c) paren-list label form not detected: 2 test(s) e.g. citations in src/ (c) label forms fails `spec/combat.md` ("Damage formula", "Provoke") | citations in .claude/ (c) label forms fails `spec/combat.md` ("Damage formula", "Provoke")
+FAILS    (c) bare <NAME> "Label" form not detected: 4 test(s) e.g. citations in src/ (c) label forms fails WORKFLOWS "Golden policy" | citations in src/ (c) label forms fails ROADMAP.md "Phase 5"
+FAILS    src/ gap: no comment leader allowed across a line break: 3 test(s) e.g. citations in src/ (b) old forms fails a CONVENTIONS "Label" wrapped over a line break | citations in src/ (c) label forms fails a label wrapped over a line break
+FAILS    phases/ and archive/ not skipped: 3 test(s) e.g. citations: where it looks skips an old form in phases/ and archive/ | citations: where it looks reads only .ts/.tsx under src/ and .md under .claude/
+FAILS    budgets fails the run when over budget: 1 test(s) e.g. runBudgets marks an over-budget file OVER and still exits 0
+FAILS    budgets counts CR bytes: 1 test(s) e.g. runBudgets sizes a CRLF file without the carriage returns
+FAILS    inventory reads HEAD instead of the Base sha: 1 test(s) e.g. inventory: the guard still passes after the condense is committed: the base sha is read from the file
+FAILS    inventory skeleton ignores --base: 2 test(s) e.g. inventory-skeleton takes --base: an older revision reads the older text | inventory-skeleton errors on an unknown revision and on a file the base does not have
+FAILS    inventory skeleton overwrites: 1 test(s) e.g. inventory-skeleton refuses to overwrite an inventory
+FAILS    inventory: missing-row check removed: 2 test(s) e.g. inventory: the guard fails on a missing row, naming the unit | inventory: the guard fails when Base is changed to the post-condense commit
+FAILS    inventory: Reason check removed: 1 test(s) e.g. inventory: the guard row checks fails a rewritten unit with no Reason
+FAILS    cli: move still accepted: 1 test(s) e.g. docs-check cli rejects the mode move with usage and exit 2
+FAILS    cli: --root ignored: 2 test(s) e.g. docs-check cli runs citations and budgets against --root, from any cwd | docs-check cli fails the real entry on a planted fault, with file:line
+
+# Round 2 (review-r1 hand-out 3): the * leader removed from SITES.src.gap in scripts/docs-check/citations.ts (`(?://+|\*)?` -> `(?://+)?`), citations.test.ts re-run, file restored
+FAILS    src/ gap: no * comment leader allowed across a line break: 2 test(s) e.g. citations: where it looks fails a label form wrapped over a block-comment leader in src/ | citations: where it looks fails an old form wrapped over a block-comment leader in src/

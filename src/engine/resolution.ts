@@ -435,7 +435,7 @@ export interface FireHookOptions {
     readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
     readonly instanceIndex: number
   }
-  /** Phase 4.1-H2b1 (CONVENTIONS "Damage observation"): supplied ONLY by `applyDamageAndEmit`'s
+  /** Phase 4.1-H2b1 (`spec/effects.md#damage-observation`): supplied ONLY by `applyDamageAndEmit`'s
    * `on-damage-observed` call. `selfInflicted` is the cost classification carried from the branch
    * that chose the cost path. Both observation hooks FAIL CLOSED: a candidate on
    * `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
@@ -1040,7 +1040,7 @@ export function executeResponse(
         } else if (response.scalingStat !== undefined) {
           // One formula for every formula-mode magnitude, trait or spell: `stat * (spellPower *
           // multiplier)`, the order deal-damage uses in every mode and `offStat` gets through
-          // getOffensiveStat above (4.1-D review item 2; CONVENTIONS, heal).
+          // getOffensiveStat above (4.1-D review item 2; `spec/combat.md#the-stat-a-spells-magnitude-scales-off`, heal).
           amount =
             getEffectiveStat(bearer, response.scalingStat) *
             ((response.spellPower ?? 1.0) * formulaMultiplier)
@@ -1223,8 +1223,7 @@ export function executeResponse(
 }
 
 /**
- * Phase 4.1-H2b2 (ASSUMPTIONS 113, 143, 144, 146; CONVENTIONS "DoT and Regen from the applier's
- * snapshot"): a status's damage tick -- INDIRECT damage computed from the instance's applier
+ * Phase 4.1-H2b2 (ASSUMPTIONS 113, 143, 144, 146; `spec/statuses.md#the-applier-snapshot`): a status's damage tick -- INDIRECT damage computed from the instance's applier
  * snapshot, through the ONE indirect formula (`calculateIndirectDamage`, no third formula):
  * `potency × affinity(snapshot vs bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective
  * Defence`, `MAX(1, floor(...))`. Defend's ×1.5 Defence and ×0.65 taken factor apply, as for all

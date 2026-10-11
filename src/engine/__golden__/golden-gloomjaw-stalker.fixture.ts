@@ -1,4 +1,4 @@
-// Golden: Glimmerdark's Gloomjaws signature mechanic (species-locked.md) -- "execute the weak",
+// Golden: Glimmerdark's Gloomjaws signature mechanic (`content/glimmerdark.md#gloomjaws-violence-execute-the-weak`) -- "execute the weak",
 // built on `conditional-damage-bonus` (Slice E2) with a `hp-percent` condition scoped to the
 // current damage TARGET (subject 'target'), against REAL shipped content (data/species/
 // glimmerdark.ts's real GLOOMJAW_STALKER_TRAIT). Mirrors Overgrowth's Ambusher/Reaper primitive

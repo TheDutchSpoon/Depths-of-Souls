@@ -1,4 +1,4 @@
-// Golden: Rotcap Hollow's floor-30 boss, the Rot Sovereign (species-locked.md's "Attrition-
+// Golden: Rotcap Hollow's floor-30 boss, the Rot Sovereign (`content/rotcap-hollow.md#rot-sovereign` "Attrition-
 // management ... grows via count-scaling off deaths (any creature that dies feeds it) + blankets
 // the party in spreading Spore") -- the real, shipped `ROT_SOVEREIGN_TRAIT` proving all three
 // signature pieces end to end: an add's death growing her Attack (`on-ally-death`), a PLAYER

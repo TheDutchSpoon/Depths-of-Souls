@@ -15,15 +15,14 @@ Read this when changing saving or loading. None of it is built: Phase 5 builds i
 - Phase 5 builds it. Assume big rosters, large inventories and many script templates.
 - **IndexedDB is the primary store** (via `idb` or Dexie); `localStorage` holds only tiny things
   (settings, a last-save pointer), never the main save.
-- The database name is namespaced by environment (`CONVENTIONS.md` "IndexedDB is namespaced by
-  environment").
+- The database name is namespaced by environment (`CONVENTIONS.md#indexeddb-is-namespaced-by-environment`).
 
 ### References, not copies
 
 - Phase 5 builds it. A save holds **instances and references only**, never copies of static game
   data: instances reference creatures and species **by id** and read base stats, affinity and
   traits from shipped data, so saves stay lean and a rebalance reaches existing saves.
-- A fused instance is saved as its recipe (`spec/creatures.md` "Fusion").
+- A fused instance is saved as its recipe (`spec/creatures.md#fusion`).
 
 ### What a save holds
 
@@ -31,7 +30,7 @@ Read this when changing saving or loading. None of it is built: Phase 5 builds i
 - **Player meta**: the specialization; the perk spend (the earned total is derived from the bosses
   cleared, never stored); the deepest cleared floor and the **last floor**; the bosses cleared; the
   discovered biomes; the atlas pins; the run seed and counter; the party's slots.
-- **Collection**: the instances (`spec/creatures.md` "Instance"), from Phase 8 with their equipped
+- **Collection**: the instances (`spec/creatures.md#instance`), from Phase 8 with their equipped
   gem and equipment references, and the **per-creature soul%**.
 - **Inventory**: currency balances (Essence, Ore, Bricks, Lifeforce); from Phase 8, gem instances
   (level and augments), equipment instances (level and infusions) and unlocked recipes.
@@ -43,7 +42,7 @@ Read this when changing saving or loading. None of it is built: Phase 5 builds i
 - Phase 5 builds it. The save is split into **logical records**, `meta`, `collection`, `inventory`,
   `facilities` and `scripts`, so a small change (spending a perk point) rewrites only its record.
 - In the first format, `collection` holds each instance with its stored `gems` set
-  (`spec/creatures.md` "Player gem sets"), and `facilities` and `scripts` start empty.
+  (`spec/creatures.md#player-gem-sets`), and `facilities` and `scripts` start empty.
 - **Don't pre-optimize** to per-creature records: split `collection` finer only if its write
   becomes a **measured** bottleneck on very large rosters.
 - If a partition is **missing or fails to parse** on load (corruption, tampering, a bug), only that

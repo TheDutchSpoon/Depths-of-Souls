@@ -8,13 +8,13 @@ Read this when changing progression: specializations, perks and perk points, the
 
 - The "numbers go up" fantasy lives in **build sources** stacking in the build-modifier pools and
   effective stats (traits, gem augments, equipment infusions, fusion, facility upgrades, spec
-  perks), **not** in levels (`spec/creatures.md` "Levels and XP").
+  perks), **not** in levels (`spec/creatures.md#levels-and-xp`).
 
 ### Specializations
 
 - The player picks a **specialization**, which shapes their own bonuses and playstyle, distinct
   from creature affinities. Each defines a **starter creature** that fits its playstyle: the
-  player's one cold-start creature (`spec/creatures.md` "Cold start").
+  player's one cold-start creature (`spec/creatures.md#cold-start`).
 - v1 ships three; more may be added and existing ones edited, so specializations are **data**, not
   hard-coded classes:
 
@@ -72,13 +72,12 @@ Read this when changing progression: specializations, perks and perk points, the
 ### Specializations are data
 
 - A specialization is a named collection of perks, as data (`src/data/specializations.ts`). A perk
-  is an effect carrier (`spec/effects.md` "Carriers and effects"), combat-only; `Perk` stays a
+  is an effect carrier (`spec/effects.md#carriers-and-effects`), combat-only; `Perk` stays a
   plain effect carrier, with no meta-economy framework.
 - A spec is valid iff its perks' `Σ(maxLevel × costPerLevel) === 1000`, checked at load.
 - Perk points are **derived**: `bossesCleared × 100`, first clears only. The spend is
   `Map<perkId, level>`; refunding is free and unlimited (one perk, all of them, or a spec swap are
-  the same clear), and the budget recomputes. The store actions are `spec/store.md` "Store
-  actions".
+  the same clear), and the budget recomputes. The store actions are `spec/store.md#store-actions`.
 - Each starter spec defines a **starter creature**.
 
 ### Inert perks

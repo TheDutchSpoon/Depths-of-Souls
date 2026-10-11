@@ -1,5 +1,5 @@
-// Phase 4 Slice F: specializations/perks (CONVENTIONS "Specializations are data... perks are
-// effect-framework effect-carriers -- v1 combat-only"). Each spec's own `.claude/specializations/
+// Phase 4 Slice F: specializations/perks (`spec/progression.md#specializations-are-data`: perks are
+// effect-framework effect-carriers, v1 combat-only). Each spec's own `.claude/specializations/
 // {sorcerer,brute,shieldbarer}.md` is the source of truth for every perk's exact cost/effect/
 // Phase tag; this file is that table transcribed into data, reusing ONLY vocabulary already
 // built by Slices A-E2 (per the plan's own "Response reuse check" -- confirmed perk-by-perk in
@@ -56,7 +56,7 @@ export interface Specialization {
   readonly perks: readonly PerkDef[]
 }
 
-/** CONVENTIONS' stated invariant: a spec is valid iff `Σ(maxLevel × costPerLevel) === 1000`.
+/** `spec/progression.md#specializations-are-data` stated invariant: a spec is valid iff `Σ(maxLevel × costPerLevel) === 1000`.
  * Throws at import time (called at the bottom of this module for all three specs) -- a
  * data-authoring mistake fails fast in tests, never reachable at runtime. */
 export function validateSpecialization(spec: Specialization): void {
@@ -293,7 +293,7 @@ export const BRUTE: Specialization = {
     },
     {
       // "On cast, +1% of the caster's Attack per rank is added to the spell's damage." The
-      // textbook cross-stat consumer (CONVENTIONS names this exact perk under "Cross-stat
+      // textbook cross-stat consumer (`spec/combat.md#cross-stat-contribution` names this exact perk under "Cross-stat
       // contribution").
       id: 'aggressive-caster',
       name: 'Aggressive Caster',
@@ -331,7 +331,7 @@ export const BRUTE: Specialization = {
     },
     {
       // "+1% damage to Weakened targets per level." The textbook conditional-damage-bonus
-      // consumer (CONVENTIONS names this exact perk under that primitive).
+      // consumer (`spec/combat.md#cross-stat-contribution` names this exact perk under that primitive).
       id: 'cull-the-weak',
       name: 'Cull the Weak',
       maxLevel: 50,
@@ -439,7 +439,7 @@ export const SHIELDBARER: Specialization = {
     },
     {
       // "Attacks and spells deal additional damage equal to 3% of Defence per level." The
-      // textbook cross-stat consumer for BOTH action kinds (CONVENTIONS names this exact perk).
+      // textbook cross-stat consumer for BOTH action kinds (`spec/combat.md#cross-stat-contribution` names this exact perk).
       id: 'shield-bash',
       name: 'Shield Bash',
       maxLevel: 10,

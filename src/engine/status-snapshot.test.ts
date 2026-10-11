@@ -1,5 +1,5 @@
 // Phase 4.1-H2b2: the unit tests of the two status rules -- single instance and the applier
-// snapshot (CONVENTIONS "DoT and Regen from the applier's snapshot", ASSUMPTIONS 113, 114, 143,
+// snapshot (`spec/statuses.md#the-applier-snapshot`, ASSUMPTIONS 113, 114, 143,
 // 144, 145). The focused goldens (golden-h2b2-*) pin the mechanisms through whole fights; these pin
 // `snapshotFor`, `applyStatus`'s keep/replace/refresh rules, the resolver invariant and the
 // validators directly.

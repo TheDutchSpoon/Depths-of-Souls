@@ -6,7 +6,7 @@ import type { Trait } from '../../engine/effect-types'
 // .claude/content/glimmerdark.md -- kept in sync with the numbers below.
 //
 // Same enabler/payoff/amplifier framing as Overgrowth (common/uncommon/rare), except where
-// species-locked.md names a single shared mechanic instead of a two-role chain (Resonants,
+// `content/glimmerdark.md#resonants-wit-caster-synergy` names a single shared mechanic instead of a two-role chain (Resonants,
 // Gloomjaws) -- there, all three creatures play the SAME mechanic at escalating scope/strength
 // by rarity, per that file's own "members ... " / "self-contained" phrasing (no separate
 // enabler exists to chain off).
@@ -122,14 +122,14 @@ export const BLINDCLAWS_SETTER_TRAIT: Trait = {
   ],
 }
 
-/** Blindclaws' Striker (payoff): "+% while acting before its target" (species-locked.md), now
+/** Blindclaws' Striker (payoff): "+% while acting before its target" (`content/glimmerdark.md#blindclaws-striker`), now
  * the spec'd numeric payoff (PR #60 review, C1) -- a real `conditional-damage-bonus` on the
  * `acted-before-target` condition, made possible by E1 (conditions.ts) completing that
  * condition's non-scripting path. Action-selection (attack-or-Defend) is the scripting layer's
  * job, never a creature-identity trait -- the previous `ambush-strike` script (data/scripts.ts)
  * has been removed; Striker runs the plain `striker` role
  * (species/glimmerdark.ts), and this is its whole identity. Scoped to `actionKind: 'attack'`
- * (species-locked.md's own wording is Attack-specific; the gems it casts when Pacified get no
+ * (`content/glimmerdark.md#blindclaws-striker` own wording is Attack-specific; the gems it casts when Pacified get no
  * bonus). */
 export const BLINDCLAWS_STRIKER_TRAIT: Trait = {
   id: 'blindclaws-striker-killing-instinct',
@@ -165,11 +165,11 @@ export const BLINDCLAWS_VANGUARD_TRAIT: Trait = {
 }
 
 // ---- Resonants (Wit lean) -- closed mechanic: caster synergy (on-action-observed) ----
-// species-locked.md names ONE shared mechanic ("members on-ally-action(cast) -> gain
+// `content/glimmerdark.md#resonants-wit-caster-synergy` names ONE shared mechanic ("members on-ally-action(cast) -> gain
 // Attack/Int"), not a two-role enabler/payoff chain -- all three creatures share the same
 // on-action-observed reaction, escalating scope/strength by rarity (common/uncommon/rare), per
 // the file's own "power up around casters" framing. Resonants are the ONLY locked
-// on-action-observed consumer across every species/starter/spec tree (CONVENTIONS).
+// on-action-observed consumer across every species/starter/spec tree (`spec/effects.md#action-reactions-actor-self-hooks-or-observation`).
 
 /** Resonant Chorus (common): a `caster` (species/glimmerdark.ts), one of the biome's cast roles
  * -- reinforces its own "caster synergy" identity by being a caster
@@ -213,7 +213,7 @@ export const RESONANT_ADEPT_TRAIT: Trait = {
 }
 
 /** Resonant Overtone (rare, amplifier): PR #60 review -- replaces the previous "gain both
- * stats" (a bigger numeric copy of Chorus+Adept) with echo-cast, species-locked.md's actual
+ * stats" (a bigger numeric copy of Chorus+Adept) with echo-cast, `content/glimmerdark.md#resonant-overtone` actual
  * spec'd mechanic: `on-ally-action (cast) -> 10% the caster echo-casts a random one of its own
  * spells` (non-stacking; echoes are themselves observable -> chains). Phase 4.1-E (A2): a
  * `perform-action(triggering-source, cast gemSlot 'random' at a 'random' target)` response -- the
@@ -244,8 +244,8 @@ export const RESONANT_OVERTONE_TRAIT: Trait = {
   ],
 }
 
-// ---- Sparkeaters (Wit/Violence lean per species-locked.md) -- closed mechanic: stat parasites ----
-// species-locked.md: "Drainers (on-attack -> -stat enemy + same +stat self, both
+// ---- Sparkeaters (Wit/Violence lean per `content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites`) -- closed mechanic: stat parasites ----
+// `content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites`: "Drainers (on-attack -> -stat enemy + same +stat self, both
 // permanent-for-fight)" -- a flat "stat parasite" identity with no enabler/payoff chain (like
 // Resonants above), so each creature drains a different stat. PR #60 review (C2): per-creature
 // affinity now matches the stat each one drains, per CLAUDE.md's affinity->stat soft-mapping --
@@ -253,7 +253,7 @@ export const RESONANT_OVERTONE_TRAIT: Trait = {
 // glimmerdark.ts). Side effect: the biome's affinity spread flattens to 4/4/4/4/2.
 
 /** Sparkeater Leech (common): every attack, permanently steals 10% Attack from its target to
- * itself (two apply-stat-modifier responses on the same hook -- "free", per species-locked.md's
+ * itself (two apply-stat-modifier responses on the same hook -- "free", per `content/glimmerdark.md#sparkeater-leech`
  * own "~free (2x apply-stat-modifier)" note). */
 export const SPARKEATER_LEECH_TRAIT: Trait = {
   id: 'sparkeater-leech-drain',
@@ -346,11 +346,9 @@ export const SPARKEATER_VOIDMAW_TRAIT: Trait = {
 }
 
 // ---- Gloomjaws (Violence lean) -- closed mechanic: execute the weak ----
-// PR #60 review (C4): three DISTINCT verbs, superseding species-locked.md's original "single
-// shared mechanic (on-damage-dealt -> bonus vs targets below X% HP, self-contained)" framing --
-// that doc entry is stale as of this review; see the doc-sync note in the phase record. All three
-// verbs were already built (conditional-damage-bonus/Slice E2, apply-stat-modifier/Slice C,
-// armor-penetration/Slice B); this is pure content-assembly, no new engine work.
+// Three distinct verbs toward one theme (`content/glimmerdark.md#gloomjaws-violence-execute-the-weak`):
+// the Stalker executes (conditional-damage-bonus), the Executioner snowballs (a triggered apply-stat-modifier),
+// the Ravager softens (armor-penetration). All three are existing primitives.
 
 /** Gloomjaw Stalker (common): the finisher -- unchanged, +30% damage to enemies below 30% HP. */
 export const GLOOMJAW_STALKER_TRAIT: Trait = {
@@ -425,7 +423,7 @@ export const SHELLBACK_WARDEN_TRAIT: Trait = {
   ],
 }
 
-/** Shellback Brawler (payoff/"attacker"): species-locked.md's "attacker uses stat-remap
+/** Shellback Brawler (payoff/"attacker"): `content/glimmerdark.md#shellback-brawler` "attacker uses stat-remap
  * Defence->Attack" -- its Attack action reads its own (high) effective Defence instead of Attack
  * entirely, "armor-as-weapon" literally. Pairs with a correspondingly high-Defence/low-Attack
  * base stat line (species/glimmerdark.ts). */
@@ -437,7 +435,7 @@ export const SHELLBACK_BRAWLER_TRAIT: Trait = {
 
 /** Shellback Bulwark (amplifier): a genuinely distinct mechanic from Brawler's OFFENSIVE
  * armor-as-weapon -- this is the DEFENSIVE mirror (Thorns/Shield Bash-shaped, `deal-damage`'s
- * `scalingStat`, per CONVENTIONS' own named example): whenever it takes damage, it retaliates
+ * `scalingStat`, per the example in `spec/responses.md#magnitude-modes`): whenever it takes damage, it retaliates
  * for damage scaled off its own Defence, not Attack. */
 export const SHELLBACK_BULWARK_TRAIT: Trait = {
   id: 'shellback-bulwark-retaliating-shell',
@@ -457,7 +455,7 @@ export const SHELLBACK_BULWARK_TRAIT: Trait = {
 }
 
 // ---- The Leech Sovereign (floor-20 boss) ----
-// species-locked.md: "Every hit steals a stat (permanent -you/+it, same as Sparkeaters); you
+// `content/glimmerdark.md#leech-sovereign`: "Every hit steals a stat (permanent -you/+it, same as Sparkeaters); you
 // hollow out over time -- answer is raw burst. Lean identity (no heavy add layer)." A single,
 // bigger-magnitude version of Sparkeaters' own steal shape (Leech's exact mechanism, at boss
 // scale) -- deliberately ONE mechanic, no second effect, per the design doc's own "lean identity."

@@ -52,21 +52,20 @@ How the chosen action then resolves is `spec/combat.md`.
 - Support selectors with no enemy mirror (highest-Defence ally, to buff the tank) are added when
   content asks for them, not guessed up front.
 - **No "provoking enemy" selector**: Provoke already overrides every single-target offensive action
-  (`spec/combat.md` "Provoke"), so selecting the provoker would change nothing when one exists and
+  (`spec/combat.md#provoke`), so selecting the provoker would change nothing when one exists and
   couldn't resolve when none does. Reintroduce it only if a mechanic makes it meaningful, such as
   targeting provokers with a non-offensive action.
 
 ### Actions in a rule
 
-- A rule's action is one of the combat actions (`spec/combat.md` "Actions"). A **Cast** rule names
+- A rule's action is one of the combat actions (`spec/combat.md#actions`). A **Cast** rule names
   which gem slot to fire, choosing the right spell for the situation being the tactical depth, or a
   random castable gem.
 - **TARGETING** is optional and matters only for actions that choose among targets (Attack, a
   single-target Cast). Without it the rule targets the default for the action's intended side: the
   lowest-HP enemy for attacks and enemy spells, the lowest-HP ally for support spells. Self-only
   actions (Defend, Provoke, Wait) and AOE casts ignore it: an AOE hits its whole side.
-- An explicit selector always wins, even one pointing at the other side (`spec/combat.md` "Default
-  targeting is side-aware").
+- An explicit selector always wins, even one pointing at the other side (`spec/combat.md#default-targeting-is-side-aware`).
 
 ### The fallback
 
@@ -83,12 +82,10 @@ How the chosen action then resolves is `spec/combat.md`.
 ### Role scripts
 
 - Enemies run **role scripts**, seven stock templates: `striker`, `guardian`, `warden`, `caster`,
-  `support`, `opener` and `taunter`. A creature's role is its default script (`spec/creatures.md`
-  "Species, creatures and instances"). They are the only scripts the game ships; what each does is
-  `content/enemy-behaviour.md` "Role scripts".
+  `support`, `opener` and `taunter`. A creature's role is its default script (`spec/creatures.md#species-creatures-and-instances`). They are the only scripts the game ships; what each does is
+  `content/enemy-behaviour.md#role-scripts`.
 - Every role ends in a fallback rule that runs only when the rule above it is illegal, so a lock
-  downgrades a turn instead of emptying it (`content/enemy-behaviour.md` "A lock downgrades a
-  turn").
+  downgrades a turn instead of emptying it (`content/enemy-behaviour.md#a-lock-downgrades-a-turn`).
 
 ## Engine rules
 
@@ -96,7 +93,7 @@ How the chosen action then resolves is `spec/combat.md`.
 
 - `decideAction(creature, script, state) → Intent` is pure engine code. It returns the winning
   rule's **unresolved** intent, or the fallback's; `resolveIntent` and `executeAction` turn it into
-  the action (`spec/combat.md` "One action pipeline").
+  the action (`spec/combat.md#one-action-pipeline`).
 - **Side-effect-free lookahead**: walk the rules top-down; a rule matches only if its condition is
   true **and** its action is legal (`checkLegality`). An illegal action **skips to the next rule**;
   it never matches and fizzles. The first match wins, and only then is anything executed: no try,
@@ -107,7 +104,7 @@ How the chosen action then resolves is `spec/combat.md`.
   above it and `same seed → same outcome` would break.
 - An action is illegal for an **empty gem slot**, **no castable gem** for a random cast, or a
   **lock** on it (Silenced blocks Cast, Pacified Attack, Stun and Sleep everything;
-  `spec/statuses.md` "Action locks").
+  `spec/statuses.md#action-locks`).
 - **An unresolvable selector makes a rule illegal**, but no v1 selector can fail to resolve: `self`
   exists, ally selectors include the actor, and an enemy selector always has a target because no
   turn or action starts after a side is wiped. The seam is kept, documented but unreachable, so
@@ -121,7 +118,7 @@ How the chosen action then resolves is `spec/combat.md`.
 
 - `Condition` is a discriminated union on `kind`: `always`, `hp-percent`, `enemy-count`,
   `ally-count`, `round-number`, `enemy-weak-to-me-exists`, `has-status` and `acted-before-target`
-  (`spec/effects.md` "acted-before-target"). Comparators are data: `<`, `<=`, `>`, `>=`, `==`, `!=`.
+  (`spec/effects.md#acted-before-target`). Comparators are data: `<`, `<=`, `>`, `>=`, `==`, `!=`.
 - **HP% by integer cross-multiplication**: `currentHp × 100 <cmp> threshold × maxHp`, with `maxHp =
   floor(getEffectiveStat(_, 'health'))`, the max HP that `currentHp` is initialised and clamped to
   (`effectiveMaxHp`), never the unfloored effective Health. So full HP is exactly 100% and every
@@ -135,8 +132,7 @@ How the chosen action then resolves is `spec/combat.md`.
   (`conditions.ts` `evaluateCondition`), so a `warden` or `support` whose ally at 30/100 HP sits
   beside one at 20/25 tests the 80% one and doesn't act. The fix is listed in `ROADMAP.md` Phase
   4.5 "Decided, not built".
-- **`'target'`** is the creature an effect is being resolved against (`spec/effects.md` "Trigger
-  conditions"). A script rule has none, so in lookahead a `'target'` condition is **false**. The
+- **`'target'`** is the creature an effect is being resolved against (`spec/effects.md#trigger-conditions`). A script rule has none, so in lookahead a `'target'` condition is **false**. The
   qualifier is ignored for it, since it is a single creature.
 
 ### Target selectors in the engine
@@ -144,7 +140,7 @@ How the chosen action then resolves is `spec/combat.md`.
 - `TargetSelector` is a discriminated union on `kind`: the player's eleven
   (`lowest-hp-enemy`, `highest-hp-enemy`, `highest-attack-enemy`, `highest-intelligence-enemy`,
   `random-enemy`, their `-ally` mirrors, and `self`) plus the intent-only `'random'`
-  (`spec/combat.md` "One action pipeline").
+  (`spec/combat.md#one-action-pipeline`).
 - Extremum selectors read current HP or effective Attack or Intelligence, with the **shared
   tie-break**: player side → slot → id, ids compared by codepoint.
 - `random-enemy` and `random-ally` draw from the seeded RNG, only at execution, for the winning
@@ -186,5 +182,5 @@ How the chosen action then resolves is `spec/combat.md`.
   - **shape**: a single-target selector on an AOE slot. The engine tolerates it: the AOE ignores the
     selector and hits its whole side;
   - **side**: an enemy selector on an ally-side spell, or the reverse. The engine resolves it
-    literally, by design (`spec/combat.md` "Default targeting is side-aware"), so the editor warns
+    literally, by design (`spec/combat.md#default-targeting-is-side-aware`), so the editor warns
     and never blocks. A rule with no selector already gets the right side.

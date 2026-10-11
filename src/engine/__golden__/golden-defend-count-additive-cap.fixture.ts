@@ -8,7 +8,7 @@
 //
 // BEARER starts the fight having ALREADY defended 15 times this battle (Creature.defendCount
 // preset via the fixture, standing in for 15 earlier rounds this golden doesn't need to spend --
-// keeps the fixture small per CONVENTIONS' testing discipline while still reaching the cap for
+// keeps the fixture small per `CONVENTIONS.md#golden-replay-tests` testing discipline while still reaching the cap for
 // real). Two more real Defends in this fight push defendCount to exactly 16 (the count at which
 // `(1 - 0.95) × 16 = 0.8` reaches the cap precisely) and then to 17 (one PAST the cap), proving
 // the clamp actually holds rather than merely being asymptotically close.

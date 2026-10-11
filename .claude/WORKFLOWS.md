@@ -38,7 +38,7 @@ drifts and stale decisions silently outlive their correction.
   spec/            the spec, one file per subsystem (CLAUDE.md has the map)   living docs
   content/  species/  specializations/                                   living docs
   workflow/        the standing rules and step files both agents follow
-  skills/          the coding agent's commands (/slice-plan, /slice-build, /slice-fix)
+  skills/          the coding agent's commands (/slice-plan, /slice-build, /slice-fix, /slice-verify)
   phases/
     <phase>/
       brief.md     phase-wide: scope, architecture, vocabulary delta, assumptions, slice list
@@ -53,6 +53,7 @@ drifts and stale decisions silently outlive their correction.
         handout-r1.md   design agent → coding agent, only when there are fixes
         report-r2.md …  and so on, one round per fix batch
         record.md       what was built; immutable once merged
+        inventory.md  verify-request.md  verify-r1.md …   a condense slice's files instead
         evidence/       generated output a step file cites (sim reports, scans, tables)
   archive/         Phases 0–4's briefs and records, untouched. History, not current truth.
 ```
@@ -109,8 +110,24 @@ Each step's rules are in its file: kickoff `workflow/kickoff.md`, plan and build
 Duncan can merge steps when a slice is small (for example, skip a separate plan review for a pure
 docs or tooling change), but the review → sync → next-slice order never changes.
 
-(Phase 4.2 only) Phase 4.2, the docs restructure, runs a variant loop for its condensing slices: the design agent
-writes, the coding agent verifies (`/slice-verify`). See `phases/4.2/brief.md` "Process for 4.2".
+### Condensing a doc over budget
+
+When a PR review takes a living doc over its budget (`workflow/budgets.md`) and Duncan chooses to
+condense it or split it (`workflow/budgets.md#over-budget`), a docs-only slice runs before the
+next kickoff, with the roles swapped: the docs are the design agent's, and the coding agent knows
+the code.
+
+| #   | Step         | Where   | Duncan types                   | Writes                                                   |
+| --- | ------------ | ------- | ------------------------------ | -------------------------------------------------------- |
+| 0   | Pre-flight   | —       | creates the slice branch       | the slice's `brief.md` (from the review)                 |
+| 1   | Condense     | Cowork  | `/slice-condense <id>`         | the condensed docs, `inventory.md`, `verify-request.md`  |
+| 2   | First commit | —       | commits step 1                 | —                                                        |
+| 3   | Verify       | VS Code | `/slice-verify <id> <N>`       | `verify-r<N>.md`                                         |
+| 4   | Fix          | Cowork  | `/slice-condense <id> <N+1>`   | doc fixes, `## Round <N+1>` in `verify-request.md`       |
+| 5   | Merge        | —       | merges                         | —                                                        |
+
+Steps 3 and 4 repeat until a verify round has no findings. Golden policy: byte-identical; the
+slice changes only `.claude/`. The rules are in `workflow/condense.md`.
 
 ## Golden policy: one per PR
 
@@ -123,8 +140,7 @@ Every slice declares its golden policy in the brief, and a PR never mixes two:
   through `npm run corpus:update`, and every changed fight is attributed to a listed change.
 
 In both cases every new behaviour lands with a new hand-derived test that is shown failing with
-its mechanism removed, at every site (CONVENTIONS "A mechanism at more than one site is tested at
-each site").
+its mechanism removed, at every site (`CONVENTIONS.md#a-mechanism-at-more-than-one-site-is-tested-at-each-site`).
 
 ## When a slice is too big
 
@@ -135,7 +151,7 @@ brief records the split when it's decided.
 ## Docs and records
 
 - The living docs are the mutable source of truth; records are immutable once merged. How doc
-  edits are made and reviewed: `workflow/design-rules.md` "Doc edits".
+  edits are made and reviewed: `workflow/design-rules.md#doc-edits`.
 - **Changing the process** is a normal doc change: edit `WORKFLOWS.md`, `workflow/` or
   `skills/`, in its own commit.
 

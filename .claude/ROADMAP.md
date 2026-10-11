@@ -4,16 +4,14 @@ Read this when placing a slice in its phase, or checking what is decided but not
 
 The build order: each phase produces something runnable, and the risky core (the pure,
 deterministic engine) came first. Each phase ships in **slices**, built and reviewed per
-`.claude/WORKFLOWS.md`. Phases 0–10 together produce the **start-of-beta build** (`VISION.md` "v1
-is the start-of-beta baseline").
+`.claude/WORKFLOWS.md`. Phases 0–10 together produce the **start-of-beta build** (`VISION.md#v1-is-the-start-of-beta-baseline`).
 
 ## Content authoring
 
 - Content authoring rides as a slice within each content-bearing phase, not as separate interlude
   phases: **3 biomes in Phase 4**, the remaining **7 tapering across Phases 6–9**, landing on
   **exactly 10 biomes by the end of Phase 10** (a hardening phase: no new content).
-- Ten is load-bearing: it makes progression and depth finish together (`spec/progression.md` "Perk
-  points"). Over- or under-shooting breaks nothing; it just decouples the two milestones the design
+- Ten is load-bearing: it makes progression and depth finish together (`spec/progression.md#perk-points`). Over- or under-shooting breaks nothing; it just decouples the two milestones the design
   aligned.
 - **Biomes 11+ are beta content.** How beta extends progression past floor 100 (more
   specializations, further perks, or otherwise) is a beta-time decision, deliberately not settled
@@ -53,11 +51,10 @@ is the start-of-beta baseline").
 
 ## Phase 4.2 — Docs restructure: the context diet (between 4.1 and 4.5)
 *Brief: `.claude/phases/4.2/brief.md`. Docs only: no behaviour change and no golden changes; the one
-`src/` change is comment-only (citations). Done: 4.2-A to 4.2-E.* Every fresh agent chat read about
+`src/` change is comment-only (citations). Done: 4.2-A to 4.2-F.* Every fresh agent chat read about
 300 KB of living docs, most of it CONVENTIONS and GAME_DESIGN. 4.2 splits them into
-`spec/<subsystem>.md`, one home per rule, condenses every living doc, and makes citations anchors
-checked in CI. The rules the condensed docs are written to are in `CLAUDE.md` "How the spec is
-written".
+`spec/<subsystem>.md`, one home per rule, condenses every living doc, makes citations anchors
+checked in CI, and strips provenance from code comments (4.2-H). The rules the condensed docs are written to are in `CLAUDE.md#how-the-spec-is-written`.
 
 ## Phase 4.5 — Run-loop demo (interlude)
 *Brief: to be written after Phase 4.2.* The throwaway visual demo for Phase 4 **and** 4.1,
@@ -73,8 +70,11 @@ guardrails as every demo; own brief and phase record.
 - **Content clean-up:** the nine Phase-3 placeholder traits move out of game data into test-only
   fixtures (goldens byte-identical); Ember Lance and Venom Bolt are deleted (no niche: Venom Bolt
   overlaps Stinger Swarm); Cinder Nova is promoted to real biome-1 content (the pool's only plain
-  AOE damage spell, with reviewed name and numbers). `CONVENTIONS.md` "Mechanism goldens vs content
-  goldens" carries a "Known bug" line that the fix's PR review removes.
+  AOE damage spell, with reviewed name and numbers). `CONVENTIONS.md#mechanism-goldens-vs-content-goldens` carries a "Known bug" line that the fix's PR review removes.
+- **One copy of Splashing's adjacency lookup:** Splashing (`engine/actions.ts`) uses a private
+  copy of `adjacentLivingTargets`, byte-identical to the export in `engine/targeting.ts` that only
+  `targeting.test.ts` calls, so that test pins code Splashing doesn't run. `actions.ts` imports the
+  `targeting.ts` export and the private copy is deleted (goldens byte-identical).
 - **Two Shieldbarer perk bugs** (the code doesn't match the perks' design): **Thorns** must answer
   only damage from an attack or a spell (today it answers any damage with a source, trait and perk
   hits and other retaliations included); **Last Stand** must roll only when the lethal damage is
@@ -84,7 +84,7 @@ guardrails as every demo; own brief and phase record.
 - **Level-ups after each fight** (a bug): `descend` must apply each fight's XP before the floor's
   next fight, so the party fights it at its new levels. Today it materializes the party once per
   descent and applies the floor's XP after the whole floor. The fix moves balance, so the CI
-  balance bands are re-checked in the same PR. `spec/run.md` "Rewards" states the design, with a
+  balance bands are re-checked in the same PR. `spec/run.md#rewards` states the design, with a
   "Known bug" line that the fix's PR review removes.
 - **`on-death-observed`** (a new direction, not a bug): death observation joins the other two
   observation hooks. `on-ally-death` and `on-enemy-death` become one `on-death-observed`, fired on
@@ -95,14 +95,13 @@ guardrails as every demo; own brief and phase record.
   (`data/traits/core.ts`, `glimmerdark.ts`, `rotcap-hollow.ts`) move over; the Rot Sovereign's pair
   becomes one `any` trigger. Deliberate golden change: the hook name in `TriggerFired`, and the
   firing order on an enemy's death (today the dead creature's allies all fire before its enemies).
-  The PR review rewrites `spec/effects.md` "Hooks", "Damage-path hook order" and "Action reactions:
-  actor-self hooks or observation" to match (17 hooks become 16).
+  The PR review rewrites `spec/effects.md#hooks`, `spec/effects.md#damage-path-hook-order` and `spec/effects.md#action-reactions-actor-self-hooks-or-observation` to match (17 hooks become 16).
 - **HP% qualifiers pick by HP%** (a bug): an `hp-percent` condition's `lowest` or `highest`
   qualifier must test the creature with the lowest or highest HP%, compared by integer
   cross-multiplication with the shared tie-break. Today `evaluateCondition` picks it by current HP.
   Users: the `warden` and `support` role scripts' first rules, so the fix is a deliberate golden
   change for fights with either role, and the CI balance bands are re-checked in the same PR.
-  `spec/scripting.md` "Conditions in the engine" states the design, with a "Known bug" line that the
+  `spec/scripting.md#conditions-in-the-engine` states the design, with a "Known bug" line that the
   fix's PR review removes.
 - **A dead creature's turn is skipped entirely** (a new direction, not a bug): a creature that is
   dead when its slot in the frozen queue comes up gets no `TurnStarted`/`TurnEnded` bracket, no
@@ -113,23 +112,22 @@ guardrails as every demo; own brief and phase record.
   else reads dead slots (the act-first and act-last poles). Deliberate golden change for every fight
   where a creature dies before its turn (the bracket events, the turn clock, the Web roll's RNG
   draws), and the CI balance bands are re-checked in the same PR. The PR review rewrites
-  `spec/combat.md` "Turn queue", `spec/statuses.md` "Self-clearing statuses" (the 72%), "Born this
-  turn" and "Turn order", and `content/overgrowth.md`'s Web entry.
+  `spec/combat.md#turn-queue`, `spec/statuses.md#self-clearing-statuses` (the 72%),
+  `spec/statuses.md#born-this-turn` and `spec/statuses.md#turn-order`, and `content/overgrowth.md`'s Web entry.
 
 ## Phase 5 — Persistence (large saves)
 - Builds `spec/saves.md` (all of it is its `## Not built` half) and the IndexedDB namespacing
-  (`CONVENTIONS.md` "IndexedDB is namespaced by environment").
+  (`CONVENTIONS.md#indexeddb-is-namespaced-by-environment`).
 
 ## Phase 6 — Scripting UI
-- Builds `spec/scripting.md` "The script editor": the block and dropdown rule editor, authoring
+- Builds `spec/scripting.md#the-script-editor`: the block and dropdown rule editor, authoring
   **script templates** and assigning them to creatures, drag-to-reorder and live-preview validity.
 - **Inputs recorded so far:**
   - grey out illegal choices with the store's `can…` queries and the engine's `checkLegality`;
   - candidate conditions: "target lacks status X" (casters currently refresh statuses they already
     applied) and a `last-action` condition (script memory);
   - whether a script-level default target overrides the engine's side-aware default;
-  - triggers can use **trigger-only conditions** (`TriggerCondition`, `spec/effects.md` "Trigger
-    conditions") that scripts can't. The editor builds its condition list from the scripting
+  - triggers can use **trigger-only conditions** (`TriggerCondition`, `spec/effects.md#trigger-conditions`) that scripts can't. The editor builds its condition list from the scripting
     `Condition` and must not offer them. If players should get "another ally is hurt", add it
     together with a matching "lowest-HP hurt ally other than me" selector, never the condition
     alone (today's `lowest-hp-ally` includes the caster and ignores full Health).
@@ -141,24 +139,23 @@ guardrails as every demo; own brief and phase record.
 **Decided, not built:**
 - **The scripted intro's story beat:** the intro's outcome is presented as a story beat, the
   starter revived and the Unicorn gained. It is presentation only (HP resets every fight, so a
-  revive changes nothing); `spec/run.md` "Scripted intro" describes the fight `main` runs.
+  revive changes nothing); `spec/run.md#scripted-intro` describes the fight `main` runs.
 - **Effective stats on screen:** stacked multipliers aren't mentally computable (`0.8³ = 0.512`,
   not "−60%"), so the UI always shows the computed effective stat and net multiplier first, with
   the per-factor breakdown on hover or in detail; it never makes the player multiply factors. Known
   cost: scripting against a predicted post-debuff stat threshold means reasoning about
   compounding; if playtesting shows that confuses players, an additive-within-a-type,
   multiplicative-across-types hybrid is the documented fallback, replacing the multiplicative fold
-  in `spec/effects.md` "Category decides player-facing treatment".
+  in `spec/effects.md#category-decides-player-facing-treatment`.
 
 ## Phase 8 — Progression & incremental layers
 - Builds the `## Not built` halves of `spec/creatures.md` (gems as items, fusion, equipment,
   catch-up levelling, summoning at the Soul Altar) and `spec/run.md` (facilities, recipe drops and
-  currency sinks), plus further unlocks and equipment variety. Masteries were considered and are out
-  of scope.
+  currency sinks), plus further unlocks and equipment variety.
 - This is where the long-term game lives; it is meaningful only once Phases 1–7 are solid.
 
 ## Phase 9 — Manual mode
-- Builds `spec/combat.md` "Manual mode": UI-chosen actions fed into the *same* resolver, with no
+- Builds `spec/combat.md#manual-mode`: UI-chosen actions fed into the *same* resolver, with no
   forked combat path.
 
 ## Phase 10 — Polish & deploy
@@ -166,5 +163,4 @@ guardrails as every demo; own brief and phase record.
   Phase 0.5): a final balance pass through config, a save-compatibility check across a version
   migration, asset and bundle-size optimization, a custom domain if wanted, and confirming
   IndexedDB persistence and save export and import on the live origin.
-- **Biome theme and visuals:** biome data gains a theme, scaling tweaks and visuals (`spec/run.md`
-  "Biome theme and visuals").
+- **Biome theme and visuals:** biome data gains a theme, scaling tweaks and visuals (`spec/run.md#biome-theme-and-visuals`).

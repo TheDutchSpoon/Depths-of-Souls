@@ -4,7 +4,7 @@ import { OVERGROWTH_BIOME } from './species/overgrowth'
 import { GLIMMERDARK_BIOME } from './species/glimmerdark'
 import { ROTCAP_HOLLOW_BIOME } from './species/rotcap-hollow'
 
-// Phase 4 Slice A ships the SHAPE only: 10 fixed biome slots (GAME_DESIGN §4's decade
+// Phase 4 Slice A ships the SHAPE only: 10 fixed biome slots (`spec/run.md#biomes`'s decade
 // cadence), each a valid-shape, empty spawn pool. Slice H1 replaced slot 1 (floors 1-10) with
 // real The Overgrowth content; Slice H2 replaced slot 2 (floors 11-20) with real Glimmerdark
 // content; Slice H3 replaced slot 3 (floors 21-30) with real Rotcap Hollow content. Biomes 4-10

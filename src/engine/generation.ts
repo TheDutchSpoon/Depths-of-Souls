@@ -1,5 +1,5 @@
-// Phase 4 Slice A: the run-layer generation module (CONVENTIONS "Generation & the run layer").
-// Pure, seeded, RNG-free where CONVENTIONS says it must be RNG-free -- an `src/engine` sibling
+// Phase 4 Slice A: the run-layer generation module (`spec/run.md#generation-is-a-pure-seeded-module`).
+// Pure, seeded, RNG-free where `spec/run.md#generation-is-a-pure-seeded-module` says it must be RNG-free -- an `src/engine` sibling
 // to the combat resolver, under the same purity discipline. Built and tested against small
 // FIXTURE biome/species/creature data (`__fixtures__/biomes.ts`); Slice H1-H3 plug in real
 // content of this exact shape via src/data/species/*.ts + src/data/biomes.ts.
@@ -35,7 +35,7 @@ export interface SpeciesCreature {
   readonly name: string
   readonly affinity: Affinity
   readonly baseStats: CreatureStats
-  /** The creature's role/behavior when it spawns as an enemy (GAME_DESIGN §5). */
+  /** The creature's role/behavior when it spawns as an enemy (`spec/run.md#enemy-script-and-gem-set`). */
   readonly defaultScriptId: string
   readonly innateTraitIds: readonly string[]
   readonly rarity: RarityTier
@@ -55,7 +55,7 @@ export interface Species {
 
 /**
  * Phase 4 Slice I (PR #65 review, boss floors): a biome's authored floor-`FLOORS_PER_BIOME`
- * encounter (CONVENTIONS "Boss floors"). `speciesId` is explicit data, not derived -- the boss
+ * encounter (`spec/run.md#boss-floor-generation`). `speciesId` is explicit data, not derived -- the boss
  * isn't spawn-pool-drawn, so there's no pool entry to read it from (the Broodmother's speciesId
  * happens to equal her Spiders adds' own, so `living-allies-of-species` counts her together with
  * them; a lean boss with no natural species, like the Leech Sovereign, just carries her own id).
@@ -76,7 +76,7 @@ export interface BiomeData {
   readonly boss?: BossEncounter
 }
 
-// ---- Equip gating (CONVENTIONS "Spell affinity & equip-gating") ----
+// ---- Equip gating (`spec/creatures.md#spell-affinity-gate`) ----
 // A universal data-driven predicate, not a per-creature allow-list. First consumer: this
 // module's cast-role loadout roll; player equipping (Phase 8) reuses the same gate.
 
@@ -86,16 +86,16 @@ export function canEquip(spell: Spell, affinity: Affinity): boolean {
 
 // ---- Biome selection ----
 
-/** GAME_DESIGN §4: v1 ships exactly 10 biomes, one per floor-decade for floors 1-100. */
+/** `spec/run.md#biomes`: v1 ships exactly 10 biomes, one per floor-decade for floors 1-100. */
 export const BIOME_COUNT = 10
 
-/** GAME_DESIGN §4: each biome spans 10 floors -- the decade cadence `biomeForFloor` maps
+/** `spec/run.md#biomes`: each biome spans 10 floors -- the decade cadence `biomeForFloor` maps
  * against, and (Phase 4 Slice I) the boss-floor cadence below. Distinct concept from
  * `BIOME_COUNT` above (they share the same v1 value, 10, by coincidence, not by construction). */
 export const FLOORS_PER_BIOME = 10
 
 /**
- * Phase 4 Slice I (PR #65 review, boss floors): CONVENTIONS "Boss floors" -- a floor is a boss
+ * Phase 4 Slice I (PR #65 review, boss floors): `spec/run.md#boss-floor-generation` -- a floor is a boss
  * floor iff it's the last floor of its biome's decade, at every depth (floor 101+ included, no
  * special case). Whether it actually generates as boss-only additionally depends on the
  * resolved biome carrying a `boss` (checked by the caller, `generateFloor` -- a placeholder
@@ -261,7 +261,7 @@ function weightedPick<T>(
 /**
  * Phase 4.1-G1 (ASSUMPTION 67): the role-script ids that make a creature a CAST ROLE -- one whose
  * script casts as a main action, so it must be generated with something to cast. A creature's
- * `defaultScriptId` is its role (CONVENTIONS "Role scripts"); `caster`, `support` and `opener` cast.
+ * `defaultScriptId` is its role (`spec/scripting.md#role-scripts`); `caster`, `support` and `opener` cast.
  * The other roles (striker, guardian, warden, taunter) only cast as a fallback. Named here because
  * the engine imports no data; a data test pins every shipped caster/support/opener against this
  * list, so a renamed role cannot silently stop being a cast role.
@@ -393,11 +393,11 @@ function spawnEnemy(
 /**
  * `(floor, biomeData, biomeIndex, allSpells, runRng, balanceConfig) -> Fight[]`, one entry per
  * `fightCount(floor, balanceConfig)`. Advances `runRng` (the caller's persistent run RNG stream,
- * per CONVENTIONS) -- re-descending the same floor with the stream at a different position
+ * per `spec/run.md#floor-runs`) -- re-descending the same floor with the stream at a different position
  * re-rolls its creatures, while `biomeForFloor` keeps the biome itself fixed.
  *
  * `biomeIndex` is the current biome's 1-based number (the caller's own resolved position in its
- * ordered biome list, per CONVENTIONS' "biomeForFloor's fixed 1-100 sequence is positional" --
+ * ordered biome list, per `spec/run.md#biomeforfloor` --
  * generation.ts stays ignorant of array position itself, it just receives the number) and
  * `allSpells` is the GLOBAL spell registry (no longer a per-biome `spellPool`, Phase 4
  * interstitial slice) -- together they drive `rollLoadout`'s cumulative-unlock filter.

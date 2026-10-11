@@ -25,17 +25,17 @@ export type Side = 'player' | 'enemy'
  * the stat-modifier's `{ stat, factor }`, the status spec) live on those responses, not here.
  * Effects run once per landed target, in list order, through `executeResponse` directly (a chosen
  * action, never a trigger: no `TriggerFired`). `cast-target` names the current landed target; see
- * CONVENTIONS "Spells carry responses" and `validateSpellEffects` (effect-types.ts).
+ * `spec/combat.md#spells-carry-responses` and `validateSpellEffects` (effect-types.ts).
  */
 export interface Spell {
   readonly id: string
   readonly name: string
   /** Governs equipping only (canEquip(spell, creature) = spell.affinity === creature.affinity,
-   * CONVENTIONS "Spell affinity & equip-gating") -- the damage affinity cycle stays keyed on
+   * `spec/creatures.md#spell-affinity-gate`) -- the damage affinity cycle stays keyed on
    * the CASTER's affinity, never the spell's. First consumer: Phase 4 Slice A's generation
    * module rolls cast-role enemies an affinity-matched spell from their biome's spell pool. */
   readonly affinity: Affinity
-  /** The biome number (1-based, matching GAME_DESIGN's "Biome 1"/"Biome 2" numbering) at which
+  /** The biome number (1-based, matching `spec/run.md#biomes` "Biome 1"/"Biome 2" numbering) at which
    * this spell enters the shared pool. `generateFloor` rolls a cast-role enemy's loadout from every
    * spell whose `unlockedAtBiome` is `<=` the current biome's number, filtered by affinity -- so a
    * spell unlocked at biome 1 stays available at every deeper biome too (spells unlock
@@ -44,7 +44,7 @@ export interface Spell {
   readonly targetShape: 'single' | 'aoe'
   /** Who this spell targets (Phase 4 Slice E's Support-spell model, REQUIRED since 4.1-D).
    * 'ally' exempts the cast from the Provoke/Confusion targeting-override pipeline entirely
-   * (GAME_DESIGN §7: "Provoke applies only to enemy-targeting offensive actions;
+   * (`spec/combat.md#targeting-override`: "Provoke applies only to enemy-targeting offensive actions;
    * ally-targeting actions... are unaffected" -- Confusion is bundled into that same exemption,
    * since Confusion's roll is scoped to a "harmful action" and a support cast on an ally isn't
    * one) and, for 'aoe' shape, freezes the caster's own living side instead of the opposing side
@@ -126,13 +126,10 @@ export interface Creature {
    * clears every turn); a small, explicit field, like innateTraitIds/activeEffects were in
    * Phase 3. Feeds the 'self-defend-count' magnitudeSource kind (effects.ts's resolveCount). */
   readonly defendCount: number
-  /** Phase 4 Slice D (own ASSUMPTION, not pinned by the brief): a static species reference,
-   * needed for the 'living-allies-of-species' magnitudeSource kind (resolveCount). Optional and
-   * unset by every Phase 1-3/Slice A-C creature and by this slice's own generation.ts --
-   * 'living-allies-of-species' is therefore inert (always 0) until a later slice (H1+) threads
-   * a real speciesId through materializeCreature. Deliberately NOT wired into generation.ts here
-   * -- out of this slice's own required scope (no Slice D golden exercises real species data);
-   * flagged for whichever slice first authors real species content. */
+  /** A static species reference, read by the 'living-allies-of-species' magnitudeSource kind
+   * (resolveCount) and the 'all-allies-of-species' response target. `materializeCreature` sets it
+   * from the species it is given, so generated creatures always carry one; it is unset only for a
+   * hand-built creature, for which both read empty (0 / no targets). */
   readonly speciesId?: string
   /** Phase 4.1-A (A5): required, engine-inert run-layer identity -- see CreatureOrigin's own doc
    * comment. Rewards read this (soul bar keyed by origin.templateId; XP per kill = the victim's
@@ -320,9 +317,9 @@ export interface DamageDealtEvent {
   readonly wasChipOnly: boolean
   readonly remainingHp: number
   /** What produced this damage: a display tag, NOT the damage channel (a trait response tagged
-   * 'attack' is still indirect, 4.1-H2a). 'dot' is the default tag of a flat-mode response; it
-   * no longer implies a Defence bypass (only a self-inflicted cost and a status tick skip
-   * Defence). */
+   * 'attack' is still indirect). 'dot' is the default tag of a flat-mode response and implies no
+   * Defence bypass: only a self-inflicted cost skips Defence, and an indirect hit (a status tick
+   * included) meets a fifth of it (`spec/combat.md#damage-channels-and-the-additional`). */
   readonly damageSource: 'attack' | 'cast' | 'dot'
   /** The causing status, when a status produced this damage (DoT ticks). Absent for attack/cast
    * and for a trait's own dot-tagged flat hit. Lets the log render "[creature] took X poison

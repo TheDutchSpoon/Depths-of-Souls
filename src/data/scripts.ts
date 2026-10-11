@@ -1,13 +1,14 @@
 import type { Rule, Script } from '../engine/scripting-types'
 
-// Real shipped content: the seven ROLE scripts (Phase 4.1-G1, D4; CONVENTIONS "Role scripts"). A
-// creature's `defaultScriptId` is its role, so enemies play readable, learnable patterns and a
-// summoned creature has a sensible default. Every role ends in the same fallback, so a lock
-// downgrades a turn instead of emptying it: "cast random gem" sits BELOW an Attack rule and only
-// fires when Attack is illegal, in practice when the actor is Pacified.
+// Real shipped content: the seven role scripts (`spec/scripting.md#role-scripts`). A creature's
+// `defaultScriptId` is its role, so enemies play readable, learnable patterns and a summoned
+// creature has a sensible default. Every role ends in a rule that runs only when the one above it
+// is illegal, so a lock downgrades a turn instead of emptying it: all roles but `caster` end in
+// "cast random gem" below an Attack rule (it fires when the actor is Pacified); `caster` casts
+// first and ends in Attack (it fires when the actor is Silenced).
 //
-// The five Phase 2 `always-*` scripts are test fixtures now (engine/__fixtures__/scripts.ts,
-// ASSUMPTION 68); no creature's role is one of them.
+// The five `always-*` scripts are test fixtures (engine/__fixtures__/scripts.ts); no creature's
+// role is one of them.
 
 /** "Attack the lowest-HP enemy": the fallback attack every role carries (explicit target). */
 const ATTACK_LOWEST_ENEMY: Rule = {
@@ -129,9 +130,9 @@ export const OPENER_SCRIPT: Script = {
   ],
 }
 
-/** For creatures whose trait fires on Provoke (Snapjaw Lure, Stonehorn Warden). Behaves exactly as
- * the old `always-provoke`: Provoke is legal on every turn that isn't skipped, so rules 2 and 3 are
- * the shared fallback and never run in practice. Not a cast role. */
+/** For a creature whose trait fires on Provoke (the Snapjaw Lure; the Stonehorn Warden runs
+ * `warden`). Provoke is legal on every turn that isn't skipped, so rules 2 and 3 are the shared
+ * fallback and never run in practice. Not a cast role. */
 export const TAUNTER_SCRIPT: Script = {
   id: 'taunter',
   rules: [

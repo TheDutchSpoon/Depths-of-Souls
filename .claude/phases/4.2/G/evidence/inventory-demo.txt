@@ -1,0 +1,40 @@
+a scratch clone of the repo; local branches: * demo-branch(no main)
+HEAD (the pre-condense text): 614ec492b692a0922733448e9d610925fc6d00c6
+
+condense (uncommitted): drop spec/store.md:9: - One Zustand store (`src/state/store.ts`). The UI subscribes to it; the engine ...
+
+$ npm run docs:check -- inventory-skeleton .claude/phases/4.5/A spec/store.md
+  inventory-skeleton: base 614ec492b692a0922733448e9d610925fc6d00c6
+    spec/store.md: 21 units
+    total: 21 units, written to .claude/phases/4.5/A/inventory.md
+  exit code: 0
+
+  | # Inventory — spec/store.md
+  | 
+  | Base: `614ec492b692a0922733448e9d610925fc6d00c6`
+  | Files: `spec/store.md`
+  | 
+  | | Unit | Old label | Decided in | Fate | New home | Reason |
+  | | --- | --- | --- | --- | --- | --- |
+  | | spec/store.md:1 | Spec — Store |  |  |  |  |
+  | | spec/store.md:3 | Read this when changing the store or the state the UI reads. |  |  |  |  |
+  | ...
+
+filled every row but spec/store.md:9, whose row is left out
+$ npm run docs:check -- inventory .claude/phases/4.5/A
+  inventory: FAIL, 1 problems (base 614ec492b692a0922733448e9d610925fc6d00c6)
+  FAIL .claude/phases/4.5/A/inventory.md: unit spec/store.md:9 (One Zustand store (`src/state/store.ts`). The UI subscribes to it; the…) is missing (1)
+  exit code: 1
+
+filled spec/store.md:9 (dropped, with a Reason)
+$ npm run docs:check -- inventory .claude/phases/4.5/A
+  inventory: PASS, 21 units and 21 rows checked (base 614ec492b692a0922733448e9d610925fc6d00c6)
+  exit code: 0
+
+committed the condense in the clone: HEAD is now dadd58996aa6e0b5bca8065ec44b7b62dc2dbd87
+$ npm run docs:check -- inventory .claude/phases/4.5/A
+  inventory: PASS, 21 units and 21 rows checked (base 614ec492b692a0922733448e9d610925fc6d00c6)
+  exit code: 0
+  (the check still reads the pre-condense text, at the Base sha written in inventory.md)
+
+summary: missing row -> exit 1; filled -> exit 0; after the commit -> exit 0

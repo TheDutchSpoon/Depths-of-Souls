@@ -1,0 +1,76 @@
+# Planted faults: each run is the real entry, `node scripts/docs-check.ts citations --root <scratch copy>`
+# The scratch copy is this branch's src/ and .claude/ (plus phases/4.2/brief.md, a citation target); the fault is the only change.
+
+clean copy: citations: PASS, 532 citations in 436 files
+clean copy exit code: 0
+
+### slug collision, headings a, a, a-1: a citation to #a-1-1 PASSES (exit 0), the third heading's GitHub anchor
+    citations: PASS, 533 citations in 436 files
+    exit code: 0
+
+### slug collision, headings a, a, a-1: a citation to #a-2 FAILS
+    .claude/spec/saves.md:76: citation spec/store.md#a-2: no such heading anchor in spec/store.md
+    src/engine/rng.ts:58: citation spec/store.md#a-2: no such heading anchor in spec/store.md
+    citations: FAIL, 2 problems
+    exit code: 1
+
+### unresolved anchor, src/ and .claude/
+    .claude/spec/saves.md:76: citation spec/combat.md#no-such-heading: no such heading anchor in spec/combat.md
+    src/engine/rng.ts:58: citation spec/combat.md#no-such-heading: no such heading anchor in spec/combat.md
+    citations: FAIL, 2 problems
+    exit code: 1
+
+### citation to a file that does not exist
+    .claude/spec/saves.md:76: citation spec/nope.md#x: no such file under .claude/
+    src/engine/rng.ts:58: citation spec/nope.md#x: no such file under .claude/
+    citations: FAIL, 2 problems
+    exit code: 1
+
+### path with a .. segment
+    src/engine/rng.ts:58: citation ../.claude/spec/combat.md#provoke: a path with ".." (paths are .claude/-rooted)
+    citations: FAIL, 1 problems
+    exit code: 1
+
+### old form CONVENTIONS "…"
+    .claude/spec/saves.md:76: old form: CONVENTIONS "…" (cite `CONVENTIONS.md#<anchor>`)
+    src/engine/rng.ts:58: old form: CONVENTIONS "…" (cite `CONVENTIONS.md#<anchor>`)
+    citations: FAIL, 2 problems
+    exit code: 1
+
+### old form GAME_DESIGN §…
+    .claude/spec/saves.md:76: old form: GAME_DESIGN §… (cite the spec file by anchor)
+    src/engine/rng.ts:58: old form: GAME_DESIGN §… (cite the spec file by anchor)
+    citations: FAIL, 2 problems
+    exit code: 1
+
+### bare names of deleted docs: fail in src/, pass in .claude/ (only src/engine/rng.ts is reported)
+    src/engine/rng.ts:58: names CONVENTIONS without an anchor (cite `CONVENTIONS.md#<anchor>`)
+    src/engine/rng.ts:58: names GAME_DESIGN, a deleted doc (cite the spec file by anchor)
+    src/engine/rng.ts:58: names species-locked, a deleted doc (cite the content doc by anchor)
+    citations: FAIL, 3 problems
+    exit code: 1
+
+### label form `path.md` "Label"
+    .claude/spec/saves.md:76: label form: `<path>.md` "Label" (cite `<path>.md#<anchor>`)
+    src/engine/rng.ts:58: label form: `<path>.md` "Label" (cite `<path>.md#<anchor>`)
+    citations: FAIL, 2 problems
+    exit code: 1
+
+### label form `path.md` ("A", "B")
+    .claude/spec/saves.md:76: label form: `<path>.md` ("Label", …) (cite `<path>.md#<anchor>`)
+    src/engine/rng.ts:58: label form: `<path>.md` ("Label", …) (cite `<path>.md#<anchor>`)
+    citations: FAIL, 2 problems
+    exit code: 1
+
+### label form NAME "Label"
+    .claude/spec/saves.md:76: label form: <NAME> "Label" (cite `<NAME>.md#<anchor>`)
+    src/engine/rng.ts:58: label form: <NAME> "Label" (cite `<NAME>.md#<anchor>`)
+    citations: FAIL, 2 problems
+    exit code: 1
+
+### label form wrapped over a line break (a // comment in src/, plain text in .claude/)
+    .claude/spec/saves.md:76: label form: `<path>.md` "Label" (cite `<path>.md#<anchor>`)
+    src/engine/rng.ts:58: label form: `<path>.md` "Label" (cite `<path>.md#<anchor>`)
+    citations: FAIL, 2 problems
+    exit code: 1
+
