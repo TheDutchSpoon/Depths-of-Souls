@@ -1,6 +1,6 @@
-// Golden: B1 (Phase 4.1-C2b) -- an ENEMY support caster whose script is the stock `always-cast`
-// (no explicit targeting any more) casting an ALLY-side heal heals its OWN lowest-HP ally, never
-// the opposing side (the review's finding B1, probe inverted). Hand-derived.
+// Golden: an ENEMY support caster whose script is the stock `always-cast`
+// (no explicit targeting) casting an ALLY-side heal heals its OWN lowest-HP ally, never
+// the opposing side. Hand-derived.
 //
 // All vitality (x1.0). Player: HERO (attack 15, speed 30, HP 100, always-attack). Enemy: SUPPORT
 // (slot 0, HP 50, Int 10, speed 20, always-cast, slot 0 = ally-side heal, spellPower 1) and WARD

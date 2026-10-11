@@ -1,9 +1,9 @@
-// Golden: B2.1 (Phase 4.1-C2c) -- a creature whose turn was SKIPPED takes no granted action
+// Golden: a creature whose turn was SKIPPED takes no granted action
 // either, even though the lock is gone by the granted-actions step; the granted cast's chance is
 // still ROLLED first, so the RNG stream doesn't depend on the skip. Hand-derived.
 //
 // CASTER (player, speed 20, Int 20, HP 40, defence 0): trait `b2-stunned-granted-caster-fixture` =
-//   [on-turn-end perform-action(self, cast 'random') chancePercent 100 (4.1-E; was `bonus-cast`),
+//   [on-turn-end perform-action(self, cast 'random') chancePercent 100,
 //    on-fight-start apply-status Stun (self),
 //    on-turn-end remove-status Stun (self)].
 // Slots after createCombat (asserted in the test): exactly [BOLT] (enemy-side single target,
@@ -12,8 +12,9 @@
 // turn-start hooks, the turn is skipped (TurnSkipped), no action. The turn-end hooks fire in
 // effect order: the grant's trigger (chance roll = draw #1, queued), then the remove-status
 // trigger REMOVES Stun, so by the granted-actions step no lock exists: checkLegality alone would let the cast through. Only the skipped-turn GATE
-// (`drainGrantedActions`' `skippedTurnOf`) refuses it (this is what separates B2.1 from B2.2). The
-// gate sits AFTER the roll: the chance roll is draw #1 at trigger time, whatever the skip.
+// (`drainGrantedActions`' `skippedTurnOf`) refuses it (this is what separates the skip gate from
+// the lock's legality check). The gate sits AFTER the roll: the chance roll is draw #1 at trigger
+// time, whatever the skip.
 //
 // LATER RNG CONSUMER: E1 (enemy, speed 10, Attack 10, script `random-attack` = attack a
 // `random-enemy`) acts next and picks uniformly among the player side's living creatures in slot
@@ -158,7 +159,7 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
-  // Stun's 'all' lock (passive, 4.1-F1): the skipped turn fills the action slot with TurnSkipped.
+  // Stun's 'all' lock (passive): the skipped turn fills the action slot with TurnSkipped.
   { type: 'TurnSkipped', creatureId: CASTER, effectId: STUN.statusId },
   // The grant's trigger (declared first, so it fires first): the chance is rolled (draw #1) ...
   {

@@ -8,8 +8,8 @@ import type { Spell } from '../../engine/types'
 
 /** Beacon Charge: a small heal that ALSO grants the target Grant Act First (a `heal` effect, then an
  * `apply-status` effect, at the status's own default duration) -- the support spell that lets an
- * ally open the next round, per `spec/run.md#the-onboarding-ramp` own "a spell may apply any status, including
- * another species' signature one" rule (Blindclaws' Setter grants the same status). Single-target
+ * ally open the next round, per `spec/run.md#the-onboarding-ramp` (a spell may apply any status,
+ * another species' signature status included; Blindclaws' Setter grants the same status). Single-target
  * + upside -> ~80-90% band. */
 export const BEACON_CHARGE: Spell = {
   id: 'beacon-charge',
@@ -34,21 +34,19 @@ export const BEACON_CHARGE: Spell = {
 }
 
 /**
- * ASSUMPTION (interstitial slice, NEW CONTENT -- surfaced for sign-off): Disorient, suggested by
- * the brief as "apply act-last to an enemy, reusing the turn-order primitive." The turn-order
- * primitive's act-last pole is already the `web` StatusDef (a `turn-order` effect,
- * position: 'last'`, data/statuses.ts) -- per `spec/statuses.md#a-status-is-a-timed-effect` and
- * `spec/run.md#the-onboarding-ramp` own "a spell may apply any status, including another species' signature
- * one" rule (already precedented: Overgrowth's own Vine Snare applies `web` too), Disorient
+ * Disorient: applies act-last to an enemy, reusing the turn-order primitive. That primitive's
+ * act-last pole is already the `web` StatusDef (a `turn-order` effect,
+ * `position: 'last'`, data/statuses.ts) -- per `spec/statuses.md#a-status-is-a-timed-effect` and
+ * `spec/run.md#the-onboarding-ramp` (a spell may apply any status, another species' signature
+ * status included; already precedented: Overgrowth's own Vine Snare applies `web` too), Disorient
  * reuses that SAME statusId rather than authoring a new near-identical StatusDef, which would
- * just be Web-with-a-new-name -- the exact anti-pattern this slice exists to undo. Authored as
+ * just be Web-with-a-new-name. Authored as
  * a `deal-damage` effect + an `apply-status` effect, same shape as Vine Snare, but on
  * Instinct (Vine Snare is Wit) -- Instinct had no status-application spell besides core.ts's
  * Venom Bolt (poison), so this fills a real gap rather than re-skinning Vine Snare; distinct
  * under the dedup guard by affinity (instinct vs wit) AND by spellPower and its status vs Venom
  * Bolt. spellPower 0.85 + duration 3 both mirror Vine Snare's own numbers exactly (single-target
- * + upside band, Web's own `defaultDuration`) -- deliberate consistency, not an oversight; flag
- * for design-owner sign-off same as any other new balance figure. */
+ * + upside band, Web's own `defaultDuration`) -- deliberate consistency, not an oversight. */
 export const DISORIENT: Spell = {
   id: 'disorient',
   name: 'Disorient',
@@ -72,10 +70,10 @@ export const DISORIENT: Spell = {
 }
 
 /**
- * ASSUMPTION (interstitial slice expansion, NEW CONTENT -- design-agent proposal, numbers deferred):
  * Blinding Flare -- first spell to apply Vulnerability (statuses.ts: x1.5 damage TAKEN, once); an
  * offensive setup debuff no biome-1 spell provides. Violence's first Glimmerdark-own spell. Unique
- * under the dedup guard by spellPower (0.7 vs Ember Lance 0.5 / Thorn Lash 1.0). */
+ * under the dedup guard by spellPower (0.7 vs Ember Lance 0.5 / Thorn Lash 1.0). Numbers are
+ * parked balance. */
 export const BLINDING_FLARE: Spell = {
   id: 'blinding-flare',
   name: 'Blinding Flare',
@@ -99,10 +97,10 @@ export const BLINDING_FLARE: Spell = {
 }
 
 /**
- * ASSUMPTION (interstitial slice expansion, NEW CONTENT -- design-agent proposal, numbers deferred):
  * Afterglow -- burst heal + Regen (statuses.ts: heal-over-time). First Regen-applier, so not a
  * reskin of Regrowth (biome-1 vitality plain heal). Vitality's Glimmerdark-own sustain heal.
- * scalingStat health like every Glimmerdark heal; unique vs Regrowth by spellPower (0.5 vs 0.3). */
+ * scalingStat health like every Glimmerdark heal; unique vs Regrowth by spellPower (0.5 vs 0.3).
+ * Numbers are parked balance. */
 export const AFTERGLOW: Spell = {
   id: 'afterglow',
   name: 'Afterglow',
@@ -126,11 +124,10 @@ export const AFTERGLOW: Spell = {
 }
 
 /**
- * ASSUMPTION (interstitial slice expansion, NEW CONTENT -- design-agent proposal, numbers deferred):
- * Kindred Light (formerly Luminous Tide, renamed in place in 4.1-H2b1 when Glow was deleted) -- a
+ * Kindred Light -- a
  * small AOE ally heal: every ally for 20% of the caster's effective Health, no status. The first
  * AOE support spell -- a new SHAPE, not another single-target heal+status. Unique under the dedup
- * guard: no other wit|aoe|heal exists (Pollen Cloud is wit|aoe|damage). */
+ * guard: no other wit|aoe|heal exists (Pollen Cloud is wit|aoe|damage). Numbers are parked balance. */
 export const KINDRED_LIGHT: Spell = {
   id: 'kindred-light',
   name: 'Kindred Light',

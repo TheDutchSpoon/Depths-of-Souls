@@ -73,7 +73,7 @@ function firstTurnEventsHitting(
   return resolveTurn(initial).events
 }
 
-describe("'all' action-lock (a trait-borne passive; 4.1-F1)", () => {
+describe("'all' action-lock (a trait-borne passive)", () => {
   const STUN_SELF: Trait = {
     id: 'stun-self',
     name: 'Stun Self',
@@ -407,8 +407,8 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
   })
 })
 
-describe('applyStatus + status-container content (Slice C)', () => {
-  // A ticking status (4.1-H2b2): potency 50% of the APPLIER's Attack. The applier `e` has Attack 20
+describe('applyStatus + status-container content', () => {
+  // A ticking status: potency 50% of the APPLIER's Attack. The applier `e` has Attack 20
   // (makeParty default), so the snapshot potency is floor(20 * 50 / 100) = 10; `p` has Defence 0 and
   // the same affinity (neutral), so a tick is 10 - 0.2 * 0 = 10.
   const TEST_DOT: StatusDef = {
@@ -457,7 +457,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
       state,
       createResolutionContext(events, newCascade()),
     )
-    // Exactly these keys: single instance (4.1-H2b2), so no `stacks` on the event.
+    // Exactly these keys: single instance, so no `stacks` on the event.
     expect(events[0]).toEqual({
       type: 'StatusApplied',
       targetId: createCreatureId('p'),
@@ -467,7 +467,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
     })
   })
 
-  it("an omitted duration inherits the status's own defaultDuration (Phase 4 Slice F, review amendment)", () => {
+  it("an omitted duration inherits the status's own defaultDuration", () => {
     const state = stateWithTestDot()
     const events: CombatEvent[] = []
     const result = applyStatus(
@@ -516,7 +516,7 @@ describe('applyStatus + status-container content (Slice C)', () => {
     ).instanceId
     apply(5)
     apply(5)
-    apply(1) // a shorter one still takes the new application's duration (ASSUMPTION 8)
+    apply(1) // a shorter one still takes the new application's duration
 
     const p = [...state.playerParty, ...state.enemyParty].find(
       (c) => c.id === createCreatureId('p'),
@@ -636,7 +636,7 @@ describe('heal response (Regen)', () => {
   })
 })
 
-describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', () => {
+describe('heal scaling (Treants Elder / Necromoss-shaped)', () => {
   it('throws a resolver-invariant error when both flatAmount and scalingStat are set', () => {
     const state = createCombat({
       seed: 1,
@@ -728,7 +728,7 @@ describe('heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)', ()
   })
 })
 
-describe('deal-damage scalingStat (Phase 4 Slice B)', () => {
+describe('deal-damage scalingStat', () => {
   const THORNS: Trait = {
     id: 'thorns',
     name: 'Thorns',
@@ -761,7 +761,7 @@ describe('deal-damage scalingStat (Phase 4 Slice B)', () => {
   })
 })
 
-describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
+describe('deal-damage mutual exclusivity', () => {
   it('throws a resolver-invariant error when more than one of offStat/scalingStat/flatAmount is set', () => {
     const state = createCombat({
       seed: 1,
@@ -785,7 +785,7 @@ describe('deal-damage mutual exclusivity (ASSUMPTION 6)', () => {
   })
 })
 
-describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', () => {
+describe('flat-mode stat-derived magnitude', () => {
   it('heal: scales off the firing creature’s own floored max HP', () => {
     // Bearer max HP 100, percent 5, count 1 (default): floor(floor(100) * 5 * 1 / 100) =
     // floor(5) = 5. 90 + 5 = 95, well under the 100 cap.
@@ -904,7 +904,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     expect(tick).toMatchObject({ finalDamage: 15, remainingHp: 85 })
   })
 
-  it('reads the bearer’s stat FLOORED before multiplying (ASSUMPTION 3) -- a fractional effective stat does not leak through', () => {
+  it('reads the bearer’s stat FLOORED before multiplying -- a fractional effective stat does not leak through', () => {
     // Base Health 49, x1.5 stat-modifier -> effective max HP 73.5. Reading it floored:
     // floor(floor(73.5) * 3 * 5 / 100) = floor(floor(73) * 15 / 100) = floor(1095 / 100) =
     // floor(10.95) = 10. Reading it UNFLOORED instead would give floor(73.5 * 15 / 100) =
@@ -1112,7 +1112,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     // floor(27) = 27 exactly, because percent/count are multiplied in as integers BEFORE
     // dividing by 100. A float-fraction equivalent (180 * 0.03 * 5) evaluates to
     // 26.999999999999996 in IEEE-754 double precision and would floor to 26 -- one too low.
-    expect(180 * 0.03 * 5).toBeLessThan(27) // the float trap this brief exists to avoid
+    expect(180 * 0.03 * 5).toBeLessThan(27) // the float trap this avoids
     const player = makeParty('player', [{ id: 'attacker' }])
     const enemy = makeParty('enemy', [{ id: 'victim', health: 180 }])
     const state = createCombat({
@@ -1166,7 +1166,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
     }
   })
 
-  it('a literal number flatAmount/flatAmount still behaves exactly as before (regression)', () => {
+  it('a literal number flatAmount behaves exactly as a plain number (regression)', () => {
     // Unchanged: 7 x 2 (live count) = 14, exactly the pre-existing literal-number behavior -- the
     // StatPercent union is purely additive.
     const player = makeParty('player', [{ id: 'attacker' }])
@@ -1200,7 +1200,7 @@ describe('flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)', 
   })
 })
 
-describe('chancePercent probabilistic gate (Phase 4 Slice E2)', () => {
+describe('chancePercent probabilistic gate', () => {
   const WITH_CHANCE: Trait = {
     id: 'with-chance-fixture',
     name: 'With Chance (fixture)',
@@ -1243,8 +1243,7 @@ describe('chancePercent probabilistic gate (Phase 4 Slice E2)', () => {
       {
         category: 'triggered',
         hook: 'on-attack',
-        // Always false: living enemy count can never be < 0. (is-provoking, the original
-        // always-false condition this test used, was deleted in Phase 4.1-C.)
+        // Always false: living enemy count can never be < 0.
         condition: { kind: 'enemy-count', comparator: '<', count: 0 },
         chancePercent: 50,
         response: {
@@ -1302,7 +1301,7 @@ describe('chancePercent probabilistic gate (Phase 4 Slice E2)', () => {
   })
 })
 
-describe('conditional-damage-bonus (Phase 4 Slice E2, Cull the Weak / Ambusher-shaped)', () => {
+describe('conditional-damage-bonus (Cull the Weak / Ambusher-shaped)', () => {
   // +50% dealt when the CURRENT damage target is below 50% HP -- a permanent passive on the
   // ATTACKER, gathered into dealtMods at hit time (never a trigger, never a second instance).
   const CULL_THE_WEAK_FIXTURE: Trait = {
@@ -1380,7 +1379,7 @@ describe('conditional-damage-bonus (Phase 4 Slice E2, Cull the Weak / Ambusher-s
   })
 })
 
-describe('conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review amendment)', () => {
+describe('conditional-damage-bonus actionKind scoping', () => {
   // Attack 20 == Intelligence 20 == Defence 0 on both sides of the comparison, so an unscoped
   // hit (no bonus) is IDENTICAL whether dealt as an Attack or a Cast: core 20, chip 0.01*20=0.2
   // -> raw 20.2 -> final 20. A +100% bonus that actually applies doubles the raw hit before the
@@ -1448,13 +1447,13 @@ describe('conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review a
     expect(finalDamageVia('attack', 'cast')).toBe(20) // does NOT leak onto Attack
   })
 
-  it("an unset actionKind applies to BOTH (byte-identical to pre-amendment 'both' default)", () => {
+  it("an unset actionKind applies to BOTH ('both' is the default)", () => {
     expect(finalDamageVia('attack', undefined)).toBe(40)
     expect(finalDamageVia('cast', undefined)).toBe(40)
   })
 })
 
-describe('grant-action-state response (Phase 4 Slice B)', () => {
+describe('grant-action-state response', () => {
   it('sets only the requested flag(s) true, leaving the other untouched', () => {
     const state = createCombat({
       seed: 1,
@@ -1476,7 +1475,7 @@ describe('grant-action-state response (Phase 4 Slice B)', () => {
   })
 })
 
-describe('revive response (Phase 4 Slice B)', () => {
+describe('revive response', () => {
   const REVIVE_FIXTURE: Trait = {
     id: 'revive-fixture',
     name: 'Fixture Revive',
@@ -1525,7 +1524,7 @@ describe('revive response (Phase 4 Slice B)', () => {
     ])
   })
 
-  it('clears defending/provoking on the revived creature (F1 regression: a creature that died while defending must not return still defending)', () => {
+  it('clears defending/provoking on the revived creature (regression: a creature that died while defending must not return still defending)', () => {
     const player = makeParty('player', [
       { id: 'reviver', innateTraitIds: ['revive-fixture'] },
       {
@@ -1599,7 +1598,7 @@ describe('revive response (Phase 4 Slice B)', () => {
     expect(events).toEqual([])
   })
 
-  it("restores a revived PLAYER creature's perks too (ASSUMPTION 21: perks are battle-start-permanent, like innate traits, not in-fight ramp death-reset should wipe)", () => {
+  it("restores a revived PLAYER creature's perks too (perks are battle-start-permanent, like innate traits, not in-fight ramp death-reset should wipe)", () => {
     const player = makeParty('player', [
       { id: 'reviver', innateTraitIds: ['revive-fixture'] },
       { id: 'fallen', health: 40, alive: false },
@@ -1635,7 +1634,7 @@ describe('revive response (Phase 4 Slice B)', () => {
   })
 })
 
-describe('remove-status response (Phase 4 Slice E2)', () => {
+describe('remove-status response', () => {
   const TEST_DEBUFF: StatusDef = {
     statusId: 'test-debuff',
     effects: [
@@ -1770,7 +1769,7 @@ describe('remove-status response (Phase 4 Slice E2)', () => {
   })
 })
 
-describe('all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbarer starter)', () => {
+describe('all-allies ResponseTarget (Shieldbarer starter)', () => {
   it('applies to every living ally, INCLUDING the firing creature itself', () => {
     const player = makeParty('player', [
       { id: 'provoker', defence: 10 },
@@ -1812,7 +1811,7 @@ describe('all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbare
   })
 })
 
-describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Queen)', () => {
+describe('all-allies-of-species ResponseTarget (Swarmhive Queen)', () => {
   it("applies to every living ally SHARING the firing creature's speciesId, INCLUDING itself", () => {
     const player = makeParty('player', [
       { id: 'queen', defence: 10, speciesId: 'swarmhive' },
@@ -1890,7 +1889,7 @@ describe('all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Quee
   })
 })
 
-describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
+describe('cheat-death (Last Stand)', () => {
   const LAST_STAND: Trait = {
     id: 'last-stand-fixture',
     name: 'Last Stand (fixture)',
@@ -1910,7 +1909,7 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
     })
   }
 
-  // Phase 4.1-B (B-1): CombatState.rng is plain data, computed from `position` via real
+  // CombatState.rng is plain data, computed from `position` via real
   // mulberry32 math -- an arbitrary-value rngNext stub is no longer possible. Instead `hit` sets
   // `rng.position` directly to a hand-picked value whose real first draw satisfies the needed
   // threshold (< or >= chancePercent/100 = 0.5). Verified via a throwaway node script against the
@@ -1946,7 +1945,7 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
     expect(bearer.alive).toBe(true)
     expect(bearer.currentHp).toBe(1)
     expect(events.find((e) => e.type === 'DamageDealt')).toMatchObject({
-      finalDamage: 20, // ASSUMPTION 19: unchanged -- only remainingHp reflects the save
+      finalDamage: 20, // Unchanged -- only remainingHp reflects the save
       remainingHp: 1,
     })
     expect(events.some((e) => e.type === 'CreatureDied')).toBe(false)
@@ -1968,7 +1967,7 @@ describe('cheat-death (Phase 4 Slice D, Last Stand)', () => {
   })
 })
 
-describe('on-action-observed filter (Phase 4 Slice E2, general action-observation system)', () => {
+describe('on-action-observed filter (general action-observation system)', () => {
   function observerTrait(filter: ObservationFilter): Trait {
     return {
       id: 'observer-fixture',
@@ -2074,7 +2073,7 @@ describe('on-action-observed filter (Phase 4 Slice E2, general action-observatio
   })
 })
 
-describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
+describe('on-action-observed end-to-end', () => {
   it('an actor-self trait fires only on its own hook, never doubles via observation', () => {
     // A trait subscribed to on-attack (actor-self routing) must NOT also fire when
     // on-action-observed is raised for that same attack instance.
@@ -2130,7 +2129,7 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
   })
 
   it('on-action-observed rides the same MAX_TRIGGER_CASCADE_DEPTH guard as every other hook', () => {
-    // `perform-action` (4.1-E) is a response that queues a real action, so a chain through
+    // `perform-action` is a response that queues a real action, so a chain through
     // on-action-observed can now be built from responses alone. Its depth coverage is in the
     // "echo = perform-action(triggering-source)" describe block below and in
     // golden-e-echo-chain-truncated. This fixture's plain apply-stat-modifier response still can't
@@ -2189,7 +2188,7 @@ describe('on-action-observed end-to-end (Phase 4 Slice E2)', () => {
   })
 })
 
-describe('echo = perform-action(triggering-source) (Phase 4.1-E, A2 -- Resonant Overtone shape)', () => {
+describe('echo = perform-action(triggering-source) (Resonant Overtone shape)', () => {
   function echoObserverTrait(id: string, chancePercent: number): Trait {
     return {
       id,
@@ -2214,7 +2213,7 @@ describe('echo = perform-action(triggering-source) (Phase 4.1-E, A2 -- Resonant 
     }
   }
 
-  // 4.1-E: the grant is queued by fireHook and run by `drainGrantedActions` (a real resolveIntent
+  // The grant is queued by fireHook and run by `drainGrantedActions` (a real resolveIntent
   // + executeAction call) -- so proving it requires a caster that can ACTUALLY cast. One equipped single-target spell and one living enemy keep the
   // gem/target draws deterministic (pool size 1 either way) regardless of seed.
   const ECHO_SPELL: Spell = {
@@ -2352,7 +2351,7 @@ describe('echo = perform-action(triggering-source) (Phase 4.1-E, A2 -- Resonant 
   })
 })
 
-describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Striker-shaped: freeze-at-application)', () => {
+describe('apply-stat-modifier magnitudeSource (Swarmhive Striker-shaped: freeze-at-application)', () => {
   it('bakes a fixed finalFactor at application time; a later change in the live count does NOT retroactively change it', () => {
     const player = makeParty('player', [
       { id: 'striker', attack: 100, speciesId: 'hive' },
@@ -2433,7 +2432,7 @@ describe('apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Strik
   })
 })
 
-describe('exact-instance rule (Phase 4.1-B, B4)', () => {
+describe('exact-instance rule', () => {
   const TICK_STATUS: StatusDef = {
     statusId: 'b4-tick-fixture',
     effects: [
@@ -2574,7 +2573,7 @@ describe('exact-instance rule (Phase 4.1-B, B4)', () => {
     // Candidate order for bearer's on-turn-end pass: [remove (trait effect 1), apply (trait
     // effect 2), tick (the OLD status instance -- captured before either trait effect ran)].
     // remove fires (TriggerFired + StatusExpired); apply fires (TriggerFired + StatusApplied, a
-    // FRESH instance with a new id, B4); by the time the candidate list reaches the old tick
+    // FRESH instance with a new id); by the time the candidate list reaches the old tick
     // candidate, its exact instance is gone -- a genuinely different instance now occupies the
     // same statusId slot -- so it never fires.
     expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(2)
@@ -2589,7 +2588,7 @@ describe('exact-instance rule (Phase 4.1-B, B4)', () => {
   })
 })
 
-describe('revive cap (Phase 4.1-B, D3)', () => {
+describe('revive cap', () => {
   it('excludes a dead ally at the cap from revive targeting -- the 11th attempt fizzles and draws no RNG', () => {
     const player = makeParty('player', [
       { id: 'reviver' },
@@ -2649,7 +2648,7 @@ describe('revive cap (Phase 4.1-B, D3)', () => {
   })
 })
 
-describe('SelfCondition validator (Phase 4.1-B, S2)', () => {
+describe('SelfCondition validator', () => {
   it('rejects an hp-percent condition gating the health stat it would read (read-cycle)', () => {
     expect(() =>
       validateStatModifierCondition({
@@ -2684,7 +2683,7 @@ describe('SelfCondition validator (Phase 4.1-B, S2)', () => {
   })
 })
 
-describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", () => {
+describe("'random' response-target validator", () => {
   it("throws when a trait/perk triggered response targets the intent-only 'random' selector", () => {
     const effects: EffectDef[] = [
       {
@@ -2751,7 +2750,7 @@ describe("'random' response-target validator (Phase 4.1-C2a, PR #71 review)", ()
   })
 })
 
-describe('a cost goes through applyDamageAndEmit (4.1-H2a, ASSUMPTION 132)', () => {
+describe('a cost goes through applyDamageAndEmit', () => {
   const LAST_STAND_FIXTURE: Trait = {
     id: 'cost-last-stand-fixture',
     name: 'Last Stand (fixture)',
@@ -2823,7 +2822,7 @@ describe('a cost goes through applyDamageAndEmit (4.1-H2a, ASSUMPTION 132)', () 
   })
 })
 
-describe('a status-sourced flat hit on ANOTHER creature is indirect, not a tick (4.1-H2a, ASSUMPTION 131)', () => {
+describe('a status-sourced flat hit on ANOTHER creature is indirect, not a tick', () => {
   function flatHit(statusId: string | undefined) {
     // Bearer 'bearer' (the firing creature, Defence 20); 'foe' has Defence 20 too. A flat 20 from a
     // status-sourced context: on the bearer itself it is a tick; on the foe it is a response.

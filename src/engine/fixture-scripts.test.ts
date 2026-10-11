@@ -15,11 +15,10 @@ import { createRngState } from './rng'
 import type { CombatState, Creature } from './types'
 import type { Script } from './scripting-types'
 
-// Phase 4.1-G1 (stage 0, ASSUMPTION 68): the five `always-*` scripts are test fixtures now
-// (__fixtures__/scripts.ts); these are the Phase 2 stock-script tests, moved here unchanged except
-// for their imports. The shipped scripts' tests are src/data/scripts.test.ts.
+// The five `always-*` scripts are test fixtures (__fixtures__/scripts.ts); these are their
+// tests. The shipped scripts' tests are src/data/scripts.test.ts.
 
-/** decideAction returns an unresolved Intent (Phase 4.1-C2a, A1); resolve it the same way
+/** decideAction returns an unresolved Intent; resolve it the same way
  * combat.ts's resolveTurn does. */
 function decide(creature: Creature, script: Script | null, state: CombatState) {
   return resolveIntent(creature, decideAction(creature, script, state), state)

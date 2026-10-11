@@ -1,17 +1,10 @@
 // Golden: the Brute starter's real signature trait (data/traits/starters.ts's
-// BRUTE_STARTER_TRAIT) -- "Attack resolves one additional instance" (`specializations/brute.md#starter-cragfang-mauler` /
-// brute.md: "Attack executes TWICE AT 100%"). A direct, content-level exercise of Slice B's
+// BRUTE_STARTER_TRAIT) -- Attack resolves one additional instance, executing twice at 100%
+// (`specializations/brute.md#starter-cragfang-mauler`). A direct, content-level exercise of the
 // action instance-list model (golden-attack-instance-list.fixture.ts's own mechanism), not a
 // new one -- this golden proves the REAL shipped content, not a fixture stand-in.
 //
-// NOTE on a brief/docs conflict, flagged rather than silently resolved (per this slice's own
-// kickoff instructions -- "docs win over anything in the brief if they disagree"):
-// `.claude/archive/briefs/phase-4-implementation-plan.md`'s own Slice B vocabulary table and Slice F
-// prose repeatedly describe the Brute starter's second instance as `[100%, 30%]` ("attack again
-// for 30%"). But the content doc, `specializations/brute.md#starter-cragfang-mauler` ("Attack
-// executes twice at 100%"), says the second instance is FULL power, [100%, 100%]. This golden (and
-// BRUTE_STARTER_TRAIT itself) follows the content doc, not the brief; the brief's own
-// prose needs a correction before it's read again in a future slice's chat.
+// The second instance is FULL power, [100%, 100%], as the content doc says.
 //
 // Hand-derived (independent `node -e` calculator). ATTACKER (BRUTE_STARTER-shaped: Attack 30,
 // violence affinity) vs DEFENDER (violence affinity too -> neutral x1.0, Defence 0).
@@ -20,7 +13,7 @@
 //   DEFENDER health 45 (picked so ONE instance alone does not kill it, but two do):
 //     instance 1: 45 - 30 -> 15 (alive -- proves the fight does NOT end after the first hit).
 //     instance 2: 15 - 30 -> -15 -> clamped to 0 -> dies. Both instances land on the SAME frozen
-//     target (ASSUMPTION 31 -- it never dies mid-list here, so the selector is never re-run).
+//     target (it never dies mid-list here, so the selector is never re-run).
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'

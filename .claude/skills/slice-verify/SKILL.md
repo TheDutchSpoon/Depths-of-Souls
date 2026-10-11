@@ -13,7 +13,7 @@ Slice and round: $ARGUMENTS (`<slice-id> <N>`). If either is missing, ask for it
 2. Read `verify-request.md` in the mailbox, the latest round. It names the files condensed, the
    base sha, and anything to check specially.
 3. Run `npm run docs:check -- inventory <mailbox>` (the mailbox as `.claude/phases/<phase>/<slice>`)
-   and record the result; then `npm run docs:check -- citations` and `-- budgets`.
+   and record the result; then `npm run docs:check -- citations`, `-- comments` and `-- budgets`.
 4. For every inventory row, check:
    - **the fate is honest:** a `dropped` unit really is superseded, duplicated, provenance, history,
      or arithmetic a named golden carries; a `merged` or `moved` unit's content is in its new home;

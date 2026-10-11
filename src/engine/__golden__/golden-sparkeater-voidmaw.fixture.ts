@@ -1,9 +1,9 @@
-// Golden: Glimmerdark's Sparkeater Voidmaw (PR #60 review, C3) -- a max-HP parasite that feeds
-// the whole team, superseding the initial submission's "steal Attack+Defence" (a diluted copy of
-// Leech/Gorger, not a distinct mechanic). Against REAL shipped content (data/species/
-// glimmerdark.ts's real SPARKEATER_VOIDMAW_TRAIT). Proves both halves of the asymmetry the
-// review called out: stealing the TARGET's max HP also clamps its CURRENT hp down
-// (resolution.ts's post-stat-modifier clamp, HpClamped event) -- it bites now; raising every
+// Golden: Glimmerdark's Sparkeater Voidmaw -- a max-HP parasite that feeds
+// the whole team (a distinct mechanic from Leech/Gorger's stat steals). Against REAL shipped
+// content (data/species/
+// glimmerdark.ts's real SPARKEATER_VOIDMAW_TRAIT). Proves both halves of the asymmetry:
+// stealing the TARGET's max HP also clamps its CURRENT hp down
+// (resolution.ts's post-stat-modifier clamp, HpClamped event); raising every
 // living ALLY's max HP (including Voidmaw itself) only raises the ceiling, no auto-heal (no
 // HpClamped/HealApplied for a RISE) -- it grows the team's pools over time.
 //

@@ -3,7 +3,7 @@ import { runGolden } from '../test-utils/golden-runner'
 import * as fixture from './golden-b2-confused-granted-cast-redirects.fixture'
 import { expectedEvents } from './golden-b2-confused-granted-cast-redirects.fixture'
 
-describe("golden replay: B2.3 -- a confused caster's granted cast can redirect (Phase 4.1-C2c)", () => {
+describe("golden replay: a confused caster's granted cast can redirect", () => {
   it('matches the committed event log exactly -- the cast lands on an ally, not the default enemy', () => {
     const { initial, events, state } = runGolden(fixture)
     expect(initial.playerParty[0]?.equippedSpells.map((s) => s?.id)).toEqual([

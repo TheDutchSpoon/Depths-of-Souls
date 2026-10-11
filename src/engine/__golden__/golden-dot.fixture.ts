@@ -1,11 +1,10 @@
 // Golden: the DoT lifecycle end-to-end -- a spell-applied status (VENOM_BOLT -> Poison),
-// StatusApplied, three on-turn-end ticks in the BEARER's own turn (indirect damage from the applier's
-// snapshot, 4.1-H2b2, credited to the living applier CASTER, no TriggerFired, each carrying
-// `statusId: 'poison'` -- the causing status), and the win
-// check right after the killing tick's turn-end hook pass (Phase 4.1-F2: ticks moved from the
-// round-end sweep to the bearer's turn end; a mid-turn wipe ends the turn at once). The cast's own
-// DamageDealt carries no statusId (it isn't status-caused). Re-derived in 4.1-F2 (was the Phase 3
-// round-end sweep golden).
+// StatusApplied, three on-turn-end ticks in the BEARER's own turn (indirect damage from the
+// applier's snapshot, credited to the living applier CASTER, no TriggerFired, each carrying
+// `statusId: 'poison'` -- the causing status), and the win check right after the killing tick's
+// turn-end hook pass (ticks run at the bearer's turn end; a
+// mid-turn wipe ends the turn at once). The cast's own DamageDealt carries no statusId (it isn't
+// status-caused).
 //
 // Hand-derived (independent `node -e` calculator). CASTER casts venom-bolt on round 1 only (a
 // custom script), then waits forever so poison is never refreshed. TARGET always-waits.
@@ -19,20 +18,19 @@
 //
 //   Cast: offStat = 40 (int) * 0.4 (spellPower) = 16. core = max(16-5,0) = 11. chip = 0.01*16 =
 //   0.16. raw = 11.16 -> final 11. TARGET's currentHp 20 -> 9 (cast damage doesn't read HP, so
-//   this is unaffected by TARGET's max HP below -- percent-hp-condition-ticks brief).
+//   this is unaffected by TARGET's max HP below).
 //   Poison (duration 3), snapshot at application: potency 20% of the applier CASTER's effective
 //   Attack (20, the makeParty default) = floor(floor(20) * 20 / 100) = 4; affinity vitality.
 //   Each tick = indirect: 4 x 1.0 (vitality vs vitality) x 1 (no taken factors) - 0.2 x TARGET's
-//   Defence 5 = 4 - 1 = 3 -> floor 3 (min 1 not reached). Same 3 as the pre-H2b2 percent-of-Health
-//   tick, but now sourced from CASTER (alive) not TARGET.
+//   Defence 5 = 4 - 1 = 3 -> floor 3 (min 1 not reached). Sourced from CASTER (alive), not TARGET.
 //   Speeds: CASTER 20 acts before TARGET 10. The Poison lands in CASTER's turn, so for its bearer
 //   it is NOT born this turn: it ticks and counts down at TARGET's own turn end, every round.
 //     R1 TARGET turn end: tick 9 -> 6; cleanup d3 -> 2.
 //     R2 TARGET turn end: tick 6 -> 3; cleanup d2 -> 1.
 //     R3 TARGET turn end: tick 3 -> 0, TARGET dies. A side is wiped, so the turn ends at once:
-//     TurnEnded, then FightEnded win. The countdown never runs (a corpse's statuses are inert,
-//     ASSUMPTION 51), so there is NO StatusExpired -- the expiry-on-the-killing-tick coverage
-//     moved to golden-f2-dot-one-turn.
+//     TurnEnded, then FightEnded win. The countdown never runs (a corpse's statuses are inert), so
+//     there is NO StatusExpired -- the expiry-on-the-killing-tick coverage is
+//     golden-f2-dot-one-turn's.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -89,8 +87,8 @@ export const scripts: ReadonlyMap<string, Script> = new Map([
   ...FIXTURE_SCRIPTS_BY_ID,
   [castOnceThenWait.id, castOnceThenWait],
 ])
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 function dotTick(remainingHp: number): CombatEvent {

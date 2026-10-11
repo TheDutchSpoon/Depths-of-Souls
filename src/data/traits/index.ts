@@ -101,12 +101,11 @@ export const STOCK_TRAITS: readonly Trait[] = [
   VENGEFUL,
   REELING,
   CATASTROPHIC_COLLAPSE,
-  // Phase 4 Slice F: the three starter creatures' + the Unicorn's signature traits (additive --
-  // see the guardrail in phase-4-implementation-plan.md: real per-species/starter content gets
-  // its own registry entries alongside the Phase 3 representative-and-temporary set above,
-  // never replacing it).
+  // The three starter creatures' + the Unicorn's signature traits (real starter content gets its
+  // own registry entries alongside the representative-and-temporary set above, never replacing
+  // it).
   ...STARTER_TRAITS,
-  // Phase 4 Slice H1: The Overgrowth's 18 species-creature traits + the Broodmother boss trait.
+  // The Overgrowth's 18 species-creature traits + the Broodmother boss trait.
   SPIDER_WEAVER_TRAIT,
   SPIDER_AMBUSHER_TRAIT,
   SPIDER_BROODWARDEN_TRAIT,
@@ -126,8 +125,7 @@ export const STOCK_TRAITS: readonly Trait[] = [
   LULLPOLLEN_REAPER_TRAIT,
   LULLPOLLEN_DOZER_TRAIT,
   BROODMOTHER_TRAIT,
-  // Phase 4 Slice H2: Glimmerdark's 18 species-creature traits + the Leech Sovereign boss trait.
-  // (4.1-H2b1: the Glowflies' three became the Flickerlings'.)
+  // Glimmerdark's 18 species-creature traits + the Leech Sovereign boss trait.
   FLICKERLING_WICK_TRAIT,
   FLICKERLING_FLARE_TRAIT,
   FLICKERLING_LAST_GLEAM_TRAIT,
@@ -147,7 +145,7 @@ export const STOCK_TRAITS: readonly Trait[] = [
   SHELLBACK_BRAWLER_TRAIT,
   SHELLBACK_BULWARK_TRAIT,
   LEECH_SOVEREIGN_TRAIT,
-  // Phase 4 Slice H3: Rotcap Hollow's 18 species-creature traits + the Rot Sovereign boss trait.
+  // Rotcap Hollow's 18 species-creature traits + the Rot Sovereign boss trait.
   SPORECLOUD_SEEDER_TRAIT,
   SPORECLOUD_REAPER_TRAIT,
   SPORECLOUD_BLOOMER_TRAIT,
@@ -174,18 +172,18 @@ export const TRAIT_REGISTRY: ReadonlyMap<string, Trait> = new Map(
   STOCK_TRAITS.map((t) => [t.id, t]),
 )
 
-// Phase 4.1-B (S2, B-9): load-time validator -- throws at import time (mirrors
+// load-time validator -- throws at import time (mirrors
 // validateSpecialization's own precedent) if any trait's stat-modifier reads the stat it gates.
-// Phase 4.1-C2a (PR #71 review): also rejects the intent-only 'random' selector in any trigger's
+// Also rejects the intent-only 'random' selector in any trigger's
 // response target.
-// Phase 4.1-F1: also rejects `turn-order.breakChancePercent` (status-only). Exported so a data
+// Also rejects `turn-order.breakChancePercent` (status-only). Exported so a data
 // test can feed it a deliberately broken trait.
 export function validateTrait(trait: Trait): void {
   validateStatModifierConditions(trait.effects)
   validateNoBreakChanceOutsideStatus(trait.effects)
   validateNoSnapshotPotencyOutsideStatus(trait.effects)
   validateNoRandomSelectorInResponseTargets(trait.effects)
-  // Phase 4.1-H2b1: observation-filter fields belong to one observation hook each.
+  // observation-filter fields belong to one observation hook each.
   validateObservationFilters(trait.effects, `trait "${trait.id}"`)
 }
 

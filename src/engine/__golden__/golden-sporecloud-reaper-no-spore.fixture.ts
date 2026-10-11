@@ -1,4 +1,4 @@
-// Golden: PR #64 review fix 4 -- a `deal-damage` response whose `magnitudeSource` resolves to
+// Golden: a `deal-damage` response whose `magnitudeSource` resolves to
 // exactly 0 is a FULL no-op (no DamageDealt, no downstream damage-path hooks), not a min-1-floor
 // "hit for 1" the damage formula's own unconditional `MAX(1, floor(raw))` clamp would otherwise
 // still produce even at 0 effective offense. Sporecloud Reaper's real `on-attack` bonus rider
@@ -13,7 +13,7 @@
 //
 //   on-attack fires BEFORE the attack's own damage (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`): Bloomburst's bonus rider rolls
 //     magnitudeSource count of enemies-with-status(spore) -> 0 (TARGET carries no Spore, and
-//     nothing else on the board applies it in this fixture) -> fix 4: TriggerFired still fires
+//     nothing else on the board applies it in this fixture) -> TriggerFired still fires
 //     (fireHook emits it before executeResponse runs), but the response itself is a full no-op --
 //     no DamageDealt for the bonus.
 //   REAPER's own base attack (off 14, def 10): core = max(14-10,0) = 4. chip = 0.01*14 = 0.14.

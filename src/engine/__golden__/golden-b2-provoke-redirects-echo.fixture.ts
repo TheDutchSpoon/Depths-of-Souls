@@ -1,4 +1,4 @@
-// Golden: B2.3 (Phase 4.1-C2c) -- an ECHO's target goes through Confusion -> Tunnel Vision ->
+// Golden: an ECHO's target goes through Confusion -> Tunnel Vision ->
 // Provoke like any action: an enemy Provoker redirects it. Hand-derived.
 //
 // Players: CASTER (slot 0, speed 20, Int 20, `always-cast`, slots after createCombat exactly
@@ -14,7 +14,7 @@
 //   CASTER's `always-cast` (slot 0, default target lowest-hp-enemy) -> Provoke: one provoker,
 //     draw #1 -> index floor(0.0401 * 1) = 0 -> P. SpellCast(P).
 //   on-action-observed dispatch #1: OVERTONE's chance roll #2 = 0.1123 < 0.50 -> passes.
-//     TriggerFired; the echo is QUEUED (4.1-E: `perform-action(triggering-source)`), and the
+//     TriggerFired; the echo is QUEUED (`perform-action(triggering-source)`), and the
 //     original cast's own damage lands first: P 100 -> 90.
 //   The grant then runs as the CASTER (draw order: chance #2 at trigger time, then when it runs):
 //     gem draw #3 (over one castable slot -> slot 0); target `'random'` then the override
@@ -22,7 +22,7 @@
 //     0.4413 over the provokers [P] -> P. ActionGranted, then the echo's own SpellCast(P).
 //   The echo's own on-action-observed dispatch: OVERTONE rolls #5 = 0.6661 >= 0.50 -> fails; the
 //     chain stops. The echo's damage lands: P 90 -> 80.
-// WHY THE SEED: before C2c (granted casts skipped the override pipeline) the echo's `'random'` draw #4 = 0.4413 would
+// WHY THE SEED: were granted casts to skip the override pipeline, the echo's `'random'` draw #4 = 0.4413 would
 // pick uniformly over ALL living enemies [P, X, Y] -> floor(0.4413 * 3) = floor(1.32) = 1 -> X, a
 // NON-provoker. Under the override pipeline it is P.
 // Damage: BOLT Int 20 x 0.5 = 10 vs def 0 -> raw 10.1 -> 10 per hit: P 100 -> 90 (echo) -> 80.
@@ -145,7 +145,7 @@ export const expectedEvents: CombatEvent[] = [
     hook: 'on-action-observed',
     effectId: ECHO_FIXTURE.id,
   },
-  hit(90), // 4.1-E: the ORIGINAL cast's payload completes first (the echo is queued) ...
+  hit(90), // The ORIGINAL cast's payload completes first (the echo is queued) ...
   // ... then the grant runs (draws #3 gem, #4 target) and is accepted: ActionGranted, then the
   // echo's own SpellCast, whose target went through Provoke -> P (NOT the random pick X).
   {

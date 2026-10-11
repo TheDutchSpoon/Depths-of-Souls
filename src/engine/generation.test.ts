@@ -76,7 +76,7 @@ describe('materializeCreature', () => {
     expect(creature.baseStats).toEqual(scaleStatsToLevel(FIXTURE_BRUISER.baseStats, 5))
   })
 
-  it('sets the engine-visible level (4.1-H2a, ASSUMPTION 111), always equal to origin.level', () => {
+  it('sets the engine-visible level, always equal to origin.level', () => {
     // The Additional reads `Creature.level`; `origin.level` stays engine-inert. Both come from the
     // one `level` option, at several levels (including past the Additional's level-11 cutoff).
     for (const level of [1, 2, 7, 11, 40]) {
@@ -169,7 +169,7 @@ describe('materializeCreature', () => {
     expect(creature.speciesId).toBe('brawlers-fixture')
   })
 
-  it('fills origin from the template id, the level and the optional ref (Phase 4.1-A, A5)', () => {
+  it('fills origin from the template id, the level and the optional ref', () => {
     const withoutRef = materializeCreature(FIXTURE_BRUISER, {
       level: 5,
       side: 'enemy',
@@ -177,7 +177,7 @@ describe('materializeCreature', () => {
       speciesId: 'fixture-species',
     })
     expect(withoutRef.origin).toEqual({ templateId: 'fixture-bruiser', level: 5 })
-    // Nit (review): `ref` is spread only when defined -- no explicit `undefined` key.
+    // `ref` is spread only when defined -- no explicit `undefined` key.
     expect('ref' in withoutRef.origin).toBe(false)
 
     const withRef = materializeCreature(FIXTURE_BRUISER, {
@@ -194,7 +194,7 @@ describe('materializeCreature', () => {
     })
   })
 
-  it('an explicit scriptId option overrides the template default (Phase 4.1-A, A6/ASSUMPTION 6)', () => {
+  it('an explicit scriptId option overrides the template default', () => {
     const creature = materializeCreature(FIXTURE_BRUISER, {
       level: 1,
       side: 'player',
@@ -270,7 +270,7 @@ describe('biomeForFloor', () => {
   })
 })
 
-describe('biomeHasContent (Phase 4.1-A review fix F1)', () => {
+describe('biomeHasContent', () => {
   it('is true for a biome with at least one positive-weight species that has at least one creature', () => {
     expect(biomeHasContent(FIXTURE_BIOME)).toBe(true)
   })
@@ -315,10 +315,10 @@ describe('biomeHasContent (Phase 4.1-A review fix F1)', () => {
   })
 })
 
-describe('contentFrontier (Phase 4.1-A, G5/S5; tightened by review fix F1)', () => {
+describe('contentFrontier', () => {
   it('is the last floor of the CONTIGUOUS prefix of has-content biomes, derived from the biome data', () => {
     // A fixture list of exactly 2 authored (non-empty) biomes followed by empty placeholders --
-    // the brief's own acceptance example: frontier = 20.
+    // so frontier = 20.
     const biomes: BiomeData[] = [
       FIXTURE_BIOME,
       FIXTURE_BIOME,
@@ -328,7 +328,7 @@ describe('contentFrontier (Phase 4.1-A, G5/S5; tightened by review fix F1)', () 
     expect(contentFrontier(biomes)).toBe(20)
   })
 
-  it('stops at the FIRST has-content gap, never resuming at a later authored biome (F1)', () => {
+  it('stops at the FIRST has-content gap, never resuming at a later authored biome', () => {
     // biome 1 authored, biome 2 empty, biome 3 authored again -- biomeForFloor would still
     // resolve biome 2 (empty) for floors 11-20, so the frontier must stop at 10, not skip ahead
     // to count biome 3's own floors 21-30 as reachable.
@@ -412,9 +412,9 @@ describe('generateFloor', () => {
   // weightedPick roll = 0.3*2 = 0.6; that's < BRAWLERS' weight (1), so BRAWLERS wins on every
   // draw. BRAWLERS' creatures are [BRUISER(common, weight 6), BRUISER_RARE(rare, weight 1)],
   // total 7; roll = 0.3*7 = 2.1, < 6, so BRUISER (common) wins every time too. floor=6 (under the
-  // Phase-4 placeholder config) -> enemyLevelRange = {min:6, max:8} (size 3); the level roll is
+  // placeholder config) -> enemyLevelRange = {min:6, max:8} (size 3); the level roll is
   // 6 + floor(0.3*3) = 6 + floor(0.9) = 6 + 0 = 6 -> scaleStatsToLevel factor = 1 + 0.25*5 =
-  // 2.25, so base 20 -> 45 on every stat. BRUISER is violence and not cast-role, but (4.1-G1) every
+  // 2.25, so base 20 -> 45 on every stat. BRUISER is violence and not cast-role, but every
   // enemy rolls a full gem set: the biome-1 violence pool is just [FIXTURE_VIOLENCE_BOLT]
   // (FIXTURE_WIT_BOLT is off-affinity), so each of the 3 slots draws from the full pool again --
   // the safety-net duplicates -- and the set is [VIOLENCE_BOLT, VIOLENCE_BOLT, VIOLENCE_BOLT].
@@ -487,10 +487,10 @@ describe('generateFloor', () => {
     }
   })
 
-  it('speciesId is now real (Phase 4 Slice E2), so living-allies-of-species reads a nonzero count', () => {
+  it('speciesId is now real, so living-allies-of-species reads a nonzero count', () => {
     // Reuses the low-roll trace above: every one of the 6 enemy slots resolves to BRUISER
     // (BRAWLERS species), so every enemy in the fight shares the same speciesId --
-    // living-allies-of-species was inert (always 0) before this slice wired it through
+    // living-allies-of-species reads it through
     // materializeCreature.
     const fights = generateFloor(
       6,
@@ -523,7 +523,7 @@ describe('generateFloor', () => {
   })
 })
 
-describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
+describe('generateFloor: boss floors', () => {
   it('isBossFloor is true only on a floor%FLOORS_PER_BIOME===0, at any depth', () => {
     expect(isBossFloor(10)).toBe(true)
     expect(isBossFloor(20)).toBe(true)
@@ -543,7 +543,7 @@ describe('generateFloor: boss floors (Phase 4 Slice I, PR #65 review)', () => {
     )
     expect(fights).toHaveLength(1)
     const fight = fights[0]!
-    // fightCount is NOT consulted: one fight. From 4.1-G1 the side is a full `enemyPartySize(10)` = 6:
+    // fightCount is NOT consulted: one fight. The side is a full `enemyPartySize(10)` = 6:
     // the boss, her one authored add, then four fill creatures (the boss-fill describe below).
     expect(fight.enemyParty).toHaveLength(enemyPartySize(10, CFG))
     expect(fight.enemyParty).toHaveLength(6)
@@ -701,7 +701,7 @@ describe('generateFloor: cumulative spell unlock', () => {
     // A lower LOADOUT roll at the same biomeIndex still reaches the biome-1 spell -- proves
     // inheritance, not a switch-over. Needs a sequence rng (not a single constant): floor 1 ->
     // enemyPartySize=1, fightCount=3 -> 3 slots, each drawing [species, within-species creature,
-    // level, then one loadout draw per gem slot] (4.1-G1: every enemy rolls all 3). species=0.9 -> weightedPick roll=0.9*2=1.8, clears BRAWLERS' weight(1)
+    // level, then one loadout draw per gem slot] (every enemy rolls all 3). species=0.9 -> weightedPick roll=0.9*2=1.8, clears BRAWLERS' weight(1)
     // leaving 0.8 (>=0, continue), then goes negative on CASTERS -- CASTERS wins (same math as
     // the "high roll picks the caster" trace above). CASTERS' one creature and the level roll
     // are both value-irrelevant (any roll resolves the same single-item pool). loadout=0.1 ->

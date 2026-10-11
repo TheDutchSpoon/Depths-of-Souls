@@ -1,5 +1,5 @@
 // Golden: the Flickerling Wick's burn and heal, the Flare reacting to the burn, and the heal's
-// "hurt" filter (Phase 4.1-H2b1, ASSUMPTIONS 116, 140). Hand-derived; the Wick and the Flare are the
+// "hurt" filter. Hand-derived; the Wick and the Flare are the
 // REAL species (data/species/glimmerdark.ts) with their real traits.
 //
 // Players (party order = slot): WICK (38 / 10 / 16 / 14 / 16, vitality), FLARE (25 / 14 / 22 / 10 /

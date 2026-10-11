@@ -7,7 +7,7 @@
 // (speed 10) acts before FOE (speed 5, scripted always-wait — it only ever reacts, never attacks).
 //
 //   HERO→FOE (off 20, def 8):        core 12, chip 0.20 → raw 12.20 → 12.
-//   FOE retaliate→HERO (magnitude 16×0.3=4.8, def 6): a trait response is INDIRECT (4.1-H2a):
+//   FOE retaliate→HERO (magnitude 16×0.3=4.8, def 6): a trait response is INDIRECT:
 //     4.8×1×1×1 − 0.2×6 = 3.6 → floor 3 (float: 3.5999999999999996), no chip, not chip-only.
 //
 // FOE 30 → 18 → 6 → 0 over three HERO hits; it retaliates after the first two (3 dmg each: HERO 40 → 37 → 34) but

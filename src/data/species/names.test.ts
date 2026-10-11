@@ -1,4 +1,4 @@
-// Phase 4.1-A (G3): every real SpeciesCreature (starters, the Unicorn, every biome's spawn pool,
+// Every real SpeciesCreature (starters, the Unicorn, every biome's spawn pool,
 // every boss) has a non-empty, unique `name` -- the full display name, never assembled from the
 // species name. Test-only fixtures (__fixtures__/*, other test files' inline literals) are
 // exempt -- this scans only the real content registries.
@@ -18,7 +18,7 @@ const ALL_REAL_CREATURES: readonly SpeciesCreature[] = [
   ...BIOMES.flatMap((biome) => (biome.boss ? [biome.boss.creature] : [])),
 ]
 
-describe('every real SpeciesCreature has a name (Phase 4.1-A, G3)', () => {
+describe('every real SpeciesCreature has a name', () => {
   it('ships the expected count: 4 starters/Unicorn + 54 biome creatures + 3 bosses = 61', () => {
     expect(ALL_REAL_CREATURES).toHaveLength(61)
   })

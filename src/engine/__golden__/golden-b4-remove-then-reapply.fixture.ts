@@ -1,4 +1,4 @@
-// Golden: B4's exact-instance rule (Phase 4.1-B, PR #69 review R5) -- a status removed AND
+// Golden: the exact-instance rule -- a status removed AND
 // reapplied within the SAME hook pass gets a genuinely new instance; the OLD instance's own
 // pending trigger candidate (captured before either happened) must not fire.
 //
@@ -9,7 +9,7 @@
 // three trait effects. So BEARER's on-turn-end candidate list is, in order: [effect 2 (remove),
 // effect 3 (apply-fresh), the OLD status's own tick trigger]. Effect 2 fires first (removes the
 // old instance); effect 3 fires next (applies a brand-new instance, a fresh id from the shared
-// counter -- B4); by the time the OLD tick candidate comes up, its exact owning instance is gone
+// counter); by the time the OLD tick candidate comes up, its exact owning instance is gone
 // (a genuinely different instance now occupies the same statusId slot) -- it never fires, not
 // even TriggerFired, and no DamageDealt is ever emitted. (The new instance's id being provably
 // DIFFERENT from the old one is covered by resolution.test.ts's own unit test, which can inspect
@@ -123,7 +123,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: BEARER },
   { type: 'Waited', creatureId: BEARER },
-  // Phase 4.1-C (D6): on-turn-end hooks fire BEFORE TurnEnded now (TurnEnded is always the
+  // on-turn-end hooks fire BEFORE TurnEnded (TurnEnded is always the
   // turn's last event).
   // Candidate 1 (effect 2, remove): fires -- the OLD instance is gone.
   {

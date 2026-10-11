@@ -36,7 +36,7 @@ describe('starter + Unicorn shape', () => {
     }
   })
 
-  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat', () => {
+  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45, 10-30 for every other stat', () => {
     for (const creature of STARTERS) {
       for (const [stat, value] of Object.entries(creature.baseStats)) {
         expect(value, creature.id + ' ' + stat).toBeGreaterThanOrEqual(
@@ -66,8 +66,8 @@ describe('starter + Unicorn shape', () => {
   })
 })
 
-describe('Stonehorn Warden starter (Phase 4.1-H2c, ASSUMPTIONS 123, 125)', () => {
-  it('has Attack 15 and Health 39 (the remap of 25), the rest unchanged', () => {
+describe('Stonehorn Warden starter', () => {
+  it('has Attack 15 and Health 39, the other stats as authored', () => {
     expect(SHIELDBARER_STARTER.baseStats).toEqual({
       health: 39,
       attack: 15,
@@ -82,12 +82,12 @@ describe('Stonehorn Warden starter (Phase 4.1-H2c, ASSUMPTIONS 123, 125)', () =>
   })
 })
 
-describe('Sorcerer starter loadout (Phase 4.1-B, A8)', () => {
+describe('Sorcerer starter loadout', () => {
   it("the granted spell is Wit-affinity, matching the starter's own affinity", () => {
     expect(ARCANE_BOLT.affinity).toBe('wit')
   })
 
-  it('SpeciesCreature carries no equippedSpells field -- the fixed loadout is deleted', () => {
+  it('SpeciesCreature carries no equippedSpells field', () => {
     expect('equippedSpells' in SORCERER_STARTER).toBe(false)
   })
 
@@ -101,7 +101,7 @@ describe('Sorcerer starter loadout (Phase 4.1-B, A8)', () => {
     expect(materialized.equippedSpells).toEqual([null, null, null])
   })
 
-  it("createCombat prepends Arcane Surge's innate spell, giving the Seer [Bolt, null, null, null] -- byte-identical to the old fixed loadout", () => {
+  it("createCombat prepends Arcane Surge's innate spell, giving the Seer [Bolt, null, null, null]", () => {
     const materialized = materializeCreature(SORCERER_STARTER, {
       level: 1,
       side: 'player',
@@ -164,7 +164,7 @@ describe('Sorcerer starter loadout (Phase 4.1-B, A8)', () => {
 })
 
 describe('signature traits', () => {
-  it('Sorcerer starter: a 50% on-turn-end perform-action(self, random cast) + an innate Arcane Bolt (4.1-B A8, 4.1-E A2)', () => {
+  it('Sorcerer starter: a 50% on-turn-end perform-action(self, random cast) + an innate Arcane Bolt', () => {
     expect(SORCERER_STARTER_TRAIT.effects).toEqual([
       {
         category: 'triggered',

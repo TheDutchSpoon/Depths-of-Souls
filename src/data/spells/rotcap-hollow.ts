@@ -1,17 +1,17 @@
 import type { Spell } from '../../engine/types'
 
-// ---- Phase 4 Slice H3: Rotcap Hollow (floors 21-30) -- 5 new, genuinely-own spells (one per
-// affinity), meeting the design owner's >=4-5-own-spells-per-biome bar (`spec/run.md#spells-unlock-cumulatively`) the same
-// way H2's post-interstitial-slice kit does: spice on top of the inherited Overgrowth/Glimmerdark
+// ---- Rotcap Hollow (floors 21-30) -- 5 new, genuinely-own spells (one per
+// affinity), meeting the per-biome bar of own spells (`spec/run.md#spells-unlock-cumulatively`),
+// spice on top of the inherited Overgrowth/Glimmerdark
 // base (cumulative unlock -- see data/spells/index.ts's ALL_SPELLS), never a re-skinned dup. Each
 // is unique under the dedup guard's (affinity, targetShape, effect kind, spellPower) key
 // (data/spells/index.test.ts) -- checked by hand against every pre-existing spell below.
 
-/** Spore Cyst: the first spell-authored producer of Spore (`spec/run.md#the-onboarding-ramp`: "a spell may
- * apply any status, including another species' signature one" -- statuses are shared
- * primitives, precedented by Vine Snare/Web and Disorient/Web). PR #64 review: `spellPower`
- * lowered 0.9 -> 0.45 -- the "~80-90% band" reasoning below no longer applies. A DoT-applying
- * spell's upfront damage shouldn't lead its band (the same rule already applied to Puppet
+/** Spore Cyst: the first spell-authored producer of Spore (`spec/run.md#the-onboarding-ramp`:
+ * a spell may apply any status, another species' signature status included -- statuses are
+ * shared primitives, precedented by Vine Snare/Web and Disorient/Web). `spellPower`
+ * is 0.45, not the ~80-90% band's 0.9: a DoT-applying
+ * spell's upfront damage shouldn't lead its band (the same rule applied to Puppet
  * String); the reference point is Venom Bolt's own DoT spell, 0.4. Distinct from every other
  * wit|single|damage entry under the dedup guard. */
 export const SPORE_CYST: Spell = {
@@ -60,8 +60,8 @@ export const RASPING_CHANT: Spell = {
 }
 
 /** Puppet String: the first spell-authored producer of Confusion (Instinct's own new-mechanic
- * spell, mirroring how Disorient introduced Web to Instinct in H2). Content-review revision:
- * spellPower lowered to 0.8 (a status-application spell's damage half shouldn't lead the pack) --
+ * spell, mirroring how Disorient introduced Web to Instinct). spellPower
+ * is 0.8 (a status-application spell's damage half shouldn't lead the pack) --
  * keeps it distinct from Disorient's own 0.85 under the dedup guard. */
 export const PUPPET_STRING: Spell = {
   id: 'puppet-string',
@@ -105,11 +105,11 @@ export const CHARNEL_FEAST: Spell = {
   ],
 }
 
-/** Withering Bolt: Violence's first spell-authored producer of Burn (statuses.ts's BURN had no
- * real producer before this slice besides Sporch's own on-attack trait -- statuses are never
- * producer-exclusive). PR #64 review: `spellPower` lowered 0.85 -> 0.45 -- the "~80-90% band"
- * reasoning below no longer applies. A DoT-applying spell's upfront damage shouldn't lead its
- * band (the same rule already applied to Puppet String and Spore Cyst); the reference point is
+/** Withering Bolt: Violence's first spell-authored producer of Burn (statuses.ts's BURN's other
+ * real producers are the Sporch Igniter's on-attack trait and the Sporch Cinderlord's on-kill
+ * trait -- statuses are never producer-exclusive). `spellPower` is 0.45, not the ~80-90% band: a DoT-applying spell's
+ * upfront damage shouldn't lead its
+ * band (the same rule applied to Puppet String and Spore Cyst); the reference point is
  * Venom Bolt's own DoT spell, 0.4. Distinct from Ember Lance (0.5) / Thorn Lash (1.0) /
  * Blinding Flare (0.7, applies Vulnerability not Burn) under the dedup guard. */
 export const WITHERING_BOLT: Spell = {

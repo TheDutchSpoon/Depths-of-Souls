@@ -1,4 +1,4 @@
-// Golden: INDIRECT damage (Phase 4.1-H2a, ASSUMPTION 112): a trait response is not an Attack or
+// Golden: INDIRECT damage: a trait response is not an Attack or
 // Cast, so it uses the response's own magnitude and meets only a fifth of the target's Defence:
 //   raw = magnitude x affinity x (1 + sum dealt) x prod(taken) - 0.2 x Defence;  MAX(1, floor(raw))
 // with no chip floor and no Additional. Hand-derived. All vitality (neutral x1.0), no dealt mods.
@@ -14,8 +14,8 @@
 //     and a x0.65 factor in its taken pool.
 //   R1 -> D (turn start): magnitude 30 x 1 x 1 x 0.65 = 19.5; - 0.2 x 30 = 6 -> raw 13.5 -> final 13.
 //     (As direct damage it would be core max(30-30,0) = 0 -> chip-only, 1.) D 100 -> 87.
-//   U waits.   R2 -> U (turn start): magnitude 30 (cross-stat is DIRECT-only, ASSUMPTION 134: the
-//     +20 is NOT added); x1 x1 x1; - 0.2 x 20 = 4 -> raw 26 -> final 26. U 50 -> 24.
+//   U waits. R2 -> U (turn start): magnitude 30 (cross-stat is DIRECT-only: the +20 is NOT added);
+//   x1 x1 x1; - 0.2 x 20 = 4 -> raw 26 -> final 26. U 50 -> 24.
 //     (With cross-stat included it would be 50 - 4 = 46; as direct damage 10-ish.)
 // Neither hit is chip-only; neither carries the Additional. TURN_STEPS = 4 (D, U, R1, R2).
 

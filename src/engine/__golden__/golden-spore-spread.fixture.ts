@@ -2,7 +2,7 @@
 // real, shipped trait (`SPORECLOUD_SEEDER_TRAIT`) infects its target with Spore mid-attack, that
 // same attack's damage kills the (pre-wounded) target, and Spore's own `on-death` trigger
 // (data/statuses.ts's SPORE) spreads it to the dying creature's only living, still-healthy ally
-// -- the NEW `random-ally-without-status` ResponseTarget (ASSUMPTION 30), exercised here for the
+// -- the NEW `random-ally-without-status` ResponseTarget, exercised here for the
 // first time against real content, not a fixture stand-in for the producer.
 //
 // Hand-derived (independent `node -e` calculator). SEEDER (real Sporecloud Seeder base stats:
@@ -15,8 +15,7 @@
 // math. ALLY (also wit, 50 max HP, untouched) is BEARER's only living ally and does not carry
 // Spore, so it's the sole (deterministic, no-RNG) candidate for the spread.
 //
-// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned
-// (4.1-H2d).
+// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned.
 //
 //   on-attack fires BEFORE the attack's own damage (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`): SEEDER's Infest trait applies
 //     Spore to BEARER (duration 3) first.

@@ -1,35 +1,34 @@
-// Phase 4 Slice F: specializations/perks (`spec/progression.md#specializations-are-data`: perks are
+// specializations/perks (`spec/progression.md#specializations-are-data`: perks are
 // effect-framework effect-carriers, v1 combat-only). Each spec's own `.claude/specializations/
-// {sorcerer,brute,shieldbarer}.md` is the source of truth for every perk's exact cost/effect/
-// Phase tag; this file is that table transcribed into data, reusing ONLY vocabulary already
-// built by Slices A-E2 (per the plan's own "Response reuse check" -- confirmed perk-by-perk in
-// the comments below).
+// {sorcerer,brute,shieldbarer}.md` is the source of truth for every perk's exact cost and
+// effect; this file is that table transcribed into data, reusing ONLY vocabulary the effect
+// framework already has (confirmed perk-by-perk in the comments below).
 //
-// ASSUMPTION 20: leveled perks' effects are a FUNCTION of the purchased level (not a fixed
+// Leveled perks' effects are a FUNCTION of the purchased level (not a fixed
 // definition) -- `effects: EffectDef[] | ((level: number) => EffectDef[])`. A load-time
 // validator (`validateSpecialization`, called at the bottom of this module for all three specs)
 // asserts each spec's perks sum to exactly 1000 -- throws at import time, not a
 // runtime-reachable error, so a data-authoring mistake fails fast in tests.
 //
-// ASSUMPTION 24: Phase-8-inert perks (the gem-equip-economy Mastery family + Arcane Shields/
-// Arcane Versatility/True Wit for Sorcerer, Shield Specialist for Shieldbarer, Proficient's half
-// of Brute's Proficient Warrior) are authored as REAL PerkDefs (full cost/maxLevel, counted
-// toward the 1000-point sum) whose `effects` are simply `[]` -- there is no engine primitive for
-// "equip gems off-affinity" / "equipment Stat Slot benefit" at all yet (the whole gem/equipment
-// forge economy is Phase 8), so `[]` is the honest, correct dormant reading, not a stub.
+// Inert perks (`spec/progression.md#inert-perks`: the gem-equip-economy Mastery family +
+// Arcane Shields/Arcane Versatility/True Wit for Sorcerer, Shield Specialist for Shieldbarer,
+// Proficient's half of Brute's Proficient Warrior) are authored as REAL PerkDefs (full
+// cost/maxLevel, counted toward the 1000-point sum) whose `effects` are simply `[]` -- there is
+// no engine primitive for equipping gems off-affinity or for an equipment Stat Slot benefit at all (the
+// whole gem/equipment forge economy is unbuilt: `spec/creatures.md#gems-as-items`,
+// `spec/creatures.md#equipment`), so `[]` is the honest, correct dormant reading, not a stub.
 //
-// Review amendment (post-initial-submission): Brute's "Brute Force" (+1% damage with ATTACKS per
-// rank) and Sorcerer's "Spell Focus" (+1% SPELL damage per level) are each authored as
-// `conditional-damage-bonus` (Slice E2) with an unconditional `{kind: 'always'}` condition -- the
-// only existing dealt-pool-percentage primitive. `ConditionalDamageBonusDef` now carries an
-// `actionKind?: 'attack' | 'cast' | 'both'` field (mirroring `CrossStatDef.appliesTo`), so each
-// perk correctly scopes to its own action kind and does NOT leak onto the other one (the initial
-// submission's own flagged caveat, now resolved rather than accepted).
+// Brute's "Brute Force" (+1% damage with ATTACKS per rank) and Sorcerer's "Spell Focus" (+1%
+// SPELL damage per level) are each authored as `conditional-damage-bonus` with an unconditional
+// `{kind: 'always'}` condition -- the only existing dealt-pool-percentage primitive.
+// `ConditionalDamageBonusDef` carries an `actionKind?: 'attack' | 'cast' | 'both'` field
+// (mirroring `CrossStatDef.appliesTo`), so each perk scopes to its own action kind and does NOT
+// leak onto the other one.
 //
-// Review amendment: Bulwark ("-5% damage taken per Defend, cap 80%") is authored as a genuine
-// permanent passive perk effect (`{ category: 'taken-reduction', ... }`) -- not, as the initial
-// submission had it, a triggered `on-fight-start -> apply-status` smuggling a STATUS into a
-// perk's own `effects: []`. See `TakenReductionDef`'s own doc comment (effect-types.ts).
+// Bulwark ("-5% damage taken per Defend, cap 80%") is authored as a genuine permanent passive
+// perk effect (`{ category: 'taken-reduction', ... }`) -- not a triggered
+// `on-fight-start -> apply-status` smuggling a STATUS into a perk's own `effects: []`. See
+// `TakenReductionDef`'s own doc comment (effect-types.ts).
 
 import type { EffectDef } from '../engine/effect-types'
 import {
@@ -66,11 +65,11 @@ export function validateSpecialization(spec: Specialization): void {
       `specialization invariant violated: ${spec.id}'s perks sum to ${total} points, expected exactly 1000`,
     )
   }
-  // Phase 4.1-B (S2, B-9): perks are stat-modifier carriers too (e.g. Arcane Might's "+1%
+  // Perks are stat-modifier carriers too (e.g. Arcane Might's "+1%
   // Intelligence per level") -- run the same load-time validator over every perk's resolved
   // effects. A level-function's SHAPE (which stat, which condition) is level-invariant by
   // construction (only the factor magnitude varies with `level`), so level 1 is representative.
-  // Phase 4.1-C2a (PR #71 review): also rejects the intent-only 'random' selector in any
+  // Also rejects the intent-only 'random' selector in any
   // trigger's response target -- perks are triggered-response carriers too.
   for (const perk of spec.perks) {
     const effects = typeof perk.effects === 'function' ? perk.effects(1) : perk.effects
@@ -78,7 +77,7 @@ export function validateSpecialization(spec: Specialization): void {
     validateNoBreakChanceOutsideStatus(effects)
     validateNoSnapshotPotencyOutsideStatus(effects)
     validateNoRandomSelectorInResponseTargets(effects)
-    // Phase 4.1-H2b1: a perk is a trigger carrier too.
+    // A perk is a trigger carrier too.
     validateObservationFilters(effects, `perk "${perk.id}"`)
   }
 }
@@ -93,9 +92,8 @@ export function resolvePerkEffects(perk: PerkDef, level: number): readonly Effec
 }
 
 /** The flattened, already-resolved effect list a `{chosenSpec, perkSpend}` pair produces --
- * ready to pass directly as `createCombat`'s `partyWidePlayerEffects` argument (the Slice G
- * store's own eventual job; exposed here so this slice's own tests/goldens can exercise the same
- * integration path). */
+ * ready to pass directly as `createCombat`'s `partyWidePlayerEffects` argument (exposed here so
+ * tests and goldens can exercise the same integration path). */
 export function resolveSpecializationEffects(
   spec: Specialization,
   perkSpend: ReadonlyMap<string, number>,
@@ -113,7 +111,7 @@ export const SORCERER: Specialization = {
   starterCreatureId: SORCERER_STARTER.id,
   perks: [
     {
-      // "Your creatures Cast spells an additional time." -- Slice B's action-instance model,
+      // "Your creatures Cast spells an additional time." -- the action-instance model,
       // the same primitive the Echo/Flurry perk family runs on unchanged.
       id: 'echo',
       name: 'Echo',
@@ -122,7 +120,7 @@ export const SORCERER: Specialization = {
       effects: [{ category: 'action-instance', actionKind: 'cast', powerPercent: 100 }],
     },
     {
-      // Inert until Phase 8 (gem system) -- see sorcerer.md
+      // Inert (gem system): `specializations/sorcerer.md#wit-mastery`
       id: 'wit-mastery',
       name: 'Wit Mastery',
       maxLevel: 1,
@@ -130,7 +128,7 @@ export const SORCERER: Specialization = {
       effects: [],
     },
     {
-      // Inert until Phase 8 (gem system) -- see sorcerer.md
+      // Inert (gem system): `specializations/sorcerer.md#violence-mastery`
       id: 'violence-mastery',
       name: 'Violence Mastery',
       maxLevel: 1,
@@ -138,7 +136,7 @@ export const SORCERER: Specialization = {
       effects: [],
     },
     {
-      // Inert until Phase 8 (gem system) -- see sorcerer.md
+      // Inert (gem system): `specializations/sorcerer.md#endurance-mastery`
       id: 'endurance-mastery',
       name: 'Endurance Mastery',
       maxLevel: 1,
@@ -146,7 +144,7 @@ export const SORCERER: Specialization = {
       effects: [],
     },
     {
-      // Inert until Phase 8 (gem system) -- see sorcerer.md
+      // Inert (gem system): `specializations/sorcerer.md#vitality-mastery`
       id: 'vitality-mastery',
       name: 'Vitality Mastery',
       maxLevel: 1,
@@ -154,7 +152,7 @@ export const SORCERER: Specialization = {
       effects: [],
     },
     {
-      // Inert until Phase 8 (gem system) -- see sorcerer.md
+      // Inert (gem system): `specializations/sorcerer.md#instinct-mastery`
       id: 'instinct-mastery',
       name: 'Instinct Mastery',
       maxLevel: 1,
@@ -162,7 +160,7 @@ export const SORCERER: Specialization = {
       effects: [],
     },
     {
-      // "Your creatures are immune to the effect of Silenced." status-immunity (Slice C) --
+      // "Your creatures are immune to the effect of Silenced." status-immunity --
       // suppresses Silenced's EFFECT only, per the immunity-suppresses-effect principle; the
       // status still applies/counts for has-status.
       id: 'clear-mind',
@@ -182,7 +180,7 @@ export const SORCERER: Specialization = {
       ],
     },
     {
-      // Inert until Phase 8 (gem system) -- see sorcerer.md
+      // Inert (gem system): `specializations/sorcerer.md#arcane-shields`
       id: 'arcane-shields',
       name: 'Arcane Shields',
       maxLevel: 10,
@@ -190,7 +188,7 @@ export const SORCERER: Specialization = {
       effects: [],
     },
     {
-      // Inert until Phase 8 (gem system) -- see sorcerer.md
+      // Inert (gem system): `specializations/sorcerer.md#arcane-versatility`
       id: 'arcane-versatility',
       name: 'Arcane Versatility',
       maxLevel: 10,
@@ -198,7 +196,7 @@ export const SORCERER: Specialization = {
       effects: [],
     },
     {
-      // Inert until Phase 8 (gem system) -- see sorcerer.md
+      // Inert (gem system): `specializations/sorcerer.md#true-wit`
       id: 'true-wit',
       name: 'True Wit',
       maxLevel: 5,
@@ -273,9 +271,10 @@ export const BRUTE: Specialization = {
       effects: [{ category: 'status-immunity', statusId: 'pacified' }],
     },
     {
-      // "Your creatures always have Splashing and Proficient." Splashing (Slice C) is real;
-      // Proficient (equipment Stat Slots, P8) has no engine primitive to key off yet -- see
-      // top-of-file ASSUMPTION 24.
+      // Your creatures always have Splashing and Proficient (`specializations/brute.md#proficient-warrior`).
+      // Splashing is real; Proficient (equipment Stat Slots, `spec/creatures.md#equipment`) has no
+      // engine primitive to key off yet -- see
+      // the note on inert perks at the top of this file.
       id: 'proficient-warrior',
       name: 'Proficient Warrior',
       maxLevel: 1,
@@ -292,9 +291,9 @@ export const BRUTE: Specialization = {
       effects: [{ category: 'annihilate' }],
     },
     {
-      // "On cast, +1% of the caster's Attack per rank is added to the spell's damage." The
-      // textbook cross-stat consumer (`spec/combat.md#cross-stat-contribution` names this exact perk under "Cross-stat
-      // contribution").
+      // On a cast, +1% of the caster's Attack per level is added to the spell's damage
+      // (`specializations/brute.md#aggressive-caster`). The textbook cross-stat consumer
+      // (`spec/combat.md#cross-stat-contribution`).
       id: 'aggressive-caster',
       name: 'Aggressive Caster',
       maxLevel: 25,
@@ -309,7 +308,7 @@ export const BRUTE: Specialization = {
       ],
     },
     {
-      // "On attack, 1% chance per rank to Weaken the target." chancePercent (Slice E2) gates a
+      // "On attack, 1% chance per rank to Weaken the target." chancePercent gates a
       // triggered apply-status response; reuses the existing WEAKEN status verbatim, inheriting
       // its `defaultDuration` (3) -- no explicit duration to repeat here.
       id: 'concussive-blows',
@@ -330,8 +329,8 @@ export const BRUTE: Specialization = {
       ],
     },
     {
-      // "+1% damage to Weakened targets per level." The textbook conditional-damage-bonus
-      // consumer (`spec/combat.md#cross-stat-contribution` names this exact perk under that primitive).
+      // +1% damage to Weakened targets per level (`specializations/brute.md#cull-the-weak`). The
+      // textbook conditional-damage-bonus consumer (`spec/effects.md#conditional-damage-bonus`).
       id: 'cull-the-weak',
       name: 'Cull the Weak',
       maxLevel: 50,
@@ -345,7 +344,7 @@ export const BRUTE: Specialization = {
       ],
     },
     {
-      // "Your creatures ignore enemy Provoke." provoke-immunity (Slice C).
+      // "Your creatures ignore enemy Provoke." provoke-immunity.
       id: 'tunnel-vision',
       name: 'Tunnel Vision',
       maxLevel: 1,
@@ -364,7 +363,7 @@ export const SHIELDBARER: Specialization = {
   perks: [
     {
       // "-5% damage taken (cap 80%) for each time the creature has Defended this battle." A
-      // genuine permanent passive (taken-reduction, review amendment) -- not a status; its own
+      // genuine permanent passive (taken-reduction) -- not a status; its own
       // magnitudeSource (self-defend-count) drives the live scaling every read, no application
       // moment needed.
       id: 'bulwark',
@@ -382,7 +381,7 @@ export const SHIELDBARER: Specialization = {
       ],
     },
     {
-      // "On provoke, the creature also defends." grant-action-state (Slice B), reused verbatim.
+      // "On provoke, the creature also defends." grant-action-state, reused verbatim.
       id: 'shield-up',
       name: 'Shield up',
       maxLevel: 1,
@@ -401,7 +400,6 @@ export const SHIELDBARER: Specialization = {
     },
     {
       // "Attacks and spells ignore 1% of the enemy's Defence per level." armor-penetration
-      // (Slice B).
       id: 'armor-piercer',
       name: 'Armor piercer',
       maxLevel: 25,
@@ -409,7 +407,7 @@ export const SHIELDBARER: Specialization = {
       effects: (level) => [{ category: 'armor-penetration', percent: 0.01 * level }],
     },
     {
-      // Inert until Phase 8 (equipment system) -- see shieldbarer.md
+      // Inert (equipment system): `specializations/shieldbarer.md#shield-specialist`
       id: 'shield-specialist',
       name: 'Shield Specialist',
       maxLevel: 100,
@@ -418,7 +416,7 @@ export const SHIELDBARER: Specialization = {
     },
     {
       // "After taking damage from an attack or spell, deal damage to that enemy equal to 15% of
-      // the creature's Defence." deal-damage's scalingStat (Slice B) -- a genuine retaliation
+      // the creature's Defence." deal-damage's scalingStat -- a genuine retaliation
       // hit, its own instance, distinct from Shield Bash below.
       id: 'thorns',
       name: 'Thorns',
@@ -438,8 +436,9 @@ export const SHIELDBARER: Specialization = {
       ],
     },
     {
-      // "Attacks and spells deal additional damage equal to 3% of Defence per level." The
-      // textbook cross-stat consumer for BOTH action kinds (`spec/combat.md#cross-stat-contribution` names this exact perk).
+      // Attacks and spells deal additional damage equal to 3% of the creature's Defence per level
+      // (`specializations/shieldbarer.md#shield-bash`). The textbook cross-stat consumer for BOTH
+      // action kinds (`spec/combat.md#cross-stat-contribution`).
       id: 'shield-bash',
       name: 'Shield Bash',
       maxLevel: 10,
@@ -463,7 +462,7 @@ export const SHIELDBARER: Specialization = {
     },
     {
       // "When taking damage that would kill the creature, 50% chance to be left at 1 HP."
-      // cheat-death (Slice D).
+      // cheat-death.
       id: 'last-stand',
       name: 'Last Stand',
       maxLevel: 1,

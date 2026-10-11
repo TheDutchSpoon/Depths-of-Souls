@@ -1,6 +1,6 @@
-// Golden: a spell effect that lands on its own CASTER is DIRECT damage (Phase 4.1-H2a, ASSUMPTIONS
-// 132, 137): the channel follows the action, not the target, so it is never a cost and never
-// indirect. Confusion's AOE redirect does exactly this to real casters. Hand-derived.
+// Golden: a spell effect that lands on its own CASTER is DIRECT damage: the channel follows the
+// action, not the target, so it is never a cost and never indirect. Confusion's AOE redirect does
+// exactly this to real casters. Hand-derived.
 //
 // CASTER (LEVEL 1, health 60, Intelligence 40, Defence 8, vitality, speed 10, `cast-slot-0`) casts
 // SELF_HIT: a single-target enemy-side spell (the cast itself is aimed at FOE) whose one

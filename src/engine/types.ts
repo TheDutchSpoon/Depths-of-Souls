@@ -20,7 +20,7 @@ export type Side = 'player' | 'enemy'
 // ---- Spells ----
 
 /**
- * Phase 4.1-D (A4): a spell is data -- a target shape, an intended side, and a LIST of the same
+ * A spell is data -- a target shape, an intended side, and a LIST of the same
  * `EffectResponse`s traits use (`effects`). The magnitude fields (`spellPower`, `scalingStat`,
  * the stat-modifier's `{ stat, factor }`, the status spec) live on those responses, not here.
  * Effects run once per landed target, in list order, through `executeResponse` directly (a chosen
@@ -32,20 +32,19 @@ export interface Spell {
   readonly name: string
   /** Governs equipping only (canEquip(spell, creature) = spell.affinity === creature.affinity,
    * `spec/creatures.md#spell-affinity-gate`) -- the damage affinity cycle stays keyed on
-   * the CASTER's affinity, never the spell's. First consumer: Phase 4 Slice A's generation
-   * module rolls cast-role enemies an affinity-matched spell from their biome's spell pool. */
+   * the CASTER's affinity, never the spell's. First consumer: the generation
+   * module, which rolls an affinity-matched spell per enemy gem slot. */
   readonly affinity: Affinity
   /** The biome number (1-based, matching `spec/run.md#biomes` "Biome 1"/"Biome 2" numbering) at which
    * this spell enters the shared pool. `generateFloor` rolls a cast-role enemy's loadout from every
    * spell whose `unlockedAtBiome` is `<=` the current biome's number, filtered by affinity -- so a
    * spell unlocked at biome 1 stays available at every deeper biome too (spells unlock
-   * cumulatively; distinct from species/creature biome-exclusivity). REQUIRED since 4.1-D. */
+   * cumulatively; distinct from species/creature biome-exclusivity). REQUIRED. */
   readonly unlockedAtBiome: number
   readonly targetShape: 'single' | 'aoe'
-  /** Who this spell targets (Phase 4 Slice E's Support-spell model, REQUIRED since 4.1-D).
+  /** Who this spell targets (the support-spell model, REQUIRED).
    * 'ally' exempts the cast from the Provoke/Confusion targeting-override pipeline entirely
-   * (`spec/combat.md#targeting-override`: "Provoke applies only to enemy-targeting offensive actions;
-   * ally-targeting actions... are unaffected" -- Confusion is bundled into that same exemption,
+   * (`spec/combat.md#targeting-override`) -- Confusion is bundled into that same exemption,
    * since Confusion's roll is scoped to a "harmful action" and a support cast on an ally isn't
    * one) and, for 'aoe' shape, freezes the caster's own living side instead of the opposing side
    * (mirroring the enemy-AOE freeze rule). */
@@ -57,7 +56,7 @@ export interface Spell {
 // ---- Creature ----
 
 /**
- * Phase 4.1-A (A5): run-layer identity on every combat creature -- REQUIRED, but
+ * run-layer identity on every combat creature -- REQUIRED, but
  * ENGINE-INERT (no engine code reads it; only the run layer/UI do, via origin.templateId).
  * `templateId` is the static SpeciesCreature.id this creature was materialized from; `level` is
  * the level it was materialized at (baked into baseStats by scaleStatsToLevel); `ref` is an
@@ -93,7 +92,7 @@ export interface Creature {
   readonly alive: boolean
   /** Reference to a shared script template in CombatState.scripts; null = no assignment. */
   readonly scriptId: string | null
-  /** Variable-length; bare Spell slots (not the Gem wrapper -- that's Phase 8 economy). */
+  /** Variable-length; bare Spell slots (not the Gem wrapper, `spec/creatures.md#gems-as-items`). */
   readonly equippedSpells: readonly (Spell | null)[]
   /** Until this creature's next turn: +50% effective Defence, -35% damage taken. */
   readonly defending: boolean
@@ -103,39 +102,38 @@ export interface Creature {
   readonly innateTraitIds: readonly string[]
   /**
    * Fight-scoped, mutable effect list (threaded via updateCreature). Instantiated from
-   * innateTraitIds at createCombat; statuses append here in-fight (Slice C). Canonical order
-   * (Phase 4 Slice F / ASSUMPTION 21 -- gains a `perks` slot, a documented change to the
-   * previously-pinned ordering): innate-1 -> innate-2 -> perks (player-side only) -> equipment
+   * innateTraitIds at createCombat; statuses append here in-fight. Canonical order
+   * innate-1 -> innate-2 -> perks (player-side only) -> equipment
    * infusions (none in v1) -> applied statuses.
    */
   readonly activeEffects: readonly ActiveEffect[]
-  /** Phase 4.1-B (S1): this creature's resolved starting effect list -- innate traits' effects,
+  /** This creature's resolved starting effect list -- innate traits' effects,
    * then (player-side only) perk effects, in canonical order -- computed ONCE at fight-setup by
    * `createCombat` and never re-derived from a registry mid-fight. `revive`'s death-reset
    * re-instantiates exactly this list (fresh instance ids from `CombatState.effectInstanceCounter`),
    * which is what lets `CombatState.traits`/`playerWideEffects` be deleted: nothing mid-fight needs
-   * the trait/perk registries again. Plain data (EffectDef contains no functions after S2). */
+   * the trait/perk registries again. Plain data (EffectDef contains no functions). */
   readonly baselineEffects: readonly BaselineEffectEntry[]
-  /** Phase 4.1-B (D3): how many times `revive` has restored this creature THIS FIGHT -- never
+  /** How many times `revive` has restored this creature THIS FIGHT -- never
    * reset by death or by a successful revive itself (it's the thing `MAX_REVIVES_PER_CREATURE`
    * bounds). Dead allies at the cap are excluded from revive targeting. */
   readonly revivesUsed: number
-  /** Phase 4 Slice D / ASSUMPTION 17: "times Defended this battle" -- cumulative for the whole
+  /** "times Defended this battle" -- cumulative for the whole
    * fight, incremented in executeDefend, NEVER reset (Bulwark's "each time the creature has
    * Defended this battle"). Not derivable from activeEffects (Defend's own action-state flag
-   * clears every turn); a small, explicit field, like innateTraitIds/activeEffects were in
-   * Phase 3. Feeds the 'self-defend-count' magnitudeSource kind (effects.ts's resolveCount). */
+   * clears every turn); a small, explicit field. Feeds the 'self-defend-count' magnitudeSource kind
+   * (effects.ts's resolveCount). */
   readonly defendCount: number
   /** A static species reference, read by the 'living-allies-of-species' magnitudeSource kind
    * (resolveCount) and the 'all-allies-of-species' response target. `materializeCreature` sets it
    * from the species it is given, so generated creatures always carry one; it is unset only for a
    * hand-built creature, for which both read empty (0 / no targets). */
   readonly speciesId?: string
-  /** Phase 4.1-A (A5): required, engine-inert run-layer identity -- see CreatureOrigin's own doc
+  /** Required, engine-inert run-layer identity -- see CreatureOrigin's own doc
    * comment. Rewards read this (soul bar keyed by origin.templateId; XP per kill = the victim's
    * origin.level) instead of parsing the per-fight CreatureId's `-side-slot` suffix. */
   readonly origin: CreatureOrigin
-  /** Phase 4.1-H2a (ASSUMPTION 111): the creature's level, engine-visible -- the Additional reads
+  /** The creature's level, engine-visible -- the Additional reads
    * the ATTACKER's. Set by `materializeCreature` from the same value as `origin.level` (which stays
    * engine-inert); the baked-in stats already reflect it. */
   readonly level: number
@@ -186,7 +184,7 @@ export type FightResult = 'win' | 'loss' | 'draw'
 // ---- Combat state ----
 
 export interface CombatState {
-  /** Phase 4.1-B (B3): a plain-data bookmark (the mulberry32 stream position), never a closure.
+  /** A plain-data bookmark (the mulberry32 stream position), never a closure.
    * Every roll goes through `nextRandom(rng)` (rng.ts), which advances `rng.position` IN PLACE --
    * safe because `resolveTurn` clones this into a fresh object at the top of every call (its own
    * "per-turn working copy"), so the snapshot passed IN to `resolveTurn` is never touched and the
@@ -205,12 +203,12 @@ export interface CombatState {
   readonly scripts: ReadonlyMap<string, Script>
   /** Status definition registry for this fight, keyed by StatusDef.statusId. */
   readonly statuses: ReadonlyMap<string, StatusDef>
-  /** Phase 4.1-B (B4): issues every effect instance id this fight (trait/perk instantiation,
+  /** Issues every effect instance id this fight (trait/perk instantiation,
    * status apply/refresh-to-a-new-instance, revive's re-instantiation, stat-modifier application)
    * -- the ONLY production issuer. Ids are opaque (`eff-<n>`; never appear in events, so goldens
    * stay byte-identical regardless of the exact format). Starts at 0 in `createCombat`. */
   readonly effectInstanceCounter: number
-  /** Phase 4.1-F2 (ASSUMPTION 18): the born-this-turn clock. Bumped once per dequeued turn, at the
+  /** The born-this-turn clock. Bumped once per dequeued turn, at the
    * action slot (alive, dead or skipped actor); a status instance is "born this turn" iff its
    * `appliedAt` equals it. Plain data, never in an event. Starts at 0 in `createCombat`. */
   readonly turnClock: number
@@ -261,7 +259,7 @@ export interface WaitedEvent {
   readonly creatureId: CreatureId
 }
 
-/** Precedes a triggered effect's consequences (mirrors AttackDeclared->DamageDealt). Slice B.
+/** Precedes a triggered effect's consequences (mirrors AttackDeclared->DamageDealt).
  * `effectId` is the stable definition id (trait/status), not the opaque instance id. */
 export interface TriggerFiredEvent {
   readonly type: 'TriggerFired'
@@ -270,7 +268,7 @@ export interface TriggerFiredEvent {
   readonly effectId: string
 }
 
-/** Phase 4.1-E (A2): a `perform-action` grant ran and was ACCEPTED -- emitted when the queued
+/** A `perform-action` grant ran and was ACCEPTED -- emitted when the queued
  * grant runs (after the actor's legality check and the gem/target draws), immediately before the
  * granted action's first event. A grant refused or fizzling when it runs emits nothing of its own
  * (the earlier `TriggerFired` stays). `sourceId` is the effect's bearer; `actorId` is who acts
@@ -284,10 +282,10 @@ export interface ActionGrantedEvent {
   readonly effectId: string
 }
 
-/** Phase 4.1-F1 (A3): an `'all'` action-lock skipped this turn -- fills the turn's action slot
+/** An `'all'` action-lock skipped this turn -- fills the turn's action slot
  * (after the turn-start cleanup and grants), like `Waited`. `effectId` is the first `'all'` lock's
  * carrier's definition id in canonical effect order (the status id for a status), the same value
- * `TriggerFired.effectId` carries. Replaces the old lock's no-op on-turn-start `TriggerFired`. */
+ * `TriggerFired.effectId` carries.  */
 export interface TurnSkippedEvent {
   readonly type: 'TurnSkipped'
   readonly creatureId: CreatureId
@@ -323,7 +321,7 @@ export interface DamageDealtEvent {
   readonly damageSource: 'attack' | 'cast' | 'dot'
   /** The causing status, when a status produced this damage (DoT ticks). Absent for attack/cast
    * and for a trait's own dot-tagged flat hit. Lets the log render "[creature] took X poison
-   * damage" and Phase 7 attribute it. */
+   * damage". */
   readonly statusId?: string
 }
 
@@ -332,8 +330,7 @@ export interface CreatureDiedEvent {
   readonly creatureId: CreatureId
 }
 
-// ---- Phase 3 consequence events (front-loaded for a stable type surface; emitted in the
-// slice that owns the mechanism: StatModifierApplied/HpClamped in B, the rest in C). ----
+// ---- consequence events ----
 
 export interface StatusAppliedEvent {
   readonly type: 'StatusApplied'
@@ -377,10 +374,9 @@ export interface HealAppliedEvent {
   readonly remainingHp: number
 }
 
-/** Phase 4 Slice B: a dead creature returned to its slot via the `revive` response
- * (death-reset baseline + pct of that baseline's max HP -- the Unicorn). Event shape is an
- * ASSUMPTION (not pinned by the brief) -- follows the existing "every consequence gets a
- * matching event" discipline, mirroring HealApplied's shape. */
+/** A dead creature returned to its slot via the `revive` response
+ * (death-reset baseline + pct of that baseline's max HP -- the Unicorn). Event shape follows the
+ * existing "every consequence gets a matching event" discipline, mirroring HealApplied's shape. */
 export interface RevivedEvent {
   readonly type: 'Revived'
   readonly sourceId: CreatureId
@@ -396,12 +392,12 @@ export interface CascadeTruncatedEvent {
   readonly depth: number
 }
 
-/** Phase 4.1-C (D6, fixes B6): turn-start cleanup emits this only when a Defend/Provoke flag
+/** turn-start cleanup emits this only when a Defend/Provoke flag
  * was actually set and just expired ("until its next turn") -- never on a dead creature's empty
  * bracket, never when neither flag was set. Runs unconditionally on a skipped (Stunned) turn
- * too, which is the fix: previously cleanup only ran when the creature went on to act, so a
- * Stunned or Sleeping creature kept Defend/Provoke through its own skipped turn. A consequence
- * event (PR #70 review), not an intent -- it reports a state ending, like `StatusExpired`, not an
+ * too, not only when the creature goes on to act, so a Stunned or Sleeping creature does not
+ * keep Defend/Provoke through its own skipped turn. A consequence
+ * event, not an intent -- it reports a state ending, like `StatusExpired`, not an
  * action taken. */
 export interface ActionStateEndedEvent {
   readonly type: 'ActionStateEnded'

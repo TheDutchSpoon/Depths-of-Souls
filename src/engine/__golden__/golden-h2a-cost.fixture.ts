@@ -1,5 +1,4 @@
-// Golden: the COST rule and the DoT-tick exclusion (Phase 4.1-H2a, ASSUMPTIONS 116, 131, 132;
-// 4.1-H2b2: the tick is now a snapshot-potency status tick, ASSUMPTION 144).
+// Golden: the COST rule and the DoT-tick exclusion (the tick is a snapshot-potency status tick).
 // Hand-derived. A creature's OWN trait response damaging itself is a cost: the exact magnitude,
 // floored once, no Defence/pools/affinity/chip; a cost of 0 is a full no-op. A status tick is
 // never a cost: it is indirect damage from the status's snapshot, floor and minimum 1.

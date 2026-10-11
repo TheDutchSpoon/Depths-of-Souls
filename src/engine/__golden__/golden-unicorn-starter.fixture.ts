@@ -1,7 +1,8 @@
-// Golden: the Unicorn's real signature trait (data/traits/starters.ts's UNICORN_TRAIT) --
-// "whenever this creature attacks, it resurrects a random dead ally at 20% of its baseline max
-// HP." Same arithmetic as Slice B's golden-revive.fixture.ts (small, hand-derivable stats, not
-// the Unicorn's own real baseStats -- this golden's point is proving the SHIPPED trait content,
+// Golden: the Unicorn's real signature trait (data/traits/starters.ts's UNICORN_TRAIT,
+// `content/overgrowth.md#unicorn-lightbearer`) -- whenever this creature attacks, it resurrects a
+// random dead ally at 20% of its baseline max HP. Same arithmetic as golden-revive.fixture.ts
+// (small, hand-derivable stats, not the Unicorn's own real baseStats -- this golden's point is
+// proving the SHIPPED trait content,
 // referenced by id from the real registry, not re-deriving new numbers for their own sake).
 //
 // Hand-derived (independent `node -e` calculator). All vitality -> neutral affinity x1.0. FOE

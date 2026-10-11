@@ -5,7 +5,7 @@ import type { StatusEffect } from '../effect-types'
 import * as fixture from './golden-h2d-pollen-cloud.fixture'
 import { C, E1, E2, expectedEvents } from './golden-h2d-pollen-cloud.fixture'
 
-describe('golden replay: the real Pollen Cloud puts Sleep on every enemy and deals no damage (4.1-H2d)', () => {
+describe('golden replay: the real Pollen Cloud puts Sleep on every enemy and deals no damage', () => {
   it('one cast sleeps both enemies for 2 turns with no DamageDealt, and the next hit wakes only its target', () => {
     const { events, state } = runGolden(fixture)
 

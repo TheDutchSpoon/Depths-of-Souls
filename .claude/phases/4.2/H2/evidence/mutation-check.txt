@@ -1,0 +1,24 @@
+# Mutation check (scratch clone of the finished branch; the repo's deploy.yml is untouched)
+
+## baseline: scripts/docs-check/ci.test.ts
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+
+## mutation 1: delete the 'docs:check -- comments' step from the test job
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |docs-check| scripts/docs-check/ci.test.ts > CI runs the docs checks > the test job runs citations, budgets and comments
+AssertionError: expected '\n  test:\n    runs-on: ubuntu-latest…' to contain '- run: npm run docs:check -- comments'
+ FAIL  |docs-check| scripts/docs-check/ci.test.ts > CI runs the docs checks > runs them before the test step
+AssertionError: expected 376 to be less than -1
+ Test Files  1 failed (1)
+
+## mutation 2: move the comments step after 'npm run test'
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |docs-check| scripts/docs-check/ci.test.ts > CI runs the docs checks > runs them before the test step
+AssertionError: expected 445 to be less than 404
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+
+## restored
+ Test Files  1 passed (1)
+      Tests  2 passed (2)

@@ -111,16 +111,20 @@ kickoff builds on.
 
 ## Decided, not built
 
-- `CONVENTIONS.md#every-pull-request-runs-the-gates` names `comments` among the docs checks
-  (blocking), and `workflow/coding-rules.md#rules`' gate list adds `npm run docs:check -- comments`
-  (4.2-H2's PR review, when the step lands in CI). The other lists of the modes CI runs follow:
-  `CLAUDE.md#how-the-spec-is-written`, `workflow/pr-review.md#2-install-and-run-the-gates` and
-  `skills/slice-verify/SKILL.md`.
-- `spec/progression.md#inert-perks`: each inert perk's code comment cites the perk's own content
-  entry (`specializations/<spec>.md#<perk>`, which states what it waits for), not the
-  `// Inert until Phase 8 (gem system) -- see sorcerer.md` form (4.2-H2's PR review).
 - `CONVENTIONS.md#comment-why-not-what`: file names and identifiers follow the same rules (no
   phase, slice or plan ids), and the check covers them (4.2-H3's PR review).
+- `comments` catches the shapes it misses today: a lower-case `pre-` before a slice name
+  (`pre-Slice-B`), `Slice-<X>` with a hyphen, a plan-item id with a hyphen (`B-2`), and review
+  words without "fix" or "round" (`design-review`, `(nit, review)`, `Nit (review)`).
+  `--quotations` also catches a quotation placed before its anchor and one of four words or fewer
+  (4.2-H3's PR review).
+- No string literal in `src/` carries provenance. The six that do are reworded: the
+  `state/rewards.ts` error message ("before Phase 8") with the `rewards.test.ts` regex that matches
+  it, the three `state/balance-sim.ts` report strings ("ASSUMPTION 22", "ASSUMPTION 108") with
+  `balance-sim.test.ts`'s assertion, and `engine/corpus-coverage.test.ts`'s reason string
+  (4.2-H3's PR review).
+- `CONVENTIONS.md#corpus-digest`: the committed fixture's header is `renderFixture`'s, and the
+  default test run checks that, so the two can't drift apart (4.2-H3's PR review).
 
 ## Known from 4.2-G's review
 
@@ -137,3 +141,10 @@ kickoff builds on.
   `engine/resolution-types.ts`).
 - `ASSUMPTION (Slice F)` blocks in `data/species/starters.ts` quote the old docs at length; the
   4.2-G fix round rewrote the affinity one only.
+
+## Known from 4.2-H2's review
+
+- `SORCERER_STARTER_TRAIT`'s doc comment in `data/traits/starters.ts` has one 135-column line
+  ("through fusion, whichever parent the Seer is. … fight-setup prepends"), left by the sweep's
+  rewrap. Rewrap the block at the width of the lines around it (about 100); the proof strips
+  comments, so it costs nothing under 4.2-H3's.

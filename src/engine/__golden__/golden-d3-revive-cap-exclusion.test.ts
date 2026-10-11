@@ -4,7 +4,7 @@ import { countDraws } from '../test-utils/rng-draw-count'
 import * as fixture from './golden-d3-revive-cap-exclusion.fixture'
 import { expectedEvents } from './golden-d3-revive-cap-exclusion.fixture'
 
-describe('golden replay: D3 revive cap -- mixed-pool exclusion (Phase 4.1-B, PR #69 R5, R5-2)', () => {
+describe('golden replay: revive cap -- mixed-pool exclusion', () => {
   it('excludes the capped dead ally from the pool, always reviving the eligible one, off exactly one draw', () => {
     const { initial, events, state } = runGolden(fixture)
 

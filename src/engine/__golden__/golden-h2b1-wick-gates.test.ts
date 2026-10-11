@@ -7,7 +7,7 @@ import {
   hurtOthersFullExpected,
 } from './golden-h2b1-wick-gates.fixture'
 
-describe('golden replay: the Wick gate (4.1-H2b1)', () => {
+describe('golden replay: the Wick gate', () => {
   it('a hurt Wick with every OTHER ally at full Health neither burns nor heals, and logs no TriggerFired', () => {
     const { events } = runGolden(hurtOthersFull)
 

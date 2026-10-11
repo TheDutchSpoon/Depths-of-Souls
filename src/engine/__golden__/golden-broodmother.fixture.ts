@@ -1,10 +1,8 @@
-// Golden: Overgrowth's floor-10 boss, the Broodmother (`content/overgrowth.md#broodmother` "Count-scales off
-// living spiderling adds + periodically Webs the party") -- the real, shipped BROODMOTHER_TRAIT
+// Golden: Overgrowth's floor-10 boss, the Broodmother (`content/overgrowth.md#broodmother`) --
+// the real, shipped BROODMOTHER_TRAIT
 // (Swarm Call) proving its `magnitudeSource: {kind:'count', of:'living-allies-of-species'}`
 // count-scaling end to end against real content: 3 while every spiderling is alive, 2 the moment
-// after one has died. This is the H1 "boss-encounter runner contract" golden that slice flagged
-// as deferred (its own doc comment: "the boss-encounter RUNNER... is currently untested"),
-// closed here by Slice I (PR #65 review).
+// after one has died.
 //
 // BROODMOTHER and two GENERIC adds (not the real Spider Weaver/Ambusher -- deliberately, mirroring
 // golden-rot-sovereign's own precedent of a generic ADD: this golden's job is Swarm Call's count
@@ -26,7 +24,7 @@
 //   BROODMOTHER's turn -> attacks STRIKER (lowest/only-HP player creature).
 //     on-attack fires Swarm Call: living-allies-of-species(BROODMOTHER) = 3 (herself + ADD1 +
 //     ADD2, all alive) -> spellPower = 0.25*3 = 0.75. offStat = getEffectiveStat(atk 24)*0.75 =
-//     18. Swarm Call is a trait response, so it is INDIRECT damage (4.1-H2a): 18 x affinity 1 x dealt 1 x
+//     18. Swarm Call is a trait response, so it is INDIRECT damage: 18 x affinity 1 x dealt 1 x
 //     taken 1 - 0.2 x STRIKER def 0 = 18, no chip -> raw 18, final floor(18) = 18. STRIKER 100-18 = 82.
 //     Main attack: offStat = 24*1.0 = 24. core 24, chip 0.24, raw 24.24, final 24. STRIKER
 //     82-24 = 58.

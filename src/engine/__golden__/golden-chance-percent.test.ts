@@ -10,7 +10,7 @@ import {
   expectedResultFail,
 } from './golden-chance-percent.fixture'
 
-describe('golden replay: chancePercent probabilistic trigger (Phase 4 Slice E2)', () => {
+describe('golden replay: chancePercent probabilistic trigger', () => {
   it('rolls succeed at the rigged seed: TriggerFired + response fire before the lethal hit', () => {
     const { state, events } = runGolden(fixture, { seed: SEED_SUCCESS })
 

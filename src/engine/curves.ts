@@ -1,5 +1,5 @@
-// Phase 4 Slice A; reworked Phase 4.1-A (A7 + D1 defaults) -- depth-scaling curves for the run
-// layer, now PARAMETERIZED by an injected BalanceConfig instead of hardcoded literals. Every
+// Depth-scaling curves for the run
+// layer, PARAMETERIZED by an injected BalanceConfig instead of hardcoded literals. Every
 // number is still explicitly parked balance (`OPEN_QUESTIONS.md#balance-numbers`); retuning happens in
 // data/balance.ts, never here.
 
@@ -13,15 +13,15 @@ export interface LevelRange {
 export type RarityTier = 'common' | 'uncommon' | 'rare'
 
 /**
- * ASSUMPTION 4 (phase-4.1-implementation-plan.md) + the 4.1-A plan review's own correction, with
- * the rounding changed by 4.1-H2c (ASSUMPTION 118): min = floor(floor * m(floor)) -- ROUNDED DOWN,
+ * min = floor(floor * m(floor)) -- ROUNDED DOWN,
  * so an early floor's minimum never exceeds floor * m(floor) -- where m(floor) rises linearly from
  * levelMultiplier.atFloor1Hundredths/100 at floor 1 to .../atFloor100Hundredths/100 at floor
- * 100, then + perFloorAfter100Hundredths/100 per floor after. Computed with a SINGLE Math.floor
+ * 100, then + perFloorAfter100Hundredths/100 per floor after (`spec/run.md#enemy-levels`).
+ * Computed with a SINGLE Math.floor
  * at the very end, in both branches -- multiplying out before dividing keeps the whole computation
  * exact integer arithmetic until that one rounding, so there is no compounding float drift across
- * floors (the plan's own "no intermediate rounding of the multiplier" requirement). A flat x1.00
- * multiplier (the Phase 4 placeholder config) makes the quotient an exact integer, so floor and
+ * floors (no intermediate rounding of the multiplier). A flat x1.00
+ * multiplier (the placeholder config) makes the quotient an exact integer, so floor and
  * round agree there.
  */
 function scaledMinLevel(floor: number, config: BalanceConfig): number {
@@ -53,13 +53,13 @@ export function fightCount(floor: number, config: BalanceConfig): number {
 }
 
 /** Ramps 1 -> enemyPartySizeCap and clamps there -- combat's max party size (6v6). Default cap
- * 6, so fights are 6v6 from floor 6 (`min(6, floor)`, unchanged from Phase 4). */
+ * 6, so fights are 6v6 from floor 6 (`min(6, floor)`). */
 export function enemyPartySize(floor: number, config: BalanceConfig): number {
   return Math.min(config.enemyPartySizeCap, floor)
 }
 
 /** A boss floor's boss spawns a few levels above that floor's own enemyLevelRange(floor).max.
- * Default offset 5 since 4.1-H2c (ASSUMPTION 119; it was 3, Phase 4 Slice I), so the narrower
+ * Default offset 5, so the narrower
  * range doesn't lower boss levels: 19 / 34 / 52 on floors 10 / 20 / 30. */
 export function bossLevel(floor: number, config: BalanceConfig): number {
   return enemyLevelRange(floor, config).max + config.bossLevelOffset

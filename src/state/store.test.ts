@@ -1,17 +1,16 @@
-// Phase 4 Slice G: the descend() integration test (per the brief's own test list), built
+// The descend() integration test, built
 // against fixture biome/specialization data -- real content is integration.test.ts's own
 // deliberate exception (see its header comment), never this file's. All win/loss outcomes below
 // are engineered to be deterministic by construction (see the header comment on each fixture),
-// following Slice A's own precedent (generation.test.ts's constant-stub-RNG traces) rather than
+// following generation.test.ts's constant-stub-RNG traces rather than
 // a generated-then-pasted checkpoint.
 //
-// Reworked Phase 4.1-A (G5, S5, G6, A6, A7): descend()/pinBiome() return `{ ok, ... }` instead of
-// throwing/returning directly; `travelTo` is deleted (G6); the collection is a flat
-// `Map<InstanceId, Instance>` (A6); every fixture pins `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` so
-// every non-XP number below stays byte-identical to Phase 4 (ASSUMPTION 3) -- only the XP
-// expectations changed, each noted inline.
+// descend()/pinBiome() return `{ ok, ... }` (`spec/store.md#how-store-actions-fail`); the
+// collection is a flat `Map<InstanceId, Instance>`; every fixture pins
+// `PHASE_4_PLACEHOLDER_BALANCE_CONFIG`, so the non-XP numbers below are the placeholder config's
+// and the XP expectations are noted inline.
 //
-// Phase 4.1-G1: the fixture creatures run the `always-*` fixture scripts (ASSUMPTION 68), so every
+// The fixture creatures run the `always-*` fixture scripts, so every
 // deps object below passes `scripts: FIXTURE_SCRIPTS_BY_ID` -- the shipped registry holds only the
 // role scripts. Each spawned enemy also draws a full gem set (6 stub draws per spawn, `spawn()`).
 
@@ -58,10 +57,9 @@ function expectFailure<T extends { ok: boolean }>(result: T): Extract<T, { ok: f
   return result as Extract<T, { ok: false }>
 }
 
-/** The collection is now a flat `Map<InstanceId, Instance>` (Phase 4.1-A, A6) -- this scans it
+/** The collection is a flat `Map<InstanceId, Instance>` -- this scans it
  * for the (at most one, per grantCreatureIfUnowned's own no-duplicate rule) Instance sourced from
- * a given static creatureId, mirroring what the old `collection.get(creatureId)` bucket lookup
- * used to answer directly. */
+ * a given static creatureId. */
 function instanceFor(
   collection: ReadonlyMap<InstanceId, Instance>,
   creatureId: string,
@@ -144,11 +142,12 @@ const FIXTURE_SPEC: Specialization = {
   ],
 }
 
-// ---- Stub RNG (deterministic species/creature/level draws -- Slice A's own testing technique) ----
+// ---- Stub RNG (deterministic species/creature/level draws) ----
 // generateFloor's per-slot call order (generation.ts, `spawnEnemy`): species pick,
-// creature-within-species pick, level roll, then (Phase 4.1-G1: every enemy rolls a full gem set,
-// whatever its role) one loadout draw per gem slot -- 6 draws per spawned enemy. FIXTURE_SPECIES is the pool's only species, so
-// its pick is invariant regardless of the value supplied (a single-item weightedPick always
+// creature-within-species pick, level roll, then (every enemy rolls a full gem set, whatever its
+// role) one loadout draw per gem slot -- 6 draws per spawned enemy. FIXTURE_SPECIES is the pool's
+// only species, so its pick is invariant regardless of the value supplied (a single-item
+// weightedPick always
 // returns that item -- see rewards.test.ts's sibling reasoning in generation.test.ts). The
 // creature-within-species pick uses CFG.rarityDrawWeight (FODDER common=6, JUGGERNAUT rare=1,
 // total=7): a value < 6/7 (~0.857) picks FODDER; >= 6/7 picks JUGGERNAUT. The level roll's value
@@ -200,7 +199,7 @@ function makeDeps(overrides: Partial<GameStoreDeps>): Partial<GameStoreDeps> {
   }
 }
 
-// ---- Fixtures for the "wipe with a mid-fight kill" regression (Fix 2) ----
+// ---- Fixtures for the "wipe with a mid-fight kill" regression ----
 // Slower than HERO (speed 1 << HERO's 50, so HERO always acts first) but overwhelming enough to
 // one-shot HERO on its own turn -- proves a kill banks even when the FIGHT it happened in is
 // ultimately lost.
@@ -239,7 +238,7 @@ const MIXED_FIGHT_SEQUENCE = [
   ...spawn(FODDER_ROLL),
 ]
 
-// ---- Fixtures for the perk-plumbing regression (Fix 3) ----
+// ---- Fixtures for the perk-plumbing regression ----
 // An extreme stat gap engineered so a single stat-modifier perk flips the fight's outcome
 // outright (loss with the perk absent, win with it applied), rather than merely changing a
 // damage number -- proves resolveSpecializationEffects's output genuinely reaches createCombat's
@@ -315,7 +314,7 @@ describe('descend()', () => {
     expect(outcome.deepestFloorAdvanced).toBe(true)
     // FODDER is common -> CFG.soulGainPercent.common = 10, killed once per fight, 3 fights.
     expect(outcome.soulGained.get(FODDER.id)).toBe(30)
-    // xpAwardForKill = the victim's own level (Phase 4.1-A, ASSUMPTION 5); CFG's flat x1.00
+    // xpAwardForKill = the victim's own level; CFG's flat x1.00
     // multiplier makes FODDER's level == floor == 1 for all 3 kills.
     expect(outcome.xpBanked).toBe(3)
     // currencyDropForKill(1, CFG) = {essence:1,ore:1,bricks:1,lifeforce:1}, banked per kill -- 3 kills.
@@ -337,7 +336,7 @@ describe('descend()', () => {
     expect(heroInstance?.xp).toBeGreaterThan(0)
   })
 
-  test('review fix F5: soul-gain under the DEFAULT config is exact per tier (common=25, rare=10), not just "a multiple of 10"', () => {
+  test('soul-gain under the DEFAULT config is exact per tier (common=25, rare=10), not just "a multiple of 10"', () => {
     // Three distinct rarity tiers in one species pool, deterministically routed by the stub RNG
     // via DEFAULT_BALANCE_CONFIG.rarityDrawWeight {common:6, uncommon:3, rare:1} (total 10,
     // authored in that order): roll = rngValue*10; common wins roll<6 (rngValue<0.6), uncommon
@@ -483,13 +482,13 @@ describe('descend()', () => {
   })
 
   test('smoke test: descend() reaches rewards through a real fight, not just resolveKillReward in isolation', () => {
-    // Review fix F4: this fixture's static id doesn't actually discriminate the deleted
-    // suffix-parser from the current origin.templateId lookup -- the old parser sliced exactly
-    // `-${side}-${slot}` off the CreatureId BY LENGTH, so it resolved this id correctly too. The
-    // real discriminating case (an id/origin pair the old parser would get WRONG) is
+    // This fixture's static id doesn't discriminate parsing a suffix off the CreatureId from the
+    // origin.templateId lookup (a parser slicing exactly `-${side}-${slot}` off the CreatureId BY
+    // LENGTH resolves this id correctly too). The
+    // real discriminating case (an id/origin pair a suffix parser would get WRONG) is
     // rewards.test.ts's own resolveKillReward unit test. This test's only job is to prove the
     // real descend() loop actually reaches that helper end-to-end, through a real generated
-    // fight -- kept as a smoke test, not a regression test for the old bug.
+    // fight -- a smoke test, not a regression test.
     const CONFUSABLE: SpeciesCreature = {
       id: 'fixture-g-confusable-enemy-0',
       name: 'Fixture Confusable',
@@ -521,7 +520,7 @@ describe('descend()', () => {
     expect(outcome.soulGained.get(CONFUSABLE.id)).toBe(30) // common, 3 kills, CFG's 10%/kill
   })
 
-  test('an instance with a custom scriptId uses it instead of the creature default (Phase 4.1-A, A6/ASSUMPTION 6)', () => {
+  test('an instance with a custom scriptId uses it instead of the creature default', () => {
     const store = createGameStore(
       makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
     )
@@ -545,7 +544,7 @@ describe('descend()', () => {
   })
 })
 
-// Phase 4.1-A review fix F3/F7: table-driven over every descend() reason -- each scenario
+// table-driven over every descend() reason -- each scenario
 // asserts canDescend() AGREES with descend(), and that BOTH leave the store's state object
 // completely unchanged (reference equality on the whole state, not a field-by-field spot check --
 // no `set()` call may run on any refusal path).
@@ -580,8 +579,8 @@ const DESCEND_REASON_SCENARIOS: readonly DescendReasonScenario[] = [
   },
   {
     // FIXTURE_BIOME alone gives a content frontier of 10; deepestFloor 15 would otherwise make
-    // floor 11 reachable (reach itself passes), but 11 > the frontier (ASSUMPTION 23: frontier
-    // wins even when reach alone would have been fine).
+    // floor 11 reachable (reach itself passes), but 11 > the frontier (frontier wins even when
+    // reach alone would have been fine).
     reason: 'beyond-content-frontier',
     floor: 11,
     setup: (store) => {
@@ -619,7 +618,7 @@ describe('descend() / canDescend(): every refusal reason', () => {
     expect(expectFailure(store.getState().descend(-1)).reason).toBe('floor-out-of-reach')
   })
 
-  test('reason: beyond-content-frontier wins even when floor-out-of-reach ALSO fails (F3)', () => {
+  test('reason: beyond-content-frontier wins even when floor-out-of-reach ALSO fails', () => {
     const store = createGameStore(
       makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
     )
@@ -628,7 +627,7 @@ describe('descend() / canDescend(): every refusal reason', () => {
     // -- BOTH checks fail here, unlike the table's own 'beyond-content-frontier' scenario above
     // (deepestFloor 15), which only exercises the frontier check failing ALONE. Swapping
     // checkDescend's two checks would still pass that scenario; this one is what actually pins
-    // the precedence (ASSUMPTION 23).
+    // the precedence.
     expect(store.getState().canDescend(11)).toEqual({
       ok: false,
       reason: 'beyond-content-frontier',
@@ -652,7 +651,7 @@ describe('descend() / canDescend(): every refusal reason', () => {
   })
 })
 
-// Phase 4.1-A review fix F1/F7: a content-less biome pin must never reach descend()'s own
+// A content-less biome pin must never reach descend()'s own
 // generator throw -- table-driven over every pinBiome() reason, mirroring the descend() table
 // above.
 const EMPTY_CONTENT_BIOME: BiomeData = {
@@ -701,10 +700,10 @@ describe('pinBiome() / canPinBiome()', () => {
     },
   )
 
-  test('review fix F1: refusing the pin closes the descend()-throws route (reproduces the review-found bug)', () => {
-    // Before F1, pinBiome accepted this pin, canDescend(1) agreed it was fine, and descend(1)
-    // then threw the generator's own "empty or zero-weight pool" error -- a player-reachable
-    // crash through a second route beyond contentFrontier's own gate.
+  test('refusing the pin closes the descend()-throws route (a player-reachable crash)', () => {
+    // Without the refusal, pinBiome would accept this pin, canDescend(1) would agree it was fine,
+    // and descend(1) would then throw the generator's own "empty or zero-weight pool" error -- a
+    // player-reachable crash through a second route beyond contentFrontier's own gate.
     const store = createGameStore(makePinDeps())
     store.getState().setSpec(FIXTURE_SPEC.id)
 
@@ -720,7 +719,7 @@ describe('pinBiome() / canPinBiome()', () => {
 
 describe('runScriptedIntro()', () => {
   test('adds the Unicorn on a win', () => {
-    // The real Unicorn (health39 since the 4.1-H2c remap, attack15/def15/speed20) is trivially
+    // The real Unicorn (health39, attack15/def15/speed20) is trivially
     // weaker than HERO (speed50 acts first, attack50 - def15 = 35 core plus chip and the Additional,
     // and HERO acts again, so the 39-HP target dies within HERO's first turns).
     const store = createGameStore(
@@ -802,7 +801,7 @@ describe('setSpec()', () => {
           [FIXTURE_SPEC.id, FIXTURE_SPEC],
           [SPEC_B.id, SPEC_B],
         ]),
-        // 4.1-G2: a granted starter now rolls gems, so it must resolve to static data.
+        // A granted starter rolls gems, so it must resolve to static data.
         standaloneCreatures: [
           HERO_STANDALONE,
           { speciesCreature: SPEC_B_STARTER, speciesId: 'fixture-g-hero-b-species' },
@@ -819,7 +818,7 @@ describe('setSpec()', () => {
     const state = store.getState()
     expect(state.chosenSpec).toBe(SPEC_B.id)
     expect(state.perkSpend.size).toBe(0) // refunded
-    expect(instanceFor(state.collection, HERO.id)).toBeDefined() // still owned -- ASSUMPTION 28
+    expect(instanceFor(state.collection, HERO.id)).toBeDefined() // still owned
     expect(instanceFor(state.collection, SPEC_B_STARTER.id)).toBeDefined() // newly granted
 
     // Swapping back doesn't grant a SECOND copy of an already-owned starter.
@@ -882,7 +881,7 @@ describe('perk effects reach combat', () => {
   })
 })
 
-describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
+describe('boss floors', () => {
   // Stat gaps here are EXTREME (matching the file's own established style, e.g. HERO vs FODDER
   // above) rather than hand-tuned near a threshold, for a reason specific to boss floors: the
   // ADD's level is a real RNG draw within enemyLevelRange(10, CFG)={min:10,max:13} (never
@@ -957,13 +956,13 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.fightResults).toEqual(['win'])
     expect(outcome.cleared).toBe(true)
     expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId)
-    // 6v6 (4.1-G1): the boss, her one authored add, and FOUR fill creatures drawn from the biome's
+    // 6v6: the boss, her one authored add, and FOUR fill creatures drawn from the biome's
     // pool (BOSS_SPECIES_WIN holds only this add's kind) -- 5 add-kind kills at 10% each.
     expect(outcome.soulGained.get(BOSS_ADD_WIN.id)).toBe(50)
     expect(outcome.soulGained.has(BOSS_CREATURE_WIN.id)).toBe(false) // bosses grant no soul%
-    // Review fix F7: pinned exact, not a range -- runSeed:99 is the real seeded RNG (never
+    // Pinned exact, not a range -- runSeed:99 is the real seeded RNG (never
     // stubbed here), so the add's rolled level is deterministic. Generated-then-checkpoint-
-    // verified (regenerated in 4.1-G1, the 6v6 boss floor): the five add-kind kills (the authored
+    // verified: the five add-kind kills (the authored
     // add and four fill creatures) roll levels summing to 53, and the boss's fixed level is 16,
     // so xpAwardForKill summed = 53 + 16 = 69. Checkpoint: five levels each within
     // enemyLevelRange(10, CFG) = 10..13 sum to 50..65, and 53 is inside it.
@@ -1061,9 +1060,9 @@ describe('boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(outcome.bossDefeated).toBeNull()
     expect(outcome.soulGained.get(BOSS_ADD_LOSS.id)).toBe(10)
     expect(outcome.soulGained.has(BOSS_CREATURE_LOSS.id)).toBe(false)
-    // Review fix F7: pinned exact -- runSeed:99 is the real seeded RNG (never stubbed here), so
+    // Pinned exact -- runSeed:99 is the real seeded RNG (never stubbed here), so
     // the killed add's rolled level is deterministic. Generated-then-checkpoint-verified
-    // (regenerated in 4.1-G1: the run stream now also feeds four fill creatures and every loadout):
+    // (the run stream also feeds four fill creatures and every loadout):
     // the one kill rolls level 10, so xpAwardForKill(10,CFG) = 10. Checkpoint: it is inside
     // enemyLevelRange(10, CFG) = 10..13.
     expect(outcome.xpBanked).toBe(10)

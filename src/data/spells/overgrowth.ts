@@ -1,13 +1,12 @@
 import type { Spell } from '../../engine/types'
 
-// ---- Phase 4 Slice H1: The Overgrowth (floors 1-10) -- 11 real spells, so any affinity-matched
-// caster (this biome's own Pollenlord, or a player's own creature via Phase 8 equipping) has
-// something to draw on. Wit carries a third spell (ARCANE_BOLT, see its own doc comment below) --
-// every other affinity has two. Support spells (an ally targetSide, `heal` and
-// `apply-stat-modifier` effects) sit alongside plain damage spells. Grouped into this biome's own spellPool by
+// ---- The Overgrowth (floors 1-10) -- 16 real spells, at least three per affinity, so any
+// affinity-matched caster (this biome's own Pollenlord, or a player's own creature once equipping
+// exists, `spec/creatures.md#gems-as-items`) has something to draw on. Support spells (an ally
+// targetSide, `heal` and `apply-stat-modifier` effects) sit alongside plain damage spells. Listed by
 // data/species/overgrowth.ts's OVERGROWTH_SPELLS (imports these by name).
 
-// Damage-spell power-coefficient convention for this biome (design-owner guidance): single-target
+// Damage-spell power-coefficient convention for this biome: single-target
 // damage-only spells land around 100% Intelligence; single-target spells that ALSO apply a status
 // pull back to ~80-90%; AOE damage-only spells would land around 50% (none in this biome -- both
 // AOE entries here carry a status too); AOE spells that also apply a status pull back to ~30-40%.
@@ -29,8 +28,8 @@ export const THORN_LASH: Spell = {
   ],
 }
 
-/** Weakening Bite: Violence's second spell is a debuff, not a second damage spell (design-owner
- * guidance: no two damage-only spells sharing an affinity in this biome) -- permanently lowers a
+/** Weakening Bite: Violence's second spell is a debuff, not a second damage spell (no two
+ * damage-only spells sharing an affinity in this biome) -- permanently lowers a
  * single enemy's Defence for the rest of the fight, via an `apply-stat-modifier`
  * effect with the enemy targetSide. */
 export const WEAKENING_BITE: Spell = {
@@ -77,7 +76,7 @@ export const VINE_SNARE: Spell = {
 
 /** Pollen Cloud: AOE, applies Sleep to everything it hits (a shorter duration than the
  * on-attack-chance route, since it lands on the WHOLE enemy side at once). A control spell with NO
- * damage, like Pacify and Silence (4.1-H2d, ASSUMPTION 150; it dealt 35% before). */
+ * damage, like Pacify and Silence. */
 export const POLLEN_CLOUD: Spell = {
   id: 'pollen-cloud',
   name: 'Pollen Cloud',
@@ -94,12 +93,9 @@ export const POLLEN_CLOUD: Spell = {
   ],
 }
 
-/** Arcane Bolt: a normal biome-1 Wit spawn-pool spell (data-layer carrier reorg -- previously
- * kept starter-local as the Sorcerer starter's one granted gem, and unreachable from the spawn
- * pool; there was never a design reason for that, so it's been promoted here like every other
- * spell). The Sorcerer starter (`data/species/starters.ts`) still references it directly for its
- * fixed slot-0 loadout; it also now rolls normally for any Wit-affinity caster. Single-target,
- * no upside -> the plain ~100% band: spell power 1.0 since 4.1-H2c (ASSUMPTION 124; it was 0.5). */
+/** Arcane Bolt: a normal biome-1 Wit spawn-pool spell. The Sorcerer starter's innate spell
+ * (`SORCERER_STARTER_TRAIT`, `data/traits/starters.ts`) is this spell; it also rolls normally for
+ * any Wit-affinity caster. Single-target, no upside -> the plain ~100% band: spell power 1.0. */
 export const ARCANE_BOLT: Spell = {
   id: 'arcane-bolt',
   name: 'Arcane Bolt',
@@ -224,9 +220,9 @@ export const HOWLING_INSTINCT: Spell = {
   ],
 }
 
-/** Phase 4.1-F3 (G2): Silence -- a pure status spell (no damage): the target cannot Cast for its
+/** Silence -- a pure status spell (no damage): the target cannot Cast for its
  * next 3 turns (Silenced's own `defaultDuration`, inherited: the effect omits a duration).
- * Violence's control spell. No tuned numbers (H's job). */
+ * Violence's control spell. It authors no numbers of its own. */
 export const SILENCE: Spell = {
   id: 'silence',
   name: 'Silence',
@@ -243,7 +239,7 @@ export const SILENCE: Spell = {
   ],
 }
 
-/** Phase 4.1-F3 (G2): Pacify -- Silence's Wit mirror: the target cannot Attack for its next 3
+/** Pacify -- Silence's Wit mirror: the target cannot Attack for its next 3
  * turns. A pure status spell, duration inherited from Pacified's `defaultDuration`. */
 export const PACIFY: Spell = {
   id: 'pacify',
@@ -261,7 +257,7 @@ export const PACIFY: Spell = {
   ],
 }
 
-/** Phase 4.1-G1 (D4, ASSUMPTION 75; numbers placeholders, tuned in 4.1-H): Pounce, Instinct's third
+/** Pounce, Instinct's third
  * biome-1 spell and its only one that scales off Speed instead of Intelligence. Single-target, no
  * upside, so it sits in the ~100% band. */
 export const POUNCE: Spell = {
@@ -282,7 +278,7 @@ export const POUNCE: Spell = {
   ],
 }
 
-/** Phase 4.1-G1 (D4): Stifling Weight, Endurance's third biome-1 spell -- a pure status spell:
+/** Stifling Weight, Endurance's third biome-1 spell -- a pure status spell:
  * Weakens a single enemy (-20% damage dealt) for Weaken's inherited 3 turns. No damage. */
 export const STIFLING_WEIGHT: Spell = {
   id: 'stifling-weight',
@@ -300,7 +296,7 @@ export const STIFLING_WEIGHT: Spell = {
   ],
 }
 
-/** Phase 4.1-G1 (D4): Life Siphon, Vitality's third biome-1 spell and its only damage spell: a
+/** Life Siphon, Vitality's third biome-1 spell and its only damage spell: a
  * single-target hit (70% Intelligence) that heals the caster for 35% of its Intelligence. */
 export const LIFE_SIPHON: Spell = {
   id: 'life-siphon',

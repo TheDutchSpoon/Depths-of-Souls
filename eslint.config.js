@@ -24,7 +24,7 @@ export default tseslint.config(
     },
   },
   {
-    // Phase 4.1-C2a (PR #71 review): `src/` must never import Node built-ins -- engine purity
+    // `src/` must never import Node built-ins -- engine purity
     // (`CONVENTIONS.md#the-engine-is-pure-and-deterministic`) and browser portability for `src/ui`/`src/app`. tsconfig.app.json's own
     // `types` array (`["vite/client"]`) keeps Node's AMBIENT globals (`process`, `Buffer`, ...)
     // out of `src/`, but `src/engine/__corpus__/node-shims.d.ts`'s ambient `declare module

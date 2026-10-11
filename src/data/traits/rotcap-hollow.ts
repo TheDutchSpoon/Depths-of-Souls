@@ -1,15 +1,15 @@
 import type { Trait } from '../../engine/effect-types'
 
-// ---- Phase 4 Slice H3: Rotcap Hollow (floors 21-30) -- real per-species content, built entirely
-// on primitives already proven through Slice E2/H2 (no new engine work needed for any TRAIT here
-// -- the one genuinely new piece this slice adds, Spore's `random-ally-without-status` target, is
+// ---- Rotcap Hollow (floors 21-30) -- real per-species content, built entirely
+// on primitives the engine already has (no new engine work needed for any TRAIT here
+// -- the one genuinely new piece, Spore's `random-ally-without-status` target, is
 // a ResponseTarget-only addition living in data/statuses.ts's SPORE, not a species trait). Player-
 // facing plain-language descriptions with exact numbers live in .claude/content/rotcap-hollow.md
 // -- kept in sync with the numbers below.
 //
 // Same enabler/payoff/amplifier framing (common/uncommon/rare) as Overgrowth/Glimmerdark, except
-// Necromoss -- like Resonants (H2) -- shares ONE mechanic across all three creatures, escalating
-// scope/strength by rarity (`content/rotcap-hollow.md#myconet-endurancewit-death-network` own "heal/buff scaling off dead-ally count" is a
+// Necromoss -- like Resonants -- shares ONE mechanic across all three creatures, escalating
+// scope/strength by rarity (`content/rotcap-hollow.md#necromoss-witvitality-reclaim` is a
 // single closed mechanic, not a two-role enabler/payoff chain).
 
 // ---- Sporecloud (Wit) -- closed mechanic: Contagion (Spore) ----
@@ -58,7 +58,7 @@ export const SPORECLOUD_REAPER_TRAIT: Trait = {
 
 /** Sporecloud Bloomer (amplifier, rare): a genuinely distinct mechanic from BOTH Seeder and
  * Reaper -- breadth over depth (the same "team-wide burst vs. per-hit trickle" shape the
- * Glimmerdark amplifiers established in H2): once at fight-start, it seeds the WHOLE enemy line with Spore at
+ * Glimmerdark amplifiers use): once at fight-start, it seeds the WHOLE enemy line with Spore at
  * once, rather than infecting one target per attack. */
 export const SPORECLOUD_BLOOMER_TRAIT: Trait = {
   id: 'sporecloud-bloomer-spore-burst',
@@ -173,7 +173,7 @@ export const MYCONET_WARDER_TRAIT: Trait = {
 }
 
 /** Myconet Rotcore (payoff, uncommon): when IT dies, it bursts a cloud of Poison across the
- * whole opposing side -- a retaliatory death-burst, `all-enemies` (already built, Slice B). */
+ * whole opposing side -- a retaliatory death-burst, `all-enemies` (already built). */
 export const MYCONET_ROTCORE_TRAIT: Trait = {
   id: 'myconet-rotcore-death-bloom',
   name: 'Death Bloom',
@@ -211,11 +211,11 @@ export const MYCONET_GRAVEDIGGER_TRAIT: Trait = {
 }
 
 // ---- Necromoss (Wit/Vitality) -- closed mechanic: Reclaim (grim sustain, one shared mechanic
-// escalating by rarity, the Resonants/H2 pattern -- `content/rotcap-hollow.md#necromoss-witvitality-reclaim` names ONE closed mechanic,
-// "heal/buff scaling off dead-ally count", not a two-role enabler/payoff chain) ----
+// escalating by rarity, the Resonants pattern -- `content/rotcap-hollow.md#necromoss-witvitality-reclaim` names ONE closed mechanic,
+// heal/buff scaling off dead-ally count, not a two-role enabler/payoff chain) ----
 
 /** Necromoss Wisp (common): every turn, heals itself scaled by the LIVE count of its own dead
- * allies (`heal`'s `magnitudeSource`, Slice E2's named Necromoss consumer -- recomputed fresh
+ * allies (`heal`'s `magnitudeSource`, the Necromoss consumer -- recomputed fresh
  * every firing, never frozen). A no-op until an ally has actually died. */
 export const NECROMOSS_WISP_TRAIT: Trait = {
   id: 'necromoss-wisp-feed-on-loss',
@@ -237,10 +237,8 @@ export const NECROMOSS_WISP_TRAIT: Trait = {
 
 /** Necromoss Thicket (uncommon): the BUFF half of the same "off dead allies" idea, not the heal
  * half -- a flat +10% Defence every time an ally dies (a fresh `apply-stat-modifier`
- * `StatModifierEffect` per firing, `factor: 1.1`, no `magnitudeSource`). PR #64 review: the
- * earlier draft scaled the SAME response's own `factor` by the live dead-ally count
- * (freeze-at-application) so a single death's rise grew with how many had already died -- the
- * review simplified this to a flat rate per event; the compounding still happens naturally, since
+ * `StatModifierEffect` per firing, `factor: 1.1`, no `magnitudeSource`): a flat rate per event, not
+ * one scaled by the live dead-ally count. The compounding still happens naturally, since
  * a repeating `apply-stat-modifier` trigger APPENDS a fresh modifier each firing and the fold is
  * multiplicative (base x Pi(factors)) -- two deaths is x1.1 x1.1 = x1.21, not one bigger jump. */
 export const NECROMOSS_THICKET_TRAIT: Trait = {
@@ -339,10 +337,9 @@ export const HOLLOWKIN_PUPPETEER_TRAIT: Trait = {
 
 // ---- Sporch (Violence/Wit) -- closed mechanic: Strong non-spreading Burn ----
 
-/** Sporch Igniter (enabler, common): every attack brands its target with a Burn (one instance:
- * 4.1-H2b2 retired the 2-stack brand; the Burn's potency is the Igniter's own Intelligence) --
- * deliberately no spread mechanic on the status itself (unlike Spore), per `content/rotcap-hollow.md#sporch-violencewit-strong-non-spreading-burn` own
- * "strong non-spreading Burn". */
+/** Sporch Igniter (enabler, common): every attack brands its target with a Burn (one instance;
+ * the Burn's potency is the Igniter's own Intelligence) --
+ * deliberately no spread mechanic on the status itself (unlike Spore), per `content/rotcap-hollow.md#sporch-violencewit-strong-non-spreading-burn`. */
 export const SPORCH_IGNITER_TRAIT: Trait = {
   id: 'sporch-igniter-brand',
   name: 'Brand',
@@ -359,8 +356,9 @@ export const SPORCH_IGNITER_TRAIT: Trait = {
   ],
 }
 
-/** Sporch Ashborn (payoff, uncommon): "+% to Burning" (`content/rotcap-hollow.md#sporch-ashborn`), the target-conditional
- * damage-modifier this species needed Slice E2 for -- +% damage to any enemy currently Burning. */
+/** Sporch Ashborn (payoff, uncommon): +% damage to Burning enemies
+ * (`content/rotcap-hollow.md#sporch-ashborn`), the target-conditional
+ * damage-modifier this species needs -- +% damage to any enemy currently Burning. */
 export const SPORCH_ASHBORN_TRAIT: Trait = {
   id: 'sporch-ashborn-fan-the-flames',
   name: 'Fan the Flames',
@@ -389,7 +387,7 @@ export const SPORCH_CINDERLORD_TRAIT: Trait = {
         kind: 'apply-status',
         target: { kind: 'all-enemies' },
         // One Burn per remaining enemy, each snapshotting the Cinderlord's own Intelligence
-        // (4.1-H2b2: a re-application keeps the stronger snapshot and refreshes the timer).
+        // (a re-application keeps the stronger snapshot and refreshes the timer).
         status: { statusId: 'burn' },
       },
     },
@@ -397,17 +395,13 @@ export const SPORCH_CINDERLORD_TRAIT: Trait = {
 }
 
 // ---- The Rot Sovereign (floor-30 boss, the biome-3 finale) ----
-// `content/rotcap-hollow.md#rot-sovereign`: "Attrition-management (finale) ... Grows via count-scaling off deaths (any
-// creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it +
-// out-manage the rot, not pure DPS." Two death-reactive growth hooks, BOTH a flat +10% Attack per
-// death -- `on-ally-death` (her own adds dying) and `on-enemy-death` (the player's own creatures
-// dying), the SAME rate either way, realizing "ANY creature that dies feeds it" without needing
-// death-side to change the magnitude. PR #64 review: the earlier draft used `magnitudeSource`
-// (freeze-at-application) on the on-ally-death half only, at a different rate (+15%) than the
-// flat on-enemy-death half (+5%) -- the review simplified both to the same flat +10% per event
-// (see Necromoss Thicket's own comment for why a flat per-event factor still compounds across
-// repeated firings without needing a live count). Plus the spreading-Spore blanket, unconditional
-// each of her own turns.
+// `content/rotcap-hollow.md#rot-sovereign`. Two death-reactive growth hooks, BOTH a flat +10%
+// Attack per death -- `on-ally-death` (her own adds dying) and `on-enemy-death` (the player's
+// own creatures dying), the SAME rate either way, so ANY creature that dies feeds her without
+// needing the death side to change the magnitude. A flat per-event factor (no `magnitudeSource`
+// freeze-at-application) still compounds across repeated firings without needing a live count
+// (see Necromoss Thicket's own comment). Plus the spreading-Spore blanket, unconditional each
+// of her own turns.
 
 export const ROT_SOVEREIGN_TRAIT: Trait = {
   id: 'rot-sovereign-attrition',

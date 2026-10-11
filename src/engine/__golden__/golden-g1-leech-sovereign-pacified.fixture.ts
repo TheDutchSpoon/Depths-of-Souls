@@ -1,17 +1,17 @@
-// Golden: a Pacified Leech Sovereign casts instead of waiting (Phase 4.1-G1, 6v6 boss floors and
-// boss loadouts; `spec/scripting.md#role-scripts`). Real content: the real LEECH_SOVEREIGN, on her real
-// role script (`striker`, from `defaultScriptId`), holding one gem (Stinger Swarm: she is Instinct),
+// Golden: a Pacified Leech Sovereign casts instead of waiting (`spec/scripting.md#role-scripts`).
+// Real content: the real LEECH_SOVEREIGN, on her real role script (`striker`, from
+// `defaultScriptId`), holding one gem (Stinger Swarm: she is Instinct),
 // Pacified by the real Pacify spell.
 //
-// Why it exists. Before G1 she fought alone on `always-attack` with no gem, so once Pacified she
-// could only wait, and one creature casting Pacify every round switched off the whole enemy side.
-// A role script that ends in "cast random gem", and a boss that holds a gem, turn a lock into a
-// downgraded turn instead of an empty one.
+// Why it exists. A role script that ends in "cast random gem", and a boss that holds a gem, turn a
+// lock into a downgraded turn instead of an empty one (a boss alone on `always-attack` with no gem
+// could only wait once Pacified, and one creature casting Pacify every round would switch off the
+// whole enemy side).
 //
 // Setup. PACIFIER (player, Wit, speed 30) is the only player creature; it has Pacify in slot 0 and
 // runs the fixture `always-cast` script. SOVEREIGN (enemy, level 1, so her stats are the species'
 // own: Attack 26, Intelligence 20, Defence 20, Speed 22) acts after it (22 < 30). Her Health is
-// the species' too (30 when this was written, 45 since 4.1-H2c's remap) but no event of this fight
+// the species' too but no event of this fight
 // reads it, so the golden is unaffected by it. The
 // player's single creature has no allies, so every default target is PACIFIER.
 //
@@ -36,7 +36,7 @@
 // PACIFIER's Defence is 0: core = max(20 - 0, 0) = 20, chip = 0.01 * 20 = 0.2, raw = 20.2.
 // Affinity: Instinct vs Wit are not adjacent on the cycle (Vitality > Violence > Wit > Endurance >
 // Instinct > Vitality), so x1.0. No dealt or taken modifiers. final = floor(20.2) = 20.
-// A Cast is DIRECT damage, so the Additional (4.1-H2a) follows the floor: SOVEREIGN is a
+// A Cast is DIRECT damage, so the Additional follows the floor: SOVEREIGN is a
 // materialized level-1 creature, so the cap is 10 - (1 - 1) = 10; 20% of PACIFIER's max Health 100
 // is 20; min(20, 10) = 10. finalDamage = 20 + 10 = 30 (rawDamage stays 20.2); PACIFIER 100 - 30 = 70.
 //

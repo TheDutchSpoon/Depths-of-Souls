@@ -1,4 +1,4 @@
-// Golden: 4.1-E (A2, ASSUMPTION 6) -- a queued grant whose ACTOR died before it runs is refused and
+// Golden: a queued grant whose ACTOR died before it runs is refused and
 // emits nothing of its own (no ActionGranted, no action event); the earlier TriggerFired stays.
 // Hand-derived.
 //
@@ -11,7 +11,7 @@
 // TURN 1 (A; TURN_STEPS = 1). A casts BOLT at FOE: SpellCast. Observation: O's chance (100%) passes
 // -> TriggerFired; the echo is QUEUED for actor A. The hit lands: Int 20 x 0.5 = 10 vs defence 0 ->
 // raw 10.1 -> 10; FOE 100 -> 90. FOE's on-damage-taken retaliation: TriggerFired(FOE), then a real
-// response hit on A (INDIRECT, 4.1-H2a): magnitude Attack 30 x 1 = 30 - 0.2 x A's defence 0 = 30,
+// response hit on A (INDIRECT): magnitude Attack 30 x 1 = 30 - 0.2 x A's defence 0 = 30,
 // no chip -> raw 30 -> final 30; A 10 -> 0 (remainingHp clamps at 0), CreatureDied(A). The action is over; the queue
 // drains: the grant's ACTOR (A) is dead -> refused, nothing emitted (a live actor would show
 // ActionGranted, a SpellCast and a hit here). TurnEnded(A). Both sides still have a living member

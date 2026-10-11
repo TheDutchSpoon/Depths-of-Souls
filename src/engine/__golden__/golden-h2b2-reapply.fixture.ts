@@ -1,4 +1,4 @@
-// Golden: the single-instance re-application rule (Phase 4.1-H2b2, ASSUMPTIONS 113, 114, 8, 9).
+// Golden: the single-instance re-application rule.
 // A re-application keeps the ONE instance, refreshes its timer to the new application's duration
 // (even when shorter), and replaces the applier snapshot ONLY when the new potency is STRICTLY
 // greater: a weaker one and a tie keep the current instance whole (applier included). Every
@@ -85,8 +85,8 @@ export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits: ReadonlyMap<string, Trait> = new Map(
   [T1, T2, T3, T4].map((t) => [t.id, t]),
 )
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 type Id = typeof E

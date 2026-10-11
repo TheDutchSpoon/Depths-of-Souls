@@ -1,0 +1,29 @@
+# Planted faults (4.2-H2), run in a scratch clone of the finished branch (the repo's tree is untouched)
+# Each fault is appended, the tool run with --root pointing at the clone, the file restored from a copy kept outside the tree.
+
+== comments: one planted tag under each scanned folder and each config ==
+comments, planted comment tag in src/app/demoFight.ts: exit 1; names file: src/app/demoFight.ts:306: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in src/data/biomes.ts: exit 1; names file: src/data/biomes.ts:31: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in src/engine/combat.ts: exit 1; names file: src/engine/combat.ts:527: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in src/state/store.ts: exit 1; names file: src/state/store.ts:919: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in src/ui/CombatDemo.tsx: exit 1; names file: src/ui/CombatDemo.tsx:244: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in src/engine/__golden__/golden-dot.fixture.ts: exit 1; names file: src/engine/__golden__/golden-dot.fixture.ts:170: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in src/engine/__corpus__/corpus.ts: exit 1; names file: src/engine/__corpus__/corpus.ts:660: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in src/engine/__fixtures__/scripts.ts: exit 1; names file: src/engine/__fixtures__/scripts.ts:63: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in vite.config.ts: exit 1; names file: vite.config.ts:49: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+comments, planted comment tag in eslint.config.js: exit 1; names file: eslint.config.js:62: pattern 1, ASSUMPTION marker: "Phase 4.1-A (ASSUMPTION 5)"
+== comments: one planted title tag under each folder that has tests ==
+comments, planted title tag in src/app/demoFight.test.ts: exit 1; names file: src/app/demoFight.test.ts:35: pattern 2, phase number: "planted (Phase 4.1-A)"
+comments, planted title tag in src/data/biomes.test.ts: exit 1; names file: src/data/biomes.test.ts:190: pattern 2, phase number: "planted (Phase 4.1-A)"
+comments, planted title tag in src/engine/combat.test.ts: exit 1; names file: src/engine/combat.test.ts:1407: pattern 2, phase number: "planted (Phase 4.1-A)"
+comments, planted title tag in src/state/store.test.ts: exit 1; names file: src/state/store.test.ts:1081: pattern 2, phase number: "planted (Phase 4.1-A)"
+comments, planted title tag in src/engine/__golden__/golden-dot.test.ts: exit 1; names file: src/engine/__golden__/golden-dot.test.ts:15: pattern 2, phase number: "planted (Phase 4.1-A)"
+comments, planted title tag in src/engine/__fixtures__/held-statuses.test.ts: exit 1; names file: src/engine/__fixtures__/held-statuses.test.ts:36: pattern 2, phase number: "planted (Phase 4.1-A)"
+== comment-proof origin/main --mask evidence/mask.json ==
+baseline (no fault): exit 0; names file: comment-proof: PASS, 346 changed files
+planted code change in src/data/balance.ts: exit 1; names file: FAIL src/data/balance.ts: code differs at printed line 12: base `bossLevelOffset: 5,`, working tree `bossLevelOffset: 6,`
+planted pragma change in src/engine/injured-allies.test.ts: exit 1; names file: FAIL src/engine/injured-allies.test.ts: pragma differs: base `// @ts-expect-error -- 'other-ally-injured' is a TriggerCondition kind, not a sc` before token 860, working tree `// @ts-ignore -- 'other-
+planted unlisted title change in src/engine/combat.test.ts: exit 1; names file: FAIL src/engine/combat.test.ts: code differs at printed line 55: base `it('throws when the player party is empty', () => {`, working tree `it('PLANTED throws when the player party is empty', () => {`
+planted added file src/engine/zz-planted.ts: exit 1; names file: FAIL src/engine/zz-planted.ts: added (not in origin/main)
+== after restoring: ==
+restored baseline: exit 0; names file: comment-proof: PASS, 346 changed files

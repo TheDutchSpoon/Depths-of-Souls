@@ -1,4 +1,4 @@
-// Golden: the Flickerling Wick's gate (Phase 4.1-H2b1, ASSUMPTION 140): it burns and heals ONLY
+// Golden: the Flickerling Wick's gate: it burns and heals ONLY
 // while a living ally OTHER than itself is below max Health. Neither effect may leave a stray
 // `TriggerFired` -- a heal whose target is nobody still logs one, which is why BOTH effects carry
 // the gate. Hand-derived; the Wick is the REAL species. Two cases, each its own fixture object in

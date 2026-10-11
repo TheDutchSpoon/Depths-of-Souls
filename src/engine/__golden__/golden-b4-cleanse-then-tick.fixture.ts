@@ -1,4 +1,4 @@
-// Golden: B4's exact-instance rule (Phase 4.1-B, PR #69 review R5) -- an earlier candidate in the
+// Golden: the exact-instance rule -- an earlier candidate in the
 // SAME on-turn-end hook pass removes a status whose own trigger was captured, unfired, in that
 // same pass. Without the exact-instance check, the tick's stale candidate would still fire even
 // though its status instance no longer exists on the creature by the time its own turn in the
@@ -114,7 +114,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: BEARER },
   { type: 'Waited', creatureId: BEARER },
-  // Phase 4.1-C (D6): on-turn-end hooks fire BEFORE TurnEnded now (TurnEnded is always the
+  // on-turn-end hooks fire BEFORE TurnEnded (TurnEnded is always the
   // turn's last event).
   {
     type: 'TriggerFired',
@@ -125,6 +125,6 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'StatusExpired', creatureId: BEARER, statusId: TICK_STATUS_ID },
   // No second TriggerFired, no DamageDealt: the tick's candidate was captured before the
   // cleanser ran, but its exact owning instance is gone by the time its own turn in the
-  // candidate list comes -- B4's exact-instance check skips it silently.
+  // candidate list comes -- the exact-instance check skips it silently.
   { type: 'TurnEnded', creatureId: BEARER },
 ]

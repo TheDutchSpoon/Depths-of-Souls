@@ -1,5 +1,5 @@
-// Golden: the Leech Sovereign, Glimmerdark's floor-20 boss (`content/glimmerdark.md#leech-sovereign`) -- "every hit
-// steals a stat (permanent -you/+it, same as Sparkeaters); you hollow out over time" -- against
+// Golden: the Leech Sovereign, Glimmerdark's floor-20 boss (`content/glimmerdark.md#leech-sovereign`) -- every hit
+// steals a stat, permanent for the fight, same as the Sparkeaters -- against
 // REAL shipped content (data/species/glimmerdark.ts's real LEECH_SOVEREIGN_TRAIT). Proves the
 // snowball across TWO hits: each attack both shrinks the target's Attack and grows the
 // Sovereign's own, and both effects COMPOUND (fresh StatModifierEffects appended each firing,

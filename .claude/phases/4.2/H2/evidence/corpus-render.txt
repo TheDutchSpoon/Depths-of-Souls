@@ -1,0 +1,30 @@
+# The corpus header and renderFixture, proved with the real `corpus:update` (D1)
+
+Where: a scratch copy of the finished branch (every tracked file at its working-tree content, committed once in a scratch
+repo outside the repo, `node_modules` joined), never Duncan's tree. The committed fixture in the repo was not regenerated;
+`npm run corpus:update` was not run in the repo.
+
+Commands, in the scratch repo:
+
+    npm run corpus:update          # vitest run src/engine/corpus-digest.test.ts --mode corpus-update
+    git diff --exit-code -- src/engine/__corpus__/corpus-digest.fixture.ts
+
+Output:
+
+    corpus:update   Test Files 1 passed (1), Tests 1 passed (1)
+    the fixture's mtime moved 21:02:47 -> 21:02:52 (the file was rewritten by renderFixture + Prettier)
+    git diff --exit-code: exit 0 (no diff)
+    cmp scratch fixture <repo fixture>: byte-equal
+
+So the template in `renderFixture`, the header it writes, the Prettier config and the digest agree byte for byte with the
+committed fixture. The header, three lines, in both places:
+
+    // GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via
+    // `npm run corpus:update`, and only in a deliberate-change PR that attributes every changed
+    // fight (`CONVENTIONS.md#corpus-digest`).
+
+The template part is a mask entry (a non-title literal, whole cooked head text), printed by the proof:
+
+456:OK src/engine/corpus-digest.test.ts (masked 2)
+457-  "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate…" -> "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate…"
+458-  "corpus digest (Phase 4.1-C2a, behaviour tripwire)" -> "corpus digest (behaviour tripwire)"

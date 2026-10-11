@@ -1,7 +1,5 @@
-// Golden: Glimmerdark's Gloomjaw Ravager (PR #60 review, C4) -- armor-penetration IS its whole
-// identity now (superseding the initial submission's "biggest execute bonus + armor-pen" combo,
-// which was still numerically anchored to Stalker/Executioner's own conditional-damage-bonus
-// verb): unconditionally ignores 30% of every target's Defence, against REAL shipped content
+// Golden: Glimmerdark's Gloomjaw Ravager -- armor-penetration IS its whole
+// identity: unconditionally ignores 30% of every target's Defence, against REAL shipped content
 // (data/species/glimmerdark.ts's real GLOOMJAW_RAVAGER_TRAIT). A single hit against a
 // non-trivial Defence value, proving the formula actually reduces the DEFENCE fed into the
 // subtractive core (not a dealt-pool bonus) -- TARGET is at full HP (well above any execute

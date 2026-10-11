@@ -1,0 +1,1732 @@
+[
+  {
+    "file": "src/app/demoFight.test.ts",
+    "old": "demo fight (Phase 3.5 presence smoke test)",
+    "new": "demo fight (presence smoke test)"
+  },
+  {
+    "file": "src/data/biomes.test.ts",
+    "old": "BIOMES (Slice A shape + Slice H1/H2/H3 real content)",
+    "new": "BIOMES (the shape and the real biomes 1-3)"
+  },
+  {
+    "file": "src/data/biomes.test.ts",
+    "old": "slots 4-10 keep the Slice A placeholder shape (empty spawn pools)",
+    "new": "slots 4-10 keep the placeholder shape (empty spawn pools)"
+  },
+  {
+    "file": "src/data/biomes.test.ts",
+    "old": "Boss floors (Phase 4 Slice I, PR #65 review)",
+    "new": "Boss floors"
+  },
+  {
+    "file": "src/data/biomes.test.ts",
+    "old": "generateFloor(10, OVERGROWTH_BIOME, ...): the boss and her two spiderling adds carry SPIDERS_SPECIES_ID, and the three fill creatures do not (4.1-G1)",
+    "new": "generateFloor(10, OVERGROWTH_BIOME, ...): the boss and her two spiderling adds carry SPIDERS_SPECIES_ID, and the three fill creatures do not"
+  },
+  {
+    "file": "src/data/biomes.test.ts",
+    "old": "every shipped boss floor is a full side (Phase 4.1-G1)",
+    "new": "every shipped boss floor is a full side"
+  },
+  {
+    "file": "src/data/perform-action.data.test.ts",
+    "old": "perform-action guard lint (4.1-E)",
+    "new": "perform-action guard lint"
+  },
+  {
+    "file": "src/data/roles.test.ts",
+    "old": "creature roles (Phase 4.1-G1)",
+    "new": "creature roles"
+  },
+  {
+    "file": "src/data/roles.test.ts",
+    "old": "spell pools back every role (Phase 4.1-G1, D4)",
+    "new": "spell pools back every role"
+  },
+  {
+    "file": "src/data/scripts.test.ts",
+    "old": "taunter behaves exactly as always-provoke did (ASSUMPTION 68)",
+    "new": "taunter behaves exactly as always-provoke did"
+  },
+  {
+    "file": "src/data/specializations.test.ts",
+    "old": "Known-inert perks (Phase 4.1-G2, G4)",
+    "new": "Known-inert perks"
+  },
+  {
+    "file": "src/data/species/glimmerdark.test.ts",
+    "old": "every species declares a positive draw weight (ASSUMPTION 5)",
+    "new": "every species declares a positive draw weight"
+  },
+  {
+    "file": "src/data/species/glimmerdark.test.ts",
+    "old": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat",
+    "new": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45, 10-30 for every other stat"
+  },
+  {
+    "file": "src/data/species/glimmerdark.test.ts",
+    "old": "the Flickerlings take the old first slot (pool index 0), in rarity order, with the content doc Health and scripts (4.1-H2b1)",
+    "new": "the Flickerlings take the first slot (pool index 0), in rarity order, with the content doc Health and scripts"
+  },
+  {
+    "file": "src/data/species/glimmerdark.test.ts",
+    "old": "the affinity spread is 4 Wit / 3 Instinct / 5 Violence / 4 Endurance / 2 Vitality (4.1-H2b1)",
+    "new": "the affinity spread is 4 Wit / 3 Instinct / 5 Violence / 4 Endurance / 2 Vitality"
+  },
+  {
+    "file": "src/data/species/glimmerdark.test.ts",
+    "old": "the cast-role creatures (caster / support / opener, 4.1-G1) are exactly the roles table ones, and each has an affinity-matched spell",
+    "new": "the cast-role creatures (caster / support / opener) are exactly the roles table ones, and each has an affinity-matched spell"
+  },
+  {
+    "file": "src/data/species/names.test.ts",
+    "old": "every real SpeciesCreature has a name (Phase 4.1-A, G3)",
+    "new": "every real SpeciesCreature has a name"
+  },
+  {
+    "file": "src/data/species/overgrowth.test.ts",
+    "old": "every species declares a positive draw weight (ASSUMPTION 5)",
+    "new": "every species declares a positive draw weight"
+  },
+  {
+    "file": "src/data/species/overgrowth.test.ts",
+    "old": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat",
+    "new": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45, 10-30 for every other stat"
+  },
+  {
+    "file": "src/data/species/overgrowth.test.ts",
+    "old": "the cast-role creatures (caster / support / opener, 4.1-G1) are exactly the roles table ones, and each has an affinity-matched spell",
+    "new": "the cast-role creatures (caster / support / opener) are exactly the roles table ones, and each has an affinity-matched spell"
+  },
+  {
+    "file": "src/data/species/overgrowth.test.ts",
+    "old": "her adds are real Spider-roster members (content/overgrowth.md#broodmother: \"adds: spiderlings\")",
+    "new": "her adds are real Spider-roster members"
+  },
+  {
+    "file": "src/data/species/rotcap-hollow.test.ts",
+    "old": "every species declares a positive draw weight (ASSUMPTION 5)",
+    "new": "every species declares a positive draw weight"
+  },
+  {
+    "file": "src/data/species/rotcap-hollow.test.ts",
+    "old": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat",
+    "new": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45, 10-30 for every other stat"
+  },
+  {
+    "file": "src/data/species/rotcap-hollow.test.ts",
+    "old": "the cast-role creatures (caster / support / opener, 4.1-G1) are exactly the roles table ones, and each has an affinity-matched spell",
+    "new": "the cast-role creatures (caster / support / opener) are exactly the roles table ones, and each has an affinity-matched spell"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat",
+    "new": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45, 10-30 for every other stat"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "Stonehorn Warden starter (Phase 4.1-H2c, ASSUMPTIONS 123, 125)",
+    "new": "Stonehorn Warden starter"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "has Attack 15 and Health 39 (the remap of 25), the rest unchanged",
+    "new": "has Attack 15 and Health 39, the other stats as authored"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "Sorcerer starter loadout (Phase 4.1-B, A8)",
+    "new": "Sorcerer starter loadout"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "SpeciesCreature carries no equippedSpells field -- the fixed loadout is deleted",
+    "new": "SpeciesCreature carries no equippedSpells field"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "createCombat prepends Arcane Surge's innate spell, giving the Seer [Bolt, null, null, null] -- byte-identical to the old fixed loadout",
+    "new": "createCombat prepends Arcane Surge's innate spell, giving the Seer [Bolt, null, null, null]"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "Sorcerer starter: a 50% on-turn-end perform-action(self, random cast) + an innate Arcane Bolt (4.1-B A8, 4.1-E A2)",
+    "new": "Sorcerer starter: a 50% on-turn-end perform-action(self, random cast) + an innate Arcane Bolt"
+  },
+  {
+    "file": "src/data/spells/glimmerdark.test.ts",
+    "old": "is Luminous Tide renamed in place: a Wit AOE ally heal of 20% of the caster Health, no status",
+    "new": "is Kindred Light: a Wit AOE ally heal of 20% of the caster Health, no status"
+  },
+  {
+    "file": "src/data/spells/glimmerdark.test.ts",
+    "old": "are five: Overcharge is deleted",
+    "new": "are five"
+  },
+  {
+    "file": "src/data/spells/index.test.ts",
+    "old": "no two spells share (affinity, targetShape, payload, factor) -- guards against H3+ reintroducing the H2 reskin mistake",
+    "new": "no two spells share (affinity, targetShape, payload, factor)"
+  },
+  {
+    "file": "src/data/spells/index.test.ts",
+    "old": "dedupKey for status-only spells (Phase 4.1-F3)",
+    "new": "dedupKey for status-only spells"
+  },
+  {
+    "file": "src/data/spells/index.test.ts",
+    "old": "Silence and Pacify (Phase 4.1-F3, G2)",
+    "new": "Silence and Pacify"
+  },
+  {
+    "file": "src/data/spells/index.test.ts",
+    "old": "ALL_SPELLS is append-only: the original 24 ids in order, then Silence, then Pacify, then the 4.1-G1 three",
+    "new": "ALL_SPELLS is append-only: the first 24 ids in order, then Silence, then Pacify, then the last three"
+  },
+  {
+    "file": "src/data/spells/index.test.ts",
+    "old": "Pounce, Stifling Weight and Life Siphon (Phase 4.1-G1, D4)",
+    "new": "Pounce, Stifling Weight and Life Siphon"
+  },
+  {
+    "file": "src/data/spells/index.test.ts",
+    "old": "Pollen Cloud is a control spell with no damage: an AoE Sleep for 2 turns on every enemy (4.1-H2d, ASSUMPTION 150)",
+    "new": "Pollen Cloud is a control spell with no damage: an AoE Sleep for 2 turns on every enemy"
+  },
+  {
+    "file": "src/data/spells/index.test.ts",
+    "old": "dedupKey reads the stat a spell scales from (Phase 4.1-G1, ASSUMPTION 74)",
+    "new": "dedupKey reads the stat a spell scales from"
+  },
+  {
+    "file": "src/data/statuses.test.ts",
+    "old": "stock statuses (representative Phase 3 content)",
+    "new": "stock statuses (representative content)"
+  },
+  {
+    "file": "src/data/statuses.test.ts",
+    "old": "the four ticking statuses declare the potencies decided at the 4.1-H2d grill (percent of the APPLIER's stat, ASSUMPTION 152)",
+    "new": "the four ticking statuses declare their potencies (percent of the APPLIER's stat)"
+  },
+  {
+    "file": "src/data/traits/core.test.ts",
+    "old": "stock traits (representative Phase 3 content)",
+    "new": "stock traits (representative content)"
+  },
+  {
+    "file": "src/data/traits/glimmerdark.test.ts",
+    "old": "the Flickerling Wick (ASSUMPTION 140)",
+    "new": "the Flickerling Wick"
+  },
+  {
+    "file": "src/engine/__fixtures__/held-statuses.test.ts",
+    "old": "holdPotency (4.1-H2d pins)",
+    "new": "holdPotency pins"
+  },
+  {
+    "file": "src/engine/__golden__/golden-action-observed.test.ts",
+    "old": "golden replay: on-action-observed (Phase 4 Slice E2, Resonants-shaped)",
+    "new": "golden replay: on-action-observed (Resonants-shaped)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-actor-dies-attack.test.ts",
+    "old": "golden replay: an action ends when its actor dies (Phase 4.1-C2c, PR #73 review)",
+    "new": "golden replay: an action ends when its actor dies"
+  },
+  {
+    "file": "src/engine/__golden__/golden-armor-penetration.test.ts",
+    "old": "golden replay: armor penetration (Phase 4 Slice B)",
+    "new": "golden replay: armor penetration"
+  },
+  {
+    "file": "src/engine/__golden__/golden-attack-instance-list.test.ts",
+    "old": "golden replay: attack instance-list (Phase 4 Slice B)",
+    "new": "golden replay: attack instance-list"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b1-fallback-lowest-hp.test.ts",
+    "old": "golden replay: B1 -- the script-less fallback attacks the lowest-HP enemy (Phase 4.1-C2b)",
+    "new": "golden replay: the script-less fallback attacks the lowest-HP enemy"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b1-granted-cast-default.test.ts",
+    "old": "golden replay: B1 -- a granted cast defaults to the lowest-HP enemy (Phase 4.1-C2b)",
+    "new": "golden replay: a granted cast defaults to the lowest-HP enemy"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b1-support-heals-own-side.test.ts",
+    "old": "golden replay: B1 -- an enemy support caster under always-cast heals its own lowest-HP ally (Phase 4.1-C2b)",
+    "new": "golden replay: an enemy support caster under always-cast heals its own lowest-HP ally"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b2-confused-granted-cast-redirects.test.ts",
+    "old": "golden replay: B2.3 -- a confused caster's granted cast can redirect (Phase 4.1-C2c)",
+    "new": "golden replay: a confused caster's granted cast can redirect"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b2-provoke-redirects-echo.test.ts",
+    "old": "golden replay: B2.3 -- a Provoke redirects an echo (Phase 4.1-C2c)",
+    "new": "golden replay: a Provoke redirects an echo"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b2-silenced-refuses-granted-cast.test.ts",
+    "old": "golden replay: B2.2 -- Silence refuses a granted cast and draws nothing (Phase 4.1-C2c)",
+    "new": "golden replay: Silence refuses a granted cast and draws nothing"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b2-skipped-turn-refuses-granted-cast.test.ts",
+    "old": "golden replay: B2.1 -- a skipped turn refuses the granted cast, after rolling (Phase 4.1-C2c)",
+    "new": "golden replay: a skipped turn refuses the granted cast, after rolling"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b4-cleanse-then-tick.test.ts",
+    "old": "golden replay: B4 exact-instance rule -- cleanse-then-tick (Phase 4.1-B, PR #69 R5)",
+    "new": "golden replay: exact-instance rule -- cleanse-then-tick"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b4-remove-then-reapply.test.ts",
+    "old": "golden replay: B4 exact-instance rule -- remove-then-reapply (Phase 4.1-B, PR #69 R5)",
+    "new": "golden replay: exact-instance rule -- remove-then-reapply"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b5-cast-fizzle.test.ts",
+    "old": "golden replay: B5 on the Cast path -- fizzle + rule 4 re-target (Phase 4.1-C2c, PR #73 review)",
+    "new": "golden replay: the pre-hit-hook fizzle on the Cast path -- fizzle + rule 4 re-target"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b5-fizzle-rule4-retarget.test.ts",
+    "old": "golden replay: B5 fizzle + rule 4 re-target (Phase 4.1-C2c)",
+    "new": "golden replay: pre-hit-hook fizzle + rule 4 re-target"
+  },
+  {
+    "file": "src/engine/__golden__/golden-b6-provoke-stun-cleanup.test.ts",
+    "old": "golden replay: B6 -- a provoking creature Stunned before its next turn stops provoking at that turn start (Phase 4.1-C, D6)",
+    "new": "golden replay: a provoking creature Stunned before its next turn stops provoking at that turn start"
+  },
+  {
+    "file": "src/engine/__golden__/golden-blindclaws-striker.test.ts",
+    "old": "golden replay: Glimmerdark Blindclaws Setter -> Striker (Phase 4 Slice H2, real content)",
+    "new": "golden replay: Glimmerdark Blindclaws Setter -> Striker (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-broodmother.test.ts",
+    "old": "golden replay: Overgrowth Broodmother Swarm Call count-scaling (Phase 4 Slice I, PR #65 review, real content)",
+    "new": "golden replay: Overgrowth Broodmother Swarm Call count-scaling (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-brute-starter.test.ts",
+    "old": "golden replay: Brute starter double-strike (Phase 4 Slice F, real content)",
+    "new": "golden replay: Brute starter double-strike (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-buff-cast.test.ts",
+    "old": "golden replay: stat-modifier-payload AOE Cast (Phase 4 Slice E)",
+    "new": "golden replay: stat-modifier-payload AOE Cast"
+  },
+  {
+    "file": "src/engine/__golden__/golden-chance-percent.test.ts",
+    "old": "golden replay: chancePercent probabilistic trigger (Phase 4 Slice E2)",
+    "new": "golden replay: chancePercent probabilistic trigger"
+  },
+  {
+    "file": "src/engine/__golden__/golden-cheat-death.test.ts",
+    "old": "golden replay: cheat-death (Phase 4 Slice D, Last Stand-shaped)",
+    "new": "golden replay: cheat-death (Last Stand-shaped)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-conditional-damage-bonus.test.ts",
+    "old": "golden replay: conditional-damage-bonus (Phase 4 Slice E2)",
+    "new": "golden replay: conditional-damage-bonus"
+  },
+  {
+    "file": "src/engine/__golden__/golden-cross-stat-contribution.test.ts",
+    "old": "golden replay: cross-stat contribution (Phase 4 Slice B)",
+    "new": "golden replay: cross-stat contribution"
+  },
+  {
+    "file": "src/engine/__golden__/golden-d3-revive-cap-exclusion.test.ts",
+    "old": "golden replay: D3 revive cap -- mixed-pool exclusion (Phase 4.1-B, PR #69 R5, R5-2)",
+    "new": "golden replay: revive cap -- mixed-pool exclusion"
+  },
+  {
+    "file": "src/engine/__golden__/golden-d3-revive-cap-fizzle.test.ts",
+    "old": "golden replay: D3 revive cap -- 11th-attempt fizzle (Phase 4.1-B, PR #69 R5)",
+    "new": "golden replay: revive cap -- 11th-attempt fizzle"
+  },
+  {
+    "file": "src/engine/__golden__/golden-defend-count-additive-cap.test.ts",
+    "old": "golden replay: defend-count additive-cap accumulation (Phase 4 Slice D, PR #47 review amendment, real Bulwark-shaped)",
+    "new": "golden replay: defend-count additive-cap accumulation (real Bulwark-shaped)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-defend-count.test.ts",
+    "old": "golden replay: defend-count magnitudeSource (Phase 4 Slice D, Bulwark-shaped)",
+    "new": "golden replay: defend-count magnitudeSource (Bulwark-shaped)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-e-echo-chain-truncated.test.ts",
+    "old": "golden replay: 4.1-E -- an echo chain through the same Overtone, truncated at the real cap",
+    "new": "golden replay: an echo chain through the same Overtone, truncated at the real cap"
+  },
+  {
+    "file": "src/engine/__golden__/golden-e-grant-actor-dies-first.test.ts",
+    "old": "golden replay: 4.1-E -- a queued grant whose actor died first emits nothing",
+    "new": "golden replay: a queued grant whose actor died first emits nothing"
+  },
+  {
+    "file": "src/engine/__golden__/golden-e-grant-during-granted-action.test.ts",
+    "old": "golden replay: 4.1-E -- a grant raised during a granted action queues FIFO",
+    "new": "golden replay: a grant raised during a granted action queues FIFO"
+  },
+  {
+    "file": "src/engine/__golden__/golden-f3-silenced-refuses-granted-cast.test.ts",
+    "old": "golden replay: the real Silenced status refuses a granted cast (the real-status mirror of B2.2)",
+    "new": "golden replay: the real Silenced status refuses a granted cast (the real-status mirror of the trait-borne golden)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-g1-leech-sovereign-pacified.test.ts",
+    "old": "golden replay: a Pacified Leech Sovereign casts instead of waiting (Phase 4.1-G1, real content)",
+    "new": "golden replay: a Pacified Leech Sovereign casts instead of waiting (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-gloomjaw-executioner.test.ts",
+    "old": "golden replay: Glimmerdark Gloomjaws Executioner (Phase 4 Slice H2, real content)",
+    "new": "golden replay: Glimmerdark Gloomjaws Executioner (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-gloomjaw-ravager.test.ts",
+    "old": "golden replay: Glimmerdark Gloomjaws Ravager (Phase 4 Slice H2, real content)",
+    "new": "golden replay: Glimmerdark Gloomjaws Ravager (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-gloomjaw-stalker.test.ts",
+    "old": "golden replay: Glimmerdark Gloomjaws Predatory Instinct (Phase 4 Slice H2, real content)",
+    "new": "golden replay: Glimmerdark Gloomjaws Predatory Instinct (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-additional-granted.test.ts",
+    "old": "golden replay: a granted Attack stays direct and gets the Additional (4.1-H2a)",
+    "new": "golden replay: a granted Attack stays direct and gets the Additional"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-additional-hp-bound.test.ts",
+    "old": "golden replay: the Additional is bounded by 20% of the target max Health (4.1-H2a)",
+    "new": "golden replay: the Additional is bounded by 20% of the target max Health"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-additional-levels.test.ts",
+    "old": "golden replay: the Additional at attacker levels 1, 8 and 11 (4.1-H2a)",
+    "new": "golden replay: the Additional at attacker levels 1, 8 and 11"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-additional-second-instance.test.ts",
+    "old": "golden replay: the Additional lands on the second attack instance too (4.1-H2a)",
+    "new": "golden replay: the Additional lands on the second attack instance too"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-additional-spell.test.ts",
+    "old": "golden replay: the Additional lands on every direct hit of a spell (4.1-H2a)",
+    "new": "golden replay: the Additional lands on every direct hit of a spell"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-additional-splashing.test.ts",
+    "old": "golden replay: the Additional lands on every Splashing hit (4.1-H2a)",
+    "new": "golden replay: the Additional lands on every Splashing hit"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-cost.test.ts",
+    "old": "golden replay: the cost rule and the DoT-tick exclusion (4.1-H2a)",
+    "new": "golden replay: the cost rule and the DoT-tick exclusion"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-flat-indirect.test.ts",
+    "old": "golden replay: flat-mode response damage on another creature is indirect (4.1-H2a)",
+    "new": "golden replay: flat-mode response damage on another creature is indirect"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-indirect-keeps.test.ts",
+    "old": "golden replay: indirect damage keeps affinity, the dealt pool, the conditional bonus, the taken pool and armor penetration, and gets no Additional (4.1-H2a)",
+    "new": "golden replay: indirect damage keeps affinity, the dealt pool, the conditional bonus, the taken pool and armor penetration, and gets no Additional"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-indirect.test.ts",
+    "old": "golden replay: a trait response is indirect damage: a fifth of Defence, Defend, no cross-stat (4.1-H2a)",
+    "new": "golden replay: a trait response is indirect damage: a fifth of Defence, Defend, no cross-stat"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2a-spell-on-caster.test.ts",
+    "old": "golden replay: a spell effect on its own caster is direct damage (4.1-H2a)",
+    "new": "golden replay: a spell effect on its own caster is direct damage"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b1-last-gleam.test.ts",
+    "old": "golden replay: the Last Gleam (4.1-H2b1)",
+    "new": "golden replay: the Last Gleam"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b1-observed-cost.test.ts",
+    "old": "golden replay: damage observation of a cost (4.1-H2b1)",
+    "new": "golden replay: damage observation of a cost"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b1-observed-lethal.test.ts",
+    "old": "golden replay: observed-lethal (4.1-H2b1)",
+    "new": "golden replay: observed-lethal"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b1-observed-silent.test.ts",
+    "old": "golden replay: what damage observation must not see (4.1-H2b1)",
+    "new": "golden replay: what damage observation must not see"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b1-observed-tick.test.ts",
+    "old": "golden replay: a DoT tick is not a cost (4.1-H2b1)",
+    "new": "golden replay: a DoT tick is not a cost"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b1-wick-burn-heal.test.ts",
+    "old": "golden replay: wick-burn-heal (4.1-H2b1)",
+    "new": "golden replay: wick-burn-heal"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b1-wick-gates.test.ts",
+    "old": "golden replay: the Wick gate (4.1-H2b1)",
+    "new": "golden replay: the Wick gate"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b1-wick-skips-self.test.ts",
+    "old": "golden replay: wick-skips-self (4.1-H2b1)",
+    "new": "golden replay: wick-skips-self"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-carrier-fresh.test.ts",
+    "old": "golden replay: a carrier applying the same status snapshots fresh from itself, not the snapshot it carries (4.1-H2b2)",
+    "new": "golden replay: a carrier applying the same status snapshots fresh from itself, not the snapshot it carries"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-reapply.test.ts",
+    "old": "golden replay: a status re-applied keeps one instance, refreshes its timer, and replaces its snapshot only when strictly stronger (4.1-H2b2)",
+    "new": "golden replay: a status re-applied keeps one instance, refreshes its timer, and replaces its snapshot only when strictly stronger"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-regen-potency.test.ts",
+    "old": "golden replay: Regen heals the frozen potency of its healer, credited to the healer while it lives, else the bearer (4.1-H2b2)",
+    "new": "golden replay: Regen heals the frozen potency of its healer, credited to the healer while it lives, else the bearer"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-spore-spread.test.ts",
+    "old": "golden replay: Spore spreads with the dying bearer whole snapshot: the new host ticks as the original applier (4.1-H2b2)",
+    "new": "golden replay: Spore spreads with the dying bearer whole snapshot: the new host ticks as the original applier"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-tick-dead-applier.test.ts",
+    "old": "golden replay: a tick whose applier died keeps its frozen amount, is sourced from the bearer, fires no dealer hooks and is never self-inflicted (4.1-H2b2)",
+    "new": "golden replay: a tick whose applier died keeps its frozen amount, is sourced from the bearer, fires no dealer hooks and is never self-inflicted"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-tick-kill-on-death.test.ts",
+    "old": "golden replay: a tick that kills its bearer offers no triggering-source to the bearer on-death either (4.1-H2b2)",
+    "new": "golden replay: a tick that kills its bearer offers no triggering-source to the bearer on-death either"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-tick-living-applier.test.ts",
+    "old": "golden replay: a status tick is indirect damage from the applier snapshot, credited to the living applier (4.1-H2b2)",
+    "new": "golden replay: a status tick is indirect damage from the applier snapshot, credited to the living applier"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-tick-no-retaliation.test.ts",
+    "old": "golden replay: a tick from a living applier offers no triggering-source: no retaliator answers, on-damage-taken still fires and wakes Sleep (4.1-H2b2)",
+    "new": "golden replay: a tick from a living applier offers no triggering-source: no retaliator answers, on-damage-taken still fires and wakes Sleep"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-tick-self-applied.test.ts",
+    "old": "golden replay: a self-applied tick makes its bearer the dealer, and is still never self-inflicted (4.1-H2b2)",
+    "new": "golden replay: a self-applied tick makes its bearer the dealer, and is still never self-inflicted"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-tick-taken-factors.test.ts",
+    "old": "golden replay: a tick passes through the bearer's taken factors, Defend's then Vulnerability's (4.1-H2b2)",
+    "new": "golden replay: a tick passes through the bearer's taken factors, Defend's then Vulnerability's"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2b2-vulnerability-once.test.ts",
+    "old": "golden replay: Vulnerability x1.5 once, even when applied twice (single instance, 4.1-H2b2)",
+    "new": "golden replay: Vulnerability x1.5 once, even when applied twice (single instance)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2c-snapback.test.ts",
+    "old": "golden replay: the real Snapjaw Jaws counterattacks at 60% of its Attack, as indirect damage (4.1-H2d)",
+    "new": "golden replay: the real Snapjaw Jaws counterattacks at 60% of its Attack, as indirect damage"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2d-dot-ticks.test.ts",
+    "old": "golden replay: one tick each of the real Poison, Burn and Spore (4.1-H2d)",
+    "new": "golden replay: one tick each of the real Poison, Burn and Spore"
+  },
+  {
+    "file": "src/engine/__golden__/golden-h2d-pollen-cloud.test.ts",
+    "old": "golden replay: the real Pollen Cloud puts Sleep on every enemy and deals no damage (4.1-H2d)",
+    "new": "golden replay: the real Pollen Cloud puts Sleep on every enemy and deals no damage"
+  },
+  {
+    "file": "src/engine/__golden__/golden-heal-cast.test.ts",
+    "old": "golden replay: heal-payload Cast (Phase 4 Slice E)",
+    "new": "golden replay: heal-payload Cast"
+  },
+  {
+    "file": "src/engine/__golden__/golden-heal-scaling-count.test.ts",
+    "old": "golden replay: heal magnitudeSource mode (Phase 4 Slice E2, Necromoss-shaped)",
+    "new": "golden replay: heal magnitudeSource mode (Necromoss-shaped)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-heal-scaling-stat.test.ts",
+    "old": "golden replay: heal scalingStat mode (Phase 4 Slice E2, Treants Elder-shaped)",
+    "new": "golden replay: heal scalingStat mode (Treants Elder-shaped)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-hollowkin-wretch-self-dot.test.ts",
+    "old": "golden replay: PR #64 fix 3 -- triggering-source never resolves to the firing creature itself",
+    "new": "golden replay: triggering-source never resolves to the firing creature itself"
+  },
+  {
+    "file": "src/engine/__golden__/golden-hollowkin-wretch.test.ts",
+    "old": "golden replay: Rotcap Hollow Hollowkin Wretch retaliatory Confusion (Phase 4 Slice H3, real content)",
+    "new": "golden replay: Rotcap Hollow Hollowkin Wretch retaliatory Confusion (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-leech-sovereign.test.ts",
+    "old": "golden replay: the Leech Sovereign, Glimmerdark boss (Phase 4 Slice H2, real content)",
+    "new": "golden replay: the Leech Sovereign, Glimmerdark boss (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-lullpollen-dozer.test.ts",
+    "old": "golden replay: Lullpollen Dozer (Phase 4 Slice H1, real content)",
+    "new": "golden replay: Lullpollen Dozer (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-necromoss-reclaim.test.ts",
+    "old": "golden replay: Rotcap Hollow Necromoss Wisp heal-off-dead-allies (Phase 4 Slice H3, real content)",
+    "new": "golden replay: Rotcap Hollow Necromoss Wisp heal-off-dead-allies (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-on-action-hooks.test.ts",
+    "old": "golden replay: on-[action] hooks (Phase 4 Slice B)",
+    "new": "golden replay: on-[action] hooks"
+  },
+  {
+    "file": "src/engine/__golden__/golden-overgrowth-web-exploit.test.ts",
+    "old": "golden replay: The Overgrowth Web -> Exploit combo (Slice H1, real content)",
+    "new": "golden replay: The Overgrowth Web -> Exploit combo (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-pollinator-pollenlord.test.ts",
+    "old": "golden replay: Pollinators Pollenlord (Phase 4 Slice H1, real content)",
+    "new": "golden replay: Pollinators Pollenlord (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-resonant-harmonize.test.ts",
+    "old": "golden replay: Glimmerdark Resonants Harmonize/Resonate (Phase 4 Slice H2, real content)",
+    "new": "golden replay: Glimmerdark Resonants Harmonize/Resonate (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-resonant-overtone.test.ts",
+    "old": "golden replay: Glimmerdark Resonant Overtone echo-cast (Phase 4 Slice H2, real content)",
+    "new": "golden replay: Glimmerdark Resonant Overtone echo-cast (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-revive.test.ts",
+    "old": "golden replay: revive (Phase 4 Slice B)",
+    "new": "golden replay: revive"
+  },
+  {
+    "file": "src/engine/__golden__/golden-rot-sovereign.test.ts",
+    "old": "golden replay: Rotcap Hollow Rot Sovereign attrition (Phase 4 Slice H3, real content)",
+    "new": "golden replay: Rotcap Hollow Rot Sovereign attrition (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-scoped-suppression.test.ts",
+    "old": "golden replay: scoped action-lock (Phase 4 Slice B)",
+    "new": "golden replay: scoped action-lock"
+  },
+  {
+    "file": "src/engine/__golden__/golden-shieldbarer-starter.test.ts",
+    "old": "golden replay: Shieldbarer starter team-wide Defence buff (Phase 4 Slice F, real content)",
+    "new": "golden replay: Shieldbarer starter team-wide Defence buff (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-sleep-wake.test.ts",
+    "old": "golden replay: Sleep two-trigger composition (Phase 4 Slice E2)",
+    "new": "golden replay: Sleep two-trigger composition"
+  },
+  {
+    "file": "src/engine/__golden__/golden-snapjaw-ironjaw.test.ts",
+    "old": "golden replay: Snapjaws Ironjaw (Phase 4 Slice H1, real content)",
+    "new": "golden replay: Snapjaws Ironjaw (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-sorcerer-starter.test.ts",
+    "old": "golden replay: Sorcerer starter granted cast (Phase 4 Slice F, real content, new primitive)",
+    "new": "golden replay: Sorcerer starter granted cast (real content, new primitive)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-sparkeater-voidmaw.test.ts",
+    "old": "golden replay: Glimmerdark Sparkeater Voidmaw (Phase 4 Slice H2, real content)",
+    "new": "golden replay: Glimmerdark Sparkeater Voidmaw (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-spider-broodwarden.test.ts",
+    "old": "golden replay: Spiders Broodwarden (Phase 4 Slice H1, real content)",
+    "new": "golden replay: Spiders Broodwarden (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-splashing.test.ts",
+    "old": "golden replay: Splashing (Phase 4 Slice C)",
+    "new": "golden replay: Splashing"
+  },
+  {
+    "file": "src/engine/__golden__/golden-spore-spread-dot-kill.test.ts",
+    "old": "golden replay: PR #64 fix 1 -- Spore spreads when its OWN turn-end DoT tick kills the host",
+    "new": "golden replay: Spore spreads when its OWN turn-end DoT tick kills the host"
+  },
+  {
+    "file": "src/engine/__golden__/golden-spore-spread.test.ts",
+    "old": "golden replay: Rotcap Hollow Spore contagion, infect -> kill -> spread (Phase 4 Slice H3, real content)",
+    "new": "golden replay: Rotcap Hollow Spore contagion, infect -> kill -> spread (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-sporecloud-reaper-no-spore.test.ts",
+    "old": "golden replay: PR #64 fix 4 -- a zero-count magnitudeSource is a full no-op (real content)",
+    "new": "golden replay: a zero-count magnitudeSource is a full no-op (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-swarmhive-queen.test.ts",
+    "old": "golden replay: Swarmhive Queen / all-allies-of-species (Phase 4 Slice H1, real content)",
+    "new": "golden replay: Swarmhive Queen / all-allies-of-species (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-treant-grovekeep.test.ts",
+    "old": "golden replay: Treants Grovekeep (Phase 4 Slice H1, real content)",
+    "new": "golden replay: Treants Grovekeep (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-turn-order-status.test.ts",
+    "old": "golden replay: turn-order status (Phase 4 Slice C)",
+    "new": "golden replay: turn-order status"
+  },
+  {
+    "file": "src/engine/__golden__/golden-unicorn-starter.test.ts",
+    "old": "golden replay: the Unicorn (Phase 4 Slice F, real content)",
+    "new": "golden replay: the Unicorn (real content)"
+  },
+  {
+    "file": "src/engine/__golden__/golden-web-break-free.test.ts",
+    "old": "golden replay: Web break-free (Phase 4 Slice E2)",
+    "new": "golden replay: Web break-free"
+  },
+  {
+    "file": "src/engine/actions-gem-side.test.ts",
+    "old": "with `gemSide` absent, today's random draw is unchanged (ASSUMPTION 69)",
+    "new": "with `gemSide` absent, today's random draw is unchanged"
+  },
+  {
+    "file": "src/engine/actions.test.ts",
+    "old": "defaultTargetingFor (Phase 4.1-C2a, A1; wired into resolveIntent in C2b/B1)",
+    "new": "defaultTargetingFor (wired into resolveIntent)"
+  },
+  {
+    "file": "src/engine/actions.test.ts",
+    "old": "castableGemSlots (Phase 4.1-C2a, A1)",
+    "new": "castableGemSlots"
+  },
+  {
+    "file": "src/engine/actions.test.ts",
+    "old": "resolveIntent's gemSlot: 'random' draw order (Phase 4.1-C2a, A1)",
+    "new": "resolveIntent's gemSlot: 'random' draw order"
+  },
+  {
+    "file": "src/engine/actions.test.ts",
+    "old": "resolveIntent -- castable-filtered gem draw and resolved-side default (Phase 4.1-C2b)",
+    "new": "resolveIntent -- castable-filtered gem draw and resolved-side default"
+  },
+  {
+    "file": "src/engine/actions.test.ts",
+    "old": "runAction -- legality before resolution, for every source (B2.2, 4.1-C2c)",
+    "new": "runAction -- legality before resolution, for every source"
+  },
+  {
+    "file": "src/engine/actions.test.ts",
+    "old": "an echo is gated by the CASTER, never the bearer (B2.2, 4.1-C2c)",
+    "new": "an echo is gated by the CASTER, never the bearer"
+  },
+  {
+    "file": "src/engine/actions.test.ts",
+    "old": "resolveInstanceTarget -- rule 4 (B2.4, 4.1-C2c)",
+    "new": "resolveInstanceTarget -- rule 4"
+  },
+  {
+    "file": "src/engine/actor-death.test.ts",
+    "old": "an action ends when its actor dies (spec/combat.md#an-action-ends-when-its-actor-dies, 4.1-C2c)",
+    "new": "an action ends when its actor dies (spec/combat.md#an-action-ends-when-its-actor-dies)"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "resolving the SAME frozen snapshot twice gives identical {state, events} (Phase 4.1-B, B3)",
+    "new": "resolving the SAME frozen snapshot twice gives identical {state, events}"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "born-this-turn: a status refreshed in its own bearer turn keeps full duration (Phase 4.1-F2)",
+    "new": "born-this-turn: a status refreshed in its own bearer turn keeps full duration"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "action instance-list composition (Phase 4 Slice B)",
+    "new": "action instance-list composition"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "Spell.scalingStat (Phase 4 Slice B)",
+    "new": "Spell.scalingStat"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "Web break-free (Phase 4 Slice E2)",
+    "new": "Web break-free"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4.1-E)",
+    "new": "Arcane Surge-shaped granted cast = on-turn-end perform-action"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "on a successful roll, casts the (only) equipped spell before TurnEnded (Phase 4.1-C, D6)",
+    "new": "on a successful roll, casts the (only) equipped spell before TurnEnded"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "turn-start cleanup (Phase 4.1-C, D6)",
+    "new": "turn-start cleanup"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "taken-reduction passive (Phase 4 Slice F, review amendment -- real Bulwark shape, as a perk)",
+    "new": "taken-reduction passive (real Bulwark shape, as a perk)"
+  },
+  {
+    "file": "src/engine/conditions.test.ts",
+    "old": "evaluateCondition -- acted-before-target (Phase 4 Slice C, Blindclaws)",
+    "new": "evaluateCondition -- acted-before-target (Blindclaws)"
+  },
+  {
+    "file": "src/engine/confusion.test.ts",
+    "old": "executeCastAoe -- Confusion redirect (Phase 4 Slice C)",
+    "new": "executeCastAoe -- Confusion redirect"
+  },
+  {
+    "file": "src/engine/confusion.test.ts",
+    "old": "an unconfused caster casts at the enemy side as before -- byte-identical, no RNG drawn for the check",
+    "new": "an unconfused caster casts at the enemy side, no RNG drawn for the check"
+  },
+  {
+    "file": "src/engine/corpus-coverage.test.ts",
+    "old": "corpus coverage (Phase 4.1-D2)",
+    "new": "corpus coverage"
+  },
+  {
+    "file": "src/engine/corpus-coverage.test.ts",
+    "old": "the corpus exercises the applier snapshot (4.1-H2b2): a living-applier tick, a dead-applier tick and a Spore spread",
+    "new": "the corpus exercises the applier snapshot: a living-applier tick, a dead-applier tick and a Spore spread"
+  },
+  {
+    "file": "src/engine/corpus-digest.test.ts",
+    "old": "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate-change PR that attributes every changed\n// fight (`CONVENTIONS.md#corpus-digest`, corpus digest).\n\nexport interface CorpusDigestEntry {\n  readonly hash: string\n  readonly events: number\n  readonly result: 'win' | 'loss' | 'draw'\n}\n\nexport const CORPUS_DIGEST: readonly CorpusDigestEntry[] = [\n",
+    "new": "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate-change PR that attributes every changed\n// fight (`CONVENTIONS.md#corpus-digest`).\n\nexport interface CorpusDigestEntry {\n  readonly hash: string\n  readonly events: number\n  readonly result: 'win' | 'loss' | 'draw'\n}\n\nexport const CORPUS_DIGEST: readonly CorpusDigestEntry[] = [\n"
+  },
+  {
+    "file": "src/engine/corpus-digest.test.ts",
+    "old": "corpus digest (Phase 4.1-C2a, behaviour tripwire)",
+    "new": "corpus digest (behaviour tripwire)"
+  },
+  {
+    "file": "src/engine/curves.test.ts",
+    "old": "enemyLevelRange (Phase-4 placeholder config)",
+    "new": "enemyLevelRange (placeholder config)"
+  },
+  {
+    "file": "src/engine/curves.test.ts",
+    "old": "the minimum is exactly the floor at every floor, so rounding it down (4.1-H2c) cannot move this config",
+    "new": "the minimum is exactly the floor at every floor, so rounding it down cannot move this config"
+  },
+  {
+    "file": "src/engine/curves.test.ts",
+    "old": "enemyLevelRange (default config, Phase 4.1-H2c / ASSUMPTIONS 4, 118, 119)",
+    "new": "enemyLevelRange (default config)"
+  },
+  {
+    "file": "src/engine/curves.test.ts",
+    "old": "floors 1-9 spawn at exactly 1, 2, 3, 5, 6, 7, 9, 10, 11 (ASSUMPTION 118)",
+    "new": "floors 1-9 spawn at exactly 1, 2, 3, 5, 6, 7, 9, 10, 11"
+  },
+  {
+    "file": "src/engine/curves.test.ts",
+    "old": "bossLevel (default config, Phase 4.1-H2c / ASSUMPTION 119)",
+    "new": "bossLevel (default config)"
+  },
+  {
+    "file": "src/engine/curves.test.ts",
+    "old": "is a flat, deterministic placeholder under the Phase-4 config -- same value at any floor, not rolled",
+    "new": "is a flat, deterministic placeholder under the placeholder config -- same value at any floor, not rolled"
+  },
+  {
+    "file": "src/engine/curves.test.ts",
+    "old": "is 10 + (floor - 1), uncapped, under the default config (Phase 4.1-A)",
+    "new": "is 10 + (floor - 1), uncapped, under the default config"
+  },
+  {
+    "file": "src/engine/damage-observation.test.ts",
+    "old": "the filter matrix: relationship x selfInflicted (4.1-H2b1)",
+    "new": "the filter matrix: relationship x selfInflicted"
+  },
+  {
+    "file": "src/engine/damage-observation.test.ts",
+    "old": "both observation hooks fail closed (4.1-H2b1)",
+    "new": "both observation hooks fail closed"
+  },
+  {
+    "file": "src/engine/damage-observation.test.ts",
+    "old": "routing: a damage event never reaches an action observer, an action never a damage observer (4.1-H2b1)",
+    "new": "routing: a damage event never reaches an action observer, an action never a damage observer"
+  },
+  {
+    "file": "src/engine/damage-observation.test.ts",
+    "old": "hook order in the damage path (4.1-H2b1; spec/effects.md#hook-execution)",
+    "new": "hook order in the damage path (spec/effects.md#hook-execution)"
+  },
+  {
+    "file": "src/engine/damage-observation.test.ts",
+    "old": "a zero cost is a full no-op: nothing to observe (4.1-H2b1, ASSUMPTION 132)",
+    "new": "a zero cost is a full no-op: nothing to observe"
+  },
+  {
+    "file": "src/engine/damage-observation.test.ts",
+    "old": "loop safety on the damage -> observer -> damage route (4.1-H2b1)",
+    "new": "loop safety on the damage -> observer -> damage route"
+  },
+  {
+    "file": "src/engine/damage-observation.test.ts",
+    "old": "the validator keeps each filter field on its own hook, on every trigger carrier (4.1-H2b1)",
+    "new": "the validator keeps each filter field on its own hook, on every trigger carrier"
+  },
+  {
+    "file": "src/engine/effective-stats.test.ts",
+    "old": "is a passthrough to baseStats.%s (Phase 1 has no stat-modifier effects)",
+    "new": "is a passthrough to baseStats.%s when the creature has no stat-modifier effects"
+  },
+  {
+    "file": "src/engine/effective-stats.test.ts",
+    "old": "includes a conditional modifier only when its read-time condition holds (Phase 4.1-B, S2)",
+    "new": "includes a conditional modifier only when its read-time condition holds"
+  },
+  {
+    "file": "src/engine/effective-stats.test.ts",
+    "old": "at fractional effective Health, hp-percent divides by FLOOR(effective Health) -- the same max HP currentHp is clamped to, not the raw fractional reading (Phase 4.1-B review, PR #69, D1/R2)",
+    "new": "at fractional effective Health, hp-percent divides by FLOOR(effective Health) -- the same max HP currentHp is clamped to, not the raw fractional reading"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "resolveBaselineEffects / instantiateEffectDefs (Phase 4.1-B, S1/B4)",
+    "new": "resolveBaselineEffects / instantiateEffectDefs"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "throws on an unknown trait id (Phase 4.1-B review, PR #69, D3) -- never silently skips",
+    "new": "throws on an unknown trait id -- never silently skips"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "resolveBaselineEffects with side effects (Phase 4 Slice F / ASSUMPTION 21, Phase 4.1-B R1)",
+    "new": "resolveBaselineEffects with side effects"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "gatherTakenFactors yields magnitude once (single instance, 4.1-H2b2) for taken damage-modifier effects only",
+    "new": "gatherTakenFactors yields magnitude once (single instance) for taken damage-modifier effects only"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "a magnitudeSource is the live count the magnitude is scaled by (Phase 4 Slice D)",
+    "new": "a magnitudeSource is the live count the magnitude is scaled by"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "accumulation: 'additive' (Phase 4 Slice D, PR #47 review amendment -- real Bulwark shape)",
+    "new": "accumulation: 'additive' (real Bulwark shape)"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "is byte-identical to the pre-amendment multiplicative default when accumulation is absent",
+    "new": "is the multiplicative default when accumulation is absent"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "gatherArmorPenetration (Phase 4 Slice B)",
+    "new": "gatherArmorPenetration"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "gatherCrossStatContribution (Phase 4 Slice B)",
+    "new": "gatherCrossStatContribution"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "gatherExtraInstances (Phase 4 Slice B)",
+    "new": "gatherExtraInstances"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "hasStatusImmunity / hasProvokeImmunity / hasSplashing / hasAnnihilate (Phase 4 Slice C)",
+    "new": "hasStatusImmunity / hasProvokeImmunity / hasSplashing / hasAnnihilate"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "activeFriendlyFireStatus (Phase 4 Slice C, Confusion)",
+    "new": "activeFriendlyFireStatus (Confusion)"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "resolveCount (Phase 4 Slice D, count-scaling)",
+    "new": "resolveCount (count-scaling)"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "living-allies-of-species is 0 when no speciesId is set (every Phase 1-3/Slice A-C creature)",
+    "new": "living-allies-of-species is 0 when no speciesId is set"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "resolveMagnitudeCount (Phase 4 Slice D)",
+    "new": "resolveMagnitudeCount"
+  },
+  {
+    "file": "src/engine/effects.test.ts",
+    "old": "gatherCheatDeathChance (Phase 4 Slice D, Last Stand)",
+    "new": "gatherCheatDeathChance (Last Stand)"
+  },
+  {
+    "file": "src/engine/generation-g1.test.ts",
+    "old": "generateFloor: full distinct gem sets (Phase 4.1-G1, ASSUMPTION 70)",
+    "new": "generateFloor: full distinct gem sets"
+  },
+  {
+    "file": "src/engine/generation-g1.test.ts",
+    "old": "generateFloor: the cast-role check (Phase 4.1-G1, ASSUMPTION 67)",
+    "new": "generateFloor: the cast-role check"
+  },
+  {
+    "file": "src/engine/generation-g1.test.ts",
+    "old": "no other role is a cast role, and always-cast no longer is: an empty pool is fine",
+    "new": "no other role is a cast role, and always-cast is not: an empty pool is fine"
+  },
+  {
+    "file": "src/engine/generation-g1.test.ts",
+    "old": "generateFloor: the boss fill (Phase 4.1-G1, 6v6 boss floors, ASSUMPTION 72)",
+    "new": "generateFloor: the boss fill (6v6 boss floors)"
+  },
+  {
+    "file": "src/engine/generation.test.ts",
+    "old": "sets the engine-visible level (4.1-H2a, ASSUMPTION 111), always equal to origin.level",
+    "new": "sets the engine-visible level, always equal to origin.level"
+  },
+  {
+    "file": "src/engine/generation.test.ts",
+    "old": "fills origin from the template id, the level and the optional ref (Phase 4.1-A, A5)",
+    "new": "fills origin from the template id, the level and the optional ref"
+  },
+  {
+    "file": "src/engine/generation.test.ts",
+    "old": "an explicit scriptId option overrides the template default (Phase 4.1-A, A6/ASSUMPTION 6)",
+    "new": "an explicit scriptId option overrides the template default"
+  },
+  {
+    "file": "src/engine/generation.test.ts",
+    "old": "biomeHasContent (Phase 4.1-A review fix F1)",
+    "new": "biomeHasContent"
+  },
+  {
+    "file": "src/engine/generation.test.ts",
+    "old": "contentFrontier (Phase 4.1-A, G5/S5; tightened by review fix F1)",
+    "new": "contentFrontier"
+  },
+  {
+    "file": "src/engine/generation.test.ts",
+    "old": "stops at the FIRST has-content gap, never resuming at a later authored biome (F1)",
+    "new": "stops at the FIRST has-content gap, never resuming at a later authored biome"
+  },
+  {
+    "file": "src/engine/generation.test.ts",
+    "old": "speciesId is now real (Phase 4 Slice E2), so living-allies-of-species reads a nonzero count",
+    "new": "speciesId is now real, so living-allies-of-species reads a nonzero count"
+  },
+  {
+    "file": "src/engine/generation.test.ts",
+    "old": "generateFloor: boss floors (Phase 4 Slice I, PR #65 review)",
+    "new": "generateFloor: boss floors"
+  },
+  {
+    "file": "src/engine/injured-allies.test.ts",
+    "old": "the gate and the heal target agree on one pool (4.1-H2b1, ASSUMPTION 140)",
+    "new": "the gate and the heal target agree on one pool"
+  },
+  {
+    "file": "src/engine/injured-allies.test.ts",
+    "old": "the trigger-only condition never reaches a script (4.1-H2b1, ASSUMPTION 141)",
+    "new": "the trigger-only condition never reaches a script"
+  },
+  {
+    "file": "src/engine/interpreter.test.ts",
+    "old": "a targeting-less rule is valid (B1): it matches, carries no targeting, and resolves to the side-aware default",
+    "new": "a targeting-less rule is valid: it matches, carries no targeting, and resolves to the side-aware default"
+  },
+  {
+    "file": "src/engine/interpreter.test.ts",
+    "old": "decideAction -- acted-before-target on a targeting-less rule (B1 peek)",
+    "new": "decideAction -- acted-before-target on a targeting-less rule (peek)"
+  },
+  {
+    "file": "src/engine/interpreter.test.ts",
+    "old": "decideAction -- scoped action-lock (Phase 4 Slice B; passive lock since 4.1-F1)",
+    "new": "decideAction -- scoped action-lock (passive lock)"
+  },
+  {
+    "file": "src/engine/interpreter.test.ts",
+    "old": "decideAction -- status-immunity vs scoped action-lock (Phase 4 Slice C)",
+    "new": "decideAction -- status-immunity vs scoped action-lock"
+  },
+  {
+    "file": "src/engine/interpreter.test.ts",
+    "old": "checkLegality -- pure, draws nothing (Phase 4.1-C2a, A1)",
+    "new": "checkLegality -- pure, draws nothing"
+  },
+  {
+    "file": "src/engine/leveling.test.ts",
+    "old": "xpForNextLevel (Phase 4.1-A, ASSUMPTION 5 -- quadratic default)",
+    "new": "xpForNextLevel (quadratic default)"
+  },
+  {
+    "file": "src/engine/leveling.test.ts",
+    "old": "the Phase-4 placeholder config reproduces the OLD linear curve (100 * level) exactly",
+    "new": "the placeholder config gives a linear curve (100 * level) exactly"
+  },
+  {
+    "file": "src/engine/leveling.test.ts",
+    "old": "xpAwardForKill (Phase 4.1-A, ASSUMPTION 5 -- victim-level-scaled)",
+    "new": "xpAwardForKill (victim-level-scaled)"
+  },
+  {
+    "file": "src/engine/perform-action.test.ts",
+    "old": "where each scope drains its grants (ASSUMPTION 3)",
+    "new": "where each scope drains its grants"
+  },
+  {
+    "file": "src/engine/perform-action.test.ts",
+    "old": "who acts (ASSUMPTIONS 6, 9) and the skip gate",
+    "new": "who acts and the skip gate"
+  },
+  {
+    "file": "src/engine/perform-action.test.ts",
+    "old": "load-time rejections (ASSUMPTION 7)",
+    "new": "load-time rejections"
+  },
+  {
+    "file": "src/engine/perform-action.test.ts",
+    "old": "the guard lint helpers (ASSUMPTION 7)",
+    "new": "the guard lint helpers"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "'all' action-lock (a trait-borne passive; 4.1-F1)",
+    "new": "'all' action-lock (a trait-borne passive)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "applyStatus + status-container content (Slice C)",
+    "new": "applyStatus + status-container content"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "an omitted duration inherits the status's own defaultDuration (Phase 4 Slice F, review amendment)",
+    "new": "an omitted duration inherits the status's own defaultDuration"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "heal scaling (Phase 4 Slice E2, Treants Elder / Necromoss-shaped)",
+    "new": "heal scaling (Treants Elder / Necromoss-shaped)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "deal-damage scalingStat (Phase 4 Slice B)",
+    "new": "deal-damage scalingStat"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "deal-damage mutual exclusivity (ASSUMPTION 6)",
+    "new": "deal-damage mutual exclusivity"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "flat-mode stat-derived magnitude (percent-hp-condition-ticks brief)",
+    "new": "flat-mode stat-derived magnitude"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "reads the bearer’s stat FLOORED before multiplying (ASSUMPTION 3) -- a fractional effective stat does not leak through",
+    "new": "reads the bearer’s stat FLOORED before multiplying -- a fractional effective stat does not leak through"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "a literal number flatAmount/flatAmount still behaves exactly as before (regression)",
+    "new": "a literal number flatAmount behaves exactly as a plain number (regression)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "chancePercent probabilistic gate (Phase 4 Slice E2)",
+    "new": "chancePercent probabilistic gate"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "conditional-damage-bonus (Phase 4 Slice E2, Cull the Weak / Ambusher-shaped)",
+    "new": "conditional-damage-bonus (Cull the Weak / Ambusher-shaped)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "conditional-damage-bonus actionKind scoping (Phase 4 Slice F, review amendment)",
+    "new": "conditional-damage-bonus actionKind scoping"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "an unset actionKind applies to BOTH (byte-identical to pre-amendment 'both' default)",
+    "new": "an unset actionKind applies to BOTH ('both' is the default)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "grant-action-state response (Phase 4 Slice B)",
+    "new": "grant-action-state response"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "revive response (Phase 4 Slice B)",
+    "new": "revive response"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "clears defending/provoking on the revived creature (F1 regression: a creature that died while defending must not return still defending)",
+    "new": "clears defending/provoking on the revived creature (regression: a creature that died while defending must not return still defending)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "restores a revived PLAYER creature's perks too (ASSUMPTION 21: perks are battle-start-permanent, like innate traits, not in-fight ramp death-reset should wipe)",
+    "new": "restores a revived PLAYER creature's perks too (perks are battle-start-permanent, like innate traits, not in-fight ramp death-reset should wipe)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "remove-status response (Phase 4 Slice E2)",
+    "new": "remove-status response"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "all-allies ResponseTarget (Phase 4 Slice F / ASSUMPTION 22, Shieldbarer starter)",
+    "new": "all-allies ResponseTarget (Shieldbarer starter)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "all-allies-of-species ResponseTarget (Phase 4 Slice H1, Swarmhive Queen)",
+    "new": "all-allies-of-species ResponseTarget (Swarmhive Queen)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "cheat-death (Phase 4 Slice D, Last Stand)",
+    "new": "cheat-death (Last Stand)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "on-action-observed filter (Phase 4 Slice E2, general action-observation system)",
+    "new": "on-action-observed filter (general action-observation system)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "on-action-observed end-to-end (Phase 4 Slice E2)",
+    "new": "on-action-observed end-to-end"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "echo = perform-action(triggering-source) (Phase 4.1-E, A2 -- Resonant Overtone shape)",
+    "new": "echo = perform-action(triggering-source) (Resonant Overtone shape)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "apply-stat-modifier magnitudeSource (Phase 4 Slice E2, Swarmhive Striker-shaped: freeze-at-application)",
+    "new": "apply-stat-modifier magnitudeSource (Swarmhive Striker-shaped: freeze-at-application)"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "exact-instance rule (Phase 4.1-B, B4)",
+    "new": "exact-instance rule"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "revive cap (Phase 4.1-B, D3)",
+    "new": "revive cap"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "SelfCondition validator (Phase 4.1-B, S2)",
+    "new": "SelfCondition validator"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "'random' response-target validator (Phase 4.1-C2a, PR #71 review)",
+    "new": "'random' response-target validator"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "a cost goes through applyDamageAndEmit (4.1-H2a, ASSUMPTION 132)",
+    "new": "a cost goes through applyDamageAndEmit"
+  },
+  {
+    "file": "src/engine/resolution.test.ts",
+    "old": "a status-sourced flat hit on ANOTHER creature is indirect, not a tick (4.1-H2a, ASSUMPTION 131)",
+    "new": "a status-sourced flat hit on ANOTHER creature is indirect, not a tick"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "4.1-D equivalence: the old cast payload path vs the new effect list",
+    "new": "equivalence: the old cast payload path vs the new effect list"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "P2: a spell hit counts as a cast (cross-stat) and never splashes",
+    "new": "a spell hit counts as a cast (cross-stat) and never splashes"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "P8: a spell effect takes no cascade-depth or self-guard accounting",
+    "new": "a spell effect takes no cascade-depth or self-guard accounting"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "B5 on the cast path: a target killed in its own pre-hit hooks gets NOTHING from the list",
+    "new": "the pre-hit-hook fizzle on the cast path: a target killed in its own pre-hit hooks gets NOTHING from the list"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "B5 and the AOE alive-skip also guard `self` effects (cast-target alone would not)",
+    "new": "the pre-hit-hook fizzle and the AOE alive-skip also guard `self` effects (cast-target alone would not)"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "B5 (single): the target dies in the on-cast hook -> no damage AND no self heal",
+    "new": "a single target: the target dies in the on-cast hook -> no damage AND no self heal"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "ASSUMPTION 35: one landed target's effect list is atomic (no actor check between effects)",
+    "new": "One landed target's effect list is atomic (no actor check between effects)"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "ASSUMPTION 36: magnitudes read the caster LIVE when each effect runs",
+    "new": "Magnitudes read the caster LIVE when each effect runs"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "heal.offStat (plan review F2)",
+    "new": "heal.offStat"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "rejects %s setting both offStat and scalingStat (it used to throw mid-fight)",
+    "new": "rejects %s setting both offStat and scalingStat (at load, not mid-fight)"
+  },
+  {
+    "file": "src/engine/spell-effects.test.ts",
+    "old": "a trait heal scaled by a live count: 26, not the old (stat x sp) x count = 27",
+    "new": "a trait heal scaled by a live count: 26, not (stat x sp) x count = 27"
+  },
+  {
+    "file": "src/engine/splashing.test.ts",
+    "old": "Splashing (Phase 4 Slice C)",
+    "new": "Splashing"
+  },
+  {
+    "file": "src/engine/status-containers.test.ts",
+    "old": "a lock gained during the actor's own turn-start hooks skips that very turn (ASSUMPTION 45)",
+    "new": "a lock gained during the actor's own turn-start hooks skips that very turn"
+  },
+  {
+    "file": "src/engine/status-containers.test.ts",
+    "old": "a granted Defend is refused under an 'all' lock (ASSUMPTION 46)",
+    "new": "a granted Defend is refused under an 'all' lock"
+  },
+  {
+    "file": "src/engine/status-containers.test.ts",
+    "old": "a status's effects carry no count of their own (single instance, 4.1-H2b2)",
+    "new": "a status's effects carry no count of their own (single instance)"
+  },
+  {
+    "file": "src/engine/status-snapshot.test.ts",
+    "old": "pass-on rule: only the SAME status inherits the firing instance’s snapshot (ASSUMPTION 145)",
+    "new": "pass-on rule: only the SAME status inherits the firing instance’s snapshot"
+  },
+  {
+    "file": "src/engine/status-timing.test.ts",
+    "old": "turn-end pass: a lethal own Poison tick after the wiping firing is a WIN with no tick (the PR #70 case)",
+    "new": "turn-end pass: a lethal own Poison tick after the wiping firing is a WIN with no tick"
+  },
+  {
+    "file": "src/engine/support-spells.test.ts",
+    "old": "interpreter -- ally-targeting single Cast (Phase 4 Slice E)",
+    "new": "interpreter -- ally-targeting single Cast"
+  },
+  {
+    "file": "src/engine/support-spells.test.ts",
+    "old": "executeCastAoe -- ally-targeting AOE Cast (Phase 4 Slice E)",
+    "new": "executeCastAoe -- ally-targeting AOE Cast"
+  },
+  {
+    "file": "src/engine/support-spells.test.ts",
+    "old": "ally-targeting Cast end-to-end -- highest-attack-ally (Phase 4 Slice E addendum)",
+    "new": "ally-targeting Cast end-to-end -- highest-attack-ally"
+  },
+  {
+    "file": "src/engine/target-selectors.test.ts",
+    "old": "targetSelectorHasCandidate throws -- 'random' needs the intended side, checked only in actions.ts (PR #71 review)",
+    "new": "targetSelectorHasCandidate throws -- 'random' needs the intended side, checked only in actions.ts"
+  },
+  {
+    "file": "src/engine/targeting.test.ts",
+    "old": "resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C)",
+    "new": "resolveOffensiveTarget -- targeting-override pipeline"
+  },
+  {
+    "file": "src/engine/targeting.test.ts",
+    "old": "ASSUMPTION 12: Confusion is checked BEFORE Provoke -- a confused actor redirects to its own side even when the enemy side has a provoker",
+    "new": "Confusion is checked BEFORE Provoke -- a confused actor redirects to its own side even when the enemy side has a provoker"
+  },
+  {
+    "file": "src/engine/targeting.test.ts",
+    "old": "shouldRedirectAoeToAllies (Phase 4 Slice C, ASSUMPTION 13)",
+    "new": "shouldRedirectAoeToAllies"
+  },
+  {
+    "file": "src/engine/targeting.test.ts",
+    "old": "adjacentLivingTargets (Phase 4 Slice C, Splashing)",
+    "new": "adjacentLivingTargets (Splashing)"
+  },
+  {
+    "file": "src/engine/targeting.test.ts",
+    "old": "skips a dead slot-neighbor in favor of the next LIVING one (ASSUMPTION 14)",
+    "new": "skips a dead slot-neighbor in favor of the next LIVING one"
+  },
+  {
+    "file": "src/engine/turn-order.test.ts",
+    "old": "buildTurnQueue -- turn-order status (Phase 4 Slice C)",
+    "new": "buildTurnQueue -- turn-order status"
+  },
+  {
+    "file": "src/engine/turn-order.test.ts",
+    "old": "ASSUMPTION 9: a creature carrying both an act-first and an act-last instance resolves to act-first",
+    "new": "A creature carrying both an act-first and an act-last instance resolves to act-first"
+  },
+  {
+    "file": "src/state/balance-ci-brute.test.ts",
+    "old": "balance CI thresholds: brute (ASSUMPTION 22)",
+    "new": "balance CI thresholds: brute"
+  },
+  {
+    "file": "src/state/balance-ci-shieldbarer.test.ts",
+    "old": "balance CI thresholds: shieldbarer (ASSUMPTION 22)",
+    "new": "balance CI thresholds: shieldbarer"
+  },
+  {
+    "file": "src/state/balance-ci-sorcerer.test.ts",
+    "old": "balance CI thresholds: sorcerer (ASSUMPTION 22)",
+    "new": "balance CI thresholds: sorcerer"
+  },
+  {
+    "file": "src/state/balance-sim-report.test.ts",
+    "old": "the floor-5 window (ASSUMPTION 126)",
+    "new": "the floor-5 window"
+  },
+  {
+    "file": "src/state/balance-sim-report.test.ts",
+    "old": "the matchup table (ASSUMPTION 127)",
+    "new": "the matchup table"
+  },
+  {
+    "file": "src/state/balance-sim-report.test.ts",
+    "old": "the first-try clear rate per floor (ASSUMPTION 127)",
+    "new": "the first-try clear rate per floor"
+  },
+  {
+    "file": "src/state/balance-sim-report.test.ts",
+    "old": "per-trait stack maxima (plan review, fix 4)",
+    "new": "per-trait stack maxima"
+  },
+  {
+    "file": "src/state/balance-sim-report.test.ts",
+    "old": "T2 and T3 floor reads (ASSUMPTION 153)",
+    "new": "T2 and T3 floor reads"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "has every spec, a row per content floor and the H1 report items",
+    "new": "has every spec, a row per content floor and the report items"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "summon once (ASSUMPTION 96)",
+    "new": "summon once"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "failed-push rule (ASSUMPTION 97)",
+    "new": "failed-push rule"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "hard wall and the stop rule (ASSUMPTION 98)",
+    "new": "hard wall and the stop rule"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "party order (ASSUMPTION 99)",
+    "new": "party order"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "functional perks and the greedy buy (ASSUMPTION 100)",
+    "new": "functional perks and the greedy buy"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "boss-run restore and the probe never editing gems (ASSUMPTION 101)",
+    "new": "boss-run restore and the probe never editing gems"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "stat-modifier stack attribution (ASSUMPTION 103)",
+    "new": "stat-modifier stack attribution"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "boss locked-turn share (ASSUMPTION 102)",
+    "new": "boss locked-turn share"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "noteBossVisit: first visit per floor only (ASSUMPTION 102)",
+    "new": "noteBossVisit: first visit per floor only"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "boss rows: first visits vs all visits, n/a counts (ASSUMPTION 102)",
+    "new": "boss rows: first visits vs all visits, n/a counts"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "report computation on hand-built seed results (F1.1, F2, F4, F5)",
+    "new": "report computation on hand-built seed results"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "F5: the walls' size, per seed, below floor 10 and to the first floor-10 clear",
+    "new": "the walls' size, per seed, below floor 10 and to the first floor-10 clear"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "F5: spreadOf",
+    "new": "spreadOf"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "ASSUMPTION 107 thresholds, both sides of each boundary",
+    "new": "thresholds, both sides of each boundary"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "first soul: never-completing seeds count as infinite (F2)",
+    "new": "first soul: never-completing seeds count as infinite"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "R2: the spec fold keeps the larger stack per bucket, with its seed; a tie keeps the first seed",
+    "new": "the spec fold keeps the larger stack per bucket, with its seed; a tie keeps the first seed"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "R2: runSeed folds each fight's stacks into the seed's maxima (the wiring, on a real run)",
+    "new": "runSeed folds each fight's stacks into the seed's maxima (the wiring, on a real run)"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "per-seed derivations hold on real runs (F1.2)",
+    "new": "per-seed derivations hold on real runs"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "analyzeFight on hand-built events (F1.3, F6)",
+    "new": "analyzeFight on hand-built events"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "R1: growth and shred stacks are separate, per side",
+    "new": "growth and shred stacks are separate, per side"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "R2: foldFightStacks keeps the larger stack per bucket",
+    "new": "foldFightStacks keeps the larger stack per bucket"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "the live wiring: playFloorRun on the level-30, floor-9 store (F1.4)",
+    "new": "the live wiring: playFloorRun on the level-30, floor-9 store"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "the analysis names the boss of the biome the store fights, pins included (L2)",
+    "new": "the analysis names the boss of the biome the store fights, pins included"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "the probe cannot leak into the policy run, end to end (F3)",
+    "new": "the probe cannot leak into the policy run, end to end"
+  },
+  {
+    "file": "src/state/integration.test.ts",
+    "old": "Slice I integration: real Brute party through real floor 1 (Overgrowth)",
+    "new": "integration: real Brute party through real floor 1 (Overgrowth)"
+  },
+  {
+    "file": "src/state/integration.test.ts",
+    "old": "Phase 4.1-A defaults: real store, real content, the new BalanceConfig",
+    "new": "real defaults: real store, real content, the default BalanceConfig"
+  },
+  {
+    "file": "src/state/integration.test.ts",
+    "old": "Phase 4.1-G2: stored player gems in the real floor-10 fight",
+    "new": "Stored player gems in the real floor-10 fight"
+  },
+  {
+    "file": "src/state/integration.test.ts",
+    "old": "the Pacified Unicorn casts one of its stored gems instead of waiting (4.1-H2c: slot 1, Wild Vigor)",
+    "new": "the Pacified Unicorn casts one of its stored gems instead of waiting (slot 1, Wild Vigor)"
+  },
+  {
+    "file": "src/state/rewards.test.ts",
+    "old": "applyXpGain (Phase-4 placeholder config: xpForNextLevel = 100 * level)",
+    "new": "applyXpGain (placeholder config: xpForNextLevel = 100 * level)"
+  },
+  {
+    "file": "src/state/rewards.test.ts",
+    "old": "applyXpGain (Phase 4.1-A default config: xpForNextLevel = 20 * level^2)",
+    "new": "applyXpGain (default config: xpForNextLevel = 20 * level^2)"
+  },
+  {
+    "file": "src/state/rewards.test.ts",
+    "old": "throws on a 'fusion' source (Phase 8 not built yet, ASSUMPTION 27)",
+    "new": "throws on a 'fusion' source (fusion is not built)"
+  },
+  {
+    "file": "src/state/rewards.test.ts",
+    "old": "resolveKillReward (Phase 4.1-A review fix F4)",
+    "new": "resolveKillReward"
+  },
+  {
+    "file": "src/state/store-gems.test.ts",
+    "old": "hand-derived player gem roll (ASSUMPTIONS 81, 82, 95)",
+    "new": "hand-derived player gem roll"
+  },
+  {
+    "file": "src/state/store-gems.test.ts",
+    "old": "the Seer never rolls her innate Arcane Bolt, for any seed (ASSUMPTION 81)",
+    "new": "the Seer never rolls her innate Arcane Bolt, for any seed"
+  },
+  {
+    "file": "src/state/store-gems.test.ts",
+    "old": "the unlock biome (ASSUMPTION 82)",
+    "new": "the unlock biome"
+  },
+  {
+    "file": "src/state/store-gems.test.ts",
+    "old": "the gem RNG is its own stream (ASSUMPTION 81)",
+    "new": "the gem RNG is its own stream"
+  },
+  {
+    "file": "src/state/store-gems.test.ts",
+    "old": "stored gems reach the fight (ASSUMPTIONS 83, 84)",
+    "new": "stored gems reach the fight"
+  },
+  {
+    "file": "src/state/store-gems.test.ts",
+    "old": "a new instance runs its role (ASSUMPTION 86)",
+    "new": "a new instance runs its role"
+  },
+  {
+    "file": "src/state/store-hub.test.ts",
+    "old": "the starters and the Unicorn resolve but never bank soul: soul-incomplete (ASSUMPTION 91)",
+    "new": "the starters and the Unicorn resolve but never bank soul: soul-incomplete"
+  },
+  {
+    "file": "src/state/store-hub.test.ts",
+    "old": "null empties the slot, and emptying every slot is allowed; descend then refuses (ASSUMPTION 10)",
+    "new": "null empties the slot, and emptying every slot is allowed; descend then refuses"
+  },
+  {
+    "file": "src/state/store-newgame.test.ts",
+    "old": "the seed must be an integer in 0 .. 2^32 - 1 (ASSUMPTION 87)",
+    "new": "the seed must be an integer in 0 .. 2^32 - 1"
+  },
+  {
+    "file": "src/state/store-perks.test.ts",
+    "old": "a perk inert until Phase 8 is buyable (no gating)",
+    "new": "an inert perk is buyable (no gating)"
+  },
+  {
+    "file": "src/state/store.test.ts",
+    "old": "review fix F5: soul-gain under the DEFAULT config is exact per tier (common=25, rare=10), not just \"a multiple of 10\"",
+    "new": "soul-gain under the DEFAULT config is exact per tier (common=25, rare=10), not just \"a multiple of 10\""
+  },
+  {
+    "file": "src/state/store.test.ts",
+    "old": "an instance with a custom scriptId uses it instead of the creature default (Phase 4.1-A, A6/ASSUMPTION 6)",
+    "new": "an instance with a custom scriptId uses it instead of the creature default"
+  },
+  {
+    "file": "src/state/store.test.ts",
+    "old": "reason: beyond-content-frontier wins even when floor-out-of-reach ALSO fails (F3)",
+    "new": "reason: beyond-content-frontier wins even when floor-out-of-reach ALSO fails"
+  },
+  {
+    "file": "src/state/store.test.ts",
+    "old": "review fix F1: refusing the pin closes the descend()-throws route (reproduces the review-found bug)",
+    "new": "refusing the pin closes the descend()-throws route (a player-reachable crash)"
+  },
+  {
+    "file": "src/state/store.test.ts",
+    "old": "boss floors (Phase 4 Slice I, PR #65 review)",
+    "new": "boss floors"
+  },
+  {
+    "file": "src/engine/__golden__/golden-resonant-overtone.test.ts",
+    "old": "matches the committed event log exactly (one echo fires, its own re-observation fails, echo damage lands before the original)",
+    "new": "matches the committed event log exactly (one echo fires, its own re-observation fails, the original damage lands first, then the echo damage)"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup",
+    "new": "absent scalingStat reads the remap-aware Intelligence"
+  }
+]

@@ -1,16 +1,14 @@
-// Golden: Rotcap Hollow's floor-30 boss, the Rot Sovereign (`content/rotcap-hollow.md#rot-sovereign` "Attrition-
-// management ... grows via count-scaling off deaths (any creature that dies feeds it) + blankets
-// the party in spreading Spore") -- the real, shipped `ROT_SOVEREIGN_TRAIT` proving all three
+// Golden: Rotcap Hollow's floor-30 boss, the Rot Sovereign (`content/rotcap-hollow.md#rot-sovereign`)
+// -- the real, shipped `ROT_SOVEREIGN_TRAIT` proving all three
 // signature pieces end to end: an add's death growing her Attack (`on-ally-death`), a PLAYER
-// creature's death ALSO growing her Attack at the SAME flat rate (`on-enemy-death`, PR #64
-// review fix 5 -- both hooks now apply a flat +10% per event, no `magnitudeSource`, replacing the
-// earlier draft's mismatched +15%-scaled/+5%-flat split), the two compounding multiplicatively
+// creature's death ALSO growing her Attack at the SAME flat rate (`on-enemy-death`; both hooks
+// apply a flat +10% per event, no `magnitudeSource`), the two compounding multiplicatively
 // across both death sources, and her own turn-start Spore blanket.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). TARGET (speed 40) acts
 // before SOVEREIGN (speed 30; her Attack 22, Intelligence 20 and Defence 26 are the real Rot
 // Sovereign's base stats, but the speed is the fixture's own -- the real one is 16 -- and her Health
-// 30 is the pre-4.1-H2c value, the real one is now 45) before WEAK (speed 10) before ADD (speed 1 --
+// 30 is the fixture's own too, the real one is 45) before WEAK (speed 10) before ADD (speed 1 --
 // never reached; this golden stops after SOVEREIGN's own turn). Endurance-vs-Endurance
 // (everyone here is endurance) is always neutral -- x1.0 everywhere, no complication. No random
 // selectors anywhere (every attack's target is deterministically the lowest-HP living enemy) --

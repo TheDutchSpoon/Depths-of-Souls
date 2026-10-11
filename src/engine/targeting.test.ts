@@ -170,7 +170,7 @@ function statusImmunity(statusId: string, id: string): ActiveEffect {
   }
 }
 
-describe('resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C)', () => {
+describe('resolveOffensiveTarget -- targeting-override pipeline', () => {
   it('Tunnel Vision skips straight to normal resolution, ignoring an active enemy provoker', () => {
     const player = makeParty('player', [
       { id: 'hero', activeEffects: [provokeImmunity()] },
@@ -247,7 +247,7 @@ describe('resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C
     expect(result).toBe(enemy[0]!.id)
   })
 
-  it('ASSUMPTION 12: Confusion is checked BEFORE Provoke -- a confused actor redirects to its own side even when the enemy side has a provoker', () => {
+  it('Confusion is checked BEFORE Provoke -- a confused actor redirects to its own side even when the enemy side has a provoker', () => {
     const player = makeParty('player', [
       { id: 'confused', activeEffects: [confusion(100)] },
     ])
@@ -292,7 +292,7 @@ describe('resolveOffensiveTarget -- targeting-override pipeline (Phase 4 Slice C
   })
 })
 
-describe('shouldRedirectAoeToAllies (Phase 4 Slice C, ASSUMPTION 13)', () => {
+describe('shouldRedirectAoeToAllies', () => {
   it('draws no RNG and returns false for an unconfused actor', () => {
     const actor = makeParty('player', [{ id: 'caster' }])[0]!
     const state = makeState({ rng: createRngState(1) })
@@ -323,7 +323,7 @@ describe('shouldRedirectAoeToAllies (Phase 4 Slice C, ASSUMPTION 13)', () => {
   })
 })
 
-describe('adjacentLivingTargets (Phase 4 Slice C, Splashing)', () => {
+describe('adjacentLivingTargets (Splashing)', () => {
   it('returns both neighbors for a middle target in a 3+ living lineup', () => {
     const enemy = makeParty('enemy', [{ id: 'a' }, { id: 'b' }, { id: 'c' }])
     expect(adjacentLivingTargets(enemy[1]!, enemy).map((c) => c.id)).toEqual([
@@ -342,7 +342,7 @@ describe('adjacentLivingTargets (Phase 4 Slice C, Splashing)', () => {
     ])
   })
 
-  it('skips a dead slot-neighbor in favor of the next LIVING one (ASSUMPTION 14)', () => {
+  it('skips a dead slot-neighbor in favor of the next LIVING one', () => {
     const enemy = makeParty('enemy', [
       { id: 'a' },
       { id: 'dead', alive: false },

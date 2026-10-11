@@ -1,6 +1,6 @@
-// Phase 4.1-H2c: tests for the report additions (ASSUMPTIONS 126, 127 and the plan review's per-trait
-// stack fold). Like H1's report tests they run on HAND-BUILT events and seed results and assert no
-// balance value (ASSUMPTION 106), so the H2d tuning doesn't rewrite them.
+// Tests for the report additions (the floor-5 window, the matchup table and the per-trait
+// stack fold). Like the base report tests they run on HAND-BUILT events and seed results and assert no
+// balance value, so tuning doesn't rewrite them.
 
 import { describe, expect, it } from 'vitest'
 import type { CombatEvent } from '../engine/types'
@@ -89,7 +89,7 @@ const fight = (
   capDraw = false,
 ): EarlyFight => ({ floor, enemyTemplateIds, result, capDraw })
 
-describe('the floor-5 window (ASSUMPTION 126)', () => {
+describe('the floor-5 window', () => {
   it('the window is 20 floor runs', () => {
     expect(FLOOR5_WINDOW_RUNS).toBe(20)
   })
@@ -119,7 +119,7 @@ describe('the floor-5 window (ASSUMPTION 126)', () => {
   })
 })
 
-describe('the matchup table (ASSUMPTION 127)', () => {
+describe('the matchup table', () => {
   it('templateIdOf strips the side and slot suffix only', () => {
     expect(templateIdOf('spider-weaver-enemy-3')).toBe('spider-weaver')
     expect(templateIdOf('glyphmoth-seer-player-0')).toBe('glyphmoth-seer')
@@ -218,7 +218,7 @@ describe('the matchup table (ASSUMPTION 127)', () => {
   })
 })
 
-describe('the first-try clear rate per floor (ASSUMPTION 127)', () => {
+describe('the first-try clear rate per floor', () => {
   it("reads each seed's FIRST run on the floor: a failed first run then a clear is a miss", () => {
     const rows = buildFirstTryRows(
       [
@@ -251,7 +251,7 @@ describe('the first-try clear rate per floor (ASSUMPTION 127)', () => {
   })
 })
 
-describe('per-trait stack maxima (plan review, fix 4)', () => {
+describe('per-trait stack maxima', () => {
   const stack = (
     targetId: string,
     attribution: string,
@@ -380,9 +380,9 @@ describe('the printed report carries the additions', () => {
   })
 })
 
-// ---- T2 and T3 as floor-read ceilings (ASSUMPTION 153) ----
+// ---- T2 and T3 as floor-read ceilings ----
 
-describe('T2 and T3 floor reads (ASSUMPTION 153)', () => {
+describe('T2 and T3 floor reads', () => {
   const party = (n: number): number[] => Array.from({ length: n }, () => 1)
   const runWith = (index: number, floor: number, size: number): RunRecord => ({
     ...run(index, floor, true),

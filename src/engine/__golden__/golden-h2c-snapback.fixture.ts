@@ -1,7 +1,6 @@
-// Golden: the real Snapjaw Jaws ("Snapback") at 60% of Attack (Phase 4.1-H2d, ASSUMPTION 151; it
-// was 30% in 4.1-H2c, ASSUMPTION 124, and 60% before). Re-derived in 4.1-H2d. A content golden: its subject is one named trait's number, on real data. Snapback is a
+// Golden: the real Snapjaw Jaws ("Snapback") at 60% of Attack. A content golden: its subject is one named trait's number, on real data. Snapback is a
 // trait response (`on-damage-taken` -> `deal-damage` at `triggering-source`, `offStat 'attack'`),
-// so its counter is INDIRECT damage (4.1-H2a): raw = magnitude x affinity x (1 + sum dealt) x
+// so its counter is INDIRECT damage: raw = magnitude x affinity x (1 + sum dealt) x
 // prod(taken) - 0.2 x Defence, then MAX(1, floor(raw)); no chip floor, no Additional.
 //
 // Hand-derived (independent `node -e` calculator). Everyone is vitality (neutral x1.0) and every

@@ -105,7 +105,7 @@ describe('evaluateCondition -- hp-percent', () => {
     expect(evaluateCondition(condition, player[0]!, state)).toBe(false)
   })
 
-  // Phase 4 Slice E2: 'target' subject -- "the creature this effect is being resolved against",
+  // 'target' subject -- "the creature this effect is being resolved against",
   // supplied via evaluateCondition's 5th param (resolvingAgainstId), resolved internally via
   // findCreature. The qualifier is irrelevant for a single creature -- any/lowest/highest all
   // degenerate to the same one-element check.
@@ -320,8 +320,8 @@ describe('evaluateCondition -- has-status', () => {
     ).toBe(false)
   })
 
-  // Phase 4 Slice E2: subject=target -- Ambusher/Sporch's Reaper shape ("+% dmg to
-  // Webbed/Burning targets") reads has-status against the resolvingAgainst creature.
+  // subject=target -- Ambusher/Sporch Ashborn shape (+% damage to
+  // Webbed/Burning targets) reads has-status against the resolvingAgainst creature.
   it('subject=target checks the resolvingAgainst creature, false without one', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const enemy = makeParty('enemy', [{ id: 'poisoned', activeEffects: [poisonEffect] }])
@@ -356,7 +356,7 @@ describe('evaluateCondition -- has-status', () => {
   })
 })
 
-describe('evaluateCondition -- acted-before-target (Phase 4 Slice C, Blindclaws)', () => {
+describe('evaluateCondition -- acted-before-target (Blindclaws)', () => {
   it('is true when the acting creature is earlier in the frozen turn queue than its rule-selected target', () => {
     const player = makeParty('player', [{ id: 'fast' }])
     const enemy = makeParty('enemy', [{ id: 'slow' }])
@@ -422,7 +422,7 @@ describe('evaluateCondition -- acted-before-target (Phase 4 Slice C, Blindclaws)
     ).toBe(false)
   })
 
-  // Phase 4 Slice H2 (PR #60 review, E1): completes the case for the non-scripting call sites --
+  // Completes the case for the non-scripting call sites --
   // a trigger's own source (fireHook) or a conditional-damage-bonus's current damage target
   // (resolution.ts), threaded in as `resolvingAgainstId` -- so this condition is a real,
   // real-content-usable passive-trait ingredient (Blindclaws' Striker), not scripting-only.

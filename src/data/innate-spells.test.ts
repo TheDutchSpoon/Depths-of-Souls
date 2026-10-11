@@ -1,4 +1,4 @@
-// Phase 4.1-G2 (ASSUMPTION 81): the player gem roll excludes the spells a creature holds innately
+// The player gem roll excludes the spells a creature holds innately
 // (a rule in the store, which has the trait registry). Two data facts keep that rule sufficient:
 // no spawnable creature carries an innate spell (so the enemy roll needs no copy of the rule), and
 // every creature that does (the starters and the Unicorn) still has a full distinct pool left.

@@ -1,4 +1,4 @@
-// The trigger / cascade resolution core (Phase 3, Slice B). This is the mutually-recursive heart
+// The trigger / cascade resolution core. This is the mutually-recursive heart
 // of the effect framework: applyDamageAndEmit fires the damage-path hooks, a hook's response can
 // deal more damage (re-entering applyDamageAndEmit), and a transient CascadeState bounds the chain.
 //
@@ -7,10 +7,10 @@
 // not live in authoritative state). combat.ts/actions.ts create a fresh CascadeState per
 // top-level action/hook point (via ResolutionContext); depth resets to 0 there.
 //
-// Phase 4.1-C2a (A1): every function below threads a `ResolutionContext` (`resolution-types.ts`)
+// Every function below threads a `ResolutionContext` (`resolution-types.ts`)
 // instead of separate `events`/`cascade` arguments. This module imports NOTHING from
 // `actions.ts` or `combat.ts`, not even a type — it never runs an action: a `perform-action`
-// response (4.1-E) only enqueues a grant on `ctx.grants`, and the scope that created the context
+// response only enqueues a grant on `ctx.grants`, and the scope that created the context
 // drains it (actions.ts `drainGrantedActions`). `newCascade` stays here (a plain factory, not a type) since `actions.ts` and
 // `combat.ts` both need to call it to build a fresh `ResolutionContext`.
 
@@ -86,7 +86,7 @@ export function newCascade(): CascadeState {
 }
 
 interface HookContext {
-  /** Phase 4.1-H2a (ASSUMPTION 130): REQUIRED -- the channel this context's damage runs in.
+  /** REQUIRED -- the channel this context's damage runs in.
    * `fireHook` builds `'indirect'` (a trait/status/perk response); a spell's own effect loop
    * (`actions.ts` `executeSpellEffects`) builds `'direct'`. */
   readonly channel: DamageChannel
@@ -97,16 +97,16 @@ interface HookContext {
   /** The firing effect's statusId, when it's a status; absent for a plain
    * triggered trait. Threaded onto DamageDealt so a DoT tick's causing status is attributable. */
   readonly statusId?: string
-  /** Phase 4.1-H2b2 (ASSUMPTION 143): the firing status INSTANCE's applier snapshot, read from
+  /** The firing status INSTANCE's applier snapshot, read from
    * the live owning instance by `fireHook`; absent for a trait/perk/spell and for a status that
    * declares no potency. A `snapshot-potency` magnitude reads it (a tick), and a status's OWN
    * `apply-status` of that same status copies it (Spore's spread) -- nothing else does. */
   readonly snapshot?: StatusSnapshot
-  /** Phase 4.1-D (A4): populated ONLY by a spell's own effect loop (actions.ts
+  /** Populated ONLY by a spell's own effect loop (actions.ts
    * `executeSpellEffects`) -- the current landed target `cast-target` resolves to. Absent for
    * every trigger; resolving `cast-target` without it is a resolver-invariant error. */
   readonly castTarget?: CreatureId
-  /** Phase 4.1-D: the cast instance's `powerPercent / 100`, populated with `castTarget`. Scales
+  /** The cast instance's `powerPercent / 100`, populated with `castTarget`. Scales
    * a spell's `deal-damage` and `heal` ONLY (the instance list's rule); never a stat-modifier or a
    * status. Replaces the magnitude `count` a `magnitudeSource` would supply (a spell may not carry
    * one -- `validateSpellEffects`). */
@@ -161,7 +161,7 @@ export function dealDamage(
 }
 
 /**
- * Phase 4 Slice B: the deal-damage response's `scalingStat` mode -- reads an ARBITRARY Stat
+ * The deal-damage response's `scalingStat` mode -- reads an ARBITRARY Stat
  * directly via getEffectiveStat (no stat-remap resolution, unlike offStatKind/RemapSlot), then
  * × spellPower, through the SAME downstream formula as dealDamage (armor-pen, cross-stat,
  * affinity, pools, min-1 floor). E.g. Thorns/Shield Bash scaling off Defence instead of Attack.
@@ -179,7 +179,7 @@ export function dealDamageWithScalingStat(
 ): CombatState {
   const attacker = getCreature(state, attackerId)
   const offStat = getEffectiveStat(attacker, stat) * spellPower
-  // ASSUMPTION (Slice B, not pinned by the brief): a scalingStat-based deal-damage response is
+  // A scalingStat-based deal-damage response is
   // treated as Attack-flavored for cross-stat's `appliesTo` gating unless damageSource says
   // 'cast' -- content examples (Thorns/Shield Bash) are reactive "strike back" responses, not
   // spell-shaped.
@@ -197,7 +197,7 @@ export function dealDamageWithScalingStat(
 }
 
 /**
- * Phase 4 Slice E2 (Cull the Weak / Ambusher / Gloomjaws / Sporch's Reaper): the attacker's
+ * The attacker's
  * summed `conditional-damage-bonus` passives whose condition (subject 'target') holds against
  * the CURRENT damage target -- folded directly into dealtMods alongside gatherDealtMods, so the
  * bonus lands as one clean modified hit rather than a second on-damage-dealt instance. Lives
@@ -205,8 +205,7 @@ export function dealDamageWithScalingStat(
  * conditions.ts already imports hasStatus FROM effects.ts -- effects.ts importing back from
  * conditions.ts would be a cycle; resolution.ts already sits above both.
  *
- * Phase 4 Slice F (review amendment): also filters on `actionKind` (absent -> `'both'`, so every
- * pre-amendment effect -- none of which set the field -- is unaffected), mirroring
+ * Also filters on `actionKind` (absent -> `'both'`), mirroring
  * `gatherCrossStatContribution`'s own `appliesTo` gate. Brute Force (`'attack'`)/Spell Focus
  * (`'cast'`) need this so their unconditional "+% damage" doesn't leak onto the OTHER action kind.
  */
@@ -249,7 +248,7 @@ function dealDamageCore(
   let damage: DamageResult
   if (channel === 'direct') {
     // The Additional is folded into finalDamage HERE, before applyDamageAndEmit, so Last Stand's
-    // lethal check, remainingHp and every hook see one number (ASSUMPTION 135).
+    // lethal check, remainingHp and every hook see one number.
     damage = withAdditional(
       calculateDamage({
         offStat,
@@ -264,7 +263,7 @@ function dealDamageCore(
       calculateAdditional(attacker.level, effectiveMaxHp(target)),
     )
   } else {
-    // Indirect: cross-stat contribution is direct-only (ASSUMPTION 134).
+    // Indirect: cross-stat contribution is direct-only.
     damage = calculateIndirectDamage({
       magnitude: offStat,
       defence,
@@ -293,11 +292,11 @@ function dealDamageCore(
  * Applies a computed damage result, emits DamageDealt, then fires the damage-path hooks in the
  * pinned order: on-damage-dealt (source, UNCONDITIONAL — even on a lethal hit) → on-damage-taken
  * (self, survived only) → on-damage-observed (every living creature, UNCONDITIONAL — even on a
- * lethal hit; Phase 4.1-H2b1) → if it died: CreatureDied → on-death → on-kill → on-ally-death /
- * on-enemy-death (observers). Death pre-empts the victim's on-damage-taken; hit-reactions
+ * lethal hit) → if it died: CreatureDied → on-death → on-kill → on-ally-death / on-enemy-death
+ * (observers). Death pre-empts the victim's on-damage-taken; hit-reactions
  * (including the observation of the hit) resolve before death-reactions.
  *
- * `origin` (Phase 4.1-H2b2, ASSUMPTIONS 5, 17, 146; it replaces H2b1's `selfInflicted` boolean) is
+ * `origin` is
  * REQUIRED, with no default, so the compiler finds every caller. It is stated by the branch that
  * chose the path and NEVER derived from `sourceId === target.id` (a tick's self-applied bearer and
  * a direct action landing on its own actor have equal ids and are not costs):
@@ -320,10 +319,10 @@ export function applyDamageAndEmit(
   const rawNewHp = Math.max(target.currentHp - damage.finalDamage, 0)
   const wouldDie = rawNewHp === 0 && target.alive
 
-  // Phase 4 Slice D (Last Stand): checked at the instant a lethal hit would land, BEFORE any
+  // Checked at the instant a lethal hit would land, BEFORE any
   // death event/hook fires -- one seeded RNG roll, drawn only when the bearer actually carries
   // a nonzero cheat-death chance (an ordinary creature never touches state.rng here, mirroring
-  // targeting.ts's Confusion "draws nothing when inactive" discipline). ASSUMPTION 19: on
+  // targeting.ts's Confusion "draws nothing when inactive" discipline). On
   // success currentHp becomes EXACTLY 1 (not finalDamage-1) and `died` flips to false --
   // resolution below proceeds through the ordinary non-lethal path (DamageDealt's remainingHp
   // reflects 1, on-damage-taken fires since the target survived, no CreatureDied/on-death).
@@ -372,7 +371,7 @@ export function applyDamageAndEmit(
     ).state
   }
 
-  // Phase 4.1-H2b1: the damage observation sits between the hit-reactions and the death chain. The
+  // The damage observation sits between the hit-reactions and the death chain. The
   // hook's `source` is the DAMAGED creature (what `relationship` compares against); a creature
   // killed by this hit is already `alive: false`, so it does not observe its own death blow.
   working = fireHook(
@@ -425,9 +424,9 @@ function fireDeathObservers(
 
 // ---- Hook firing ----
 
-/** Phase 4.1-C2a (A1): fireHook's per-call specifics, out of the positional parameter list. */
+/** fireHook's per-call specifics, out of the positional parameter list. */
 export interface FireHookOptions {
-  /** Phase 4 Slice E2 (general action-observation system): supplied ONLY by the four action
+  /** Supplied ONLY by the four action
    * executors' own 'on-action-observed' call (actions.ts), alongside their existing actor-self
    * hook call -- every other call site omits it. Consulted below to filter ObservationFilter-
    * carrying candidates; meaningless (and unread) for any other hook. */
@@ -435,13 +434,13 @@ export interface FireHookOptions {
     readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
     readonly instanceIndex: number
   }
-  /** Phase 4.1-H2b1 (`spec/effects.md#damage-observation`): supplied ONLY by `applyDamageAndEmit`'s
-   * `on-damage-observed` call. `selfInflicted` is the cost classification carried from the branch
-   * that chose the cost path. Both observation hooks FAIL CLOSED: a candidate on
+  /** Supplied ONLY by `applyDamageAndEmit`'s `on-damage-observed` call
+   * (`spec/effects.md#damage-observation`). `selfInflicted` is the cost classification carried
+   * from the branch that chose the cost path. Both observation hooks FAIL CLOSED: a candidate on
    * `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
    * `observed` is. */
   readonly observedDamage?: { readonly selfInflicted: boolean }
-  /** Phase 4.1-F2 (ASSUMPTION 52): the born-this-turn tick gate, supplied ONLY by `resolveTurn`'s
+  /** The born-this-turn tick gate, supplied ONLY by `resolveTurn`'s
    * `on-turn-end` call. Consulted for every STATUS-sourced candidate (trait-sourced triggers are
    * never gated): true means the bearer's status instance (`statusInstanceId`) was applied or
    * refreshed since this turn's action slot, so its trigger does not fire this turn. Skips
@@ -451,7 +450,7 @@ export interface FireHookOptions {
     bearer: Creature,
     statusInstanceId: EffectInstanceId,
   ) => boolean
-  /** Phase 4.1-F2 (ASSUMPTION 19): "the fight is over" predicate, supplied by `resolveTurn` for
+  /** "the fight is over" predicate, supplied by `resolveTurn` for
    * its in-fight hook passes. Checked BETWEEN top-level candidates only (never inside a
    * cascade -- nested `fireHook` calls get no options): once true the pass stops, so a later
    * firing (e.g. a lethal tick) cannot follow the firing that wiped a side. */
@@ -482,7 +481,7 @@ export function fireHook(
   const { events, cascade } = ctx
   let working = state
   const isDeathHook = hook === 'on-death'
-  // Phase 4 Slice H2 (PR #60 review, E2.1): sourceTraitIds that have already claimed their one
+  // sourceTraitIds that have already claimed their one
   // `stacks: false` slot THIS fireHook call -- claimed the moment an effect is about to roll
   // chancePercent (see below), regardless of whether that roll succeeds, so the AGGREGATE chance
   // of firing stays exactly chancePercent no matter how many creatures carry the same effect.
@@ -493,20 +492,20 @@ export function fireHook(
     if (!initial) continue
     // Candidates are looked up ONCE per creature, from `initial` -- a snapshot at this creature's
     // pass start. The list CAN change mid-pass (an earlier candidate's own response may cleanse
-    // or replace a status this creature also carries -- that's exactly what B4's exact-instance
+    // or replace a status this creature also carries -- that's exactly what the exact-instance
     // check below exists to catch), so aliveness AND each candidate's real owning instance are
     // both re-checked fresh, per effect, against the LIVE creature below -- never trusted off
     // this snapshot.
     const candidates = effectsForHook(initial, hook)
 
     for (const effect of candidates) {
-      if (stopWhen?.(working)) return { state: working } // a wipe ends the pass (F2)
+      if (stopWhen?.(working)) return { state: working } // a wipe ends the pass
       const self = findCreature(working, selfId)
       if (!self) continue
       // Dead creatures fire only on-death; everything else requires a living self.
       if (isDeathHook ? self.alive : !self.alive) continue
 
-      // Phase 4.1-B (B4): the exact-instance rule -- `candidates` was built ONCE, from `initial`,
+      // The exact-instance rule -- `candidates` was built ONCE, from `initial`,
       // at the top of this creature's pass; an EARLIER candidate in this SAME pass may since have
       // removed or replaced (cleanse, then reapply) the status this candidate came from. Re-check
       // against the LIVE `self` (not `initial`) that the effect's REAL owning instance
@@ -519,7 +518,7 @@ export function fireHook(
 
       if (cascade.activeInstances.has(effect.instanceId)) continue // self-re-entry guard
 
-      // F2: see skipStatusTrigger's own doc comment above.
+      // See skipStatusTrigger's own doc comment above.
       if (
         effect.statusId !== undefined &&
         skipStatusTrigger?.(self, effect.sourceInstanceId)
@@ -527,12 +526,12 @@ export function fireHook(
         continue
       }
 
-      // Phase 4 Slice E2: on-action-observed's own filter -- relationship (observer vs actor)/
+      // on-action-observed's own filter -- relationship (observer vs actor)/
       // actionKind/excludeActor. Absent fields match everything (permissive default). Checked
       // BEFORE the generic `condition` (a cheaper, more fundamental "is this candidate even
       // relevant" gate); a non-matching observer draws nothing and consumes no depth budget,
       // same silent-skip discipline as a false condition.
-      // Phase 4.1-H2b1: BOTH observation hooks fail closed. A candidate on `on-action-observed` is
+      // BOTH observation hooks fail closed. A candidate on `on-action-observed` is
       // skipped when the caller passed no `observed`, one on `on-damage-observed` when it passed
       // no `observedDamage` -- a call site that forgets its option can never make every observer
       // fire on every event. (All five action call sites and the one damage call site pass theirs.)
@@ -578,7 +577,7 @@ export function fireHook(
       // earlier same-hook effect's HP change is visible. A false condition means the trigger simply
       // isn't firing: it emits nothing and consumes none of the depth/truncation budget.
       // evaluateCondition is pure (never draws RNG), safe to call for every candidate effect.
-      // Phase 4 Slice E2: `source` (the trigger's OTHER creature -- attacker for on-damage-taken,
+      // `source` (the trigger's OTHER creature -- attacker for on-damage-taken,
       // dead ally for on-ally-death, etc.) is threaded through as the 'target'-subject condition's
       // resolving-against creature; absent for hooks with no such creature (on-round-end,
       // on-fight-start), in which case 'target' simply evaluates false, same as scripting lookahead.
@@ -599,7 +598,7 @@ export function fireHook(
         continue
       }
 
-      // Phase 4 Slice H2 (PR #60 review, E2.1): a `stacks: false` effect claims its one dedup
+      // A `stacks: false` effect claims its one dedup
       // slot HERE -- before the chancePercent roll below, not just on success -- so a second
       // matching effect (e.g. a second Overtone) never gets to roll at all this firing, keeping
       // the aggregate chance at exactly chancePercent regardless of how many creatures carry it.
@@ -608,7 +607,7 @@ export function fireHook(
         claimedNonStacking.add(effect.sourceTraitId)
       }
 
-      // Phase 4 Slice E2 (Concussive Blows / Sleeper): an optional probabilistic gate, a sibling
+      // An optional probabilistic gate, a sibling
       // of `condition`, read uniformly off the resolved-trigger record regardless of whether it
       // came from a trait's TriggeredDef or a triggered effect inside a status. Rolled AFTER the depth-cap
       // check (a depth-capped effect isn't firing, so it must draw zero RNG -- cheat-death's
@@ -638,15 +637,15 @@ export function fireHook(
       }
 
       // Present only when the resolved trigger came from a status; absent for
-      // a plain permanent trait. The snapshot is read from the LIVE owning instance (ASSUMPTION 7:
-      // the safe read -- unobservable today, a same-pass refresh makes the instance born so its
-      // tick is skipped, and a corpse can't be re-applied), never carried on the candidate.
+      // a plain permanent trait. The snapshot is read from the LIVE owning instance (the safe read
+      // -- unobservable today, a same-pass refresh makes the instance born so its tick is skipped,
+      // and a corpse can't be re-applied), never carried on the candidate.
       const statusId = effect.statusId
       const snapshot = owner.category === 'status' ? owner.snapshot : undefined
 
       // A `perform-action` response only ENQUEUES its grant (executeResponse), so the self-re-entry
       // guard below is released before the granted action ever starts: an echo chain can pass
-      // through the same Overtone again, and only `cascade.depth` bounds it (4.1-E, A2).
+      // through the same Overtone again, and only `cascade.depth` bounds it.
       cascade.activeInstances.add(effect.instanceId)
       cascade.depth += 1
       const result = executeResponse(
@@ -678,14 +677,15 @@ function resolveResponseTargets(
       return [context.self]
     case 'triggering-source':
     case 'triggering-ally':
-      // PR #64 review fix 3: never resolves to the firing creature itself. A creature's own cost
+      // Never resolves to the firing creature itself
+      // (`spec/responses.md#triggering-source-is-never-the-firing-creature`). A creature's own cost
       // damages itself (applyCostDamage), so on-damage-taken's hook context has context.source ===
       // context.self, and without this check a retaliatory trait (e.g. Hollowkin Wretch's
       // on-damage-taken -> apply-status(triggering-source, confusion)) would apply its response to
       // its OWN bearer. TriggerFired has already been emitted by the time this resolves (fireHook,
       // before executeResponse runs) -- only the response's actual effect fizzles, the same "no
       // valid target -> empty list -> no-op" discipline every other ResponseTarget already uses.
-      // 4.1-H2b2: a status TICK offers no source at all (applyDamageAndEmit, origin 'tick'), so a
+      // A status TICK offers no source at all (applyDamageAndEmit, origin 'tick'), so a
       // living applier's tick reaches no retaliator either; on-damage-taken itself still fires
       // for a tick (Sleep's wake-on-damage depends on it) -- this only narrows targeting, never
       // hook firing.
@@ -708,7 +708,7 @@ function resolveResponseTargets(
       }
       // The landed target, alive or not: a dead one gets nothing from the rest of the list
       // because NO verb acts on a corpse except `revive` (the verb rule in executeResponse), not
-      // because this target kind filters it (4.1-D review item 3).
+      // because this target kind filters it.
       return [context.castTarget]
     }
     case 'selector': {
@@ -722,7 +722,7 @@ function resolveResponseTargets(
     case 'random-dead-ally': {
       const self = getCreature(state, context.self)
       const party = self.side === 'player' ? state.playerParty : state.enemyParty
-      // Phase 4.1-B (D3): dead allies at the revive cap are excluded from the pool -- an empty
+      // Dead allies at the revive cap are excluded from the pool -- an empty
       // pool draws no random number (the check below runs BEFORE the draw).
       const deadAllies = party.filter(
         (c) => !c.alive && c.revivesUsed < MAX_REVIVES_PER_CREATURE,
@@ -733,12 +733,12 @@ function resolveResponseTargets(
       return chosen ? [chosen.id] : []
     }
     case 'lowest-hp-injured-other-ally': {
-      // Phase 4.1-H2b1 (ASSUMPTION 140): the same pool as the `other-ally-injured` condition.
+      // The same pool as the `other-ally-injured` condition.
       const id = resolveLowestHpInjuredOtherAlly(getCreature(state, context.self), state)
       return id ? [id] : []
     }
     case 'random-ally-without-status': {
-      // Phase 4 Slice H3 (Spore's spread-on-death, ASSUMPTION 30): livingAlliesOf resolves off
+      // livingAlliesOf resolves off
       // `self.side` only (never `self.alive`), so this works correctly even when self is the
       // just-died Spore bearer firing its own on-death trigger.
       const self = getCreature(state, context.self)
@@ -757,7 +757,7 @@ function resolveResponseTargets(
   }
 }
 
-/** True iff a flat magnitude is the `snapshot-potency` marker (a status's tick, 4.1-H2b2). */
+/** True iff a flat magnitude is the `snapshot-potency` marker (a status's tick). */
 function isSnapshotPotency(
   amount: number | StatPercent | SnapshotPotency,
 ): amount is SnapshotPotency {
@@ -776,7 +776,7 @@ function requireSnapshot(context: HookContext): StatusSnapshot {
   return context.snapshot
 }
 
-/** The creature a tick credits (4.1-H2b2, ASSUMPTIONS 113, 146): its applier WHILE IT LIVES --
+/** The creature a tick credits: its applier WHILE IT LIVES --
  * judged at tick time, so a revived applier is the source again -- else the bearer, which is only
  * the logged source (`dealerId` is then null: no dealer-side hook fires). One rule for the damage
  * tick and Regen's heal. */
@@ -826,7 +826,7 @@ export function executeResponse(
 ): { state: CombatState } {
   switch (response.kind) {
     case 'deal-damage': {
-      // ASSUMPTION 6: offStat/scalingStat/flatAmount are mutually exclusive -- setting more
+      // offStat/scalingStat/flatAmount are mutually exclusive -- setting more
       // than one is a resolver-invariant error, mirroring applyStatus's unknown-statusId throw,
       // rather than silently picking one.
       const modesSet = [
@@ -840,37 +840,38 @@ export function executeResponse(
         )
       }
       const bearer = getCreature(state, context.self)
-      // Phase 4 Slice D: magnitudeSource, when present, is the repetition count this response's
+      // magnitudeSource, when present, is the repetition count this response's
       // magnitude is scaled by, a live resolveMagnitudeCount(...) reading (see MagnitudeSource's
       // own doc comment); absent, the count stays the implicit 1, in flat AND formula mode (a
-      // status is single-instance, 4.1-H2b2). Resolved ONCE up front (bearer/state don't change
-      // per target); the single `count` feeds whichever mode below actually reads it (only one
+      // status is single-instance). Resolved ONCE up front (bearer/state don't change per target);
+      // the single `count` feeds whichever mode below actually reads it (only one
       // does per call).
       const count = response.magnitudeSource
         ? resolveMagnitudeCount(bearer, state, response.magnitudeSource)
         : undefined
-      // A status's tick (4.1-H2b2): its snapshot is required up front (the invariant throw), read
+      // A status's tick: its snapshot is required up front (the invariant throw), read
       // once -- the bearer is the one target (the validator pins `self`).
       const tickSnapshot =
         response.flatAmount !== undefined && isSnapshotPotency(response.flatAmount)
           ? requireSnapshot(context)
           : undefined
-      // PR #64 review fix 4: a magnitudeSource resolving to exactly 0 is a FULL no-op -- no
+      // A magnitudeSource resolving to exactly 0 is a FULL no-op -- no
       // DamageDealt, no downstream damage-path hooks (on-damage-dealt/on-damage-taken/death). The
       // damage formula's own MIN(1, floor(raw)) floor would otherwise still deal 1 damage even at
       // 0 effective offense (0 * spellPower = 0 through the whole formula, but the "a hit always
       // removes >=1 HP" floor doesn't know this was never really a hit). TriggerFired was already
       // emitted by fireHook before executeResponse runs, so it is NOT retracted here -- only the
       // response's own consequence is skipped. Absent magnitudeSource is untouched (count stays
-      // undefined, this branch never taken) -- byte-identical to pre-fix-4 behavior.
+      // undefined, this branch never taken).
       if (response.magnitudeSource && count === 0) {
         return { state }
       }
-      // No count (a trait's own trigger, no magnitudeSource): the implicit 1 -- exact pre-Slice-D
-      // values (a no-op multiplier on spellPower).
+      // No count (a trait's own trigger, no magnitudeSource): the implicit 1
+      // (a no-op multiplier on spellPower).
       const flatCount = count ?? 1
-      // Phase 4.1-D: a spell's cast-instance fraction (`castPowerFraction`) takes the place of the
-      // implicit `1`, in the SAME multiplication order as the pre-4.1-D `spell.spellPower * pf`.
+      // A spell's cast-instance fraction (`castPowerFraction`) takes the place of the
+      // implicit `1`, in the SAME multiplication order (`spellPower * fraction`) as the legacy
+      // cast path, so the result stays byte-identical with what `spell-effects.test.ts`'s oracle pins.
       const formulaMultiplier = count ?? context.castPowerFraction ?? 1
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
@@ -878,7 +879,7 @@ export function executeResponse(
         if (!t || !t.alive) continue // never strike a corpse
         const damageSource = response.damageSource ?? 'dot'
         if (tickSnapshot !== undefined) {
-          // A status tick (ASSUMPTION 144): recognised by its marker, never by the 'dot' label or
+          // A status tick: recognised by its marker, never by the 'dot' label or
           // by statusId + self (CATASTROPHIC_COLLAPSE carries that label and is a cost).
           working = applyTickDamage(
             targetId,
@@ -904,7 +905,7 @@ export function executeResponse(
               context.statusId,
             )
           } else {
-            // Flat mode is always indirect (no true-damage channel, ASSUMPTION 112): the flat
+            // Flat mode is always indirect (no true-damage channel): the flat
             // amount is the magnitude, Attack-flavoured unless tagged 'cast'.
             working = dealDamageCore(
               context.self,
@@ -974,12 +975,12 @@ export function executeResponse(
       return { state: working }
     }
     case 'heal': {
-      // Phase 4 Slice E2 (Treants Elder / Necromoss): mirrors deal-damage's own mode-selection
-      // exactly (ASSUMPTION 6-style exclusivity, magnitudeSource-as-repetition-count). Flat mode
-      // (the Wick's heal; Regen's tick via the `snapshot-potency` marker, 4.1-H2b2) reads
+      // Mirrors deal-damage's own mode-selection
+      // exactly (exclusivity, magnitudeSource-as-repetition-count). Flat mode
+      // (the Wick's heal; Regen's tick via the `snapshot-potency` marker) reads
       // `flatAmount`; `scalingStat` mode reads the HEALER's (firing creature's) own effective stat
       // × spellPower × the same live count -- never the target's.
-      // Phase 4.1-D (F2): offStat joins as the third mode; all three are mutually exclusive.
+      // offStat joins as the third mode; all three are mutually exclusive.
       const healModesSet = [
         response.flatAmount !== undefined,
         response.scalingStat !== undefined,
@@ -995,7 +996,7 @@ export function executeResponse(
       const count = response.magnitudeSource
         ? resolveMagnitudeCount(bearer, state, response.magnitudeSource)
         : undefined
-      // PR #64 review fix 4: mirrors deal-damage's own zero-count no-op -- see its comment above.
+      // Mirrors deal-damage's own zero-count no-op -- see its comment above.
       // A heal has no min-1 floor to worry about (applyHeal's own Math.max(0, ...) already
       // allows a 0 heal), but this still skips emitting a HealApplied event for a "heal" that
       // never really happened.
@@ -1006,7 +1007,7 @@ export function executeResponse(
       // deal-damage's own magnitudeSource.
       const flatCount = count ?? 1
       const formulaMultiplier = count ?? context.castPowerFraction ?? 1
-      // Regen's tick (4.1-H2b2): the snapshot is required up front, like deal-damage's.
+      // Regen's tick: the snapshot is required up front, like deal-damage's.
       const tickSnapshot =
         response.flatAmount !== undefined && isSnapshotPotency(response.flatAmount)
           ? requireSnapshot(context)
@@ -1018,7 +1019,7 @@ export function executeResponse(
         if (!t || !t.alive) continue
         if (tickSnapshot !== undefined) {
           // The healer's potency, frozen at application; credited to the applier while it lives,
-          // else the bearer -- the damage tick's rule (ASSUMPTION 146, one tick rule).
+          // else the bearer -- the damage tick's rule (one tick rule).
           working = applyHeal(
             tickDealer(tickSnapshot, working).sourceOf(targetId),
             targetId,
@@ -1030,8 +1031,9 @@ export function executeResponse(
         }
         let amount: number
         if (response.offStat !== undefined) {
-          // Remap-aware (a stat-remap redirects the slot), the lookup a heal SPELL always used;
-          // `spellPower × multiplier` is associated exactly as the pre-4.1-D `sp * pf`.
+          // Remap-aware (a stat-remap redirects the slot), the lookup a heal SPELL uses;
+          // `spellPower × multiplier` keeps the legacy cast path's association, so the result
+          // stays byte-identical with what `spell-effects.test.ts`'s oracle pins.
           amount = getOffensiveStat(
             bearer,
             response.offStat,
@@ -1040,7 +1042,7 @@ export function executeResponse(
         } else if (response.scalingStat !== undefined) {
           // One formula for every formula-mode magnitude, trait or spell: `stat * (spellPower *
           // multiplier)`, the order deal-damage uses in every mode and `offStat` gets through
-          // getOffensiveStat above (4.1-D review item 2; `spec/combat.md#the-stat-a-spells-magnitude-scales-off`, heal).
+          // getOffensiveStat above (`spec/combat.md#the-stat-a-spells-magnitude-scales-off`, heal).
           amount =
             getEffectiveStat(bearer, response.scalingStat) *
             ((response.spellPower ?? 1.0) * formulaMultiplier)
@@ -1056,7 +1058,7 @@ export function executeResponse(
       return { state: working }
     }
     case 'apply-stat-modifier': {
-      // Phase 4 Slice E2 (Swarmhive Striker / Necromoss): FREEZE-AT-APPLICATION -- resolved
+      // FREEZE-AT-APPLICATION -- resolved
       // ONCE here (relative to the FIRING creature, context.self -- the bearer whose own
       // side/species/etc. the count reads), before the per-target loop; the resulting
       // finalFactor is a plain number baked into every target's new StatModifierEffect, never
@@ -1072,7 +1074,8 @@ export function executeResponse(
 
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
-        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts
+        // on a dead creature, except `revive`.
         if (!findCreature(working, targetId)?.alive) continue
         working = applyStatModifier(
           context.self,
@@ -1089,9 +1092,10 @@ export function executeResponse(
     case 'apply-status': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
-        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts
+        // on a dead creature, except `revive`.
         if (!findCreature(working, targetId)?.alive) continue
-        // Pass-on by rule (ASSUMPTIONS 143, 145): a status's OWN effect applying that same status
+        // Pass-on by rule: a status's OWN effect applying that same status
         // copies the firing instance's snapshot (Spore's spread, the dying bearer's whole
         // snapshot). A trait, perk or spell has no `statusId` in its context, so a carrier can
         // never pass a snapshot on -- it snapshots its own stat fresh.
@@ -1109,10 +1113,10 @@ export function executeResponse(
       return { state: working }
     }
     case 'perform-action': {
-      // Phase 4.1-E (A2): ENQUEUE only -- actions are atomic, so the granted action starts after the
+      // ENQUEUE only -- actions are atomic, so the granted action starts after the
       // granting action completes, when the scope that owns `ctx` drains `ctx.grants`
       // (actions.ts `drainGrantedActions`). `'triggering-source'` is the hook's source INCLUDING
-      // the bearer (the PR #64 "never the firing creature" rule is for response targets). No
+      // the bearer (`spec/responses.md#triggering-source-is-never-the-firing-creature` is for response targets). No
       // actor-state check here: only the actor's state WHEN THE GRANT RUNS decides it (dead,
       // locked, skipped turn), and the bearer dying afterwards doesn't cancel it. `depth` is the
       // granting trigger's depth (fireHook already added its +1), so a chain stays depth-bounded.
@@ -1132,12 +1136,12 @@ export function executeResponse(
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
-        // Phase 4.1-B (D3): target must be dead AND under the revive cap -- the RNG-avoidance
+        // Target must be dead AND under the revive cap -- the RNG-avoidance
         // half of the cap lives in resolveResponseTargets' random-dead-ally branch above; this is
         // the defensive re-check for any OTHER ResponseTarget a future revive might use.
         if (!target || target.alive || target.revivesUsed >= MAX_REVIVES_PER_CREATURE)
           continue
-        // Death-reset: re-instantiate the target's OWN already-resolved `baselineEffects` (S1) --
+        // Death-reset: re-instantiate the target's OWN already-resolved `baselineEffects` --
         // fresh instance ids from the shared per-fight counter, no registry lookup needed (no
         // ramp preserved: innate traits + perks come back exactly as they were at fight-start).
         // Then currentHp = round(baselineMaxHp * pct) computed from THAT fresh baseline.
@@ -1160,7 +1164,7 @@ export function executeResponse(
           // just stat-modifiers/statuses.
           defending: false,
           provoking: false,
-          // Phase 4.1-B (D3): counts up, NEVER reset by death or by this very revive's own reset
+          // Counts up, NEVER reset by death or by this very revive's own reset
           // -- it's the thing MAX_REVIVES_PER_CREATURE bounds.
           revivesUsed: target.revivesUsed + 1,
         })
@@ -1176,7 +1180,8 @@ export function executeResponse(
     case 'grant-action-state': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
-        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D round 2).
+        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts
+        // on a dead creature, except `revive`.
         if (!findCreature(working, targetId)?.alive) continue
         working = updateCreature(working, targetId, {
           ...(response.defending ? { defending: true } : {}),
@@ -1186,7 +1191,7 @@ export function executeResponse(
       return { state: working }
     }
     case 'remove-status': {
-      // Phase 4 Slice E2 (Sleep's on-damage-taken wake-up; future cleanse/dispel). It has a real
+      // Sleep's on-damage-taken wake-up; future cleanse/dispel. It has a real
       // `target` field -- reuses the full ResponseTarget
       // vocabulary, so "cleanse lowest-hp-ally" / "dispel all-enemies" get targeting for free.
       // A no-op, no-event when the target doesn't carry the statusId (mirrors revive's
@@ -1195,7 +1200,8 @@ export function executeResponse(
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
-        // The verb rule: no response acts on a dead creature, except `revive` (4.1-D item 3).
+        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts
+        // on a dead creature, except `revive`.
         if (!target || !target.alive) continue
         const existing = target.activeEffects.find(
           (e): e is StatusEffect =>
@@ -1223,15 +1229,16 @@ export function executeResponse(
 }
 
 /**
- * Phase 4.1-H2b2 (ASSUMPTIONS 113, 143, 144, 146; `spec/statuses.md#the-applier-snapshot`): a status's damage tick -- INDIRECT damage computed from the instance's applier
- * snapshot, through the ONE indirect formula (`calculateIndirectDamage`, no third formula):
- * `potency × affinity(snapshot vs bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective
- * Defence`, `MAX(1, floor(...))`. Defend's ×1.5 Defence and ×0.65 taken factor apply, as for all
- * indirect damage. There is NO dealt pool (so no `conditional-damage-bonus`), no cross-stat, no
- * armour penetration and no Additional: those are the applier's live build, absent from the
- * snapshot. The source is the applier while it lives, else the bearer (`tickDealer`); the origin
- * is a `tick` carrying that dealer, so the bearer's hooks see no `triggering-source` and the
- * dealer-side hooks fire only for a living applier. Never self-inflicted.
+ * A status's damage tick -- INDIRECT damage computed from the instance's applier snapshot
+ * (`spec/statuses.md#the-applier-snapshot`), through the ONE indirect formula
+ * (`calculateIndirectDamage`, no third formula):
+ * `potency × affinity(snapshot vs bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective Defence`,
+ * `MAX(1, floor(...))`. Defend's ×1.5 Defence and ×0.65 taken factor apply, as for all indirect
+ * damage. There is NO dealt pool (so no `conditional-damage-bonus`), no cross-stat, no armour
+ * penetration and no Additional: those are the applier's live build, absent from the snapshot. The
+ * source is the applier while it lives, else the bearer (`tickDealer`); the origin is a `tick`
+ * carrying that dealer, so the bearer's hooks see no `triggering-source` and the dealer-side
+ * hooks fire only for a living applier. Never self-inflicted.
  */
 function applyTickDamage(
   bearerId: CreatureId,
@@ -1265,7 +1272,7 @@ function applyTickDamage(
 }
 
 /**
- * Phase 4.1-H2a (ASSUMPTIONS 116, 132): a COST -- a creature's own trait/status/perk response
+ * A COST -- a creature's own trait/status/perk response
  * damaging itself. The exact magnitude, floored once, no Defence/pools/affinity/Additional. A cost
  * of 0 is a full no-op (no event, no hooks): the minimum of 1 exists so a hit always lands, and a
  * cost isn't a hit. Still a damage event with the creature as its own source, through
@@ -1281,7 +1288,7 @@ function applyCostDamage(
 ): CombatState {
   const damage = calculateCost(magnitude)
   if (damage.finalDamage === 0) return state
-  // The ONLY caller that passes origin 'cost' (Phase 4.1-H2b1, ASSUMPTIONS 115, 132, 137): the
+  // The ONLY caller that passes origin 'cost': the
   // cost classification is the choice of this branch, carried -- not re-derived from the ids.
   return applyDamageAndEmit(
     selfId,
@@ -1297,8 +1304,8 @@ function applyCostDamage(
 
 /** Regen tick / spell heal: a flat or stat-scaled heal, clamped to effective max Health -- no
  * auto-heal past it. Reached through `executeResponse`'s `heal` (a trigger's or a spell's own
- * effect list); exported so the 4.1-D equivalence oracle (spell-effects.test.ts) can replay the
- * pre-4.1-D cast path on the same primitive. */
+ * effect list); exported so the equivalence oracle (spell-effects.test.ts) can replay the
+ * legacy cast path on the same primitive. */
 export function applyHeal(
   sourceId: CreatureId,
   targetId: CreatureId,
@@ -1321,21 +1328,21 @@ export function applyHeal(
 }
 
 /**
- * Applies (or re-applies) a status. Single instance per (statusId, creature) (4.1-H2b2, ASSUMPTION
- * 114): a fresh application creates a new instance at the status's declared duration; re-applying
- * keeps the instance (and its id), REFRESHES the timer to the new application's duration (even
+ * Applies (or re-applies) a status. Single instance per (statusId, creature): a fresh application
+ * creates a new instance at the status's declared duration; re-applying keeps the instance (and its
+ * id), REFRESHES the timer to the new application's duration (even
  * when shorter) and resets `appliedAt` (born this turn), and replaces the applier snapshot ONLY
  * when the new one's potency is STRICTLY greater -- a tie or a weaker one keeps the current
  * instance whole (applier, affinity and potency), so the source of later ticks does not move on a
  * tie. A fixed-magnitude status carries no snapshot and just refreshes. Every application emits
- * StatusApplied (`sourceId` = the applying creature, ASSUMPTION 9) and fires on-status-applied
+ * StatusApplied (`sourceId` = the applying creature) and fires on-status-applied
  * (event-before-hook), weaker or tied included.
  *
  * The candidate snapshot is `inherited` when the caller passes one (a status's own effect applying
- * the same status: Spore's spread, ASSUMPTION 143) and otherwise the APPLYING creature's own,
- * taken fresh now (`snapshotFor`) -- even when that creature carries the status itself.
+ * the same status: Spore's spread) and otherwise the APPLYING creature's own, taken fresh now
+ * (`snapshotFor`) -- even when that creature carries the status itself.
  *
- * Phase 4 Slice F (review amendment): `spec.duration ?? def.defaultDuration` -- an omitted
+ * `spec.duration ?? def.defaultDuration` -- an omitted
  * duration inherits the status's own declared default; an explicit one overrides it.
  */
 export function applyStatus(
@@ -1361,7 +1368,7 @@ export function applyStatus(
     ? (inherited ?? snapshotFor(getCreature(state, sourceId), def.potency))
     : undefined
 
-  // Phase 4.1-B (B4): refreshing keeps the existing instance and its id (no new counter draw);
+  // Refreshing keeps the existing instance and its id (no new counter draw);
   // only a genuinely FRESH application issues a new id, from the shared per-fight counter (the
   // ONLY production issuer -- never a derived/deterministic string, so a removed-then-reapplied
   // status always gets a truly new id, never the old one back).
@@ -1369,15 +1376,15 @@ export function applyStatus(
   const nextEffects: ActiveEffect[] = existing
     ? target.activeEffects.map((e) =>
         e.instanceId === existing.instanceId
-          ? // Phase 4 Slice H2 (PR #60 review): spread `existing` (already narrowed to the status
+          ? // Spread `existing` (already narrowed to the status
             // container by the `.find()` above), not the loop's own `e: ActiveEffect` --
-            // `TriggeredEffect` carries an UNRELATED `stacks?: boolean` field (E2.1's dedup
+            // `TriggeredEffect` carries an UNRELATED `stacks?: boolean` field (the dedup
             // flag), so spreading the raw union member no longer type-checks cleanly against
             // `ActiveEffect`. `existing` carries the exact same runtime value at this index.
             {
               ...existing,
               remainingDuration: duration,
-              appliedAt: state.turnClock, // F2: a refresh is born this turn too
+              appliedAt: state.turnClock, // a refresh is born this turn too
               ...(candidate &&
               (existing.snapshot === undefined ||
                 candidate.potency > existing.snapshot.potency)
@@ -1414,7 +1421,7 @@ export function applyStatus(
 
 /** Reached through `executeResponse`'s `apply-stat-modifier` (sourceTraitId = the firing trait's
  * id, or the spell's own id for a spell's effect, for effect-instance-id/debugging legibility);
- * exported for the 4.1-D equivalence oracle, like `applyHeal` above. */
+ * exported for the equivalence oracle, like `applyHeal` above. */
 export function applyStatModifier(
   sourceId: CreatureId,
   targetId: CreatureId,
@@ -1426,9 +1433,9 @@ export function applyStatModifier(
 ): CombatState {
   const target = getCreature(state, targetId)
   const effectiveBefore = getEffectiveStat(target, stat)
-  // Phase 4.1-B (B4): a fresh id from the shared per-fight counter -- the counter alone already
+  // A fresh id from the shared per-fight counter -- the counter alone already
   // guarantees distinct ids across re-applications (e.g. Grudge firing on each ally death), so
-  // the old ordinal-scan-over-a-deterministic-prefix trick is no longer needed.
+  // no ordinal scan over a deterministic prefix is needed.
   const modifier: ActiveEffect = {
     category: 'stat-modifier',
     stat,

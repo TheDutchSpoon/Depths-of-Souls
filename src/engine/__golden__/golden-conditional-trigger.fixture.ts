@@ -8,7 +8,7 @@
 // currentHp < 15 (integer cross-multiply: currentHp*100 < 50*30 = 1500).
 //
 //   A→X (off 20, def 8):                    core 12, chip 0.20 → raw 12.20 → 12.
-//   X retaliate→A (magnitude 16×0.3=4.8, def 6): a trait response is INDIRECT (4.1-H2a):
+//   X retaliate→A (magnitude 16×0.3=4.8, def 6): a trait response is INDIRECT:
 //     4.8×1×1×1 − 0.2×6 = 4.8 − 1.2 = 3.6 → floor 3 (float: 3.5999999999999996), no chip, not chip-only.
 //
 //   R1: X 30 → 18. 18 ≥ 15 → condition FALSE → no retaliation.

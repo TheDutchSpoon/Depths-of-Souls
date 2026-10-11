@@ -86,7 +86,7 @@ export const expectedRound1TurnOrder: readonly CreatureId[] = [
 ].map(createCreatureId)
 
 /** Per-event-type counts across the full ~28-round fight. Sparse: only the event types that
- * actually occur are keys (Phase 3's new event types never fire in this Phase-2-content fight),
+ * actually occur are keys (event types this fight never fires are absent),
  * matching how the test tallies actual events. */
 export const expectedEventTypeCounts: Partial<Record<CombatEvent['type'], number>> = {
   FightStarted: 1,
@@ -98,7 +98,7 @@ export const expectedEventTypeCounts: Partial<Record<CombatEvent['type'], number
   Defended: 41,
   Provoked: 4,
   Waited: 50,
-  // Phase 4.1-C (D6, fixes B6): turn-start cleanup now unconditionally emits ActionStateEnded
+  // turn-start cleanup unconditionally emits ActionStateEnded
   // whenever a Defend/Provoke flag actually expires -- one per Defended/Provoked action whose
   // bearer survives to reach its own next turn (fewer than the 45 total Defended+Provoked here,
   // since a creature that dies before its own next turn never gets another turn-start cleanup to

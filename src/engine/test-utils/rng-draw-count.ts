@@ -1,9 +1,8 @@
-// Phase 4.1-B (B-2): a test-only helper replacing the old `countingRng` (a closure wrapper
-// around `SeededRng.next()`, impossible once `CombatState.rng` is a plain `{ position }` bookmark
-// with no method to wrap). Every `nextRandom` draw adds a FIXED increment (0x6d2b79f5, mod 2**32)
-// to `position`, so the number of draws between two bookmarks is exact and derivable from the
-// bookmarks alone -- no spying on the module, which would depend on how the test runner rewrites
-// ESM imports.
+// A test-only helper counting RNG draws. It reads `rng.position` because `CombatState.rng` is a
+// plain `{ position }` bookmark with no method to wrap. Every `nextRandom` draw adds a FIXED
+// increment (0x6d2b79f5, mod 2**32) to `position`, so the number of draws between two bookmarks is
+// exact and derivable from the bookmarks alone -- no spying on the module, which would depend on
+// how the test runner rewrites ESM imports.
 
 import type { RngState } from '../rng'
 import { nextRandom } from '../rng'

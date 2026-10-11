@@ -1,6 +1,6 @@
-// Golden: Pacified (Phase 4.1-F3, G2) -- the real Pacify spell locks its target's Attack for the
+// Golden: Pacified -- the real Pacify spell locks its target's Attack for the
 // target's next THREE OWN turns, whether the target acts after its applier in round 1 or before it,
-// and each lock expires in its own bearer's turn-end cleanup (F2: one born window, durations count
+// and each lock expires in its own bearer's turn-end cleanup (one born window, durations count
 // the bearer's turns). A scoped lock never skips the turn: a Pacified always-attack creature has no legal attack, so the implicit fallback WAITS.
 // Hand-derived.
 //

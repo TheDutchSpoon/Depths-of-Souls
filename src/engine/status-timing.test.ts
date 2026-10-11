@@ -1,7 +1,7 @@
-// Phase 4.1-F2: status timing in the bearer's turns -- the born-this-turn clock, the countdown and
-// the Web roll in turn-end cleanup, and the win checks inside a turn (ASSUMPTIONS 15, 18, 19, 49,
-// 51, 52). The goldens (golden-f2-*, golden-stun, golden-dot, ...) pin end-to-end logs; each test
-// here is the one that fails with its mechanism removed (the phase record lists each mutation).
+// Status timing in the bearer's turns -- the born-this-turn clock, the countdown and
+// the Web roll in turn-end cleanup, and the win checks inside a turn. The goldens (golden-f2-*,
+// golden-stun, golden-dot, ...) pin end-to-end logs; each test here is the one that fails with its
+// mechanism removed.
 
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from './combat'
@@ -164,7 +164,7 @@ const lethalHit = (
   },
 })
 
-// ---- The born-this-turn clock: the action-slot window (ASSUMPTIONS 18, 49) ----
+// ---- The born-this-turn clock: the action-slot window ----
 
 describe('the born window opens at the action slot', () => {
   it('a Weaken 1 self-applied at turn START counts down at that same turn end (applied before the slot)', () => {
@@ -220,7 +220,7 @@ describe('the born window opens at the action slot', () => {
   })
 })
 
-// ---- The countdown and the tick gate (ASSUMPTIONS 18, 52) ----
+// ---- The countdown and the tick gate ----
 
 describe('born-this-turn: tick gate and countdown', () => {
   // X attacks in round 1 only; its on-attack trigger Poisons it (an action-phase application,
@@ -275,7 +275,7 @@ describe('born-this-turn: tick gate and countdown', () => {
   })
 })
 
-// ---- Corpses (ASSUMPTION 51) ----
+// ---- Corpses ----
 
 describe("a corpse's statuses are inert", () => {
   it('a bearer that dies in its own turn gets no countdown and no StatusExpired', () => {
@@ -304,7 +304,7 @@ describe("a corpse's statuses are inert", () => {
   })
 })
 
-// ---- The Web roll in turn-end cleanup (ASSUMPTION 15) ----
+// ---- The Web roll in turn-end cleanup ----
 
 describe('the Web roll', () => {
   it('a Web applied since the action slot is not rolled at the applier turn end, but at the next creature turn end', () => {
@@ -411,7 +411,7 @@ describe('the Web roll', () => {
   })
 })
 
-// ---- Win checks inside the turn (ASSUMPTION 19) ----
+// ---- Win checks inside the turn ----
 
 const marker = (hook: 'on-turn-end'): EffectDef => ({
   category: 'triggered',
@@ -584,7 +584,7 @@ describe('a hook pass stops at the firing that wipes (never inside a cascade)', 
     expectEndsWithWin(events)
   })
 
-  it('turn-end pass: a lethal own Poison tick after the wiping firing is a WIN with no tick (the PR #70 case)', () => {
+  it('turn-end pass: a lethal own Poison tick after the wiping firing is a WIN with no tick', () => {
     // X (3 HP, Poisoned at fight start: a 3% tick of 100 max HP is 3 = lethal) empties the enemy
     // side in its own turn-end pass; the tick that follows in the same pass must not run.
     const { events, state } = run(
@@ -642,7 +642,7 @@ describe('a grant drain stops at the grant that wipes', () => {
   )
 })
 
-// ---- The fight-start win check (Phase 4.1-F3, ASSUMPTION 61) ----
+// ---- The fight-start win check ----
 
 describe('a fight-start wipe ends the fight before round 1', () => {
   const noRound = (events: readonly CombatEvent[]) => {
@@ -697,7 +697,7 @@ describe('a fight-start wipe ends the fight before round 1', () => {
   })
 })
 
-// ---- Round end has no status work (ASSUMPTION 50) ----
+// ---- Round end has no status work ----
 
 describe('a status may not trigger on round end', () => {
   const ROUND_END_DOT: StatusDef = {
@@ -731,14 +731,14 @@ describe('a status may not trigger on round end', () => {
   })
 })
 
-// ---- Arcane Surge shares the turn-end pass with the ticks (brief, PR #78 review) ----
+// ---- Arcane Surge shares the turn-end pass with the ticks ----
 
 describe('Arcane Surge and a lethal tick in one turn-end pass', () => {
   it("a Seer killed by its own tick keeps Surge's TriggerFired; the queued cast is refused at drain (dead actor)", () => {
     // Innate effects run before the status tick in canonical effect order, so the Surge roll
     // (seed 0's first draw, 0.2664 < 50%) happens first. The Poison then kills the Seer (3 HP; its
-    // tick is the 4.1-H2b2 applier-snapshot potency, no longer a percent of max HP); the grant it
-    // queued is refused (ASSUMPTION 43). An ally keeps the side alive, so the drain runs.
+    // tick is the applier-snapshot potency); the grant it
+    // queued is refused. An ally keeps the side alive, so the drain runs.
     const state = fight(
       [
         {

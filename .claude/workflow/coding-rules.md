@@ -45,8 +45,10 @@ before designing around it.
   lives.
 - Engine stays pure (no UI/store/data imports in `src/engine`).
 - Green all gates before reporting done: `npm run test`, `npm run lint`, `npm run format:check`,
-  `npm run build`, `npx tsc -b`, and `npm run docs:check -- citations` (CI blocks on it: a comment
-  that cites the docs must cite `<path>.md#<anchor>` and resolve).
+  `npm run build`, `npx tsc -b`, `npm run docs:check -- citations` (CI blocks on it: a comment
+  that cites the docs must cite `<path>.md#<anchor>` and resolve) and `npm run docs:check --
+  comments` (CI blocks on it: no provenance in a `src/` comment or test title,
+  `CONVENTIONS.md#comment-why-not-what`).
 - Leave `main` green and deployable; a demo consumes the engine, it doesn't leak into it.
 - **Never commit, never delete files.** Say what needs deleting; Duncan commits and deletes.
 - **The living docs are the design agent's:** `CLAUDE`, `CONVENTIONS`, `VISION`, `OPEN_QUESTIONS`,

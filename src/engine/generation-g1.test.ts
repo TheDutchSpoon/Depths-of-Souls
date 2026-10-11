@@ -25,8 +25,8 @@ import {
   FIXTURE_WIT_BOLT_TIER2,
 } from './__fixtures__/biomes'
 
-// Phase 4.1-G1: generation's enemy-behaviour rules, split from generation.test.ts so the slice's
-// tests read together -- full distinct gem sets (D4), the cast-role check, and the 6v6 boss fill.
+// generation's enemy-behaviour rules, split from generation.test.ts so these
+// tests read together -- full distinct gem sets, the cast-role check, and the 6v6 boss fill.
 
 function constantRng(value: number): SeededRng {
   return { next: () => value }
@@ -78,7 +78,7 @@ const asRole = (creature: SpeciesCreature, role: string): SpeciesCreature => ({
   defaultScriptId: role,
 })
 
-describe('generateFloor: full distinct gem sets (Phase 4.1-G1, ASSUMPTION 70)', () => {
+describe('generateFloor: full distinct gem sets', () => {
   it('a pool of 4 gives every enemy 3 DISTINCT affinity-matched spells, across seeds', () => {
     const spells = [WIT_A, WIT_B, WIT_C, WIT_D, FIXTURE_VIOLENCE_BOLT]
     for (let seed = 1; seed <= 40; seed++) {
@@ -166,7 +166,7 @@ describe('generateFloor: full distinct gem sets (Phase 4.1-G1, ASSUMPTION 70)', 
   })
 })
 
-describe('generateFloor: the cast-role check (Phase 4.1-G1, ASSUMPTION 67)', () => {
+describe('generateFloor: the cast-role check', () => {
   it('the cast roles are caster, support and opener', () => {
     expect([...CAST_ROLE_SCRIPT_IDS]).toEqual(['caster', 'support', 'opener'])
   })
@@ -199,7 +199,7 @@ describe('generateFloor: the cast-role check (Phase 4.1-G1, ASSUMPTION 67)', () 
     ).toThrow(/has no wit spell unlocked at biome 1/)
   })
 
-  it('no other role is a cast role, and always-cast no longer is: an empty pool is fine', () => {
+  it('no other role is a cast role, and always-cast is not: an empty pool is fine', () => {
     for (const role of ['striker', 'guardian', 'warden', 'taunter', 'always-cast']) {
       expect(() =>
         generateFloor(
@@ -215,7 +215,7 @@ describe('generateFloor: the cast-role check (Phase 4.1-G1, ASSUMPTION 67)', () 
   })
 })
 
-describe('generateFloor: the boss fill (Phase 4.1-G1, 6v6 boss floors, ASSUMPTION 72)', () => {
+describe('generateFloor: the boss fill (6v6 boss floors)', () => {
   const bossBiome = (
     boss: Partial<BossEncounter>,
     pool = FIXTURE_BIOME.speciesPool,

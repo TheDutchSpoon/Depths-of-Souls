@@ -1,4 +1,4 @@
-// Golden: the `cheat-death` passive EffectDef (Phase 4 Slice D, Last Stand-shaped) -- intercepted
+// Golden: the `cheat-death` passive EffectDef (Last Stand-shaped) -- intercepted
 // inside applyDamageAndEmit at the instant a hit would reduce a living target to 0 HP, BEFORE
 // CreatureDied/on-death fire. Two rigged seeds against the IDENTICAL parties/scripts, proving
 // both branches of the one seeded RNG roll:
@@ -7,7 +7,7 @@
 //   raw 20.2 -> final 20 -- EXACTLY lethal. DEFENDER carries a 50% cheat-death passive.
 //
 // SEED 7's first RNG draw is 0.0117... (< 0.5 -> the roll SUCCEEDS): DEFENDER survives at
-// exactly 1 HP (ASSUMPTION 19), no CreatureDied/on-death. DEFENDER then takes its own turn
+// exactly 1 HP, no CreatureDied/on-death. DEFENDER then takes its own turn
 // (still alive) and attacks back: off 15 (DEFENDER's own Attack), def 0 -> core 15, chip
 // 0.01*15=0.15 -> raw 15.15 -> final 15 -- EXACTLY ATTACKER's health (15), which has no
 // cheat-death of its own, so it dies normally. DEFENDER's side wins.
@@ -79,7 +79,7 @@ export const expectedEventsSuccess: CombatEvent[] = [
     sourceId: ATTACKER,
     targetId: DEFENDER,
     rawDamage: 20.2,
-    finalDamage: 20, // unchanged (ASSUMPTION 19) -- only remainingHp reflects the save
+    finalDamage: 20, // unchanged -- only remainingHp reflects the save
     affinityMultiplier: 1,
     wasChipOnly: false,
     remainingHp: 1,

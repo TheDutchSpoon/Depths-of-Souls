@@ -1,16 +1,14 @@
 // Golden: the Sorcerer starter's real signature trait (data/traits/starters.ts's
-// SORCERER_STARTER_TRAIT, an on-turn-end `perform-action` since 4.1-E) + its real granted spell (ARCANE_BOLT,
-// data/spells/overgrowth.ts -- also a normal biome-1 Wit spawn-pool spell as of the data-layer
-// carrier reorg)
-// -- "50% chance on-turn-end to cast a random equipped spell." Phase 4.1-B (A8, design-review
-// B-10): CASTER carries NO explicit `equippedSpells` -- ARCANE_BOLT comes SOLELY from
-// SORCERER_STARTER_TRAIT's own `innate-spell` effect, which `createCombat`'s fight-setup
-// prepends onto the (otherwise default, all-null) regular gem slots. Before A8 this fixture hand-
-// authored `equippedSpells: [ARCANE_BOLT]` directly; keeping that alongside the trait's own
+// SORCERER_STARTER_TRAIT, an on-turn-end `perform-action`) + its real granted spell (ARCANE_BOLT,
+// data/spells/overgrowth.ts -- also a normal biome-1 Wit spawn-pool spell)
+// -- a 50% chance at the end of its turn to cast a random equipped spell. CASTER carries NO explicit
+// `equippedSpells` -- ARCANE_BOLT comes SOLELY from SORCERER_STARTER_TRAIT's own `innate-spell`
+// effect, which `createCombat`'s fight-setup
+// prepends onto the (otherwise default, all-null) regular gem slots. Hand-authoring
+// `equippedSpells: [ARCANE_BOLT]` alongside the trait's own
 // innate-spell grant would double it to `[Bolt, Bolt]` (pool size 2), which happens to still pick
-// slot 0 at this exact seed (a coincidence, not a proof) -- dropping it here is the one allowed
-// deliberate change (a `createCombat`-shape fixture also needing a content-level fix), and it
-// makes the equipped pool size 1 again, matching the real Seer's starting loadout exactly. A
+// slot 0 at this exact seed (a coincidence, not a proof). This fixture authors no
+// `equippedSpells`, so the pool is size 1, matching the real Seer's starting loadout exactly. A
 // single equipped spell (pool size 1) makes the "random" slot pick deterministic regardless of
 // its own RNG draw, isolating this golden to proving the ONE thing that actually varies: the
 // chancePercent roll succeeding, at real seed 7 (chosen empirically -- its very first mulberry32
@@ -19,15 +17,15 @@
 //
 // Hand-derived (independent `node -e` calculator). CASTER acts (Waits, per its own script) then,
 // at turn-end, Arcane Surge's trigger rolls and queues the cast, which runs in the granted-actions
-// step -- BEFORE TurnEnded (Phase 4.1-C, D6: TurnEnded is always the turn's last event).
+// step -- BEFORE TurnEnded (TurnEnded is always the turn's last event).
 //
-//   ARCANE_BOLT: spellPower 1.0 (4.1-H2c, ASSUMPTION 124; it was 0.5), scalingStat unset -> default
+//   ARCANE_BOLT: spellPower 1.0, scalingStat unset -> default
 //   remap-aware Intelligence lookup.
 //   effInt 20 (no modifiers) x spellPower 1.0 x instance-list powerFraction 1.0 (no extra
 //   instances) = offStat 20. FOE (wit, neutral x1.0) defence 0: core 20, chip 0.01*20=0.2 ->
 //   raw 20.2 -> final 20 (a direct Cast; the fixture creatures are level 11, so no Additional).
 //   FOE health 20 - 20 -> 0 -> dies, ending the fight in CASTER's win inside its own single turn
-//   (before FOE ever gets to act). At 0.5 the hit would be raw 10.1, final 10, leaving FOE at 10.
+//   (before FOE ever gets to act).
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -71,8 +69,8 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
   { type: 'Waited', creatureId: CASTER },
-  // 4.1-E: Arcane Surge is an on-turn-end `perform-action` trigger -- TriggerFired at the chance
-  // roll (draw #1, the same draw as before), ActionGranted once the queued cast runs.
+  // Arcane Surge is an on-turn-end `perform-action` trigger -- TriggerFired at the chance
+  // roll (draw #1), ActionGranted once the queued cast runs.
   {
     type: 'TriggerFired',
     sourceId: CASTER,

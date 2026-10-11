@@ -24,7 +24,7 @@ export function targetSelectorHasCandidate(
     case 'highest-attack-ally':
     case 'highest-intelligence-ally':
     case 'random-ally':
-      // Phase 4 Slice E: always true -- "ally" includes the acting creature itself, which is
+      // Always true -- "ally" includes the acting creature itself, which is
       // alive by construction whenever this is evaluated (mirrors lowest-hp-ally's own contract).
       return livingAlliesOf(creature, state).length > 0
     case 'lowest-hp-enemy':
@@ -34,7 +34,7 @@ export function targetSelectorHasCandidate(
     case 'random-enemy':
       return livingEnemiesOf(creature, state).length > 0
     case 'random':
-      // Phase 4.1-C2a (PR #71 review): 'random' needs the action's intended side to check
+      // 'random' needs the action's intended side to check
       // existence against, which this module never has -- same reason resolveTargetSelector
       // throws on it below. actions.ts's `hasValidTarget` intercepts 'random' before ever
       // calling this function (checking the intended side's own living pool directly), so this
@@ -68,7 +68,7 @@ export function resolveTargetSelector(
         pickExtremum(livingAlliesOf(creature, state), (c) => c.currentHp, 'asc')?.id ??
         null
       )
-    // Phase 4 Slice E: the one-for-one ally mirror of the four non-trivial enemy selectors
+    // The one-for-one ally mirror of the four non-trivial enemy selectors
     // below, reusing the exact same pickExtremum/tie-break machinery over livingAlliesOf
     // instead of livingEnemiesOf.
     case 'highest-hp-ally':
@@ -131,7 +131,7 @@ export function resolveTargetSelector(
       return pool[index]?.id ?? null
     }
     case 'random':
-      // Phase 4.1-C2a (A1): 'random' needs the action's intended side to resolve, which this
+      // 'random' needs the action's intended side to resolve, which this
       // module never has -- actions.ts's resolveIntent resolves it directly (over
       // livingEnemiesOf/livingAlliesOf, matching random-enemy/random-ally's own draw), never
       // through this function.
@@ -146,7 +146,7 @@ export function resolveTargetSelector(
 }
 
 /**
- * Phase 4.1-H2b1 (ASSUMPTION 140): the `lowest-hp-injured-other-ally` response target -- the lowest
+ * The `lowest-hp-injured-other-ally` response target -- the lowest
  * current HP among the living allies other than `creature` that are below max Health
  * (`injuredOtherAlliesOf`). RNG-free; ties by the standard order. Deliberately not a
  * `TargetSelector` variant: the player-facing vocabulary is unchanged.
@@ -162,12 +162,12 @@ export function resolveLowestHpInjuredOtherAlly(
 }
 
 /**
- * Phase 4 Slice C: an RNG-FREE resolution, for the acted-before-target condition's lookahead
+ * An RNG-FREE resolution, for the acted-before-target condition's lookahead
  * (see scripting-types.ts's ActedBeforeTargetCondition doc). Every selector kind but
  * random-enemy is already RNG-free in resolveTargetSelector -- this delegates to it unchanged
  * for those, and returns null for random-enemy rather than drawing (there is no way to "peek"
- * a random pick without consuming randomness, and lookahead must never do that). Phase 4 Slice E:
- * random-ally follows the exact same rule, for the same reason.
+ * a random pick without consuming randomness, and lookahead must never do that). random-ally
+ * follows the exact same rule, for the same reason.
  */
 export function peekTargetSelector(
   selector: TargetSelector,

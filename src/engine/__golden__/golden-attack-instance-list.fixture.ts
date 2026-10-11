@@ -1,4 +1,4 @@
-// Golden: the action instance-list model (Phase 4 Slice B, locked). ATTACKER carries a
+// Golden: the action instance-list model. ATTACKER carries a
 // Brute-starter-shaped "attack again for 30%" passive (TWO_INSTANCE: an action-instance effect,
 // [100, 30]) plus an on-attack trigger (PING: flat 3 dmg to the target) fired EACH instance --
 // proving on-attack fires per instance, not once per action, and that instance damage composes
@@ -11,8 +11,7 @@
 //   Instance 2 (30%):  off 10x0.3=3, def 0 -> core 3,  chip 0.01*3=0.03 -> raw 3.03 -> final 3.
 //   Ping (flat, each instance): rawDamage 3, finalDamage max(1,floor(3))=3.
 //
-// DEFENDER health 19, all hits landing on the SAME frozen target (ASSUMPTION 31 -- alive
-// throughout, so the selector is never re-run):
+// DEFENDER health 19, all hits landing on the SAME frozen target (alive throughout, so the selector is never re-run):
 //   19 -(ping 3)-> 16 -(instance1 10)-> 6 -(ping 3)-> 3 -(instance2 3)-> 0 -- dies on the very
 // last hit of ATTACKER's single turn. One round, one turn, fight over.
 

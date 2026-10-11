@@ -1,4 +1,4 @@
-// Golden: the `cross-stat` passive EffectDef (Phase 4 Slice B) -- ATTACKER's own Defence feeds
+// Golden: the `cross-stat` passive EffectDef -- ATTACKER's own Defence feeds
 // its Attack damage (Shield Bash-shaped): a flat bonus added to effOffStat AFTER spellPower,
 // BEFORE the subtractive core (and feeding the chip floor, since that scales off the same
 // effOffStat).

@@ -1,9 +1,9 @@
-// Golden: the triggered `heal` response's `scalingStat` mode (Phase 4 Slice E2, Treants
-// Elder-shaped) -- magnitude = getEffectiveStat(HEALER, scalingStat) x spellPower, mirroring
-// deal-damage's own scalingStat/spellPower pairing exactly, clamped to effective max HP AFTER
+// Golden: the triggered `heal` response's `scalingStat` mode (Treants Elder-shaped) -- magnitude =
+// getEffectiveStat(HEALER, scalingStat) x spellPower, mirroring deal-damage's own
+// scalingStat/spellPower pairing exactly, clamped to effective max HP AFTER
 // scaling (the overheal rule already existed; this proves it composes correctly with the new
 // scaling mode). ELDER self-heals via `on-turn-end` (its own turn's aftermath, no round-end
-// pass needed) -- fixture-shaped, not real Elder content (H1's job).
+// pass needed) -- fixture-shaped, not real Elder content.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // FOE (speed 20) acts before ELDER (speed 10) in round 1.
@@ -12,7 +12,7 @@
 //     ELDER 100 - 40 -> 60.
 //   ELDER's own on-turn-end heal (self): amount = getEffectiveStat(elder,'health') x
 //     spellPower(1.0) = 100. newHp = min(maxHp 100, 60+100=160) = 100 (clamped -- the "no
-//     overheal" rule, now exercised through the NEW scaling mode). HealApplied.amount =
+//     overheal" rule, exercised through the scaling mode). HealApplied.amount =
 //     100-60 = 40, remainingHp = 100.
 
 import { makeParty } from '../__fixtures__/creatures'
@@ -91,7 +91,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: FOE },
   { type: 'TurnStarted', creatureId: ELDER },
   { type: 'Waited', creatureId: ELDER },
-  // Phase 4.1-C (D6): on-turn-end hooks fire BEFORE TurnEnded now (TurnEnded is always the
+  // on-turn-end hooks fire BEFORE TurnEnded (TurnEnded is always the
   // turn's last event).
   {
     type: 'TriggerFired',

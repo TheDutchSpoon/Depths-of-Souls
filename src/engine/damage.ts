@@ -13,16 +13,16 @@ export interface DamageInput {
   readonly defence: number
   readonly attackerAffinity: Affinity
   readonly defenderAffinity: Affinity
-  /** Attacker's additive dealt-mod pool. Empty in Phase 1; applied as (1 + Σ). */
+  /** Attacker's additive dealt-mod pool. Applied as (1 + Σ). */
   readonly dealtMods: readonly number[]
-  /** Defender's multiplicative taken-mod pool. Empty in Phase 1; applied as Π. */
+  /** Defender's multiplicative taken-mod pool. Applied as Π. */
   readonly takenFactors: readonly number[]
-  /** Phase 4 Slice B: ignore this fraction of the TARGET's Defence, applied before the
-   * subtractive core. 0 by default -- byte-identical to pre-Slice-B behavior. */
+  /** Ignore this fraction of the TARGET's Defence, applied before the
+   * subtractive core. 0 by default -- no effect. */
   readonly armorPenetrationPercent?: number
-  /** Phase 4 Slice B: a flat bonus added to offStat AFTER spellPower, before the subtractive
-   * core (Shield Bash's Defence contribution, etc.). 0 by default -- byte-identical to
-   * pre-Slice-B behavior. Feeds the chip floor too, since it scales with the same effOffStat. */
+  /** A flat bonus added to offStat AFTER spellPower, before the subtractive
+   * core (Shield Bash's Defence contribution, etc.). 0 by default -- no effect.
+   * Feeds the chip floor too, since it scales with the same effOffStat. */
   readonly crossStatBonus?: number
 }
 
@@ -36,7 +36,7 @@ export interface DamageResult {
 }
 
 export function calculateDamage(input: DamageInput): DamageResult {
-  // Both default to their pre-Slice-B no-op value (0), so effectiveOffStat === input.offStat and
+  // Both default to their no-op value (0), so effectiveOffStat === input.offStat and
   // effectiveDefence === input.defence when neither is set -- provably additive.
   const effectiveOffStat = input.offStat + (input.crossStatBonus ?? 0)
   const effectiveDefence = input.defence * (1 - (input.armorPenetrationPercent ?? 0))
@@ -62,7 +62,7 @@ export function calculateDamage(input: DamageInput): DamageResult {
 }
 
 /**
- * Phase 4.1-H2a (ASSUMPTIONS 110, 135): the Additional, a fading flat bonus added to a DIRECT hit
+ * The Additional, a fading flat bonus added to a DIRECT hit
  * after its `MAX(1, floor(...))`. 20% of the target's effective max Health (the integer-percent
  * float rule), capped at `ADDITIONAL_BASE_CAP` at level 1 with the cap falling by
  * `ADDITIONAL_CAP_FADE_PER_LEVEL` per attacker level (gone from level 11). Nothing modifies it.
@@ -77,7 +77,7 @@ export function calculateAdditional(attackerLevel: number, targetMaxHp: number):
 }
 
 /** A direct hit's result with the Additional added to the integer damage (`rawDamage` stays the
- * formula's pre-clamp value, ASSUMPTION 136). */
+ * formula's pre-clamp value). */
 export function withAdditional(result: DamageResult, additional: number): DamageResult {
   return { ...result, finalDamage: result.finalDamage + additional }
 }
@@ -91,12 +91,12 @@ export interface IndirectDamageInput {
   readonly defenderAffinity: Affinity
   readonly dealtMods: readonly number[]
   readonly takenFactors: readonly number[]
-  /** Fraction of the TARGET's Defence ignored, applied to the Defence term (ASSUMPTION 134). */
+  /** Fraction of the TARGET's Defence ignored, applied to the Defence term. */
   readonly armorPenetrationPercent?: number
 }
 
 /**
- * Phase 4.1-H2a (ASSUMPTION 112): INDIRECT damage -- every damage that is not an Attack or Cast
+ * INDIRECT damage -- every damage that is not an Attack or Cast
  * action (a trait/status/perk response). `magnitude x affinity x (1 + sum dealt) x prod(taken) -
  * 0.2 x Defence`, then `MAX(1, floor(...))` once. No chip, no Additional: it meets a fifth of
  * the target's Defence. `wasChipOnly` is always false.
@@ -121,7 +121,7 @@ export function calculateIndirectDamage(input: IndirectDamageInput): DamageResul
 }
 
 /**
- * Phase 4.1-H2a (ASSUMPTION 116/132): a COST -- a creature's own response damaging itself. The
+ * A COST -- a creature's own response damaging itself. The
  * exact magnitude, floored once, minimum 0 (no Defence, pools, affinity or Additional). The caller
  * treats a 0 result as a full no-op.
  */

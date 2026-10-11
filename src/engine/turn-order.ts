@@ -5,8 +5,8 @@ import { flatEffects } from './effects'
 import { compareBySideSlotId } from './tie-break'
 
 /**
- * Phase 4 Slice C: the bearer's active `turn-order` position (carried by Web / Grant Act First),
- * read through the effect iterator (4.1-F1: an immune bearer's status doesn't count), never a hook. ASSUMPTION 9: a bearer carrying both an act-first AND an act-last instance at once
+ * The bearer's active `turn-order` position (carried by Web / Grant Act First),
+ * read through the effect iterator (an immune bearer's status doesn't count), never a hook. A bearer carrying both an act-first AND an act-last instance at once
  * resolves to 'first' -- first wins over last when both are simultaneously active.
  */
 function turnOrderPosition(creature: Creature): 'first' | 'last' | null {
@@ -19,7 +19,7 @@ function turnOrderPosition(creature: Creature): 'first' | 'last' | null {
   return position
 }
 
-/** Speed-descending, then the shared side/slot/id tie-break -- the pre-Slice-C sort, applied
+/** Speed-descending, then the shared side/slot/id tie-break -- the plain sort, applied
  * within each turn-order pole below. */
 function sortBySpeed(group: readonly Creature[]): CreatureId[] {
   return group
@@ -33,11 +33,11 @@ function sortBySpeed(group: readonly Creature[]): CreatureId[] {
 
 /**
  * Builds the frozen round-start turn queue: all currently-alive creatures across both sides,
- * partitioned into an act-first pole, the normal group, and an act-last pole (Phase 4 Slice C
- * -- Web/Blindclaws' turn-order status), each internally ordered by descending effective
- * Speed with the existing side/slot/id tie-break, then concatenated first -> normal -> last.
+ * partitioned into an act-first pole, the normal group, and an act-last pole (Web/Blindclaws'
+ * turn-order status), each internally ordered by descending effective Speed with the existing
+ * side/slot/id tie-break, then concatenated first -> normal -> last.
  * With no `turn-order` effects present, both poles are empty and this is byte-identical
- * to the pre-Slice-C single-group sort. Called once per round; never called again mid-round
+ * to the plain single-group sort. Called once per round; never called again mid-round
  * even if something changes Speed or position (nothing can mid-round in v1).
  */
 export function buildTurnQueue(

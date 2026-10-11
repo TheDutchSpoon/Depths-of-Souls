@@ -1,4 +1,4 @@
-// Golden: a tick whose applier has DIED (Phase 4.1-H2b2, ASSUMPTIONS 113, 146). Its amount is still
+// Golden: a tick whose applier has DIED. Its amount is still
 // the frozen snapshot, but the logged source falls back to the BEARER, and that fallback is not a
 // dealer: the bearer's own dealer-side hook (on-damage-dealt) does not fire. A tick is also never
 // self-inflicted, applier alive or dead: an ally's cost observer (the real Flickerling Flare) stays
@@ -102,8 +102,8 @@ export const traits: ReadonlyMap<string, Trait> = new Map([
   ...TRAIT_REGISTRY,
   [DEALER.id, DEALER],
 ])
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState => {

@@ -72,7 +72,7 @@ const REGISTRY: ReadonlyMap<string, Trait> = new Map([
   ],
 ] as [string, Trait][])
 
-describe('resolveBaselineEffects / instantiateEffectDefs (Phase 4.1-B, S1/B4)', () => {
+describe('resolveBaselineEffects / instantiateEffectDefs', () => {
   it('preserves declaration order within a trait, pairing each def with its sourceTraitId', () => {
     const c = makeCreature({ id: 'hero', innateTraitIds: ['two-effects'] })
     const entries = resolveBaselineEffects(c, REGISTRY)
@@ -107,7 +107,7 @@ describe('resolveBaselineEffects / instantiateEffectDefs (Phase 4.1-B, S1/B4)', 
     expect(entries.map((e) => e.sourceTraitId)).toEqual(['plus-attack', 'big-health'])
   })
 
-  it('throws on an unknown trait id (Phase 4.1-B review, PR #69, D3) -- never silently skips', () => {
+  it('throws on an unknown trait id -- never silently skips', () => {
     const c = makeCreature({ id: 'hero', innateTraitIds: ['nope', 'plus-attack'] })
     expect(() => resolveBaselineEffects(c, REGISTRY)).toThrow(/unknown trait id "nope"/)
   })
@@ -117,12 +117,11 @@ describe('resolveBaselineEffects / instantiateEffectDefs (Phase 4.1-B, S1/B4)', 
   })
 })
 
-// Phase 4.1-B review (PR #69, R1): `resolveBaselineEffects` no longer reads `creature.side` at
-// all -- it applies whatever `sideEffects` list it's given UNCONDITIONALLY, since the CALLER
-// (`createCombat`) is the one that knows which side's list belongs to which party. "a player-side
-// creature gets perks, an enemy-side creature never does" is now proven at that call site --
-// combat.test.ts's own R1 coverage -- not here.
-describe('resolveBaselineEffects with side effects (Phase 4 Slice F / ASSUMPTION 21, Phase 4.1-B R1)', () => {
+// `resolveBaselineEffects` doesn't read `creature.side`: it applies whatever `sideEffects` list
+// it's given UNCONDITIONALLY, since the CALLER (`createCombat`) is the one that knows which
+// side's list belongs to which party. "a player-side creature gets perks, an enemy-side
+// creature never does" is proven at that call site -- combat.test.ts -- not here.
+describe('resolveBaselineEffects with side effects', () => {
   const PLAYER_WIDE = [
     { category: 'stat-modifier', stat: 'attack', factor: 1.5 } as const,
   ]
@@ -229,12 +228,12 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     expect(gatherDealtMods(c, makeState())).toEqual([-0.2])
   })
 
-  it('gatherTakenFactors yields magnitude once (single instance, 4.1-H2b2) for taken damage-modifier effects only', () => {
+  it('gatherTakenFactors yields magnitude once (single instance) for taken damage-modifier effects only', () => {
     const c = makeCreature({ activeEffects: [weaken, vulnerability, unrelated] })
     expect(gatherTakenFactors(c, makeState())).toEqual([1.5])
   })
 
-  it('a magnitudeSource is the live count the magnitude is scaled by (Phase 4 Slice D)', () => {
+  it('a magnitudeSource is the live count the magnitude is scaled by', () => {
     const bulwarkShaped: ActiveEffect = {
       category: 'status',
       statusId: 'bulwark-fixture',
@@ -260,7 +259,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
     expect(gatherTakenFactors(c, state)).toEqual([0.9 ** 3])
   })
 
-  describe("accumulation: 'additive' (Phase 4 Slice D, PR #47 review amendment -- real Bulwark shape)", () => {
+  describe("accumulation: 'additive' (real Bulwark shape)", () => {
     function bulwark(reductionCap: number): ActiveEffect {
       return {
         category: 'status',
@@ -303,7 +302,7 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
       expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(0.2)
     })
 
-    it('is byte-identical to the pre-amendment multiplicative default when accumulation is absent', () => {
+    it('is the multiplicative default when accumulation is absent', () => {
       const multiplicative: ActiveEffect = {
         category: 'status',
         statusId: 'bulwark-fixture',
@@ -368,7 +367,7 @@ describe('hasStatus', () => {
   })
 })
 
-describe('gatherArmorPenetration (Phase 4 Slice B)', () => {
+describe('gatherArmorPenetration', () => {
   function pen(percent: number, id: string): ActiveEffect {
     return {
       category: 'armor-penetration',
@@ -393,7 +392,7 @@ describe('gatherArmorPenetration (Phase 4 Slice B)', () => {
   })
 })
 
-describe('gatherCrossStatContribution (Phase 4 Slice B)', () => {
+describe('gatherCrossStatContribution', () => {
   function crossStat(
     fromStat: 'defence' | 'attack',
     percentPerRank: number,
@@ -434,7 +433,7 @@ describe('gatherCrossStatContribution (Phase 4 Slice B)', () => {
   })
 })
 
-describe('gatherExtraInstances (Phase 4 Slice B)', () => {
+describe('gatherExtraInstances', () => {
   function instanceGrant(
     actionKind: 'attack' | 'cast' | 'both',
     powerPercent: number,
@@ -475,7 +474,7 @@ describe('gatherExtraInstances (Phase 4 Slice B)', () => {
   })
 })
 
-describe('hasStatusImmunity / hasProvokeImmunity / hasSplashing / hasAnnihilate (Phase 4 Slice C)', () => {
+describe('hasStatusImmunity / hasProvokeImmunity / hasSplashing / hasAnnihilate', () => {
   it('hasStatusImmunity matches only a present status-immunity for the exact statusId', () => {
     const clearMind: ActiveEffect = {
       category: 'status-immunity',
@@ -514,7 +513,7 @@ describe('hasStatusImmunity / hasProvokeImmunity / hasSplashing / hasAnnihilate 
   })
 })
 
-describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
+describe('activeFriendlyFireStatus (Confusion)', () => {
   const confusion: ActiveEffect = {
     category: 'status',
     statusId: 'confusion',
@@ -550,7 +549,7 @@ describe('activeFriendlyFireStatus (Phase 4 Slice C, Confusion)', () => {
   })
 })
 
-describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
+describe('resolveCount (count-scaling)', () => {
   it('living-allies counts the reading creature’s own side, alive only, INCLUDING itself', () => {
     const party = makeParty('player', [
       { id: 'a' },
@@ -572,7 +571,7 @@ describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
     expect(resolveCount(party[0]!, 'living-allies-of-affinity', state)).toBe(2)
   })
 
-  it('living-allies-of-species is 0 when no speciesId is set (every Phase 1-3/Slice A-C creature)', () => {
+  it('living-allies-of-species is 0 when no speciesId is set', () => {
     const party = makeParty('player', [{ id: 'a' }, { id: 'b' }])
     const state = makeState({ playerParty: party })
     expect(resolveCount(party[0]!, 'living-allies-of-species', state)).toBe(0)
@@ -653,7 +652,7 @@ describe('resolveCount (Phase 4 Slice D, count-scaling)', () => {
   })
 })
 
-describe('resolveMagnitudeCount (Phase 4 Slice D)', () => {
+describe('resolveMagnitudeCount', () => {
   it("'flat' returns its own value, ignoring board state entirely", () => {
     const c = makeCreature({})
     expect(resolveMagnitudeCount(c, makeState(), { kind: 'flat', value: 7 })).toBe(7)
@@ -670,7 +669,7 @@ describe('resolveMagnitudeCount (Phase 4 Slice D)', () => {
   })
 })
 
-describe('gatherCheatDeathChance (Phase 4 Slice D, Last Stand)', () => {
+describe('gatherCheatDeathChance (Last Stand)', () => {
   function cheatDeath(chancePercent: number, id: string): ActiveEffect {
     return {
       category: 'cheat-death',

@@ -1,6 +1,6 @@
-// Golden: Silenced (Phase 4.1-F3, G2) -- the real Silence spell locks its target's Cast for the
+// Golden: Silenced -- the real Silence spell locks its target's Cast for the
 // target's next THREE OWN turns, whether the target acts after its applier in round 1 or before it,
-// and each lock expires in its own bearer's turn-end cleanup (F2: one born window, durations count
+// and each lock expires in its own bearer's turn-end cleanup (one born window, durations count
 // the bearer's turns). A scoped lock never skips the turn: a Silenced always-cast creature falls through to the implicit fallback and ATTACKS.
 // Hand-derived.
 //

@@ -1,6 +1,6 @@
-// Golden: the `chancePercent` probabilistic gate on a `TriggeredDef` (Phase 4 Slice E2,
-// Concussive Blows-shaped) -- rolled once per firing, AFTER the cascade-depth check, BEFORE
-// TriggerFired/execution, only when present. Two rigged seeds against the IDENTICAL parties/
+// Golden: the `chancePercent` probabilistic gate on a `TriggeredDef` (Concussive Blows-shaped) --
+// rolled once per firing, AFTER the cascade-depth check, BEFORE TriggerFired/execution, only when
+// present. Two rigged seeds against the IDENTICAL parties/
 // scripts, proving both branches of the one seeded RNG roll -- mirrors golden-cheat-death's
 // two-seed pattern.
 //

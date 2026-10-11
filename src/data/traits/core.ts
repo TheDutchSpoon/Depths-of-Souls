@@ -1,8 +1,9 @@
 import type { Trait } from '../../engine/effect-types'
 
-// Representative & temporary Phase 3 trait content — real data (with tests), exercising each
-// Slice-A passive shape, until the actual creature roster is designed (Phase 4+) and replaces
-// it. Triggered traits (retaliate etc.) land with Slice B; status-applying traits with Slice C.
+// Representative & temporary trait content — real data (with tests), exercising each
+// passive shape, until the actual creature roster replaces it
+// (`CONVENTIONS.md#mechanism-goldens-vs-content-goldens` names these placeholder traits).
+// Triggered traits (retaliate etc.) and status-applying traits are among them.
 
 /** Flat passive stat-modifier: always-on +30% Attack. */
 export const BRUTISH: Trait = {
@@ -12,12 +13,12 @@ export const BRUTISH: Trait = {
 }
 
 /**
- * Conditional passive: +25% Attack while at full HP. Phase 4.1-B (S2): the condition is DATA
+ * Conditional passive: +25% Attack while at full HP. The condition is DATA
  * (`SelfCondition`, evaluated at read-time during stat folding), not a `predicate` function --
  * `{ kind: 'hp-percent', comparator: '>=', thresholdPercent: 100 }` reads effective Health (never
  * Attack — no read-cycle) via the same integer cross-multiplication as scripting's own
  * `hp-percent` Condition. currentHp is clamped to effective max, so `>= 100%` means exactly "at
- * full HP" -- byte-identical to the old predicate `(c) => c.currentHp >= effectiveMaxHp(c)`.
+ * full HP" -- i.e. `c.currentHp >= effectiveMaxHp(c)`.
  */
 export const BLOODLUST: Trait = {
   id: 'bloodlust',
@@ -126,7 +127,7 @@ export const VENGEFUL: Trait = {
 
 /** Triggered + apply-status: when dealt damage, this creature is stunned (reeling) for 1 round.
  * Exercises Stun's 'all' action-lock end-to-end from a trait's apply-status
- * response (Slice C). */
+ * response. */
 export const REELING: Trait = {
   id: 'reeling',
   name: 'Reeling',

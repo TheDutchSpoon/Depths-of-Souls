@@ -1,4 +1,4 @@
-// Phase 4.1-H2b1 (ASSUMPTIONS 115, 132, 137, 142): damage observation -- the `on-damage-observed`
+// Damage observation -- the `on-damage-observed`
 // sibling hook, fired from `applyDamageAndEmit` for every damage event, filtered by the DAMAGED
 // creature's relationship to the observer and by whether the damage was self-inflicted (a COST).
 // Mechanism tests; the goldens `golden-h2b1-observed-*` pin the same behaviour as replays.
@@ -289,7 +289,7 @@ const MATRIX: readonly Row[] = [
   ],
 ]
 
-describe('the filter matrix: relationship x selfInflicted (4.1-H2b1)', () => {
+describe('the filter matrix: relationship x selfInflicted', () => {
   for (const [label, observer, filter, fires] of MATRIX) {
     for (const scenario of Object.keys(fires) as Scenario[]) {
       it(`${label} | ${scenario}: ${fires[scenario] ? 'fires' : 'silent'}`, () => {
@@ -316,7 +316,7 @@ describe('the filter matrix: relationship x selfInflicted (4.1-H2b1)', () => {
   })
 })
 
-describe('both observation hooks fail closed (4.1-H2b1)', () => {
+describe('both observation hooks fail closed', () => {
   it('on-damage-observed without observedDamage fires nothing, filtered or not', () => {
     const plain = watcherTrait('plain', undefined)
     const filtered = watcherTrait('filtered', { relationship: 'ally' })
@@ -414,7 +414,7 @@ describe('both observation hooks fail closed (4.1-H2b1)', () => {
   })
 })
 
-describe('routing: a damage event never reaches an action observer, an action never a damage observer (4.1-H2b1)', () => {
+describe('routing: a damage event never reaches an action observer, an action never a damage observer', () => {
   it('a Resonant-shaped on-action-observed trait never fires on a damage event', () => {
     const resonant = watcherTrait(
       'resonant',
@@ -455,7 +455,7 @@ describe('routing: a damage event never reaches an action observer, an action ne
   })
 })
 
-describe('hook order in the damage path (4.1-H2b1; spec/effects.md#hook-execution)', () => {
+describe('hook order in the damage path (spec/effects.md#hook-execution)', () => {
   const ON_TAKEN: Trait = {
     id: 'on-taken',
     name: 'On taken (fixture)',
@@ -595,7 +595,7 @@ describe('hook order in the damage path (4.1-H2b1; spec/effects.md#hook-executio
   })
 })
 
-describe('a zero cost is a full no-op: nothing to observe (4.1-H2b1, ASSUMPTION 132)', () => {
+describe('a zero cost is a full no-op: nothing to observe', () => {
   it('a flat 1% of 30 Health floors to 0: no DamageDealt, so no observation', () => {
     const watch = watcherTrait('watch', { relationship: 'ally', selfInflicted: true })
     const state = world({
@@ -621,7 +621,7 @@ describe('a zero cost is a full no-op: nothing to observe (4.1-H2b1, ASSUMPTION 
   })
 })
 
-describe('loop safety on the damage -> observer -> damage route (4.1-H2b1)', () => {
+describe('loop safety on the damage -> observer -> damage route', () => {
   // A (player) and B (enemy) each carry "on an ENEMY's cost, pay a cost of 1" -- the ping-pong:
   // A's cost is seen by B (A is B's enemy), B pays, B's cost is seen by A, A pays, ... Health 400
   // so nobody dies before the cascade cap (each payer takes ~half of the 500 depth steps).
@@ -696,7 +696,7 @@ describe('loop safety on the damage -> observer -> damage route (4.1-H2b1)', () 
   })
 })
 
-describe('the validator keeps each filter field on its own hook, on every trigger carrier (4.1-H2b1)', () => {
+describe('the validator keeps each filter field on its own hook, on every trigger carrier', () => {
   const triggered = (
     hook: 'on-damage-observed' | 'on-action-observed' | 'on-turn-start',
     observationFilter: ObservationFilter,

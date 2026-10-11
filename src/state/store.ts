@@ -1,21 +1,17 @@
-// Phase 4 Slice G: src/state's first file (`spec/run.md#generation-is-a-pure-seeded-module` -- "the
-// Zustand store owns navigation + ownership only... and CALLS the generator. It never owns the
-// deterministic derivation of a floor's contents."). In-memory only -- no persistence middleware,
-// no idb/Dexie (Phase 5, wholesale, per the brief's scope boundary).
+// src/state's first file (`spec/run.md#generation-is-a-pure-seeded-module`: the store owns
+// navigation and ownership only and CALLS the generator). In-memory only -- no persistence
+// middleware, no idb/Dexie (`spec/saves.md#the-stores-plain-data-boundary`).
 //
 // Dependency-injected via `createGameStore(overrides)` rather than a bare module-level `create`
 // call: the default deps wire in real src/data content (`useGameStore`, below), but most tests
-// (store.test.ts) run against a fully isolated, deterministic instance built on Slice A's own
-// FIXTURE biome/spec data instead -- this is an ASSUMPTION beyond the brief's literal "store.ts"
-// framing, necessary for testability without a UI (no Slice-4.5-style demo exists yet to
-// exercise this against). Slice I's `integration.test.ts` is the deliberate exception: it runs
-// the zero-override, real-content store end to end (real biomes 1-3 landed in H1-H3; biomes
-// 4-10 stay the Slice A placeholder shape -- see data/biomes.ts).
+// (store.test.ts) run against a fully isolated, deterministic instance built on FIXTURE
+// biome/spec data instead, so the store is testable without a UI. `integration.test.ts` is the
+// deliberate exception: it runs the zero-override, real-content store end to end (biomes 4-10
+// are the placeholder shape -- see data/biomes.ts).
 //
-// Phase 4.1-A (G5, S5, G6, A6, A7) reworks this file's action/state shape: player-reachable
-// failures return `{ ok: false, reason }` instead of throwing (`descend`, `pinBiome`); each such
-// action gets a pure `can...` query sharing its check; `currentFloor` is renamed `lastFloor`;
-// `travelTo` is deleted (fast-travel is just `descend`); the collection becomes a flat
+// Player-reachable failures return `{ ok: false, reason }` instead of throwing (`descend`,
+// `pinBiome`; `spec/store.md#how-store-actions-fail`); each such action gets a pure `can...`
+// query sharing its check; fast-travel is just `descend`; the collection is a flat
 // `Map<InstanceId, Instance>`; and generation/rewards receive an injected `BalanceConfig`.
 
 import { create } from 'zustand'
@@ -79,9 +75,8 @@ export const PARTY_SIZE = 6
 
 export interface GameStoreDeps {
   readonly biomes: readonly BiomeData[]
-  /** Phase 4 interstitial slice (cumulative spell unlock): the GLOBAL spell registry
-   * `generateFloor` rolls a cast-role loadout from (filtered by `unlockedAtBiome` then
-   * affinity) -- replaces the old per-biome `BiomeData.spellPool`. */
+  /** The GLOBAL spell registry `generateFloor` rolls a cast-role loadout from (filtered by
+   * `unlockedAtBiome` then affinity; `spec/run.md#spells-unlock-cumulatively`). */
   readonly allSpells: readonly Spell[]
   readonly scripts: ReadonlyMap<string, Script>
   readonly traits: ReadonlyMap<string, Trait>
@@ -95,14 +90,14 @@ export interface GameStoreDeps {
    * createSeededRng inside createCombat (not overridable without an engine change, and not
    * needed: combat's own determinism is already proven by the existing engine goldens). */
   readonly createRng: (seed: number) => SeededRng
-  /** Phase 4.1-A (A7): the injected progression/economy config. Generation and reward math
+  /** The injected progression/economy config. Generation and reward math
    * receive this as an argument rather than reading module-level constants -- tests pin their
    * own config instead of inheriting tuning changes (see __fixtures__/balance.ts). */
   readonly balanceConfig: BalanceConfig
 }
 
-// ASSUMPTION: a fixed default so the store is constructible with zero config; a real new-game
-// flow (a later phase) lets the player's save generation seed this instead.
+// A fixed default so the store is constructible with zero config; the real seed is generated in
+// `src/app` (`spec/store.md#newgame`).
 const DEFAULT_RUN_SEED = 20260914
 
 const DEFAULT_DEPS: GameStoreDeps = {
@@ -127,13 +122,13 @@ const DEFAULT_DEPS: GameStoreDeps = {
 
 export interface GameState {
   readonly deepestFloor: number
-  /** Phase 4.1-A (G6): the floor last FOUGHT (renamed from `currentFloor`) -- set by `descend` on
+  /** The floor last FOUGHT -- set by `descend` on
    * every actually-attempted run, success or failure; a `{ ok: false }` refusal leaves it (and
    * all other state) unchanged, since nothing was attempted. */
   readonly lastFloor: number
   readonly discoveredBiomes: ReadonlySet<BiomeId>
   readonly atlasPins: ReadonlyMap<number, BiomeId>
-  /** Phase 4.1-A (A6): a flat map keyed by the OPAQUE InstanceId (never buckets keyed by static
+  /** A flat map keyed by the OPAQUE InstanceId (never buckets keyed by static
    * creature id). */
   readonly collection: ReadonlyMap<InstanceId, Instance>
   readonly activeParty: readonly (InstanceId | null)[]
@@ -143,23 +138,22 @@ export interface GameState {
   readonly perkSpend: ReadonlyMap<string, number>
   readonly bossesCleared: ReadonlySet<string>
   readonly currencies: Currencies
-  /** ASSUMPTION 27: the run RNG stream's seed + an advance counter, NOT a live SeededRng object
-   * -- keeps the store a plain, serializable-shaped record (ready for Phase 5's save format). A
+  /** The run RNG stream's seed + an advance counter, NOT a live SeededRng object
+   * -- keeps the store a plain, serializable-shaped record (`spec/saves.md#the-stores-plain-data-boundary`). A
    * fresh SeededRng is re-derived from (runSeed, runCounter) whenever a draw is needed, mirroring
    * biomeForFloor's own per-floor re-derivation (generation.ts) rather than threading a stateful
    * RNG object through Zustand. */
   readonly runSeed: number
   readonly runCounter: number
-  /** Own addition (not named by the brief): a monotonic counter used only to mint unique,
-   * deterministic, OPAQUE InstanceIds (`inst-<ordinal>`, Phase 4.1-A/A6) -- unrelated to
-   * runCounter/RNG. */
+  /** A monotonic counter used only to mint unique, deterministic, OPAQUE InstanceIds
+   * (`inst-<ordinal>`, `spec/creatures.md#instance`) -- unrelated to runCounter/RNG. */
   readonly nextInstanceOrdinal: number
 }
 
 export interface FloorOutcome {
   readonly floor: number
   /** One result per fight actually resolved -- stops at the first non-win (`spec/combat.md#resolution--timing`: "the
-   * fight ends the instant a side has no living creatures"; a floor's remaining fights are
+   * fight ends the instant a side has no living creature"; a floor's remaining fights are
    * simply never attempted after a wipe). */
   readonly fightResults: readonly FightResult[]
   /** True iff every fight on the floor was won. */
@@ -171,15 +165,15 @@ export interface FloorOutcome {
   readonly xpBanked: number
   readonly currencyGained: Currencies
   readonly events: readonly CombatEvent[]
-  /** Phase 4 Slice I (PR #65 review, boss floors): the bossId, iff this floor's (single) fight
+  /** The bossId, iff this floor's (single) fight
    * was a boss encounter AND it was won -- else null. Idempotent at the bossesCleared level (a
    * re-fought, already-cleared boss still reports bossDefeated here, but grants no further perk
    * points -- see `withBossCleared`). */
   readonly bossDefeated: string | null
 }
 
-/** Phase 4.1-A (G5, S5): reasons `descend` can refuse -- see `spec/store.md#how-store-actions-fail`.
- * `beyond-content-frontier` wins over `floor-out-of-reach` when both apply (ASSUMPTION 23). */
+/** Reasons `descend` can refuse -- see `spec/store.md#how-store-actions-fail`.
+ * `beyond-content-frontier` wins over `floor-out-of-reach` when both apply. */
 export type DescendFailureReason =
   'no-spec' | 'empty-party' | 'floor-out-of-reach' | 'beyond-content-frontier'
 
@@ -196,7 +190,7 @@ export type PinBiomeFailureReason =
 export type PinBiomeResult =
   { readonly ok: true } | { readonly ok: false; readonly reason: PinBiomeFailureReason }
 
-/** Phase 4.1-G2 (ASSUMPTIONS 91, 92): `unknown-creature` (not resolvable to static data) is checked
+/** `unknown-creature` (not resolvable to static data) is checked
  * before `soul-incomplete` (soul below 100%). */
 export type SummonFailureReason = 'unknown-creature' | 'soul-incomplete'
 
@@ -213,7 +207,7 @@ export type SetPartySlotResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly reason: SetPartySlotFailureReason }
 
-/** Phase 4.1-G2 (G4): in this order, per `spec/progression.md#specializations`. */
+/** In this order, per `spec/progression.md#specializations`. */
 export type SetPerkLevelFailureReason =
   'no-spec' | 'perk-not-in-spec' | 'invalid-level' | 'over-budget'
 
@@ -222,44 +216,43 @@ export type SetPerkLevelResult =
   | { readonly ok: false; readonly reason: SetPerkLevelFailureReason }
 
 export interface GameActions {
-  /** Phase 4.1-G2 (§6, ASSUMPTION 87): resets EVERYTHING to a fresh game with the given run seed
+  /** Resets EVERYTHING to a fresh game with the given run seed
    * (an integer in `0 .. 2^32 - 1`; anything else throws -- the seed comes from `src/app`, so a bad
    * one is an impossible state). The scripted intro is run separately. */
   newGame(options: { readonly seed: number }): void
-  /** Phase 4.1-G2 (D2): needs 100% soul in `creatureId`; free and unlimited (ASSUMPTIONS 89, 90).
+  /** Needs 100% soul in `creatureId`; free and unlimited.
    * Creates a level-1 instance with rolled gems and puts it in the lowest-index empty party slot,
    * if any. `soulProgress` is left alone. */
   summon(creatureId: string): SummonResult
   /** Pure query sharing `summon`'s own check. */
   canSummon(creatureId: string): CanSummonResult
-  /** Phase 4.1-G2 (D2): swap semantics -- placing an instance already in another slot swaps the
+  /** Swap semantics -- placing an instance already in another slot swaps the
    * two; `null` empties the slot. An empty party is allowed (`descend` refuses it). */
   setPartySlot(slot: number, instanceId: InstanceId | null): SetPartySlotResult
   /** Pure query sharing `setPartySlot`'s own check. */
   canSetPartySlot(slot: number, instanceId: InstanceId | null): SetPartySlotResult
-  /** Phase 4.1-G2 (G4): sets a perk's ABSOLUTE level (buy and refund are one call; 0 removes the
-   * entry). Nothing is gated by the Phase 8 inert list. */
+  /** Sets a perk's ABSOLUTE level (buy and refund are one call; 0 removes the
+   * entry). Nothing is gated by the inert list (`spec/progression.md#inert-perks`). */
   setPerkLevel(perkId: string, level: number): SetPerkLevelResult
   /** Pure query sharing `setPerkLevel`'s own check. */
   canSetPerkLevel(perkId: string, level: number): SetPerkLevelResult
-  /** Phase 4.1-G2 (G4, ASSUMPTION 88): clears all perk spend. Can't fail, so no `can…` query. */
+  /** Clears all perk spend. Can't fail, so no `can…` query. */
   refundAllPerks(): void
   /** Refunds all spent perk points (clears perkSpend -- perk points are derived from
    * bossesCleared, so "refund" just means clearing spend) and, if the new spec's starter isn't
    * already owned, grants one copy of it into the collection (and the first open party slot).
-   * ASSUMPTION 28: swapping specs never removes a previously-owned starter. Throws on an unknown
-   * spec id (ASSUMPTION 9: the UI only offers real specs, so this is an impossible state, not a
-   * player-reachable failure). */
+   * Swapping specs never removes a previously-owned starter. Throws on an unknown
+   * spec id (the UI only offers real specs, so this is an impossible state, not a player-reachable failure). */
   setSpec(specId: string): void
-  /** Idempotent: a boss already in bossesCleared is a no-op (first-clear-only per `spec/progression.md#perk-points`
-   * §9). Own addition (not named by the brief) -- needed for bossesCleared to ever become
+  /** Idempotent: a boss already in bossesCleared is a no-op (first-clear-only per
+   * `spec/progression.md#perk-points`). Needed for bossesCleared to ever become
    * non-empty; perk points are `bossesCleared.size * 100`, derived, never stored separately. */
   recordBossKill(bossId: string): void
-  /** Own addition (not named by the brief, but directly described by `spec/run.md#facilities` Biome Atlas
-   * facility). No facility-unlock gating here (Phase 8/facilities scope). Player-reachable
-   * failure per G5/S5: returns `{ ok: false, reason }` instead of throwing. Reasons:
-   * `floor-out-of-range` (floor < 1), `unknown-biome`, `biome-has-no-content` (review fix F1 --
-   * refuses a pin that would otherwise route `descend` into the generator's own throw). */
+  /** Pins a biome for a floor (the Biome Atlas facility, `spec/run.md#facilities`). No
+   * facility-unlock gating here (the facilities wait, `spec/run.md#facilities`). Player-reachable
+   * failure (`spec/store.md#how-store-actions-fail`): returns `{ ok: false, reason }` instead of throwing. Reasons:
+   * `floor-out-of-range` (floor < 1), `unknown-biome`, `biome-has-no-content` (refuses a pin that
+   * would otherwise route `descend` into the generator's own throw). */
   pinBiome(floor: number, biomeId: BiomeId): PinBiomeResult
   /** Pure query sharing `pinBiome`'s own check -- lets the UI grey out an invalid pin without
    * performing it. */
@@ -270,13 +263,13 @@ export interface GameActions {
    * generation module, runs each fight through the real resolver in sequence, banks soul%/XP/
    * currency rewards as each fight resolves (never held pending the floor's overall outcome),
    * applies XP-driven level-ups post-fight, and advances deepestFloor only on a full clear.
-   * Player-reachable failure per G5/S5: returns `{ ok: false, reason }` (state unchanged) instead
-   * of throwing. */
+   * Player-reachable failure (`spec/store.md#how-store-actions-fail`): returns
+   * `{ ok: false, reason }` (state unchanged) instead of throwing. */
   descend(floor: number): DescendResult
   /** Pure query sharing `descend`'s own check -- lets the UI grey out an unreachable floor
    * without resolving anything. */
   canDescend(floor: number): CanDescendResult
-  /** ASSUMPTION 23: NOT a new engine mechanism -- a fixed, hardcoded 1-enemy fight (the Unicorn)
+  /** NOT a new engine mechanism -- a fixed, hardcoded 1-enemy fight (the Unicorn)
    * resolved through the ordinary resolver, with a special outcome handler HERE (the run layer):
    * regardless of win/loss/draw, the Unicorn joins the collection (and the first open party
    * slot) if not already owned. The engine has zero awareness this fight is special. */
@@ -301,7 +294,7 @@ function resolvePlayerParty(state: GameState, deps: GameStoreDeps): Creature[] {
     const staticId = staticCreatureIdFor(instance)
     const staticRef = findStaticCreature(staticId, deps.standaloneCreatures, deps.biomes)
     if (!staticRef) continue // defensive; every referenced creatureId resolves to static data
-    // ASSUMPTION 84: a stored spell id that no longer resolves is data drift, not a skippable slot.
+    // A stored spell id that no longer resolves is data drift, not a skippable slot.
     const gems = instance.gems.map((spellId) => {
       if (spellId === null) return null
       const spell = deps.allSpells.find((candidate) => candidate.id === spellId)
@@ -346,7 +339,7 @@ function applyXpToParty(
   return next
 }
 
-/** Phase 4.1-G2 (ASSUMPTION 82): the unlock biome's 1-based number for a player gem roll -- the
+/** The unlock biome's 1-based number for a player gem roll -- the
  * biome of `min(100, max(1, deepestFloor))` through `biomeForFloor` with EMPTY pins, so a farming
  * pin never changes a roll and the pool stops growing at floor 100 (the fixed sequence ends there;
  * past it `biomeForFloor` draws by seed hash and could shrink the pool). The cap is also bounded by
@@ -358,7 +351,7 @@ function unlockBiomeIndex(state: GameState, deps: GameStoreDeps): number {
   return deps.biomes.findIndex((b) => b.id === biomeId) + 1
 }
 
-/** Phase 4.1-G2 (ASSUMPTION 81): the spell ids a creature holds INNATELY, read from its traits'
+/** The spell ids a creature holds INNATELY, read from its traits'
  * `innate-spell` effects (createCombat prepends them to the gem slots). A general rule: whatever a
  * creature holds this way is excluded from its own roll pool. */
 function innateSpellIds(
@@ -376,7 +369,7 @@ function innateSpellIds(
   return ids
 }
 
-/** Phase 4.1-G2 (D4, ASSUMPTION 81-84, 95): a new player instance's gem set, rolled once.
+/** A new player instance's gem set, rolled once.
  * Its OWN stream, `createRng(hashGemDraw(runSeed, ordinal))`: never the run stream, never advances
  * `runCounter`, so a roll can't shift a floor draw. The roll itself is generation's `rollLoadout`
  * (the enemy rule: distinct picks, safety net, cast-role throw) over the unlocked, affinity-matched
@@ -396,8 +389,8 @@ function rollPlayerGems(
 }
 
 /** Adds one fresh Instance of `creatureId` (level 1, rolled gems, role script) to the collection,
- * and into the lowest-index empty party slot if there is one (ASSUMPTION 92, brief ASSUMPTION 11).
- * Shared by the starter grant, the Unicorn grant and `summon` (ASSUMPTION 94). */
+ * and into the lowest-index empty party slot if there is one.
+ * Shared by the starter grant, the Unicorn grant and `summon`. */
 function addInstance(
   state: GameState,
   deps: GameStoreDeps,
@@ -457,7 +450,7 @@ function grantCreatureIfUnowned(
 
 /** Idempotent add -- a boss already in `bossesCleared` returns the SAME Set reference (a no-op,
  * first-clear-only per `spec/progression.md#perk-points`). Shared by `recordBossKill` and `descend()`'s own
- * boss-floor-win path (Phase 4 Slice I, PR #65 review) so the two never drift. */
+ * boss-floor-win path so the two never drift. */
 function withBossCleared(
   bossesCleared: ReadonlySet<string>,
   bossId: string,
@@ -469,13 +462,13 @@ function withBossCleared(
 }
 
 /** Small, deterministic, non-cryptographic combine of the run seed and an advance counter --
- * mirrors generation.ts's own hashFloorDraw (ASSUMPTION 4's precedent), distinct constants so
+ * mirrors generation.ts's own hashFloorDraw, distinct constants so
  * the two hashes never collide by construction. */
 function hashRunDraw(runSeed: number, counter: number): number {
   return (Math.imul(runSeed | 0, 0x27d4eb2f) ^ Math.imul(counter | 0, 0x165667b1)) >>> 0
 }
 
-/** Phase 4.1-G2 (ASSUMPTION 81): the player gem roll's own hash -- its OWN constants, distinct from
+/** The player gem roll's own hash -- its OWN constants, distinct from
  * `hashRunDraw` above and generation's `hashFloorDraw`. Distinct constants make a coincidence with
  * another stream's seed unlikely, not impossible; what keeps a gem roll from shifting a floor draw
  * is that it is a separate stream that never touches `runCounter`. */
@@ -485,11 +478,11 @@ function hashGemDraw(runSeed: number, ordinal: number): number {
   )
 }
 
-/** Phase 4.1-A (G5, S5): the shared check behind both `descend` and `canDescend` -- a
+/** The shared check behind both `descend` and `canDescend` -- a
  * player-reachable failure returns `{ ok: false, reason }`, never throws. Order: prerequisites
  * that don't depend on which floor was asked for (no-spec, empty-party) first, then
  * `beyond-content-frontier` before `floor-out-of-reach` so the frontier wins when both would
- * otherwise apply (ASSUMPTION 23). */
+ * otherwise apply. */
 function checkDescend(
   state: GameState,
   deps: GameStoreDeps,
@@ -511,11 +504,11 @@ function checkDescend(
   return { ok: true }
 }
 
-/** Phase 4.1-A (G5, S5): the shared check behind both `pinBiome` and `canPinBiome`. Kept
- * minimal/conservative (ASSUMPTION): only `floor >= 1` is required (no upper bound), preserving
- * today's implicit "pin any floor, including 101+" behaviour.
+/** The shared check behind both `pinBiome` and `canPinBiome`. Kept
+ * minimal: only `floor >= 1` is required (no upper bound), so any floor can be pinned,
+ * including 101+.
  *
- * Review fix F1: a pin into a biome with no content (`biomeHasContent`, generation.ts) is
+ * A pin into a biome with no content (`biomeHasContent`, generation.ts) is
  * refused with `biome-has-no-content` -- without this, `pinBiome` could route `descend` straight
  * into `generateFloor`'s own `weightedPick` throw (a player-reachable crash through a second
  * route beyond `contentFrontier`'s own gate, since a pin can target a biome the fixed 1-100
@@ -539,7 +532,7 @@ function checkPinBiome(
   return { ok: true }
 }
 
-/** Phase 4.1-G2 (ASSUMPTIONS 91, 92): shared by `summon` and `canSummon`. */
+/** Shared by `summon` and `canSummon`. */
 function checkSummon(
   state: GameState,
   deps: GameStoreDeps,
@@ -554,7 +547,7 @@ function checkSummon(
   return { ok: true }
 }
 
-/** Phase 4.1-G2 (ASSUMPTION 92): shared by `setPartySlot` and `canSetPartySlot`. A non-integer
+/** Shared by `setPartySlot` and `canSetPartySlot`. A non-integer
  * slot is out of range; `null` (emptying) is always valid on an in-range slot. */
 function checkSetPartySlot(
   state: GameState,
@@ -570,7 +563,7 @@ function checkSetPartySlot(
   return { ok: true }
 }
 
-/** Phase 4.1-G2 (G4, ASSUMPTION 93): shared by `setPerkLevel` and `canSetPerkLevel`. The budget is
+/** Shared by `setPerkLevel` and `canSetPerkLevel`. The budget is
  * `Σ level × costPerLevel` over the current spec's perks with this change applied, against
  * `bossesCleared × 100`; lowering a level can't go over (spend only ever falls). */
 function checkSetPerkLevel(
@@ -737,7 +730,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       if (!biome) {
         throw new Error(`descend: no biome data for resolved biome id ${String(biomeId)}`)
       }
-      // Phase 4 interstitial slice (cumulative spell unlock): the biome's 1-based number is its
+      // The biome's 1-based number (`spec/run.md#spells-unlock-cumulatively`) is its
       // position in the caller's own ordered `deps.biomes` list (`spec/run.md#biomeforfloor`:
       // the 1-100 sequence is positional) -- generation.ts stays ignorant of
       // array position itself, it just receives the number).
@@ -760,7 +753,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       const fightResults: FightResult[] = []
       const allEvents: CombatEvent[] = []
       let cleared = true
-      // Phase 4 Slice I (PR #65 review, boss floors): set iff this floor's (single) fight is a
+      // Set iff this floor's (single) fight is a
       // boss encounter AND it's won -- `spec/run.md#rewards-are-a-run-layer-consumer-of-the-event-log`: winning a boss fight adds its
       // bossId to bossesCleared.
       let bossDefeated: string | null = null
@@ -783,7 +776,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         fightResults.push(finalState.result as FightResult)
 
         // Rewards bank per kill-event, immediately, regardless of how this fight (or the floor)
-        // ultimately ends (`spec/run.md#rewards`: "never held pending fight outcome").
+        // ultimately ends (`spec/run.md#rewards`).
         for (const event of events) {
           if (event.type !== 'CreatureDied') continue
           const deadEnemy = fight.enemyParty.find((c) => c.id === event.creatureId)
@@ -803,7 +796,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
             continue
           }
 
-          // Phase 4.1-A review fix F4: the ordinary (non-boss) lookup is a pure, independently-
+          // The ordinary (non-boss) lookup is a pure, independently-
           // tested helper (rewards.ts's resolveKillReward) -- reads deadEnemy.origin.templateId,
           // never a parsed CreatureId suffix.
           const reward = resolveKillReward(
@@ -916,11 +909,10 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
   }))
 }
 
-/** The default, zero-config store instance -- real src/data content wired in (Phase 4 Slice G:
- * "first use in the project"). Biomes 1-3 (The Overgrowth/Glimmerdark/Rotcap Hollow) are real,
- * playable content as of Slices H1-H3; biomes 4-10 stay Slice A's placeholder shape (empty
- * spawn pools) until a future phase authors them -- `descend()` against floor 31+ returns
- * `{ ok: false, reason: 'beyond-content-frontier' }` (see data/biomes.ts's own header comment)
- * until then. See integration.test.ts for an end-to-end exercise of this exact instance against
- * real floor 1. */
+/** The default, zero-config store instance -- real src/data content wired in. Biomes 1-3
+ * (The Overgrowth/Glimmerdark/Rotcap Hollow) are real, playable content; biomes 4-10 are the
+ * placeholder shape (empty spawn pools) until content authors them -- `descend()` against
+ * floor 31+ returns `{ ok: false, reason: 'beyond-content-frontier' }` (see data/biomes.ts's own
+ * header comment) until then. See integration.test.ts for an end-to-end exercise of this exact
+ * instance against real floor 1. */
 export const useGameStore = createGameStore()

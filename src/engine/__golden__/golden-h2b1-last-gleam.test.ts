@@ -7,7 +7,7 @@ import {
   gleamDiesExpected,
 } from './golden-h2b1-last-gleam.fixture'
 
-describe('golden replay: the Last Gleam (4.1-H2b1)', () => {
+describe('golden replay: the Last Gleam', () => {
   it('an ally dying gives every living ally +20% Attack, the Last Gleam included', () => {
     const { events } = runGolden(allyDies)
 

@@ -1,6 +1,6 @@
-// Golden: a LETHAL cost, in the damage-path hook order (Phase 4.1-H2b1, ASSUMPTIONS 115, 116, 140,
-// `spec/effects.md#hook-execution`): DamageDealt -> (on-damage-taken, survivors only) ->
-// on-damage-observed -> CreatureDied -> on-death -> on-kill -> on-ally-death. The Wick's burn can
+// Golden: a LETHAL cost, in the damage-path hook order (`spec/effects.md#hook-execution`):
+// DamageDealt -> (on-damage-taken, survivors only) -> on-damage-observed -> CreatureDied ->
+// on-death -> on-kill -> on-ally-death. The Wick's burn can
 // kill it; the Flare's reaction then sits BEFORE CreatureDied and the Last Gleam's `on-ally-death`
 // AFTER it, and the lethal burn skips the heal (fireHook re-checks `alive` per effect).
 // Hand-derived; the Wick, the Flare and the Last Gleam are the REAL species with their real traits.

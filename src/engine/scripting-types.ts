@@ -45,7 +45,7 @@ export interface RoundNumberCondition {
 }
 
 /**
- * `spec/scripting.md#conditions`'s "affinity advantage vs a target" condition -- deliberately existential
+ * The "an enemy is weak to me" condition (`spec/scripting.md#conditions`) -- deliberately existential
  * and decoupled from targeting: true iff >=1 living enemy is weak to the acting
  * creature's affinity. No embedded TargetSelector/qualifier; conditions describe board
  * state, selectors describe targeting, and the two never couple. Named for that
@@ -58,7 +58,7 @@ export interface EnemyWeakToMeExistsCondition {
 }
 
 /** Matches a literal statusId (never a category) among the subject pool's status-carrying
- * status containers (4.1-F1; never stat-modifiers). Existential over
+ * status containers (never stat-modifiers). Existential over
  * the pool, same as hp-percent's `any` qualifier; no lowest/highest qualifier here. */
 export interface HasStatusCondition {
   readonly kind: 'has-status'
@@ -92,10 +92,10 @@ export type Condition =
 
 // ---- Target selectors ----
 // The v1 set from `spec/scripting.md#target-selectors`: the 5-member enemy set (lowest/highest-hp, highest-attack,
-// highest-intelligence, random) plus `self` shipped in Phase 2; Phase 4 Slice E completed the
-// one-for-one ally mirror (highest-hp/highest-attack/highest-intelligence/random-ally alongside
-// the already-existing lowest-hp-ally) so ally-targeting spells/trait responses (the Slice E
-// support-spell model) can pick WHICH ally, not only "the weakest one" -- 11 members total.
+// highest-intelligence, random) plus `self`, and the one-for-one ally mirror
+// (highest-hp/highest-attack/highest-intelligence/random-ally alongside the lowest-hp-ally) so
+// ally-targeting spells/trait responses (the support-spell model) can pick WHICH ally, not only
+// "the weakest one" -- 11 members total.
 
 export interface SelfSelector {
   readonly kind: 'self'
@@ -165,11 +165,12 @@ export interface CastSlotRuleAction {
   readonly kind: 'cast'
   readonly gemSlot: number
 }
-/** Phase 4.1-C2a (A1): 'random' picks uniformly among the actor's castable gems (innate slots
+/** 'random' picks uniformly among the actor's castable gems (innate slots
  * included) at resolution time -- see actions.ts's `castableGemSlots`/`resolveIntent`.
- * Phase 4.1-G1 (ASSUMPTION 69): `gemSide` narrows the draw to gems whose own `targetSide` is that
+ * `gemSide` narrows the draw to gems whose own `targetSide` is that
  * side (the `support` role's "cast random ally-side gem"; AOE spells count by their targetSide).
- * Absent = every castable gem, exactly the pre-G1 draw. Read at both sites that read the castable
+ * Absent = every castable gem, exactly the draw from before the field existed. Read at both sites
+ * that read the castable
  * set: `checkLegality` and `resolveGemSlot`. */
 export interface CastRandomRuleAction {
   readonly kind: 'cast'
@@ -203,11 +204,11 @@ export interface Rule {
 export interface Script {
   readonly id: string
   readonly rules: readonly Rule[]
-  /** Reserved for Phase 6's authoring UI. Never read by the Phase 2 interpreter. */
+  /** Reserved for the authoring UI (`spec/scripting.md#scripts-and-rules`). Never read by the interpreter. */
   readonly defaultTarget?: TargetSelector
 }
 
-// ---- Intent (Phase 4.1-C2a, A1) ----
+// ---- Intent ----
 // The rule-shaped, UNRESOLVED action every action source (a script rule, the implicit fallback,
 // a granted action) produces -- `actions.ts`'s `checkLegality`/`resolveIntent` are the one
 // pipeline that turns this into a resolved `Action` (types.ts). Structurally identical to `Rule`

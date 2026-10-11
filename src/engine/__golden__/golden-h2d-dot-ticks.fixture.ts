@@ -1,4 +1,4 @@
-// Golden: one tick each of the real Poison, Burn and Spore (Phase 4.1-H2d, ASSUMPTION 152): Poison
+// Golden: one tick each of the real Poison, Burn and Spore: Poison
 // 40% of the applier's Attack, Burn 35% of its Intelligence, Spore 35% of its Speed. A content
 // golden: its subject is the three statuses' numbers, on real data. The three statuses are applied in
 // `setup` with the real `applyStatus` (source A, target the bearer), so each snapshot is computed from the real def (a
@@ -16,10 +16,9 @@
 //   Spore on E3: floor(60 x 35 / 100) = 21.
 // A tick is INDIRECT damage at the bearer's turn end: MAX(1, floor(potency x affinity x 1 x 1 -
 //   0.2 x Defence)), with the bearer's Defence 50 -> a term of 10, no chip, no dealt pool:
-//   E1 Poison: 40 - 10 = 30, E1 1000 -> 970.   (At the old 20%: 20 - 10 = 10.)
-//   E2 Burn:   28 - 10 = 18, E2 1000 -> 982.   (At the old 25%: floor(80 x 25 / 100) = 20 -> 10.)
-//   E3 Spore:  21 - 10 = 11, E3 1000 -> 989.   (At the old 15%: floor(60 x 15 / 100) = 9 ->
-//                                                MAX(1, floor(-1)) = 1.)
+//   E1 Poison: 40 - 10 = 30, E1 1000 -> 970.
+//   E2 Burn:   28 - 10 = 18, E2 1000 -> 982.
+//   E3 Spore:  21 - 10 = 11, E3 1000 -> 989.
 // Round 1: A waits; then E1, E2, E3 in Speed order each wait and tick at their own turn end. The
 // statuses' countdowns (3 -> 2) emit nothing. TURN_STEPS = 4 (A, E1, E2, E3).
 

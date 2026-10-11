@@ -1,15 +1,15 @@
 import type { Trait } from '../../engine/effect-types'
 
-// ---- Phase 4 Slice H1: The Overgrowth (floors 1-10) -- real per-species content, additive
-// (same guardrail as STARTER_TRAITS above). Every creature's own doc comment in
+// ---- The Overgrowth (floors 1-10) -- real per-species content.
+// Every creature's own doc comment in
 // data/species/overgrowth.ts explains its ROLE within its species; the mechanism doc comments
 // here explain the trait's own shape. Player-facing plain-language descriptions with exact
 // numbers live in .claude/content/overgrowth.md -- kept in sync with the numbers below.
 
 /** Spiders' Weaver (enabler): at the END of its own turn, Webs a random living enemy --
  * unconditional, decoupled from whatever action it then takes (unlike Lullpollen's Sleeper,
- * which is attack-triggered). Fires on-turn-end -> apply-status(random-enemy selector). Moved from
- * on-turn-start in 4.1-F2 (ASSUMPTION 49): the Web is then born this turn, so the Weaver's own
+ * which is attack-triggered). Fires on-turn-end -> apply-status(random-enemy selector), not
+ * on-turn-start: the Web is then born this turn, so the Weaver's own
  * cleanup does not roll it (its first roll is at the next creature's cleanup). */
 export const SPIDER_WEAVER_TRAIT: Trait = {
   id: 'spider-weaver-web-strike',
@@ -27,7 +27,7 @@ export const SPIDER_WEAVER_TRAIT: Trait = {
   ],
 }
 
-/** Spiders' Ambusher (payoff): a passive conditional-damage-bonus (Slice E2), condition subject
+/** Spiders' Ambusher (payoff): a passive conditional-damage-bonus, condition subject
  * 'target' -- folds straight into the attacker's own dealtMods pool for whichever hit lands on a
  * Webbed target. Applies to both Attack and Cast (actionKind left unset -> 'both'). */
 export const SPIDER_AMBUSHER_TRAIT: Trait = {
@@ -46,8 +46,8 @@ export const SPIDER_AMBUSHER_TRAIT: Trait = {
  * Ambusher, not the two of them combined -- it never applies Web itself (that's Weaver's job
  * alone) and never reads a flat conditional bonus off ITS OWN hit (that's Ambusher's job alone).
  * Instead, every attack lands a SEPARATE bonus hit whose power grows with how many enemies are
- * CURRENTLY Webbed -- "rewards multiple Webs out" read as a live count-scaling bonus (deal-
- * damage's own magnitudeSource, Slice D), a payoff-of-the-payoff that depends entirely on its
+ * CURRENTLY Webbed -- "rewards multiple Webs out" read as a live count-scaling bonus (deal-damage's
+ * own magnitudeSource), a payoff-of-the-payoff that depends entirely on its
  * species-mates having done their own jobs, rather than doing any part of those jobs itself. */
 export const SPIDER_BROODWARDEN_TRAIT: Trait = {
   id: 'spider-broodwarden-entangling-brood',
@@ -67,7 +67,7 @@ export const SPIDER_BROODWARDEN_TRAIT: Trait = {
   ],
 }
 
-/** Swarmhive's Drone (enabler): `content/overgrowth.md#swarmhive-drone` calls it a "cheap body," but every creature
+/** Swarmhive's Drone (enabler, `content/overgrowth.md#swarmhive-drone`): a cheap body, but every creature
  * needs its own real mechanic (no trait-less filler) -- a small on-death parting sting fits a
  * cheap, expendable swarm body without stepping on Striker/Queen's own count-scaling payoff.
  * Strikes a RANDOM living enemy, not necessarily its own killer. */
@@ -88,11 +88,10 @@ export const SWARMHIVE_DRONE_TRAIT: Trait = {
   ],
 }
 
-/** Swarmhive's Striker (payoff): "scales per hive-mate in the team" -- the Slice E2-DECIDED
- * shape for this exact species (`spec/effects.md#count-scaling` own Phase 4 addenda names Swarmhive Striker as
- * apply-stat-modifier's magnitudeSource consumer): fires once on-fight-start, freeze-at-
- * application, count = living-allies-of-species (INCLUDES self) at that moment -- never
- * re-reads live after. */
+/** Swarmhive's Striker (payoff, `content/overgrowth.md#swarmhive-striker`): scales per hive-mate
+ * in the team, through apply-stat-modifier's magnitudeSource (`spec/effects.md#count-scaling`):
+ * fires once on-fight-start, freeze-at-application, count = living-allies-of-species (INCLUDES
+ * self) at that moment -- never re-reads live after. */
 export const SWARMHIVE_STRIKER_TRAIT: Trait = {
   id: 'swarmhive-striker-hive-mind',
   name: 'Hive Mind',
@@ -154,8 +153,8 @@ export const TREANT_SAPLING_TRAIT: Trait = {
   ],
 }
 
-/** Treants' Elder (payoff): "heals the line" -- heal's own scalingStat mode (Slice E2, Treants
- * Elder is the CANONICAL example in that mechanism's own doc comment), scaling off the HEALER's
+/** Treants' Elder (payoff): "heals the line" -- heal's own scalingStat mode (Treants Elder is the
+ * CANONICAL example in that mechanism's own doc comment), scaling off the HEALER's
  * own effective Health, landing on the lowest-HP ally every round-end. */
 export const TREANT_ELDER_TRAIT: Trait = {
   id: 'treant-elder-verdant-ward',
@@ -216,7 +215,7 @@ export const POLLINATOR_DUSTER_TRAIT: Trait = {
 }
 
 /** Pollinators' Beneficiary (payoff): "capitalizes on a buffed team" -- reads its OWN
- * (Duster-buffed) effective Speed as bonus Attack via cross-stat (Slice B), so raising the
+ * (Duster-buffed) effective Speed as bonus Attack via cross-stat, so raising the
  * team's Speed literally raises this creature's own damage; never a status/trigger, folded
  * straight into the formula. */
 export const POLLINATOR_BENEFICIARY_TRAIT: Trait = {
@@ -268,10 +267,7 @@ export const SNAPJAW_LURE_TRAIT: Trait = {
   ],
 }
 
-/** Snapjaws' Jaws (payoff): a retaliate at 60% of its Attack ("a big retaliate", `content/overgrowth.md#snapjaw-jaws`).
- * It was 30% in 4.1-H2c (ASSUMPTION 124: as indirect damage the 60% beat the Shieldbarer pair in
- * every floor-1 fight); 4.1-H2d put it back at 60% once Pollen Cloud no longer deals damage
- * (ASSUMPTION 151). */
+/** Snapjaws' Jaws (payoff): a retaliate at 60% of its Attack (`content/overgrowth.md#snapjaw-jaws`). */
 export const SNAPJAW_JAWS_TRAIT: Trait = {
   id: 'snapjaw-jaws-snapback',
   name: 'Snapback',
@@ -347,7 +343,7 @@ export const LULLPOLLEN_REAPER_TRAIT: Trait = {
  * it never rolls to apply Sleep itself (Sleeper's job alone) and never reads a flat conditional
  * bonus off its OWN hit (Reaper's job alone). Instead, every attack lands a SEPARATE bonus hit
  * whose power grows with how many enemies are CURRENTLY Sleeping -- the exact same live
- * count-scaling shape as Spiders' Broodwarden (deal-damage's magnitudeSource, Slice D), reused
+ * count-scaling shape as Spiders' Broodwarden (deal-damage's magnitudeSource), reused
  * for a different status: a payoff-of-the-payoff that depends entirely on its species-mates
  * having done their own jobs. */
 export const LULLPOLLEN_DOZER_TRAIT: Trait = {

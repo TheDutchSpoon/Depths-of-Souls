@@ -3,13 +3,13 @@ import type { SelfCondition } from './effect-types'
 import type { Creature, Stat } from './types'
 
 /**
- * True iff `creature` carries a status container (`category: 'status'`, 4.1-F1) with the
+ * True iff `creature` carries a status container (`category: 'status'`) with the
  * literal statusId -- what scripting's has-status condition scopes to. Reads the raw list, never
  * the effect iterator: an immune bearer's status still exists and counts. Never matches a
  * stat-modifier/stat-remap/plain-triggered effect, nor the permanent perk-granted passives, which
  * carry no statusId and are never themselves a status.
  *
- * Phase 4.1-B (S2/B-8): lives HERE, not effects.ts, so `evaluateSelfCondition`'s `has-status`
+ * Lives HERE, not effects.ts, so `evaluateSelfCondition`'s `has-status`
  * branch (below) can read it without effects.ts -> effective-stats.ts becoming a cycle --
  * effects.ts re-exports this for its existing importers (conditions.ts, interpreter.ts,
  * resolution.ts, combat.ts, effects.ts itself), so nothing else about the public API changes.
@@ -44,14 +44,13 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
 /**
  * Integer cross-multiplication, no float: `currentHp/maxHp <cmp> thresholdPercent/100`, i.e.
  * `currentHp * 100 <cmp> thresholdPercent * maxHp`. Shared by conditions.ts's scripting
- * `hp-percent` Condition and this module's own `SelfCondition` (S2) -- one implementation, per
- * design-review B-7. `maxHp` is `floor(getEffectiveStat(creature, 'health'))` -- the SAME integer
+ * `hp-percent` Condition and this module's own `SelfCondition` -- one implementation.
+ * `maxHp` is `floor(getEffectiveStat(creature, 'health'))` -- the SAME integer
  * `currentHp` is initialised and clamped to (effects.ts's `effectiveMaxHp`), computed HERE from
  * `creature` directly (not passed in) so there is exactly one place either caller's "what does
- * HP% divide by" reading can come from (Phase 4.1-B review, PR #69: the previous unfloored
- * `getEffectiveStat` reading made "at full HP" untrue whenever a Health modifier left effective
- * Health fractional -- a creature at its own max is trivially 100% only against the floored value
- * currentHp actually gets clamped to).
+ * HP% divide by" reading can come from (an unfloored `getEffectiveStat` reading would make "at full
+ * HP" untrue whenever a Health modifier left effective Health fractional -- a creature at its own
+ * max is trivially 100% only against the floored value currentHp actually gets clamped to).
  */
 export function hpPercentSatisfied(
   creature: Creature,
@@ -63,8 +62,7 @@ export function hpPercentSatisfied(
 }
 
 /**
- * Phase 4.1-B (S2): evaluates a conditional passive's read-time gate -- DATA, not a function
- * (replaces `predicate: ActivationPredicate`). Self-only, mirroring the old predicate's contract:
+ * Evaluates a conditional passive's read-time gate -- DATA, not a function. Self-only: it
  * may read OTHER effective stats but must never read the stat it gates (no read-cycle). This is
  * enforced by a load-time validator (data/traits/index.ts, data/specializations.ts), not here --
  * `hp-percent` reads effective Health via `getEffectiveStat`, which only terminates without
@@ -93,7 +91,7 @@ function evaluateSelfCondition(condition: SelfCondition, creature: Creature): bo
 /**
  * A creature's current value for `stat`: base folded with active `stat-modifier` effects,
  * **multiplicatively** (`base × Π(factors)`), in canonical active-effects order. A conditional
- * passive's factor is included only when its read-time `condition` (SelfCondition, S2) holds.
+ * passive's factor is included only when its read-time `condition` (SelfCondition) holds.
  * Base stats are immutable; this is computed on demand and never written back.
  *
  * Multiplication is commutative, so numeric order is irrelevant here — but effects are still

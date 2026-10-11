@@ -1,4 +1,4 @@
-// Phase 4.1-E (A2): the loop-safety lint for `perform-action` grants (`spec/responses.md#perform-action`).
+// The loop-safety lint for `perform-action` grants (`spec/responses.md#perform-action`).
 // Every `perform-action` trigger in every registry -- traits, specialization perks (at every level)
 // and status triggers -- must carry a REAL guard: a `chancePercent` below 100, or a `condition`
 // other than `always`. The depth bound is what guarantees termination; this is a lint against
@@ -15,7 +15,7 @@ import { TRAIT_REGISTRY } from './traits'
 import { STATUS_REGISTRY } from './statuses'
 import { SPECIALIZATIONS, resolvePerkEffects } from './specializations'
 
-describe('perform-action guard lint (4.1-E)', () => {
+describe('perform-action guard lint', () => {
   it('every perform-action trigger in the trait registry carries a real guard', () => {
     const unguarded: string[] = []
     for (const trait of TRAIT_REGISTRY.values()) {

@@ -1,9 +1,8 @@
-// Golden: a SELF-APPLIED tick (applier = bearer, alive) (Phase 4.1-H2b2, ASSUMPTIONS 115, 142,
-// 146). The bearer is the applier, so it IS the dealer: its own dealer-side hook (on-damage-dealt)
-// fires. And the tick is still not self-inflicted: an ally cost observer (Flare-shaped:
+// Golden: a SELF-APPLIED tick (applier = bearer, alive). The bearer is the applier, so it IS the
+// dealer: its own dealer-side hook (on-damage-dealt) fires. And the tick is still not
+// self-inflicted: an ally cost observer (Flare-shaped:
 // relationship 'ally', selfInflicted true) stays silent -- self-inflicted is the cost branch's own
-// classification, never "the dealer is the bearer" (the id inference H2b1 refused, in its other
-// spelling).
+// classification, never "the dealer is the bearer" (an inference from the ids).
 //
 // Hand-derived (independent `node -e` calculator). Players: S (health 100, Attack 100, Defence 20,
 // speed 20, carries a fixture "Dealer": on-damage-dealt -> its own Attack x1.5) and W (speed 10,
@@ -87,8 +86,8 @@ export const traits: ReadonlyMap<string, Trait> = new Map([
   [DEALER.id, DEALER],
   [WATCH_COSTS.id, WATCH_COSTS],
 ])
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState =>

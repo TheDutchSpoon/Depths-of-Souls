@@ -1,7 +1,6 @@
-// Golden: `accumulation: 'additive'` on a `taken`-direction `damage-modifier` (Phase 4 Slice D,
-// PR #47 review amendment -- real Bulwark-SHAPED: specializations/shieldbarer.md's actual
-// "-5% damage taken (cap 80%) for each time the creature has Defended this battle," unchanged
-// under this decision). Companion to golden-defend-count, which pins the `'multiplicative'`
+// Golden: `accumulation: 'additive'` on a `taken`-direction `damage-modifier` (real Bulwark-SHAPED:
+// `specializations/shieldbarer.md#bulwark`'s -5% damage taken, cap 80%, for each time the creature
+// has Defended this battle). Companion to golden-defend-count, which pins the `'multiplicative'`
 // (default) mode: a purely multiplicative `magnitude ** count` does NOT implement Bulwark's hard
 // cap -- it sails past 80% toward 100% as count grows (`0.95 ** 32 ≈ 0.19`, an 81% reduction) --
 // so `'additive'` sums the per-unit reduction × count and hard-clamps it instead.
@@ -143,7 +142,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: STRIKER },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: BEARER },
-  // Phase 4.1-C (D6, fixes B6): round 1's Defend expires at BEARER's own turn-start cleanup,
+  // Round 1's Defend expires at BEARER's own turn-start cleanup,
   // unconditionally, before it decides its round-2 action.
   { type: 'ActionStateEnded', creatureId: BEARER, defending: true, provoking: false },
   { type: 'Defended', creatureId: BEARER },

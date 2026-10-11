@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import { holdPotency } from './held-statuses'
 
-describe('holdPotency (4.1-H2d pins)', () => {
+describe('holdPotency pins', () => {
   it('replaces only the potency percent: the held def equals the real def apart from it', () => {
     const real = STATUS_REGISTRY.get('poison')!
     const held = holdPotency(STATUS_REGISTRY, { poison: 7 }).get('poison')!

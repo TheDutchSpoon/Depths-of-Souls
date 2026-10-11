@@ -1,4 +1,4 @@
-// Golden: 4.1-E (A2, ASSUMPTION 2) -- the grant queue is FIRST IN, FIRST OUT: a grant raised BY a
+// Golden: the grant queue is FIRST IN, FIRST OUT: a grant raised BY a
 // granted action goes to the BACK of the queue, behind grants already waiting. Hand-derived.
 //
 // SETUP (player side, slot order A, O1, O2, O3; all chancePercent 100, so every roll passes and no

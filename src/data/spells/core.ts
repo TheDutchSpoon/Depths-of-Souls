@@ -1,17 +1,15 @@
 import type { Spell } from '../../engine/types'
 
-// Real shipped content, not test fixtures. Phase 8 (Gem Forge/augments/leveling) will
-// wrap these in the full Gem economy; for now Creature.equippedSpells holds bare Spells.
+// Real shipped content, not test fixtures. The full Gem economy (`spec/creatures.md#gems-as-items`)
+// will wrap these; for now Creature.equippedSpells holds bare Spells.
 
 export const EMBER_LANCE: Spell = {
   id: 'ember-lance',
   name: 'Ember Lance',
   targetShape: 'single',
   affinity: 'violence',
-  // Phase 4 interstitial slice (cumulative spell unlock): these three core spells were never
-  // actually wired into any biome's roll before this slice (BiomeData.spellPool never
-  // referenced data/spells/core.ts) -- unlockedAtBiome:1 plus data/spells/index.ts's new
-  // ALL_SPELLS aggregate is what makes them reachable at all now.
+  // These three core spells are reachable by the roll through `unlockedAtBiome: 1` plus
+  // data/spells/index.ts's ALL_SPELLS aggregate (`spec/run.md#spells-unlock-cumulatively`).
   unlockedAtBiome: 1,
   targetSide: 'enemy',
   effects: [
@@ -24,7 +22,7 @@ export const EMBER_LANCE: Spell = {
   ],
 }
 
-// The "30%-Intelligence" spell anchor from `content/overgrowth.md#spell-power-convention`'s own example.
+// The 30%-Intelligence spell anchor for the spell power convention (`content/overgrowth.md#spell-power-convention`).
 export const CINDER_NOVA: Spell = {
   id: 'cinder-nova',
   name: 'Cinder Nova',
@@ -42,7 +40,7 @@ export const CINDER_NOVA: Spell = {
   ],
 }
 
-// Slice C: a spell-applied status, per `spec/combat.md#spells-carry-responses`
+// A spell-applied status, per `spec/combat.md#spells-carry-responses`
 export const VENOM_BOLT: Spell = {
   id: 'venom-bolt',
   name: 'Venom Bolt',

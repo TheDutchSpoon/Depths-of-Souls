@@ -1,0 +1,64 @@
+# Gates (4.2-H2), run on the branch's working tree
+
+node v24.19.0; npm 11.12.1; lockfile: package-lock.json (node_modules not reinstalled)
+
+## npm run test
+    > vitest run
+     RUN  v5.0.3 C:/Users/dunca/MyProjects/Depths-of-Souls
+     Test Files  210 passed (210)
+          Tests  1681 passed | 1 skipped (1682)
+       Start at  22:10:53
+       Duration  23.15s (tests 70%, import 16%, transform 10%, worker 2%, environment 2%)
+    exit 0
+
+## npm run lint
+    > depths-of-souls@0.0.0 lint
+    > eslint .
+    exit 0
+
+## npm run format:check
+    > prettier --check .
+    Checking formatting...
+    All matched files use Prettier code style!
+    exit 0
+
+## npm run build
+    computing gzip size...
+    dist/index.html                   0.51 kB │ gzip:  0.31 kB
+    dist/assets/index-CpQxvG1H.css    0.32 kB │ gzip:  0.20 kB
+    dist/assets/index-CPteU_Xa.js   295.23 kB │ gzip: 86.22 kB
+    ✓ built in 96ms
+    exit 0
+
+## npx tsc -b
+    exit 0
+
+## npm run docs:check -- citations
+    > node scripts/docs-check.ts citations
+    citations: PASS, 640 citations in 436 files
+    exit 0
+
+## npm run docs:check -- budgets
+    spec/statuses.md     17.1 KB  21 KB   82%   ok
+    spec/store.md        2.8 KB   4 KB    70%   ok
+    budgets: 12 files, 0 over budget
+    exit 0
+
+## npm run docs:check -- comments
+    > node scripts/docs-check.ts comments
+    comments: PASS, 7003 comments and 1627 titles in 403 files
+    exit 0
+
+## npm run docs:check -- comments --quotations
+    > node scripts/docs-check.ts comments --quotations
+    quotations: 0 comments and 0 titles
+    exit 0
+
+## npm run docs:check -- comment-proof origin/main --mask evidence/mask.json
+    comment-proof: PASS, 347 changed files
+    exit 0
+
+## npm run docs:check -- citations <report-r2.md> <record.md>
+    citations: PASS, 16 citations in 2 files
+    exit 0
+

@@ -1,5 +1,5 @@
 // Golden: a tick that KILLS its bearer offers no `triggering-source` to the bearer's `on-death`
-// either (Phase 4.1-H2b2, ASSUMPTION 6). `on-death` is the second bearer-side site of the tick
+// either. `on-death` is the second bearer-side site of the tick
 // origin (the first is `on-damage-taken`, golden-h2b2-tick-no-retaliation). A fixture trait on the
 // bearer answers its own death by striking `triggering-source`: after a tick-kill from a living
 // applier it fires (TriggerFired) and resolves to nothing -- the applier takes no damage.
@@ -66,8 +66,8 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits: ReadonlyMap<string, Trait> = new Map([[LAST_WORDS.id, LAST_WORDS]])
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState => {

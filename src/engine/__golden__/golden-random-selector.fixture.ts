@@ -79,7 +79,7 @@ export const enemyParty = makeParty('enemy', [
 /**
  * Hand-derived. Expected target indices are derived by calling rng.ts's own tested
  * mulberry32 primitive directly with SEED 7007, as the independent calculator (this is
- * the RNG *primitive*, already golden-tested on its own in Phase 1 -- not the
+ * the RNG *primitive*, already golden-tested on its own -- not the
  * interpreter/resolver under test here): draw1=0.5217045086901635 -> floor(draw1*3)=1
  * (of pool [e0,e1,e2]) -> targets e1; draw2=0.008260984206572175 -> floor(draw2*2)=0 (of
  * the round-2 pool [e0,e2], e1 now dead) -> targets e0; draw3=0.1733984888996929 ->

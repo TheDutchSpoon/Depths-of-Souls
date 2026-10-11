@@ -1,5 +1,5 @@
 // Golden: a status tick is INDIRECT damage from the applier's snapshot, credited to the LIVING
-// applier (Phase 4.1-H2b2, ASSUMPTIONS 113, 143, 144, 146). It is the focused case for the tick
+// applier. It is the focused case for the tick
 // formula and its inputs:
 //   tick = potency x affinity(snapshot vs bearer) x prod(bearer's taken factors)
 //          - 0.2 x bearer's effective Defence, then MAX(1, floor(...)).
@@ -128,8 +128,8 @@ export const scripts = new Map([
 export const traits: ReadonlyMap<string, Trait> = new Map(
   [SURGE, LIFESTEAL, BONUS_VS_POISON].map((t) => [t.id, t]),
 )
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState => {

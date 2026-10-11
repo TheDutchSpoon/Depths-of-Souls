@@ -1,5 +1,5 @@
 // Golden: the REFRESH path of the turn-end DoT-kill burst -- golden-turn-end-dot-kill-burst's
-// twin (4.1-H2b2: single instance + the applier snapshot). E1 already carries a WEAK Poison applied
+// twin (single instance + the applier snapshot). E1 already carries a WEAK Poison applied
 // by TANK before the fight; ROTCORE's on-death burst RE-APPLIES Poison to E1 with a STRONGER
 // snapshot during ROTCORE's turn: the same instance (and id) is kept, the timer is refreshed and
 // stamped born in THAT turn (for E1 another creature's turn, so E1 ticks at its own next turn
@@ -63,8 +63,8 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const TURN_STEPS = 6 // ROTCORE, TANK and E1's round-1 turns, then TANK's round-2 turn (with
@@ -149,8 +149,7 @@ export const expectedEvents: CombatEvent[] = [
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
   // Pre-apply Poison to ROTCORE (its own) and to E1 (TANK's, the weak one), and wound ROTCORE to
-  // 1 HP, all before any turn resolves -- into a throwaway events array, mirroring the PR #64
-  // repro's own setup idiom.
+  // 1 HP, all before any turn resolves -- into a throwaway events array.
   let state = applyStatus(
     ROTCORE,
     ROTCORE,

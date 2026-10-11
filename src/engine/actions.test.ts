@@ -1,4 +1,4 @@
-// Phase 4.1-C2a (A1): unit coverage for actions.ts's own plumbing beyond what
+// Unit coverage for actions.ts's own plumbing beyond what
 // interpreter.test.ts (checkLegality via decideAction's rule loop / the implicit fallback) and
 // support-spells.test.ts (resolveIntent's ally-side path) already exercise.
 
@@ -87,7 +87,7 @@ const AOE_SPELL: Spell = {
   ],
 }
 
-describe('defaultTargetingFor (Phase 4.1-C2a, A1; wired into resolveIntent in C2b/B1)', () => {
+describe('defaultTargetingFor (wired into resolveIntent)', () => {
   it('Attack defaults to lowest-hp-enemy', () => {
     const player = makeParty('player', [{ id: 'me' }])
     expect(defaultTargetingFor(player[0]!, { kind: 'attack' })).toEqual({
@@ -136,7 +136,7 @@ describe('defaultTargetingFor (Phase 4.1-C2a, A1; wired into resolveIntent in C2
   })
 })
 
-describe('castableGemSlots (Phase 4.1-C2a, A1)', () => {
+describe('castableGemSlots', () => {
   it('includes every non-empty slot whose spell has a valid target, innate slots included', () => {
     const player = makeParty('player', [
       { id: 'me', equippedSpells: [ENEMY_SPELL, null, ALLY_SPELL] },
@@ -160,7 +160,7 @@ describe('castableGemSlots (Phase 4.1-C2a, A1)', () => {
   })
 })
 
-describe("resolveIntent's gemSlot: 'random' draw order (Phase 4.1-C2a, A1)", () => {
+describe("resolveIntent's gemSlot: 'random' draw order", () => {
   it('draws the gem slot BEFORE the target across seeds 0-19 -- pinned for byte-identity with granted-cast/echo', () => {
     // Two DISTINCT slots (0/1) and three enemies (unequal pool sizes) so the gem-first and
     // target-first hypotheses can resolve to DIFFERENT concrete picks -- a discriminating proof,
@@ -219,7 +219,7 @@ describe("resolveIntent's gemSlot: 'random' draw order (Phase 4.1-C2a, A1)", () 
   })
 })
 
-describe('resolveIntent -- castable-filtered gem draw and resolved-side default (Phase 4.1-C2b)', () => {
+describe('resolveIntent -- castable-filtered gem draw and resolved-side default', () => {
   it("gemSlot 'random' draws over the castable slots only, and draws NOTHING when none is castable", () => {
     // Slot 0 = enemy spell, slot 1 = ally spell; the enemy side is empty, so only slot 1 castable.
     const player = makeParty('player', [
@@ -276,7 +276,7 @@ describe('resolveIntent -- castable-filtered gem draw and resolved-side default 
   })
 })
 
-// ---- Phase 4.1-C2c (B2, B5): one rule set for every action source ----
+// ---- one rule set for every action source ----
 
 function lock(scope: 'all' | 'cast', id = 'lock'): ActiveEffect {
   return {
@@ -294,7 +294,7 @@ function lock(scope: 'all' | 'cast', id = 'lock'): ActiveEffect {
 
 const RANDOM_CAST = { action: { kind: 'cast', gemSlot: 'random' } } as const
 
-describe('runAction -- legality before resolution, for every source (B2.2, 4.1-C2c)', () => {
+describe('runAction -- legality before resolution, for every source', () => {
   it('a scoped-Cast lock refuses a cast, and NOTHING is drawn or emitted (not even the gem draw)', () => {
     const player = makeParty('player', [
       { id: 'me', equippedSpells: [ENEMY_SPELL], activeEffects: [lock('cast')] },
@@ -337,8 +337,8 @@ describe('runAction -- legality before resolution, for every source (B2.2, 4.1-C
   })
 
   it("an 'all' lock applied MID-turn (a turn-end hook) refuses that turn's granted cast", () => {
-    // The lock lands AFTER turn-start, so the skipped-turn flag is false: this is B2.2 (legality
-    // at the granted step), not B2.1 (the skip gate).
+    // The lock lands AFTER turn-start, so the skipped-turn flag is false: this is the legality
+    // check at the granted step (`spec/combat.md#every-action-source-obeys-the-same-rules`), not the skip gate.
     const trait: Trait = {
       id: 'lock-then-bonus-fixture',
       name: 'Lock then bonus (fixture)',
@@ -392,7 +392,7 @@ describe('runAction -- legality before resolution, for every source (B2.2, 4.1-C
   })
 })
 
-describe('an echo is gated by the CASTER, never the bearer (B2.2, 4.1-C2c)', () => {
+describe('an echo is gated by the CASTER, never the bearer', () => {
   // Seed 7's draws: #1 0.0117 (echo roll, 50% -> passes), #2 0.0620 (gem), #3 0.9769 (random
   // target), #4 0.6990 (the echo's own re-observation roll -> fails), so the chain is one echo.
   const ECHO: ActiveEffect = {
@@ -432,7 +432,7 @@ describe('an echo is gated by the CASTER, never the bearer (B2.2, 4.1-C2c)', () 
       state,
       ctx,
     )
-    drainGrantedActions(ctx, after) // 4.1-E: the echo is queued; the scope drains it
+    drainGrantedActions(ctx, after) // The echo is queued; the scope drains it
     return events
   }
 
@@ -451,7 +451,7 @@ describe('an echo is gated by the CASTER, never the bearer (B2.2, 4.1-C2c)', () 
   })
 })
 
-describe('resolveInstanceTarget -- rule 4 (B2.4, 4.1-C2c)', () => {
+describe('resolveInstanceTarget -- rule 4', () => {
   // ATTACKER: Attack 20, a second 30% instance. Instance 1 (100%, 20 dmg) kills the first
   // enemy (HP 5), so instance 2 must fall back. Defence 0 everywhere.
   const SECOND_INSTANCE: ActiveEffect = {

@@ -83,6 +83,6 @@ Read this when changing progression: specializations, perks and perk points, the
 ### Inert perks
 
 - Nothing gates build order: a perk that stays inert until Phase 8 is buyable. **`PerkDef` carries
-  no phase tag**; each inert perk has a code comment instead (`// Inert until Phase 8 (gem system)
-  -- see sorcerer.md`), and a data test holds the explicit list of the 9 known-inert perk ids,
+  no phase tag**; each inert perk has a code comment instead, citing the perk's own entry, which
+  states what it waits for (`// Inert (gem system): specializations/<spec>.md#<perk>`), and a data test holds the explicit list of the 9 known-inert perk ids,
   while every other perk must have at least one effect at max level.

@@ -1,8 +1,6 @@
-// Golden: a DoT tick is not a cost, so a cost observer stays silent (Phase 4.1-H2b1, ASSUMPTIONS
-// 115, 131, 137; 4.1-H2b2: the tick is a snapshot-potency status tick, ASSUMPTION 144).
-// Hand-derived. Its own golden on purpose: H2b2 moved the tick's source to the applier and made it
-// indirect, so this case changed alone, while the ordinary-hit, spell-on-caster and zero-cost cases
-// (golden-h2b1-observed-silent) stayed byte-identical.
+// Golden: a DoT tick is not a cost, so a cost observer stays silent (the tick is a snapshot-potency status tick).
+// Hand-derived. Its own golden on purpose, so the tick case can change without touching the others
+// (the ordinary-hit, spell-on-caster and zero-cost cases are in golden-h2b1-observed-silent).
 //
 // Players (speed order O 10, P 5; both always-wait), enemy E (health 100, always-wait, speed 1):
 //   O (health 40) carries the Flare-shaped observer (`relationship 'ally'`, `selfInflicted true`)

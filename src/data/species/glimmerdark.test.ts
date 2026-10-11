@@ -11,7 +11,7 @@ import {
   LEECH_SOVEREIGN,
 } from './glimmerdark'
 
-// Loader/shape test (per the H1/H2 common checklist item 6): every creature has a valid
+// Loader/shape test: every creature has a valid
 // affinity/species/rarity/trait/script reference; every trait/spell/status referenced actually
 // exists in a registry.
 
@@ -33,7 +33,7 @@ describe('Glimmerdark: shape', () => {
     expect(creatureIds.size).toBe(18)
   })
 
-  it('every species declares a positive draw weight (ASSUMPTION 5)', () => {
+  it('every species declares a positive draw weight', () => {
     for (const species of GLIMMERDARK_SPECIES_POOL) {
       expect(species.weight).toBeGreaterThan(0)
     }
@@ -54,7 +54,7 @@ describe('Glimmerdark: shape', () => {
     }
   })
 
-  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat', () => {
+  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45, 10-30 for every other stat', () => {
     for (const creature of ALL_CREATURES) {
       for (const [stat, value] of Object.entries(creature.baseStats)) {
         expect(value, creature.id + ' ' + stat).toBeGreaterThanOrEqual(
@@ -67,7 +67,7 @@ describe('Glimmerdark: shape', () => {
     }
   })
 
-  it('the Flickerlings take the old first slot (pool index 0), in rarity order, with the content doc Health and scripts (4.1-H2b1)', () => {
+  it('the Flickerlings take the first slot (pool index 0), in rarity order, with the content doc Health and scripts', () => {
     const flickerlings = GLIMMERDARK_SPECIES_POOL[0]!
     expect(flickerlings.id).toBe('flickerlings')
     expect(flickerlings.weight).toBe(1)
@@ -86,7 +86,7 @@ describe('Glimmerdark: shape', () => {
     ])
   })
 
-  it('the affinity spread is 4 Wit / 3 Instinct / 5 Violence / 4 Endurance / 2 Vitality (4.1-H2b1)', () => {
+  it('the affinity spread is 4 Wit / 3 Instinct / 5 Violence / 4 Endurance / 2 Vitality', () => {
     const count = (affinity: string) =>
       GLIMMERDARK_AFFINITIES.filter((a) => a === affinity).length
     expect([
@@ -105,7 +105,7 @@ describe('Glimmerdark: shape', () => {
     )
   })
 
-  it('the cast-role creatures (caster / support / opener, 4.1-G1) are exactly the roles table ones, and each has an affinity-matched spell', () => {
+  it('the cast-role creatures (caster / support / opener) are exactly the roles table ones, and each has an affinity-matched spell', () => {
     const casters = ALL_CREATURES.filter((c) =>
       CAST_ROLE_SCRIPT_IDS.includes(c.defaultScriptId),
     )

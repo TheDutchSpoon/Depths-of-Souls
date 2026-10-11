@@ -1,16 +1,16 @@
-// Phase 4.1-D (A4): spells carry responses. The re-expression is BYTE-IDENTICAL, so this file has
-// two halves:
+// Spells carry responses. The effect-list cast is BYTE-IDENTICAL to the legacy payload path, so
+// this file has two halves:
 //
 //  1. One old-vs-new EQUIVALENCE test per payload kind (damage, heal, stat-modifier, damage +
-//     status, AOE + status). The "old" side is `legacyCast` below: the pre-4.1-D cast executor's
-//     payload path as it stood on `main@eb37246` (`applyCastPayload`,
+//     status, AOE + status). The "old" side is `legacyCast` below: the legacy cast executor's
+//     payload path (`applyCastPayload`,
 //     `resolveSpellOffStat`, `applyStatusIfAlive`, and the executeCastSingle/Aoe loops minus their
 //     hook firing, which is a no-op on a trait-free fixture), replayed on the current primitives.
 //     It is NOT verbatim: the old damage call (`dealDamageWithOffStat`, since deleted) is replaced
 //     by `dealDamage` / `dealDamageWithScalingStat`, which compute the same value from the same
 //     `spellPower x pf` and call the same core. Both sides start from equal states; the events, the final state and the RNG
 //     position must be identical. Each case also pins its hand-derived numbers.
-//  2. Pins for each parity rule and check site the plan names (P2, P5, P8, B5 on the cast path,
+//  2. Pins for each parity rule and check site on the cast path (the dead-target verb rule,
 //     `cast-target` at BOTH the single-target and the AOE site, `self` once per landed target, the
 //     atomic effect list, live caster stats) plus the validators.
 //
@@ -101,9 +101,9 @@ function runNew(
 const findCreature = (state: CombatState, id: string): Creature =>
   [...state.playerParty, ...state.enemyParty].find((c) => String(c.id) === id)!
 
-// ---- The legacy oracle (main@eb37246) ----
+// ---- The legacy oracle ----
 
-/** The PRE-4.1-D `Spell` shape (history): `spellPower`, `scalingStat`, `payload`, `statModifier` and
+/** The legacy `Spell` shape: `spellPower`, `scalingStat`, `payload`, `statModifier` and
  * `appliesStatus` were spell-level fields. Only the legacy oracle below reads it. */
 interface LegacySpell {
   readonly id: string
@@ -116,8 +116,8 @@ interface LegacySpell {
   readonly appliesStatus?: StatusSpec
 }
 
-/** How the 4.1-D data re-expression maps an old spell onto `effects` (what the codemod did to
- * every literal in src/data and every fixture). */
+/** How an old spell maps onto `effects` (what the legacy oracle's literals were converted
+ * with). */
 function toSpell(legacy: LegacySpell): Spell {
   const payload = legacy.payload ?? 'damage'
   const effects: EffectResponse[] = []
@@ -323,7 +323,7 @@ const damages = (events: CombatEvent[]) =>
 
 // ---- 1. Old-vs-new equivalence, one per payload kind ----
 
-describe('4.1-D equivalence: the old cast payload path vs the new effect list', () => {
+describe('equivalence: the old cast payload path vs the new effect list', () => {
   it('damage (instance list [100, 30], so the power fraction composes with spellPower)', () => {
     // Caster Int 20, enemy defence 0, HP 100. spellPower 0.3.
     // Instance 1 (100%): off = 20 x (0.3 x 1) = 6, core 6, chip 0.06 -> raw 6.06 -> final 6.
@@ -501,7 +501,7 @@ describe('4.1-D equivalence: the old cast payload path vs the new effect list', 
 
 // ---- 2. Parity-rule pins ----
 
-describe('P2: a spell hit counts as a cast (cross-stat) and never splashes', () => {
+describe('a spell hit counts as a cast (cross-stat) and never splashes', () => {
   it("a cast-only cross-stat bonus applies; a Splashing caster's cast hits ONE target", () => {
     // Caster Int 20, Attack 40. cross-stat: +percentPerRank of Attack read into the OffStat for
     // CASTS only. The spell is single-target, spellPower 1.0; enemies defence 0, HP 100 each.
@@ -546,7 +546,7 @@ describe('P2: a spell hit counts as a cast (cross-stat) and never splashes', () 
   })
 })
 
-describe('P8: a spell effect takes no cascade-depth or self-guard accounting', () => {
+describe('a spell effect takes no cascade-depth or self-guard accounting', () => {
   it("at depth MAX-1 the target's reaction to the spell hit still fires (no +1 from the spell)", () => {
     // The target retaliates (on-damage-taken -> flat 1 to the triggering source). fireHook needs
     // depth+1 <= MAX to fire. With the cascade at MAX-1 the trigger fires ONLY IF the spell's own
@@ -586,7 +586,7 @@ describe('P8: a spell effect takes no cascade-depth or self-guard accounting', (
   })
 })
 
-describe('B5 on the cast path: a target killed in its own pre-hit hooks gets NOTHING from the list', () => {
+describe('the pre-hit-hook fizzle on the cast path: a target killed in its own pre-hit hooks gets NOTHING from the list', () => {
   // The caster's on-cast trigger deals a lethal 99 to the cast's target before the list runs.
   const KILL_TARGET_ON_CAST = () =>
     eff({
@@ -646,7 +646,7 @@ describe('B5 on the cast path: a target killed in its own pre-hit hooks gets NOT
   })
 })
 
-describe('B5 and the AOE alive-skip also guard `self` effects (cast-target alone would not)', () => {
+describe('the pre-hit-hook fizzle and the AOE alive-skip also guard `self` effects (cast-target alone would not)', () => {
   // DRAIN: damage the landed target, then heal the CASTER. A dead target must cost the caster its
   // heal too -- "gets NOTHING from the effect list" -- which only the loop-level checks enforce,
   // because `self` does not resolve through `cast-target`.
@@ -668,7 +668,7 @@ describe('B5 and the AOE alive-skip also guard `self` effects (cast-target alone
     ],
   })
 
-  it('B5 (single): the target dies in the on-cast hook -> no damage AND no self heal', () => {
+  it('a single target: the target dies in the on-cast hook -> no damage AND no self heal', () => {
     const player = makeParty('player', [
       {
         id: 'me',
@@ -886,7 +886,7 @@ describe('a `self` effect runs once per landed target', () => {
   })
 })
 
-describe("ASSUMPTION 35: one landed target's effect list is atomic (no actor check between effects)", () => {
+describe("One landed target's effect list is atomic (no actor check between effects)", () => {
   // The target retaliates against whoever hits it with a lethal flat 99. The caster (HP 10) dies
   // from the retaliation to the spell's damage, BETWEEN the damage effect and the status effect.
   const RETALIATE = () =>
@@ -960,12 +960,12 @@ describe("ASSUMPTION 35: one landed target's effect list is atomic (no actor che
   })
 })
 
-describe('ASSUMPTION 36: magnitudes read the caster LIVE when each effect runs', () => {
+describe('Magnitudes read the caster LIVE when each effect runs', () => {
   it("the caster's own on-cast trigger doubles its Intelligence before the hit, and the hit uses it", () => {
     // Caster Int 10. on-cast -> apply-stat-modifier self Intelligence x2 (fires in the pre-hit
     // hooks, before the list). Spell: spellPower 1.0, enemy defence 0, HP 100.
     // LIVE:     off = 20 x 1 = 20 -> core 20, chip 0.2 -> raw 20.2 -> final 20.
-    // SNAPSHOT (pre-4.1-D): off = 10 -> core 10, chip 0.1 -> raw 10.1 -> final 10.
+    // SNAPSHOT (the legacy read): off = 10 -> core 10, chip 0.1 -> raw 10.1 -> final 10.
     const spell = toSpell({ id: 's', targetShape: 'single', spellPower: 1 })
     const player = makeParty('player', [
       {
@@ -996,7 +996,7 @@ describe('ASSUMPTION 36: magnitudes read the caster LIVE when each effect runs',
   })
 })
 
-describe('heal.offStat (plan review F2)', () => {
+describe('heal.offStat', () => {
   it('is remap-aware: a cast->attack stat-remap heals by Attack, not Intelligence', () => {
     // Attack 40, Int 10, remap(cast <- attack). sp 0.5: remap-aware = floor(40 x 0.5) = 20;
     // raw Int would be 5.
@@ -1160,7 +1160,7 @@ describe('validateSpellEffects', () => {
   })
 })
 
-// ---- 4.1-D review item 1: a spell's damage is cast damage ----
+// ---- a spell's damage is cast damage ----
 
 describe("validateSpellEffects: a spell's damage and heal are cast-slot formula magnitudes", () => {
   const base = toSpell({ id: 's', targetShape: 'single', spellPower: 1 })
@@ -1221,7 +1221,7 @@ describe("validateSpellEffects: a spell's damage and heal are cast-slot formula 
   )
 
   it.each(['deal-damage', 'heal'] as const)(
-    'rejects %s setting both offStat and scalingStat (it used to throw mid-fight)',
+    'rejects %s setting both offStat and scalingStat (at load, not mid-fight)',
     (kind) => {
       expect(() =>
         validateSpellEffects(
@@ -1241,16 +1241,16 @@ describe("validateSpellEffects: a spell's damage and heal are cast-slot formula 
   )
 })
 
-// ---- 4.1-D review item 2: one formula for every formula-mode magnitude ----
+// ---- one formula for every formula-mode magnitude ----
 
 describe('heal scalingStat mode: stat x (spellPower x multiplier), for a trait too', () => {
-  it('a trait heal scaled by a live count: 26, not the old (stat x sp) x count = 27', () => {
+  it('a trait heal scaled by a live count: 26, not (stat x sp) x count = 27', () => {
     // Fixture trait (not real content): heal self, scalingStat health, spellPower 0.15,
     // magnitudeSource count of dead-allies. Healer effective Health 60, wounded to 20 (missing 40,
     // so the heal is not clamped). 3 dead allies -> count 3.
     //   spellPower x count = 0.15 x 3 = 0.44999999999999996
     //   60 x 0.44999999999999996 = 26.999999999999996 -> floor 26   (this order)
-    //   (60 x 0.15) x 3 = 9 x 3 = 27 -> 27                        (the pre-review trait order)
+    //   (60 x 0.15) x 3 = 9 x 3 = 27 -> 27                        (stat x sp, then x count)
     const player = makeParty('player', [
       { id: 'me', health: 60, currentHp: 20 },
       { id: 'd1', alive: false },
@@ -1275,12 +1275,12 @@ describe('heal scalingStat mode: stat x (spellPower x multiplier), for a trait t
   })
 })
 
-// ---- 4.1-D review item 3: no response acts on a dead creature, except revive ----
+// ---- no response acts on a dead creature, except revive ----
 
 describe('the verb rule: no response acts on a corpse', () => {
   // Spell: damage the landed target, then a `self` effect. The target retaliates with a lethal
   // flat 99 on whoever hit it, so the caster (HP 10) is dead BEFORE the self effect runs (the list
-  // is atomic, ASSUMPTION 35, so the effect is attempted).
+  // is atomic, so the effect is attempted).
   const RETALIATE = () =>
     eff({
       category: 'triggered',

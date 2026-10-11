@@ -7,8 +7,8 @@ import {
   withAdditional,
 } from './damage'
 
-// Phase 4.1-H2a: the pure arithmetic of the Additional, indirect damage and the cost.
-// `damage.test.ts` (the direct formula) is untouched by this slice.
+// The pure arithmetic of the Additional, indirect damage and the cost.
+// `damage.test.ts` covers the direct formula.
 
 describe('calculateAdditional: min(floor(20% x max HP), max(0, 10 - (level - 1)))', () => {
   it('the level cap binds against a large target and falls by 1 per level, gone from level 11', () => {

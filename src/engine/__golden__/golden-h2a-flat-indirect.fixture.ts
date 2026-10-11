@@ -1,15 +1,15 @@
-// Golden: a FLAT-mode response on ANOTHER creature is INDIRECT damage (Phase 4.1-H2a, ASSUMPTIONS
-// 112, 134): the flat amount is the magnitude, and there is no Defence bypass and no true-damage
-// channel. Hand-derived. All vitality (neutral x1.0), no dealt/taken mods, so
+// Golden: a FLAT-mode response on ANOTHER creature is INDIRECT damage: the flat amount is the
+// magnitude, and there is no Defence bypass and no true-damage channel. Hand-derived. All vitality
+// (neutral x1.0), no dealt/taken mods, so
 //   raw = flat - 0.2 x Defence;  final = MAX(1, floor(raw)).
 //
 // Players (always-wait): U1 (health 100, Defence 20, speed 10), U2 (health 50, Defence 20, speed 5).
 // Enemies (always-wait), each with an on-turn-start flat hit (default tag 'dot', no statusId, so
 // NOT a status tick): R1 (speed 2) flat 20 at the highest-HP enemy (U1); R2 (speed 1) flat 3 at the
 // lowest-HP enemy (U2).
-//   R1 -> U1: 20 - 0.2 x 20 = 16 -> final 16. U1 100 -> 84.   (Before H2a: 20, Defence ignored.)
+//   R1 -> U1: 20 - 0.2 x 20 = 16 -> final 16. U1 100 -> 84.
 //   R2 -> U2: 3 - 4 = -1 -> raw -1 -> MAX(1, floor(-1)) = 1.   U2 50 -> 49.
-//     (Before H2a: 3. A flat 3 against Defence 20 now deals the minimum of 1.)
+//     (A flat 3 against Defence 20 deals the minimum of 1.)
 // TURN_STEPS = 4 (U1, U2, R1, R2).
 
 import { makeParty } from '../__fixtures__/creatures'

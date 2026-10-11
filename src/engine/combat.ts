@@ -20,7 +20,7 @@ import type { CombatEvent, CombatState, Creature, FightResult } from './types'
 import type { Intent, Script } from './scripting-types'
 import type { StatusDef, Trait } from './effect-types'
 
-/** Phase 4.1-B (S1): one side's fight-setup input -- its party and its side-wide effects (perks
+/** One side's fight-setup input -- its party and its side-wide effects (perks
  * for the player today; biome/boss effects for either side later). */
 export interface CreateCombatSideInput {
   readonly party: readonly Creature[]
@@ -41,21 +41,21 @@ export interface CreateCombatInput {
 }
 
 /**
- * Phase 4.1-B (S1): named per-side inputs -- two same-typed positional lists (player effects,
+ * Named per-side inputs -- two same-typed positional lists (player effects,
  * enemy effects) could be silently swapped; `{ player: { party, effects }, enemy: { party,
  * effects }, registries }` can't. `registries` bundles scripts/traits/statuses, each defaulting
- * to an empty Map (matching the pre-S1 positional defaults).
+ * to an empty Map.
  *
  * `createCombat` ALWAYS RECOMPUTES `baselineEffects` from each input creature's own
  * `innateTraitIds` (+ that creature's own side's effects) and RESETS `revivesUsed` to `0` -- it
- * never trusts those fields on an input `Creature` (design-review B-5). Fight setup takes FRESH
- * creatures only (PR #69 review, R3): an input creature that already carries setup output
+ * never trusts those fields on an input `Creature`. Fight setup takes FRESH
+ * creatures only: an input creature that already carries setup output
  * (non-empty `baselineEffects` or `activeEffects` -- i.e. pulled from a PREVIOUS `CombatState`
  * rather than fresh `materializeCreature` output) is a thrown error, not silently discarded-and-
- * recomputed -- re-feeding one would double its innate spell slots (A8), since this function
+ * recomputed -- re-feeding one would double its innate spell slots, since this function
  * itself prepends every `innate-spell` effect's spell onto `equippedSpells`. A creature whose own
  * `side` doesn't match the list it was passed in (`player.party` vs `enemy.party`) is likewise a
- * thrown error (R1) -- each side's `effects` apply to exactly that side's creatures.
+ * thrown error -- each side's `effects` apply to exactly that side's creatures.
  */
 export function createCombat(input: CreateCombatInput): CombatState {
   const { seed, player, enemy, registries = {} } = input
@@ -63,7 +63,7 @@ export function createCombat(input: CreateCombatInput): CombatState {
   const playerEffects = player.effects ?? []
   const enemyEffects = enemy.effects ?? []
 
-  // Phase 4.1-F2 (ASSUMPTION 50): the status registry this fight is given is validated here as
+  // The status registry this fight is given is validated here as
   // well as at data import, so an inline status carrying a forbidden effect (e.g. an
   // `on-round-end` trigger -- round end has no status work) fails at fight setup.
   for (const def of statuses.values()) validateStatusDef(def)
@@ -73,12 +73,11 @@ export function createCombat(input: CreateCombatInput): CombatState {
   }
 
   // Fight-start: resolve + instantiate each creature's innate-trait (+ this side's own effects)
-  // effects onto activeEffects (B4: fresh ids from the shared per-fight counter, threaded across
-  // BOTH parties, player then enemy, slot order), prepend any innate spells onto equippedSpells
-  // (A8), reset revivesUsed (D3), then set currentHp to effective max Health (so a +Health
+  // effects onto activeEffects (fresh ids from the shared per-fight counter, threaded across
+  // BOTH parties, player then enemy, slot order), prepend any innate spells onto equippedSpells,
+  // reset revivesUsed, then set currentHp to effective max Health (so a +Health
   // trait/perk actually grants the HP). For a trait-less, effect-less creature this is a no-op:
-  // activeEffects is [] and effective max == base Health, so currentHp is unchanged -- Phase 1/2
-  // fixtures stay byte-identical.
+  // activeEffects is [] and effective max == base Health, so currentHp is unchanged.
   let counter = 0
   const instantiate = (
     creature: Creature,
@@ -150,17 +149,17 @@ function livingIds(state: CombatState): CreatureId[] {
     .map((c) => c.id)
 }
 
-/** Born this turn (Phase 4.1-F2, ASSUMPTION 18): applied or refreshed since this turn's action
+/** Born this turn: applied or refreshed since this turn's action
  * slot. The one test behind the tick gate, the countdown and the Web roll. */
 function isBornThisTurn(state: CombatState, effect: ActiveEffect): boolean {
   return effect.category === 'status' && effect.appliedAt === state.turnClock
 }
 
 /**
- * Turn-end cleanup, part 1 (`spec/statuses.md#turn-end-cleanup`, Phase 4.1-F2): the BEARER's own
+ * Turn-end cleanup, part 1 (`spec/statuses.md#turn-end-cleanup`): the BEARER's own
  * statuses count down by one and expire at 0 (`StatusExpired`), in canonical (activeEffects)
  * order. Bookkeeping only. Skips a status born this turn. Only ever called for a LIVING bearer: a
- * corpse's statuses are inert (ASSUMPTION 51 -- no countdown, no StatusExpired).
+ * corpse's statuses are inert (no countdown, no StatusExpired).
  */
 function countDownStatuses(
   state: CombatState,
@@ -189,9 +188,9 @@ function countDownStatuses(
 }
 
 /**
- * Turn-end cleanup, part 2 -- Web break-free (Phase 4 Slice E2; moved to cleanup in 4.1-F2,
- * ASSUMPTION 15): rolled once per dequeued turn (every creature's, a dead actor's empty bracket
- * included), AFTER the actor's own countdown, against every LIVING bearer of an active
+ * Turn-end cleanup, part 2 -- Web break-free: rolled once per dequeued turn (every creature's, a
+ * dead actor's empty bracket included), AFTER the actor's own countdown, against every LIVING
+ * bearer of an active
  * status-borne `turn-order` effect carrying breakChancePercent (read through the effect iterator:
  * an immune bearer's Web has no effects, so it draws nothing), skipping a Web born this turn. A
  * board with no such Web draws nothing (only-when-present discipline). Bearers are iterated in the
@@ -243,12 +242,11 @@ function checkWinLoss(state: CombatState): FightResult | null {
   return null
 }
 
-/** The "the fight is over" predicate every in-fight hook pass and grant drain stops on (F2,
- * ASSUMPTION 19). */
+/** The "the fight is over" predicate every in-fight hook pass and grant drain stops on. */
 const fightOver = (state: CombatState): boolean => checkWinLoss(state) !== null
 
 /**
- * Round end (Phase 4.1-F2, ASSUMPTION 16): only the `on-round-end` trait triggers and the
+ * Round end: only the `on-round-end` trait triggers and the
  * round-level grant drain. NO status work -- ticks and the countdown live in the bearer's own turn
  * (statuses may not carry `on-round-end`, validateStatusDef). Both stop on a wipe.
  */
@@ -264,14 +262,14 @@ function resolveRoundEnd(state: CombatState, events: CombatEvent[]): CombatState
       stopWhen: fightOver,
     },
   ).state
-  // 4.1-E (A2): round-level grants run right after the hook pass (no shipped content raises one).
+  // round-level grants run right after the hook pass (no shipped content raises one).
   return drainGrantedActions(roundEndCtx, hooked, { stopWhen: fightOver })
 }
 
-// The action executors (attack/cast/defend/provoke/wait) all moved to actions.ts (Phase
-// 4.1-C2a, A1) -- combat.ts only orchestrates the turn skeleton, dispatching every action through
-// actions.ts's `runAction`. Every `ResolutionContext` built below is drained exactly once, at
-// the end of its own scope, by `drainGrantedActions`.
+// The action executors (attack/cast/defend/provoke/wait) live in actions.ts; combat.ts only
+// orchestrates the turn skeleton, dispatching every action through actions.ts's `runAction`. Every
+// `ResolutionContext` built below is drained exactly once, at the end of its own scope, by
+// `drainGrantedActions`.
 
 function finalize(
   state: CombatState,
@@ -290,19 +288,19 @@ export function resolveTurn(state: CombatState): {
   events: CombatEvent[]
 } {
   const events: CombatEvent[] = []
-  // Phase 4.1-B (B3, B-1): "the per-turn working copy resolveTurn makes when it starts" --
+  // "the per-turn working copy resolveTurn makes when it starts" --
   // clones `rng` into a FRESH object so every draw this turn (directly here, or by any pure
   // helper this call tree hands `working`/its descendants to -- target selectors, targeting, the
   // interpreter, the resolver) advances THIS copy's bookmark in place (nextRandom mutates its
   // argument -- see rng.ts) without ever touching `state.rng`, the caller's own object. This is
-  // what fixes B3: resolving the same frozen `state` twice always starts both calls' bookmarks
-  // from the same `.position` and advances them identically, since neither call can see or
+  // what makes resolving the same frozen `state` twice always start both calls' bookmarks
+  // from the same `.position` and advance them identically, since neither call can see or
   // affect the other's clone.
   let working: CombatState = { ...state, rng: { position: state.rng.position } }
 
-  // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start. Phase
-  // 4.1-F3 (ASSUMPTION 61): like every other in-fight pass, the hook pass and its drain stop at a
-  // wipe, and win/loss is checked right after both, BEFORE RoundStarted -- a fight-start wipe
+  // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start. Like every
+  // other in-fight pass, the hook pass and its drain stop at a wipe, and win/loss is checked right
+  // after both, BEFORE RoundStarted -- a fight-start wipe
   // ends the fight as FightStarted ... FightEnded, with no round and no turn.
   if (working.round === 0) {
     events.push({ type: 'FightStarted' })
@@ -315,7 +313,7 @@ export function resolveTurn(state: CombatState): {
       fightStartCtx,
       { stopWhen: fightOver },
     ).state
-    // round-level grants (A2)
+    // round-level grants
     working = drainGrantedActions(fightStartCtx, working, { stopWhen: fightOver })
     const fightStartResult = checkWinLoss(working)
     if (fightStartResult) return finalize(working, events, fightStartResult)
@@ -368,7 +366,7 @@ export function resolveTurn(state: CombatState): {
   // trigger start-of-turn effects, hence the hooks (not the events) are alive-gated.
   events.push({ type: 'TurnStarted', creatureId: actor.id })
 
-  // Phase 4.1-F2 (ASSUMPTION 19): a wipe ends the turn at once. After every top-level step (the
+  // A wipe ends the turn at once. After every top-level step (the
   // action, each granted action, each firing of a turn-start / turn-end hook pass -- never inside
   // a cascade) the fight-over predicate is checked; a wipe skips the rest of the turn (later
   // firings, grants, cleanup, the Web roll) but still closes the bracket with TurnEnded, then
@@ -382,7 +380,7 @@ export function resolveTurn(state: CombatState): {
   }
 
   // Turn-start hooks fire on the acting creature (if it entered the turn alive), after the
-  // TurnStarted boundary. The skip (4.1-F1, `spec/statuses.md#action-locks`): a turn is skipped if an
+  // TurnStarted boundary. The skip (`spec/statuses.md#action-locks`): a turn is skipped if an
   // 'all' action-lock is active right after the turn-start hook pass (read 1, below -- the
   // turn-start grants need it) or at the action slot (read 2). `skipped` is the first read's
   // carrier id, if any; the combined value (`skipEffectId`) is fixed at the action slot.
@@ -404,9 +402,9 @@ export function resolveTurn(state: CombatState): {
     const afterHooks = getCreature(working, actor.id)
     skipped = afterHooks.alive ? firstAllLock(afterHooks)?.effectId : undefined
 
-    // Turn-start cleanup (Phase 4.1-C, D6): "until its next turn" expires HERE, right after
-    // turn-start hooks, UNCONDITIONALLY on a skip -- runs on a Stunned/skipped turn too
-    // (fixes B6). Gated only on the actor being alive AT THIS POINT (re-checked fresh -- a
+    // Turn-start cleanup: "until its next turn" expires HERE, right after
+    // turn-start hooks, UNCONDITIONALLY on a skip -- runs on a Stunned/skipped turn too.
+    // Gated only on the actor being alive AT THIS POINT (re-checked fresh -- a
     // turn-start hook may have killed it). Cleanup is bookkeeping only (`spec/combat.md#turn-structure`: it ends
     // things, never deals damage/heals/fires triggers).
     const afterStartHooks = getCreature(working, actor.id)
@@ -422,9 +420,9 @@ export function resolveTurn(state: CombatState): {
       }
     }
 
-    // Turn-start grants (4.1-E, A2) run AFTER the turn-start cleanup -- a Defend/Provoke granted
+    // Turn-start grants run AFTER the turn-start cleanup -- a Defend/Provoke granted
     // here must not be ended by this same turn's cleanup -- and before decide + action. A skipped
-    // turn refuses them (B2 rule 1: `skippedTurnOf`).
+    // turn refuses them (`spec/combat.md#every-action-source-obeys-the-same-rules`: `skippedTurnOf`).
     working = drainGrantedActions(turnStartCtx, working, {
       skippedTurnOf: skipped !== undefined ? actor.id : undefined,
       stopWhen: fightOver,
@@ -433,7 +431,7 @@ export function resolveTurn(state: CombatState): {
     if (wipedAfterGrants) return wipedAfterGrants
   }
 
-  // THE ACTION SLOT (Phase 4.1-F2, ASSUMPTION 18): the born-this-turn clock bumps once per
+  // THE ACTION SLOT: the born-this-turn clock bumps once per
   // dequeued turn, here, whether the actor is alive, dead or skipped. A status applied or
   // refreshed from now on is born this turn (no tick, no countdown, no Web roll); one applied
   // earlier in the turn (turn-start hooks / grants) is not.
@@ -460,7 +458,7 @@ export function resolveTurn(state: CombatState): {
     const ctx = createResolutionContext(events, newCascade())
     working = ctx.runAction(actorAfterStart.id, intent, working)
     // The action's grants (an echo of its cast, ...) run right after it, before the turn-end
-    // hooks (4.1-E, A2). Not a skipped turn (the branch above took it), so no gate. The drain
+    // hooks. Not a skipped turn (the branch above took it), so no gate. The drain
     // checks `fightOver` before each grant, so a wipe by the action itself drops them all.
     working = drainGrantedActions(ctx, working, { stopWhen: fightOver })
     // The check after the action and its grants. The turn-end block below is alive-gated, so
@@ -471,11 +469,12 @@ export function resolveTurn(state: CombatState): {
   }
 
   // Turn-end hooks (incl. DoT/HoT ticks) and the granted-actions step fire BEFORE TurnEnded --
-  // Phase 4.1-C, D6: TurnEnded is always the turn's last event. The hook pass is alive-gated; the
+  // TurnEnded is always the turn's last event. The hook pass is alive-gated; the
   // granted step runs the grants those hooks raised (Arcane Surge's roll happened in the hook
-  // pass), refusing on a skipped turn (either lock read, B2.1: the chance was rolled first) and,
-  // through runAction's checks, on a dead actor or any lock active at that point (B2.2).
-  // F2: a status born this turn doesn't tick (ASSUMPTION 52, passed through FireHookOptions).
+  // pass), refusing on a skipped turn (either lock read: the chance was rolled first) and,
+  // through runAction's checks, on a dead actor or any lock active at that point
+  // (`spec/combat.md#every-action-source-obeys-the-same-rules`).
+  // A status born this turn doesn't tick (passed through FireHookOptions).
   if (getCreature(working, actor.id).alive) {
     const turnEndCtx = createResolutionContext(events, newCascade())
     working = fireHook('on-turn-end', [actor.id], undefined, working, turnEndCtx, {
@@ -497,8 +496,8 @@ export function resolveTurn(state: CombatState): {
     if (wipedByTurnEndGrants) return wipedByTurnEndGrants
   }
 
-  // TURN-END CLEANUP (`spec/combat.md#turn-structure`, 4.1-F2): bookkeeping only. The bearer's own
-  // statuses count down (a LIVING actor only -- a corpse's statuses are inert, ASSUMPTION 51),
+  // TURN-END CLEANUP (`spec/combat.md#turn-structure`): bookkeeping only. The bearer's own
+  // statuses count down (a LIVING actor only -- a corpse's statuses are inert),
   // then the Web roll runs for every dequeued turn (a dead actor's bracket included).
   if (getCreature(working, actor.id).alive) {
     working = countDownStatuses(working, actor.id, events)

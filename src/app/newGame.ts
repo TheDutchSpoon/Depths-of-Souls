@@ -1,4 +1,4 @@
-// Phase 4.1-G2 (§6, ASSUMPTION 87): a new game's run seed is generated HERE, in the app layer --
+// A new game's run seed is generated HERE, in the app layer --
 // never in the store or the engine (the engine has no `crypto`/`Math.random`, and the store takes
 // its seed as an argument so `newGame({ seed })` stays deterministic). Not wired into the UI yet:
 // the app is still the combat demo.

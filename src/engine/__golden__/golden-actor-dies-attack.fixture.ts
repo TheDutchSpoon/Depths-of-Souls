@@ -1,4 +1,4 @@
-// Golden: "An action ends when its actor dies" (Phase 4.1-C2c, PR #73 review), the main case: a
+// Golden: "An action ends when its actor dies", the main case: a
 // two-instance attacker whose FIRST hit is retaliated against (on-damage-taken -> a lethal flat hit
 // on the triggering source) dies inside its own action, so instance 2 emits NOTHING (no
 // AttackDeclared, no hit). Events already emitted stay. Hand-derived; no RNG (seed inert).

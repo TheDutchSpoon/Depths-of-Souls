@@ -1,6 +1,6 @@
-// Golden: Web's break-free roll (Phase 4 Slice E2) -- a per-GLOBAL-turn chance rolled at EVERY
-// creature's turn-end cleanup (4.1-F2; was turn start) against every current Web-bearer (TurnOrderDef.breakChancePercent),
-// NOT the bearer's own hook. Fixture-shaped, not real Web content (that's H1's job).
+// Golden: Web's break-free roll -- a per-GLOBAL-turn chance rolled at EVERY
+// creature's turn-end cleanup against every current Web-bearer (TurnOrderDef.breakChancePercent),
+// NOT the bearer's own hook. Fixture-shaped, not real Web content.
 //
 // Hand-derived (independent `node -e` mulberry32 trace against rng.ts's exact algorithm). BEARER
 // applies Web to itself via an on-fight-start trait (a fixture stand-in for "starts the fight
@@ -92,7 +92,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: OTHER },
   { type: 'Waited', creatureId: OTHER },
-  // 4.1-F2: the roll is in turn-end cleanup, after OTHER's action.
+  // The roll is in turn-end cleanup, after OTHER's action.
   { type: 'StatusExpired', creatureId: BEARER, statusId: WEB_STATUS_ID },
   { type: 'TurnEnded', creatureId: OTHER },
   { type: 'TurnStarted', creatureId: BEARER },

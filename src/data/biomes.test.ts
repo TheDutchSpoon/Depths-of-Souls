@@ -16,14 +16,11 @@ import {
 import { GLIMMERDARK_BIOME_ID } from './species/glimmerdark'
 import { ROTCAP_HOLLOW_BIOME_ID } from './species/rotcap-hollow'
 
-// Slice A shipped the SHAPE only -- 10 placeholder slots, empty spawn pools. Slice H1 replaced
-// slot 1 (floors 1-10) with real The Overgrowth content; Slice H2 replaced slot 2 (floors 11-20)
-// with real Glimmerdark content; Slice H3 replaces slot 3 (floors 21-30) with real Rotcap Hollow
-// content. This test now pins the POST-H3 shape: slots 1-3 real + non-empty, slots 4-10 still
-// the placeholder shape every later slice can safely replace one entry of without disturbing the
-// rest.
+// 10 fixed biome slots (`spec/run.md#biomes`): slots 1-3 are real, non-empty content (The
+// Overgrowth, Glimmerdark, Rotcap Hollow); slots 4-10 are the placeholder shape (empty spawn
+// pools) that every later biome can safely replace one entry of without disturbing the rest.
 
-describe('BIOMES (Slice A shape + Slice H1/H2/H3 real content)', () => {
+describe('BIOMES (the shape and the real biomes 1-3)', () => {
   it('ships exactly 10 slots (spec/run.md#biomes decade cadence)', () => {
     expect(BIOMES).toHaveLength(10)
   })
@@ -51,7 +48,7 @@ describe('BIOMES (Slice A shape + Slice H1/H2/H3 real content)', () => {
     expect(rotcapHollow?.speciesPool.length).toBeGreaterThan(0)
   })
 
-  it('slots 4-10 keep the Slice A placeholder shape (empty spawn pools)', () => {
+  it('slots 4-10 keep the placeholder shape (empty spawn pools)', () => {
     for (const biome of BIOMES.slice(3)) {
       expect(biome.speciesPool).toEqual([])
     }
@@ -64,7 +61,7 @@ describe('BIOMES (Slice A shape + Slice H1/H2/H3 real content)', () => {
   })
 })
 
-describe('Boss floors (Phase 4 Slice I, PR #65 review)', () => {
+describe('Boss floors', () => {
   it('every authored biome (non-empty speciesPool) has a boss', () => {
     for (const biome of BIOMES) {
       if (biome.speciesPool.length === 0) continue // placeholder slots 4-10, not authored yet
@@ -89,7 +86,7 @@ describe('Boss floors (Phase 4 Slice I, PR #65 review)', () => {
     expect(OVERGROWTH_BIOME.boss?.bossId).toBe(BROODMOTHER_BOSS_ID)
   })
 
-  it('generateFloor(10, OVERGROWTH_BIOME, ...): the boss and her two spiderling adds carry SPIDERS_SPECIES_ID, and the three fill creatures do not (4.1-G1)', () => {
+  it('generateFloor(10, OVERGROWTH_BIOME, ...): the boss and her two spiderling adds carry SPIDERS_SPECIES_ID, and the three fill creatures do not', () => {
     const fights = generateFloor(
       10,
       OVERGROWTH_BIOME,
@@ -100,7 +97,7 @@ describe('Boss floors (Phase 4 Slice I, PR #65 review)', () => {
     )
     expect(fights).toHaveLength(1) // a boss floor is exactly one fight
     const enemyParty = fights[0]!.enemyParty
-    expect(enemyParty).toHaveLength(6) // 6v6 (PR #81 review): the boss, her two adds, three fill
+    expect(enemyParty).toHaveLength(6) // 6v6: the boss, her two adds, three fill
     // The count-scaling signature stays her authored adds: only the first three are Spiders.
     expect(enemyParty.slice(0, 3).map((e) => e.speciesId)).toEqual([
       SPIDERS_SPECIES_ID,
@@ -113,9 +110,9 @@ describe('Boss floors (Phase 4 Slice I, PR #65 review)', () => {
   })
 })
 
-// Phase 4.1-G1 (6v6 boss floors and boss loadouts, PR #81 review): every shipped boss floor, over a
+// Every shipped boss floor, over a
 // spread of run seeds, against the real config.
-describe('every shipped boss floor is a full side (Phase 4.1-G1)', () => {
+describe('every shipped boss floor is a full side', () => {
   const SEEDS = [1, 2, 3, 42, 777, 20260702]
   const bossBiomes = BIOMES.map((biome, index) => ({ biome, index })).filter(
     ({ biome }) => biome.boss,

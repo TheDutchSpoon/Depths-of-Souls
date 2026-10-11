@@ -1,5 +1,5 @@
-// Golden: a carrier applying the same status snapshots FRESH from itself (Phase 4.1-H2b2, ASSUMPTION
-// 143). Only a status's OWN effect passes its snapshot on (Spore's spread, golden-h2b2-spore-spread).
+// Golden: a carrier applying the same status snapshots FRESH from itself. Only a status's OWN
+// effect passes its snapshot on (Spore's spread, golden-h2b2-spore-spread).
 // A creature that merely CARRIES Spore and applies Spore through a trait of its own -- here a real
 // Sporecloud Seeder, which infects whoever it attacks -- is an ordinary applier: the new Spore
 // carries the Seeder's snapshot, not the one on the Seeder.
@@ -52,8 +52,8 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { spore: 15 })
 
 export const setup = (created: CombatState): CombatState =>

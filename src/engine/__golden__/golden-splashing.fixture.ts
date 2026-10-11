@@ -1,8 +1,8 @@
-// Golden: the `splashing` passive EffectDef category (Phase 4 Slice C, Proficient Warrior) --
+// Golden: the `splashing` passive EffectDef category (Proficient Warrior) --
 // an Attack's main hit against the lowest-HP enemy in a 3-enemy lineup also splashes onto both
 // living neighbors, each via its OWN recomputed damage formula (own Defence), never a copy of
 // the main hit's number. Attacks only (brute.md) -- a Splashing Cast never splashes, see
-// combat.ts's executeCastSingle / this slice's dedicated Cast-no-splash unit test.
+// combat.ts's executeCastSingle / the dedicated Cast-no-splash unit test.
 //
 // Hand-derived (independent calculator). ATTACKER: effective Attack 20 x spellPower(Attack)
 // 1.0 = effOffStat 20; all four creatures share the default 'vitality' affinity -> neutral

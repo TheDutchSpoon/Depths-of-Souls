@@ -3,7 +3,7 @@ import { runGolden } from '../test-utils/golden-runner'
 import * as fixture from './golden-actor-dies-attack.fixture'
 import { expectedEvents } from './golden-actor-dies-attack.fixture'
 
-describe('golden replay: an action ends when its actor dies (Phase 4.1-C2c, PR #73 review)', () => {
+describe('golden replay: an action ends when its actor dies', () => {
   it('matches the committed event log exactly -- instance 2 emits nothing after the retaliation kills the attacker', () => {
     const { events, state } = runGolden(fixture)
 

@@ -1,8 +1,8 @@
-// Golden: scoped action-lock (Phase 4 Slice B; re-expressed on a passive trait-borne `action-lock`
-// in 4.1-F1) -- a Silenced-shaped creature's Cast rule is illegal (checkLegality) while its Attack
-// rule -- lower in the SAME script -- still fires. The lock is passive: it fires no hook, so the
-// old per-turn on-turn-start TriggerFired is gone (the one deliberate F1 change to this golden),
-// and its scope is 'cast', not 'all', so the turn is not skipped.
+// Golden: scoped action-lock (a passive trait-borne `action-lock`) -- a Silenced-shaped creature's
+// Cast rule is illegal (checkLegality) while its Attack rule -- lower in the SAME script -- still
+// fires. The lock is passive: it fires no hook, so
+// there is no per-turn TriggerFired, and its scope is 'cast', not 'all', so the turn is not
+// skipped.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // HERO's Cast rule (slot 0 holds a real, single-target spell -- proving the skip is caused by

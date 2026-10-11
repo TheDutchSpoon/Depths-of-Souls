@@ -1,31 +1,32 @@
-// Phase 4.1-H1 (D1): the deterministic balance simulator. It drives the REAL store (`newGame`,
+// The deterministic balance simulator. It drives the REAL store (`newGame`,
 // `setSpec`, `runScriptedIntro`, `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with the
 // documented player policy below, over a fixed list of seeds, and builds a plain-data report of the
-// design targets (T1-T5), the 4.1-H watch points and ASSUMPTION 22's thresholds. It REPORTS; it
-// asserts nothing: the CI threshold test (4.1-H2d, ASSUMPTION 148) is a separate set of test files
-// that calls `runSeed` and `computeThresholds` and asserts ASSUMPTION 22's three verdicts. It
+// design targets T1-T5 (`CONVENTIONS.md#balance-simulator`), the watch points (the failed pushes from
+// floor 20 and the largest stacked stat-modifier growth) and the loose thresholds. It REPORTS; it
+// asserts nothing: the CI threshold test is a separate set of test files
+// that calls `runSeed` and `computeThresholds` and asserts the three verdicts. It
 // changes no number and no file under src/.
 //
 // Run the full report with `npm run sim` (vitest in `--mode sim`, the corpus pattern).
 //
-// ---- The player policy (brief ASSUMPTIONS 21, 96-102) ----
+// ---- The player policy ----
 // One run = one spec x one seed: `newGame({ seed })`, `setSpec`, `runScriptedIntro`, then a loop of
 // FLOOR RUNS (one `descend` each) until the seed clears the content frontier (`frontier`) or
 // reaches RUN_CAP floor runs (`cap`).
-//  - Which floor (ASSUMPTION 97): after a clear, push to `deepestFloor + 1`. After a FAILED PUSH the
+//  - Which floor: after a clear, push to `deepestFloor + 1`. After a FAILED PUSH the
 //    next run re-farms `deepestFloor`; while `deepestFloor` is 0 there is nothing to re-farm, so a
 //    failed floor-1 push is retried (floor 1 is `deepestFloor + 1` again: a push).
-//  - Hard wall (ASSUMPTION 98): WALL_FAILED_PUSHES failed pushes at one floor, re-farm runs
+//  - Hard wall: WALL_FAILED_PUSHES failed pushes at one floor, re-farm runs
 //    between them not resetting the count. A walled seed KEEPS GOING; the simulator records the
 //    first wall floor and the failed-push count per floor.
 //  - After every run (and once before the first): (1) summon every creature id whose soul has
-//    reached 100%, once per id, the first time (ASSUMPTION 96; ids already owned start in the
-//    set; a pass walks `soulProgress` in key order); (2) set the party to the six highest-level
-//    instances, ordered level descending then instance ordinal ascending, through `setPartySlot`
-//    (ASSUMPTION 99); (3) refund and re-buy perks from scratch: each FUNCTIONAL perk (its
+//    reached 100%, once per id, the first time (ids already owned start in the set; a pass
+//    walks `soulProgress` in key order); (2) set the party to the six highest-level
+//    instances, ordered level descending then instance ordinal ascending, through
+//    `setPartySlot`; (3) refund and re-buy perks from scratch: each FUNCTIONAL perk (its
 //    max-level effects are non-empty) in data order takes the most levels the remaining budget
-//    allows, then the next (ASSUMPTION 100).
-//  - Boss-floor lock probe (ASSUMPTION 101): before every run on a boss floor the simulator
+//    allows, then the next.
+//  - Boss-floor lock probe: before every run on a boss floor the simulator
 //    snapshots the store state, runs the same floor once with the probe creature on its own script
 //    plus `Cast <Pacify's slot> -> highest-hp-enemy` as the FIRST rule, restores the snapshot, and
 //    only then plays the policy run. The policy run is the only one that advances the seed, and
@@ -35,16 +36,16 @@
 //    such creature means the probe is `n/a`. The probe scripts are registered up front in the
 //    store's script registry; a script nothing references is inert, and a test proves it.
 //
-// ---- The report's thresholds (ASSUMPTIONS 22, 107, 108) ----
+// ---- The report's thresholds ----
 // Read over the seeds of one spec: floor 1 = the first-try floor-1 clear rate (fails below 80%);
 // first soul = the median over EVERY seed of the floor runs until a soul first reaches 100%, a seed
 // that never completes one counting as infinite (fails above 30); floor 5 = some seed fought on
-// floor 5 or deeper in its first FLOOR5_WINDOW_RUNS (20) floor runs (ASSUMPTION 126). T2 and T3 are
-// floor-read ceilings (ASSUMPTION 153), reported and never asserted. The walls' size (ASSUMPTION 108) is reported as the
+// floor 5 or deeper in its first FLOOR5_WINDOW_RUNS (20) floor runs. T2 and T3 are
+// floor-read ceilings, reported and never asserted. The walls' size is reported as the
 // most failed pushes on one floor below 10 and the floor runs to the first floor-10 clear.
 //
 // Nothing here is pinned to a balance value: the simulator runs the store's default config, and
-// the tuning passes (H2c, then H2d) move those numbers.
+// tuning passes move those numbers.
 
 import type { BalanceConfig } from '../engine/balance-types'
 import { ROUND_CAP, MAX_REVIVES_PER_CREATURE } from '../engine/config'
@@ -85,27 +86,27 @@ import type { GameActions, GameState } from './store'
 
 // ---- Named constants ----
 
-/** The fixed seed list of the full report (ASSUMPTION 105): 1..40. */
+/** The fixed seed list of the full report: 1..40. */
 export const SIM_SEEDS: readonly number[] = Array.from({ length: 40 }, (_, i) => i + 1)
-/** The normal suite's determinism seeds (ASSUMPTION 105). */
+/** The normal suite's determinism seeds. */
 export const SMOKE_SEEDS: readonly number[] = [1, 2, 3]
-/** A seed stops after this many floor runs (ASSUMPTION 98). */
+/** A seed stops after this many floor runs. */
 export const RUN_CAP = 400
-/** A hard wall: this many failed pushes at one floor (ASSUMPTION 98). */
+/** A hard wall: this many failed pushes at one floor. */
 export const WALL_FAILED_PUSHES = 5
-/** ASSUMPTION 126: the window the floor-5 threshold reads (10 floor runs until the H2 grill). */
+/** The window the floor-5 threshold reads. */
 export const FLOOR5_WINDOW_RUNS = 20
-/** ASSUMPTION 153: T2 asks for a completed soul by the first run on this floor. */
+/** T2 asks for a completed soul by the first run on this floor. */
 export const SOUL_BY_FLOOR = 3
-/** ASSUMPTION 153: T3 asks for a full party by the first run on this floor. */
+/** T3 asks for a full party by the first run on this floor. */
 export const FULL_PARTY_BY_FLOOR = 6
-/** ASSUMPTION 127: the matchup table covers fights on floors 1 to this one. */
+/** The matchup table covers fights on floors 1 to this one. */
 export const MATCHUP_MAX_FLOOR = 5
 /** How many traits per stack bucket the report prints. */
 export const TOP_TRAIT_STACKS = 5
-/** ASSUMPTION 107: the floor the third threshold asks a seed to reach within FLOOR5_WINDOW_RUNS. */
+/** The floor the third threshold asks a seed to reach within FLOOR5_WINDOW_RUNS. */
 export const SESSION_TARGET_FLOOR = 5
-/** The first boss floor: T4's "no wall before the floor-10 boss" and ASSUMPTION 108's measures. */
+/** The first boss floor: T4's "no wall before the floor-10 boss" and the walls' measures. */
 export const FIRST_BOSS_FLOOR = 10
 export const PACIFY_SPELL_ID = 'pacify'
 export const PACIFIED_STATUS_ID = 'pacified'
@@ -136,14 +137,14 @@ export const INITIAL_PROGRESS: Progress = {
   firstWallFloor: null,
 }
 
-/** ASSUMPTIONS 107, 126: one of the first FLOOR5_WINDOW_RUNS floor runs was on floor
+/** One of the first FLOOR5_WINDOW_RUNS floor runs was on floor
  * SESSION_TARGET_FLOOR or deeper (fighting on it, not clearing it). Read from the finished runs, so a
  * seed that stops before the window (a small run cap) still gets the right value. */
 export function reachedFloorInWindow(runs: readonly Pick<RunRecord, 'floor'>[]): boolean {
   return runs.slice(0, FLOOR5_WINDOW_RUNS).some((r) => r.floor >= SESSION_TARGET_FLOOR)
 }
 
-/** ASSUMPTION 97: the next run's floor and kind. */
+/** The next run's floor and kind. */
 export function nextRun(progress: Progress): { floor: number; kind: RunKind } {
   if (progress.lastRunFailedPush && progress.deepestFloor >= 1) {
     return { floor: progress.deepestFloor, kind: 'farm' }
@@ -151,7 +152,7 @@ export function nextRun(progress: Progress): { floor: number; kind: RunKind } {
   return { floor: progress.deepestFloor + 1, kind: 'push' }
 }
 
-/** ASSUMPTION 98: why a seed stops, or null to keep going. */
+/** Why a seed stops, or null to keep going. */
 export function stopReason(
   progress: Progress,
   frontier: number,
@@ -190,7 +191,7 @@ export function advanceProgress(
   }
 }
 
-/** ASSUMPTION 99: the six highest-level instances, level descending then ordinal ascending. */
+/** The six highest-level instances, level descending then ordinal ascending. */
 export function orderedParty(
   collection: ReadonlyMap<InstanceId, Instance>,
 ): readonly InstanceId[] {
@@ -204,13 +205,13 @@ function ordinalOf(id: InstanceId): number {
   return Number(String(id).slice('inst-'.length))
 }
 
-/** ASSUMPTION 100: a perk is functional when its max-level effects are non-empty (the rule the
- * data test pins for the nine inert Phase 8 perks). */
+/** A perk is functional when its max-level effects are non-empty (the rule the
+ * data test pins for the inert perks, `spec/progression.md#inert-perks`). */
 export function isFunctionalPerk(perk: PerkDef): boolean {
   return resolvePerkEffects(perk, perk.maxLevel).length > 0
 }
 
-/** ASSUMPTION 100: the greedy purchase from scratch -- each functional perk in data order takes
+/** The greedy purchase from scratch -- each functional perk in data order takes
  * the most levels the remaining budget allows (up to its max), then the next. Only perks with at
  * least one level are listed. */
 export function planPerkLevels(
@@ -251,7 +252,7 @@ function speciesCreatureFor(creatureId: string): SpeciesCreature | undefined {
 }
 
 /** How many `innate-spell` effects a creature's innate traits carry: `createCombat` prepends them
- * to the gem slots, so stored gem N is cast slot `innateSpellCount + N` (ASSUMPTION 101). */
+ * to the gem slots, so stored gem N is cast slot `innateSpellCount + N`. */
 export function innateSpellCount(creature: SpeciesCreature): number {
   let count = 0
   for (const traitId of creature.innateTraitIds) {
@@ -277,7 +278,7 @@ const PROBE_FIRST_RULE = (castSlot: number): Rule => ({
 })
 
 /** The stock registry plus one probe script per (stock script, cast slot): the creature's own
- * script with the Pacify cast added as the FIRST rule (ASSUMPTION 101). */
+ * script with the Pacify cast added as the FIRST rule. */
 export function buildSimScripts(
   base: ReadonlyMap<string, Script> = STOCK_SCRIPTS_BY_ID,
 ): ReadonlyMap<string, Script> {
@@ -300,7 +301,7 @@ export interface ProbeChoice {
   readonly baseScriptId: string
 }
 
-/** ASSUMPTION 101: the active-party instance with the highest level (ties: ordinal) whose STORED
+/** The active-party instance with the highest level (ties: ordinal) whose STORED
  * gems already hold Pacify; null when there is none (the probe is `n/a`). */
 export function pickProbeCreature(
   state: Pick<GameState, 'collection' | 'activeParty'>,
@@ -340,7 +341,7 @@ export function splitFights(events: readonly CombatEvent[]): CombatEvent[][] {
   return fights
 }
 
-/** R1: a stat-modifier with a factor above 1 is GROWTH (the watch point's stall: Defence or Health
+/** A stat-modifier with a factor above 1 is GROWTH (the watch point's stall: Defence or Health
  * multiplied up), below 1 is SHRED (it cuts the target). A factor of exactly 1 changes nothing and
  * is no stack. */
 export type StackDirection = 'growth' | 'shred'
@@ -371,7 +372,7 @@ export const NO_STACKS: StackMaxima<never> = {
 /** A seed's maxima: each stack with the floor of the fight it came from. */
 export type SeedStackMaxima = StackMaxima<StackCount & { readonly floor: number }>
 
-/** H2c (plan review, fix 4): the largest stack per (bucket, trait), so a trait that is not its
+/** The largest stack per (bucket, trait), so a trait that is not its
  * bucket's overall maximum (Rallying Cry once the Warden attacks, the Flare) still has its number.
  * Keyed by the attribution (a trait id, `(spell)` or `(unattributed)`). */
 export type TraitStackMaxima<T> = Readonly<
@@ -398,10 +399,10 @@ export interface StackAttribution {
 export const UNATTRIBUTED = '(unattributed)'
 export const SPELL_ATTRIBUTION = '(spell)'
 
-/** ASSUMPTION 103: a `StatModifierApplied` is attributed to the latest `TriggerFired` effect id or
+/** A `StatModifierApplied` is attributed to the latest `TriggerFired` effect id or
  * `SpellCast` from its source in the current turn (markers clear at each turn and round
  * boundary), else to `(unattributed)`. A stack is the number of such applications per (target,
- * attribution, direction): growth and shred are separate stacks (R1). Input: ONE fight's events. */
+ * attribution, direction): growth and shred are separate stacks. Input: ONE fight's events. */
 export function attributeStatModifiers(events: readonly CombatEvent[]): StackAttribution {
   const marker = new Map<string, string>()
   const counts = new Map<string, StackCount>()
@@ -445,8 +446,7 @@ export function attributeStatModifiers(events: readonly CombatEvent[]): StackAtt
   return { stacks: [...counts.values()], unattributed, applications }
 }
 
-/** Status id -> the scopes of its `action-lock` effects, read from the registry (ASSUMPTION 102:
- * never hard-coded ids). */
+/** Status id -> the scopes of its `action-lock` effects, read from the registry (never hard-coded ids). */
 export function lockScopesByStatus(
   statuses: ReadonlyMap<string, StatusDef>,
 ): ReadonlyMap<string, readonly LockScope[]> {
@@ -470,7 +470,7 @@ export interface BossLockStats {
   readonly pacifyLands: number
 }
 
-/** ASSUMPTION 102: counts the boss's turns and its LOCKED turns (a turn it starts while holding any
+/** Counts the boss's turns and its LOCKED turns (a turn it starts while holding any
  * status whose effects include an `action-lock`), tracked from StatusApplied / StatusExpired /
  * CreatureDied. A turn is counted once per distinct scope it is locked by. Input: one fight. */
 export function bossLockStats(
@@ -543,9 +543,9 @@ export interface FightMetrics {
   readonly deaths: number
   /** The largest stack in each bucket (direction x the target's side). */
   readonly largestStacks: StackMaxima<StackCount>
-  /** The largest stack per (bucket, trait) in this fight (H2c). */
+  /** The largest stack per (bucket, trait) in this fight. */
   readonly traitStacks: TraitStackMaxima<StackCount>
-  /** The distinct enemy-side creature template ids that started the fight (ASSUMPTION 127). */
+  /** The distinct enemy-side creature template ids that started the fight. */
   readonly enemyTemplateIds: readonly string[]
   readonly unattributed: number
   readonly applications: number
@@ -643,7 +643,7 @@ export function topTraitStacks<T extends StackCount>(
     .slice(0, limit)
 }
 
-/** R2: folds one fight's maxima into a seed's, per bucket: the larger stack wins, the floor of the
+/** Folds one fight's maxima into a seed's, per bucket: the larger stack wins, the floor of the
  * fight it came from is recorded, and on a tie the first stays. Pure. */
 export function foldFightStacks(
   maxima: SeedStackMaxima,
@@ -789,10 +789,10 @@ export interface SeedResult {
   readonly firstTryFloor1Clear: boolean
   readonly clearsToFirstSoul: number | null
   readonly runsToFirstSoul: number | null
-  /** ASSUMPTIONS 107, 126: one of the first FLOOR5_WINDOW_RUNS floor runs was on floor
+  /** One of the first FLOOR5_WINDOW_RUNS floor runs was on floor
    * SESSION_TARGET_FLOOR or deeper (fighting on it, not clearing it). */
   readonly reachedFloor5InWindow: boolean
-  /** ASSUMPTION 127: every fight on floors 1..MATCHUP_MAX_FLOOR, for the matchup table. */
+  /** Every fight on floors 1..MATCHUP_MAX_FLOOR, for the matchup table. */
   readonly earlyFights: readonly EarlyFight[]
   readonly fights: number
   readonly draws: number
@@ -805,7 +805,7 @@ export interface SeedResult {
   readonly bossVisits: readonly BossVisit[]
 }
 
-/** One fight on an early floor: who the enemy side was and how it ended (ASSUMPTION 127). */
+/** One fight on an early floor: who the enemy side was and how it ended. */
 export interface EarlyFight {
   readonly floor: number
   readonly enemyTemplateIds: readonly string[]
@@ -829,7 +829,7 @@ export interface SimOptions {
 
 // ---- Applying the policy to the store ----
 
-/** ASSUMPTION 96. Mutates `summoned`; returns the ids summoned this pass. */
+/** Summons each creature once per id. Mutates `summoned`; returns the ids summoned this pass. */
 export function summonPass(store: Store, summoned: Set<string>): readonly string[] {
   const done: string[] = []
   for (const [creatureId, progress] of [...store.getState().soulProgress]) {
@@ -842,7 +842,7 @@ export function summonPass(store: Store, summoned: Set<string>): readonly string
   return done
 }
 
-/** ASSUMPTION 99, applied through `setPartySlot`. */
+/** The six highest-level instances in party order, applied through `setPartySlot`. */
 export function applyPartyOrder(store: Store): void {
   const ids = orderedParty(store.getState().collection)
   ids.forEach((id, slot) => {
@@ -851,7 +851,7 @@ export function applyPartyOrder(store: Store): void {
   })
 }
 
-/** ASSUMPTION 100, applied through `refundAllPerks` + `setPerkLevel`. */
+/** The greedy perk buy, applied through `refundAllPerks` + `setPerkLevel`. */
 export function applyPerkPlan(store: Store): void {
   const state = store.getState()
   if (state.chosenSpec === null) return
@@ -891,7 +891,7 @@ function unicornCombatId(state: StoreState): string | null {
   return null
 }
 
-/** ASSUMPTION 102: true the first time a seed fights a boss floor; records the visit. */
+/** `true` the first time a seed fights a boss floor; records the visit. */
 export function noteBossVisit(seen: Set<number>, floor: number): boolean {
   const first = !seen.has(floor)
   seen.add(floor)
@@ -922,7 +922,7 @@ export function runProbe(
 }
 
 /** The analysis context for `floor`: the boss and its traits on a boss floor (the biome the store
- * fights, so it reads the store's own `atlasPins`: L2), else boss-free. The Unicorn's combat id
+ * fights, so it reads the store's own `atlasPins`), else boss-free. The Unicorn's combat id
  * rides along. */
 export function bossContext(
   floor: number,
@@ -1201,18 +1201,18 @@ export interface AttritionRow {
   readonly maxPeakAttack: number
 }
 
-/** ASSUMPTION 22's loose CI thresholds, as read by ASSUMPTION 107. */
+/** The loose CI thresholds, as the report reads them. */
 export const FLOOR1_MIN_CLEAR_PCT = 80
 export const FIRST_SOUL_MAX_RUNS = 30
-/** ASSUMPTION 148: the run cap of the CI threshold test. No verdict reads past the larger of the two
+/** The run cap of the CI threshold test. No verdict reads past the larger of the two
  * windows (the first-soul median reads up to FIRST_SOUL_MAX_RUNS runs, the floor-5 verdict the first
  * FLOOR5_WINDOW_RUNS), so a seed capped here gets every verdict a 400-run seed would; deriving it
  * from both means a longer window can't be truncated silently. */
 export const CI_RUN_CAP = Math.max(FIRST_SOUL_MAX_RUNS, FLOOR5_WINDOW_RUNS)
 
-/** ASSUMPTION 22 / 107, each value next to its verdict (H2's CI test asserts the verdicts). */
+/** Each threshold value next to its verdict (the CI test asserts the verdicts). */
 export interface Thresholds {
-  /** The first-try floor-1 clear rate over seeds (ASSUMPTION 106); passes at 80% exactly. */
+  /** The first-try floor-1 clear rate over seeds; passes at 80% exactly. */
   readonly floor1ClearRatePct: number
   readonly floor1Pass: boolean
   /** The median over EVERY seed of the floor runs until a soul first reaches 100%, a seed that
@@ -1227,7 +1227,7 @@ export interface Thresholds {
   readonly floor5Pass: boolean
 }
 
-/** ASSUMPTION 153: how one seed reads a floor-read ceiling. A seed that never runs the floor
+/** How one seed reads a floor-read ceiling. A seed that never runs the floor
  * "didn't reach" it: counted apart, never a miss. */
 export type FloorRead = 'met' | 'missed' | 'did-not-reach'
 
@@ -1239,7 +1239,7 @@ export function firstRunOnFloor(
   return runs.find((r) => r.floor === floor) ?? null
 }
 
-/** ASSUMPTION 153 (T2): a soul had completed at the START of the seed's first run on `floor`.
+/** A soul had completed at the START of the seed's first run on `floor`.
  * `runsToFirstSoul` is the run count after the run in which the soul completed, i.e. that run's
  * `index`, so `< index` means an EARLIER run: a soul that completes during the floor run itself
  * doesn't count for it. */
@@ -1254,7 +1254,7 @@ export function soulBySeedFloor(
     : 'missed'
 }
 
-/** ASSUMPTION 153 (T3): the party is full (PARTY_SIZE) at the START of the seed's first run on
+/** The party is full (PARTY_SIZE) at the START of the seed's first run on
  * `floor` (`partyLevels` is read from the active party before the descent). */
 export function fullPartyBySeedFloor(
   seed: Pick<SeedResult, 'runs'>,
@@ -1289,14 +1289,14 @@ export interface SpecReport {
   readonly seeds: number
   readonly t1: { readonly firstTryClears: number; readonly seeds: number }
   readonly t2: {
-    /** ASSUMPTION 153: a soul completed by the first run on SOUL_BY_FLOOR. */
+    /** A soul completed by the first run on SOUL_BY_FLOOR. */
     readonly atFloor3: FloorReadTally
-    // The first-soul median in floor runs stays: it is ASSUMPTION 22's CI threshold.
+    // The first-soul median in floor runs stays: it is a CI threshold.
     readonly clearsToFirstSoul: readonly number[]
     readonly runsToFirstSoul: readonly number[]
     readonly seedsWithoutSoul: number
   }
-  /** ASSUMPTION 153: a full party by the first run on FULL_PARTY_BY_FLOOR. */
+  /** A full party by the first run on FULL_PARTY_BY_FLOOR. */
   readonly t3: { readonly atFloor6: FloorReadTally }
   readonly t4: {
     readonly stopReasons: Readonly<Record<StopReason, number>>
@@ -1306,10 +1306,10 @@ export interface SpecReport {
     /** Seeds whose first wall is on a floor below FIRST_BOSS_FLOOR (a wall AT it is not before it). */
     readonly seedsWalledBeforeFloor10: number
     readonly failedPushesByFloor: Readonly<Record<number, number>>
-    /** ASSUMPTION 108: per seed, the most failed pushes on any one floor below FIRST_BOSS_FLOOR
+    /** Per seed, the most failed pushes on any one floor below FIRST_BOSS_FLOOR
      * (0 when it had none); the spread over seeds. */
     readonly worstFailedPushesBelow10: Spread | null
-    /** ASSUMPTION 108: per seed, the floor runs until its first clear of FIRST_BOSS_FLOOR; the
+    /** Per seed, the floor runs until its first clear of FIRST_BOSS_FLOOR; the
      * spread over the seeds that clear it, and how many never do. */
     readonly runsToFirstFloor10Clear: {
       readonly spread: Spread | null
@@ -1325,14 +1325,14 @@ export interface SpecReport {
   readonly largestStacks: StackMaxima<
     StackCount & { readonly floor: number; readonly seed: number }
   >
-  /** H2c: per bucket, every trait's largest stack (the report prints the top few). */
+  /** Per bucket, every trait's largest stack (the report prints the top few). */
   readonly traitStacks: SpecTraitStacks
   readonly unattributed: number
   readonly applications: number
   readonly unicorn: UnicornTotals
-  /** ASSUMPTION 127: the floor 1-5 matchup rows, by (floor, enemy template). */
+  /** The floor 1-5 matchup rows, by (floor, enemy template). */
   readonly matchups: readonly MatchupRow[]
-  /** ASSUMPTION 127: the first-try clear rate per floor. */
+  /** The first-try clear rate per floor. */
   readonly firstTry: readonly FirstTryRow[]
   readonly bosses: readonly BossFloorRow[]
   readonly attrition: AttritionRow
@@ -1368,7 +1368,7 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
 }
 
-/** The median over EVERY seed, a missing value (`null`) counting as +Infinity (ASSUMPTION 107).
+/** The median over EVERY seed, a missing value (`null`) counting as +Infinity.
  * With an even count the middle two are averaged, so one infinite middle makes it infinite. */
 export function medianOfSeeds(values: readonly (number | null)[]): number {
   return median(values.map((v) => v ?? Infinity)) ?? Infinity
@@ -1380,7 +1380,7 @@ export function spreadOf(values: readonly number[]): Spread | null {
   return { min: sorted[0]!, median: median(sorted)!, max: sorted[sorted.length - 1]! }
 }
 
-/** ASSUMPTION 22 / 107, computed over the seeds of one spec. Pure. */
+/** The thresholds, computed over the seeds of one spec. Pure. */
 export function computeThresholds(
   results: readonly Pick<
     SeedResult,
@@ -1402,7 +1402,7 @@ export function computeThresholds(
   }
 }
 
-/** ASSUMPTION 127: one (floor, enemy creature) row of the matchup table. A fight counts once for
+/** One (floor, enemy creature) row of the matchup table. A fight counts once for
  * each DISTINCT enemy template in it, with the fight's own result: a row is "fights containing
  * this creature". On floor 1 there is one enemy, so its rows attribute each fight exactly. */
 export interface MatchupRow {
@@ -1456,7 +1456,7 @@ export function buildMatchupRows(
   )
 }
 
-/** ASSUMPTION 127: per floor, over the seeds that ever ran it, how many cleared it on their FIRST
+/** Per floor, over the seeds that ever ran it, how many cleared it on their FIRST
  * run there (a push or a farm, whichever came first). A floor no seed ran has no row. */
 export interface FirstTryRow {
   readonly floor: number
@@ -1757,7 +1757,7 @@ function pad(value: string | number, width: number): string {
   return String(value).padStart(width)
 }
 
-/** `met / reached (didn't reach N)` (ASSUMPTION 153). */
+/** `met / reached (didn't reach N)`. */
 export function formatTally(tally: FloorReadTally): string {
   return `${tally.met} / ${tally.reached} (didn't reach ${tally.didNotReach})`
 }

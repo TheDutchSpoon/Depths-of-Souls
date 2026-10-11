@@ -3,8 +3,7 @@
 // golden-spore-spread.fixture.ts and golden-spore-spread-dot-kill.fixture.ts both exercise,
 // where the draw's OUTCOME is forced regardless of the RNG value).
 //
-// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned
-// (4.1-H2d).
+// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). BEARER itself is
 // pre-applied Spore (its own on-death spread trigger only exists while it carries the status),
@@ -100,8 +99,7 @@ export const expectedEvents: CombatEvent[] = [
 export const setup = (created: CombatState): CombatState => {
   // Pre-apply Spore to BEARER itself (its own on-death spread trigger only exists while it
   // carries the status) and to ALLY_SPORED (the one candidate the filter must exclude), then
-  // wound BEARER -- all before any turn resolves, into a throwaway events array, mirroring the
-  // PR #64 repro's own setup idiom.
+  // wound BEARER -- all before any turn resolves, into a throwaway events array.
   let state = applyStatus(
     BEARER,
     BEARER,

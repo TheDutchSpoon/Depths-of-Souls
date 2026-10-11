@@ -1,5 +1,5 @@
-// Golden: the Flickerling Wick's heal never targets the Wick itself (Phase 4.1-H2b1, ASSUMPTION 140:
-// "heals the lowest-HP injured ally OTHER than itself"). Hand-derived; the Wick is the REAL species.
+// Golden: the Flickerling Wick's heal never targets the Wick itself ("heals the lowest-HP injured
+// ally OTHER than itself"). Hand-derived; the Wick is the REAL species.
 //
 // Players: WICK (38 / 10 / 16 / 14 / 16; wounded to 10/38 by `setup`, the MOST hurt ally and the
 // lowest current HP), C (health 40, speed 5, lightly hurt: 39/40). Enemy E waits (health 100,

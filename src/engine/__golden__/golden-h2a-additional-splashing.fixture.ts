@@ -1,4 +1,4 @@
-// Golden: the Additional on EVERY Splashing hit (Phase 4.1-H2a, ASSUMPTION 135). Hand-derived.
+// Golden: the Additional on EVERY Splashing hit. Hand-derived.
 // ATTACKER (level 1, Attack 20, Splashing, speed 10) attacks the lowest-HP enemy, MIDDLE; both
 // living neighbours are splashed, each through its OWN recomputed formula (own Defence). All
 // vitality, neutral x1.0; effOffStat 20, chip 0.2 every time.

@@ -1,6 +1,5 @@
-// Phase 4.1-G1, stage 0 (ASSUMPTION 68): the five Phase 2 `always-*` scripts, moved UNCHANGED (same
-// ids, same rules) out of the shipped data layer. They are test fixtures now: a mechanism test
-// wants the simplest deterministic actor, and a role's extra rules and random draws would only blur
+// The five `always-*` scripts, kept out of the shipped data layer: a mechanism test wants the
+// simplest deterministic actor, and a role's extra rules and random draws would only blur
 // it. `data/scripts.ts` ships the role scripts; no creature's role is an `always-*` script.
 //
 // A script is player data, so using these in the corpus's coverage fights is still real content: a
@@ -22,7 +21,7 @@ export const ALWAYS_ATTACK_SCRIPT: Script = {
 export const ALWAYS_CAST_SCRIPT: Script = {
   id: 'always-cast',
   // Degrades to the implicit fallback automatically when slot 0 is empty (invalid action
-  // -> skip rule -> no more rules -> fallback). No `targeting` (B1): the engine's side-aware
+  // -> skip rule -> no more rules -> fallback). No `targeting`: the engine's side-aware
   // default picks the lowest-HP enemy for an enemy-side spell and the lowest-HP ally for an
   // ally-side one, so the same script serves single-target, ally-side and AOE loadouts.
   rules: [

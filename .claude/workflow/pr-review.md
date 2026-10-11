@@ -43,6 +43,7 @@ npm run format:check
 npm run build         # runs tsc -b, then vite build
 npx tsc -b            # on its own too, as the agent reports it separately
 npm run docs:check -- citations   # blocking in CI
+npm run docs:check -- comments    # blocking in CI
 npm run docs:check -- budgets     # reported only
 ```
 

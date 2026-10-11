@@ -1,6 +1,6 @@
 // Golden: the Shieldbarer starter's real signature trait (data/traits/starters.ts's
 // SHIELDBARER_STARTER_TRAIT) -- "on-provoke -> your creatures gain +35% Defence" (team-wide).
-// ASSUMPTION 22: authored as an apply-stat-modifier response targeted at the new `all-allies`
+// Authored as an apply-stat-modifier response targeted at the new `all-allies`
 // ResponseTarget (not grant-action-state -- it's a stat buff, not an action-state flag).
 //
 // Hand-derived (independent `node -e` calculator; no damage formula involved, just

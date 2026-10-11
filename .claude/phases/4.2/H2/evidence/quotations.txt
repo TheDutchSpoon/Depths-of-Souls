@@ -1,0 +1,103 @@
+# --quotations: a quotation beside an anchor that the anchor's section does not contain
+
+## before (the clean tree = origin/main's src/, 0126c4a)
+
+    
+    src/data/species/glimmerdark.ts:13: content/glimmerdark.md#affinity-spread "Coverage"
+    src/data/species/glimmerdark.ts:343: content/glimmerdark.md#leech-sovereign "Fast steal-race ... Every hit steals a stat (permanent -you/+it, same as Sparkeaters); you hollow out over time -- answer is raw burst. Lean identity (no heavy add layer)."
+    src/data/species/overgrowth.test.ts:125: content/overgrowth.md#broodmother "adds: spiderlings"
+    src/data/species/overgrowth.ts:7: content/overgrowth.md#enabler-payoff-amplifier "roles ... enabler / payoff / amplifier"
+    src/data/species/overgrowth.ts:19: spec/creatures.md#affinity "Coverage"
+    src/data/species/overgrowth.ts:381: content/overgrowth.md#broodmother "adds: spiderlings (Spider pool)"
+    src/data/species/rotcap-hollow.ts:8: content/rotcap-hollow.md#species-roles "roles ... enabler / payoff / amplifier"
+    src/data/species/rotcap-hollow.ts:346: content/rotcap-hollow.md#rot-sovereign "Attrition-management (finale) ... Grows via count-scaling off deaths (any creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it + out-manage the rot, not pure DPS."
+    src/data/species/starters.ts:1: spec/progression.md#starter-species-are-stubs "Starter species (stubbed -- rosters deferred)"
+    src/data/species/starters.ts:11: spec/progression.md#starter-species-are-stubs "for now only the starter creature exists -- species sits below the >=3-creature minimum on purpose"
+    src/data/spells/glimmerdark.ts:11: spec/run.md#the-onboarding-ramp "a spell may apply any status, including another species' signature one"
+    src/data/spells/glimmerdark.ts:41: spec/run.md#the-onboarding-ramp "a spell may apply any status, including another species' signature one"
+    src/data/spells/rotcap-hollow.ts:10: spec/run.md#the-onboarding-ramp "a spell may apply any status, including another species' signature one"
+    src/data/statuses.ts:105: spec/statuses.md#no-stacking "one instance + duration"
+    src/data/statuses.ts:230: content/rotcap-hollow.md#confusion "3-turn default ... 50% chance it strikes its own side"
+    src/data/traits/glimmerdark.ts:168: content/glimmerdark.md#resonants-wit-caster-synergy "members on-ally-action(cast) -> gain Attack/Int"
+    src/data/traits/glimmerdark.ts:248: content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites "Drainers (on-attack -> -stat enemy + same +stat self, both permanent-for-fight)"
+    src/data/traits/glimmerdark.ts:256: content/glimmerdark.md#sparkeater-leech "~free (2x apply-stat-modifier)"
+    src/data/traits/glimmerdark.ts:426: content/glimmerdark.md#shellback-brawler "attacker uses stat-remap Defence->Attack"
+    src/data/traits/glimmerdark.ts:458: content/glimmerdark.md#leech-sovereign "Every hit steals a stat (permanent -you/+it, same as Sparkeaters); you hollow out over time -- answer is raw burst. Lean identity (no heavy add layer)."
+    src/data/traits/overgrowth.ts:70: content/overgrowth.md#swarmhive-drone "cheap body,"
+    src/data/traits/rotcap-hollow.ts:12: content/rotcap-hollow.md#myconet-endurancewit-death-network "heal/buff scaling off dead-ally count"
+    src/data/traits/rotcap-hollow.ts:214: content/rotcap-hollow.md#necromoss-witvitality-reclaim "heal/buff scaling off dead-ally count"
+    src/data/traits/rotcap-hollow.ts:344: content/rotcap-hollow.md#sporch-violencewit-strong-non-spreading-burn "strong non-spreading Burn"
+    src/data/traits/rotcap-hollow.ts:400: content/rotcap-hollow.md#rot-sovereign "Attrition-management (finale) ... Grows via count-scaling off deaths (any creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it + out-manage the rot, not pure DPS."
+    src/engine/__golden__/golden-broodmother.fixture.ts:1: content/overgrowth.md#broodmother "Count-scales off living spiderling adds + periodically Webs the party"
+    src/engine/__golden__/golden-brute-starter.fixture.ts:2: specializations/brute.md#starter-cragfang-mauler "Attack executes TWICE AT 100%"
+    src/engine/__golden__/golden-brute-starter.fixture.ts:11: specializations/brute.md#starter-cragfang-mauler "Attack executes twice at 100%"
+    src/engine/__golden__/golden-defend-count.fixture.ts:14: spec/effects.md#taken-reduction-accumulation "reductions trend toward but never reach 0"
+    src/engine/__golden__/golden-hollowkin-wretch.fixture.ts:1: content/rotcap-hollow.md#hollowkin-wretch "Puppet"
+    src/engine/__golden__/golden-leech-sovereign.fixture.ts:1: content/glimmerdark.md#leech-sovereign "every hit steals a stat (permanent -you/+it, same as Sparkeaters); you hollow out over time"
+    src/engine/__golden__/golden-necromoss-reclaim.fixture.ts:1: content/rotcap-hollow.md#necromoss-wisp "Reclaim"
+    src/engine/__golden__/golden-overgrowth-web-exploit.fixture.ts:1: content/overgrowth.md#spiders-wit-trap--exploit "+% dmg to Webbed"
+    src/engine/__golden__/golden-resonant-harmonize.fixture.ts:1: content/glimmerdark.md#resonants-wit-caster-synergy "members on-ally-action(cast) -> gain Attack/Int"
+    src/engine/__golden__/golden-rot-sovereign.fixture.ts:1: content/rotcap-hollow.md#rot-sovereign "Attrition- management ... grows via count-scaling off deaths (any creature that dies feeds it) + blankets the party in spreading Spore"
+    src/engine/__golden__/golden-spore-spread-fizzle.fixture.ts:2: content/rotcap-hollow.md#spore "fizzles if none [qualify]"
+    src/engine/effect-types.ts:781: spec/effects.md#splashing-and-annihilate "option a"
+    src/engine/scripting-types.ts:48: spec/scripting.md#conditions "affinity advantage vs a target"
+    src/engine/support-spells.test.ts:73: spec/combat.md#provoke "Provoke applies only to enemy-targeting offensive actions; ally-targeting actions... are unaffected."
+    src/engine/targeting.ts:107: content/rotcap-hollow.md#confusion "Confusion consumes combat RNG"
+    src/engine/types.ts:47: spec/combat.md#targeting-override "Provoke applies only to enemy-targeting offensive actions; ally-targeting actions... are unaffected"
+    src/state/integration.test.ts:182: content/overgrowth.md#unicorn-lightbearer "whenever this creature attacks, it resurrects a random dead ally at 20% of its baseline max HP"
+    src/state/integration.test.ts:397: OPEN_QUESTIONS.md#fight-count "per-fight loss rate compounds"
+    src/state/rewards.ts:60: spec/run.md#rewards "the engine never sees a mid-fight level change"
+    src/state/rewards.ts:103: spec/run.md#currencies "global depth-scaled drop table... independent of which specific creature was defeated"
+    src/state/rewards.ts:123: spec/progression.md#perk-points "100 points per boss... perk points are NOT dropped -- derived, never stored."
+    src/state/store.ts:1: spec/run.md#generation-is-a-pure-seeded-module "the Zustand store owns navigation + ownership only... and CALLS the generator. It never owns the deterministic derivation of a floor's contents."
+    src/state/store.ts:786: spec/run.md#rewards "never held pending fight outcome"
+    quotations: 47 comments and 1 titles
+
+## after (the branch)
+
+    quotations: 0 comments and 0 titles
+
+Zero rows remain, so there is no false positive to show. Each of the 47 comments and 1 title was resolved one of three ways:
+- the target holds the fact in other words: the anchor stays, the quote went (most of them);
+- the anchor named the wrong heading: re-pointed (`spec/responses.md#perform-action` B2 rule 2 -> `spec/combat.md#every-action-source-obeys-the-same-rules`);
+- the fact has no home in the target: the quote went and the fact is under Spec questions in report-r1.md.
+
+## round 2: the by-hand re-scan
+
+`--quotations` misses a quotation that sits before its anchor and one of four words or fewer, so the scan was repeated over every
+comment block of the 346 changed files that holds a `.md#` anchor:
+
+1. Every double-quoted span in such a block: 78 (`1w`..`15w`, before or after the anchor).
+2. Each span compared (lower-cased, whitespace and markdown marks removed, `...` as a gap) against the whole of every doc its
+   block cites: 61 are not in any cited doc.
+3. Of those 61, 28 sit within 110 characters of an anchor (the rest are scare quotes, script rules or error text in a long block
+   with an anchor elsewhere). The 28 were read in place:
+   - **Changed (quote dropped or made exact, the anchor kept), 23:** `specializations.ts` header ("equip gems off-affinity",
+     "equipment Stat Slot benefit") and the four perk comments at `:274`, `:293`, `:331`, `:438` (whose "names this exact perk"
+     claims were also false: they now cite `specializations/brute.md#proficient-warrior`, `#aggressive-caster`, `#cull-the-weak` and
+     `specializations/shieldbarer.md#shield-bash` for the perk and `spec/combat.md#cross-stat-contribution` or
+     `spec/effects.md#conditional-damage-bonus` for the primitive); `species/glimmerdark.ts:58` and `species/rotcap-hollow.ts:66`
+     ("the spells this biome introduces"); `rotcap-hollow.ts:141` ("grows fatter off its kills", not in the Gorgemaw entry);
+     `rotcap-hollow.ts:365` ("adds drawn from the biome's own spawn pool", "spiderlings"); `species/starters.ts:1` ("high X");
+     `spells/core.ts:25` ("30%-Intelligence ... own example"); `statuses.ts:162` ("same tool, opposite pole") and `:173` ("colonies,
+     spores, decay ... spread", "spreads to a living, non-Spored enemy"); `traits/glimmerdark.ts:418` ("attacker", "armor-as-weapon");
+     `traits/rotcap-hollow.ts:359` ("+% to Burning"; the entry says "30% more damage to Burning enemies");
+     `golden-action-observed.fixture.ts:1` (now the spec's own "an ally's multi-cast is observed once per instance");
+     `effects.ts:496` ("board counts") and `:544` ("the existing implicit behavior, made explicit"); `rng.ts:6` ("never mutate",
+     "advance the working copy's bookmark"); `state/store.ts:155` (now the spec's "the fight ends the instant a side has no living
+     creature", singular).
+   - **False positives, 5, kept:** the `"vite/client"` literal in `eslint.config.js:27` and `__corpus__/node-shims.d.ts:1` (a
+     value in `tsconfig.app.json`'s `types`, not a quotation of a doc); the perk name "Brute Force" (and "Spell Focus") in
+     `specializations.ts:1` (names); `actions.ts:660` "draws nothing when inactive" (quotes `targeting.ts`, a code discipline, not
+     the cited spec); `statuses.ts:173` "exclude a status" (names a missing primitive, not a quotation).
+4. `--quotations` after the round: 0 comments and 0 titles.
+
+## round 3: Sorcerer starter and nonexistent creature
+
+Quotes dropped because they quote nothing a cited doc holds (`specializations/sorcerer.md#starter-glyphmoth-seer` says "a 50% chance at the end
+of its turn to cast a random equipped spell", an innate spell and not a gem):
+
+- src/data/traits/starters.ts:11 `"50% chance on-turn-end to cast a random equipped spell."` -> plain statement, no quote marks.
+- src/data/traits/starters.ts:16-17 `"grants one spell as a permanent extra gem"` -> stated as what the code does (an `innate-spell` effect on the trait).
+- src/engine/__golden__/golden-sorcerer-starter.fixture.ts:4 the same quotation as starters.ts:11 -> plain statement, no quote marks.
+- src/engine/conditions.test.ts:323 `("+% dmg to Webbed/Burning targets")` -> quote marks dropped (it quoted nothing).

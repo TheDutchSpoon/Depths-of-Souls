@@ -1,4 +1,4 @@
-// Golden: the Flickerling Last Gleam (Phase 4.1-H2b1, ASSUMPTION 116): whenever an ally dies, every
+// Golden: the Flickerling Last Gleam: whenever an ally dies, every
 // living ally permanently gains 20% Attack -- and its own death does not trigger itself.
 // Hand-derived; the Last Gleam is the REAL species with its real trait. Two cases, each its own
 // fixture object in this file.
