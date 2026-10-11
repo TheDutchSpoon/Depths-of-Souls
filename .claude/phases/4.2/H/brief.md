@@ -56,9 +56,10 @@ were comments that restated a spec rule or narrated history.
     the patterns; golden fixtures are not exempt.
   - `comment-proof <base>`, run by hand: for every `src/` file changed since `<base>`, comments
     stripped (TypeScript printer, `removeComments: true`), compares the two prints byte for byte,
-    and fails on a changed pragma comment (`@ts-…`, `eslint-…`, `/// <`). Listed test titles may be
-    masked. It reads `<base>` with `git show`, so it never runs in CI. Every later comment-only
-    change reuses it.
+    and fails on a changed pragma comment (`@ts-…`, `eslint-…`, `/// <`): its text, or the token it
+    sits before, since a moved pragma governs different code. Listed test titles may be masked.
+    It reads `<base>` with `git show`, so it never runs in CI. Every later comment-only change
+    reuses it.
 - **`citations <file>…`** (Duncan, after this kickoff): `citations` also takes file paths and
   checks exactly those files, `phases/` included, by the rules it applies to a living doc (every
   anchor resolves; no old form, no label form). With no paths it does what it does today, and CI is
