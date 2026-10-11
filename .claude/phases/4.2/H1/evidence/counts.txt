@@ -1,0 +1,44 @@
+# Scanner totals and `comments --counts` (branch 4.2-h1)
+#
+# $ node scripts/docs-check.ts comments --counts
+totals: 403 files, 7178 comment ranges, 1627 titles (1598 plain, 19 each, 2 skipIf/runIf, 8 template)
+pattern  comments  titles  files  what
+      1       356      76    142  ASSUMPTION marker
+      2       576     161    268  phase number
+      3         7       4      8  phase id
+      4       530     142    260  slice id
+      5       223      95    127  slice name
+      6       103      20     74  PR number
+      7        44      10     28  review round
+      8       139      50    140  plan item id
+      9         5       1      4  plan item range or rule
+     10        15       1     12  workflow word
+     11         8       0      5  locked as a decision
+     12         3       1      3  decided at a point in history
+     13         4       0      3  section sign
+     14        30       1     23  brief
+     15         6       0      6  the plan
+     16         5       2      5  plan review
+     17         1       0      1  sign-off
+
+# Against plan §1's probe (403 files, 6,949 comment ranges, 1,627 titles; 1,598 plain, 19 .each,
+# 2 skipIf, 8 templates):
+#   files    403  = 403   src/**/*.{ts,tsx} (no .js, .jsx or .mts exist under src) + vite.config.ts + eslint.config.js
+#   titles   1,627 = 1,627   shapes 1,598 / 19 / 2 / 8 as the probe split them (template first, then .each, then skipIf/runIf)
+#   ranges   7,178 vs 6,949: the difference is the reading, see below
+#
+# The comment-range total under four readings of the same 403 files (a scratch script, not kept; it
+# walks the same leaves as the scanner):
+#   leading comments only, at each token's full start ................................ 6,677
+#   leading + trailing, both at the token's full start (the scanner) ................. 7,178
+#   leading at full start + trailing at token.end, kept if end <= the same token's start  6,677  (plan's first draft: every
+#                                                                                              trailing comment dropped)
+#   leading at full start + trailing at token.end, no filter ......................... 7,178
+# 7,178 - 6,677 = 501 = the same-line trailing comments (the scanner marks them standalone: false). The
+# pre-split probe's 6,949 matches none of these readings and I could not reproduce it; the plan-review
+# probe's 7,178 and 6,677 are reproduced exactly. The scanner reads 7,178, of which 727 are /** */ blocks
+# and 1 is a pragma (injured-allies.test.ts:149); they make 2,499 blocks.
+#
+# The table's "comments" column counts comment blocks (a run of // lines is one), "titles" counts
+# titles (a title with two hits counts once), "files" counts distinct files. A block that hits a
+# pattern twice counts once.

@@ -1,0 +1,70 @@
+# Planted faults (comment-proof on the scratch clone at a7c4fa2, base 3fd6a8f)
+#
+# Same invocation as g-rehearsal.txt (this branch's entry, the g-mask.json listed there, --root <clone>),
+# with vite.config.ts reset to 3fd6a8f so the baseline is exit 0. Each fault is planted in the clone
+# (never in the repo), run, and restored. A scratch script drove it; it is not kept.
+# Expected: every planted fault exit 1 naming the file; the ignored files do not fail.
+#
+## baseline (vite.config.ts reset): expect exit 0
+comment-proof: PASS, 88 changed files
+exit 0
+
+## a code change (src/engine/rng.ts gains an export)
+FAIL src/engine/rng.ts: code differs at printed line 24: base ``, working tree `export const planted = 1;`
+comment-proof: FAIL, 1 problems
+exit 1
+
+## a pragma change (the @ts-expect-error text in src/engine/injured-allies.test.ts)
+FAIL src/engine/injured-allies.test.ts: pragma differs: base `// @ts-expect-error -- 'other-ally-injured' is a TriggerCondition kind, not a sc` before token 860, working tree `// @ts-expect-error -- (reworded) 'other-ally-injured' is a TriggerCondition kin` before token 860
+comment-proof: FAIL, 1 problems
+exit 1
+
+## a pragma moved (same text, one statement down, in src/engine/injured-allies.test.ts)
+FAIL src/engine/injured-allies.test.ts: pragma differs: base `// @ts-expect-error -- 'other-ally-injured' is a TriggerCondition kind, not a sc` before token 860, working tree `// @ts-expect-error -- 'other-ally-injured' is a TriggerCondition kind, not a sc` before token 873
+comment-proof: FAIL, 1 problems
+exit 1
+
+## an unlisted title change (src/engine/rng.test.ts)
+FAIL src/engine/rng.test.ts: code differs at printed line 4: base `it('produces an identical sequence for the same seed', () => {`, working tree `it('produces an identical sequence for one seed', () => {`
+comment-proof: FAIL, 1 problems
+exit 1
+
+## an added file (src/planted-added.ts, untracked and not ignored)
+FAIL src/planted-added.ts: added (not in 3fd6a8f)
+comment-proof: FAIL, 1 problems
+exit 1
+
+## a deleted file (src/engine/rng.ts)
+FAIL src/engine/rng.ts: deleted (in 3fd6a8f, not in the working tree)
+comment-proof: FAIL, 1 problems
+exit 1
+
+## an unconsumed entry in a changed file (src/engine/rng.ts is a 4.2-G comment-only change; the entry text is absent)
+FAIL src/engine/rng.ts: mask entry "no such text" -> "whatever" expects 1 in the base, found 0
+FAIL src/engine/rng.ts: mask: "whatever" occurs 0 times in the working tree, expected 1
+comment-proof: FAIL, 2 problems
+exit 1
+
+## an unconsumed entry for an unchanged file (src/main.tsx)
+FAIL src/main.tsx: mask entry "a" -> "b" not consumed (no code change in that path, or it is not a file in scope)
+comment-proof: FAIL, 1 problems
+exit 1
+
+## an unconsumed entry for a path in neither file set (src/nowhere.ts)
+FAIL src/nowhere.ts: mask entry "a" -> "b" not consumed (no code change in that path, or it is not a file in scope)
+comment-proof: FAIL, 1 problems
+exit 1
+
+## an unconsumed entry written with a backslash separator (src, engine, rng.ts joined by a backslash)
+FAIL src\engine\rng.ts: mask entry "a" -> "b" not consumed (no code change in that path, or it is not a file in scope)
+comment-proof: FAIL, 1 problems
+exit 1
+
+## an ignored file (src/.DS_Store, src/engine/scratch.local): expect exit 0
+comment-proof: PASS, 88 changed files
+exit 0
+
+## clone state after restoring (expect only the staged vite.config.ts reset):
+M  vite.config.ts
+
+no leftovers

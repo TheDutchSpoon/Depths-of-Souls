@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 
-// Used by the inventory modes only: `citations` and `budgets` read the working tree, because CI's
-// checkout is shallow and has no local branches.
+// Used by `comment-proof` and the inventory modes, read-only: `citations`, `comments` and `budgets`
+// read the working tree, because CI's checkout is shallow and has no local branches.
 
 /** Runs git with an argument array (never a shell string) from `root`. */
 export function git(root: string, args: string[]): Buffer {

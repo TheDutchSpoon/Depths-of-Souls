@@ -1,0 +1,90 @@
+# `comments --quotations` on today's tree (branch 4.2-h1) against 4.2-G's review-quotations.txt
+#
+# $ node scripts/docs-check.ts comments --quotations
+#
+# Counts. This scan: 47 comments and 1 title (48 rows). 4.2-G's regex scan at e53ce62: 39 comments and
+# 1 title (40 rows). The title is the same one, overgrowth.test.ts:125 ("adds: spiderlings").
+# A row is `file:line: anchor "quote"`; the quote here is read whole across wraps (4.2-G's was cut at
+# a wrap), so rows with a cut quote there (`"Starter`, `"for`) are whole here.
+#
+# Rows are matched on file:line and anchor (a re-pointed anchor counts as a different row). 36 are in both lists (40 - 4 = 48 - 12). The differences, each explained:
+#
+# In 4.2-G's list, not here (4):
+#   overgrowth.ts:19  content/overgrowth.md#reading-this-biome   4.2-G's own fix commit (8d73ab0) re-pointed the anchor; the same
+#                                                                 quote "Coverage" is listed here under spec/creatures.md#affinity (below).
+#   integration.test.ts:397  spec/run.md#fights-per-floor        likewise re-pointed to OPEN_QUESTIONS.md#fight-count; listed here under that.
+#   golden-dot.fixture.ts:15 spec/combat.md#fight-setup          the fix commit rewrote the line; the quote is gone.
+#   traits/starters.ts:56    specializations/shieldbarer.md#starter-stonehorn-warden "ramping team-Defence engine"
+#                                                                 The doc wraps "ramping" and "team-Defence" over two lines; 4.2-G's line-based
+#                                                                 check read them as absent. This scan collapses whitespace in the section, so the
+#                                                                 quote is found: a false positive of the regex scan, not a fact.
+#
+# Here, not in 4.2-G's list (12), none of them a new quote: the same text sits in the tree at e53ce62.
+#   overgrowth.ts:19 (spec/creatures.md#affinity), integration.test.ts:397 (OPEN_QUESTIONS.md#fight-count)
+#                                      the two re-pointed anchors above.
+#   overgrowth.ts:7, rotcap-hollow.ts:8   "roles ... enabler / payoff / amplifier": the section says "three roles in it", the quote is not in it.
+#                                      The regex scan did not reach them.
+#   traits/glimmerdark.ts:168            the quote follows "(" ; the regex scan did not reach it.
+#   traits/glimmerdark.ts:256            the quote starts after a " * " JSDoc leader on the next line; the regex handled one comment wrap
+#                                      of the // kind. Here every leader is stripped (scanner), so a wrap of either kind is whole.
+#   golden-brute-starter:2, :11, golden-leech-sovereign:1, golden-overgrowth-web-exploit:1,
+#   golden-resonant-harmonize:1, store.ts:1
+#                                      the quote follows ") -- ", " / " or "-> " punctuation before the opening quote; the window here
+#                                      counts words (a run of letters or digits), punctuation alone is not a word.
+#
+# One attribution rule differs on purpose: a quote is read as belonging to the nearest anchor before it.
+# `A and B own "quote"` lists the quote against B only (src/data/spells/glimmerdark.ts:40 would otherwise list it
+# against A too). Rows with an unterminated quote read to the end of the comment block.
+#
+# Limits, as 4.2-G's: approximate. A quote the scan does not reach is missed; a quote paraphrased inside the
+# window is listed. It reports and exits 0.
+#
+src/data/species/glimmerdark.ts:13: content/glimmerdark.md#affinity-spread "Coverage"
+src/data/species/glimmerdark.ts:343: content/glimmerdark.md#leech-sovereign "Fast steal-race ... Every hit steals a stat (permanent -you/+it, same as Sparkeaters); you hollow out over time -- answer is raw burst. Lean identity (no heavy add layer)."
+src/data/species/overgrowth.test.ts:125: content/overgrowth.md#broodmother "adds: spiderlings"
+src/data/species/overgrowth.ts:7: content/overgrowth.md#enabler-payoff-amplifier "roles ... enabler / payoff / amplifier"
+src/data/species/overgrowth.ts:19: spec/creatures.md#affinity "Coverage"
+src/data/species/overgrowth.ts:381: content/overgrowth.md#broodmother "adds: spiderlings (Spider pool)"
+src/data/species/rotcap-hollow.ts:8: content/rotcap-hollow.md#species-roles "roles ... enabler / payoff / amplifier"
+src/data/species/rotcap-hollow.ts:346: content/rotcap-hollow.md#rot-sovereign "Attrition-management (finale) ... Grows via count-scaling off deaths (any creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it + out-manage the rot, not pure DPS."
+src/data/species/starters.ts:1: spec/progression.md#starter-species-are-stubs "Starter species (stubbed -- rosters deferred)"
+src/data/species/starters.ts:11: spec/progression.md#starter-species-are-stubs "for now only the starter creature exists -- species sits below the >=3-creature minimum on purpose"
+src/data/spells/glimmerdark.ts:11: spec/run.md#the-onboarding-ramp "a spell may apply any status, including another species' signature one"
+src/data/spells/glimmerdark.ts:41: spec/run.md#the-onboarding-ramp "a spell may apply any status, including another species' signature one"
+src/data/spells/rotcap-hollow.ts:10: spec/run.md#the-onboarding-ramp "a spell may apply any status, including another species' signature one"
+src/data/statuses.ts:105: spec/statuses.md#no-stacking "one instance + duration"
+src/data/statuses.ts:230: content/rotcap-hollow.md#confusion "3-turn default ... 50% chance it strikes its own side"
+src/data/traits/glimmerdark.ts:168: content/glimmerdark.md#resonants-wit-caster-synergy "members on-ally-action(cast) -> gain Attack/Int"
+src/data/traits/glimmerdark.ts:248: content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites "Drainers (on-attack -> -stat enemy + same +stat self, both permanent-for-fight)"
+src/data/traits/glimmerdark.ts:256: content/glimmerdark.md#sparkeater-leech "~free (2x apply-stat-modifier)"
+src/data/traits/glimmerdark.ts:426: content/glimmerdark.md#shellback-brawler "attacker uses stat-remap Defence->Attack"
+src/data/traits/glimmerdark.ts:458: content/glimmerdark.md#leech-sovereign "Every hit steals a stat (permanent -you/+it, same as Sparkeaters); you hollow out over time -- answer is raw burst. Lean identity (no heavy add layer)."
+src/data/traits/overgrowth.ts:70: content/overgrowth.md#swarmhive-drone "cheap body,"
+src/data/traits/rotcap-hollow.ts:12: content/rotcap-hollow.md#myconet-endurancewit-death-network "heal/buff scaling off dead-ally count"
+src/data/traits/rotcap-hollow.ts:214: content/rotcap-hollow.md#necromoss-witvitality-reclaim "heal/buff scaling off dead-ally count"
+src/data/traits/rotcap-hollow.ts:344: content/rotcap-hollow.md#sporch-violencewit-strong-non-spreading-burn "strong non-spreading Burn"
+src/data/traits/rotcap-hollow.ts:400: content/rotcap-hollow.md#rot-sovereign "Attrition-management (finale) ... Grows via count-scaling off deaths (any creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it + out-manage the rot, not pure DPS."
+src/engine/__golden__/golden-broodmother.fixture.ts:1: content/overgrowth.md#broodmother "Count-scales off living spiderling adds + periodically Webs the party"
+src/engine/__golden__/golden-brute-starter.fixture.ts:2: specializations/brute.md#starter-cragfang-mauler "Attack executes TWICE AT 100%"
+src/engine/__golden__/golden-brute-starter.fixture.ts:11: specializations/brute.md#starter-cragfang-mauler "Attack executes twice at 100%"
+src/engine/__golden__/golden-defend-count.fixture.ts:14: spec/effects.md#taken-reduction-accumulation "reductions trend toward but never reach 0"
+src/engine/__golden__/golden-hollowkin-wretch.fixture.ts:1: content/rotcap-hollow.md#hollowkin-wretch "Puppet"
+src/engine/__golden__/golden-leech-sovereign.fixture.ts:1: content/glimmerdark.md#leech-sovereign "every hit steals a stat (permanent -you/+it, same as Sparkeaters); you hollow out over time"
+src/engine/__golden__/golden-necromoss-reclaim.fixture.ts:1: content/rotcap-hollow.md#necromoss-wisp "Reclaim"
+src/engine/__golden__/golden-overgrowth-web-exploit.fixture.ts:1: content/overgrowth.md#spiders-wit-trap--exploit "+% dmg to Webbed"
+src/engine/__golden__/golden-resonant-harmonize.fixture.ts:1: content/glimmerdark.md#resonants-wit-caster-synergy "members on-ally-action(cast) -> gain Attack/Int"
+src/engine/__golden__/golden-rot-sovereign.fixture.ts:1: content/rotcap-hollow.md#rot-sovereign "Attrition- management ... grows via count-scaling off deaths (any creature that dies feeds it) + blankets the party in spreading Spore"
+src/engine/__golden__/golden-spore-spread-fizzle.fixture.ts:2: content/rotcap-hollow.md#spore "fizzles if none [qualify]"
+src/engine/effect-types.ts:781: spec/effects.md#splashing-and-annihilate "option a"
+src/engine/scripting-types.ts:48: spec/scripting.md#conditions "affinity advantage vs a target"
+src/engine/support-spells.test.ts:73: spec/combat.md#provoke "Provoke applies only to enemy-targeting offensive actions; ally-targeting actions... are unaffected."
+src/engine/targeting.ts:107: content/rotcap-hollow.md#confusion "Confusion consumes combat RNG"
+src/engine/types.ts:47: spec/combat.md#targeting-override "Provoke applies only to enemy-targeting offensive actions; ally-targeting actions... are unaffected"
+src/state/integration.test.ts:182: content/overgrowth.md#unicorn-lightbearer "whenever this creature attacks, it resurrects a random dead ally at 20% of its baseline max HP"
+src/state/integration.test.ts:397: OPEN_QUESTIONS.md#fight-count "per-fight loss rate compounds"
+src/state/rewards.ts:60: spec/run.md#rewards "the engine never sees a mid-fight level change"
+src/state/rewards.ts:103: spec/run.md#currencies "global depth-scaled drop table... independent of which specific creature was defeated"
+src/state/rewards.ts:123: spec/progression.md#perk-points "100 points per boss... perk points are NOT dropped -- derived, never stored."
+src/state/store.ts:1: spec/run.md#generation-is-a-pure-seeded-module "the Zustand store owns navigation + ownership only... and CALLS the generator. It never owns the deterministic derivation of a floor's contents."
+src/state/store.ts:786: spec/run.md#rewards "never held pending fight outcome"
+quotations: 47 comments and 1 titles
