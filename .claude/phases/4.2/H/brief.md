@@ -74,10 +74,13 @@ review):
 
 - **4.2-H1, the tooling:** the scanner, `comments` (not in CI yet: it fails on `main` until
   4.2-H2's sweep), `comment-proof <base>` and `citations <file>…`, each with its tests. No `src/`
-  change.
+  change. Everything the plan and its review put in `scripts/` is H1's: the plan's module changes
+  and test table, plan-review fixes 2, 3, 5–7 and 10, D1 and D2 as they bear on the check, and
+  A1–A11 (Duncan, at the 4.2-H1 kickoff), so 4.2-H2 never changes the tool that proves it.
 - **4.2-H2, the sweep:** every comment and test title in scope brought to
   `CONVENTIONS.md#comment-why-not-what`, proved by `comment-proof origin/main` with 4.2-H1's tool
-  from `main`; `comments` added to `deploy.yml`.
+  from `main`; `comments` added to `deploy.yml`. It takes the plan's mechanical rewrite and hand
+  pass, plan-review fixes 1, 4, 8, 9, 11 and 12, D3 and A12–A16.
 - **4.2-H3, the names:** provenance stripped from `src/` file names (121 files carry a slice id,
   most of them golden fixture/test pairs) and identifiers (`PHASE_4_PLACEHOLDER_BALANCE_CONFIG`),
   each renamed by hand for what it pins or is for, since stripping the id alone collides
@@ -87,8 +90,8 @@ review):
   `comment-proof` option, the plan's to design). `comments`, or a sibling mode, also fails on a
   phase or slice id in a `src/` file name or identifier, so a new name can't copy the old pattern.
 
-This folder keeps the brief and the pre-split kickoff, plan and plan review, which both slices'
-kickoffs build on.
+This folder keeps the brief and the pre-split kickoff, plan and plan review, which each slice's
+kickoff builds on.
 
 ## The PR must prove
 
