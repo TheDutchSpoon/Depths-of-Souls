@@ -1,7 +1,7 @@
-// Golden: the Additional (Phase 4.1-H2a, brief ASSUMPTIONS 110, 135) on DIRECT hits, at three
+// Golden: the Additional (`spec/combat.md#damage-channels-and-the-additional`) on DIRECT hits, at three
 // attacker levels. Hand-derived. The Additional is added after the formula's MAX(1, floor(...)):
 //   additional = min( floor(20% x target max HP), max(0, 10 - (attacker level - 1)) )
-// and nothing modifies it. rawDamage stays the formula's pre-clamp value (ASSUMPTION 136).
+// and nothing modifies it. rawDamage stays the formula's pre-clamp value.
 //
 // Setup. Three player attackers, each Attack 20, all vitality (neutral x1.0), scripted
 // `attack-highest-hp` so each hits a DIFFERENT dummy (the highest-HP enemy at that moment). Three

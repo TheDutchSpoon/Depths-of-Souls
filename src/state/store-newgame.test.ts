@@ -1,4 +1,4 @@
-// Phase 4.1-G2 (§6, ASSUMPTION 87): `newGame({ seed })` resets EVERYTHING and is deterministic: two
+// `newGame({ seed })` resets EVERYTHING and is deterministic: two
 // `newGame` calls with the same seed give deep-equal states, and the same follow-up play from
 // either gives the same game. Each field of the reset has its own test, so a field dropped from
 // the reset fails by name.
@@ -188,7 +188,7 @@ describe('newGame()', () => {
     expect(first).toHaveLength(3)
   })
 
-  test('the seed must be an integer in 0 .. 2^32 - 1 (ASSUMPTION 87)', () => {
+  test('the seed must be an integer in 0 .. 2^32 - 1', () => {
     const store = createGameStore()
     for (const seed of [
       -1,

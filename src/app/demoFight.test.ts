@@ -10,10 +10,10 @@ import {
 } from './demoFight'
 
 // Presence smoke test, not a golden -- guards against a future retune silently gutting the
-// Phase 3.5 demo (traits/statuses no longer firing at all). Pins DEMO_SEED so the demo's
-// randomize-seed button never destabilizes this; asserts presence of Phase 3 mechanics, not
-// a full log.
-describe('demo fight (Phase 3.5 presence smoke test)', () => {
+// demo (traits/statuses no longer firing at all). Pins DEMO_SEED so the demo's
+// randomize-seed button never destabilizes this; asserts that trait and status mechanics
+// fire, not a full log.
+describe('demo fight (presence smoke test)', () => {
   it('fires at least one triggered effect and applies at least one status at DEMO_SEED', () => {
     const initial = createCombat({
       seed: DEMO_SEED,

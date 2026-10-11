@@ -6,7 +6,7 @@ import { createEffectInstanceId } from './effect-types'
 import type { ActiveEffect } from './effect-types'
 import type { CombatEvent, CombatState, Spell } from './types'
 
-// Phase 4 Slice C, ASSUMPTION 13: end-to-end proof that combat.ts's executeCastAoe actually
+// end-to-end proof that combat.ts's executeCastAoe actually
 // wires shouldRedirectAoeToAllies in (unit-tested directly in targeting.test.ts) -- one roll
 // per AOE instance decides whether the WHOLE frozen target set flips to the caster's own
 // living side, never a per-target coin flip.
@@ -60,7 +60,7 @@ function withConfused(
   }
 }
 
-describe('executeCastAoe -- Confusion redirect (Phase 4 Slice C)', () => {
+describe('executeCastAoe -- Confusion redirect', () => {
   it('a confused caster at 100% chance redirects the whole AOE cast to its own living side', () => {
     const player = makeParty('player', [
       {
@@ -97,7 +97,7 @@ describe('executeCastAoe -- Confusion redirect (Phase 4 Slice C)', () => {
     expect(dealt.every((e) => e.targetId === player[0]!.id)).toBe(true)
   })
 
-  it('an unconfused caster casts at the enemy side as before -- byte-identical, no RNG drawn for the check', () => {
+  it('an unconfused caster casts at the enemy side, no RNG drawn for the check', () => {
     const player = makeParty('player', [
       {
         id: 'caster',

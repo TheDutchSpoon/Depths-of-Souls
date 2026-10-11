@@ -1,5 +1,4 @@
-// Golden: a DoT tick is not a cost, so a cost observer stays silent (Phase 4.1-H2b1, ASSUMPTIONS
-// 115, 131, 137; 4.1-H2b2: the tick is a snapshot-potency status tick, ASSUMPTION 144).
+// Golden: a DoT tick is not a cost, so a cost observer stays silent (the tick is a snapshot-potency status tick).
 // Hand-derived. Its own golden on purpose: H2b2 moved the tick's source to the applier and made it
 // indirect, so this case changed alone, while the ordinary-hit, spell-on-caster and zero-cost cases
 // (golden-h2b1-observed-silent) stayed byte-identical.

@@ -14,7 +14,7 @@ import {
   STATUS_REGISTRY,
 } from './statuses'
 
-describe('stock statuses (representative Phase 3 content)', () => {
+describe('stock statuses (representative content)', () => {
   it('registers every stock status by statusId', () => {
     expect([...STATUS_REGISTRY.keys()].sort()).toEqual(
       STOCK_STATUSES.map((s) => s.statusId).sort(),
@@ -51,7 +51,7 @@ describe('stock statuses (representative Phase 3 content)', () => {
     })
   })
 
-  it("the four ticking statuses declare the potencies decided at the 4.1-H2d grill (percent of the APPLIER's stat, ASSUMPTION 152)", () => {
+  it("the four ticking statuses declare their potencies (percent of the APPLIER's stat)", () => {
     expect(POISON.potency).toEqual({ ofStat: 'attack', percent: 40 })
     expect(BURN.potency).toEqual({ ofStat: 'intelligence', percent: 35 })
     expect(REGEN.potency).toEqual({ ofStat: 'health', percent: 10 })

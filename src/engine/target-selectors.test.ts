@@ -165,7 +165,7 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
     expect(targetSelectorHasCandidate({ kind: 'random-enemy' }, me, state)).toBe(false)
   })
 
-  // Phase 4 Slice E: the one-for-one ally mirror of the enemy-selector cases above, over
+  // The one-for-one ally mirror of the enemy-selector cases above, over
   // livingAlliesOf instead of livingEnemiesOf. "ally" always includes the acting creature, so
   // candidacy is unconditionally true for these (already covered by the ALL_SELECTORS table
   // above, on a solo party) -- these cases exercise RESOLUTION against a real multi-member pool.
@@ -293,11 +293,11 @@ describe('targetSelectorHasCandidate / resolveTargetSelector', () => {
   })
 })
 
-// Phase 4.1-C2a (A1): the side-neutral 'random' selector. It can't be RESOLVED here (it needs
+// The side-neutral 'random' selector. It can't be RESOLVED here (it needs
 // the action's intended side, which only actions.ts knows -- see resolveIntent's own
 // resolveRandomTarget) but every exhaustive consumer of TargetSelector still has to handle it.
 describe("the side-neutral 'random' selector", () => {
-  it("targetSelectorHasCandidate throws -- 'random' needs the intended side, checked only in actions.ts (PR #71 review)", () => {
+  it("targetSelectorHasCandidate throws -- 'random' needs the intended side, checked only in actions.ts", () => {
     const player = makeParty('player', [{ id: 'me' }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })

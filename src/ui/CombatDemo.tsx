@@ -5,18 +5,17 @@ import type { CombatEvent, Creature, FightResult } from '../engine/types'
 import type { Script } from '../engine/scripting-types'
 import type { StatusDef, Trait } from '../engine/effect-types'
 
-// Throwaway dev harness proving the engine runs end-to-end in the browser. Phase 7
-// (Combat UI & feedback) replaces this with real combat presentation once Phase 4
-// content exists. Do not grow this toward real combat UI (sprites, health bars,
-// animation) or toward a script-authoring UI -- that is Phase 6/7 scope. This is a
-// viewer, not an editor: both sides run real scripts through the Phase 2 interpreter,
-// with real Phase 3 traits/statuses wired onto the demo parties (see demoFight.ts).
+// Throwaway dev harness proving the engine runs end-to-end in the browser
+// (`CONVENTIONS.md#every-feature-phase-ships-a-demo`). Do not grow this toward real
+// combat UI (sprites, health bars, animation) or toward a script-authoring UI. This is a
+// viewer, not an editor: both sides run real scripts through the interpreter,
+// with real traits/statuses wired onto the demo parties (see demoFight.ts).
 //
 // Playback is cosmetic only: resolveFight still computes the whole deterministic event
 // log synchronously up front (src/engine stays pure, sync, seed-deterministic); this
 // component just reveals it progressively, paced on "beats" (each turn's action, each
 // triggered effect) rather than per raw event, so a full fight plays out in ~15-30s.
-// Baseline UI-only demo feature carried forward from Phase 3.5 to all future .5 demos.
+// Baseline UI-only demo feature, inherited by every demo.
 
 const BEAT_DELAY_MS = 500
 
@@ -40,7 +39,7 @@ function randomSeed(): number {
 }
 
 /** A beat starts at a creature's turn or at a triggered effect firing -- the "meaningful
- * beats" the brief paces playback on, not raw events (a full fight is 80-120+ events). */
+ * beats" playback is paced on, not raw events (a full fight is 80-120+ events). */
 function isBeatStart(event: CombatEvent): boolean {
   return event.type === 'TurnStarted' || event.type === 'TriggerFired'
 }

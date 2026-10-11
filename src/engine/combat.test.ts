@@ -71,8 +71,8 @@ describe('createCombat', () => {
     ).toThrow()
   })
 
-  // Phase 4.1-B review (PR #69, R1): `enemy.effects` used to be silently dropped -- `createCombat`
-  // called `instantiate(c, [])` for the whole enemy party regardless of what `enemy.effects` held.
+  // `enemy.effects` must reach the enemy party: `createCombat` must not call
+  // `instantiate(c, [])` for the whole enemy party regardless of what `enemy.effects` holds.
   it("applies enemy.effects to the enemy party only, never the player's", () => {
     const player = makeParty('player', [{ id: 'hero', attack: 10 }])
     const enemy = makeParty('enemy', [{ id: 'goblin', attack: 10 }])
@@ -109,9 +109,8 @@ describe('createCombat', () => {
     ).toThrow(/side/)
   })
 
-  // Phase 4.1-B review (PR #69, R3): re-feeding a post-setup creature used to be "safe but
-  // pointless" (silently recomputed from scratch) -- for a trait carrying an innate-spell effect
-  // (A8), it would silently DOUBLE the innate slots instead. Now a thrown error.
+  // Re-feeding a post-setup creature throws: silently recomputing it from scratch would, for a
+  // trait carrying an innate-spell effect, DOUBLE the innate slots.
   it('throws when re-fed a creature that already carries fight-setup output (double-prepend guard)', () => {
     const player = makeParty('player', [
       { id: 'seer', intelligence: 20, innateTraitIds: [SORCERER_STARTER_TRAIT.id] },
@@ -176,18 +175,18 @@ describe('determinism', () => {
     expect(run1.state.result).toBe(run2.state.result)
   })
 
-  it('resolving the SAME frozen snapshot twice gives identical {state, events} (Phase 4.1-B, B3)', () => {
-    // The actual B3 regression probe: unlike the test above (which builds two SEPARATE
-    // CombatStates from the same seed), this resolves ONE already-built, deep-frozen snapshot
-    // twice. Before B3, CombatState.rng was a closure shared by reference across every `{
-    // ...state }` copy, so a second resolveTurn(state) call would continue from wherever the
+  it('resolving the SAME frozen snapshot twice gives identical {state, events}', () => {
+    // The regression probe for a shared RNG closure: unlike the test above (which builds two
+    // SEPARATE CombatStates from the same seed), this resolves ONE already-built, deep-frozen
+    // snapshot twice. A CombatState.rng that is a closure shared by reference across every `{
+    // ...state }` copy would make a second resolveTurn(state) call continue from wherever the
     // FIRST call's draws left the closure's internal position, breaking this exact guarantee.
     //
-    // Phase 4.1-B review (PR #69, R4): a 1v1 always-attack turn draws ZERO RNG, so the equality
+    // A 1v1 always-attack turn draws ZERO RNG, so the equality
     // this test asserts would hold trivially even with the resolveTurn clone removed (nothing
     // ever touches state.rng to diverge). `random-enemy` targeting against TWO living enemies
     // forces this turn to actually draw, so the countDraws assertion below proves the test can't
-    // go vacuous again.
+    // go vacuous.
     const randomTargetScript: Script = {
       id: 'random-target-b3-fixture',
       rules: [
@@ -230,9 +229,8 @@ describe('determinism', () => {
     expect(first.state).toEqual(second.state)
   })
 
-  // Phase 4.1-B review (PR #69, scope/labeling): the brief's own B3 acceptance criterion is a
-  // STRUCTURAL guarantee -- "CombatState holds no closure, function, or class instance" -- which
-  // deep-freezing doesn't actually prove (a frozen closure is still a closure). `structuredClone`
+  // That CombatState holds no closure, function, or class instance is a STRUCTURAL guarantee,
+  // which deep-freezing doesn't actually prove (a frozen closure is still a closure). `structuredClone`
   // throws on any function/closure/class instance it encounters, so a real mid-fight state (real
   // trait content, several turns in) surviving a clone-and-resolve round-trip is a direct proof
   // of plain-data-ness, not just "nothing mutated its input."
@@ -696,9 +694,9 @@ describe('Wait', () => {
     ).toBe(false)
   })
 })
-describe('born-this-turn: a status refreshed in its own bearer turn keeps full duration (Phase 4.1-F2)', () => {
+describe('born-this-turn: a status refreshed in its own bearer turn keeps full duration', () => {
   it('does not count down a status refreshed in the bearer turn (instance and id kept), counts down the rest', () => {
-    // Replaces the Phase 3 round-end-sweep refresh test (the sweep is deleted). Z seeds two
+    // Z seeds two
     // statuses at fight-start (weaken-test, vulnerability-test), then re-applies weaken-test to
     // itself in its own on-turn-end hooks -- refreshing the SAME instance (single-instance-per-
     // statusId) in the very turn whose cleanup would otherwise count it down.
@@ -797,14 +795,14 @@ describe('born-this-turn: a status refreshed in its own bearer turn keeps full d
     )
 
     // Refreshed in Z's own turn (born this turn) -> NOT counted down: stays at 5, not 4 -- and it
-    // is the same instance (a refresh keeps its id, B4).
+    // is the same instance (a refresh keeps its id).
     expect(weaken).toMatchObject({ remainingDuration: 5, instanceId: idBefore })
     // Untouched by any re-application -> counts down normally: 3 -> 2 -> 1.
     expect(vulnerability).toMatchObject({ remainingDuration: 1 })
   })
 })
 
-describe('action instance-list composition (Phase 4 Slice B)', () => {
+describe('action instance-list composition', () => {
   // Attacker: attack 20, no cross-stat/armor-pen. Target: defence 0, huge HP (survives every
   // instance). Base 100%: off 20, core 20, chip 0.2 -> raw 20.2 -> final 20.
   // Echo-shaped "an additional time" (100%): identical to the base instance -> final 20.
@@ -913,7 +911,7 @@ describe('action instance-list composition (Phase 4 Slice B)', () => {
   })
 })
 
-describe('Spell.scalingStat (Phase 4 Slice B)', () => {
+describe('Spell.scalingStat', () => {
   function castHit(spell: Spell, casterOverrides: Record<string, unknown>) {
     const player = makeParty('player', [
       {
@@ -984,7 +982,7 @@ describe('Spell.scalingStat (Phase 4 Slice B)', () => {
   })
 })
 
-describe('Web break-free (Phase 4 Slice E2)', () => {
+describe('Web break-free', () => {
   const WEB_TEST_STATUS: StatusDef = {
     statusId: 'web-test-fixture',
     polarity: 'debuff',
@@ -1108,7 +1106,7 @@ describe('Web break-free (Phase 4 Slice E2)', () => {
   })
 })
 
-describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4.1-E)', () => {
+describe('Arcane Surge-shaped granted cast = on-turn-end perform-action', () => {
   const GRANTED_CASTER_FIXTURE: Trait = {
     id: 'granted-caster-fixture',
     name: 'Granted Caster (fixture)',
@@ -1126,7 +1124,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4
     ],
   }
 
-  // Phase 4.1-B (B-1): CombatState.rng is plain data, computed from `position` via real
+  // CombatState.rng is plain data, computed from `position` via real
   // mulberry32 math -- an arbitrary-value stub is no longer possible. Instead these tests set
   // `rng.position` directly to a hand-picked value whose real first draw satisfies the needed
   // threshold (< or >= chancePercent/100 = 0.5); every fixture here has at most one non-null
@@ -1141,7 +1139,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4
     return event.type === 'SpellCast'
   }
 
-  it('on a successful roll, casts the (only) equipped spell before TurnEnded (Phase 4.1-C, D6)', () => {
+  it('on a successful roll, casts the (only) equipped spell before TurnEnded', () => {
     const player = makeParty('player', [
       {
         id: 'caster',
@@ -1163,8 +1161,8 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4
     state = { ...state, rng: { position: SUCCEEDS_POSITION } }
     const { events } = resolveTurn(state)
 
-    // Phase 4.1-C (D6): TurnEnded is always the turn's last event -- the granted-actions step
-    // (the queued perform-action grant) now runs BEFORE it, not after (Phase 4 fired it after).
+    // TurnEnded is always the turn's last event -- the granted-actions step
+    // (the queued perform-action grant) runs BEFORE it.
     const turnEndedIndex = events.findIndex((e) => e.type === 'TurnEnded')
     const spellCastIndex = events.findIndex(isSpellCast)
     expect(spellCastIndex).toBeLessThan(turnEndedIndex)
@@ -1246,8 +1244,8 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4
   })
 })
 
-describe('turn-start cleanup (Phase 4.1-C, D6)', () => {
-  // Phase 4.1-C1 review (PR #70, F2): the two branches the goldens don't individually exercise --
+describe('turn-start cleanup', () => {
+  // The two branches the goldens don't individually exercise --
   // both flags ending as ONE event, and the whole cleanup step being skipped for a creature that
   // doesn't survive its own turn-start hooks.
 
@@ -1307,7 +1305,7 @@ describe('turn-start cleanup (Phase 4.1-C, D6)', () => {
       ],
     }
     const doomedId = createCreatureId('doomed')
-    // provoking (not defending) at fight-start, per the review: Defend's own damage reduction
+    // provoking (not defending) at fight-start: Defend's own damage reduction
     // must not be able to interfere with this trait's own lethality.
     const player = makeParty('player', [
       {
@@ -1344,8 +1342,8 @@ describe('turn-start cleanup (Phase 4.1-C, D6)', () => {
   })
 })
 
-describe('taken-reduction passive (Phase 4 Slice F, review amendment -- real Bulwark shape, as a perk)', () => {
-  // Same numbers as Slice D's golden-defend-count-additive-cap (mechanically identical --
+describe('taken-reduction passive (real Bulwark shape, as a perk)', () => {
+  // Same numbers as golden-defend-count-additive-cap (mechanically identical --
   // magnitude 0.95, additive accumulation, reductionCap 0.8, driven by self-defend-count) but
   // authored as a permanent PASSIVE (not a status applied via on-fight-start), proving the
   // mitigation still ramps round-over-round while the bearer carries no status at all.

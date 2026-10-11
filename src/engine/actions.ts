@@ -1,19 +1,19 @@
-// Phase 4.1-C2a (A1): the one action pipeline. Every action source -- a script rule, the
-// implicit fallback, a `perform-action` grant (4.1-E) -- goes through this module:
+// The one action pipeline. Every action source -- a script rule, the
+// implicit fallback, a `perform-action` grant -- goes through this module:
 // `checkLegality` (pure, draws nothing), `resolveIntent` (the only place action-level draws
 // happen), `executeAction` (the executors, moved here from combat.ts).
 // `createResolutionContext` builds the `ResolutionContext` (resolution-types.ts) the resolver
-// threads; `drainGrantedActions` (4.1-E) runs the `perform-action` grants it queued.
+// threads; `drainGrantedActions` runs the `perform-action` grants it queued.
 //
-// Phase 4.1-C2b (B1): `resolveIntent`'s default target is the side-aware one (`defaultTargetingFor`,
+// `resolveIntent`'s default target is the side-aware one (`defaultTargetingFor`,
 // derived from the RESOLVED action -- a `gemSlot: 'random'` cast defaults by the drawn spell's
-// side), and `gemSlot: 'random'` draws over `castableGemSlots` (ASSUMPTION 13).
+// side), and `gemSlot: 'random'` draws over `castableGemSlots`.
 //
-// Phase 4.1-C2c (B2, B5): `runAction` calls `checkLegality` before `resolveIntent` for EVERY source,
+// `runAction` calls `checkLegality` before `resolveIntent` for EVERY source,
 // so a lock refuses a chosen or granted action alike and a refused action draws nothing; granted
 // casts go through Confusion -> Tunnel Vision -> Provoke like any action; rule 4's instance
 // fallback is the side-aware default then Provoke; and a hit whose target died in its own pre-hit
-// hooks fizzles (B5).
+// hooks fizzles (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`).
 
 import { getCreature, findCreature, updateCreature } from './creature-lookup'
 import {
@@ -53,8 +53,8 @@ import type { Action, CombatEvent, CombatState, Creature, Spell } from './types'
  * Builds a fresh ResolutionContext over `events` (shared, mutated in place by push) and
  * `cascade` (fresh per top-level action; see resolveTurn's own "fresh cascade per top-level
  * action" discipline). `runAction` is the one-action entry the scopes in combat.ts and
- * `drainGrantedActions` call (resolution.ts only enqueues grants, 4.1-E): it
- * checks `intent` is legal for `actorId` (locks included -- B2.2, every source), resolves it, pushes
+ * `drainGrantedActions` call (resolution.ts only enqueues grants): it
+ * checks `intent` is legal for `actorId` (locks included, every source), resolves it, pushes
  * `options.announce` (if the intent resolved) right before executing, then executes -- a silent
  * no-op (nothing drawn, nothing pushed) if the actor is dead/unknown, the intent is illegal, or it
  * doesn't resolve to an action (no castable gem, no valid target).
@@ -64,7 +64,7 @@ export function createResolutionContext(
   cascade: CascadeState,
 ): ResolutionContext {
   // One context object, shared by every executor `runAction` starts, so they all enqueue onto the
-  // SAME `grants` queue (4.1-E) -- built first, `runAction` closes over it.
+  // SAME `grants` queue -- built first, `runAction` closes over it.
   const ctx: ResolutionContext = { events, cascade, grants: [], runAction }
   function runAction(
     actorId: CreatureId,
@@ -84,18 +84,19 @@ export function createResolutionContext(
 }
 
 export interface DrainGrantsOptions {
-  /** The creature whose turn was skipped this turn, if any (B2 rule 1): a grant whose actor is
+  /** The creature whose turn was skipped this turn, if any
+   * (`spec/combat.md#every-action-source-obeys-the-same-rules`): a grant whose actor is
    * that creature is refused, even if the lock that skipped the turn is gone by now. The chance
    * roll already happened at trigger time, so the RNG stream doesn't depend on the skip. Supplied
-   * by `resolveTurn` from its `'all'`-lock skip read (4.1-F1); transient, never in `CombatState`. */
+   * by `resolveTurn` from its `'all'`-lock skip read; transient, never in `CombatState`. */
   readonly skippedTurnOf?: CreatureId
-  /** "The fight is over" (Phase 4.1-F2, ASSUMPTION 19): checked before each grant; once true the
+  /** "The fight is over": checked before each grant; once true the
    * rest of the queue is dropped (a wipe ends the turn at once). Supplied by `resolveTurn`. */
   readonly stopWhen?: (state: CombatState) => boolean
 }
 
 /**
- * Phase 4.1-E (A2): runs `ctx.grants` -- the `perform-action` grants raised in this context's
+ * Runs `ctx.grants` -- the `perform-action` grants raised in this context's
  * scope -- FIRST IN, FIRST OUT, once the scope's own work is done (the chosen action, a hook pass,
  * ...). Actions are atomic: a granted action starts only now, after the granting action completed.
  * A grant raised BY a granted action goes to the back of the queue, behind those already waiting.
@@ -120,8 +121,8 @@ export function drainGrantedActions(
   for (let i = 0; i < ctx.grants.length; i++) {
     const grant = ctx.grants[i]
     if (!grant) continue
-    if (options.stopWhen?.(working)) break // a wipe ends the turn (F2)
-    if (grant.actorId === options.skippedTurnOf) continue // B2 rule 1
+    if (options.stopWhen?.(working)) break // a wipe ends the turn
+    if (grant.actorId === options.skippedTurnOf) continue // a skipped turn takes no granted action
     const outerDepth = ctx.cascade.depth
     ctx.cascade.depth = grant.depth
     working = ctx.runAction(grant.actorId, grant.intent, working, {
@@ -154,7 +155,7 @@ function livingPoolFor(
 
 /** Existence-only (no RNG): does `targeting` (or, absent, the intended side's default) have a
  * candidate at all? Absent targeting is legal whenever the intended side has >=1 living member
- * (B1: the side-aware default always exists then). */
+ * (the side-aware default always exists then). */
 function hasValidTarget(
   actor: Creature,
   targeting: TargetSelector | undefined,
@@ -170,8 +171,8 @@ function hasValidTarget(
 }
 
 /**
- * Phase 4.1-C2a (A1): every equipped slot (innate spells included -- they're bare entries in
- * `equippedSpells` like any gem, A8) whose spell is castable right now: non-empty, and (for a
+ * Every equipped slot (innate spells included -- they're bare entries in
+ * `equippedSpells` like any gem) whose spell is castable right now: non-empty, and (for a
  * single-target spell) has a valid target on its own intended side. An AOE spell is always
  * castable -- it "happens" even against an empty side (matches executeCastAoe's own contract).
  */
@@ -183,7 +184,7 @@ export function castableGemSlots(
   const slots: number[] = []
   actor.equippedSpells.forEach((spell, slot) => {
     if (!spell) return
-    // Phase 4.1-G1 (ASSUMPTION 69): `side`, when given, keeps only the spells whose own
+    // `side`, when given, keeps only the spells whose own
     // `targetSide` is that side (the `support` role's ally-side draw); absent keeps every slot.
     if (side !== undefined && spell.targetSide !== side) return
     if (spell.targetShape === 'aoe') {
@@ -198,9 +199,7 @@ export function castableGemSlots(
 
 /**
  * `checkLegality(actor, intent, state)` -- pure, draws nothing. Can the actor take this action
- * at all: an `action-lock` (4.1-F1: an `'all'` lock refuses EVERY kind, Attack/Cast/Defend/Provoke/
- * Wait; a scoped lock only its own -- read through the effect iterator, so an immune bearer's
- * status lock doesn't count), an empty slot, no castable gem for `gemSlot: 'random'`, no valid
+ * at all: an `action-lock` (an `'all'` lock refuses EVERY kind, Attack/Cast/Defend/Provoke/ Wait; a scoped lock only its own -- read through the effect iterator, so an immune bearer's status lock doesn't count), an empty slot, no castable gem for `gemSlot: 'random'`, no valid
  * target? Used by the interpreter's lookahead over script rules, and by the implicit
  * fallback to decide whether Attack is legal at all before resolving it.
  */
@@ -234,7 +233,7 @@ export function checkLegality(
   }
 }
 
-// ---- Default targeting (B1) ----
+// ---- Default targeting ----
 
 /**
  * The side-aware default target SELECTOR for `action` on `actor`: `lowest-hp-enemy` for Attack
@@ -298,7 +297,7 @@ function resolveSelectorTarget(
   return resolveTargetSelector(targeting, actor, state)
 }
 
-/** Phase 4.1-C2b (ASSUMPTION 13): uniform among the actor's CASTABLE slots (innate included) --
+/** Uniform among the actor's CASTABLE slots (innate included) --
  * `castableGemSlots`, the same set `checkLegality` uses. No castable slot means no draw. */
 function resolveGemSlot(
   actor: Creature,
@@ -314,7 +313,7 @@ function resolveGemSlot(
 }
 
 /** An enemy-side single target: the override pipeline (Confusion -> Tunnel Vision -> Provoke),
- * for every action source (B2.3). */
+ * for every action source. */
 function resolveEnemySingleTarget(
   actor: Creature,
   targeting: TargetSelector | undefined,
@@ -375,14 +374,14 @@ export function resolveIntent(
   }
 }
 
-// ---- Execution (the executors, moved from combat.ts unchanged) ----
+// ---- Execution (the executors) ----
 
 /**
- * ASSUMPTION 31: every instance after the first targets the SAME resolved target as instance 1
+ * Every instance after the first targets the SAME resolved target as instance 1
  * (the selector is not re-run per instance) -- except when that target has since died. Rule 4
- * (`spec/combat.md#every-action-source-obeys-the-same-rules`, 4.1-C2c): a dead previous target
+ * (`spec/combat.md#every-action-source-obeys-the-same-rules`): a dead previous target
  * falls back to the side-aware default of the instance's own action (`defaultTargetingFor`, the
- * same function B1 uses), then Provoke -- one draw even for a single provoker, skipped under Tunnel
+ * same function the default targeting uses), then Provoke -- one draw even for a single provoker, skipped under Tunnel
  * Vision and for an ally-side instance. It never rolls Confusion. Returns null once no living
  * target remains (nothing further in the list can resolve).
  *
@@ -408,7 +407,7 @@ function resolveInstanceTarget(
 }
 
 /**
- * The action instance-list model (`spec/combat.md#action-instance-list`, locked): an Attack or
+ * The action instance-list model (`spec/combat.md#action-instance-list`): an Attack or
  * Cast resolves as a list of powerPercent entries, assembled ONCE, up front, before any instance
  * resolves -- base [100], plus one entry per active action-instance passive matching
  * `actionKind` (or 'both'), in canonical active-effects order. Composition is LINEAR
@@ -423,7 +422,7 @@ function buildInstanceList(
 }
 
 /**
- * Phase 4 Slice C (Proficient Warrior / Annihilate): the living enemies a Splashing actor's
+ * The living enemies a Splashing actor's
  * main ATTACK hit against `mainTargetId` should also strike -- computed from `state` as it
  * stood BEFORE the main hit lands (so `mainTargetId` is still among the alive-filtered list
  * adjacentLivingTargets indexes into; looking this up AFTER the main hit could drop the just-
@@ -448,10 +447,8 @@ function splashTargetIds(
 }
 
 /**
- * Phase 4 Slice C (Splashing): the living neighbors of `target` within `party`, taken from
- * the alive-filtered, slot-ordered list (ASSUMPTION 14 -- living-adjacency, not raw
- * slot-index adjacency: a dead slot-neighbor would make Splashing whiff for no
- * player-visible reason, and living-adjacency degrades gracefully as a side thins out).
+ * The living neighbors of `target` within `party`, taken from
+ * the alive-filtered, slot-ordered list (living-adjacency, not raw slot-index adjacency: a dead slot-neighbor would make Splashing whiff for no player-visible reason, and living-adjacency degrades gracefully as a side thins out).
  * Returns up to two neighbors (one at each edge of the living list); empty when `target`
  * isn't alive-and-present in `party` or has no living neighbor.
  */
@@ -468,7 +465,7 @@ function adjacentLivingTargets(target: Creature, party: readonly Creature[]): Cr
 }
 
 /**
- * `spec/combat.md#an-action-ends-when-its-actor-dies` (4.1-C2c, PR #73 review): true once the actor
+ * `spec/combat.md#an-action-ends-when-its-actor-dies`: true once the actor
  * has died inside its own action (a retaliation after one of its hits, or a response nested in
  * its own pre-hit hooks). Read fresh from `working`, never from the `actor` snapshot the executor
  * was handed. Callers drop the rest of the action: no further events, no fizzle event.
@@ -504,13 +501,13 @@ function executeAttack(
       targetId: thisTargetId,
     })
     working = fireHook('on-attack', [actor.id], thisTargetId, working, ctx).state
-    // Phase 4 Slice E2 (general action-observation system): fires on ALL living creatures
+    // Fires on ALL living creatures
     // (cheap -- effectsForHook returns nothing for non-observers), per instance, alongside the
     // actor's own on-attack hook above -- see `spec/effects.md#action-reactions-actor-self-hooks-or-observation` actor-vs-observer routing table.
     working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
       observed: { actionKind: 'attack', instanceIndex },
     }).state
-    // B5 (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`): the pre-hit hooks may have killed the target -- that hit fizzles (no
+    // (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`) the pre-hit hooks may have killed the target -- that hit fizzles (no
     // damage, no Splashing for this instance). AttackDeclared stays in the log; no fizzle event.
     // The next instance re-targets per rule 4. A dead ACTOR ends the whole action instead (site 2).
     if (actorDied(actor, working)) break
@@ -525,8 +522,7 @@ function executeAttack(
       working,
       ctx,
     )
-    // Splashing: recompute the SAME formula (own offStat/spellPower, each splash target's own
-    // Defence/affinity/pools -- never a copy of the main hit's number, ASSUMPTION 15). No
+    // Splashing: recompute the SAME formula (own offStat/spellPower, each splash target's own Defence/affinity/pools -- never a copy of the main hit's number). No
     // TriggerFired -- it's the same action, not a triggered response. Re-checks aliveness in
     // case an earlier splash hit's own damage-path cascade (e.g. Retaliate) already killed a
     // later one.
@@ -549,21 +545,21 @@ function executeAttack(
 }
 
 /**
- * Phase 4.1-D (A4): runs a spell's effect list against ONE landed target -- the single target, or
+ * Runs a spell's effect list against ONE landed target -- the single target, or
  * the AOE member being hit -- in list order, each through `executeResponse` DIRECTLY (not
  * `fireHook`): a spell's effects are the chosen action, never a trigger, so none emits
- * `TriggerFired` and none takes part in cascade-depth / self-re-entry accounting (ASSUMPTION
- * D-A4, byte-identical with the pre-4.1-D direct calls). `cast-target` resolves to `targetId`; a
- * dead one gets nothing because no verb acts on a corpse (`executeResponse`'s verb rule; pre-4.1-D
- * this was `applyStatusIfAlive`), so an `apply-status` after a killing hit lands nowhere.
+ * `TriggerFired` and none takes part in cascade-depth / self-re-entry accounting.
+ * `cast-target` resolves to `targetId`; a
+ * dead one gets nothing because no verb acts on a corpse (`executeResponse`'s verb rule), so an
+ * `apply-status` after a killing hit lands nowhere.
  * `self` resolves to the caster, once per landed target.
  *
- * The list is ATOMIC (ASSUMPTION 35, design-owner confirmed): no dead-actor check between one
+ * The list is ATOMIC: no dead-actor check between one
  * target's effects -- if a retaliation to the damage kills the caster, the rest of this target's
  * list still runs; the checks sit between targets and instances (the callers' loops). Magnitudes
- * read the caster LIVE when each effect runs (ASSUMPTION 36), as Attack and every response do.
+ * read the caster LIVE when each effect runs, as Attack and every response do.
  * `powerPercent` scales `deal-damage` / `heal` only (resolution.ts, `castPowerFraction`).
- * `apply-stat-modifier`'s source id is the spell's id, as before.
+ * `apply-stat-modifier`'s source id is the spell's id.
  */
 function executeSpellEffects(
   actor: Creature,
@@ -629,13 +625,13 @@ function executeCastSingle(
       targetId: thisTargetId,
     })
     working = fireHook('on-cast', [actor.id], thisTargetId, working, ctx).state
-    // Phase 4 Slice E2 (general action-observation system): Resonants' own consumer shape
+    // Resonants' own consumer shape
     // (relationship 'ally', actionKind 'cast') -- see `spec/effects.md#action-reactions-actor-self-hooks-or-observation` actor-vs-observer routing. An
     // echo (a `perform-action` grant) raised here is queued, and runs after this whole action.
     working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
       observed: { actionKind: 'cast', instanceIndex },
     }).state
-    // B5: same pre-hit-hook fizzle as executeAttack (no payload, no status); SpellCast stays.
+    // Same pre-hit-hook fizzle as executeAttack (no payload, no status); SpellCast stays.
     if (actorDied(actor, working)) break // site 2
     if (!findCreature(working, thisTargetId)?.alive) continue
     working = executeSpellEffects(actor, spell, thisTargetId, powerPercent, working, ctx)
@@ -661,7 +657,7 @@ function executeCastAoe(
     'cast',
   ).entries()) {
     if (actorDied(actor, working)) break // site 1: before target freezing / SpellCast
-    // Phase 4 Slice E: an ally-targeting AOE spell always freezes the caster's OWN living side
+    // An ally-targeting AOE spell always freezes the caster's OWN living side
     // -- no Confusion roll at all (Confusion's redirect is scoped to a "harmful action" per
     // `spec/combat.md#targeting-override`; a support cast on your own side is never one, so it must never touch
     // state.rng here, mirroring targeting.ts's "draws nothing when inactive" discipline).
@@ -670,7 +666,7 @@ function executeCastAoe(
     if (targetSide === 'ally') {
       resolvedParty = actor.side
     } else {
-      // Confusion (ASSUMPTION 13): one roll, per instance, decides whether this WHOLE AOE
+      // Confusion: one roll, per instance, decides whether this WHOLE AOE
       // instance retargets to the caster's own living side instead of the enemy side -- never
       // a per-target coin flip.
       const redirectToAllies = shouldRedirectAoeToAllies(actor, working)
@@ -692,7 +688,7 @@ function executeCastAoe(
     })
     // AOE has no single target to name as the hook's `source` -- self only.
     working = fireHook('on-cast', [actor.id], undefined, working, ctx).state
-    // Phase 4 Slice E2 (general action-observation system): source here IS the actor (needed
+    // Source here IS the actor (needed
     // for relationship filtering), unlike on-cast's own source above.
     working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
       observed: { actionKind: 'cast', instanceIndex },
@@ -719,12 +715,12 @@ function executeDefend(
 ): CombatState {
   ctx.events.push({ type: 'Defended', creatureId: actor.id })
   let working = fireHook('on-defend', [actor.id], undefined, state, ctx).state
-  // Phase 4 Slice E2 (general action-observation system): Defend/Provoke are always
+  // Defend/Provoke are always
   // single-instance in v1 -- instanceIndex is always 0.
   working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
     observed: { actionKind: 'defend', instanceIndex: 0 },
   }).state
-  // Phase 4 Slice D / ASSUMPTION 17: cumulative for the whole fight, never reset -- read fresh
+  // Cumulative for the whole fight, never reset -- read fresh
   // from `working` (not the pre-hook `actor`) in case an on-defend response somehow touched it,
   // matching the project's existing "re-fetch before mutating" discipline (e.g. combat.ts's own
   // freshActor pattern).

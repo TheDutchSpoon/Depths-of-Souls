@@ -1,4 +1,4 @@
-// Golden: the `turn-order` effect inside a status (Phase 4 Slice C; a `StatusDef` category until 4.1-F1) -- Web (act-last) /
+// Golden: the `turn-order` effect inside a status -- Web (act-last) /
 // Blindclaws' grant-act-first (act-first), applied at fight-start via an on-fight-start
 // triggered apply-status response, read PASSIVELY by buildTurnQueue (never hook-fired itself).
 // Proves position beats raw Speed entirely, and that a Speed-sorted "normal" group of

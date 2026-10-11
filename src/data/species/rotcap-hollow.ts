@@ -1,27 +1,27 @@
-// Phase 4 Slice H3: Rotcap Hollow (floors 21-30, `spec/run.md#biomes`'s decade cadence / ASSUMPTION
-// 29) -- Biome 3's real roster, against `content/rotcap-hollow.md#rotcap-hollow-biome-3-floors-2130` own table, built
-// entirely on primitives already proven through Slice E2/H2 (no new engine work needed for any
+// Rotcap Hollow (floors 21-30, `spec/run.md#biomes`'s decade cadence) -- Biome 3's real roster,
+// against `content/rotcap-hollow.md#rotcap-hollow-biome-3-floors-2130`'s own table, built
+// entirely on primitives the engine already has (no new engine work needed for any
 // TRAIT here -- see traits/rotcap-hollow.ts's own header comment for the one genuinely new
 // piece, Spore's `random-ally-without-status` target, which lives in data/statuses.ts, not a
 // species trait).
 //
-// Six species x three creatures each (18 total), following `content/rotcap-hollow.md#species-roles` own "roles ...
-// enabler / payoff / amplifier" framing, except Necromoss (like Resonants, H2) shares ONE
-// mechanic across all three creatures, escalating scope/strength by rarity.
+// Six species x three creatures each (18 total), following the enabler / payoff / amplifier
+// framing of `content/rotcap-hollow.md#species-roles`, except Necromoss (like Resonants) shares
+// ONE mechanic across all three creatures, escalating scope/strength by rarity.
 //
-// ASSUMPTION (Slice H3, mirrors H1/H2's own): exact base stats (10-30/stat) and every
-// percent/factor balance number are parked balance (`OPEN_QUESTIONS.md#content-numbers`), picked only to be
-// flavorful and internally consistent. Per-creature affinity mostly follows `content/rotcap-hollow.md#species-roles`
-// own dual leans (Necromoss: Wit/Vitality, Hollowkin: Endurance/Instinct, Sporch: Violence/Wit),
-// with four content-review revisions off the family default -- see each creature's own doc
-// comment: Rotfeeder Gorgemaw is Vitality (its identity is HP growth, not a raw Violence hit);
-// Myconet Rotcore is Wit (its identity is a Poison-application death-burst, not a raw Endurance
-// tank trick); Necromoss Hollowroot is Vitality (the team healer and the biome's only caster,
-// matching this game's healer affinity, so it rolls Vitality heal/buff spells instead of Wit
-// damage spells); Hollowkin Puppeteer is Instinct (evens out that species' own Endurance/Instinct
-// lean). All 5 affinities remain present across the 18 creatures -- Wit 6 / Violence 4 /
-// Endurance 3 / Vitality 3 / Instinct 2 -- without needing any extra coverage-sprinkle creature
-// (unlike H1/H2, whose single-lean species needed one).
+// Exact base stats (10-30/stat) and every percent/factor balance number are parked balance
+// (`OPEN_QUESTIONS.md#content-numbers`), picked only to be flavorful and internally consistent.
+// Per-creature affinity mostly follows `content/rotcap-hollow.md#species-roles`'s dual leans
+// (Necromoss: Wit/Vitality, Hollowkin: Endurance/Instinct, Sporch: Violence/Wit), with four
+// revisions off the family default -- see each creature's own doc comment: Rotfeeder Gorgemaw is
+// Vitality (its identity is HP growth, not a raw Violence hit); Myconet Rotcore is Wit (its
+// identity is a Poison-application death-burst, not a raw Endurance tank trick); Necromoss
+// Hollowroot is Vitality (the team healer and the biome's only caster, matching this game's
+// healer affinity, so it rolls Vitality heal/buff spells instead of Wit damage spells); Hollowkin
+// Puppeteer is Instinct (evens out that species' own Endurance/Instinct lean). All 5 affinities
+// remain present across the 18 creatures -- Wit 6 / Violence 4 / Endurance 3 / Vitality 3 /
+// Instinct 2 -- without needing any extra coverage-sprinkle creature (unlike Overgrowth and
+// Glimmerdark, whose single-lean species needed one).
 //
 // Composition ONLY (Species/SpeciesCreature/BiomeData + boss data) -- Trait/Spell objects live in
 // the central `../traits`/`../spells` library (`CONVENTIONS.md#composition-files-only-reference-carriers`), same as `../species/overgrowth.ts`/`../species/glimmerdark.ts`.
@@ -63,11 +63,10 @@ import {
   SPORECLOUD_SEEDER_TRAIT,
 } from '../traits'
 
-// ---- Rotcap Hollow's own authored spells (5 of the ~22-spell global total) ----
-// Phase 4 interstitial slice (cumulative spell unlock, extended to H3 from the start -- see
-// data/spells/glimmerdark.ts's own header comment for why H2 needed a correction pass H3 never
-// triggers): this grouping is no longer fed into `BiomeData` -- kept purely as "the spells this
-// biome introduces" documentation, every entry here tagged `unlockedAtBiome: 3`.
+// ---- Rotcap Hollow's own authored spells ----
+// This grouping is documentation only: `generateFloor` rolls from the global spell registry
+// (`spec/run.md#spells-unlock-cumulatively`), not from biome data -- kept as "the spells this
+// biome introduces", every entry here tagged `unlockedAtBiome: 3`.
 
 export const ROTCAP_HOLLOW_SPELLS = [
   SPORE_CYST,
@@ -139,9 +138,9 @@ export const ROTFEEDER_RIPPER: SpeciesCreature = {
   rarity: 'uncommon',
 }
 
-/** Content-review revision: Vitality instead of Violence -- Gorgemaw's identity is HP growth
- * ("grows fatter off its kills"), which reads as Vitality (CLAUDE.md's affinity->stat
- * soft-mapping) more than the family's default Violence lean. */
+/** Vitality instead of Violence -- Gorgemaw's identity is HP growth
+ * ("grows fatter off its kills"), which reads as Vitality (the soft
+ * affinity->stat mapping, `spec/creatures.md#affinity`) more than the family's default Violence lean. */
 export const ROTFEEDER_GORGEMAW: SpeciesCreature = {
   id: 'rotfeeder-gorgemaw',
   name: 'Rotfeeder Gorgemaw',
@@ -172,9 +171,9 @@ export const MYCONET_WARDER: SpeciesCreature = {
   rarity: 'common',
 }
 
-/** Content-review revision: Wit instead of Endurance -- Rotcore's identity is a Poison-application
- * death-burst (a status effect, not a raw stat/tank trick), which reads as Wit (CLAUDE.md's
- * affinity->stat soft-mapping) more than the family's default Endurance lean. */
+/** Wit instead of Endurance -- Rotcore's identity is a Poison-application
+ * death-burst (a status effect, not a raw stat/tank trick), which reads as Wit (the soft
+ * affinity->stat mapping, `spec/creatures.md#affinity`) more than the family's default Endurance lean. */
 export const MYCONET_ROTCORE: SpeciesCreature = {
   id: 'myconet-rotcore',
   name: 'Myconet Rotcore',
@@ -228,7 +227,7 @@ export const NECROMOSS_THICKET: SpeciesCreature = {
 /** The biome's one cast-role creature (role `caster`) -- its trait fires on
  * on-turn-start regardless of the chosen action, so casting never blunts it; exercises
  * generateFloor's real spell-loadout roll against the cumulative-unlocked vitality-affinity pool.
- * PR #64 review revision: affinity `wit` -> `vitality` -- Hollowroot is the team healer (and the
+ * Affinity is `vitality` (not `wit`): Hollowroot is the team healer (and the
  * biome's only caster), and Vitality is this game's healer affinity; as Vitality it rolls
  * Regrowth/Wild Vigor/Afterglow/Charnel Feast instead of Wit damage spells. */
 export const NECROMOSS_HOLLOWROOT: SpeciesCreature = {
@@ -271,7 +270,7 @@ export const HOLLOWKIN_MARIONETTE: SpeciesCreature = {
   rarity: 'uncommon',
 }
 
-/** PR #64 review revision: affinity `endurance` -> `instinct` -- evens out Hollowkin's
+/** Affinity `instinct` (not `endurance`) evens out Hollowkin's
  * Endurance/Instinct lean (Wretch stays Endurance, Marionette stays Instinct). */
 export const HOLLOWKIN_PUPPETEER: SpeciesCreature = {
   id: 'hollowkin-puppeteer',
@@ -343,19 +342,15 @@ export const ROTCAP_HOLLOW_SPECIES_POOL: readonly Species[] = [
 ]
 
 // ---- Boss (floor 30): the Rot Sovereign ----
-// `content/rotcap-hollow.md#rot-sovereign`: "Attrition-management (finale) ... Grows via count-scaling off deaths (any
-// creature that dies feeds it) + blankets the party in spreading Spore. Puzzle = don't-feed-it +
-// out-manage the rot, not pure DPS." Adds drawn from this biome's own spawn pool (the
+// `content/rotcap-hollow.md#rot-sovereign`. Adds drawn from this biome's own spawn pool (the
 // fixed-authored-encounter path, same mechanism as the Unicorn's scripted intro and the
 // Broodmother/Leech Sovereign before her) -- Sporecloud Seeder (keeps infecting the party with
 // Spore alongside her own blanket) and Rotfeeder Scavenger (a body that feeds the "any creature
 // that dies" half of her own growth when it falls), both real Rotcap Hollow roster members.
 //
 // The boss floor itself (materializing her + her adds on floor 30, banking rewards, recording
-// bossesCleared) is wired through `BiomeData.boss` below (Phase 4 Slice I, PR #65 review) -- see
-// `generation.ts`'s `generateFloor` boss branch and `spec/run.md#boss-floor-generation`. H3 authored her
-// as data only and deliberately left the runner unbuilt, mirroring H1/H2's own bosses; that gap
-// is what Slice I closes.
+// bossesCleared) is wired through `BiomeData.boss` below -- see
+// `generation.ts`'s `generateFloor` boss branch and `spec/run.md#boss-floor-generation`.
 
 export const ROT_SOVEREIGN: SpeciesCreature = {
   id: 'rot-sovereign',
@@ -377,7 +372,7 @@ export const ROT_SOVEREIGN_ADDS: readonly SpeciesCreature[] = [
 
 export const ROT_SOVEREIGN_BOSS_ID = 'rot-sovereign'
 
-/** Phase 4 Slice I (PR #65 review): wires the Rot Sovereign into `ROTCAP_HOLLOW_BIOME.boss`.
+/** Wires the Rot Sovereign into `ROTCAP_HOLLOW_BIOME.boss`.
  * `speciesId` is her OWN id -- like the Leech Sovereign (and unlike the Broodmother), she has no
  * natural species of her own; her adds span TWO different real species (Sporecloud/Rotfeeder),
  * each resolved independently against this biome's `speciesPool` by `resolveAddSpeciesId`. */

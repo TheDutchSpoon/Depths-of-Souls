@@ -51,8 +51,8 @@ describe('shipped spec shape', () => {
   })
 })
 
-// Phase 4.1-G2 (G4): `PerkDef.phase` is deleted; the nine perks that stay inert until Phase 8 are
-// an explicit list here, each with a code comment in specializations.ts.
+// The nine inert perks are an explicit list here (`spec/progression.md#inert-perks`), each with
+// a code comment in specializations.ts.
 const KNOWN_INERT_PERK_IDS = [
   'wit-mastery',
   'violence-mastery',
@@ -65,7 +65,7 @@ const KNOWN_INERT_PERK_IDS = [
   'shield-specialist',
 ]
 
-describe('Known-inert perks (Phase 4.1-G2, G4)', () => {
+describe('Known-inert perks', () => {
   const allPerks = SPECIALIZATIONS.flatMap((spec) => spec.perks)
 
   it('the list names 9 real perks, and each resolves to zero effects at max level', () => {

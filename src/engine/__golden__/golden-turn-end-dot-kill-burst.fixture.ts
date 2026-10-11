@@ -1,7 +1,5 @@
 // Golden: a status applied during ANOTHER creature's turn ticks at its bearer's own next turn
-// end (4.1-F2; the born-this-turn rule only protects a status from the turn it was applied in,
-// for its bearer). Re-derived from the PR #64 fix 2 round-end-sweep golden (the sweep, its
-// snapshot and its gate are deleted). The repro: Myconet Rotcore (player-side, real
+// end (the born-this-turn rule only protects a status from the turn it was applied in, for its bearer). The case: Myconet Rotcore (player-side, real
 // `MYCONET_ROTCORE_TRAIT`) dies to its own Poison tick in its own turn-end hooks and Poisons the
 // enemy side via its on-death trigger.
 //
@@ -12,7 +10,7 @@
 // both survive the whole fixture. Turn order (speed): ROTCORE(20) > TANK(15) > E1(10) in round 1;
 // TANK(15) > E1(10) in rounds 2-3 (Rotcore excluded, dead).
 //
-// (4.1-H2b2) Poison's potency is 20% of the APPLIER's effective Attack at application. ROTCORE has
+//  Poison's potency is 20% of the APPLIER's effective Attack at application. ROTCORE has
 // Attack 50; every bearer has Defence 20 and is vitality (neutral), so every tick here is
 // potency 10 - 0.2 x 20 = 6.
 //
@@ -26,8 +24,7 @@
 //     statuses are inert, no StatusExpired). TurnEnded.
 //   TANK: nothing.
 //   E1's turn end (round 1): the Poison was applied in ROTCORE's turn, so for E1 it is NOT born
-//     this turn: it ticks (6, source E1, E1 100 -> 94) and counts down 3 -> 2. (Under the old
-//     sweep it waited a full round.)
+//     this turn: it ticks (6, source E1, E1 100 -> 94) and counts down 3 -> 2.
 //   Round 2: TANK waits; E1's turn end: tick 94 -> 88, countdown 2 -> 1. Round 3 begins: TANK's
 //     turn (always-wait) -> Waited.
 
@@ -70,8 +67,7 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const TURN_STEPS = 6 // ROTCORE, TANK and E1's round-1 turns, then TANK's round-2 turn (with
@@ -156,7 +152,7 @@ export const expectedEvents: CombatEvent[] = [
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
   // Pre-apply Poison to ROTCORE and wound it to 1 HP, both before any turn resolves -- into a
-  // throwaway events array, mirroring the PR #64 repro's own setup idiom.
+  // throwaway events array.
   let state = applyStatus(
     ROTCORE,
     ROTCORE,

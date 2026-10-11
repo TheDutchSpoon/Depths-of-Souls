@@ -1,4 +1,4 @@
-// Golden: 4.1-E (A2) -- an echo chain through the SAME Overtone, every hop, truncated by the real
+// Golden: an echo chain through the SAME Overtone, every hop, truncated by the real
 // cascade cap (MAX_TRIGGER_CASCADE_DEPTH = 500) with a mandatory CascadeTruncated. Hand-derived:
 // the per-hop template below is derived by hand once; the loop only REPEATS that template, and
 // nothing in the expected log comes from running the engine. The test also asserts explicit

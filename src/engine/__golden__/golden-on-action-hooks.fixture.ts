@@ -1,4 +1,4 @@
-// Golden: the four on-[action] hooks (Phase 4 Slice B) -- on-defend, on-provoke, on-cast,
+// Golden: the four on-[action] hooks -- on-defend, on-provoke, on-cast,
 // on-attack, one per round via a round-number-gated script, each firing a distinct,
 // easily-verified apply-stat-modifier response ON SELF (a different Stat each, so the four
 // firings are individually attributable). Proves each hook fires exactly once per that action
@@ -172,7 +172,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: DUMMY },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: HERO },
-  // Phase 4.1-C (D6, fixes B6): round 1's Defend expires at HERO's own turn-start cleanup,
+  // Round 1's Defend expires at HERO's own turn-start cleanup,
   // unconditionally, before it decides its round-2 action.
   { type: 'ActionStateEnded', creatureId: HERO, defending: true, provoking: false },
   { type: 'Provoked', creatureId: HERO },
@@ -197,7 +197,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: DUMMY },
   { type: 'RoundStarted', round: 3 },
   { type: 'TurnStarted', creatureId: HERO },
-  // Phase 4.1-C (D6, fixes B6): round 2's Provoke expires at HERO's own turn-start cleanup,
+  // Round 2's Provoke expires at HERO's own turn-start cleanup,
   // unconditionally, before it decides its round-3 action.
   { type: 'ActionStateEnded', creatureId: HERO, defending: false, provoking: true },
   {

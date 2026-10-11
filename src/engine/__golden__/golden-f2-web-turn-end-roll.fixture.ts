@@ -1,5 +1,5 @@
-// Golden: the Web break-free roll runs in turn-end cleanup and skips a Web applied THIS turn
-// (Phase 4.1-F2, ASSUMPTIONS 15 and 18). Real Web (10% per bearer per creature's turn). Hand-derived.
+// Golden: the Web break-free roll runs in turn-end cleanup and skips a Web applied THIS turn.
+// Real Web (10% per bearer per creature's turn). Hand-derived.
 //
 // A (player, speed 30) casts a fixture status-only spell on round 1: apply-status(cast-target,
 // web) on E. B (player, speed 20) and E (enemy, speed 10) wait. SEED 7's mulberry32 sequence

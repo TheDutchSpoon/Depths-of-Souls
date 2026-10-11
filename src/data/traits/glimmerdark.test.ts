@@ -1,4 +1,4 @@
-// Phase 4.1-H2b1: the Flickerling traits' shape, against `.claude/content/glimmerdark.md`. The
+// The Flickerling traits' shape, against `.claude/content/glimmerdark.md`. The
 // behaviour is pinned by goldens (golden-h2b1-wick-*, -observed-lethal, -last-gleam); these tests
 // pin the data a golden cannot see: which hooks, which filters, the effect order and the gate.
 
@@ -10,7 +10,7 @@ import {
 } from './glimmerdark'
 import { TRAIT_REGISTRY } from '.'
 
-describe('the Flickerling Wick (ASSUMPTION 140)', () => {
+describe('the Flickerling Wick', () => {
   const [burn, heal, ...rest] = FLICKERLING_WICK_TRAIT.effects
 
   it('has exactly two effects, both on-turn-start and both gated on another ally being hurt', () => {

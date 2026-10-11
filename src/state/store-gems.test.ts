@@ -1,4 +1,4 @@
-// Phase 4.1-G2 (D4, ASSUMPTIONS 81-84, 86, 94): player gem sets. Every new player instance (the
+// Player gem sets. Every new player instance (the
 // starter grant, the Unicorn, a summon) rolls and STORES a distinct, affinity-matched gem set
 // through generation's `rollLoadout`, on its own RNG stream. Real content throughout.
 //
@@ -58,7 +58,7 @@ const DEFAULT_DEPS_STANDALONE = [
 
 const spellById = new Map(ALL_SPELLS.map((spell) => [spell.id, spell]))
 
-describe('hand-derived player gem roll (ASSUMPTIONS 81, 82, 95)', () => {
+describe('hand-derived player gem roll', () => {
   // Setup: run seed 1, the Sorcerer starter (the Glyphmoth Seer) is the first grant, so its ordinal
   // is 0. deepestFloor is 0, so the unlock biome is that of floor 1 = biome 1.
   //
@@ -68,7 +68,7 @@ describe('hand-derived player gem roll (ASSUMPTIONS 81, 82, 95)', () => {
   //   = 0xbb728d28.
   //
   // The pool: ALL_SPELLS in registry order, Wit, unlocked at biome <= 1: Vine Snare, Pollen Cloud,
-  // Arcane Bolt, Pacify. The Seer holds Arcane Bolt innately, so it is excluded (ASSUMPTION 81):
+  // Arcane Bolt, Pacify. The Seer holds Arcane Bolt innately, so it is excluded:
   // [Vine Snare, Pollen Cloud, Pacify].
   //
   // The draws (rollLoadout: one weightedPick per slot, weight 1 each, `roll = draw * total`, walk
@@ -123,7 +123,7 @@ describe('every new player instance rolls and stores a distinct, affinity-matche
     }
   })
 
-  test('the Seer never rolls her innate Arcane Bolt, for any seed (ASSUMPTION 81)', () => {
+  test('the Seer never rolls her innate Arcane Bolt, for any seed', () => {
     for (let seed = 0; seed < 200; seed++) {
       const store = createGameStore({ runSeed: seed })
       store.getState().setSpec('sorcerer')
@@ -181,16 +181,15 @@ describe('every new player instance rolls and stores a distinct, affinity-matche
   })
 })
 
-describe('the unlock biome (ASSUMPTION 82)', () => {
+describe('the unlock biome', () => {
   // A constant draw of 0.6 over the affinity-matched pool of a non-innate Wit creature picks index
   // floor(0.6 x poolSize) in registry order (rollLoadout = one weightedPick per slot at weight 1):
   //   biome 1  (4 spells: Vine Snare, Pollen Cloud, Arcane Bolt, Pacify):            2.4 -> index 2, Arcane Bolt
   //   biome 2  (6: + Beacon Charge, Kindred Light):                                  3.6 -> index 3, Beacon Charge
   //   biome 3+ (7: + Spore Cyst):                                                    4.2 -> index 4, Kindred Light
   // (registry order: Vine, Pollen, Arcane, Beacon, Kindred, Spore Cyst, Pacify). The three biomes
-  // give three different picks, so the test can tell the pools apart (4.1-H2b1: Overcharge is gone
-  // and Luminous Tide is now Kindred Light; the draw moved from 0.7 to 0.6 to keep biomes 2 and 3
-  // distinguishable).
+  // give three different picks, so the test can tell the pools apart (the draw of 0.6 keeps biomes 2 and
+  // 3 distinguishable).
   const wit = BIOMES.flatMap((b) => b.speciesPool)
     .flatMap((s) => s.creatures)
     .find((c) => c.affinity === 'wit')!
@@ -242,7 +241,7 @@ describe('the unlock biome (ASSUMPTION 82)', () => {
   })
 })
 
-describe('the gem RNG is its own stream (ASSUMPTION 81)', () => {
+describe('the gem RNG is its own stream', () => {
   test('rolling gems never reads or advances runCounter', () => {
     const store = createGameStore()
     store.getState().setSpec('brute')
@@ -296,7 +295,7 @@ describe('the gem RNG is its own stream (ASSUMPTION 81)', () => {
   })
 })
 
-describe('stored gems reach the fight (ASSUMPTIONS 83, 84)', () => {
+describe('stored gems reach the fight', () => {
   /** A fixture script: cast gem slot 0 at the lowest-HP enemy, else wait. */
   const CAST_SLOT_0: Script = {
     id: 'cast-slot-0',
@@ -342,7 +341,7 @@ describe('stored gems reach the fight (ASSUMPTIONS 83, 84)', () => {
   })
 })
 
-describe('a new instance runs its role (ASSUMPTION 86)', () => {
+describe('a new instance runs its role', () => {
   // The Brute starter, re-roled to a script id nothing else in the game uses, so a lookup of that
   // id can only come from a player instance of it (enemies never run it).
   const PROBE_ROLE: Script = {

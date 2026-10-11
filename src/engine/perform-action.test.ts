@@ -1,4 +1,4 @@
-// Phase 4.1-E (A2): `perform-action` unit coverage beyond the goldens -- where each scope drains its
+// `perform-action` unit coverage beyond the goldens -- where each scope drains its
 // grants, who may act, the load-time rejections and the guard lint helpers. The goldens
 // (golden-e-*, the re-derived granted-cast/echo goldens) pin the end-to-end logs; each test here is
 // the one that fails with its mechanism removed (the PR lists the mutation for each).
@@ -104,7 +104,7 @@ function setup(
 
 const types = (events: readonly CombatEvent[]) => events.map((e) => e.type)
 
-describe('where each scope drains its grants (ASSUMPTION 3)', () => {
+describe('where each scope drains its grants', () => {
   it("a turn-start grant runs AFTER the turn-start cleanup: a granted Defend survives that turn's cleanup", () => {
     const { events, state } = resolveTurn(setup([grantTrigger('on-turn-start', DEFEND)]))
     expect(types(events)).toEqual([
@@ -124,7 +124,7 @@ describe('where each scope drains its grants (ASSUMPTION 3)', () => {
 
   it('a turn-start grant on a SKIPPED turn is refused (the skip gate covers the turn-start drain, not just the turn-end one)', () => {
     // Stun is applied at fight start; its 'all' lock is read right after the turn-start hook pass
-    // that queued the Defend (4.1-F1), so the grant must be refused when it would run.
+    // that queued the Defend, so the grant must be refused when it would run.
     const stunAtStart: EffectDef = {
       category: 'triggered',
       hook: 'on-fight-start',
@@ -207,7 +207,7 @@ describe('where each scope drains its grants (ASSUMPTION 3)', () => {
   })
 })
 
-describe('who acts (ASSUMPTIONS 6, 9) and the skip gate', () => {
+describe('who acts and the skip gate', () => {
   function bareState(): CombatState {
     return createCombat({
       seed: 1,
@@ -308,7 +308,7 @@ describe('who acts (ASSUMPTIONS 6, 9) and the skip gate', () => {
   })
 })
 
-describe('load-time rejections (ASSUMPTION 7)', () => {
+describe('load-time rejections', () => {
   const performAction = {
     kind: 'perform-action',
     actor: 'self',
@@ -339,7 +339,7 @@ describe('load-time rejections (ASSUMPTION 7)', () => {
   })
 })
 
-describe('the guard lint helpers (ASSUMPTION 7)', () => {
+describe('the guard lint helpers', () => {
   it('a real guard is a chancePercent below 100, or a condition other than `always`', () => {
     expect(hasRealGuard({ chancePercent: 50 })).toBe(true)
     expect(hasRealGuard({ chancePercent: 99 })).toBe(true)

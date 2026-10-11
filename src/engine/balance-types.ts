@@ -1,5 +1,5 @@
-// Phase 4.1-A (A7): the engine OWNS this shape; the values live in data/balance.ts (real) or a
-// test fixture (the Phase-4 placeholder, __fixtures__/balance.ts) -- `CONVENTIONS.md#where-each-number-lives`:
+// The engine OWNS this shape; the values live in data/balance.ts (real) or a
+// test fixture (the placeholder, __fixtures__/balance.ts) -- `CONVENTIONS.md#where-each-number-lives`:
 // progression/economy numbers are an injected BalanceConfig, combat rule
 // constants (affinity, chip floor, Defend, round cap, cascade depth, MAX_REVIVES_PER_CREATURE)
 // stay in engine/config.ts. Curves are PARAMETERS, not functions/closures, so this is plain data
@@ -17,7 +17,7 @@ export interface BalanceConfig {
   readonly enemyPartySizeCap: number
 
   /**
-   * The enemy level multiplier (ASSUMPTION 4): rises linearly from
+   * The enemy level multiplier: rises linearly from
    * atFloor1Hundredths/100 at floor 1 to atFloor100Hundredths/100 at floor 100, then
    * + perFloorAfter100Hundredths/100 per floor after. Expressed in HUNDREDTHS (integers) so
    * enemyLevelRange can do the whole min-level computation in exact integer arithmetic with a
@@ -31,40 +31,38 @@ export interface BalanceConfig {
   }
 
   /** enemyLevelRange(floor).max = min + levelRangeWidth.base + floor(floor/10) *
-   * levelRangeWidth.perTenFloors. Default 2, 1 (Phase 4's own width rule, unchanged by 4.1). */
+   * levelRangeWidth.perTenFloors. Default 2, 1. */
   readonly levelRangeWidth: { readonly base: number; readonly perTenFloors: number }
 
   /** bossLevel(floor) = enemyLevelRange(floor).max + bossLevelOffset. The default is in
    * `data/balance.ts`. */
   readonly bossLevelOffset: number
 
-  /** Within-species rarity-weighted draw. Default {common:6, uncommon:3, rare:1} (unchanged by
-   * 4.1 -- only soul gain, below, changed). */
+  /** Within-species rarity-weighted draw. Default {common:6, uncommon:3, rare:1}. */
   readonly rarityDrawWeight: Record<RarityTier, number>
 
   /** Flat soul% banked per kill, by the victim's rarity. Default {common:25, uncommon:20,
-   * rare:10} (4.1-A's new values; Phase 4 shipped {10,5,2}). */
+   * rare:10}. */
   readonly soulGainPercent: Record<RarityTier, number>
 
   /** xpForNextLevel(level) = round(xpCurveCoefficient * level ** xpCurveExponent). Default 20, 2
-   * (quadratic -- `spec/creatures.md#levels-and-xp` / ASSUMPTION 5). */
+   * (quadratic -- `spec/creatures.md#levels-and-xp`). */
   readonly xpCurveCoefficient: number
   readonly xpCurveExponent: number
 
   /** xpAwardForKill(victimLevel) = round(xpPerKillMultiplier * victimLevel) -- the victim's OWN
-   * level (Creature.origin.level, A5), replacing the old floor-scaled placeholder. Default 1. */
+   * level (Creature.origin.level). Default 1. */
   readonly xpPerKillMultiplier: number
 
   /** currencyDropForKill(floor): essence/ore/lifeforce = floor * currencyPerFloor; bricks =
-   * max(bricksMinimum, floor(floor/10) * bricksPerTenFloors). Defaults 1, 1, 1 (unchanged by
-   * 4.1 -- reproduces Phase 4's {essence:floor, ore:floor, bricks:max(1,floor(floor/10)),
-   * lifeforce:floor} exactly). */
+   * max(bricksMinimum, floor(floor/10) * bricksPerTenFloors). Defaults 1, 1, 1 (giving
+   * {essence:floor, ore:floor, bricks:max(1,floor(floor/10)), lifeforce:floor}). */
   readonly currencyPerFloor: number
   readonly bricksMinimum: number
   readonly bricksPerTenFloors: number
 
   /** Soul% required to summon is always 100 (fixed); this is the CURRENCY cost of summon()
-   * itself (Phase 4.1-G). Default 0 (free), per `spec/creatures.md#souls`. Nothing reads it until Phase 8's
-   * Soul Altar names the currency it is paid in (ASSUMPTION 90). */
+   * itself. Default 0 (free), per `spec/creatures.md#souls`. Nothing reads it yet
+   * (`spec/creatures.md#summoning-at-the-soul-altar`). */
   readonly summonCost: number
 }

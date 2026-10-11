@@ -1,4 +1,4 @@
-// Golden: what INDIRECT damage keeps (Phase 4.1-H2a, ASSUMPTIONS 112, 134, 135). Hand-derived.
+// Golden: what INDIRECT damage keeps. Hand-derived.
 // A trait response is indirect:
 //   raw = magnitude x affinity x (1 + sum dealt) x prod(taken) - 0.2 x effective Defence;
 //   final = MAX(1, floor(raw)). It keeps affinity, the dealt pool (including

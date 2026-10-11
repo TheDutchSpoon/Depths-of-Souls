@@ -11,9 +11,9 @@
 // Hand-derived (independent `node -e` calculator). Both bodies → neutral ×1.0. A (speed 10) first.
 //   A→X (off 20, def 5):            core 15, chip 0.20 → raw 15.20 → 15. (A's level is the fixture
 //     default 11, so the direct hit's Additional is 0.)
-//   X reckless→X: X's own response damaging ITSELF is a COST (4.1-H2a): the exact magnitude
-//     20×0.3 = 6, floored once, no Defence/pools/chip → 6. (Before 4.1-H2a this was a formula hit
-//     of 1; the cost is six times that, so X is 30 HP, not 20, to survive round 1.)
+//   X reckless→X: X's own response damaging ITSELF is a COST: the exact magnitude
+//     20×0.3 = 6, floored once, no Defence/pools/chip → 6. (A formula hit would be
+//     1; the cost is six times that, so X is 30 HP, not 20, to survive round 1.)
 // X 30 → 15 (−15) → 9 (−6 self) in round 1; killed by A's round-2 hit (9 − 15 → 0).
 
 import { makeParty } from '../__fixtures__/creatures'

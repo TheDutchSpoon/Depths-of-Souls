@@ -13,8 +13,8 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
     atFloor100Hundredths: 200, // x2.00
     perFloorAfter100Hundredths: 1, // +0.01/floor after 100
   },
-  levelRangeWidth: { base: 0, perTenFloors: 1 }, // 4.1-H2c (ASSUMPTION 118): was base 2
-  bossLevelOffset: 5, // 4.1-H2c (ASSUMPTION 119): was 3
+  levelRangeWidth: { base: 0, perTenFloors: 1 },
+  bossLevelOffset: 5,
   rarityDrawWeight: { common: 6, uncommon: 3, rare: 1 },
   soulGainPercent: { common: 25, uncommon: 20, rare: 10 },
   xpCurveCoefficient: 20,

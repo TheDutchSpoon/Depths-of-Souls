@@ -12,7 +12,7 @@ import {
   ROTCAP_HOLLOW_SPELLS,
 } from './rotcap-hollow'
 
-// Loader/shape test (per the H1/H2/H3 common checklist item 6): every creature has a valid
+// Loader/shape test: every creature has a valid
 // affinity/species/rarity/trait/script reference; every trait/spell/status referenced actually
 // exists in a registry.
 
@@ -34,7 +34,7 @@ describe('Rotcap Hollow: shape', () => {
     expect(creatureIds.size).toBe(18)
   })
 
-  it('every species declares a positive draw weight (ASSUMPTION 5)', () => {
+  it('every species declares a positive draw weight', () => {
     for (const species of ROTCAP_HOLLOW_SPECIES_POOL) {
       expect(species.weight).toBeGreaterThan(0)
     }
@@ -55,7 +55,7 @@ describe('Rotcap Hollow: shape', () => {
     }
   })
 
-  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat', () => {
+  it('base stats fall within spec/creatures.md#core-stats ranges: Health 20-45, 10-30 for every other stat', () => {
     for (const creature of ALL_CREATURES) {
       for (const [stat, value] of Object.entries(creature.baseStats)) {
         expect(value, creature.id + ' ' + stat).toBeGreaterThanOrEqual(
@@ -75,7 +75,7 @@ describe('Rotcap Hollow: shape', () => {
     )
   })
 
-  it('the cast-role creatures (caster / support / opener, 4.1-G1) are exactly the roles table ones, and each has an affinity-matched spell', () => {
+  it('the cast-role creatures (caster / support / opener) are exactly the roles table ones, and each has an affinity-matched spell', () => {
     const casters = ALL_CREATURES.filter((c) =>
       CAST_ROLE_SCRIPT_IDS.includes(c.defaultScriptId),
     )

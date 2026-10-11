@@ -1,6 +1,6 @@
-// Phase 4.1-C2a (PR #71 review): the test-only corpus builder behind the behaviour-tripwire
-// digest (`corpus-digest.fixture.ts` / `corpus-digest.test.ts`). Pinned exactly per the review's
-// own spec -- do not reshape without regenerating the digest in a deliberate-change PR.
+// The test-only corpus builder behind the behaviour-tripwire
+// digest (`corpus-digest.fixture.ts` / `corpus-digest.test.ts`). Pinned exactly
+// -- do not reshape without regenerating the digest in a deliberate-change PR.
 //
 // This module imports `src/data`, exactly like `__golden__` fixtures do. Engine SOURCE must
 // never import it (it lives outside `src/engine`'s own files, in a leaf-only, test-facing
@@ -82,13 +82,13 @@ export interface CorpusFight {
   readonly seed: number
   readonly player: readonly Creature[]
   readonly enemy: readonly Creature[]
-  /** Phase 4.1-D2: player-wide effects (specialization perks), the `createCombat` side input.
+  /** player-wide effects (specialization perks), the `createCombat` side input.
    * Absent for Parts A and B, which pass none. */
   readonly playerEffects?: readonly EffectDef[]
 }
 
-/** Phase 4.1-G1 (ASSUMPTION 68): the shipped role scripts (Parts A and B run creatures on their
- * roles) plus the five `always-*` fixture scripts (Part C pins them explicitly, ASSUMPTION 79). */
+/** The shipped role scripts (Parts A and B run creatures on their
+ * roles) plus the five `always-*` fixture scripts (Part C pins them explicitly). */
 const CORPUS_SCRIPTS: ReadonlyMap<string, Script> = new Map([
   ...STOCK_SCRIPTS_BY_ID,
   ...FIXTURE_SCRIPTS_BY_ID,
@@ -112,7 +112,7 @@ export function createCorpusCombat(fight: CorpusFight): CombatState {
   })
 }
 
-/** `gen(floor, seed)`, per the review's own spec: `b = floor((floor-1)/10)`, one generated
+/** `gen(floor, seed)`: `b = floor((floor-1)/10)`, one generated
  * floor's `[0].enemyParty`. Every corpus floor reference stays within floors 1-30 (biomes 1-3,
  * the only biomes with real content), so `BIOMES[b]` is always defined here. */
 function gen(floor: number, seed: number): readonly Creature[] {
@@ -167,7 +167,7 @@ function withShieldbarerAtSlot0(party: readonly Creature[], level: number): Crea
 }
 
 /** Slot 1: replacing it if the party already has one, appending it (as the new slot 1) if the
- * party had only one creature -- per the review's own spec. */
+ * party had only one creature. */
 function withWretchAtSlot1(party: readonly Creature[], level: number): Creature[] {
   const wretch = materializeCreature(HOLLOWKIN_WRETCH, {
     level,
@@ -243,7 +243,7 @@ function buildPartB(i: number): CorpusFight {
   return { seed: 1000 + i, player, enemy }
 }
 
-// ---- Part C (Phase 4.1-D2): coverage fights ----
+// ---- Part C: coverage fights ----
 //
 // Appended after Part B, never interleaved: the digest compares entries by index, so appending is
 // the only change that leaves every existing entry untouched. Part C's own seed ranges: combat
@@ -320,7 +320,7 @@ const SPELL_FIGHTS: readonly SpellFightSpec[] = [
   },
 ]
 
-/** Phase 4.1-F3: Silence (a Brute caster, Violence) and Pacify (a Pollinator Beneficiary, Wit, no
+/** Silence (a Brute caster, Violence) and Pacify (a Pollinator Beneficiary, Wit, no
  * innate spell). */
 const F3_SPELL_FIGHTS: readonly SpellFightSpec[] = [
   { spell: SILENCE, caster: BRUTE_STARTER, speciesId: BRUTE_STARTER_SPECIES_ID },
@@ -395,8 +395,8 @@ function buildParty(
   )
 }
 
-// Phase 4.1-G1 (ASSUMPTION 79): every Part C member pins the script it ran before roles existed, so
-// the coverage fights ride on no role's draws and stay byte-identical through G1. The defaults below
+// Every Part C member pins the script it ran before roles existed, so
+// the coverage fights ride on no role's draws and stay byte-identical when roles change. The defaults below
 // are those scripts (the fixture registry's), never the creature's own `defaultScriptId`.
 const brute = (scriptId: string = ALWAYS_ATTACK_SCRIPT.id): PartyMember => ({
   creature: BRUTE_STARTER,
@@ -438,7 +438,7 @@ const beneficiaryCaster = (spell: Spell): PartyMember => ({
 
 const SPELL_FIGHT_LEVEL = 20
 
-/** Phase 4.1-F3: a Violence caster whose only gem is `spell` (the Brute starter has no innate
+/** A Violence caster whose only gem is `spell` (the Brute starter has no innate
  * spell, so the gem sits in slot 0 for the stock `always-cast` script). */
 const bruteCaster = (spell: Spell): PartyMember => ({
   creature: BRUTE_STARTER,
@@ -583,7 +583,7 @@ export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
     brute(),
     sorcerer(),
   ]),
-  // Phase 4.1-F3 (ASSUMPTION 59), appended last (corpus entries 522-523, seeds 2107-2108): Clear
+  // Appended last (corpus entries 522-523, seeds 2107-2108): Clear
   // Mind and Aggressive only matter against a Silenced / Pacified bearer that would otherwise
   // use the locked action. Rides on no chance: the enemy caster is `always-cast` and four times
   // the player's level (it outlives the early swings), its target is the player's lowest-HP
@@ -610,7 +610,7 @@ export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
   ),
 ]
 
-/** Phase 4.1-G1 (corpus entry 526, seed 2017), appended after the F3 spell fights: Life Siphon.
+/** Corpus entry 526, seed 2017, appended after the spell fights: Life Siphon.
  * Its `heal(self)` only lands (an amount above zero) on a WOUNDED caster, and the spell fights'
  * WALL_ENEMY never attacks, so this one differs: a level-20 Unicorn (Vitality, no innate spell)
  * casts Life Siphon every turn on the stock `always-cast` script, alone against two level-5 Brutes.
@@ -638,20 +638,20 @@ function buildLifeSiphonFight(): CorpusFight {
 }
 
 /** The ordered list of fights the digest hashes -- Part A (300 generated fights), Part B (200
- * fights with the shipped player creatures), then Part C (coverage fights, Phase 4.1-D2). A and B
- * are pinned exactly per the review's own spec; C only ever appends. */
+ * fights with the shipped player creatures), then Part C (coverage fights). A and B
+ * are pinned exactly; C only ever appends. */
 export function buildCorpus(): readonly CorpusFight[] {
   const partA = Array.from({ length: 300 }, (_, i) => buildPartA(i))
   const partB = Array.from({ length: 200 }, (_, i) => buildPartB(i))
   const partC = [
     ...SPELL_FIGHTS.map((spec, i) => buildSpellFight(i, spec)),
     ...PERK_FIGHT_VARIANTS.map((v) => v.build()),
-    // Phase 4.1-F3 (ASSUMPTION 58): the Silence and Pacify spell fights, after the perk fights
+    // The Silence and Pacify spell fights, after the perk fights
     // (entries 524-525, seeds 2015-2016): appended, never interleaved. Same shape as
     // SPELL_FIGHTS (an `always-cast` caster against WALL_ENEMY), so the status landing rides on
     // no random draw.
     ...F3_SPELL_FIGHTS.map((spec, i) => buildSpellFight(SPELL_FIGHTS.length + i, spec)),
-    // Phase 4.1-G1: Life Siphon's coverage fight, appended after entry 525 (entry 526).
+    // Life Siphon's coverage fight, appended after entry 525 (entry 526).
     buildLifeSiphonFight(),
   ]
   return [...partA, ...partB, ...partC]

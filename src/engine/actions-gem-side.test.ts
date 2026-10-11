@@ -1,7 +1,7 @@
-// Phase 4.1-G1 (ASSUMPTION 69): the `gemSide` filter on a `gemSlot: 'random'` cast, the `support`
+// The `gemSide` filter on a `gemSlot: 'random'` cast, the `support`
 // role's "cast random ally-side gem". It is read at TWO sites -- `checkLegality` (is any gem of that
 // side castable?) and `resolveGemSlot` (which one?) -- and each has its own test below, so removing
-// either read fails a test. With the field absent, the pre-G1 draw must be unchanged: pinned here
+// either read fails a test. With the field absent, the draw from before the field existed must be unchanged: pinned here
 // against an independent computation, not only by the goldens and the digest.
 
 import { describe, expect, it } from 'vitest'
@@ -157,7 +157,7 @@ describe('the side filter at resolveGemSlot (site 2, via resolveIntent)', () => 
   })
 })
 
-describe("with `gemSide` absent, today's random draw is unchanged (ASSUMPTION 69)", () => {
+describe("with `gemSide` absent, today's random draw is unchanged", () => {
   it('draws one value and indexes the UNFILTERED castable slots, across seeds 0-19', () => {
     const player = makeParty('player', [
       { id: 'me', equippedSpells: [ENEMY_SINGLE, ALLY_SINGLE, ENEMY_SINGLE] },

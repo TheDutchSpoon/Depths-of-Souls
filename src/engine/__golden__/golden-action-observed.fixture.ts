@@ -1,7 +1,6 @@
-// Golden: the general action-observation system (Phase 4 Slice E2) -- Resonants' own locked
+// Golden: the general action-observation system -- Resonants' own locked
 // consumer shape (`relationship: 'ally'`, `actionKind: 'cast'`), fired on `on-action-observed`
-// per action INSTANCE. CASTER carries an Echo-shaped extra-cast-instance passive (reusing the
-// already-built action-instance-list mechanism, Slice B) so its Cast resolves as TWO instances;
+// per action INSTANCE. CASTER carries an Echo-shaped extra-cast-instance passive (reusing the already-built action-instance-list mechanism) so its Cast resolves as TWO instances;
 // RESONANT (an ally observer, not the actor) reacts to EACH instance independently, proving
 // "an ally's Echo/Flurry multi-cast is observed once per instance" (`spec/effects.md#action-reactions-actor-self-hooks-or-observation`).
 //

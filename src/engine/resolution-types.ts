@@ -1,6 +1,6 @@
-// Phase 4.1-C2a (A1): a LEAF types module. `resolution.ts` imports `CascadeState`/
+// A LEAF types module. `resolution.ts` imports `CascadeState`/
 // `ResolutionContext` from here (types only) and never imports `actions.ts` or `combat.ts` --
-// it never runs an action: a `perform-action` response (4.1-E) only enqueues onto `ctx.grants`,
+// it never runs an action: a `perform-action` response only enqueues onto `ctx.grants`,
 // and the scope that created the context drains it with `actions.ts`'s `drainGrantedActions`
 // (`ctx.runAction`, constructed in `actions.ts` and handed down, is what the drain calls).
 // This file itself imports only the other leaf modules (`types.ts`, `ids.ts`, `effect-types.ts`,
@@ -13,7 +13,7 @@ import type { CombatEvent, CombatState } from './types'
 import type { EffectInstanceId } from './effect-types'
 
 /**
- * Phase 4.1-H2a (ASSUMPTIONS 112, 130): which damage channel a `deal-damage` response runs in.
+ * Which damage channel a `deal-damage` response runs in.
  * `'direct'` = an Attack or Cast action (a spell's own effect list; a granted action runs through
  * the same executors) -- the chip-floor formula plus the Additional. `'indirect'` = any other
  * damage (a trait, status or perk response) -- the magnitude formula against a fifth of Defence.
@@ -23,7 +23,7 @@ import type { EffectInstanceId } from './effect-types'
 export type DamageChannel = 'direct' | 'indirect'
 
 /**
- * Phase 4.1-H2b2 (ASSUMPTIONS 5, 17, 146; supersedes H2b1's `selfInflicted: boolean`): where one
+ * Where one
  * damage application came from, REQUIRED of `applyDamageAndEmit` with no default so the compiler
  * finds every caller. Stated by the branch that chose the path, never inferred from ids.
  *  - `'hit'`: an Attack/Cast action's damage, or an indirect response hitting a target. Its
@@ -44,7 +44,7 @@ export type DamageOrigin =
 /** Trigger-cascade bookkeeping for one top-level action: chain depth (bounds
  * `MAX_TRIGGER_CASCADE_DEPTH`) and the self-re-entry guard (an effect instance already unwinding
  * on the stack is skipped). Lives on the call stack only -- never in `CombatState`, never
- * serialized (Phase 3). */
+ * serialized. */
 export interface CascadeState {
   depth: number
   readonly activeInstances: Set<EffectInstanceId>
@@ -57,7 +57,7 @@ export interface RunActionOptions {
 }
 
 /**
- * Phase 4.1-E (A2): one queued `perform-action` grant. `executeResponse` pushes it onto
+ * One queued `perform-action` grant. `executeResponse` pushes it onto
  * `ResolutionContext.grants`; the scope that created the context drains the queue at its end
  * (`actions.ts` `drainGrantedActions`), first in, first out. `depth` is the granting trigger's
  * cascade depth (it already includes that trigger's +1): the granted action runs at that depth, so
@@ -76,10 +76,9 @@ export interface QueuedGrant {
 }
 
 /**
- * Phase 4.1-C2a (A1): the effect -> action seam. Created per top-level action by the action
+ * The effect -> action seam. Created per top-level action by the action
  * layer (`actions.ts`'s `createResolutionContext`) and threaded through the whole resolver,
- * replacing the separate `events`/`cascade` arguments every resolution.ts function used to take,
- * and replacing the old echo callback. A response that needs an action run (`perform-action`, Phase 4.1-E)
+ * carrying `events`/`cascade` to every resolution.ts function. A response that needs an action run (`perform-action`)
  * ENQUEUES onto `grants`; the scope that created the context runs `runAction` itself, draining the
  * queue at its end. Never stored in `CombatState` (transient, call-stack-scoped, like `CascadeState`).
  */
@@ -94,7 +93,7 @@ export interface ResolutionContext {
    * (if given) then executes it. A no-op (returns `state` unchanged, nothing drawn, nothing pushed)
    * if the actor is dead or unknown, the intent is illegal (a lock, no castable gem, no valid
    * target), or it fails to resolve -- a refused granted action emits nothing of its own
-   * (`spec/responses.md#perform-action` B2 rule 2). */
+   * (`spec/combat.md#every-action-source-obeys-the-same-rules`). */
   readonly runAction: (
     actorId: CreatureId,
     intent: Intent,

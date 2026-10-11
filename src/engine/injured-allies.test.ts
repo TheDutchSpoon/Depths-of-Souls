@@ -1,4 +1,4 @@
-// Phase 4.1-H2b1 (ASSUMPTION 140, 141): the Flickerling Wick's gate (`other-ally-injured`, a
+// The Flickerling Wick's gate (`other-ally-injured`, a
 // trigger-only condition) and its heal target (`lowest-hp-injured-other-ally`) read ONE pool,
 // `injuredOtherAlliesOf`. This table pins that they agree on every board state, plus the type-level
 // and data-level guarantees that the trigger-only kind never reaches a player's script.
@@ -104,7 +104,7 @@ const ROWS: readonly (readonly [
   ],
 ]
 
-describe('the gate and the heal target agree on one pool (4.1-H2b1, ASSUMPTION 140)', () => {
+describe('the gate and the heal target agree on one pool', () => {
   for (const [label, edit, chosen] of ROWS) {
     it(`${label}`, () => {
       const state = board(edit)
@@ -144,7 +144,7 @@ describe('the gate and the heal target agree on one pool (4.1-H2b1, ASSUMPTION 1
   })
 })
 
-describe('the trigger-only condition never reaches a script (4.1-H2b1, ASSUMPTION 141)', () => {
+describe('the trigger-only condition never reaches a script', () => {
   it('is a type error in a scripting rule (checked by `npx tsc -b`)', () => {
     // @ts-expect-error -- 'other-ally-injured' is a TriggerCondition kind, not a scripting Condition
     const condition: Rule['condition'] = { kind: 'other-ally-injured' }

@@ -1,32 +1,27 @@
-// Phase 4 Slice H1: The Overgrowth (floors 1-10, `spec/run.md#biomes`'s decade cadence / ASSUMPTION
-// 29) -- Biome 1's real roster, against `content/overgrowth.md#the-overgrowth-biome-1-floors-110` own table, built
-// entirely on primitives already proven through Slice E2 (no new engine work needed -- per the
-// project's own "stop and amend the relevant earlier slice" discipline, confirmed while
-// authoring: nothing here needed anything not already built).
+// The Overgrowth (floors 1-10, `spec/run.md#biomes`'s decade cadence) -- Biome 1's real roster,
+// against `content/overgrowth.md#the-overgrowth-biome-1-floors-110`'s own table, built entirely
+// on primitives the engine already has (no new engine work needed).
 //
-// Six species x three creatures each (18 total), following `content/overgrowth.md#enabler-payoff-amplifier` own "roles ...
-// enabler / payoff / amplifier" framing uniformly: the common creature ENABLES its species'
-// closed mechanic (creates the status/sets up the condition), the uncommon creature is the
-// PAYOFF (benefits from it), and the rare creature is an AMPLIFIER (usually combines both halves
-// or scales harder). Per the locked design principle ("rarity governs spawn-frequency + soul-gain
-// only, NOT power"), each creature's own stat BUDGET is kept comparable across a species'
-// rarity tiers -- only the role differs, never raw strength.
+// Six species x three creatures each (18 total), following the enabler / payoff / amplifier
+// framing of `content/overgrowth.md#enabler-payoff-amplifier` uniformly: the common creature
+// ENABLES its species' closed mechanic (creates the status/sets up the condition), the uncommon
+// creature is the PAYOFF (benefits from it), and the rare creature is an AMPLIFIER (usually
+// combines both halves or scales harder). Rarity governs spawn frequency and soul gain, not power
+// (`spec/creatures.md#identity-and-rarity`), so each creature's own stat BUDGET is kept
+// comparable across a species' rarity tiers -- only the role differs, never raw strength.
 //
-// ASSUMPTION (Slice H1): exact base stats (10-30/stat, `spec/creatures.md#core-stats`) and every percent/factor
-// balance number are parked balance (`OPEN_QUESTIONS.md#content-numbers`), picked only to be flavorful and
-// internally consistent -- not derived from any locked design number. Per-creature affinity
-// deliberately departs from a species' own "lean" in a few places (documented inline) per
-// `spec/creatures.md#affinity` own "Coverage" note: "balance at creature-stamping (affinity is
-// per-creature)" -- Endurance/Instinct are thin at the LEAN level across this biome's table, so
-// individual creatures are stamped into those affinities to round out the full 5-affinity spread.
+// Exact base stats (10-30/stat, `spec/creatures.md#core-stats`) and every percent/factor
+// balance number are parked balance (`OPEN_QUESTIONS.md#content-numbers`), picked only to be
+// flavorful and internally consistent. Per-creature affinity deliberately departs from a
+// species' own "lean" in a few places (documented inline; `spec/creatures.md#affinity`) --
+// Endurance/Instinct are thin at the LEAN level across this biome's table, so individual
+// creatures are stamped into those affinities to round out the 5-affinity spread.
 //
 // This file is COMPOSITION ONLY (Species/SpeciesCreature/BiomeData + boss data) -- the actual
 // Trait/Spell object definitions live in the central `../traits`/`../spells` library, the same
-// place every other trait/spell/status in the game lives (matching how Web/Sleep already live in
-// `../statuses`, not here). `../traits` and `../spells` are themselves grouping directories --
-// see the data-layer carrier reorg phase record. `../species/starters.ts` was retrofit to the
-// same composition-only shape in that same reorg (it used to define its own trait/spell consts
-// inline).
+// place every other trait/spell/status in the game lives (matching how Web/Sleep live in
+// `../statuses`, not here). `../traits` and `../spells` are themselves grouping directories.
+// `../species/starters.ts` has the same composition-only shape.
 
 import { createBiomeId } from '../../engine/ids'
 import type { Affinity } from '../../engine/types'
@@ -74,15 +69,13 @@ import {
   TREANT_SAPLING_TRAIT,
 } from '../traits'
 
-// ---- Overgrowth's own authored spells (11 of the ~17-spell global total) ----
-// The Spell object definitions themselves live in data/spells/ (the library). Phase 4
-// interstitial slice (cumulative spell unlock): this grouping is no longer fed into
-// `BiomeData` (that field, `spellPool`, is gone -- `generateFloor` now rolls a cast-role
-// loadout from the GLOBAL `ALL_SPELLS` registry, filtered by `unlockedAtBiome`, see
-// engine/generation.ts's `spellsUnlockedAt`); it's kept purely as a documentation/test grouping
-// of "the spells this biome introduces" (every entry here is tagged `unlockedAtBiome: 1`).
-// Includes ARCANE_BOLT (data-layer carrier reorg: promoted from Sorcerer-starter-only to a
-// normal Wit pool spell), giving Wit a third entry here while every other affinity keeps two.
+// ---- Overgrowth's own authored spells ----
+// The Spell object definitions themselves live in data/spells/ (the library). This grouping is
+// documentation and test grouping only ("the spells this biome introduces"; every entry here is
+// tagged `unlockedAtBiome: 1`): `generateFloor` rolls a cast-role loadout from the GLOBAL
+// `ALL_SPELLS` registry, filtered by `unlockedAtBiome` (`spec/run.md#spells-unlock-cumulatively`,
+// engine/generation.ts's `spellsUnlockedAt`). Includes ARCANE_BOLT, giving Wit a third entry
+// here while every other affinity keeps two.
 
 export const OVERGROWTH_SPELLS = [
   THORN_LASH,
@@ -96,7 +89,7 @@ export const OVERGROWTH_SPELLS = [
   WILD_VIGOR,
   STINGER_SWARM,
   HOWLING_INSTINCT,
-  // Phase 4.1-G1 (D4): the three spells that give every affinity a third biome-1 entry.
+  // The three spells that give every affinity a third biome-1 entry.
   POUNCE,
   STIFLING_WEIGHT,
   LIFE_SIPHON,
@@ -293,7 +286,7 @@ export const SNAPJAW_IRONJAW: SpeciesCreature = {
   name: 'Snapjaw Ironjaw',
   affinity: 'violence',
   baseStats: { health: 33, attack: 22, intelligence: 10, defence: 22, speed: 12 },
-  // Its own trait fires on-turn-start regardless of chosen action (unlike the old provoke-gated
+  // Its own trait fires on-turn-start regardless of chosen action (unlike a provoke-gated
   // shape) -- attacks while it ramps, rather than tying up a turn provoking.
   defaultScriptId: 'striker',
   innateTraitIds: [SNAPJAW_IRONJAW_TRAIT.id],
@@ -378,7 +371,7 @@ export const BROODMOTHER: SpeciesCreature = {
 }
 
 /** The spiderling adds accompanying her fight -- real Spider-roster members, per
- * `content/overgrowth.md#broodmother` "adds: spiderlings (Spider pool)"; both already share SPIDERS_SPECIES_ID. */
+ * `content/overgrowth.md#broodmother`; both already share SPIDERS_SPECIES_ID. */
 export const BROODMOTHER_ADDS: readonly SpeciesCreature[] = [
   SPIDER_WEAVER,
   SPIDER_AMBUSHER,
@@ -386,7 +379,7 @@ export const BROODMOTHER_ADDS: readonly SpeciesCreature[] = [
 
 export const BROODMOTHER_BOSS_ID = 'broodmother'
 
-/** Phase 4 Slice I (PR #65 review): wires the Broodmother into `OVERGROWTH_BIOME.boss` --
+/** Wires the Broodmother into `OVERGROWTH_BIOME.boss` --
  * `generateFloor`'s boss branch materializes her at `bossLevel(10)` plus her two adds, each
  * resolved against this biome's own `speciesPool` (`resolveAddSpeciesId`'s invariant check). */
 export const OVERGROWTH_BOSS: BossEncounter = {

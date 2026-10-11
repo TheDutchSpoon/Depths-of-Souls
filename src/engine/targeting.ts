@@ -22,7 +22,7 @@ export function livingAlliesOf(
 }
 
 /**
- * Phase 4.1-H2b1 (ASSUMPTION 140): the ONE pool behind the Flickerling Wick's gate and heal -- the
+ * The ONE pool behind the Flickerling Wick's gate and heal -- the
  * living allies of `creature` OTHER than itself that are below their effective max Health. "Hurt"
  * is `currentHp < effectiveMaxHp` (the floor of effective Health, an integer comparison), so a
  * raised ceiling counts as hurt and a clamped current HP never does. Read by both the trigger-only
@@ -44,20 +44,19 @@ export function getProvokingMembers(party: readonly Creature[]): readonly Creatu
 }
 
 /**
- * Phase 4 Slice C: the targeting-override pipeline for a single-target offensive action, in
- * pinned order: (1) Confusion -- ASSUMPTION 12: checked FIRST, so a confused actor's 50%
+ * The targeting-override pipeline for a single-target offensive action, in
+ * pinned order: (1) Confusion -- checked FIRST, so a confused actor's 50%
  * friendly-fire roll can redirect the action at its own side regardless of whether the enemy
  * side has a provoker, and regardless of whether the actor is provoke-immune -- Tunnel Vision
  * (brute.md) is defined as bypassing Provoke's redirect only, not Confusion's, so a confused
  * Tunnel-Vision creature still rolls Confusion. (2) Tunnel Vision -- if the roll didn't
  * redirect (or the actor isn't confused) and the actor is provoke-immune, skip straight to
- * normal resolution, ignoring enemy Provoke entirely. (3) Provoke -- the pre-Slice-C
- * mechanism, unchanged: if the opposing side has >=1 provoking member, draws one seeded-RNG
+ * normal resolution, ignoring enemy Provoke entirely. (3) Provoke -- if the opposing side has >=1 provoking member, draws one seeded-RNG
  * index among them and returns that provoker, `resolveNormally` NEVER CALLED in that case (a
  * selector's own RNG draw, e.g. random-enemy, never happens when it would just be discarded);
  * only when no provoker exists does the normal selector/default-target resolution run.
  *
- * RNG draws are no longer capped at exactly one (Confusion may draw up to two of its own,
+ * RNG draws are not capped at exactly one (Confusion may draw up to two of its own,
  * always BEFORE any Provoke draw), but each step still draws at most what its own mechanism
  * requires, and a step that isn't active for this actor draws nothing.
  *
@@ -100,11 +99,11 @@ type ConfusionOutcome =
   | { readonly redirected: true; readonly targetId: CreatureId | null }
 
 /**
- * Phase 4 Slice C (Confusion): if `actor` carries no active, non-immune friendly-fire status,
+ * If `actor` carries no active, non-immune friendly-fire status,
  * returns `{redirected: false}` WITHOUT touching state.rng at all (an unconfused or Lucidity-
  * immune actor's harmful action never rolls). Otherwise draws exactly one RNG value for the
  * chancePercent roll (always drawn for a confused, non-immune actor's harmful action -- win
- * or lose, per `content/rotcap-hollow.md#confusion` "Confusion consumes combat RNG"); on success, draws a
+ * or lose; `spec/combat.md#targeting-override`); on success, draws a
  * second RNG value to pick which living ally is hit instead, returning that (or null in the
  * defensively-unreachable case of zero living allies -- livingAlliesOf always includes the
  * acting creature itself while alive).
@@ -123,7 +122,7 @@ function resolveConfusionRedirect(actor: Creature, state: CombatState): Confusio
 }
 
 /**
- * Phase 4 Slice C (Confusion, AOE case -- ASSUMPTION 13): the roll is per-ACTION, not
+ * The roll is per-ACTION, not
  * per-target -- one roll decides whether the whole AOE cast retargets to the caster's own
  * living side (frozen the same way enemy-AOE targeting freezes) instead of proceeding
  * normally, never a per-target coin flip. A separate entry point from
@@ -138,10 +137,8 @@ export function shouldRedirectAoeToAllies(actor: Creature, state: CombatState): 
 }
 
 /**
- * Phase 4 Slice C (Splashing): the living neighbors of `target` within `party`, taken from
- * the alive-filtered, slot-ordered list (ASSUMPTION 14 -- living-adjacency, not raw
- * slot-index adjacency: a dead slot-neighbor would make Splashing whiff for no
- * player-visible reason, and living-adjacency degrades gracefully as a side thins out).
+ * The living neighbors of `target` within `party`, taken from
+ * the alive-filtered, slot-ordered list (living-adjacency, not raw slot-index adjacency: a dead slot-neighbor would make Splashing whiff for no player-visible reason, and living-adjacency degrades gracefully as a side thins out).
  * Returns up to two neighbors (one at each edge of the living list); empty when `target`
  * isn't alive-and-present in `party` or has no living neighbor.
  */

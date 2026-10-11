@@ -1,13 +1,12 @@
-// Phase 4.1-C2c (PR #73 review, `CONVENTIONS.md#every-golden-replays-through-one-shared-runner`):
-// the ONE way a golden test builds its starting state and replays it. Every turn is resolved from a
+// The ONE way a golden test builds its starting state and replays it. Every turn is resolved from a
 // deep-frozen state (`stepFrozen`), so every golden also proves the engine never writes to its
 // input -- there is no separate sweep and no list of excluded goldens.
 //
-// What a fixture exports for the runner (ASSUMPTIONS, see the 4.1-C2c phase record):
+// What a fixture exports for the runner:
 //   SEED                   the starting seed (a two-seed golden passes `{ seed }` instead)
 //   playerParty/enemyParty the two sides (fresh creatures; `createCombat` sets them up)
 //   scripts/traits/statuses  optional registries
-//   playerEffects/enemyEffects  optional (4.1-F3): a side's effects (specialization perks, ...),
+//   playerEffects/enemyEffects  optional: a side's effects (specialization perks, ...),
 //                          passed straight to `createCombat`'s per-side `effects` input
 //   TURN_STEPS             optional: run exactly N turns; absent = run until the fight has a result
 //   setup                  optional: a post-`createCombat` step (e.g. `updateCreature` wounds, since
@@ -28,7 +27,7 @@ export interface GoldenFixture {
   readonly scripts?: ReadonlyMap<string, Script>
   readonly traits?: ReadonlyMap<string, Trait>
   readonly statuses?: ReadonlyMap<string, StatusDef>
-  /** Phase 4.1-F3: per-side effects, absent for every pre-F3 fixture. */
+  /** per-side effects, absent for a fixture without side effects. */
   readonly playerEffects?: readonly EffectDef[]
   readonly enemyEffects?: readonly EffectDef[]
   readonly TURN_STEPS?: number

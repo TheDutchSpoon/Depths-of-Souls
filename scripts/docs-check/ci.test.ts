@@ -17,10 +17,11 @@ function testJob(): string {
 }
 
 describe('CI runs the docs checks', () => {
-  it('the test job runs citations and budgets', () => {
+  it('the test job runs citations, budgets and comments', () => {
     const job = testJob()
     expect(job).toContain('- run: npm run docs:check -- citations')
     expect(job).toContain('- run: npm run docs:check -- budgets')
+    expect(job).toContain('- run: npm run docs:check -- comments')
   })
 
   it('runs them before the test step', () => {
@@ -29,6 +30,9 @@ describe('CI runs the docs checks', () => {
       job.indexOf('- run: npm run test'),
     )
     expect(job.indexOf('docs:check -- budgets')).toBeLessThan(
+      job.indexOf('docs:check -- comments'),
+    )
+    expect(job.indexOf('docs:check -- comments')).toBeLessThan(
       job.indexOf('- run: npm run test'),
     )
   })

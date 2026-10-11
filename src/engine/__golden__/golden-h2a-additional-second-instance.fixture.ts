@@ -1,4 +1,4 @@
-// Golden: the Additional on EVERY attack instance (Phase 4.1-H2a, ASSUMPTION 135), not just the
+// Golden: the Additional on EVERY attack instance, not just the
 // first. Hand-derived. ATTACKER (level 1, Attack 20, speed 10) carries the instance-list passive
 // [100, 30] (Brute-starter-shaped "attack again for 30%"). DEFENDER: health 100, defence 5,
 // always-wait. All vitality, neutral x1.0. The Additional is min(floor(20% x 100) = 20, cap 10) =

@@ -5,9 +5,8 @@ import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
 import type { CombatEvent, Spell } from './types'
 import type { Trait } from './effect-types'
 
-// Phase 4 Slice C (Proficient Warrior / Annihilate). Fixture-scoped traits only -- per the
-// slice-sequencing rule, this new mechanism is never exercised against the real Phase 4
-// roster (that's Slice I), just local test content.
+// Proficient Warrior / Annihilate. Fixture-scoped traits only -- this mechanism is exercised
+// against local test content, not the real roster.
 
 function registry(...traits: Trait[]): ReadonlyMap<string, Trait> {
   return new Map(traits.map((t) => [t.id, t]))
@@ -50,7 +49,7 @@ function damageDealtEvents(
   )
 }
 
-describe('Splashing (Phase 4 Slice C)', () => {
+describe('Splashing', () => {
   it('an Attack against the middle of a 3-enemy lineup also splashes onto both living neighbors, each with its own recomputed damage', () => {
     const player = makeParty('player', [
       {
@@ -84,7 +83,7 @@ describe('Splashing (Phase 4 Slice C)', () => {
     //   left   (defence 4): core = 16; raw = 16.2 -> floor 16.
     //   right  (defence 2): core = 18; raw = 18.2 -> floor 18.
     // Distinct per-target values prove each splash hit is its OWN recomputed formula against
-    // that target's own Defence (ASSUMPTION 15), never a copy of the main hit's number.
+    // that target's own Defence, never a copy of the main hit's number.
     expect(events.filter((e) => e.type === 'AttackDeclared')).toHaveLength(1) // one instance, splash isn't a second instance
     const dealt = damageDealtEvents(events)
     expect(

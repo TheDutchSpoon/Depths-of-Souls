@@ -1,4 +1,4 @@
-// Golden: the Additional on EVERY direct hit of a spell (Phase 4.1-H2a, ASSUMPTION 135): each
+// Golden: the Additional on EVERY direct hit of a spell: each
 // target of an AOE, each `deal-damage` effect in a spell's list, and a single-target cast.
 // Hand-derived. All vitality, neutral x1.0; all targets Defence 0.
 //

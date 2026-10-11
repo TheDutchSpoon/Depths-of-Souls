@@ -1,6 +1,6 @@
-// Golden: B1 (Phase 4.1-C2b) -- the implicit fallback is an ordinary intent (`{ action: attack }`,
+// Golden: the implicit fallback is an ordinary intent (`{ action: attack }`,
 // no targeting), so it resolves through the pipeline's SIDE-AWARE default: the LOWEST-HP enemy,
-// not Phase 1's first-living-by-slot. Hand-derived.
+// not the first living by slot. Hand-derived.
 //
 // HERO is script-less (scriptId null -> the fallback every turn), attack 40, all vitality (x1.0).
 // Enemies: A (slot 0, HP 25) and B (slot 1, HP 15). Slot 0 has MORE HP than slot 1, so the two

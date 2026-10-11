@@ -1,18 +1,19 @@
-// Phase 4 Slice H2: Glimmerdark (floors 11-20, `spec/run.md#biomes`'s decade cadence / ASSUMPTION 29)
-// -- Biome 2's real roster, against `content/glimmerdark.md#glimmerdark-biome-2-floors-1120` own table, built
-// entirely on primitives already proven through Slice E2 (no new engine work needed -- verified
-// while authoring: `acted-before-target`'s own real-content shape is a new SCRIPT, not a new
-// primitive; see `data/traits/glimmerdark.ts`'s Blindclaws Striker doc comment).
+// Glimmerdark (floors 11-20, `spec/run.md#biomes`'s decade cadence)
+// -- Biome 2's real roster, against `content/glimmerdark.md#glimmerdark-biome-2-floors-1120`'s own
+// table, built entirely on primitives the engine already has (no new engine work needed:
+// `acted-before-target`'s real-content shape is a new SCRIPT, not a new primitive; see
+// `data/traits/glimmerdark.ts`'s Blindclaws Striker doc comment).
 //
 // Same enabler/payoff/amplifier (common/uncommon/rare) framing as Overgrowth, except where
-// `content/glimmerdark.md#resonants-wit-caster-synergy` names one shared mechanic instead of a two-role chain (Resonants, Gloomjaws)
-// -- see `data/traits/glimmerdark.ts`'s own per-species doc comments.
+// `content/glimmerdark.md#resonants-wit-caster-synergy` names one shared mechanic instead of a
+// two-role chain (Resonants, Gloomjaws) -- see `data/traits/glimmerdark.ts`'s own per-species doc
+// comments.
 //
-// ASSUMPTION (Slice H2, mirrors H1's own): exact base stats (10-30/stat) and every percent/factor
-// balance number are parked balance (`OPEN_QUESTIONS.md#content-numbers`), picked only to be flavorful and internally
-// consistent. `content/glimmerdark.md#affinity-spread` own "Coverage" note for this biome: "Vitality absent at species
-// level -- resolved by sprinkling Vitality creatures into these species at stamping (agreed)" --
-// applied here to the Flickerlings' Wick and Sparkeaters' Voidmaw.
+// Exact base stats (10-30/stat) and every percent/factor balance number are parked balance
+// (`OPEN_QUESTIONS.md#content-numbers`), picked only to be flavorful and internally consistent.
+// Affinity is stamped per creature (`spec/creatures.md#affinity`): the biome's 2 Vitality
+// creatures (`content/glimmerdark.md#affinity-spread`), the Flickerlings' Wick and Sparkeaters'
+// Voidmaw, sit in species that lean elsewhere.
 //
 // Composition ONLY (Species/SpeciesCreature/BiomeData + boss data) -- Trait/Spell objects live in
 // the central `../traits`/`../spells` library (`CONVENTIONS.md#composition-files-only-reference-carriers`), same as `../species/overgrowth.ts`.
@@ -54,14 +55,10 @@ import {
   SPARKEATER_VOIDMAW_TRAIT,
 } from '../traits'
 
-// ---- Glimmerdark's own authored spells (6 of the ~20-spell global total) ----
-// Phase 4 interstitial slice (cumulative spell unlock): H2 originally authored 10 here (a
-// near-complete reskinned kit); 9 were deleted as exact-or-near reskins of Overgrowth spells
-// once unlock became cumulative (see data/spells/glimmerdark.ts's own header comment for the
-// full list). Five new spells were added to meet the design owner's >=4-5-own-spells-per-biome
-// bar (`spec/run.md#spells-unlock-cumulatively`). This grouping is no longer fed into `BiomeData` (see overgrowth.ts's own
-// comment on the same change) -- kept purely as "the spells this biome introduces" documentation,
-// every entry here tagged `unlockedAtBiome: 2`.
+// ---- Glimmerdark's own authored spells ----
+// This grouping is documentation only ("the spells this biome introduces"): `generateFloor`
+// rolls from the global spell registry (`spec/run.md#spells-unlock-cumulatively`), not from biome
+// data. Every entry here is tagged `unlockedAtBiome: 2`.
 
 export const GLIMMERDARK_SPELLS = [
   BEACON_CHARGE,
@@ -72,10 +69,7 @@ export const GLIMMERDARK_SPELLS = [
 ]
 
 // ---- Flickerlings (Vitality/Wit/Violence) -- closed mechanic: the flame that feeds on itself ----
-// Phase 4.1-H2b1 (ASSUMPTION 116): replace the Glowflies in the same pool slot, creatures in the
-// same rarity order, so the species swap is the only generation change. Their Health (38 / 25 /
-// 28) is on the new 20-45 scale NOW, while every other creature stays on 10-30 until 4.1-H2c, whose
-// remap must skip them. Every number is parked balance (H2c).
+// Their Health (38 / 25 / 28) is on the 20-45 scale. Every number is parked balance.
 
 export const FLICKERLING_WICK: SpeciesCreature = {
   id: 'flickerling-wick',
@@ -200,14 +194,14 @@ export const RESONANTS: Species = {
 }
 
 // ---- Sparkeaters (Wit/Violence lean per `content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites`) -- closed mechanic: stat parasites ----
-// PR #60 review (C2): per-creature affinity stamped to match the stat each one steals, not the
+// Per-creature affinity is stamped to match the stat each one steals, not the
 // species-level lean -- see traits/glimmerdark.ts's own header comment for the full rationale.
 
 export const SPARKEATER_LEECH: SpeciesCreature = {
   id: 'sparkeater-leech',
   name: 'Sparkeater Leech',
-  // PR #60 review (C2): affinity now matches the stat it steals (CLAUDE.md's affinity->stat
-  // soft-mapping) -- Attack -> violence.
+  // Affinity matches the stat it steals (the soft affinity->stat mapping,
+  // `spec/creatures.md#affinity`) -- Attack -> violence.
   affinity: 'violence',
   baseStats: { health: 28, attack: 18, intelligence: 16, defence: 12, speed: 18 },
   defaultScriptId: 'striker',
@@ -218,7 +212,7 @@ export const SPARKEATER_LEECH: SpeciesCreature = {
 export const SPARKEATER_GORGER: SpeciesCreature = {
   id: 'sparkeater-gorger',
   name: 'Sparkeater Gorger',
-  // PR #60 review (C2): Defence -> endurance.
+  // Defence -> endurance.
   affinity: 'endurance',
   baseStats: { health: 30, attack: 20, intelligence: 12, defence: 16, speed: 14 },
   defaultScriptId: 'striker',
@@ -245,8 +239,7 @@ export const SPARKEATERS: Species = {
   creatures: [SPARKEATER_LEECH, SPARKEATER_GORGER, SPARKEATER_VOIDMAW],
 }
 
-// ---- Gloomjaws (Violence lean) -- execute the weak, via three distinct verbs (PR #60 review,
-// C4 -- see traits/glimmerdark.ts's own header comment) ----
+// ---- Gloomjaws (Violence lean) -- execute the weak, via three distinct verbs (see traits/glimmerdark.ts's own header comment) ----
 
 export const GLOOMJAW_STALKER: SpeciesCreature = {
   id: 'gloomjaw-stalker',
@@ -340,16 +333,12 @@ export const GLIMMERDARK_SPECIES_POOL: readonly Species[] = [
 ]
 
 // ---- Boss (floor 20): the Leech Sovereign ----
-// `content/glimmerdark.md#leech-sovereign`: "Fast steal-race ... Every hit steals a stat (permanent -you/+it, same as
-// Sparkeaters); you hollow out over time -- answer is raw burst. Lean identity (no heavy add
-// layer)." Deliberately no `_ADDS` export (unlike the Broodmother) -- the design doc explicitly
-// calls out this boss as lean, single-mechanic, no add layer.
+// `content/glimmerdark.md#leech-sovereign`: a lean, single-mechanic boss with no add layer, so
+// deliberately no `_ADDS` export (unlike the Broodmother).
 //
 // The boss floor itself (materializing her on floor 20, banking rewards, recording bossesCleared)
-// is wired through `BiomeData.boss` below (Phase 4 Slice I, PR #65 review) -- see
-// `generation.ts`'s `generateFloor` boss branch and `spec/run.md#boss-floor-generation`. H2 authored her
-// as data only and deliberately left the runner unbuilt, mirroring H1's own Broodmother; that gap
-// is what Slice I closes.
+// is wired through `BiomeData.boss` below -- see
+// `generation.ts`'s `generateFloor` boss branch and `spec/run.md#boss-floor-generation`.
 
 export const LEECH_SOVEREIGN: SpeciesCreature = {
   id: 'leech-sovereign',
@@ -363,7 +352,7 @@ export const LEECH_SOVEREIGN: SpeciesCreature = {
 
 export const LEECH_SOVEREIGN_BOSS_ID = 'leech-sovereign'
 
-/** Phase 4 Slice I (PR #65 review): wires the Leech Sovereign into `GLIMMERDARK_BIOME.boss`.
+/** Wires the Leech Sovereign into `GLIMMERDARK_BIOME.boss`.
  * `speciesId` is her OWN id -- unlike the Broodmother, she has no natural species (no shared
  * roster members to count alongside), and `adds` is empty (lean by design, per the doc comment
  * above). */

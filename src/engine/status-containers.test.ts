@@ -1,5 +1,5 @@
-// Phase 4.1-F1 (A3): statuses as effect containers. Every test here is the one that fails with its
-// mechanism removed (the phase record lists the mutation for each). Numbers are hand-derived in
+// Statuses as effect containers. Every test here is the one that fails with its
+// mechanism removed. Numbers are hand-derived in
 // the comments; the log-level behaviour is also pinned by the goldens (golden-stun,
 // golden-b6-provoke-stun-cleanup, golden-b2-skipped-turn-refuses-granted-cast,
 // golden-scoped-suppression, golden-b2-silenced-refuses-granted-cast) and the corpus digest.
@@ -192,7 +192,7 @@ describe("the skip: an 'all' lock", () => {
       'RoundStarted',
       'TurnStarted',
       'TurnSkipped',
-      'StatusExpired', // F2: Stun 1 counts down at the skipped turn's own cleanup (deliberate change)
+      'StatusExpired', // Stun 1 counts down at the skipped turn's own cleanup (deliberate change)
       'TurnEnded',
     ])
     expect(events.find((e) => e.type === 'TurnSkipped')).toEqual({
@@ -218,7 +218,7 @@ describe("the skip: an 'all' lock", () => {
     ])
   })
 
-  it("a lock gained during the actor's own turn-start hooks skips that very turn (ASSUMPTION 45)", () => {
+  it("a lock gained during the actor's own turn-start hooks skips that very turn", () => {
     const { events } = resolveTurn(
       build({
         effects: [
@@ -242,7 +242,7 @@ describe("the skip: an 'all' lock", () => {
       'TriggerFired',
       'StatusApplied',
       'TurnSkipped',
-      'StatusExpired', // F2 (ASSUMPTION 49): gained before the action slot, so it counts this turn
+      'StatusExpired', // gained before the action slot, so it counts this turn
       'TurnEnded',
     ])
   })
@@ -324,8 +324,7 @@ describe("the skip: an 'all' lock", () => {
     // decide (no Waited) and TurnSkipped names the first read's lock: effectId 'stun'.
     const FIXTURE_X = createCreatureId('x')
     const FIXTURE_Y = createCreatureId('y')
-    // 4.1-H2b1: stands in for the real Glow this test used to borrow (deleted): the same shape, a
-    // buff with a dealt damage-modifier of 0.08, default duration 4.
+    // A fixture buff with a dealt damage-modifier of 0.08, default duration 4.
     const FIXTURE_DAMAGE_BOOST: StatusDef = {
       statusId: 'fixture-damage-boost',
       effects: [{ category: 'damage-modifier', direction: 'dealt', magnitude: 0.08 }],
@@ -564,7 +563,7 @@ describe('locks in checkLegality, at every site', () => {
     }
   })
 
-  it("a granted Defend is refused under an 'all' lock (ASSUMPTION 46)", () => {
+  it("a granted Defend is refused under an 'all' lock", () => {
     // X attacks; its on-attack trigger 1 stuns X, trigger 2 grants a Defend. The grant drains right
     // after the action (no skip gate: the turn was not skipped), so only the lock can refuse it.
     const withLock = resolveTurn(
@@ -656,7 +655,7 @@ describe('immunity is checked once, in the effect iterator', () => {
       const x = creatureOf(state)
       expect(hasStatus(x, 'poison')).toBe(true)
       expect(effectsForHook(x, 'on-turn-end')).toHaveLength(immune ? 0 : 1)
-      // End to end: run three turns (poison ticks at its bearer's turn end, F2) and look for the tick.
+      // End to end: run three turns (poison ticks at its bearer's turn end) and look for the tick.
       let working = state
       const events: CombatEvent[] = []
       for (let i = 0; i < 3; i++) {
@@ -713,7 +712,7 @@ describe('immunity is checked once, in the effect iterator', () => {
   })
 })
 
-describe("a status's effects carry no count of their own (single instance, 4.1-H2b2)", () => {
+describe("a status's effects carry no count of their own (single instance)", () => {
   /** A one-effect status on X, applied once, its trigger fired through the real hook path. */
   function fireOnce(
     effect: EffectDef,

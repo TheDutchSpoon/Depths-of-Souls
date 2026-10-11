@@ -57,7 +57,7 @@ describe('buildTurnQueue', () => {
   })
 })
 
-// Phase 4 Slice C: Web (act-last) / Blindclaws' grant-act-first (act-first) -- the same
+// Web (act-last) / Blindclaws' grant-act-first (act-first) -- the same
 // turn-order primitive, opposite pole (`content/glimmerdark.md#grant-act-first`).
 function turnOrderStatus(position: 'first' | 'last', id: string): ActiveEffect {
   return {
@@ -73,7 +73,7 @@ function turnOrderStatus(position: 'first' | 'last', id: string): ActiveEffect {
   }
 }
 
-describe('buildTurnQueue -- turn-order status (Phase 4 Slice C)', () => {
+describe('buildTurnQueue -- turn-order status', () => {
   it('reorders an act-first and an act-last creature around a Speed-sorted middle -- position beats raw Speed entirely', () => {
     const player = makeParty('player', [
       // Highest raw Speed (30) but act-LAST -- must still end up dead last.
@@ -98,7 +98,7 @@ describe('buildTurnQueue -- turn-order status (Phase 4 Slice C)', () => {
     ])
   })
 
-  it('ASSUMPTION 9: a creature carrying both an act-first and an act-last instance resolves to act-first', () => {
+  it('A creature carrying both an act-first and an act-last instance resolves to act-first', () => {
     const player = makeParty('player', [
       {
         id: 'both',

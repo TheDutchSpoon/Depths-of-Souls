@@ -1,4 +1,4 @@
-// Golden: the Additional's 20%-of-max-HP bound (Phase 4.1-H2a, ASSUMPTION 110). Hand-derived.
+// Golden: the Additional's 20%-of-max-HP bound. Hand-derived.
 // A level-1 attacker's cap is 10, but the target's max Health is only 20, so the 20% bound binds:
 //   additional = min( floor(20 x 20 / 100) = 4, max(0, 10 - 0) = 10 ) = 4.
 //

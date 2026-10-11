@@ -22,12 +22,12 @@ function decideImplicitFallback(creature: Creature, state: CombatState): Intent 
 }
 
 /**
- * The Phase 1 seam, now consulting the script. Side-effect-free lookahead: walk the
+ * The seam that consults the script. Side-effect-free lookahead: walk the
  * ordered rules top-down, evaluating condition + validity as pure predicates over current
  * state; the first rule that passes wins. Non-winning rules never consume RNG state, so
  * `same seed -> identical outcome` holds regardless of incidental script structure.
  *
- * Phase 4.1-C2a (A1): returns the winning rule's UNRESOLVED `Intent` (or the fallback intent),
+ * Returns the winning rule's UNRESOLVED `Intent` (or the fallback intent),
  * never a resolved `Action` -- resolution (target/gem draws) happens exactly once, in
  * `actions.ts`'s `resolveIntent`, for whichever intent this function returns.
  */
@@ -38,7 +38,7 @@ export function decideAction(
 ): Intent {
   if (script) {
     for (const rule of script.rules) {
-      // B1: a targeting-less rule peeks the side-aware default (pure, no RNG). No single default
+      // A targeting-less rule peeks the side-aware default (pure, no RNG). No single default
       // before the draw (`gemSlot: 'random'`, AOE, self-only) -> `undefined` -> acted-before-target
       // is false. conditions.ts never imports actions.ts (that would be a cycle).
       const peekTargeting = rule.targeting ?? defaultTargetingFor(creature, rule.action)

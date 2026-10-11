@@ -1,12 +1,10 @@
-// Golden: the `conditional-damage-bonus` passive EffectDef (Phase 4 Slice E2, Cull the Weak /
-// Ambusher / Gloomjaws / Sporch's Reaper-shaped) -- ATTACKER carries +50% dealt, gated on a
+// Golden: the `conditional-damage-bonus` passive EffectDef (Cull the Weak / Ambusher / Gloomjaws / Sporch's Reaper-shaped) -- ATTACKER carries +50% dealt, gated on a
 // `hp-percent` condition with subject `'target'` (< 50%), evaluated against the CURRENT damage
 // target at hit time via gatherConditionalDamageBonus, folded into dealtMods alongside
 // gatherDealtMods -- one clean modified hit, never a second `on-damage-dealt` instance.
 //
-// Explicit BEFORE/AFTER proof on the SAME target across two rounds (Slice B/D discipline for
-// formula-touching work): hit 1 lands while TARGET is still above the threshold (byte-identical
-// to the pre-Slice-E2 formula -- no bonus); hit 1 itself brings TARGET below the threshold, so
+// Explicit BEFORE/AFTER proof on the SAME target across two rounds: hit 1 lands while TARGET is
+// still above the threshold (no bonus); hit 1 itself brings TARGET below the threshold, so
 // hit 2 (round 2) lands WITH the bonus, proving the mechanism actually engages once the gate
 // opens, on the same fixture, same attacker, same formula inputs otherwise.
 //

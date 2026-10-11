@@ -36,7 +36,7 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
 }
 
 /**
- * Phase 4 Slice E2: `resolvingAgainst` is "the creature this effect is being resolved against"
+ * `resolvingAgainst` is "the creature this effect is being resolved against"
  * -- present when a trigger's own source is known (fireHook) or a conditional-damage-bonus is
  * being gathered against a live target, ABSENT during scripting-rule lookahead (no such creature
  * exists there yet -- see evaluateCondition's own doc comment). 'target' degenerates to a
@@ -68,8 +68,8 @@ function subjectPool(
 /**
  * Pure -- never touches state.rng. Safe to run during lookahead for every rule.
  * `ruleTargeting` is the evaluating RULE's own targeting selector (absent for a TriggeredDef's
- * condition, which has no rule context) -- consulted ONLY by acted-before-target (Slice C);
- * every other condition kind ignores it. Phase 4 Slice E2: `resolvingAgainstId` is "the
+ * condition, which has no rule context) -- consulted ONLY by acted-before-target;
+ * every other condition kind ignores it. `resolvingAgainstId` is "the
  * creature this effect is being resolved against" for a 'target'-subject condition -- supplied
  * by fireHook (the trigger's own `source`) or a conditional-damage-bonus gather (the current
  * damage target); resolved to a live Creature via findCreature (undefined/unknown id -> no
@@ -129,7 +129,7 @@ export function evaluateCondition(
         hasStatus(c, condition.statusId),
       )
     case 'acted-before-target': {
-      // Phase 4 Slice H2 (PR #60 review, E1): completes the case for the non-scripting call
+      // Completes the case for the non-scripting call
       // sites -- gatherConditionalDamageBonus (resolution.ts) already passes the CURRENT damage
       // target as resolvingAgainstId, and this function already resolves it into
       // `resolvingAgainst` above (for 'target'-subject hp-percent/has-status conditions); this
@@ -154,7 +154,7 @@ export function evaluateCondition(
 }
 
 /**
- * Phase 4.1-H2b1 (ASSUMPTION 141): a TRIGGER's condition -- any scripting `Condition`, or a
+ * A TRIGGER's condition -- any scripting `Condition`, or a
  * trigger-only kind. `other-ally-injured` is true iff `injuredOtherAlliesOf` (targeting.ts, the
  * pool the `lowest-hp-injured-other-ally` target also reads) is non-empty. Every other kind
  * delegates to `evaluateCondition` unchanged, whose exhaustive `never` arm is untouched, so the

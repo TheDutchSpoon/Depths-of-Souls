@@ -1,4 +1,4 @@
-// Golden: D3's revive cap, the fizzle half (Phase 4.1-B, PR #69 review R5) -- the "11th attempt"
+// Golden: the revive cap, the fizzle half -- the "11th attempt"
 // case, where the ONLY dead ally is already at MAX_REVIVES_PER_CREATURE: the pool is empty
 // before the draw, so the revive response finds nothing, targets nothing, and consumes zero RNG.
 // The triggering hook still fires (TriggerFired IS emitted -- the trigger's own condition/

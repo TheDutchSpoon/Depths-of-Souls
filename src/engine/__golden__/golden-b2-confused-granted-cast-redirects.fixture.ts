@@ -1,8 +1,8 @@
-// Golden: B2.3 (Phase 4.1-C2c) -- a CONFUSED creature's granted cast goes through the override
+// Golden: a CONFUSED creature's granted cast goes through the override
 // pipeline like any action: Confusion can redirect it to the caster's own side. Hand-derived.
 //
 // CASTER (player, slot 0, speed 20, Int 20, always-wait): trait `b2-confused-granted-caster-fixture`
-// = [on-turn-end perform-action(self, cast 'random') chancePercent 100 (4.1-E; was `bonus-cast`),
+// = [on-turn-end perform-action(self, cast 'random') chancePercent 100,
 // on-fight-start apply-status Confusion (self, 3 turns)].
 // Confusion = 50% friendly-fire (data/statuses.ts). Slots after createCombat (asserted): [BOLT]
 // (enemy-side single target, spellPower 0.5). Allies: A1 (slot 1), A2 (slot 2), HP 40 each.
@@ -15,8 +15,8 @@
 // [CASTER, A1, A2] (the caster is an ally of itself) -> floor(0.7761 * 3) = floor(2.33) = 2 -> A2.
 // So the cast lands on A2. BOLT: Int 20 x 0.5 = 10, A2 defence 0 -> core 10, chip 0.1 -> raw
 // 10.1 -> final 10; A2 40 - 10 = 30 (no clamp). Vitality throughout (x1.0).
-// Before C2c (granted casts skipped the override pipeline) the cast hit E2 (the default
-// lowest-HP enemy) and drew nothing after the gem.
+// Were granted casts to skip the override pipeline, the cast would hit E2 (the default
+// lowest-HP enemy) and draw nothing after the gem.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -120,7 +120,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
   { type: 'Waited', creatureId: CASTER },
-  // 4.1-E: the granted cast is an on-turn-end `perform-action` grant (chance roll #1 at trigger
+  // The granted cast is an on-turn-end `perform-action` grant (chance roll #1 at trigger
   // time); ActionGranted comes once the grant runs and is accepted (after draws #2-#4).
   {
     type: 'TriggerFired',

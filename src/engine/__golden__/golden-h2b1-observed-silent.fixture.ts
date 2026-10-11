@@ -1,4 +1,4 @@
-// Golden: what damage observation must NOT react to (Phase 4.1-H2b1, ASSUMPTIONS 115, 132, 137).
+// Golden: what damage observation must NOT react to.
 // Hand-derived. The observer O is Flare-shaped (`relationship 'ally'`, `selfInflicted true`) and
 // answers with Attack x1.5 on itself; so ANY `TriggerFired` from O would show. Three damage events
 // that are not costs, one zero cost, and O stays silent through all of them:
@@ -18,7 +18,7 @@
 //    source === target here, but it is not a cost: O is SILENT. (Reading "self-inflicted" as
 //    `source === target` would fire O.)
 // 2. Z's turn start: ZERO is flat 1% of Z's Health = floor(30 x 1 / 100) = floor(0.3) = 0. A cost
-//    of 0 is a full no-op (ASSUMPTION 132): TriggerFired shows (ASSUMPTION 138), then NOTHING: no
+//    of 0 is a full no-op: TriggerFired shows, then NOTHING: no
 //    DamageDealt, so nothing to observe.
 // 3. E attacks the lowest-HP player: C 38, Z 30, O 40, A 25 -> A. Attack 30 vs Defence 10: core
 //    20, chip 0.3 -> raw 20.3 -> 20; E is level 11, so no Additional. A 25 -> 5. An ordinary direct

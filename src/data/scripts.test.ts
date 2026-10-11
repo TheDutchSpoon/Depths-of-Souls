@@ -34,7 +34,7 @@ import { createEffectInstanceId, type ActiveEffect } from '../engine/effect-type
 import type { CombatState, Creature } from '../engine/types'
 import type { Intent, Script } from '../engine/scripting-types'
 
-// Phase 4.1-G1 (D4; `spec/scripting.md#role-scripts`): the seven role scripts, rule by rule. Every role
+// The seven role scripts, rule by rule. Every role
 // ends in the same fallback, so each fallback rule has its own test below, in a state where every
 // rule above it is false or illegal, and each fails with that rule removed (the report's mutation
 // table shows it: a role without its last rule waits where it should cast).
@@ -303,11 +303,9 @@ describe('taunter', () => {
   })
 })
 
-// Phase 4.1-G1 (ASSUMPTION 68): `taunter` is `always-provoke` renamed into the role set. Its two real
-// users then (Snapjaw Lure, Stonehorn Warden) must fight exactly as they did: the same fight, with
-// only the script id swapped, gives the same event log. (Since 4.1-H2c the Warden runs `warden`; the
-// test still swaps the script on the same creature, so it stays valid.)
-describe('taunter behaves exactly as always-provoke did (ASSUMPTION 68)', () => {
+// `taunter` is `always-provoke` renamed into the role set: the same fight, with only the
+// script id swapped on the same creature, gives the same event log.
+describe('taunter behaves exactly as always-provoke did', () => {
   const scripts = new Map([...STOCK_SCRIPTS_BY_ID, ...FIXTURE_SCRIPTS_BY_ID])
 
   function fight(seed: number, provokeScript: string) {

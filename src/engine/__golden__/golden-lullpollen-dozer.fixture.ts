@@ -14,7 +14,7 @@
 // golden -- same stats, same 0.25 base/2-count shape). All vitality -> neutral affinity x1.0.
 //
 //   Bonus hit first: off = 20(attack) * spellPower (0.25 base * 2 count = 0.5) = 10, def 0 ->
-//     INDIRECT (a trait response, 4.1-H2a): 10 - 0.2 x def 0 = 10, no chip -> raw 10 -> final 10.
+//     INDIRECT (a trait response): 10 - 0.2 x def 0 = 10, no chip -> raw 10 -> final 10.
 //     TARGET 30 - 10 -> 20.
 //   Main hit: off 20, def 0 -> core 20, chip 0.2 -> raw 20.2 -> final 20. TARGET 20 - 20 -> 0 ->
 //     dies. OTHERFOE (1000 HP) survives, so the fight is NOT over.

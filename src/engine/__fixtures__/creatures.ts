@@ -1,4 +1,4 @@
-// Test-only fixtures. Not real content — see src/data/ for that (deferred). Never imported
+// Test-only fixtures. Not real content — see src/data/ for that. Never imported
 // by src/app or src/ui.
 
 import { createCreatureId } from '../ids'
@@ -26,21 +26,21 @@ export interface CreatureOverrides {
   activeEffects?: readonly ActiveEffect[]
   defendCount?: number
   speciesId?: string
-  /** Phase 4.1-A (A5): defaults to `{ templateId: <this creature's id>, level: 1 }` so the ~140
+  /** Defaults to `{ templateId: <this creature's id>, level: 1 }` so the ~140
    * existing golden/fixture files that build creatures through this helper don't need to churn
-   * now that Creature.origin is required. */
+   * since Creature.origin is required. */
   origin?: CreatureOrigin
-  /** Phase 4.1-H2a (ASSUMPTION 133): the engine-visible level the Additional reads. Defaults to
+  /** The engine-visible level the Additional reads. Defaults to
    * `DEFAULT_FIXTURE_LEVEL` (11), where the Additional is 0 for every target, so a fixture fight
    * keeps its direct-formula numbers unless it sets a level. Deliberately NOT tied to
    * `origin.level` (which keeps defaulting to 1 so XP-reading tests don't move); production keeps
    * the two equal via `materializeCreature`. */
   level?: number
-  /** Phase 4.1-B (S1): defaults to `[]` -- most fixtures pass creatures through `createCombat`,
+  /** Defaults to `[]` -- most fixtures pass creatures through `createCombat`,
    * which ALWAYS recomputes this from `innateTraitIds` (never trusts the input), so an explicit
    * override is only useful for a test constructing a post-fight-setup `Creature` directly. */
   baselineEffects?: readonly BaselineEffectEntry[]
-  /** Phase 4.1-B (D3): defaults to `0`, matching `createCombat`'s own always-reset-to-0 rule. */
+  /** Defaults to `0`, matching `createCombat`'s own always-reset-to-0 rule. */
   revivesUsed?: number
 }
 

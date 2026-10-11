@@ -1,4 +1,4 @@
-// Golden: B5 + rule 4 (Phase 4.1-C2c) -- a Brute-style two-instance attacker whose first hit's
+// Golden: the pre-hit-hook fizzle + rule 4 -- a Brute-style two-instance attacker whose first hit's
 // target dies to an `on-attack` trait: that hit FIZZLES (no damage on the corpse), and the second
 // instance re-targets by rule 4 (side-aware default = LOWEST-HP enemy, then Provoke -- none here),
 // not first-by-slot. Hand-derived.
@@ -17,14 +17,14 @@
 // Instance 1 (100%): script target lowest-hp-enemy over {A 30, B 25, C 5} = C. AttackDeclared(C).
 //   on-attack condition on C: hp-percent by integer cross-multiplication: currentHp*100 <=
 //   thresholdPercent*maxHp  ->  5*100 = 500 <= 30*20 = 600 TRUE -> the trait fires: 99 flat on C:
-//   C 5 -> 0, CreatureDied(C). B5: the target died in its own pre-hit hooks, so the main hit
+//   C 5 -> 0, CreatureDied(C). The target died in its own pre-hit hooks, so the main hit
 //   FIZZLES: no DamageDealt for the 100% hit.
 // Instance 2 (30%): previous target C is dead -> rule 4: default lowest-hp-enemy over survivors
 //   {A 30, B 25} = B (25 < 30); first-by-slot would pick A (slot 0). No provoker -> no draw.
 //   AttackDeclared(B). The lethal trait's condition against B: 25*100 = 2500 <= 30*25 = 750 FALSE
 //   -> it does NOT fire. Hit: off 20 x 0.3 = 6, def 0 -> core 6, chip 0.06 -> raw 6.06 -> final 6.
 //   B 25 - 6 = 19 (no clamp). Fight continues (A, B alive). No RNG anywhere; SEED is inert.
-// With B5's guard removed the log gains a DamageDealt on C (dead) after CreatureDied; with
+// With the fizzle guard removed the log gains a DamageDealt on C (dead) after CreatureDied; with
 // first-by-slot restored for rule 4 instance 2 hits A (remainingHp 24) instead of B.
 
 import { makeParty } from '../__fixtures__/creatures'

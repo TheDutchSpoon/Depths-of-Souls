@@ -1,7 +1,6 @@
-// Golden: the triggered `heal` response's `magnitudeSource` mode (Phase 4 Slice E2, Necromoss-
-// shaped) -- a flat per-unit `flatAmount` scaled by a LIVE count (dead-allies), mirroring deal-damage's own magnitudeSource composition
+// Golden: the triggered `heal` response's `magnitudeSource` mode (Necromoss- shaped) -- a flat per-unit `flatAmount` scaled by a LIVE count (dead-allies), mirroring deal-damage's own magnitudeSource composition
 // exactly. NECROMOSS self-heals via `on-turn-end` (no round end needed) -- fixture-shaped,
-// not real Necromoss content (H3's job).
+// not real Necromoss content.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // FOE (speed 20) acts before NECROMOSS (speed 10) in round 1. DEAD-ALLY starts the fight already
@@ -96,7 +95,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: FOE },
   { type: 'TurnStarted', creatureId: NECROMOSS },
   { type: 'Waited', creatureId: NECROMOSS },
-  // Phase 4.1-C (D6): on-turn-end hooks fire BEFORE TurnEnded now (TurnEnded is always the
+  // on-turn-end hooks fire BEFORE TurnEnded (TurnEnded is always the
   // turn's last event).
   {
     type: 'TriggerFired',

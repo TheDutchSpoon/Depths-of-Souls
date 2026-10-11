@@ -1,6 +1,6 @@
-// Effect-framework runtime helpers (pure). Slice A: instantiate innate-trait effects onto a
-// creature's active-effects list, and the HP-vs-effective-max-Health helpers. Grows in
-// Slices B/C (status apply/refresh/decrement/expire, gatherDealtMods/gatherTakenFactors).
+// Effect-framework runtime helpers (pure). Instantiate innate-trait effects onto a
+// creature's active-effects list, and the HP-vs-effective-max-Health helpers, the status
+// apply/refresh/decrement/expire lifecycle and gatherDealtMods/gatherTakenFactors.
 //
 // Dependency direction is one-way: effects.ts -> effective-stats.ts (for getEffectiveStat,
 // hasStatus). effective-stats.ts never imports this module, so there is no cycle.
@@ -25,7 +25,7 @@ import type {
 import type { CombatState, Creature } from './types'
 
 /**
- * Phase 4.1-B (S1): resolves a creature's baseline effect list -- innate traits' effects, in
+ * Resolves a creature's baseline effect list -- innate traits' effects, in
  * trait-then-declaration order, then this side's own `sideEffects` -- WITHOUT instantiating
  * instance ids yet (that's `instantiateEffectDefs` below). `sourceTraitId` is paired with each
  * def here (a trait-sourced def's owning trait id; a side-effect def's `<sideLabel>-<ordinal>`
@@ -33,13 +33,13 @@ import type { CombatState, Creature } from './types'
  * `Creature.baselineEffects`; `revive`'s death-reset re-instantiates the SAME stored list
  * directly, needing no registry lookup.
  *
- * Phase 4.1-B review (PR #69, R1/D3): `sideEffects` applies UNCONDITIONALLY to every creature
+ * `sideEffects` applies UNCONDITIONALLY to every creature
  * passed in here -- the caller (`createCombat`) already knows which side's list it's threading
  * through which party, so there is no `creature.side` re-check to get wrong; `sideLabel` picks
  * the sourceTraitId prefix (`'perk'` for the player side, `'enemy-effect'` for the enemy side --
  * distinct so a TriggerFired.effectId can't collide across sides). An unknown trait id THROWS
- * (never silently skipped, matching S1's own "no silent drop" rationale) -- a caller that forgot
- * to pass `registries.traits` used to strip every innate trait with no signal at all.
+ * (never silently skipped): a caller that forgot
+ * to pass `registries.traits` would strip every innate trait with no signal at all.
  */
 export function resolveBaselineEffects(
   creature: Pick<Creature, 'innateTraitIds'>,
@@ -59,9 +59,9 @@ export function resolveBaselineEffects(
       entries.push({ def, sourceTraitId: traitId })
     }
   }
-  // Phase 4 Slice F / ASSUMPTION 21: side effects (perks today; biome/boss effects later)
+  // Side effects (perks today; biome/boss effects later)
   // appended AFTER a creature's own innate-trait effects -- the canonical per-creature effect
-  // order: innate-1 -> innate-2 -> side effects -> infusions (Phase 8, none yet) -> statuses.
+  // order: innate-1 -> innate-2 -> side effects -> infusions (none yet, `spec/creatures.md#equipment`) -> statuses.
   sideEffects.forEach((def, ordinal) => {
     entries.push({ def, sourceTraitId: `${sideLabel}-${ordinal}` })
   })
@@ -69,7 +69,7 @@ export function resolveBaselineEffects(
 }
 
 /**
- * Phase 4.1-B (B3/B4): instantiates a resolved baseline effect list onto fresh `ActiveEffect`s,
+ * Instantiates a resolved baseline effect list onto fresh `ActiveEffect`s,
  * issuing each one a unique id from the per-fight counter (`eff-<n>`, `CombatState.
  * effectInstanceCounter` -- the ONLY production issuer of effect instance ids; never
  * deterministic/derived-from-content, so a removed-then-reapplied or revived instance always gets
@@ -140,11 +140,11 @@ function withInstance(
 }
 
 /**
- * Phase 4.1-F1 (A3): THE effect iterator -- the one way every reader sees a creature's effects.
+ * THE effect iterator -- the one way every reader sees a creature's effects.
  * A trait/perk effect is yielded as is. A status (a timed container, `category: 'status'`) is
  * flattened in place into its own `effects`, in order, each tagged with the status it came from
  * (`statusId` and `sourceInstanceId`) and given its own guard identity `${statusInstanceId}#effect#${index}`
- * (PR #64: a trigger's self-re-entry guard is scoped to ONE trigger, never the whole status).
+ * (a trigger's self-re-entry guard is scoped to ONE trigger, never the whole status).
  *
  * **Immunity is checked here, once** (`spec/effects.md#immunity`): every effect, of every kind, of a
  * status the bearer is immune to is skipped -- locks, friendly-fire, triggers (a tick included),
@@ -201,11 +201,11 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
       chancePercent: e.chancePercent,
       observationFilter: e.observationFilter,
       response: e.response,
-      // Phase 4 Slice H2 (PR #60 review, E2.1): the dedup flag (`stacks: false`).
+      // The dedup flag (`stacks: false`).
       nonStacking: e.stacks === false ? true : undefined,
       // Present only when the trigger came out of a status container.
       statusId: e.statusId,
-      // Phase 4.1-B (B4): the REAL owning instance's id -- a plain trigger's own id, or the
+      // The REAL owning instance's id -- a plain trigger's own id, or the
       // status's shared instance id (distinct from the derived per-trigger guard `instanceId`).
       // fireHook checks it against the creature's LIVE activeEffects before firing: a status
       // removed (cleansed) or replaced earlier in the SAME hook pass must not let a stale
@@ -227,14 +227,14 @@ export function effectiveMaxHp(creature: Creature): number {
 
 /**
  * Clamps currentHp down to the effective maximum, returning the (possibly reduced) currentHp.
- * Used at fight-start (init to full) and whenever effective max Health changes (Slice B/C).
+ * Used at fight-start (init to full) and whenever effective max Health changes.
  * A rise in max never auto-heals — currentHp only ever moves down here.
  */
 export function clampedHp(creature: Creature): number {
   return Math.min(creature.currentHp, effectiveMaxHp(creature))
 }
 
-/** Phase 4 Slice F (review amendment): the shared structural shape `damageModifierCount`/
+/** The shared structural shape `damageModifierCount`/
  * `takenFactorFor` read -- satisfied by BOTH `damage-modifier` and `taken-reduction` entries. */
 interface TakenReductionSource {
   readonly magnitude: number
@@ -252,10 +252,9 @@ function modifierSource(e: FlatEffect & TakenReductionSource): TakenReductionSou
   }
 }
 
-/** Phase 4 Slice D: the live repetition count a damage-modifier's `magnitude` is
+/** The live repetition count a damage-modifier's `magnitude` is
  * multiplied/exponentiated by -- the live resolveCount(...) reading when the effect declares a
- * `magnitudeSource` (recomputed every read), else 1: the flat single application (a status is
- * single-instance, 4.1-H2b2, so it has no count of its own). */
+ * `magnitudeSource` (recomputed every read), else 1: the flat single application (a status is single-instance, so it has no count of its own). */
 function damageModifierCount(
   bearer: Creature,
   state: CombatState,
@@ -275,7 +274,7 @@ export function gatherDealtMods(creature: Creature, state: CombatState): number[
   return mods
 }
 
-/** Phase 4 Slice D, PR #47 review amendment: collapses one `taken`-direction modifier to its
+/** Collapses one `taken`-direction modifier to its
  * single contributed factor, per its `accumulation` mode (`spec/effects.md#taken-reduction-accumulation`). `'multiplicative'` (default/absent): `magnitude ** count`, asymptoting toward
  * 0, never clamped. `'additive'` (Bulwark): the per-unit reduction `(1 - magnitude)` summed ×
  * count, hard-clamped at `reductionCap` (default 1 -- unclamped -- if somehow omitted). The
@@ -316,7 +315,7 @@ export function gatherTakenFactors(creature: Creature, state: CombatState): numb
   return factors
 }
 
-/** Phase 4.1-B (B-8): re-exported from effective-stats.ts, which now owns the canonical
+/** re-exported from effective-stats.ts, which owns the canonical
  * implementation (so `SelfCondition`'s `has-status` branch can read it without effects.ts ->
  * effective-stats.ts becoming a cycle -- see its own doc comment there). Every existing importer
  * of `hasStatus` from THIS module keeps working unchanged. */
@@ -354,7 +353,7 @@ export function gatherCrossStatContribution(
 /** The powerPercent of each active action-instance passive matching `actionKind` (or 'both'),
  * in canonical effect order -- appended after the base [100] entry to build an Attack/Cast's
  * instance list (actions.ts's buildInstanceList). See ActionInstanceDef's own doc comment for the
- * inline ASSUMPTION this primitive's exact shape rests on. */
+ * shape. */
 export function gatherExtraInstances(
   creature: Creature,
   actionKind: 'attack' | 'cast',
@@ -372,8 +371,8 @@ export function gatherExtraInstances(
 }
 
 /** Instantiates a status definition into a container `ActiveEffect` with fresh duration
- * bookkeeping (4.1-F1: ONE instance shape; the def's `effects` are embedded on it). `snapshot` is
- * the applier snapshot (4.1-H2b2); passed iff the def declares `potency`, so a fixed-magnitude
+ * bookkeeping (ONE instance shape; the def's `effects` are embedded on it). `snapshot` is
+ * the applier snapshot; passed iff the def declares `potency`, so a fixed-magnitude
  * status carries no `snapshot` key at all. */
 export function instantiateStatus(
   def: StatusDef,
@@ -393,12 +392,12 @@ export function instantiateStatus(
   }
 }
 
-/** Phase 4.1-H2b2 (ASSUMPTIONS 113, 144): the applier snapshot a ticking status records at
+/** The applier snapshot a ticking status records at
  * application -- who applied it, their affinity then, and `potency.percent` of their effective
  * `potency.ofStat` then. Integer arithmetic with ONE floor (the stat is floored, then `percent`
  * multiplied in before dividing by 100, as `resolveFlatTotal` always did, so a float fraction
  * cannot land just below an integer). Read from the applier AS IT IS NOW -- a corpse's effective
- * stats (modifiers included) stay readable (Myconet Rotcore poisons as it dies, ASSUMPTION 13). */
+ * stats (modifiers included) stay readable (Myconet Rotcore poisons as it dies). */
 export function snapshotFor(
   applier: Creature,
   potency: NonNullable<StatusDef['potency']>,
@@ -412,7 +411,7 @@ export function snapshotFor(
   }
 }
 
-// ---- Phase 4 Slice C: permanent-passive checks + status-carrying lookups ----
+// ---- permanent-passive checks + status-carrying lookups ----
 
 /** True iff `creature` carries a status-immunity for `statusId` (Clear Mind/Aggressive/
  * Lucidity). Read only from NON-status carriers (the raw list, never the iterator), and only
@@ -462,7 +461,7 @@ export function activeFriendlyFireStatus(
 export type LockableKind = 'attack' | 'cast' | 'defend' | 'provoke' | 'wait'
 
 /**
- * Phase 4.1-F1 (A3, `spec/statuses.md#action-locks`): true iff an active `action-lock` makes `kind`
+ * True iff an active `action-lock` makes `kind`
  * illegal for `creature` -- an `'all'` lock refuses EVERY kind (Attack, Cast, Defend, Provoke,
  * Wait), a scoped lock only its own. Read through the iterator, so an immune bearer's status lock
  * doesn't count. `checkLegality` (actions.ts) is the one caller on the action path.
@@ -490,7 +489,7 @@ export function firstAllLock(
   return undefined
 }
 
-// ---- Phase 4 Slice D: resource & counter primitives ----
+// ---- resource & counter primitives ----
 
 /**
  * The count-scaling primitive (`spec/effects.md#count-scaling`): one of the six live "board counts"

@@ -3,7 +3,7 @@ import { runGolden } from '../test-utils/golden-runner'
 import * as fixture from './golden-buff-cast.fixture'
 import { expectedEvents, expectedResult } from './golden-buff-cast.fixture'
 
-describe('golden replay: stat-modifier-payload AOE Cast (Phase 4 Slice E)', () => {
+describe('golden replay: stat-modifier-payload AOE Cast', () => {
   it('matches the committed event log exactly', () => {
     const { events, state } = runGolden(fixture)
 

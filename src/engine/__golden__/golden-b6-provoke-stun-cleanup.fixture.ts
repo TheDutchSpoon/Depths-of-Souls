@@ -1,11 +1,10 @@
-// Golden: B6 (Phase 4.1-C, D6) -- a provoking creature Stunned before its next turn stops
-// provoking at that turn's start, with no stale redirect afterward. Before this fix, turn-start
-// cleanup only ran inside the not-skipped decide+action gate, so a Stunned/Sleeping creature
-// kept Defend/Provoke through its own skipped turn -- Provoke would have kept redirecting HERO's
-// attacks at PROVOKER in round 2 even after it was Stunned.
+// Golden: a provoking creature Stunned before its next turn stops
+// provoking at that turn's start, with no stale redirect afterward. Turn-start
+// cleanup runs outside the not-skipped decide+action gate, so a Stunned/Sleeping creature
+// does not keep Defend/Provoke through its own skipped turn -- Provoke would otherwise keep
+// redirecting HERO's attacks at PROVOKER in round 2 even after it was Stunned.
 //
-// PROVOKER carries a fixture trait that self-inflicts a Stun-shaped status (a passive
-// `action-lock { scope: 'all' }`, 4.1-F1) the instant it takes damage (on-damage-taken ->
+// PROVOKER carries a fixture trait that self-inflicts a Stun-shaped status (a passive `action-lock { scope: 'all' }`) the instant it takes damage (on-damage-taken ->
 // apply-status).
 // WEAKLING has less HP than PROVOKER throughout, so HERO's "attack the lowest-HP enemy" rule is
 // the discriminator: whichever enemy it actually hits reveals whether Provoke's redirect is still
@@ -21,7 +20,7 @@
 //     30 -> 20, survives -> on-damage-taken fires -> self-applies the stun-fixture status
 //     (StatusApplied). WEAKLING waits.
 //   Round 2: the stun-fixture's 'all' lock is passive, so no TriggerFired; it is read right after
-//     the turn-start hooks and the turn is skipped. Turn-start cleanup runs regardless (B6):
+//     the turn-start hooks and the turn is skipped. Turn-start cleanup runs regardless:
 //     PROVOKER's `provoking` flag (still true from round 1) is cleared, emitting
 //     ActionStateEnded{defending:false, provoking:true}. Then TurnSkipped{provoker,
 //     'b6-stun-fixture'} fills the action slot, after the cleanup; no action follows.
@@ -175,10 +174,10 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: WEAKLING },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: PROVOKER },
-  // B6 fix: cleanup runs even though the turn is skipped -- PROVOKER's stale `provoking`
+  // Cleanup runs even though the turn is skipped -- PROVOKER's stale `provoking`
   // flag from round 1 is cleared here, not carried into a redirect that no longer applies.
   { type: 'ActionStateEnded', creatureId: PROVOKER, defending: false, provoking: true },
-  // 4.1-F1: the lock is passive (no on-turn-start TriggerFired); the skip fills the action slot,
+  // The lock is passive (no on-turn-start TriggerFired); the skip fills the action slot,
   // after the cleanup.
   { type: 'TurnSkipped', creatureId: PROVOKER, effectId: STUN_STATUS_ID },
   { type: 'TurnEnded', creatureId: PROVOKER },

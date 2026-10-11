@@ -1,5 +1,4 @@
-// Golden: Regen is the HEAL site of the applier snapshot (Phase 4.1-H2b2, ASSUMPTIONS 3, 113, 143,
-// 144, 146). A Regen tick heals the instance's potency -- 10% of the HEALER's (applier's) Health at
+// Golden: Regen is the HEAL site of the applier snapshot. A Regen tick heals the instance's potency -- 10% of the HEALER's (applier's) Health at
 // application -- not a percent of the bearer's own Health, frozen at application, credited to the
 // healer while it lives and to the bearer once the healer is dead (the same tick rule as damage).
 //

@@ -1,11 +1,11 @@
-// Golden: a fight-start wipe ends the fight before RoundStarted (Phase 4.1-F3, ASSUMPTION 61):
+// Golden: a fight-start wipe ends the fight before RoundStarted:
 // FightStarted ... FightEnded, with no round and no turn. Hand-derived.
 //
 // HERO (player, speed 20) carries a fixture trait with ONE on-fight-start effect: a flat 999 hit
 // on the lowest-HP enemy (no TriggerFired suppression, so one TriggerFired). FOE (enemy, 30 HP) is
 // the only enemy: the hit kills it, the enemy side is empty, and the fight ends at once. A flat
 // deal-damage is tagged 'dot' (default for flatAmount) and carries no statusId; remainingHp
-// clamps at 0. Flat mode on another creature is INDIRECT damage (4.1-H2a): the flat 999 is the
+// clamps at 0. Flat mode on another creature is INDIRECT damage: the flat 999 is the
 // magnitude, so 999 x 1 x 1 x 1 - 0.2 x FOE's defence 20 (the fixture default) = 995, no chip:
 // raw 995 -> final 995 (still far above FOE's 30 HP). The win check runs right after the hook pass and its drain, before the round starts.
 

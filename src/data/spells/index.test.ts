@@ -11,25 +11,20 @@ import {
   STINGER_SWARM,
 } from './index'
 
-// Phase 4 interstitial slice (cumulative spell unlock). This registry only exists because H2
-// accidentally re-authored a near-complete Overgrowth kit under new names in Glimmerdark (9
-// exact-or-near reskins, since deleted -- see data/spells/glimmerdark.ts's own header comment).
-// This guard is cheap protection against the SAME mistake in H3+: two spells that are
-// mechanically identical (same affinity + targetShape + effect kind + magnitude) but for their name
-// and id.
+// This registry guard exists to prevent re-authoring a near-complete kit under new names: two
+// spells that are mechanically identical (same affinity + targetShape + effect kind + magnitude)
+// but for their name and id are near-duplicates (`spec/run.md#spells-unlock-cumulatively`).
 //
-// ASSUMPTION: the brief's own guard wording is "(affinity, targetShape, payload, factor)" --
-// "factor" read as the primary effect's `spellPower`. Pre-4.1-D that field was a spell-level one
-// and an unread placeholder `1` on every stat-modifier spell, which is why this simple key caught
-// every REAL duplicate pair pre-deletion (every stat-modifier reskin shared the placeholder); the
-// key below keeps that behaviour (an `apply-stat-modifier` primary effect keys as spellPower 1). A
-// future stat-modifier spell that deliberately reuses an existing (affinity, targetShape) pair
-// with a genuinely different stat/factor would produce a false-positive collision under this key;
-// none exists in v1 content, so this is left as a known sharp edge rather than a speculative
-// addition.
-/** Phase 4.1-F3 (ASSUMPTION 60): a spell is status-only when every effect is `apply-status`.
- * Before this, every such spell of one affinity and shape keyed to `...|none|1`, so a second one
- * in an affinity would have been a false duplicate. */
+// The key reads the primary effect (the first damage/heal/stat-modifier effect; an `apply-status`
+// rider never distinguishes two spells): its payload kind, the stat it scales from and its
+// `spellPower`. A stat-modifier spell has no spell-level power, so an `apply-stat-modifier`
+// primary effect keys as spellPower 1, and a status-only spell keys by its status ids. A future
+// stat-modifier spell that deliberately reuses an existing (affinity, targetShape) pair with a
+// genuinely different stat/factor would produce a false-positive collision under this key; none
+// exists in v1 content, so this is left as a known sharp edge rather than a speculative addition.
+/** A spell is status-only when every effect is `apply-status`. It keys by its status ids:
+ * otherwise every such spell of one affinity and shape would key to `...|none|1`, so a second one
+ * in an affinity would be a false duplicate. */
 function statusOnlyIds(spell: Spell): string[] | null {
   if (spell.effects.length === 0) return null
   const ids: string[] = []
@@ -40,7 +35,7 @@ function statusOnlyIds(spell: Spell): string[] | null {
   return ids.sort()
 }
 
-/** Phase 4.1-G1 (ASSUMPTION 74): the stat a damage or heal effect actually scales from --
+/** The stat a damage or heal effect actually scales from --
  * `scalingStat`, else `offStat` normalized ('cast' reads Intelligence, 'attack' reads Attack). A
  * spell that names one stat both ways (offStat 'cast' vs scalingStat 'intelligence') keys the same. */
 function scaledStat(effect: Spell['effects'][number]): string {
@@ -55,7 +50,7 @@ function dedupKey(spell: Spell): string {
   const statusIds = statusOnlyIds(spell)
   if (statusIds)
     return `${spell.affinity}|${spell.targetShape}|status:${statusIds.join(',')}`
-  // 4.1-D: the old (payload, spellPower) pair, read off the spell's PRIMARY effect -- the first
+  // The (payload, spellPower) pair, read off the spell's PRIMARY effect -- the first
   // damage/heal/stat-modifier effect (an `apply-status` rider never distinguished two spells).
   const primary = spell.effects.find((e) => e.kind !== 'apply-status')
   const payload =
@@ -81,7 +76,7 @@ describe('ALL_SPELLS (global registry)', () => {
     expect(ids.size).toBe(ALL_SPELLS.length)
   })
 
-  it('no two spells share (affinity, targetShape, payload, factor) -- guards against H3+ reintroducing the H2 reskin mistake', () => {
+  it('no two spells share (affinity, targetShape, payload, factor)', () => {
     const seen = new Map<string, Spell>()
     for (const spell of ALL_SPELLS) {
       const key = dedupKey(spell)
@@ -97,7 +92,7 @@ describe('ALL_SPELLS (global registry)', () => {
   })
 })
 
-describe('dedupKey for status-only spells (Phase 4.1-F3)', () => {
+describe('dedupKey for status-only spells', () => {
   const statusOnly = (id: string, statusId: string): Spell => ({
     id,
     name: id,
@@ -111,7 +106,7 @@ describe('dedupKey for status-only spells (Phase 4.1-F3)', () => {
   })
 
   it('two status-only spells of one affinity and shape applying different statuses do not collide', () => {
-    // A throwaway pair. Keyed by status ids they differ; keyed the old way (payload "none",
+    // A throwaway pair. Keyed by status ids they differ; keyed by payload and spellPower alone (payload "none",
     // spellPower 1) both would have been `violence|single|none|1` -- the revert mutation shows it.
     const a = statusOnly('throwaway-a', 'silenced')
     const b = statusOnly('throwaway-b', 'pacified')
@@ -125,10 +120,9 @@ describe('dedupKey for status-only spells (Phase 4.1-F3)', () => {
   })
 })
 
-describe('Silence and Pacify (Phase 4.1-F3, G2)', () => {
-  // Append-only: the registry order maps RNG rolls to spells (`CONVENTIONS.md#combat-is-reproducible-from-its-inputs`), so the first ids are pinned in order and the two new spells come last. Phase 4.1-H2b1
-  // deliberately deleted Overcharge (index 15) and renamed Luminous Tide to Kindred Light in place, so
-  // the pin is now 24 ids.
+describe('Silence and Pacify', () => {
+  // Append-only: the registry order maps RNG rolls to spells (`CONVENTIONS.md#combat-is-reproducible-from-its-inputs`),
+  // so the first ids are pinned in order and the later spells come last.
   const FIRST_24 = [
     'ember-lance',
     'cinder-nova',
@@ -156,8 +150,8 @@ describe('Silence and Pacify (Phase 4.1-F3, G2)', () => {
     'withering-bolt',
   ]
 
-  it('ALL_SPELLS is append-only: the original 24 ids in order, then Silence, then Pacify, then the 4.1-G1 three', () => {
-    // Phase 4.1-G1: the pin is the first 26 ids, then exactly Pounce, Stifling Weight, Life Siphon.
+  it('ALL_SPELLS is append-only: the first 24 ids in order, then Silence, then Pacify, then the last three', () => {
+    // The pin is the first 26 ids, then exactly Pounce, Stifling Weight, Life Siphon.
     expect(ALL_SPELLS.slice(0, 26).map((s) => s.id)).toEqual([
       ...FIRST_24,
       'silence',
@@ -188,7 +182,7 @@ describe('Silence and Pacify (Phase 4.1-F3, G2)', () => {
   })
 })
 
-describe('Pounce, Stifling Weight and Life Siphon (Phase 4.1-G1, D4)', () => {
+describe('Pounce, Stifling Weight and Life Siphon', () => {
   it('Pounce is a plain single-enemy hit scaling off Speed at 100%', () => {
     expect(POUNCE).toMatchObject({
       affinity: 'instinct',
@@ -221,11 +215,11 @@ describe('Pounce, Stifling Weight and Life Siphon (Phase 4.1-G1, D4)', () => {
         status: { statusId: 'weaken' },
       },
     ])
-    // A status-only spell keys by its status ids (F3), so it never collides with a damage spell.
+    // A status-only spell keys by its status ids, so it never collides with a damage spell.
     expect(dedupKey(STIFLING_WEIGHT)).toBe('endurance|single|status:weaken')
   })
 
-  it('Pollen Cloud is a control spell with no damage: an AoE Sleep for 2 turns on every enemy (4.1-H2d, ASSUMPTION 150)', () => {
+  it('Pollen Cloud is a control spell with no damage: an AoE Sleep for 2 turns on every enemy', () => {
     expect(POLLEN_CLOUD).toMatchObject({
       affinity: 'wit',
       targetShape: 'aoe',
@@ -266,7 +260,7 @@ describe('Pounce, Stifling Weight and Life Siphon (Phase 4.1-G1, D4)', () => {
   })
 })
 
-describe('dedupKey reads the stat a spell scales from (Phase 4.1-G1, ASSUMPTION 74)', () => {
+describe('dedupKey reads the stat a spell scales from', () => {
   const damage = (
     id: string,
     stat: { offStat: 'cast' | 'attack' } | { scalingStat: 'intelligence' | 'speed' },

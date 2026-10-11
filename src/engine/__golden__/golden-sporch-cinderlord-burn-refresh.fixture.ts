@@ -1,15 +1,10 @@
-// Golden: Sporch Cinderlord's real `on-kill` trait applies ONE Burn to every remaining enemy
-// (Phase 4.1-H2b2: renamed from golden-sporch-cinderlord-burn-stacks -- the stacking it was named
-// for is gone). It pins the single-instance rule against real content: a fresh target gets a Burn
+// Golden: Sporch Cinderlord's real `on-kill` trait applies ONE Burn to every remaining enemy.
+// It pins the single-instance rule against real content: a fresh target gets a Burn
 // at the full 3 turns, a target already Burning keeps its one instance and has the timer
 // REFRESHED 1 -> 3, with no count anywhere.
 //
-// Field-only golden: the expected events equal main's once `stacks` is stripped from its
-// `StatusApplied` events (ENEMY_B's pre-applied 2 stacks lived in the SETUP, a throwaway events
-// array, which is the only thing that changed besides the field).
-//
 // Hand-derived (independent `node -e` calculator, verified via Bash). CINDERLORD (real Sporch
-// Cinderlord base stats, speed 16; its Health 18 is the pre-4.1-H2c value, the real one is now 30)
+// Cinderlord base stats, speed 16; its Health 18 is the fixture's own, the real one is 30)
 // acts before VICTIM/ENEMY_A/ENEMY_B (speeds 5/4/3, all
 // always-wait, never reached in 1 step). Violence-vs-Violence is always neutral (same affinity)
 // -- x1.0, no complication. No random selectors anywhere -- SEED is inert.
@@ -29,8 +24,7 @@
 //       Intelligence 20 against Cinderlord's 12, at the same percentage), but no tick lands in
 //       this one step, so neither is visible in the events.
 //
-// It applies the real Burn, no tick lands, so its potency isn't read and isn't pinned (4.1-H2d;
-// the percentage was 25% when this was written).
+// It applies the real Burn, no tick lands, so its potency isn't read and isn't pinned.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'

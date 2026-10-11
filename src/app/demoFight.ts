@@ -15,14 +15,14 @@ import {
 
 // Hardcoded demo fight data -- not real game content (species/creature data doesn't
 // exist yet, see `OPEN_QUESTIONS.md#balance-numbers`), just enough to run the real engine and show its
-// output. This file and CombatDemo.tsx are a throwaway harness; Phase 7 replaces them.
-// Successor to the Phase 2.5 harness: Phase 3.5 wires real trait/status/spell content
-// (src/data/traits/, src/data/statuses.ts, src/data/spells/) onto the same scripted
+// output. This file and CombatDemo.tsx are a throwaway harness
+// (`CONVENTIONS.md#every-feature-phase-ships-a-demo`). Real trait/status/spell content
+// (src/data/traits/, src/data/statuses.ts, src/data/spells/) is wired onto the same scripted
 // parties so triggers, DoT, stun, and stat-modifier statuses actually fire in the log.
 
 export const DEMO_SEED = 20260702
 
-// The five one-rule scripts the demo parties run, declared here (4.1-G1, ASSUMPTION 68): the
+// The five one-rule scripts the demo parties run, declared here: the
 // shipped script registry holds only role scripts, and the demo may not import test fixtures.
 // A one-rule script is player data like any other.
 const DEMO_SCRIPTS: readonly Script[] = [
@@ -63,8 +63,8 @@ export const demoStatuses = STATUS_REGISTRY
 
 // Demo-only trait: NOT part of the shipped src/data/traits.ts roster, clearly scoped here
 // like the demo parties themselves. Grants self Regen whenever hit, so a HealApplied event
-// arises naturally in-fight (per the Phase 3.5 brief's recommendation) rather than being
-// seeded. Merged into a demo-scoped trait registry below, never touching real content.
+// arises naturally in-fight rather than being seeded. Merged into a demo-scoped trait
+// registry below, never touching real content.
 const DEMO_ONLY_REGEN_ON_HIT: Trait = {
   id: 'demo-regen-on-hit',
   name: '(Demo) Regen on Hit',

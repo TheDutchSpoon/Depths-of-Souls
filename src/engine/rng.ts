@@ -1,7 +1,7 @@
 // mulberry32 — small, fast, deterministic PRNG. The only source of randomness allowed in
 // src/engine: never Math.random() (see `CONVENTIONS.md#the-engine-is-pure-and-deterministic`).
 //
-// Phase 4.1-B (B3): CombatState.rng is plain data, a bookmark { position: number } -- not a
+// CombatState.rng is plain data, a bookmark { position: number } -- not a
 // closure. `nextRandom(rng)` draws a value and ADVANCES `rng.position` IN PLACE (a deliberate,
 // narrow exception to "never mutate" -- `CONVENTIONS.md#combat-is-reproducible-from-its-inputs` calls this out explicitly: rolls "advance
 // the working copy's bookmark"). This is safe exactly because CALLERS are responsible for never
@@ -12,9 +12,9 @@
 // -- it is the CALLER's job to have already handed them a genuinely fresh working copy.
 //
 // generation.ts keeps its own separate, unrelated RNG stream (the run-layer's persistent seed) --
-// out of B3's scope, which is specifically CombatState.rng. `createSeededRng`/`SeededRng` stay
-// exported for it, now implemented ON TOP of RngState/nextRandom so there is exactly one copy of
-// the mulberry32 math to keep in step (B-2).
+// not part of CombatState.rng, which this file serves. `createSeededRng`/`SeededRng` stay
+// exported for it, implemented ON TOP of RngState/nextRandom so there is exactly one copy of
+// the mulberry32 math to keep in step.
 
 /** A plain-data RNG bookmark: the mulberry32 stream position. `position` is intentionally
  * mutable (not `readonly`) -- see this module's own doc comment above. Always stored as an

@@ -12,21 +12,20 @@
 // fixture-authored, the same "real mechanism, fixture-scoped setup" split the project's other
 // goldens use.
 //
-// Because Web is now genuinely applied (not preset), it carries its real breakChancePercent (10)
-// -- rollWebBreakFree (Slice E2; in turn-end cleanup since 4.1-F2) rolls once per LIVING
+// Because Web is genuinely applied (not preset), it carries its real breakChancePercent (10)
+// -- rollWebBreakFree (in turn-end cleanup) rolls once per LIVING
 // Web-bearer at EVERY creature's turn end, including Broodwarden's own. Both Webs were applied at
 // fight start (not born in any turn), so Broodwarden's cleanup rolls them -- but TARGET dies to
 // the attack, so only OTHERFOE rolls: draw #1 = 0.7343 (SEED 2's mulberry32 sequence: 0.7343,
 // 0.3250, ...), >= 0.10, so it doesn't break, verified via an independent `node -e` trace of the
-// exact rng.ts algorithm. (Before 4.1-F2 both rolled at turn start; draw #2 = 0.3250 was also a
-// miss, so the event log is unchanged.)
+// exact rng.ts algorithm.
 //
 // Hand-derived (independent `node -e` calculator). All vitality -> neutral affinity x1.0.
 // BROODWARDEN attacks TARGET (lowest-HP enemy, health 30, defence 0); OTHERFOE (health 1000,
 // never chosen) stays alive and Webbed throughout, keeping the count at 2 for the whole hit.
 //
 //   Bonus hit first (on-attack fires BEFORE the main hit): off = 20(attack) * spellPower
-//     (0.25 base * 2 count = 0.5) = 10, INDIRECT (a trait response, 4.1-H2a): 10 - 0.2 x def 0 = 10, no chip -> raw 10 -> final 10.
+//     (0.25 base * 2 count = 0.5) = 10, INDIRECT (a trait response): 10 - 0.2 x def 0 = 10, no chip -> raw 10 -> final 10.
 //     TARGET 30 - 10 -> 20.
 //   Main hit (off 20, def 0): core 20, chip 0.2 -> raw 20.2 -> final 20. TARGET 20 - 20 -> 0 ->
 //     dies. OTHERFOE (1000 HP) survives, so the fight is NOT over (state.result stays null).

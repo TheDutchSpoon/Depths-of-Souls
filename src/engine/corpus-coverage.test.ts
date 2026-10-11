@@ -1,4 +1,4 @@
-// Phase 4.1-D2 (PR #74 review, ASSUMPTION 40): the corpus digest only protects what its corpus
+// The corpus digest only protects what its corpus
 // exercises, so this test enforces that the corpus covers ALL real content, against the
 // registries (never hand-copied lists), so new content is covered or fails loudly:
 //   - every spell in ALL_SPELLS is cast, with its effects landing;
@@ -29,9 +29,9 @@ const STATUS_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
   ],
 ])
 
-/** Perks whose effect cannot show in any fight yet, each with its reason. Empty since 4.1-F3:
- * Clear Mind and Aggressive had nothing to be immune to until Silenced and Pacified existed, and
- * now matter in the two appended perk fights (corpus entries 522-523). */
+/** Perks whose effect cannot show in any fight yet, each with its reason. Empty: Clear Mind and
+ * Aggressive matter against Silenced and Pacified, in the two appended perk fights (corpus
+ * entries 522-523). */
 const PERK_EXEMPTIONS: ReadonlyMap<string, string> = new Map()
 
 interface ResolvedFight {
@@ -129,7 +129,7 @@ function logOf(fight: CorpusFight): string {
 
 const resolved = buildCorpus().map(resolve)
 
-describe('corpus coverage (Phase 4.1-D2)', () => {
+describe('corpus coverage', () => {
   it('every creature carries only spells matching its own affinity', () => {
     // Innate spells are prepended at fight setup and are not in the input creatures, so only the
     // loadouts the corpus itself builds are checked.
@@ -164,7 +164,7 @@ describe('corpus coverage (Phase 4.1-D2)', () => {
   })
 
   it('the Silence and Pacify spell fights (entries 524-525) cast their spell with the status landing, riding on no draw', () => {
-    // Appended in 4.1-F3 (ASSUMPTION 58): an always-cast caster against a wall, so the status
+    // Appended: an always-cast caster against a wall, so the status
     // lands whatever the seed. Pinned by index because the perk fights also happen to cast them.
     const expected = [
       ['silence', 'silenced'],
@@ -236,7 +236,7 @@ describe('corpus coverage (Phase 4.1-D2)', () => {
     ).toEqual([])
   })
 
-  it('the corpus exercises the applier snapshot (4.1-H2b2): a living-applier tick, a dead-applier tick and a Spore spread', () => {
+  it('the corpus exercises the applier snapshot: a living-applier tick, a dead-applier tick and a Spore spread', () => {
     // A tick's source is its applier while it lives (so source !== bearer), else the bearer: a
     // tick sourced from its own bearer whose status was last applied by SOMEONE ELSE is a
     // dead-applier tick (a self-applied one was applied by the bearer). A spread is Spore's own

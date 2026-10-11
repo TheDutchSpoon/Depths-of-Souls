@@ -1,16 +1,12 @@
-// Golden: Glimmerdark's Resonants signature mechanic (`content/glimmerdark.md#resonants-wit-caster-synergy`) -- "members
-// on-ally-action(cast) -> gain Attack/Int", built on the general `on-action-observed` system
-// (Slice E2) against REAL shipped content (data/species/glimmerdark.ts's real
+// Golden: Glimmerdark's Resonants signature mechanic (`content/glimmerdark.md#resonants-wit-caster-synergy`) --
+// an ally casting raises its caster's Attack/Int, built on the general `on-action-observed` system
+// against REAL shipped content (data/species/glimmerdark.ts's real
 // RESONANT_CHORUS_TRAIT/RESONANT_ADEPT_TRAIT). Proves the "ally includes self" rule concretely:
 // CHORUS is both the caster AND an ally-relationship observer of its OWN cast, so it reacts to
 // itself in the same firing ADEPT (a separate ally) reacts in.
 //
-// Phase 4 interstitial slice (cumulative spell unlock): originally cast GLOWSPARK_BOLT
-// (Glimmerdark, spellPower 1.0), since deleted as a near-dup of ARCANE_BOLT (Overgrowth, now
-// inherited at every deeper biome -- see data/spells/glimmerdark.ts's own header comment).
-// Retargeted to ARCANE_BOLT (same wit/single/damage shape) per design-owner call -- the damage
-// number below is RECOMPUTED against the new spellPower, not preserved. Phase 4.1-H2c (ASSUMPTION
-// 124) raised Arcane Bolt's spellPower from 0.5 to 1.0 and the number was re-derived again.
+// The spell is ARCANE_BOLT (a wit/single/damage spell, spellPower 1.0); the damage number below
+// is derived against that spellPower.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). Both CHORUS/TARGET are wit
 // -> neutral (x1.0); ADEPT never deals damage in this fixture, so its own affinity is moot.
@@ -24,7 +20,7 @@
 //     precision, per the harness's own precision). Neither modifies Intelligence used below.
 //   Spell damage: off = Intelligence(24, CHORUS's own, unaffected by either reaction above) x
 //     spellPower(1.0) = 24; vs def 0: core 24, chip 0.24 -> raw 24.24 -> final 24 (direct Cast; the
-//     fixture creatures are level 11, so no Additional). TARGET 100-24=76. (At 0.5: 12, 88 left.)
+//     fixture creatures are level 11, so no Additional). TARGET 100-24=76.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'

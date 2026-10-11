@@ -1,4 +1,4 @@
-// Phase 4 Slice A; XP curve reworked Phase 4.1-A (A7, ASSUMPTION 5) -- creature leveling. Pure,
+// Creature leveling. Pure,
 // no RNG. `spec/creatures.md#levels-and-xp`
 
 import type { CreatureStats } from './types'
@@ -21,20 +21,19 @@ export function scaleStatsToLevel(base: CreatureStats, level: number): CreatureS
 }
 
 /**
- * Phase 4.1-A (A7, ASSUMPTION 5): parameters, not a function -- xpCurveCoefficient/
+ * Parameters, not a function -- xpCurveCoefficient/
  * xpCurveExponent live in BalanceConfig so retuning happens in data/balance.ts. Default
  * `20 * level^2` (quadratic, `spec/creatures.md#levels-and-xp`): XP per floor clear grows with floor^2 (kills ∝
  * floor at victim levels ∝ floor), so a quadratic curve keeps party level ≈ floor at every
- * depth. Replaces Phase 4's linear `100 * level` placeholder.
+ * depth.
  */
 export function xpForNextLevel(level: number, config: BalanceConfig): number {
   return Math.round(config.xpCurveCoefficient * level ** config.xpCurveExponent)
 }
 
 /**
- * Phase 4.1-A (ASSUMPTION 5): XP per kill = the victim's OWN level (Creature.origin.level, A5),
- * awarded to every party member regardless of survival -- replaces Phase 4's floor-scaled
- * placeholder (`10 * floor`), which had no way to read the defeated Creature's actual level.
+ * XP per kill = the victim's OWN level (Creature.origin.level),
+ * awarded to every party member regardless of survival.
  * xpPerKillMultiplier is the config lever (default 1).
  */
 export function xpAwardForKill(victimLevel: number, config: BalanceConfig): number {

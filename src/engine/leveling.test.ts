@@ -51,7 +51,7 @@ describe('scaleStatsToLevel', () => {
   })
 })
 
-describe('xpForNextLevel (Phase 4.1-A, ASSUMPTION 5 -- quadratic default)', () => {
+describe('xpForNextLevel (quadratic default)', () => {
   it('is strictly monotonic in level', () => {
     expect(xpForNextLevel(2, DEFAULT_BALANCE_CONFIG)).toBeGreaterThan(
       xpForNextLevel(1, DEFAULT_BALANCE_CONFIG),
@@ -66,16 +66,16 @@ describe('xpForNextLevel (Phase 4.1-A, ASSUMPTION 5 -- quadratic default)', () =
     expect(xpForNextLevel(5, DEFAULT_BALANCE_CONFIG)).toBe(500)
   })
 
-  // Review fix F6: `xpForNextLevel`'s curve IS expressible under the Phase-4 placeholder config
-  // (unlike xpAwardForKill's floor->level basis change, below) -- 100 * level is just
-  // {coefficient: 100, exponent: 1}, the same two parameters as the new default's {20, 2}.
-  it('the Phase-4 placeholder config reproduces the OLD linear curve (100 * level) exactly', () => {
+  // `xpForNextLevel`'s curve under the placeholder config is `100 * level`, just
+  // {coefficient: 100, exponent: 1}, the same two parameters as the default's {20, 2}
+  // (unlike xpAwardForKill's basis, below).
+  it('the placeholder config gives a linear curve (100 * level) exactly', () => {
     expect(xpForNextLevel(1, PHASE_4_PLACEHOLDER_BALANCE_CONFIG)).toBe(100)
     expect(xpForNextLevel(5, PHASE_4_PLACEHOLDER_BALANCE_CONFIG)).toBe(500)
   })
 })
 
-describe('xpAwardForKill (Phase 4.1-A, ASSUMPTION 5 -- victim-level-scaled)', () => {
+describe('xpAwardForKill (victim-level-scaled)', () => {
   it("equals the victim's own level under the default multiplier (1)", () => {
     expect(xpAwardForKill(7, DEFAULT_BALANCE_CONFIG)).toBe(7)
     expect(xpAwardForKill(42, DEFAULT_BALANCE_CONFIG)).toBe(42)

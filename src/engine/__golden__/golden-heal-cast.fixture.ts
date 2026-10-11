@@ -1,5 +1,4 @@
-// Golden: a spell whose effect is a `heal` (Phase 4 Slice E; a `heal` response on `cast-target`
-// since 4.1-D) -- a single-target ally-targeting Cast heals through the response executor
+// Golden: a spell whose effect is a `heal` (a `heal` response on `cast-target`) -- a single-target ally-targeting Cast heals through the response executor
 // directly (no TriggerFired -- Cast itself is the chosen-action context, not a trigger).
 // Magnitude is the SAME value a damage spell would compute (`offStat: 'cast'` -> remap-aware
 // Intelligence, x spellPower); applied as HP restored,
@@ -44,9 +43,7 @@ export const HEAL_SPELL: Spell = {
   ],
 }
 
-/** A fixture-only script with an explicit `lowest-hp-ally` rule, authored for this slice's own
- * tests, not real content (per the brief: "at least one demo/fixture spell per new shape... for
- * this slice's own tests; the real spell set is authored in H1-H3"). Since Phase 4.1-C2b (B1) the
+/** A fixture-only script with an explicit `lowest-hp-ally` rule, not real content. The
  * stock `always-cast` has no targeting field and an ally-side spell defaults to the lowest-HP
  * ally, so it would also work here; this script pins the explicit-selector path. */
 export const HEAL_LOWEST_ALLY_SCRIPT: Script = {

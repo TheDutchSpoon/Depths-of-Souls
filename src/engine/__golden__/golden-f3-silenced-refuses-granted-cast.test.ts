@@ -6,7 +6,7 @@ import {
   expectedResult,
 } from './golden-f3-silenced-refuses-granted-cast.fixture'
 
-describe('golden replay: the real Silenced status refuses a granted cast (the real-status mirror of B2.2)', () => {
+describe('golden replay: the real Silenced status refuses a granted cast (the real-status mirror of the trait-borne golden)', () => {
   it('matches the committed event log exactly', () => {
     const { events, state } = runGolden(fixture)
 

@@ -1,19 +1,18 @@
-// Golden: PR #64 review fix 1 -- Spore spreads when its OWN turn-end DoT tick kills the host,
-// not just when an outside hit does (golden-spore-spread.fixture.ts's own scenario). Before the
-// fix, both of Spore's triggers (the DoT tick and the on-death spread) shared the status's single
-// `instanceId` as their self-re-entry guard key -- the DoT tick's own firing added that instanceId
-// to `cascade.activeInstances` and had not yet removed it by the time its own lethal damage
-// cascaded into `on-death`, so the guard skipped the spread trigger as if it were trying to
-// re-enter ITSELF. `effectsForHook` (effects.ts) now derives a distinct guard identity per trigger
-// (`${instanceId}#trigger#${index}`), so the DoT tick and the spread no longer collide.
-// Re-derived in 4.1-F2: the tick is a trigger in the bearer's OWN turn-end hooks (it used to be a
-// round-end sweep step gated by a start-of-sweep snapshot).
+// Golden: Spore spreads when its OWN turn-end DoT tick kills the host,
+// not just when an outside hit does (golden-spore-spread.fixture.ts's own scenario). Were both of
+// Spore's triggers (the DoT tick and the on-death spread) to share the status's single
+// `instanceId` as their self-re-entry guard key, the DoT tick's own firing would add that
+// instanceId to `cascade.activeInstances` and not yet have removed it by the time its own lethal
+// damage cascaded into `on-death`, so the guard would skip the spread trigger as if it were
+// trying to re-enter ITSELF. `effectsForHook` (effects.ts) derives a distinct guard identity per
+// trigger (`${instanceId}#trigger#${index}`), so the DoT tick and the spread don't collide.
+// The tick is a trigger in the bearer's OWN turn-end hooks.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). BEARER starts the fight
 // already carrying Spore (applied via a direct `applyStatus` call before any turn resolves, into
-// a throwaway events array, at turn clock 0 -- mirrors the PR #64 repro's own setup idiom) and
+// a throwaway events array, at turn clock 0) and
 // wounded to 1 HP, so its own first DoT tick is lethal. P (speed 60) acts before BEARER (speed
-// 20) before MATE (speed 10); all three `always-wait`. (4.1-H2b2) P applies the Spore: snapshot =
+// 20) before MATE (speed 10); all three `always-wait`. P applies the Spore: snapshot =
 // applier P, vitality, potency 15% of P's Speed = floor(60 x 15 / 100) = 9. Every bearer has
 // Defence 20, vitality (neutral): a tick is 9 - 0.2 x 20 = 5, sourced from P (alive).
 //
@@ -29,7 +28,7 @@
 //   BEARER's cleanup: a corpse's statuses are inert (no countdown, no StatusExpired). TurnEnded.
 //   MATE's turn: the Spore was applied in BEARER's turn, so for MATE it is NOT born this turn: at
 //     MATE's own turn end it ticks (the inherited 9 - 4 = 5 from P, MATE 100 -> 95, no TriggerFired) and then
-//     counts down 3 -> 2 (no event). (Under the old sweep it was skipped until round 2.)
+//     counts down 3 -> 2 (no event).
 //   Round 2 begins: queue = [P, MATE] (BEARER excluded, dead) -> RoundStarted{round:2} -> P's turn
 //     (always-wait) -> Waited.
 
@@ -65,8 +64,7 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { spore: 15 })
 
 export const TURN_STEPS = 4 // P, BEARER and MATE's round-1 turns, then round 2's setup and P's turn.
@@ -126,8 +124,7 @@ export const expectedEvents: CombatEvent[] = [
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
   // Pre-apply Spore to BEARER and wound it to 1 HP, both before any turn resolves -- into a
-  // throwaway events array, mirroring the PR #64 repro's own setup idiom (see the fixture's
-  // header comment).
+  // throwaway events array (see the fixture's header comment).
   let state = applyStatus(
     P,
     BEARER,

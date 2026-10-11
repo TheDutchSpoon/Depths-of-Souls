@@ -1,15 +1,15 @@
-// Golden: Rotcap Hollow's Hollowkin Wretch (`content/rotcap-hollow.md#hollowkin-wretch` "Puppet" mechanic) -- the real,
+// Golden: Rotcap Hollow's Hollowkin Wretch (`content/rotcap-hollow.md#hollowkin-wretch`) -- the real,
 // shipped `HOLLOWKIN_WRETCH_TRAIT` retaliates against whoever strikes it by confusing them,
-// proving Confusion's real data (data/statuses.ts's CONFUSION -- a `friendly-fire` effect built
-// in Slice C, given its first real producer here) applies correctly end to end against real
+// proving Confusion's real data (data/statuses.ts's CONFUSION -- a `friendly-fire`
+// effect) applies correctly end to end against real
 // content. The redirect ROLL itself (the 50%/harmful-action friendly-fire mechanism) is already
-// covered generically against fixture content in confusion.test.ts (Slice C) -- this golden
+// covered generically against fixture content in confusion.test.ts -- this golden
 // exercises the APPLICATION chain (on-damage-taken -> triggering-source -> apply-status), not a
 // re-proof of the roll.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). ATTACKER (speed 20) acts
 // before WRETCH (speed 14, always-wait, never reached in 1 step). Violence-vs-Endurance is
-// neutral (neither is the other's next-in-cycle per CLAUDE.md's
+// neutral (neither is the other's next-in-cycle per `spec/combat.md#affinity-advantage`:
 // vitality>violence>wit>endurance>instinct>vitality) -- x1.0, no complication. No random
 // selectors anywhere in this scenario -- SEED is inert.
 //

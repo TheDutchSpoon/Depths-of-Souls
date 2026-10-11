@@ -1,5 +1,5 @@
-// Phase 4.1-H1: balance simulator tests. They assert determinism, report shape and the POLICY
-// MECHANICS, never a balance value (ASSUMPTION 106), so the tuning passes (H2c, H2d) don't rewrite them.
+// Balance simulator tests. They assert determinism, report shape and the POLICY
+// MECHANICS, never a balance value, so tuning passes don't rewrite them.
 // `npm run sim` (vitest --mode sim) runs the full report instead of these tests.
 
 import { describe, expect, it } from 'vitest'
@@ -140,7 +140,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(buildReport(options)).toEqual(buildReport(options))
     })
 
-    it('has every spec, a row per content floor and the H1 report items', () => {
+    it('has every spec, a row per content floor and the report items', () => {
       const report = buildReport(options)
       expect(report.specs.map((s) => s.specId)).toEqual(SPECIALIZATIONS.map((s) => s.id))
       for (const spec of report.specs) {
@@ -165,7 +165,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  // ---- the CI threshold test's coverage (ASSUMPTIONS 148, 155) ----
+  // ---- the CI threshold test's coverage ----
 
   it('every spec has a CI threshold file (balance-ci-<spec>.test.ts), and the CI run cap covers both windows', () => {
     // Fails when a fourth spec ships without a file of its own.
@@ -197,7 +197,7 @@ describe.skipIf(isSim)('balance simulator', () => {
 
   // ---- policy mechanics ----
 
-  describe('summon once (ASSUMPTION 96)', () => {
+  describe('summon once', () => {
     it('summons a creature at 100% once, however many passes run', () => {
       const store = freshStore()
       store.setState({ soulProgress: new Map([[FIRST_CREATURE_ID, 100]]) })
@@ -224,7 +224,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  describe('failed-push rule (ASSUMPTION 97)', () => {
+  describe('failed-push rule', () => {
     it('pushes to deepestFloor + 1 after a clear', () => {
       const p = advanceProgress({ ...INITIAL_PROGRESS, deepestFloor: 4 }, 5, 'push', true)
       expect(p.deepestFloor).toBe(5)
@@ -268,7 +268,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  describe('hard wall and the stop rule (ASSUMPTION 98)', () => {
+  describe('hard wall and the stop rule', () => {
     it('records the first wall floor at the 5th failed push, re-farm runs not resetting the count', () => {
       let p = { ...INITIAL_PROGRESS, deepestFloor: 2 }
       for (let i = 1; i <= WALL_FAILED_PUSHES; i++) {
@@ -329,7 +329,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  describe('party order (ASSUMPTION 99)', () => {
+  describe('party order', () => {
     it('level descending, then ordinal ascending, top six', () => {
       const collection = collectionOf(
         instance(0, 3),
@@ -370,7 +370,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  describe('functional perks and the greedy buy (ASSUMPTION 100)', () => {
+  describe('functional perks and the greedy buy', () => {
     const effect = {
       category: 'action-instance',
       actionKind: 'cast',
@@ -433,7 +433,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  // ---- the probe (ASSUMPTION 101) ----
+  // ---- the probe ----
 
   describe('probe creature and script', () => {
     it('picks the highest-level party instance holding Pacify; ties go to the lower ordinal', () => {
@@ -492,7 +492,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  describe('boss-run restore and the probe never editing gems (ASSUMPTION 101)', () => {
+  describe('boss-run restore and the probe never editing gems', () => {
     it('restores the state exactly, so the policy run fights the identical floor', () => {
       const store = atBossFloor()
       const before = store.getState()
@@ -557,7 +557,7 @@ describe.skipIf(isSim)('balance simulator', () => {
 
   // ---- event analysis on hand-built lists ----
 
-  describe('stat-modifier stack attribution (ASSUMPTION 103)', () => {
+  describe('stat-modifier stack attribution', () => {
     const A = cid('a-player-0')
     const B = cid('b-player-1')
     const C = cid('c-player-2')
@@ -643,7 +643,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  describe('boss locked-turn share (ASSUMPTION 102)', () => {
+  describe('boss locked-turn share', () => {
     const BOSS = cid('boss-enemy-0')
     const ALLY = cid('ally-enemy-1')
     const applied = (target: typeof BOSS, statusId: string): CombatEvent => ({
@@ -727,7 +727,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  it('noteBossVisit: first visit per floor only (ASSUMPTION 102)', () => {
+  it('noteBossVisit: first visit per floor only', () => {
     const seen = new Set<number>()
     expect(noteBossVisit(seen, 10)).toBe(true)
     expect(noteBossVisit(seen, 10)).toBe(false)
@@ -735,7 +735,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     expect(noteBossVisit(seen, 10)).toBe(false)
   })
 
-  describe('boss rows: first visits vs all visits, n/a counts (ASSUMPTION 102)', () => {
+  describe('boss rows: first visits vs all visits, n/a counts', () => {
     const metrics = (locked: number, turns: number, lands: number) => ({
       bossTurns: turns,
       lockedTurns: locked,
@@ -782,9 +782,9 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  // ---- PR #84 fixes: pin the report computation (F1-F6) ----
+  // ---- pins on the report computation ----
 
-  describe('report computation on hand-built seed results (F1.1, F2, F4, F5)', () => {
+  describe('report computation on hand-built seed results', () => {
     const zeroUnicorn = {
       fightsWithUnicorn: 0,
       winsWithUnicorn: 0,
@@ -867,7 +867,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(r.t4.failedPushesByFloor).toEqual({ 3: 11, 4: 1, 10: 5 })
     })
 
-    it("F5: the walls' size, per seed, below floor 10 and to the first floor-10 clear", () => {
+    it("the walls' size, per seed, below floor 10 and to the first floor-10 clear", () => {
       const r = report([
         // Worst below 10: max(7 at floor 3, 2 at floor 9) = 7 (floor 10's own 20 is excluded).
         seedResult({
@@ -891,12 +891,12 @@ describe.skipIf(isSim)('balance simulator', () => {
       })
     })
 
-    it('F5: spreadOf', () => {
+    it('spreadOf', () => {
       expect(spreadOf([])).toBeNull()
       expect(spreadOf([5, 1, 3, 2])).toEqual({ min: 1, median: 2.5, max: 5 })
     })
 
-    describe('ASSUMPTION 107 thresholds, both sides of each boundary', () => {
+    describe('thresholds, both sides of each boundary', () => {
       it('floor 1: 80% exactly passes, below fails, no seeds fail', () => {
         const at = (clears: number) =>
           computeThresholds(many(40, (i) => ({ firstTryFloor1Clear: i < clears })))
@@ -915,7 +915,7 @@ describe.skipIf(isSim)('balance simulator', () => {
         expect(at(31).firstSoulPass).toBe(false)
       })
 
-      it('first soul: never-completing seeds count as infinite (F2)', () => {
+      it('first soul: never-completing seeds count as infinite', () => {
         // 40 seeds: 24 complete at 1..24 floor runs, 16 never do. Sorted, the 1-based positions
         // 20 and 21 (the two middles of 40) hold 20 and 21, so the median is 20.5. A median over
         // the completing seeds alone would be 12.5.
@@ -960,7 +960,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(report(results).thresholds).toEqual(computeThresholds(results))
     })
 
-    it('R2: the spec fold keeps the larger stack per bucket, with its seed; a tie keeps the first seed', () => {
+    it('the spec fold keeps the larger stack per bucket, with its seed; a tie keeps the first seed', () => {
       const stack = (
         targetId: string,
         direction: 'growth' | 'shred',
@@ -1026,7 +1026,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  it("R2: runSeed folds each fight's stacks into the seed's maxima (the wiring, on a real run)", () => {
+  it("runSeed folds each fight's stacks into the seed's maxima (the wiring, on a real run)", () => {
     // Enemy traits stack growth (Ancient Growth, Hive Mind) from the first floors, so a few real
     // runs hold stacks. Each bucket's stack names a floor the seed actually fought and has the
     // direction its bucket says; every stack is on its bucket's side.
@@ -1043,7 +1043,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     }
   })
 
-  describe('per-seed derivations hold on real runs (F1.2)', () => {
+  describe('per-seed derivations hold on real runs', () => {
     for (const specId of SPECIALIZATIONS.map((s) => s.id)) {
       for (const seed of SMOKE_SEEDS) {
         it(`${specId} seed ${seed}: the run readings match the run records`, () => {
@@ -1060,7 +1060,7 @@ describe.skipIf(isSim)('balance simulator', () => {
           } else {
             expect(r.clearsToFirstSoul).toBeNull()
           }
-          // ASSUMPTION 126: the floor-5 flag reads the finished runs at the 20-run window (here the
+          // The floor-5 flag reads the finished runs at the 20-run window (here the
           // run cap is 11, so it reads all of them).
           expect(r.reachedFloor5InWindow).toBe(
             r.runs
@@ -1072,7 +1072,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     }
   })
 
-  describe('analyzeFight on hand-built events (F1.3, F6)', () => {
+  describe('analyzeFight on hand-built events', () => {
     const noCtx = {
       unicornId: null,
       bossId: null,
@@ -1162,7 +1162,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(m.boss?.peakAttack).toBe(150)
     })
 
-    describe('R1: growth and shred stacks are separate, per side', () => {
+    describe('growth and shred stacks are separate, per side', () => {
       const P = cid('p-player-0')
       const Q = cid('q-player-1')
       const E = cid('sparkeater-enemy-0')
@@ -1259,7 +1259,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       })
     })
 
-    describe('R2: foldFightStacks keeps the larger stack per bucket', () => {
+    describe('foldFightStacks keeps the larger stack per bucket', () => {
       const stack = (
         targetId: string,
         direction: 'growth' | 'shred',
@@ -1319,7 +1319,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  describe('the live wiring: playFloorRun on the level-30, floor-9 store (F1.4)', () => {
+  describe('the live wiring: playFloorRun on the level-30, floor-9 store', () => {
     it('the ids the analysis keys on are the ids in the fight, and the counts match the events', () => {
       const store = atBossFloor()
       const played = playFloorRun(
@@ -1354,7 +1354,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(played.run.floor).toBe(10)
     })
 
-    it('the analysis names the boss of the biome the store fights, pins included (L2)', () => {
+    it('the analysis names the boss of the biome the store fights, pins included', () => {
       // Pin floor 10 to the second biome: the store then fights ITS boss, so the analysis must
       // name that boss, not the one an empty-pins lookup would give.
       const store = atBossFloor()
@@ -1380,7 +1380,7 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
   })
 
-  describe('the probe cannot leak into the policy run, end to end (F3)', () => {
+  describe('the probe cannot leak into the policy run, end to end', () => {
     function plain(state: object): object {
       return Object.fromEntries(
         Object.entries(state).filter(([, value]) => typeof value !== 'function'),

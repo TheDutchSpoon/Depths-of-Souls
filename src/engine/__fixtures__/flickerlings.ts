@@ -1,5 +1,5 @@
 // Test-only: builds a fight-ready creature from a REAL Flickerling (data/species/glimmerdark.ts), so
-// the Phase 4.1-H2b1 goldens are about the shipped content -- its base stats, affinity and innate
+// the goldens built on it are about the shipped content -- its base stats, affinity and innate
 // trait -- not a copy of it. A golden still supplies its own script and any overrides; the stats and
 // traits below are read from the species data.
 

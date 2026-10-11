@@ -1,8 +1,6 @@
 // Golden: Glimmerdark's Blindclaws signature combo (`content/glimmerdark.md#blindclaws-instinct-ambush-via-turn-order`) -- Setter grants the
 // team's hardest hitter the initiative (`grant-act-first`) -> Striker's real, shipped
-// `conditional-damage-bonus` on `acted-before-target` (PR #60 review, C1/E1 -- superseding the
-// initial submission's `ambush-strike` script, which wrongly put a creature's signature mechanic
-// in the scripting layer). Real shipped content throughout (data/species/glimmerdark.ts's real
+// `conditional-damage-bonus` on `acted-before-target` (a creature's signature mechanic lives in its trait, never in the scripting layer). Real shipped content throughout (data/species/glimmerdark.ts's real
 // BLINDCLAWS_SETTER_TRAIT/BLINDCLAWS_STRIKER_TRAIT, data/statuses.ts's real GRANT_ACT_FIRST),
 // stats overridden via the fixture (same methodology as golden-spider-broodwarden -- a clean
 // scenario, real trait objects) to force the round-1-negative / round-2-positive contrast into

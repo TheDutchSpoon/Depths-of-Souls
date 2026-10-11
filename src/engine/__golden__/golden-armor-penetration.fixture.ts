@@ -1,4 +1,4 @@
-// Golden: the `armor-penetration` passive EffectDef (Phase 4 Slice B) -- ATTACKER ignores 50%
+// Golden: the `armor-penetration` passive EffectDef -- ATTACKER ignores 50%
 // of DEFENDER's Defence, applied before the subtractive core:
 // effDefForCore = effDef x (1 - armorPenetrationPercent).
 //

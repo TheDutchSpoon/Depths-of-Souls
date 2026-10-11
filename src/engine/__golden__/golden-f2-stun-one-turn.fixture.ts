@@ -1,5 +1,5 @@
 // Golden: Stun 1 skips exactly ONE turn of its bearer, whichever side of the applier the bearer
-// acts on (Phase 4.1-F2; `spec/statuses.md#timing`: durations count the bearer's own turns).
+// acts on (`spec/statuses.md#timing`: durations count the bearer's own turns).
 // Hand-derived.
 //
 // STRIKER (player, speed 30) carries a fixture trait: on-turn-start, round 1 only, apply Stun for
@@ -11,7 +11,7 @@
 //     trigger Stuns both (slot order: FAST then SLOW). SLOW's R1 turn is skipped (TurnSkipped),
 //     then its cleanup counts the Stun down 1 -> 0 and it expires, inside SLOW's bracket.
 //   Round 2: FAST's turn is skipped (TurnSkipped) and the Stun expires in its cleanup -- one
-//     skipped turn, not zero (the old round-end countdown expired it before FAST ever acted again)
+//     skipped turn, not zero
 //     and not two. SLOW acts normally.
 //   Round 3: everybody waits.
 

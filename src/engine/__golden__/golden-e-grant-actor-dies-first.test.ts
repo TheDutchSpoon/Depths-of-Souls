@@ -3,7 +3,7 @@ import { runGolden } from '../test-utils/golden-runner'
 import * as fixture from './golden-e-grant-actor-dies-first.fixture'
 import { expectedEvents } from './golden-e-grant-actor-dies-first.fixture'
 
-describe('golden replay: 4.1-E -- a queued grant whose actor died first emits nothing', () => {
+describe('golden replay: a queued grant whose actor died first emits nothing', () => {
   it('matches the hand-derived log exactly', () => {
     const { events, state } = runGolden(fixture)
     expect(events).toEqual(expectedEvents)

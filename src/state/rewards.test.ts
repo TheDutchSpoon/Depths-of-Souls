@@ -1,6 +1,5 @@
-// Phase 4 Slice G: unit coverage for the pure reward/lookup helpers, isolated from the store's
-// Zustand plumbing (store.test.ts covers those integration paths). Reworked Phase 4.1-A (A6, A7)
-// for the new Instance shape and the injected BalanceConfig.
+// Unit coverage for the pure reward/lookup helpers, isolated from the store's
+// Zustand plumbing (store.test.ts covers those integration paths).
 
 import { describe, expect, test } from 'vitest'
 import { DEFAULT_GEM_SLOT_COUNT } from '../engine/config'
@@ -23,13 +22,12 @@ import {
   type StaticCreatureRef,
 } from './rewards'
 
-// ASSUMPTION 83: a real instance holds one entry per regular gem slot (never `[]`).
+// A real instance holds one entry per regular gem slot (never `[]`).
 const EMPTY_GEM_SLOTS = Array.from({ length: DEFAULT_GEM_SLOT_COUNT }, () => null)
 
-// Review fix F6: the Phase-4 placeholder config reproduces the OLD linear curve
-// (xpForNextLevel = 100 * level) exactly -- these four cases are byte-identical to main's own
-// pre-4.1 applyXpGain tests, just now routed through CFG instead of an implicit module constant.
-describe('applyXpGain (Phase-4 placeholder config: xpForNextLevel = 100 * level)', () => {
+// The placeholder config is a linear curve (xpForNextLevel = 100 * level); these four cases
+// route it through CFG.
+describe('applyXpGain (placeholder config: xpForNextLevel = 100 * level)', () => {
   test('no level-up when the gain stays under the threshold', () => {
     const instance: Instance = {
       id: createInstanceId('i1'),
@@ -84,9 +82,8 @@ describe('applyXpGain (Phase-4 placeholder config: xpForNextLevel = 100 * level)
   })
 })
 
-// The new default curve (20 * level^2, ASSUMPTION 5) -- kept as its own block, separate from the
-// byte-identical-to-main placeholder block above.
-describe('applyXpGain (Phase 4.1-A default config: xpForNextLevel = 20 * level^2)', () => {
+// The default curve (20 * level^2) -- its own block, separate from the placeholder block above.
+describe('applyXpGain (default config: xpForNextLevel = 20 * level^2)', () => {
   test('no level-up when the gain stays under the threshold', () => {
     const instance: Instance = {
       id: createInstanceId('i1'),
@@ -166,7 +163,7 @@ describe('staticCreatureIdFor', () => {
     expect(staticCreatureIdFor(instance)).toBe('spider-weaver')
   })
 
-  test("throws on a 'fusion' source (Phase 8 not built yet, ASSUMPTION 27)", () => {
+  test("throws on a 'fusion' source (fusion is not built)", () => {
     const instance: Instance = {
       id: createInstanceId('i1'),
       source: { kind: 'fusion', identityParent: 'a', affinityParent: 'b' },
@@ -280,7 +277,7 @@ describe('findStaticCreature', () => {
   })
 })
 
-describe('resolveKillReward (Phase 4.1-A review fix F4)', () => {
+describe('resolveKillReward', () => {
   const BBB: SpeciesCreature = {
     id: 'bbb',
     name: 'BBB',

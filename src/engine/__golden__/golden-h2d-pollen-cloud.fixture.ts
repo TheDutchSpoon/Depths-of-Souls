@@ -1,9 +1,8 @@
-// Golden: the real Pollen Cloud deals NO damage (Phase 4.1-H2d, ASSUMPTION 150): one AoE, enemy-side
+// Golden: the real Pollen Cloud deals NO damage: one AoE, enemy-side
 // cast puts Sleep (2 turns) on every target and nothing else -- no `DamageDealt` from the cast. A
-// content golden: its subject is one named spell on real data. Before 4.1-H2d the spell also dealt
-// 35% damage per target, ahead of the Sleep.
+// content golden: its subject is one named spell on real data.
 //
-// It also shows Sleep's wake-up is unchanged: nothing in the cast hits, so the sleepers stay
+// It also shows Sleep's wake-up: nothing in the cast hits, so the sleepers stay
 // asleep until a LATER hit from another source lands, and that hit wakes only its own target.
 //
 // Hand-derived (independent `node -e` calculator). Everyone is vitality (neutral x1.0) and every

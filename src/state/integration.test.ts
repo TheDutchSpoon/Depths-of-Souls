@@ -1,4 +1,4 @@
-// Phase 4 Slice I: the phase's end-to-end integration tests, run against REAL content -- the
+// End-to-end integration tests, run against REAL content -- the
 // default, zero-override store (`createGameStore()`, real biomes/specializations/starters, the
 // fixed DEFAULT_RUN_SEED), never store.test.ts's fixture biome/spec data. Per `CONVENTIONS.md#two-tier-golden-discipline`,
 // these are the explicitly-labeled **generated-then-checkpoint-
@@ -6,34 +6,30 @@
 // below pin exactly what came back -- not a hand-traced log the way store.test.ts's own
 // fixture-scoped goldens are. Per-mechanism correctness (the action instance-list, revive,
 // count-scaling stat-modifiers, on-fight-start/on-attack/on-damage-taken hooks, the reward/XP/
-// currency banking math) already rests on Slice A-H3's own focused goldens (and, for the
+// currency banking math) already rests on focused goldens (and, for the
 // Broodmother's Swarm Call specifically, golden-broodmother.test.ts's own hand-derived count-3/
 // count-2 trace); these tests' job is only to prove the whole stack composes against real data,
 // stays deterministic, and that real species-signature mechanics actually fire along the way.
 //
-// Phase 4.1-A (ASSUMPTION 3, A7): the two original scenarios below pin
+// The two original scenarios below pin
 // `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` so every non-XP number (fight count, enemy level range,
-// soul gain, instance ids aside) stays exactly what it was under Phase 4 -- only the XP
-// expectations changed (the per-kill basis moved from `10 * floor` to the victim's own level,
-// and the level curve from `100 * level` to `20 * level^2`, per ASSUMPTION 5), each listed here.
-// A separate "Phase 4.1-A defaults" describe block below exercises the REAL, zero-override store
-// (the new default BalanceConfig) instead.
+// soul gain, instance ids aside) is the placeholder config's; per-kill XP is the victim's own
+// level (`spec/creatures.md#levels-and-xp`). A separate describe block below (the real defaults)
+// exercises the REAL, zero-override store (the default BalanceConfig) instead.
 //
 // The Brute spec is picked deliberately (not Sorcerer/Shieldbarer): its starter's signature
-// trait is a direct, content-level exercise of Slice B's action instance-list model (Attack
+// trait is a direct, content-level exercise of the action instance-list model (Attack
 // resolves as two full-power instances), so this same run also re-proves that mechanism against
-// real content, not just Slice B's own fixture-scoped golden.
+// real content, not just a fixture-scoped golden.
 //
-// Phase 4.1-G1 (regenerated; still generated-then-checkpoint-verified): enemy gem sets, role scripts
-// and the 6v6 boss floor changed which creatures the fixed DEFAULT_RUN_SEED spawns (every enemy now
-// draws a full gem set from the run stream, so the stream shifts) and what they do. Every pinned
-// outcome below was regenerated and then checked against an independent invariant, noted inline;
+// Enemy gem sets, role scripts
+// and the 6v6 boss floor decide which creatures the fixed DEFAULT_RUN_SEED spawns (every enemy
+// draws a full gem set from the run stream) and what they do. Every pinned
+// outcome below was generated and then checked against an independent invariant, noted inline;
 // the species mechanics asserted are the ones the NEW draw exercises.
 //
-// Two cases: floor 1 (the original Slice I scenario, unchanged by the PR #65 review) and floor
-// 10 -- the real Broodmother boss floor, added by that review to close the "boss-encounter
-// runner" gap H1-H3 each deferred (see `spec/run.md#boss-floor-generation` and the Slice I phase-record
-// section for the full history).
+// Two cases: floor 1 and floor 10 -- the real Broodmother boss floor
+// (`spec/run.md#boss-floor-generation`).
 
 import { describe, expect, test } from 'vitest'
 import type { CombatEvent } from '../engine/types'
@@ -54,7 +50,7 @@ import { UNICORN_TRAIT } from '../data/traits/starters'
 import { createGameStore, type DescendResult } from './store'
 
 /** Narrows `descend()`'s `{ ok, ... }` union, failing loudly instead of silently continuing on
- * an unexpected refusal (Phase 4.1-A, G5/S5 -- descend no longer throws on success/failure). */
+ * an unexpected refusal (descend does not throw on success/failure). */
 function expectOk(result: DescendResult): Extract<DescendResult, { ok: true }> {
   if (!result.ok) {
     throw new Error(`expected descend() to succeed, got refusal: ${result.reason}`)
@@ -68,7 +64,7 @@ function triggersFor(events: readonly CombatEvent[], effectId: string): number {
 
 /** Buckets AttackDeclared events by `attackerId`'s own TurnStarted...TurnEnded bracket -- one
  * entry per turn that creature actually took, each the count of attack INSTANCES it declared
- * that turn (Slice B's action instance-list model: a double-strike Attack fires AttackDeclared
+ * that turn (the action instance-list model: a double-strike Attack fires AttackDeclared
  * once per instance, not once per action). */
 function attacksPerTurn(events: readonly CombatEvent[], attackerId: string): number[] {
   const counts: number[] = []
@@ -96,14 +92,14 @@ function attacksPerTurn(events: readonly CombatEvent[], attackerId: string): num
   return counts
 }
 
-describe('Slice I integration: real Brute party through real floor 1 (Overgrowth)', () => {
+describe('integration: real Brute party through real floor 1 (Overgrowth)', () => {
   test('descends floor 1 deterministically, banking rewards and firing real species mechanics', () => {
     const store = createGameStore({ balanceConfig: CFG })
     store.getState().setSpec('brute')
 
     const intro = store.getState().runScriptedIntro()
     expect(intro.result).toBe('win')
-    // The scripted intro is a run-layer special case (ASSUMPTION 23) -- the Unicorn joins
+    // The scripted intro is a run-layer special case -- the Unicorn joins
     // regardless of outcome, but this seed happens to win it: the scripted Unicorn stand-in
     // (speed 20 > the Brute starter's 15, 39 HP) acts FIRST each round, hitting for 7: raw
     // damage 0.1875 (chip only, x1.25 affinity) floors to the minimum of 1, plus the Additional
@@ -111,12 +107,12 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // 19; the Brute's double-strike hits for 18+18 (raw 11.475 at x0.75 affinity floors to 11,
     // plus the Additional min(floor(0.2 x 39), 10) = 7), bringing the stand-in from 39 HP to 21
     // to 3 in round 1, then kills it with round 2's first instance alone (3-18<0) -- instance 2
-    // has no living target left and never fires (Slice B's action instance-list model,
+    // has no living target left and never fires (the action instance-list model,
     // re-exercised here too).
     const afterIntro = store.getState()
-    // Phase 4.1-A (A6): instance ids are opaque ('inst-<ordinal>'), never embedding the creature
+    // Instance ids are opaque ('inst-<ordinal>'), never embedding the creature
     // id -- the Brute starter is the first grant (setSpec), the Unicorn the second
-    // (runScriptedIntro). Review fix F7: the opaque ids alone don't show WHICH creature is
+    // (runScriptedIntro). The opaque ids alone don't show WHICH creature is
     // which, so assert each slot's own `source` too, not just the id strings.
     expect(afterIntro.activeParty.slice(0, 2)).toEqual(['inst-0', 'inst-1'])
     expect(afterIntro.collection.get(createInstanceId('inst-0'))?.source).toEqual({
@@ -147,7 +143,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
         ['snapjaw-jaws', 5], // uncommon -> CFG.soulGainPercent.uncommon = 5
       ].sort(),
     )
-    // Phase 4.1-A (ASSUMPTION 5): xpAwardForKill = the victim's own level, not 10*floor -- see
+    // xpAwardForKill = the victim's own level, not 10*floor -- see
     // this file's own header comment. Generated-then-checkpoint-verified: the three victims'
     // own rolled levels (within enemyLevelRange(1, CFG) = {min:1, max:3}) sum to 6. Checkpoint:
     // three levels in 1..3 sum to 3..9.
@@ -175,35 +171,21 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // Swarmhive Drone (Final Sting): a trait that fires when the drone dies -- this floor's draw has
     // one drone, killed once in its fight, so the trigger fires exactly once.
     expect(triggersFor(outcome.events, SWARMHIVE_DRONE_TRAIT.id)).toBe(1)
-    // Snapjaw Jaws (content/overgrowth.md: "whenever this creature takes damage, it attacks back
-    // for 60% of its Attack"; 30% in 4.1-H2c, 60% again since 4.1-H2d) -- an on-damage-taken retaliation trigger, fires
-    // once per hit landed on it before it dies.
+    // Snapjaw Jaws (`content/overgrowth.md#snapjaw-jaws`) -- an on-damage-taken retaliation
+    // trigger, fires once per hit landed on it before it dies.
     expect(triggersFor(outcome.events, SNAPJAW_JAWS_TRAIT.id)).toBeGreaterThan(0)
-    // The Unicorn's own signature trait (`content/overgrowth.md#unicorn-lightbearer`: "whenever this creature attacks, it
-    // resurrects a random dead ally at 20% of its baseline max HP") -- Slice B's `revive`
-    // response/on-attack hook against real content, firing per attack instance across the floor.
+    // The Unicorn's own signature trait (`content/overgrowth.md#unicorn-lightbearer`) -- the
+    // `revive` response/on-attack hook against real content, firing per attack instance across
+    // the floor.
     const unicornTriggers = triggersFor(outcome.events, UNICORN_TRAIT.id)
     expect(unicornTriggers).toBeGreaterThan(0)
-    // 4.1-H2a re-pin (the Additional, ASSUMPTION 110): this used to assert `revivedCount > 0`.
-    // Before the Additional, the Treant Grovekeep fight was a ~50-turn grind of 1-damage chip hits
-    // in which the Brute kept dying and the Unicorn kept reviving it; with the Additional the same
-    // seed's fights end in 5, 6 and 5 hits and nobody is ever dead when the Unicorn attacks (the
-    // fight-2 Unicorn dies, and a dead Unicorn revives no one). So the trigger still fires on
-    // every Unicorn attack but its `random-dead-ally` pool is empty: a targeting fizzle (`spec/responses.md#fizzles`),
-    // not a suppressed trigger, and no Revived event (`revivedCount` was 0).
-    //
-    // 4.1-H2c re-pin (0 -> 1; generated-then-checkpoint-verified; first changed by Snapback at 30%
-    // of Attack, ASSUMPTION 124: the Health remap alone leaves it at 0, and so does Arcane Bolt):
-    // fight 2 against the Snapjaw Jaws now runs two events longer. The Brute (33 HP since the
-    // remap) takes two 6-damage counters (30% of its Attack against a fifth of its Defence) across
-    // its double strike, 6 left then 0, so the Unicorn's next attack finds a dead ally and its
-    // `on-attack` Guardian's Light revives the Brute at 7 HP. The revive response itself stays
+    // No Revived event: nobody dies in these fights, so the Unicorn's trigger fires on every
+    // Unicorn attack but its `random-dead-ally` pool is empty: a targeting fizzle
+    // (`spec/responses.md#fizzles`), not a suppressed trigger. The revive response itself stays
     // pinned end to end by golden-revive, golden-unicorn-starter and the golden-d3-revive-cap-*
     // goldens.
     //
-    // 4.1-H2d re-pin (1 -> 0; generated-then-checkpoint-verified). The count moved first at stage 2
-    // of the digest attribution (Snapback back at 60% of Attack, ASSUMPTION 151); Pollen Cloud and
-    // the DoT percentages leave this fight as it was. Fight 2 is the Snapjaw Jaws alone, effective
+    // Generated-then-checkpoint-verified derivation of fight 2: the Snapjaw Jaws alone, effective
     // Attack 30 against Defence 15 on both the Brute and the Unicorn. A counter is 30 x 0.6 = 18,
     // times the affinity multiplier, minus a fifth of the Defence (3): on the Brute (x1) 15, on
     // the Unicorn (x0.75) 13.5 - 3 = 10.5 -> 10. The Unicorn's opening attack draws the 10 counter
@@ -211,12 +193,8 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     // enemy below 80% HP -> attack the lowest-HP enemy") aims the Snapjaw's one attack (18) at the
     // Unicorn (29 < the Brute's 33): Unicorn 29 -> 11. The Brute then takes only the two 15
     // counters of its double strike, 33 -> 18 -> 3, alive, and the Snapjaw dies to the Unicorn's
-    // next attack. Nobody dies, so the Unicorn's `random-dead-ally` pool is empty: a targeting
-    // fizzle, no Revived event. At 30% the opening counter was 30 x 0.3 x 0.75 - 3 = 3.75 -> 3
-    // (Unicorn 39 -> 36, 92%), no enemy was below 80%, so rule 2's random pick drew the Brute: 21
-    // (33 -> 12), then two 6 counters (30 x 0.3 - 3) killed it (12 -> 6 -> 0) and the Unicorn's
-    // next attack revived it. The checkpoint loop below stays: it checks any Revived the fight
-    // produces.
+    // next attack. Nobody dies, so there is no Revived event. The checkpoint loop below checks any
+    // Revived the fight produces.
     const revives = outcome.events.filter((e) => e.type === 'Revived')
     expect(revives).toHaveLength(0)
     // Independent checkpoint: every Revived is the Unicorn's, on a creature that had died earlier
@@ -238,7 +216,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
 
     // ---- StatModifierApplied: the fight-start amplifier landed the exact documented rate ----
     // (Treant Grovekeep's +15% Health; the Swarmhive Striker's Attack amplifier is not in this
-    // floor's draw any more.)
+    // floor's draw.)
     const statMods = outcome.events.filter(
       (e): e is Extract<CombatEvent, { type: 'StatModifierApplied' }> =>
         e.type === 'StatModifierApplied',
@@ -254,19 +232,14 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     const replayResult = expectOk(replay.getState().descend(1))
     expect(replayResult.outcome).toEqual(outcome)
 
-    // ---- Slice B's action instance-list model, re-proven against real content (per this
+    // ---- the action instance-list model, re-proven against real content (per this
     // test's own header comment) ----
     const perTurn = attacksPerTurn(outcome.events, 'brute-starter-player-0')
-    // 4.1-H2a re-pin (the Additional shortens every fight): the Brute now takes 4 turns across
-    // floor 1's 3 fights (was 5), [2, 1, 2, 1] (was [2, 2, 2, 2, 1]): the double-strike still
-    // fires ordinarily, and a turn is a single attack whenever instance 1 alone kills the lone
-    // enemy (fight 1's second turn, and the whole of fight 3's one turn).
-    //
-    // 4.1-H2c re-pin (generated-then-checkpoint-verified; first changed by the Health remap,
-    // ASSUMPTION 125): with Health on the 20-45 scale no lone enemy dies to instance 1 any more, so
-    // every Brute turn is the full double strike, [2, 2, 2, 2]. The "instance 2 has no living
-    // target left" case (`resolveInstanceTarget` returns null, the instance loop breaks) is no
-    // longer reached by this run; `actions.test.ts` ('resolveInstanceTarget -- rule 4') pins it.
+    // Generated-then-checkpoint-verified: the Brute takes 4 turns across floor 1's 3 fights, each
+    // the full double strike, [2, 2, 2, 2], because with Health on the 20-45 scale no lone
+    // enemy dies to instance 1. The "instance 2 has no living target left" case
+    // (`resolveInstanceTarget` returns null, the instance loop breaks) is not reached by this
+    // run; `actions.test.ts` ('resolveInstanceTarget -- rule 4') pins it.
     expect(perTurn).toEqual([2, 2, 2, 2])
     // Independent checkpoint: a Brute turn is the double strike or, when instance 1 leaves no
     // living target, a single attack -- never anything else, and the double strike fires.
@@ -297,7 +270,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
 
     const { outcome } = expectOk(store.getState().descend(10))
 
-    // ---- One fight, 6v6 (4.1-G1): the boss, her two real spiderling adds, and three fill
+    // ---- One fight, 6v6: the boss, her two real spiderling adds, and three fill
     // creatures drawn from the biome's own pool minus the Spiders (ids confirmed from the run) ----
     expect(outcome.fightResults).toEqual(['win'])
     const died = outcome.events
@@ -329,8 +302,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
     expect(store.getState().bossesCleared).toEqual(new Set(['broodmother']))
     // bossesCleared.size(1) * 100 = 100 perk points (`spec/progression.md#perk-points`), derived, never stored.
     expect(store.getState().bossesCleared.size * 100).toBe(100)
-    // (Fill creatures are ordinary spawns with ordinary per-kill rewards, soul% included --
-    // ASSUMPTION 80.)
+    // (Fill creatures are ordinary spawns with ordinary per-kill rewards, soul% included.)
     expect([...outcome.soulGained.keys()].sort()).toEqual(
       [
         'spider-ambusher',
@@ -341,7 +313,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
       ].sort(),
     )
     expect(outcome.soulGained.has('broodmother')).toBe(false)
-    // Phase 4.1-A (ASSUMPTION 5): xpAwardForKill = each victim's own level, not 10*floor.
+    // xpAwardForKill = each victim's own level, not 10*floor.
     // Generated-then-checkpoint-verified: the boss's own level is FIXED (bossLevel(10, CFG) =
     // 16); the five other enemies' rolled levels (within enemyLevelRange(10, CFG) = {min:10,
     // max:13}) sum with it to 73. Checkpoint: five levels in 10..13 sum to 50..65, so 73 - 16 = 57
@@ -380,7 +352,7 @@ describe('Slice I integration: real Brute party through real floor 1 (Overgrowth
   })
 })
 
-describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig', () => {
+describe('real defaults: real store, real content, the default BalanceConfig', () => {
   test('the content frontier reflects the 3 authored biomes (Overgrowth/Glimmerdark/Rotcap Hollow)', () => {
     expect(contentFrontier(BIOMES)).toBe(30)
   })
@@ -393,9 +365,9 @@ describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig'
     const { outcome } = expectOk(store.getState().descend(1))
 
     // Generated-then-checkpoint-verified (this describe block's own header comment): under the
-    // real default config, floor 1 is 10 fights (not CFG's 3). Before 4.1-G1 the level-1 Brute/
-    // Unicorn party lost the 10th (`OPEN_QUESTIONS.md#fight-count` accepted "per-fight loss rate compounds" risk);
-    // with this draw (roles and full gem sets shifted the stream) it wins all ten. `fightResults`
+    // real default config, floor 1 is 10 fights (not CFG's 3). The level-1 Brute/
+    // Unicorn party wins all ten with this draw (roles and full gem sets shift the stream; the
+    // risk that a per-fight loss rate compounds is `OPEN_QUESTIONS.md#fight-count`). `fightResults`
     // stops at the first non-win per `spec/run.md#a-descent-is-atomic`, so ten wins means a cleared floor. Checkpoint:
     // one result per fight, ten fights.
     expect(outcome.fightResults).toEqual(Array.from({ length: 10 }, () => 'win'))
@@ -411,30 +383,21 @@ describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig'
   })
 })
 
-// Phase 4.1-G2 (D4, ASSUMPTION 81-83): player creatures now hold a stored, rolled gem set, which a
-// striker uses only on a turn it cannot Attack (rule 3: "Attack illegal (Pacified) -> cast a random
-// gem"). The three tests above are the Brute party (the Cragfang Mauler and the Unicorn, both
-// strikers) and every value they pin is UNCHANGED by G2. What does move is the floor-10 event log
-// (137 events on main, 212 now), and exactly one thing moves it, from event 66 on: in round 3 the
-// Unicorn, Pacified by the Pollinator Beneficiary in round 2, Waited on main (no gem to cast) and
-// now casts its slot-0 gem, Life Siphon (15 damage to the Beneficiary, 30 healed), and every later
-// event follows from that turn. Floor 1 (both stores) and the second floor-10 visit are identical
-// to main, event for event: no party member is Pacified in them. (That was G2's own log.)
-//
-// Phase 4.1-H2c re-pin (first changed by the Health remap, ASSUMPTION 125): the floor-10 log is now
-// 135 events (143 before H2c) and the Pacify lands earlier, in round 1 (event 25: the Pollinator
-// Beneficiary Pacifies the Unicorn before its first turn). The rule is unchanged: the Unicorn is
-// Pacified, takes its turn, does not Wait and casts instead. But the gem draw over its castable
-// slots now lands on slot 1, Wild Vigor (a SpellCast, then a StatModifierApplied on itself: Attack
-// x1.15, 86 -> 98.9), not slot 0, Life Siphon: the draw is a generated pin on a random roll, not
-// the rule. The test now pins the drawn slot and its effect, and checks the cast gem is one of
-// the Unicorn's stored set.
+// Player creatures hold a stored, rolled gem set, which a striker uses only on a turn it cannot
+// Attack (rule 3: "Attack illegal (Pacified) -> cast a random gem"). The three tests above are
+// the Brute party (the Cragfang Mauler and the Unicorn, both strikers), and none of the values
+// they pin involves a gem cast. What the gems move is the floor-10 fight: the Pollinator
+// Beneficiary Pacifies the Unicorn, which then takes its turn, does not Wait and casts instead.
+// The gem draw over its castable slots lands on slot 1, Wild Vigor (a SpellCast, then a
+// StatModifierApplied on itself: Attack x1.15): the draw is a generated pin on a random roll,
+// not the rule. The test pins the drawn slot and its effect, and checks the cast gem is one of
+// the Unicorn's stored set. Floor 1 and the second floor-10 visit never Pacify a party member.
 //
 // Generated-then-checkpoint-verified: the pinned gem sets are what the roll returned for the
 // default run seed; the independent checkpoints are (a) the Unicorn's set is exactly the three
 // biome-1 Vitality spells, in any order, and (b) the Mauler's are three distinct biome-1 Violence
 // spells, both from the spell registry rather than from this run.
-describe('Phase 4.1-G2: stored player gems in the real floor-10 fight', () => {
+describe('Stored player gems in the real floor-10 fight', () => {
   function floor10() {
     const store = createGameStore({ balanceConfig: CFG })
     store.getState().setSpec('brute')
@@ -472,7 +435,7 @@ describe('Phase 4.1-G2: stored player gems in the real floor-10 fight', () => {
     for (const id of mauler.gems) expect(violence.has(id as string)).toBe(true)
   })
 
-  test('the Pacified Unicorn casts one of its stored gems instead of waiting (4.1-H2c: slot 1, Wild Vigor)', () => {
+  test('the Pacified Unicorn casts one of its stored gems instead of waiting (slot 1, Wild Vigor)', () => {
     const { store, outcome } = floor10()
     const events = outcome.events
     const pacifiedAt = events.findIndex(

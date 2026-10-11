@@ -1,9 +1,9 @@
 // Golden: the turn-end interaction -- a DoT tick kills its bearer, whose on-death spreads a
 // status to another creature, which then follows the born-this-turn rule, and the win check after
-// the turn-end hooks ends the fight on a tick-kill (Phase 4.1-F2). Hand-derived.
+// the turn-end hooks ends the fight on a tick-kill. Hand-derived.
 //
 // H (player, speed 100, health 100) waits. HOST (enemy, speed 20, Spore, wounded to 1 HP) and MATE
-// (enemy, speed 10, health 100 wounded to 20 HP) both wait. Spore (data/statuses.ts, 4.1-H2b2): a
+// (enemy, speed 10, health 100 wounded to 20 HP) both wait. Spore (data/statuses.ts): a
 // turn-end tick of potency 15% of the APPLIER's Speed at application, plus an on-death spread to a
 // living, non-Spored ally that copies the dying bearer's WHOLE snapshot. H applies HOST's Spore
 // before any turn (turn clock 0), so it is never born: snapshot = applier H, vitality, potency
@@ -49,8 +49,7 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { spore: 15 })
 
 export const setup = (created: CombatState): CombatState => {

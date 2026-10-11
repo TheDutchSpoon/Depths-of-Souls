@@ -1,31 +1,29 @@
 import type { Trait } from '../../engine/effect-types'
 
-// ---- Phase 4 Slice H2: Glimmerdark (floors 11-20) -- real per-species content, built entirely
-// on primitives already proven through Slice E2 (no new engine work needed, same discipline as
-// H1). Player-facing plain-language descriptions with exact numbers live in
+// ---- Glimmerdark (floors 11-20) -- real per-species content, built entirely
+// on primitives the engine already has (no new engine work needed, same discipline as
+// Overgrowth). Player-facing plain-language descriptions with exact numbers live in
 // .claude/content/glimmerdark.md -- kept in sync with the numbers below.
 //
 // Same enabler/payoff/amplifier framing as Overgrowth (common/uncommon/rare), except where
 // `content/glimmerdark.md#resonants-wit-caster-synergy` names a single shared mechanic instead of a two-role chain (Resonants,
 // Gloomjaws) -- there, all three creatures play the SAME mechanic at escalating scope/strength
-// by rarity, per that file's own "members ... " / "self-contained" phrasing (no separate
-// enabler exists to chain off).
+// by rarity (no separate enabler exists to chain off).
 
-// ---- Flickerlings (Vitality/Wit/Violence) -- closed mechanic: the flame that feeds on itself
-// (Phase 4.1-H2b1, ASSUMPTION 116). They replaced the Glowflies once Glow was deleted. Names are
-// placeholders; every number below is parked balance (H2c). ----
+// ---- Flickerlings (Vitality/Wit/Violence) -- closed mechanic: the flame that feeds on itself.
+// Names are placeholders; every number below is parked balance. ----
 
 /** Flickerlings' Wick (enabler, Vitality): at the start of its turn it BURNS 10% of its own max
  * Health to heal the lowest-HP injured ally other than itself for 20% of its own max Health --
- * but only while some other ally is below max Health (ASSUMPTION 140). Both effects carry the
+ * but only while some other ally is below max Health. Both effects carry the
  * trigger-only gate `other-ally-injured`, so with every other ally at full Health (or none alive)
  * it neither burns nor heals, and no stray `TriggerFired` is logged. Order matters: burn, then
  * heal (the burn can't change whether another ally is hurt; a lethal burn skips the heal because
  * `fireHook` re-checks `alive` per effect, and Last Stand can still save it).
  *
- * The burn is a COST (ASSUMPTION 116): a self-targeted flat `StatPercent` with no `statusId`, so
+ * The burn is a COST: a self-targeted flat `StatPercent` with no `statusId`, so
  * it takes the cost path -- exact, ignoring Defence and modifiers -- and carries the default
- * `'dot'` label (nothing reads the label for the cost test, ASSUMPTION 131). The heal's target is
+ * `'dot'` label (nothing reads the label for the cost test). The heal's target is
  * the engine's `lowest-hp-injured-other-ally`, reading the same pool as the gate. Its amount reads
  * the Wick's OWN effective Health (`resolveFlatTotal` reads the firer). */
 export const FLICKERLING_WICK_TRAIT: Trait = {
@@ -60,7 +58,7 @@ export const FLICKERLING_WICK_TRAIT: Trait = {
  * ally permanently gains 15% Speed. `relationship: 'ally'` includes the Flare itself;
  * `selfInflicted` is the cost classification (never `source === target`), so an ordinary hit or a
  * DoT tick on an ally does not trigger it. Two Flares both fire (no `stacks: false`), so their
- * bonuses multiply (flagged for H2c's tuning pass). */
+ * bonuses multiply (flagged for tuning). */
 export const FLICKERLING_FLARE_TRAIT: Trait = {
   id: 'flickerling-flare-kindle',
   name: 'Kindle',
@@ -103,9 +101,7 @@ export const FLICKERLING_LAST_GLEAM_TRAIT: Trait = {
 
 /** Blindclaws' Setter (enabler): every turn, grants the team's hardest hitter the initiative --
  * `grant-act-first` (a `turn-order` effect, position 'first' -- see data/statuses.ts), so that ally
- * acts first starting NEXT round (re-application refreshes; it affects future rounds' turn order
- * only, like Overgrowth's Weaver Webbing an enemy -- though the Weaver now places its Web in its
- * turn-end hooks, 4.1-F2, so its own cleanup never rolls it; this grant stays at turn start). */
+ * acts first starting NEXT round (re-application refreshes; it affects future rounds' turn order only, like Overgrowth's Weaver Webbing an enemy -- though the Weaver places its Web in its turn-end hooks, so its own cleanup never rolls it; this grant stays at turn start). */
 export const BLINDCLAWS_SETTER_TRAIT: Trait = {
   id: 'blindclaws-setter-mark-the-prey',
   name: 'Mark the Prey',
@@ -122,14 +118,13 @@ export const BLINDCLAWS_SETTER_TRAIT: Trait = {
   ],
 }
 
-/** Blindclaws' Striker (payoff): "+% while acting before its target" (`content/glimmerdark.md#blindclaws-striker`), now
- * the spec'd numeric payoff (PR #60 review, C1) -- a real `conditional-damage-bonus` on the
- * `acted-before-target` condition, made possible by E1 (conditions.ts) completing that
+/** Blindclaws' Striker (payoff): "+% while acting before its target" (`content/glimmerdark.md#blindclaws-striker`), the
+ * spec'd numeric payoff -- a real `conditional-damage-bonus` on the
+ * `acted-before-target` condition, made possible by conditions.ts completing that
  * condition's non-scripting path. Action-selection (attack-or-Defend) is the scripting layer's
- * job, never a creature-identity trait -- the previous `ambush-strike` script (data/scripts.ts)
- * has been removed; Striker runs the plain `striker` role
+ * job, never a creature-identity trait -- Striker runs the plain `striker` role
  * (species/glimmerdark.ts), and this is its whole identity. Scoped to `actionKind: 'attack'`
- * (`content/glimmerdark.md#blindclaws-striker` own wording is Attack-specific; the gems it casts when Pacified get no
+ * (`content/glimmerdark.md#blindclaws-striker` is Attack-specific; the gems it casts when Pacified get no
  * bonus). */
 export const BLINDCLAWS_STRIKER_TRAIT: Trait = {
   id: 'blindclaws-striker-killing-instinct',
@@ -165,11 +160,11 @@ export const BLINDCLAWS_VANGUARD_TRAIT: Trait = {
 }
 
 // ---- Resonants (Wit lean) -- closed mechanic: caster synergy (on-action-observed) ----
-// `content/glimmerdark.md#resonants-wit-caster-synergy` names ONE shared mechanic ("members on-ally-action(cast) -> gain
-// Attack/Int"), not a two-role enabler/payoff chain -- all three creatures share the same
-// on-action-observed reaction, escalating scope/strength by rarity (common/uncommon/rare), per
-// the file's own "power up around casters" framing. Resonants are the ONLY locked
-// on-action-observed consumer across every species/starter/spec tree (`spec/effects.md#action-reactions-actor-self-hooks-or-observation`).
+// `content/glimmerdark.md#resonants-wit-caster-synergy` names ONE shared mechanic (an ally
+// casting raises the stats of its caster), not a two-role enabler/payoff chain -- all three
+// creatures share the same on-action-observed reaction, escalating scope/strength by rarity
+// (common/uncommon/rare). Resonants are the ONLY on-action-observed
+// consumer across every species/starter/spec tree (`spec/effects.md#action-reactions-actor-self-hooks-or-observation`).
 
 /** Resonant Chorus (common): a `caster` (species/glimmerdark.ts), one of the biome's cast roles
  * -- reinforces its own "caster synergy" identity by being a caster
@@ -212,10 +207,9 @@ export const RESONANT_ADEPT_TRAIT: Trait = {
   ],
 }
 
-/** Resonant Overtone (rare, amplifier): PR #60 review -- replaces the previous "gain both
- * stats" (a bigger numeric copy of Chorus+Adept) with echo-cast, `content/glimmerdark.md#resonant-overtone` actual
- * spec'd mechanic: `on-ally-action (cast) -> 10% the caster echo-casts a random one of its own
- * spells` (non-stacking; echoes are themselves observable -> chains). Phase 4.1-E (A2): a
+/** Resonant Overtone (rare, amplifier): echo-cast (`content/glimmerdark.md#resonant-overtone`):
+ * `on-ally-action (cast) -> 10% the caster echo-casts a random one of its own
+ * spells` (non-stacking; echoes are themselves observable -> chains). A
  * `perform-action(triggering-source, cast gemSlot 'random' at a 'random' target)` response -- the
  * observed caster (the bearer included: an `ally` observation includes self) casts again once the
  * original cast, payload and all, has completed (the grant is queued and drained after the
@@ -245,16 +239,16 @@ export const RESONANT_OVERTONE_TRAIT: Trait = {
 }
 
 // ---- Sparkeaters (Wit/Violence lean per `content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites`) -- closed mechanic: stat parasites ----
-// `content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites`: "Drainers (on-attack -> -stat enemy + same +stat self, both
-// permanent-for-fight)" -- a flat "stat parasite" identity with no enabler/payoff chain (like
-// Resonants above), so each creature drains a different stat. PR #60 review (C2): per-creature
-// affinity now matches the stat each one drains, per CLAUDE.md's affinity->stat soft-mapping --
+// `content/glimmerdark.md#sparkeaters-violenceendurancevitality-stat-parasites`: a flat "stat
+// parasite" identity with no enabler/payoff chain (like
+// Resonants above), so each creature drains a different stat. Per-creature
+// affinity matches the stat each one drains (`spec/creatures.md#affinity`) --
 // Leech (Attack) -> violence, Gorger (Defence) -> endurance; Voidmaw stays vitality (species/
 // glimmerdark.ts). Side effect: the biome's affinity spread flattens to 4/4/4/4/2.
 
 /** Sparkeater Leech (common): every attack, permanently steals 10% Attack from its target to
- * itself (two apply-stat-modifier responses on the same hook -- "free", per `content/glimmerdark.md#sparkeater-leech`
- * own "~free (2x apply-stat-modifier)" note). */
+ * itself (two apply-stat-modifier responses on the same hook, no new primitive;
+ * `content/glimmerdark.md#sparkeater-leech`). */
 export const SPARKEATER_LEECH_TRAIT: Trait = {
   id: 'sparkeater-leech-drain',
   name: 'Drain',
@@ -310,11 +304,10 @@ export const SPARKEATER_GORGER_TRAIT: Trait = {
   ],
 }
 
-/** Sparkeater Voidmaw (rare, amplifier, Vitality coverage sprinkle): PR #60 review (C3) --
- * replaces the previous "steal Attack+Defence" (a diluted copy of Leech+Gorger, not a distinct
- * mechanic) with a genuinely different one -- a max-HP parasite that feeds the whole team, not
- * just itself. Every attack, it steals 10% max Health from its target (which also clamps the
- * target's CURRENT hp down, resolution.ts's post-stat-modifier clamp -- it bites now) and raises
+/** Sparkeater Voidmaw (rare, amplifier, Vitality coverage sprinkle): a max-HP parasite that
+ * feeds the whole team, not just itself (a distinct mechanic from Leech's and Gorger's stat
+ * steals). Every attack, it steals 10% max Health from its target (which also clamps the
+ * target's CURRENT hp down, resolution.ts's post-stat-modifier clamp -- it bites) and raises
  * every living ally's (including itself) max Health by 5% (a ceiling raise only -- no auto-heal,
  * same `clampedHp` asymmetry Treant Grovekeep's one-time team +max-HP already established;
  * Voidmaw's version repeats every attack instead of firing once, so a smaller per-hit number). */
@@ -350,7 +343,7 @@ export const SPARKEATER_VOIDMAW_TRAIT: Trait = {
 // the Stalker executes (conditional-damage-bonus), the Executioner snowballs (a triggered apply-stat-modifier),
 // the Ravager softens (armor-penetration). All three are existing primitives.
 
-/** Gloomjaw Stalker (common): the finisher -- unchanged, +30% damage to enemies below 30% HP. */
+/** Gloomjaw Stalker (common): the finisher -- +30% damage to enemies below 30% HP. */
 export const GLOOMJAW_STALKER_TRAIT: Trait = {
   id: 'gloomjaw-stalker-predatory-instinct',
   name: 'Predatory Instinct',
@@ -369,10 +362,9 @@ export const GLOOMJAW_STALKER_TRAIT: Trait = {
   ],
 }
 
-/** Gloomjaw Executioner (uncommon): PR #60 review (C4) -- replaces the previous "bigger execute
- * bonus" (a numeric duplicate of Stalker) with a genuinely different verb: snowballs off
+/** Gloomjaw Executioner (uncommon): a different verb from Stalker's execute bonus: snowballs off
  * finishing blows. Every kill permanently raises its own Attack by 15% for the rest of the fight
- * (apply-stat-modifier, same on-kill shape Overgrowth's Rotfeeders will use in H3) -- it doesn't
+ * (apply-stat-modifier, same on-kill shape as the Rotfeeders') -- it doesn't
  * need a low-HP target to pay off, it needs kills. */
 export const GLOOMJAW_EXECUTIONER_TRAIT: Trait = {
   id: 'gloomjaw-executioner-finishing-blow',
@@ -391,9 +383,8 @@ export const GLOOMJAW_EXECUTIONER_TRAIT: Trait = {
   ],
 }
 
-/** Gloomjaw Ravager (rare, amplifier): PR #60 review (C4) -- replaces the previous "biggest
- * execute bonus + armor-pen" combo (still numerically anchored to Stalker/Executioner's own
- * verb) with armor-penetration as its WHOLE identity, unconditional -- it doesn't hit low-HP
+/** Gloomjaw Ravager (rare, amplifier): armor-penetration is its WHOLE identity, unconditional --
+ * it doesn't hit low-HP
  * targets harder, it ignores 30% of EVERY target's Defence outright, softening healthy targets
  * into the rest of the species' execute range faster. */
 export const GLOOMJAW_RAVAGER_TRAIT: Trait = {
@@ -423,8 +414,8 @@ export const SHELLBACK_WARDEN_TRAIT: Trait = {
   ],
 }
 
-/** Shellback Brawler (payoff/"attacker"): `content/glimmerdark.md#shellback-brawler` "attacker uses stat-remap
- * Defence->Attack" -- its Attack action reads its own (high) effective Defence instead of Attack
+/** Shellback Brawler (payoff/"attacker"): `content/glimmerdark.md#shellback-brawler` -- its
+ * Attack action reads its own (high) effective Defence instead of Attack
  * entirely, "armor-as-weapon" literally. Pairs with a correspondingly high-Defence/low-Attack
  * base stat line (species/glimmerdark.ts). */
 export const SHELLBACK_BRAWLER_TRAIT: Trait = {
@@ -455,10 +446,9 @@ export const SHELLBACK_BULWARK_TRAIT: Trait = {
 }
 
 // ---- The Leech Sovereign (floor-20 boss) ----
-// `content/glimmerdark.md#leech-sovereign`: "Every hit steals a stat (permanent -you/+it, same as Sparkeaters); you
-// hollow out over time -- answer is raw burst. Lean identity (no heavy add layer)." A single,
-// bigger-magnitude version of Sparkeaters' own steal shape (Leech's exact mechanism, at boss
-// scale) -- deliberately ONE mechanic, no second effect, per the design doc's own "lean identity."
+// `content/glimmerdark.md#leech-sovereign`: a single, bigger-magnitude version of Sparkeaters' own
+// steal shape (Leech's exact mechanism, at boss scale) -- deliberately ONE mechanic, no second
+// effect (a lean boss).
 
 export const LEECH_SOVEREIGN_TRAIT: Trait = {
   id: 'leech-sovereign-vital-siphon',

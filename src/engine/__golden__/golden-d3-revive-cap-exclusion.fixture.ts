@@ -1,5 +1,4 @@
-// Golden: D3's revive cap, the mixed-pool exclusion half (Phase 4.1-B, PR #69 review R5, then
-// R5-2) -- `random-dead-ally` excludes a dead ally already at MAX_REVIVES_PER_CREATURE from the
+// Golden: the revive cap, the mixed-pool exclusion half -- `random-dead-ally` excludes a dead ally already at MAX_REVIVES_PER_CREATURE from the
 // pool BEFORE drawing, so a pool with one capped and one eligible dead ally always lands on the
 // eligible one.
 //
@@ -101,7 +100,7 @@ export const expectedEvents: CombatEvent[] = [
 /** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
-  // createCombat resets currentHp/revivesUsed at fight-setup (S1/D3), so the pre-capped,
+  // createCombat resets currentHp/revivesUsed at fight-setup, so the pre-capped,
   // pre-dead starting state has to be applied here, after creation -- see this fixture's own
   // header comment (mirrors golden-dot.fixture.ts's identical constraint).
   const withCapped = updateCreature(created, CAPPED, {

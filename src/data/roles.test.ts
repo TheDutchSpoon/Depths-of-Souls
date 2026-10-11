@@ -11,7 +11,7 @@ import {
 } from '../engine/generation'
 import type { Affinity } from '../engine/types'
 
-// Phase 4.1-G1 (D4, ASSUMPTION 8 as amended, ASSUMPTION 68): every creature's `defaultScriptId` is
+// Every creature's `defaultScriptId` is
 // its role, per the content docs' "Roles" tables. This table is those tables, one row per
 // creature: the 54 spawn-pool creatures and 3 bosses, then the starters and the Unicorn.
 
@@ -76,10 +76,10 @@ const ROLES: Readonly<Record<string, string>> = {
   'sporch-ashborn': 'caster',
   'sporch-cinderlord': 'opener',
   'rot-sovereign': 'warden',
-  // Starters and the Unicorn (ASSUMPTION 8)
+  // Starters and the Unicorn
   'sorcerer-starter': 'caster',
   'brute-starter': 'striker',
-  'shieldbarer-starter': 'warden', // 4.1-H2c (ASSUMPTION 123): was 'taunter'
+  'shieldbarer-starter': 'warden', // Was 'taunter'
   unicorn: 'striker',
 }
 
@@ -103,7 +103,7 @@ function allCreatures(): Located[] {
   return found
 }
 
-describe('creature roles (Phase 4.1-G1)', () => {
+describe('creature roles', () => {
   const creatures = allCreatures()
 
   it('the table covers every shipped creature exactly once', () => {
@@ -126,7 +126,7 @@ describe('creature roles (Phase 4.1-G1)', () => {
       )
     }
     // Starters are excluded: they have their own rows above (the Stonehorn Warden starter is a
-    // warden since 4.1-H2c; Snapjaw Lure is the only taunter).
+    // warden; Snapjaw Lure is the only taunter).
     expect(Object.fromEntries(counts)).toEqual({
       striker: 27,
       warden: 10,
@@ -151,7 +151,7 @@ describe('creature roles (Phase 4.1-G1)', () => {
   })
 })
 
-describe('spell pools back every role (Phase 4.1-G1, D4)', () => {
+describe('spell pools back every role', () => {
   const AFFINITIES: readonly Affinity[] = [
     'vitality',
     'violence',

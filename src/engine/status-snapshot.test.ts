@@ -1,6 +1,5 @@
-// Phase 4.1-H2b2: the unit tests of the two status rules -- single instance and the applier
-// snapshot (`spec/statuses.md#the-applier-snapshot`, ASSUMPTIONS 113, 114, 143,
-// 144, 145). The focused goldens (golden-h2b2-*) pin the mechanisms through whole fights; these pin
+// The unit tests of the two status rules -- single instance and the applier
+// snapshot (`spec/statuses.md#the-applier-snapshot`). The focused goldens (golden-h2b2-*) pin the mechanisms through whole fights; these pin
 // `snapshotFor`, `applyStatus`'s keep/replace/refresh rules, the resolver invariant and the
 // validators directly.
 
@@ -28,8 +27,7 @@ import type { CombatEvent, CombatState, Creature, Spell } from './types'
 import type { EffectDef, StatusDef, StatusEffect, StatusSnapshot } from './effect-types'
 
 // This file's subject is the snapshot RULE, not Poison's number: it borrows the real Poison and pins
-// its percentage at the 20% its arithmetic uses (4.1-H2d, ASSUMPTION 147, extended to a rule's unit
-// test), so a tuning pass never changes its expected values.
+// its percentage at the 20% its arithmetic uses (extended to a rule's unit test), so a tuning pass never changes its expected values.
 const STATUSES = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 const A = createCreatureId('a')
@@ -247,7 +245,7 @@ describe('applyStatus: single instance, keep the stronger snapshot, refresh the 
   })
 })
 
-describe('pass-on rule: only the SAME status inherits the firing instance’s snapshot (ASSUMPTION 145)', () => {
+describe('pass-on rule: only the SAME status inherits the firing instance’s snapshot', () => {
   it('a status X whose effect applies a DIFFERENT status snapshots its bearer fresh, not X’s snapshot', () => {
     const xTick: EffectDef = {
       category: 'triggered',

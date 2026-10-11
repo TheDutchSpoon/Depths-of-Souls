@@ -1,7 +1,6 @@
-// Phase 4.1-G2 (D2): `summon` and `setPartySlot`, each with its `can…` query, against the real,
+// `summon` and `setPartySlot`, each with its `can…` query, against the real,
 // zero-override content store (real biomes, specs, starters, spells). Every failure reason has a
-// test, and every `can…` query is checked to agree with its action on the same cases (ASSUMPTIONS
-// 89-92). Gem-roll details live in store-gems.test.ts; here only the shape of the result matters.
+// test, and every `can…` query is checked to agree with its action on the same cases. Gem-roll details live in store-gems.test.ts; here only the shape of the result matters.
 
 import { describe, expect, test } from 'vitest'
 import { DEFAULT_GEM_SLOT_COUNT } from '../engine/config'
@@ -59,7 +58,7 @@ describe('summon()', () => {
     })
   })
 
-  test('the starters and the Unicorn resolve but never bank soul: soul-incomplete (ASSUMPTION 91)', () => {
+  test('the starters and the Unicorn resolve but never bank soul: soul-incomplete', () => {
     const store = storeWithSoul()
     expect(store.getState().summon('unicorn')).toEqual({
       ok: false,
@@ -91,11 +90,11 @@ describe('summon()', () => {
       source: { kind: 'creature', creatureId: SUMMONABLE.id },
       level: 1,
       xp: 0,
-      scriptId: null, // ASSUMPTION 86: null = the role
+      scriptId: null, // Null = the role
     })
     expect(instance.gems).toHaveLength(DEFAULT_GEM_SLOT_COUNT)
     expect(state.nextInstanceOrdinal).toBe(ordinalBefore + 1)
-    // ASSUMPTION 89: summoning is free and does not touch soul.
+    // Summoning is free and does not touch soul.
     expect(state.soulProgress.get(SUMMONABLE.id)).toBe(100)
   })
 
@@ -255,7 +254,7 @@ describe('setPartySlot()', () => {
     expect(store.getState().activeParty).toEqual(partyBefore)
   })
 
-  test('null empties the slot, and emptying every slot is allowed; descend then refuses (ASSUMPTION 10)', () => {
+  test('null empties the slot, and emptying every slot is allowed; descend then refuses', () => {
     const { store } = threeInParty()
     for (let slot = 0; slot < PARTY_SIZE; slot++) {
       expect(store.getState().setPartySlot(slot, null)).toEqual({ ok: true })

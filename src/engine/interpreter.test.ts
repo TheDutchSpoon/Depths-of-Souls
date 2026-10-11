@@ -26,9 +26,8 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
   }
 }
 
-/** decideAction now returns an unresolved Intent (Phase 4.1-C2a, A1); resolve it the same way
- * combat.ts's resolveTurn does, so every existing assertion's VALUE (the resolved Action) stays
- * unchanged -- only the call site adapts to the new two-step API. */
+/** decideAction returns an unresolved Intent; this resolves it the same way
+ * combat.ts's resolveTurn does, so each assertion is on the VALUE (the resolved Action). */
 function decide(creature: Creature, script: Script | null, state: CombatState) {
   const intent = decideAction(creature, script, state)
   return resolveIntent(creature, intent, state)
@@ -98,7 +97,7 @@ describe('decideAction -- skip on invalid', () => {
     expect(decide(player[0]!, script, state)).toEqual({ kind: 'defend' })
   })
 
-  it('a targeting-less rule is valid (B1): it matches, carries no targeting, and resolves to the side-aware default', () => {
+  it('a targeting-less rule is valid: it matches, carries no targeting, and resolves to the side-aware default', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const enemy = makeParty('enemy', [
       { id: 'tanky', health: 50 }, // slot 0: first-by-slot, but NOT the lowest HP
@@ -153,7 +152,7 @@ describe('decideAction -- skip on invalid', () => {
   })
 })
 
-describe('decideAction -- acted-before-target on a targeting-less rule (B1 peek)', () => {
+describe('decideAction -- acted-before-target on a targeting-less rule (peek)', () => {
   // Queue: tanky (slot 0, HP 50), me, weak (slot 1, HP 10). `me` acts before `weak`, the
   // lowest-HP enemy = the side-aware default, but AFTER `tanky`, the first-by-slot enemy -- so the
   // condition is true only if the peek uses the side-aware default.
@@ -418,7 +417,7 @@ describe('decideAction -- RNG lookahead vs execution discipline', () => {
   })
 })
 
-describe('decideAction -- scoped action-lock (Phase 4 Slice B; passive lock since 4.1-F1)', () => {
+describe('decideAction -- scoped action-lock (passive lock)', () => {
   function suppressEffect(scope: 'attack' | 'cast'): ActiveEffect {
     return {
       category: 'action-lock',
@@ -502,7 +501,7 @@ describe('decideAction -- scoped action-lock (Phase 4 Slice B; passive lock sinc
   })
 })
 
-describe('decideAction -- status-immunity vs scoped action-lock (Phase 4 Slice C)', () => {
+describe('decideAction -- status-immunity vs scoped action-lock', () => {
   const SILENCED_CAST_SUPPRESSION: ActiveEffect = {
     category: 'status',
     statusId: 'silenced',
@@ -594,7 +593,7 @@ describe('decideAction -- status-immunity vs scoped action-lock (Phase 4 Slice C
   })
 })
 
-describe('checkLegality -- pure, draws nothing (Phase 4.1-C2a, A1)', () => {
+describe('checkLegality -- pure, draws nothing', () => {
   it('an Attack intent is legal iff the enemy side has a living member (suppression is covered separately, above)', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])

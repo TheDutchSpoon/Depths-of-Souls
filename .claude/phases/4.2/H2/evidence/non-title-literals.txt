@@ -1,0 +1,7 @@
+6 non-title string literals still match a provenance pattern:
+src/engine/corpus-coverage.test.ts:27: "applied only by the Phase-3 mechanism trait 'reeling' (data/traits/core.ts), which is in the "
+src/state/balance-sim.test.ts:164: "ASSUMPTION 22"
+src/state/balance-sim.ts:1788: "T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below "
+src/state/balance-sim.ts:1866: "ASSUMPTION 22: floor-1 clear >= "
+src/state/balance-sim.ts:1876: "ASSUMPTION 22 summary (reported, not asserted):"
+src/state/rewards.ts:52: "staticCreatureIdFor: fused instances are not materializable before Phase 8"

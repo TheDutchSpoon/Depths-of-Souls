@@ -9,7 +9,7 @@ import {
   SEED,
 } from './golden-g1-leech-sovereign-pacified.fixture'
 
-describe('golden replay: a Pacified Leech Sovereign casts instead of waiting (Phase 4.1-G1, real content)', () => {
+describe('golden replay: a Pacified Leech Sovereign casts instead of waiting (real content)', () => {
   it('matches the committed event log exactly, and her turn spends exactly one random draw', () => {
     const { events, state } = runGolden(fixture)
 

@@ -1,6 +1,6 @@
-// Phase 4 Slice F: the three spec starter creatures + the Unicorn (`spec/progression.md#starter-species-are-stubs` "Starter
-// species (stubbed -- rosters deferred)" section). Real, shipped content -- authored directly as
-// `SpeciesCreature`s (generation.ts's own static-content shape), so a future Slice G store can
+// The three spec starter creatures + the Unicorn (`spec/progression.md#starter-species-are-stubs`).
+// Real, shipped content -- authored directly as
+// `SpeciesCreature`s (generation.ts's own static-content shape), so the store can
 // materialize a starter through the EXACT same `materializeCreature` path any spawned enemy goes
 // through, per `spec/creatures.md#materializecreature`.
 //
@@ -8,17 +8,16 @@
 // Arcane Bolt are shared library carriers, defined in `../traits`/`../spells` and referenced here
 // by id/object, never redefined.
 //
-// ASSUMPTION (Slice F): each starter/Unicorn's own species is stubbed (`spec/progression.md#starter-species-are-stubs`: "for
-// now only the starter creature exists -- species sits below the >=3-creature minimum on
-// purpose"), so a placeholder `speciesId` string stands in below (never a real Species grouping,
+// Each starter/Unicorn's own species is stubbed (`spec/progression.md#starter-species-are-stubs`),
+// so a placeholder `speciesId` string stands in below (never a real Species grouping,
 // never drawn from a biome spawn pool). `rarity` is likewise a required SpeciesCreature field
 // that is mechanically meaningless here (starters/the Unicorn are never rarity-weighted-drawn);
 // set to 'rare' as a flavor-only placeholder.
 //
-// ASSUMPTION (Slice F): exact base stats (10-30 per `spec/creatures.md#core-stats`) are parked balance, picked only
+// Exact base stats (10-30 per `spec/creatures.md#core-stats`) are parked balance, picked only
 // to satisfy each starter's qualitative "high X" description (`specializations/brute.md#starter-cragfang-mauler`,
 // `specializations/shieldbarer.md#starter-stonehorn-warden`, `specializations/sorcerer.md#starter-glyphmoth-seer`) --
-// not exercised by any locked design number.
+// not derived from any design number.
 //
 // Each affinity is set in its entry's content doc: the three starters' in the specialization docs
 // above, the Unicorn's (Vitality) in `content/overgrowth.md#unicorn-lightbearer`. Each starter's
@@ -35,13 +34,13 @@ import {
 
 // ---- Sorcerer starter ----
 // "Wit affinity, high Intelligence. Trait: grants one spell as a permanent extra gem + 50%
-// chance on-turn-end to cast a random equipped spell" (`specializations/sorcerer.md#starter-glyphmoth-seer` / sorcerer.md). Its
+// chance on-turn-end to cast a random equipped spell" (`specializations/sorcerer.md#starter-glyphmoth-seer`). Its
 // own signature trait (SORCERER_STARTER_TRAIT) and granted gem (ARCANE_BOLT) live in the
 // library -- see `../traits`/`../spells`.
 
 export const SORCERER_STARTER: SpeciesCreature = {
   id: 'sorcerer-starter',
-  // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- the Sorcerer starter's real species
+  // A placeholder name -- the Sorcerer starter's real species
   // (`spec/progression.md#starter-species-are-stubs`) is authored in a later biome; this stands in until then.
   name: 'Glyphmoth Seer',
   affinity: 'wit',
@@ -49,26 +48,24 @@ export const SORCERER_STARTER: SpeciesCreature = {
   defaultScriptId: 'caster',
   innateTraitIds: [SORCERER_STARTER_TRAIT.id],
   rarity: 'rare',
-  // Phase 4.1-B (A8): the FIXED `equippedSpells: [ARCANE_BOLT, null, null, null]` loadout is
-  // deleted (`SpeciesCreature.equippedSpells` no longer exists) -- Arcane Bolt is now granted by
+  // Arcane Bolt is granted by
   // SORCERER_STARTER_TRAIT's own `innate-spell` effect, prepended by `createCombat`'s fight-setup
-  // ahead of this creature's regular (default, all-null) gem slots. Materialized result is
-  // byte-identical: `[Arcane Bolt, null, null, null]` -- immediately castable by the `caster` role
-  // (4.1-G1), which casts a random castable gem every turn.
+  // ahead of this creature's regular (default, all-null) gem slots. The materialized result is
+  // `[Arcane Bolt, null, null, null]` -- immediately castable by the `caster` role, which
+  // casts a random castable gem every turn.
 }
 
 export const SORCERER_STARTER_SPECIES_ID = 'sorcerer-starter-species'
 
 // ---- Brute starter ----
-// "high Attack. Trait: Attack resolves one additional instance -- Attack executes twice at 100%,
-// each a real attack firing on-attack (same target as the first, default-target fallback if it
-// died)." A direct, content-level exercise of Slice B's action instance-list model -- no new
-// resolver logic needed (per the plan's own "Response reuse check"). Its signature trait
+// High Attack; its trait makes Attack execute twice at 100%
+// (`specializations/brute.md#starter-cragfang-mauler`). A direct, content-level exercise of the
+// action instance-list model -- no new resolver logic needed. Its signature trait
 // (BRUTE_STARTER_TRAIT) lives in the library -- see `../traits`.
 
 export const BRUTE_STARTER: SpeciesCreature = {
   id: 'brute-starter',
-  // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
+  // A placeholder name -- see SORCERER_STARTER's own comment.
   name: 'Cragfang Mauler',
   affinity: 'violence',
   baseStats: { health: 33, attack: 30, intelligence: 10, defence: 15, speed: 15 },
@@ -85,12 +82,11 @@ export const BRUTE_STARTER_SPECIES_ID = 'brute-starter-species'
 
 export const SHIELDBARER_STARTER: SpeciesCreature = {
   id: 'shieldbarer-starter',
-  // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
+  // A placeholder name -- see SORCERER_STARTER's own comment.
   name: 'Stonehorn Warden',
   affinity: 'endurance',
-  // 4.1-H2c: Health 39 is the ASSUMPTION 125 remap of 25; Attack 15 is ASSUMPTION 123 (was 10).
   baseStats: { health: 39, attack: 15, intelligence: 10, defence: 30, speed: 10 },
-  // 4.1-H2c (ASSUMPTION 123): 'warden', was 'taunter' ("always: Provoke"), which never attacked.
+  // 'warden', not 'taunter' ("always: Provoke"): taunter provokes every turn, so it never attacks.
   defaultScriptId: 'warden',
   innateTraitIds: [SHIELDBARER_STARTER_TRAIT.id],
   rarity: 'rare',
@@ -99,15 +95,14 @@ export const SHIELDBARER_STARTER: SpeciesCreature = {
 export const SHIELDBARER_STARTER_SPECIES_ID = 'shieldbarer-starter-species'
 
 // ---- The Unicorn ----
-// "Whenever this creature attacks, it resurrects a random dead ally at 20% of its baseline max
-// HP. Fires per attack hit." Unique, permanent intro-helper party member (`content/overgrowth.md#unicorn-lightbearer`);
-// joins via the scripted-intro encounter, a Slice G/run-layer concern -- this slice only authors
-// the creature content itself. Its signature trait (UNICORN_TRAIT) lives in the library -- see
+// Unique, permanent intro-helper party member (`content/overgrowth.md#unicorn-lightbearer`);
+// joins via the scripted-intro encounter, a run-layer concern -- this file only authors the
+// creature content itself. Its signature trait (UNICORN_TRAIT) lives in the library -- see
 // `../traits`.
 
 export const UNICORN: SpeciesCreature = {
   id: 'unicorn',
-  // Phase 4.1-A (G3, ASSUMPTION 25): a placeholder name -- see SORCERER_STARTER's own comment.
+  // A placeholder name -- see SORCERER_STARTER's own comment.
   name: 'Unicorn Lightbearer',
   affinity: 'vitality',
   baseStats: { health: 39, attack: 15, intelligence: 15, defence: 15, speed: 20 },

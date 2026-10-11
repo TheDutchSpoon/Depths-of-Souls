@@ -1,5 +1,4 @@
-// Golden: a spell whose effect is an `apply-stat-modifier`, AOE shape (Phase 4 Slice E; a response
-// on `cast-target` since 4.1-D) -- an ally-targeting AOE Cast freezes the caster's OWN living side
+// Golden: a spell whose effect is an `apply-stat-modifier`, AOE shape (a response on `cast-target`) -- an ally-targeting AOE Cast freezes the caster's OWN living side
 // (mirroring the enemy-AOE freeze rule) and applies the modifier through the response executor per
 // target (no TriggerFired -- Cast itself is the
 // chosen-action context, not a trigger), emitting the same StatModifierApplied event a triggered

@@ -1,4 +1,4 @@
-// Golden: B5 on the CAST path (Phase 4.1-C2c, PR #73 review) -- the twin of
+// Golden: the pre-hit-hook fizzle on the CAST path -- the twin of
 // golden-b5-fizzle-rule4-retarget, which only covers executeAttack. A single-target DAMAGE spell
 // followed by an `apply-status` effect, whose target is killed by an `on-cast` trigger during that instance's
 // pre-hit hooks: the hit fizzles (no damage, no status), SpellCast stays, and the caster's second
@@ -17,7 +17,7 @@
 //
 // Fight start: lowest-hp-enemy over {30, 25, 20} = C (unique minimum, no tie): 20 - 15 = 5.
 // Instance 1 (100%): default target lowest-hp-enemy over {A 30, B 25, C 5} = C. SpellCast(C).
-//   on-cast: 5*100 = 500 <= 30*20 = 600 TRUE -> flat 99 on C -> 0, CreatureDied(C). B5: the target
+//   on-cast: 5*100 = 500 <= 30*20 = 600 TRUE -> flat 99 on C -> 0, CreatureDied(C). The target
 //   died in its own pre-hook -> NO DamageDealt for the spell, NO StatusApplied.
 // Instance 2 (30%): rule 4 -> lowest-HP survivor of {A 30, B 25} = B (first-by-slot would be A).
 //   SpellCast(B). on-cast on B: 25*100 = 2500 <= 30*25 = 750 FALSE -> no trigger. Hit: off 20 x

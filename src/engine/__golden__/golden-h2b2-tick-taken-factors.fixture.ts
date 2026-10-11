@@ -1,5 +1,5 @@
 // Golden: a status tick passes through the BEARER'S taken factors -- Defend's AND its status/perk
-// factors (Phase 4.1-H2b2, ASSUMPTIONS 113, 143). The focused case for the factor list inside
+// factors. The focused case for the factor list inside
 // `applyTickDamage`: Defend's factors (from `resolveDefenceAndTakenFactors`) first, then the
 // bearer's own (`gatherTakenFactors`, here Vulnerability x1.5). Dropping the second part leaves
 // every other golden green; only this one pins it.
@@ -66,8 +66,7 @@ export const scripts = new Map([
   ...FIXTURE_SCRIPTS_BY_ID,
   [waitThenDefend.id, waitThenDefend],
 ])
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (4.1-H2d, ASSUMPTION 147: tuning
-// never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState => {

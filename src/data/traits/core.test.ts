@@ -24,7 +24,7 @@ function instantiateTraitEffects(
   return instantiateEffectDefs(resolveBaselineEffects(c, registry), 0).effects
 }
 
-describe('stock traits (representative Phase 3 content)', () => {
+describe('stock traits (representative content)', () => {
   it('registers every stock trait by id', () => {
     expect([...TRAIT_REGISTRY.keys()].sort()).toEqual(
       STOCK_TRAITS.map((t) => t.id).sort(),

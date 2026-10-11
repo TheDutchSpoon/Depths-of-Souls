@@ -1,8 +1,7 @@
-// Phase 4 Slice E (Support-spell model) -- targeted unit coverage for the two mechanisms the
-// brief's own Tests bullet calls out beyond the two goldens: ally-single-target Cast resolution
-// bypassing Provoke, and ally-AOE Cast resolution never rolling Confusion. Payload correctness
-// (heal magnitude/clamp, stat-modifier application) is proven end-to-end by the two goldens
-// instead (golden-heal-cast, golden-buff-cast) -- this file is about TARGETING only.
+// Targeted unit coverage for two mechanisms beyond the two goldens: ally-single-target Cast
+// resolution bypassing Provoke, and ally-AOE Cast resolution never rolling Confusion. Payload
+// correctness (heal magnitude/clamp, stat-modifier application) is proven end-to-end by the two
+// goldens instead (golden-heal-cast, golden-buff-cast) -- this file is about TARGETING only.
 
 import { describe, expect, it } from 'vitest'
 import { decideAction } from './interpreter'
@@ -62,7 +61,7 @@ const BUFF_AOE_SPELL: Spell = {
   ],
 }
 
-describe('interpreter -- ally-targeting single Cast (Phase 4 Slice E)', () => {
+describe('interpreter -- ally-targeting single Cast', () => {
   it('resolves via the ally target pool and ignores an active enemy Provoke entirely', () => {
     const player = makeParty('player', [
       { id: 'healer', intelligence: 20, equippedSpells: [HEAL_SPELL] },
@@ -70,8 +69,7 @@ describe('interpreter -- ally-targeting single Cast (Phase 4 Slice E)', () => {
     ])
     // If ally casts were routed through resolveOffensiveTarget (the enemy-cast pipeline), this
     // provoking foe would hijack the target to ITSELF -- an enemy id, not the wounded ally.
-    // `spec/combat.md#provoke`: "Provoke applies only to enemy-targeting offensive actions; ally-targeting
-    // actions... are unaffected."
+    // Provoke exempts ally-side actions (`spec/combat.md#provoke`).
     const enemy = makeParty('enemy', [{ id: 'foe', provoking: true }])
     const script: Script = {
       id: 'test-heal-script',
@@ -111,7 +109,7 @@ function confusionFixture(chancePercent: number): ActiveEffect {
   }
 }
 
-describe('executeCastAoe -- ally-targeting AOE Cast (Phase 4 Slice E)', () => {
+describe('executeCastAoe -- ally-targeting AOE Cast', () => {
   it("freezes the caster's own living side and draws ZERO RNG, even at 100% Confusion", () => {
     const player = makeParty('player', [
       {
@@ -156,12 +154,11 @@ describe('executeCastAoe -- ally-targeting AOE Cast (Phase 4 Slice E)', () => {
   })
 })
 
-// Design-agent addendum (Phase 4 Slice E): the v1 ally target-selector set was completed
-// (highest-hp/highest-attack/highest-intelligence/random-ally, mirroring the enemy set) alongside
-// this slice's own support-spell model. target-selectors.test.ts covers the selectors themselves
+// The v1 ally target-selector set (highest-hp/highest-attack/highest-intelligence/random-ally,
+// mirroring the enemy set) supports the support-spell model. target-selectors.test.ts covers the selectors themselves
 // in isolation; this is the end-to-end proof that a real ally-targeting Cast, scripted with one of
 // the new selectors, actually lands its payload on the selector's pick.
-describe('ally-targeting Cast end-to-end -- highest-attack-ally (Phase 4 Slice E addendum)', () => {
+describe('ally-targeting Cast end-to-end -- highest-attack-ally', () => {
   it('a stat-modifier buff scripted with highest-attack-ally lands on the highest-Attack ally', () => {
     const BUFF_SINGLE_SPELL: Spell = {
       id: 'test-buff-single',

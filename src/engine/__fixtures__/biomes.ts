@@ -1,5 +1,5 @@
-// Test-only fixtures for generation.ts. Not real content -- see src/data/biomes.ts (Slice A
-// placeholder shape) and src/data/species/ (real content, Slice H1-H3). Never imported by
+// Test-only fixtures for generation.ts. Not real content -- see src/data/biomes.ts (the
+// placeholder shape) and src/data/species/ (real content). Never imported by
 // src/app or src/ui.
 
 import { createBiomeId } from '../ids'
@@ -36,7 +36,7 @@ export const FIXTURE_BRUISER_RARE: SpeciesCreature = {
   rarity: 'rare',
 }
 
-// A cast-role creature (role `caster`, 4.1-G1; was `always-cast`): generation throws if it has no
+// A cast-role creature (role `caster`): generation throws if it has no
 // affinity-matched (wit) spell to roll.
 export const FIXTURE_CASTER: SpeciesCreature = {
   id: 'fixture-caster',
@@ -118,9 +118,8 @@ export const FIXTURE_WIT_BOLT_TIER2: Spell = {
   ],
 }
 
-/** The global spell registry a generateFloor call rolls a cast-role loadout from (Phase 4
- * interstitial slice: no longer a per-biome `spellPool` -- every biome shares one cumulative
- * list, filtered by `unlockedAtBiome <= biomeIndex` then by affinity). */
+/** The global spell registry a generateFloor call rolls a cast-role loadout from (every biome
+ * shares one cumulative list, filtered by `unlockedAtBiome <= biomeIndex` then by affinity). */
 export const FIXTURE_ALL_SPELLS: readonly Spell[] = [
   FIXTURE_WIT_BOLT,
   FIXTURE_VIOLENCE_BOLT,
@@ -145,9 +144,9 @@ export const FIXTURE_BIOME_SEQUENCE: readonly BiomeData[] = Array.from(
   }),
 )
 
-// ---- Boss floors (Phase 4 Slice I, PR #65 review) ----
+// ---- Boss floors ----
 // A SEPARATE fixture biome, deliberately never merged into FIXTURE_BIOME itself -- "every fixture
-// biome is boss-less" is the invariant that keeps every pre-Slice-I generateFloor golden/test
+// biome is boss-less" is the invariant that keeps every non-boss generateFloor golden/test
 // byte-identical (see `spec/run.md#boss-floor-generation`).
 
 export const FIXTURE_BOSS_CREATURE: SpeciesCreature = {

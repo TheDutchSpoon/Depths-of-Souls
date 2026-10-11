@@ -4,7 +4,7 @@ import { MAX_TRIGGER_CASCADE_DEPTH } from '../config'
 import * as fixture from './golden-e-echo-chain-truncated.fixture'
 import { expectedEvents } from './golden-e-echo-chain-truncated.fixture'
 
-describe('golden replay: 4.1-E -- an echo chain through the same Overtone, truncated at the real cap', () => {
+describe('golden replay: an echo chain through the same Overtone, truncated at the real cap', () => {
   it('matches the hand-built log exactly', () => {
     const { events, state } = runGolden(fixture)
     expect(events).toHaveLength(2007)

@@ -1,0 +1,57 @@
+# The mechanical script (4.2-H2)
+
+One-off, run from the scratchpad outside the repo (`node mech.ts <root>`); it is not in the repo. It imports `scanSource`
+from `scripts/docs-check/scanner.ts` (read only), edits only comment text and title-literal text by position, repeats until
+a pass changes nothing, and never rewraps prose. Everything it does not match is left for the hand pass.
+
+## Token grammar
+
+A non-id tag is one of: `Phase <n>[.<m>][-<X>..]` (optionally ` Slice <X>..`), `<n>.<m>-<X>..`, `Slice <X>..`,
+`Pre-<n>.<m>-<X>`, `PR #<n>` (optionally ` review`), `ASSUMPTIONS? <n>[, <n>].. [as amended]`, `review fix [<id>]`, `§<n>`,
+`grill`. An id is `<X><n>[.<m>][<x>]` (`A7`, `S4`, `D4`, `H2c`, `B2.2`). Separators: `,` `;` ` / ` ` + ` ` -- ` `: ` `and`.
+
+An id is removed only when it sits in the same parenthetical as a non-id tag, or directly follows one (fix 1). A
+parenthetical or leading label made only of ids is never edited: it was residue for the hand pass (`bare-ids.md`).
+
+## Rules
+
+| Rule | Does |
+| --- | --- |
+| M1 | a leading label (tags + attached ids, an optional parenthetical, then `:` or ` --`) at the start of a comment or sentence goes; the next word is capitalised only if it is a plain lower-case word (fix 11: an identifier, a hyphenated word or a backticked word is left) |
+| M1d | M1 where the label's parenthetical held words (a slice's descriptor, such as `(Rotcap Hollow, Hollowkin)`): dropped with the label, the *why* is in the sentence after the colon |
+| M2 | a parenthetical of only tags (and the ids attached to them) is removed with its leading space |
+| M3 | a mixed parenthetical: tag-only pieces go (split at top-level separators), the rest stays |
+| M4 | `(<tags> -- <why>)`: the tags and their separator go, the *why* stays (M3 where the first piece was a tag and the separator `--` or `:`) |
+| M5 | a test title (string or template part): the same rules on the title text; the quote character is kept and escaped; before writing, a file where a new duplicate full name would appear is held (A9) |
+| M6 | a comment line left empty is deleted, an emptied one-line `/** */` or an empty block comment is deleted |
+
+## Printed table (real run on the branch), rule x folder
+
+    rule	folder	count
+    M1	eslint.config.js	1
+    M1	src/data	63
+    M1	src/engine	200
+    M1	src/state	84
+    M1	vite.config.ts	2
+    M1d	src/app	1
+    M1d	src/data	16
+    M1d	src/engine	78
+    M1d	src/state	11
+    M2	src/app	1
+    M2	src/data	29
+    M2	src/engine	189
+    M2	src/state	47
+    M3	src/data	16
+    M3	src/engine	93
+    M3	src/state	13
+    M4	src/data	6
+    M4	src/engine	51
+    M4	src/state	7
+    M5	src/data	31
+    M5	src/engine	209
+    M5	src/state	34
+
+Total edits: 1182 (a title edit is counted under M5; the same pass also applied M1-M4 to title text).
+
+Gate on the script: after the real run and Prettier, `comment-proof origin/main --mask` passed on the mechanical diff alone (325 changed files, 274 mask entries), before any hand edit.
+Residue after the script: 686 `comments` problems in 133 files, which the hand pass cleared.

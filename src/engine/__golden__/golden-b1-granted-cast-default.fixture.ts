@@ -1,18 +1,18 @@
-// Golden: B1 (Phase 4.1-C2b) -- a granted cast with an enemy-side single-target spell and no
-// explicit targeting takes the SIDE-AWARE default: the LOWEST-HP enemy, not Phase 1's first
+// Golden: a granted cast with an enemy-side single-target spell and no
+// explicit targeting takes the SIDE-AWARE default: the LOWEST-HP enemy, not the first
 // living enemy by slot. Hand-derived.
 //
 // CASTER (player): Int 20, speed 20, always-wait (so the ONLY hit in the log is the granted cast),
 // trait `granted-caster-fixture` = on-turn-end perform-action(self, cast 'random') at chancePercent
-// 100 (re-expressed from `bonus-cast` in 4.1-E: the log gains TriggerFired + ActionGranted
-// before the SpellCast; target/damage unchanged). Exactly ONE equipped spell,
+// 100 (the log gains TriggerFired + ActionGranted
+// before the SpellCast). Exactly ONE equipped spell,
 // BOLT (enemy-side single target, spellPower 0.5). The trait has no innate-spell, so the slot
 // list after createCombat is exactly [BOLT] (asserted in the test): the gem draw is a pool of
 // one (index floor(r*1) = 0), so no gem-draw ambiguity muddies what this golden pins.
 // Enemies (always-wait): A (slot 0, HP 50, speed 1) and B (slot 1, HP 30, speed 2). Slot 0 has
 // MORE HP than slot 1, so the two defaults disagree: first-by-slot = A, lowest-HP = B.
 // No Provoker, no Confusion, no Tunnel Vision, so the override pipeline (which every granted
-// cast goes through since C2c) draws nothing here. All vitality (x1.0).
+// cast goes through) draws nothing here. All vitality (x1.0).
 //
 // One round (queue: caster 20, B 2, A 1), three turns:
 //   CASTER waits. Turn-end: granted cast rolls (100%: passes whatever the draw), gem draw over
@@ -99,7 +99,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'RoundStarted', round: 1 },
   { type: 'TurnStarted', creatureId: CASTER },
   { type: 'Waited', creatureId: CASTER },
-  // 4.1-E: the granted cast is now an on-turn-end `perform-action` grant (chance = draw #1, then
+  // The granted cast is an on-turn-end `perform-action` grant (chance = draw #1, then
   // drained in the granted-actions step: gem draw #2, target draw -> default, no draw).
   { type: 'TriggerFired', sourceId: CASTER, hook: 'on-turn-end', effectId: TRAIT_ID },
   { type: 'ActionGranted', sourceId: CASTER, actorId: CASTER, effectId: TRAIT_ID },

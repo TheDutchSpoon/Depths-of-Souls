@@ -1,4 +1,4 @@
-// Phase 4.1-B (B3): a test-only helper. Freezes a value recursively (plain objects, arrays,
+// A test-only helper. Freezes a value recursively (plain objects, arrays,
 // and their own nested values) so any write anywhere in the tree throws (strict mode) --
 // engine tests that resolve the same snapshot more than once, or assert on a snapshot AFTER
 // resolving it, wrap it in this helper to prove the input was never mutated.

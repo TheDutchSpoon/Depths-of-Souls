@@ -3,7 +3,7 @@ import { runGolden } from '../test-utils/golden-runner'
 import * as fixture from './golden-leech-sovereign.fixture'
 import { expectedEvents } from './golden-leech-sovereign.fixture'
 
-describe('golden replay: the Leech Sovereign, Glimmerdark boss (Phase 4 Slice H2, real content)', () => {
+describe('golden replay: the Leech Sovereign, Glimmerdark boss (real content)', () => {
   it('matches the committed event log exactly (Attack steal compounds across two hits)', () => {
     const { events, state } = runGolden(fixture)
 

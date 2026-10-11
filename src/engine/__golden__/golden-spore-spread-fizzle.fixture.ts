@@ -1,15 +1,14 @@
 // Golden: Spore's spread-on-death fizzles when every living member of the dying host's own side
-// is already Spored -- `content/rotcap-hollow.md#spore` own "fizzles if none [qualify]" loop-guard. The
+// is already Spored -- `content/rotcap-hollow.md#spore` states the loop-guard. The
 // trigger's own `TriggerFired` still fires (it's a targeting fizzle, not a suppressed trigger),
 // but nothing follows it: no `StatusApplied`, and NO RNG DRAW AT ALL (the empty-pool check in
 // `resolveResponseTargets`'s `random-ally-without-status` case returns before ever calling
 // `nextRandom(state.rng)`) -- this is PROVEN, not just asserted, by the test's own trailing
 // check: it asserts `state.rng.position` still equals `SEED` (the plain-data bookmark's
 // starting value) after the whole run -- if anything inside the run had consumed even one draw,
-// the bookmark would have advanced away from that value (Phase 4.1-B, B3).
+// the bookmark would have advanced away from that value.
 //
-// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned
-// (4.1-H2d).
+// It applies the real Spore, but no tick lands, so its potency isn't read and isn't pinned.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). Both BEARER and its only
 // living ally, ALLY, are pre-applied Spore before any turn resolves (a throwaway events array),

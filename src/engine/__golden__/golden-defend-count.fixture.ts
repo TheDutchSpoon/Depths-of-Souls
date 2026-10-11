@@ -1,9 +1,8 @@
 // Golden: Creature.defendCount + the `magnitudeSource` count-scaling primitive on a
-// `damage-modifier` status, `accumulation: 'multiplicative'` (the DEFAULT mode -- Phase 4 Slice D,
-// a fixture mechanism demo, not real content). PR #47 review amendment: this fixture now
-// specifically PINS the multiplicative mode (asymptotes toward 0, never clamped) -- the
-// additive-with-cap mode (real Bulwark's actual "-5%/Defend, cap 80%" shape,
-// specializations/shieldbarer.md) is its own separate golden,
+// `damage-modifier` status, `accumulation: 'multiplicative'` (the DEFAULT mode, a fixture mechanism demo, not real content). This fixture
+// PINS the multiplicative mode (asymptotes toward 0, never clamped) -- the
+// additive-with-cap mode (real Bulwark's -5%/Defend, cap 80% shape,
+// `specializations/shieldbarer.md#bulwark`) is its own separate golden,
 // golden-defend-count-additive-cap, since a purely multiplicative `magnitude ** count` does NOT
 // reach or hold a hard cap (see that fixture's header for why).
 //
@@ -11,8 +10,7 @@
 // damage-modifier ONCE at fight-start, whose `magnitude` (0.95) is raised to the power of a LIVE
 // `self-defend-count` reading instead of the status's own count (a status is single-instance: 1) -- so the taken
 // factor keeps shrinking round-over-round purely from BEARER defending again, with no
-// re-application needed. Multiplicative mode never clamps (`spec/effects.md#taken-reduction-accumulation`: "reductions trend toward
-// but never reach 0") -- contrast the additive-with-cap fixture, which hard-clamps.
+// re-application needed. Multiplicative mode never clamps (`spec/effects.md#taken-reduction-accumulation`) -- contrast the additive-with-cap fixture, which hard-clamps.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // BEARER is faster (defends first each round, so it's already `defending` when hit that same
@@ -139,7 +137,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: STRIKER },
   { type: 'RoundStarted', round: 2 },
   { type: 'TurnStarted', creatureId: BEARER },
-  // Phase 4.1-C (D6, fixes B6): round 1's Defend expires at BEARER's own turn-start cleanup,
+  // Round 1's Defend expires at BEARER's own turn-start cleanup,
   // unconditionally, before it decides its round-2 action.
   { type: 'ActionStateEnded', creatureId: BEARER, defending: true, provoking: false },
   { type: 'Defended', creatureId: BEARER },

@@ -10,7 +10,7 @@ import {
   expectedResultFail,
 } from './golden-cheat-death.fixture'
 
-describe('golden replay: cheat-death (Phase 4 Slice D, Last Stand-shaped)', () => {
+describe('golden replay: cheat-death (Last Stand-shaped)', () => {
   it('a successful roll (SEED 7) survives at 1 HP -- no CreatureDied for the bearer', () => {
     const { state, events } = runGolden(fixture, { seed: SEED_SUCCESS })
 

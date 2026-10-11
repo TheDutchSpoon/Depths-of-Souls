@@ -1,5 +1,5 @@
 // Golden: Clear Mind and Aggressive -- the REAL perks, passed as the player side's effects through
-// the golden runner (Phase 4.1-F3, ASSUMPTION 63). Immunity suppresses the EFFECT, not the
+// the golden runner. Immunity suppresses the EFFECT, not the
 // application: Silence and Pacify still land (StatusApplied), `has-status` stays true, and the
 // lock is ignored -- for the chosen action AND for a granted cast. Hand-derived.
 //

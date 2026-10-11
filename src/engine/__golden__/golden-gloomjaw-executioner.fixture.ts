@@ -1,4 +1,4 @@
-// Golden: Glimmerdark's Gloomjaw Executioner (PR #60 review, C4) -- "snowballs off finishing
+// Golden: Glimmerdark's Gloomjaw Executioner -- "snowballs off finishing
 // blows": every kill permanently raises its own Attack by 15% for the rest of the fight
 // (`on-kill -> apply-stat-modifier self`), against REAL shipped content (data/species/
 // glimmerdark.ts's real GLOOMJAW_EXECUTIONER_TRAIT). Two kills, one per round, prove the

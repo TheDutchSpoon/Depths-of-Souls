@@ -1,7 +1,7 @@
-// Phase 4.1-G2 (G4): `setPerkLevel`, `canSetPerkLevel` and `refundAllPerks` against the real specs.
-// Budget numbers (ASSUMPTION 93): perk points = bossesCleared x 100; spend = Σ level x
+// `setPerkLevel`, `canSetPerkLevel` and `refundAllPerks` against the real specs.
+// Budget numbers: perk points = bossesCleared x 100; spend = Σ level x
 // costPerLevel. Brute's `might` is maxLevel 50 x 2 = 100 and `flurry` is 1 x 100; Sorcerer's
-// `wit-mastery` is 1 x 60 and inert until Phase 8 (still buyable: no gating).
+// `wit-mastery` is 1 x 60 and inert (`specializations/sorcerer.md#wit-mastery`; still buyable: no gating).
 
 import { describe, expect, test } from 'vitest'
 import { createGameStore } from './store'
@@ -103,7 +103,7 @@ describe('setPerkLevel()', () => {
     expect(store.getState().perkSpend.has('might')).toBe(false)
   })
 
-  test('a perk inert until Phase 8 is buyable (no gating)', () => {
+  test('an inert perk is buyable (no gating)', () => {
     const store = createGameStore()
     store.getState().setSpec('sorcerer')
     store.getState().recordBossKill('boss-0')
