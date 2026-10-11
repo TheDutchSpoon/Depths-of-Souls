@@ -73,13 +73,6 @@ opens with a "Read this when …" line.
   `**Known bug:**` line). The spec holds the rules and the system-wide constants, and links to
   content rather than restating it.
 
-(Phase 4.2 only) Until 4.2-G, citations of the form `CONVENTIONS "…"` and `GAME_DESIGN §…`, in
-`src/` and in the docs, name the files as they were at commit `892f1b8`. Find the section's new
-file with the map in `.claude/phases/4.2/brief.md` ("The file map"), or read the old text with
-`git show 892f1b8:.claude/CONVENTIONS.md` (or `GAME_DESIGN.md`). Cross-links between the living
-docs use the label form (`spec/combat.md` "Damage channels and the Additional") until 4.2-G
-converts them to anchors.
-
 ## Tech stack
 
 - **TypeScript** (strict): non-negotiable; types are the contract we build against.

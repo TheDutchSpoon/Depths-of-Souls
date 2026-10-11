@@ -53,10 +53,10 @@ is the start-of-beta baseline").
 
 ## Phase 4.2 — Docs restructure: the context diet (between 4.1 and 4.5)
 *Brief: `.claude/phases/4.2/brief.md`. Docs only: no behaviour change and no golden changes; the one
-`src/` change is comment-only (citations). Done: 4.2-A to 4.2-E.* Every fresh agent chat read about
+`src/` change is comment-only (citations). Done: 4.2-A to 4.2-F.* Every fresh agent chat read about
 300 KB of living docs, most of it CONVENTIONS and GAME_DESIGN. 4.2 splits them into
-`spec/<subsystem>.md`, one home per rule, condenses every living doc, and makes citations anchors
-checked in CI. The rules the condensed docs are written to are in `CLAUDE.md` "How the spec is
+`spec/<subsystem>.md`, one home per rule, condenses every living doc, makes citations anchors
+checked in CI, and strips provenance from code comments (4.2-H). The rules the condensed docs are written to are in `CLAUDE.md` "How the spec is
 written".
 
 ## Phase 4.5 — Run-loop demo (interlude)
@@ -75,6 +75,10 @@ guardrails as every demo; own brief and phase record.
   overlaps Stinger Swarm); Cinder Nova is promoted to real biome-1 content (the pool's only plain
   AOE damage spell, with reviewed name and numbers). `CONVENTIONS.md` "Mechanism goldens vs content
   goldens" carries a "Known bug" line that the fix's PR review removes.
+- **One copy of Splashing's adjacency lookup:** Splashing (`engine/actions.ts`) uses a private
+  copy of `adjacentLivingTargets`, byte-identical to the export in `engine/targeting.ts` that only
+  `targeting.test.ts` calls, so that test pins code Splashing doesn't run. `actions.ts` imports the
+  `targeting.ts` export and the private copy is deleted (goldens byte-identical).
 - **Two Shieldbarer perk bugs** (the code doesn't match the perks' design): **Thorns** must answer
   only damage from an attack or a spell (today it answers any damage with a source, trait and perk
   hits and other retaliations included); **Last Stand** must roll only when the lethal damage is
@@ -153,8 +157,7 @@ guardrails as every demo; own brief and phase record.
 ## Phase 8 — Progression & incremental layers
 - Builds the `## Not built` halves of `spec/creatures.md` (gems as items, fusion, equipment,
   catch-up levelling, summoning at the Soul Altar) and `spec/run.md` (facilities, recipe drops and
-  currency sinks), plus further unlocks and equipment variety. Masteries were considered and are out
-  of scope.
+  currency sinks), plus further unlocks and equipment variety.
 - This is where the long-term game lives; it is meaningful only once Phases 1–7 are solid.
 
 ## Phase 9 — Manual mode

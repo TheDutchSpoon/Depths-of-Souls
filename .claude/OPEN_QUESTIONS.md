@@ -80,11 +80,6 @@ Decided to defer, not undecided.
 
 - An idea: the Unicorn's revive opens it as a design space for future specs.
 
-### Off-affinity spell equipping
-
-- An exception to the spell affinity gate (`spec/creatures.md` "Spell affinity gate") through a
-  trait or perk: deferred past beta with the gem and perk economy. The gate is universal until then.
-
 ## Genuinely open
 
 Each needs a decision before the content that depends on it.

@@ -415,7 +415,17 @@ src/
 
 ### Comment why, not what
 
-- The types say what.
+- The types say what. A comment says **why**: the reason for a choice, the invariant the code keeps,
+  the trap a plausible change would fall into.
+- **No provenance.** No phase, slice, PR, review or plan-assumption numbers, no "decided", "locked"
+  or "review fix", no "was X before". Where code came from is in git and the mailboxes; in a comment
+  it only goes stale.
+- **Don't restate a spec rule.** Cite it by anchor (`spec/<file>.md#<anchor>`) and say only what
+  this code adds to it. A restated rule rots silently when the spec changes.
+- `// ASSUMPTION:` is kept for a live open question only ("Open questions get an interface"), not
+  as a record of a decision a plan once made.
+- A golden fixture's setup, arithmetic and random draws are not commentary: they are required
+  ("Two-tier golden discipline").
 
 ### Open questions get an interface
 

@@ -110,8 +110,8 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   cleanse or a drain is just data.
 - **Spell affinity:** every spell carries an affinity, and a creature can hold a spell only of its
   own affinity. The gate governs **holding only**: the damage cycle stays keyed on the **caster's**
-  affinity. Innate spells are outside the gate. An off-affinity exception is parked
-  (`OPEN_QUESTIONS.md` "Off-affinity spell equipping").
+  affinity. Innate spells are outside the gate. On `main` the gate has no exception; the
+  Sorcerer's Mastery perks lift it per affinity once Phase 8 builds equipping ("Gems as items").
 - **Gem sets:** every enemy rolls a full set of distinct spells at spawn (`spec/run.md` "Enemy
   script and gem set"); every player instance rolls one when it is created and keeps it (Engine
   rules, "Player gem sets").
@@ -241,7 +241,9 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 - The spells on offer come from the same cumulative pool as a gem set: every spell with
   `unlockedAtBiome` ≤ the current biome (`spec/run.md` "Spells unlock cumulatively").
 - Gems are a **shared, finite inventory**. A gem is equipped on one creature at a time, **free and
-  instant** to equip or unequip, gated by the spell's affinity ("Spell affinity gate").
+  instant** to equip or unequip, gated by the spell's affinity ("Spell affinity gate"). The one
+  exception: each of the Sorcerer's five Mastery perks lets your creatures equip that affinity's
+  gems regardless of their own (`specializations/sorcerer.md` "Wit Mastery" and the four after it).
 - Traits and effects can change a creature's gem-slot count (the Sorcerer's True Wit).
 - When gems become objects, an innate spell no longer fits the gem array: expect innate slots to
   become a separate list the cast pipeline reads ahead of the gem slots.
