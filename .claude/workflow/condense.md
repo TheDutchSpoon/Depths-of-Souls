@@ -1,7 +1,8 @@
 # Step — Condense (design agent)
 
 Command in Cowork: `/slice-condense <slice-id>` for round 1, then `/slice-condense <slice-id> <N>`
-after the coding agent's `verify-r<N-1>.md`, in the same chat. Read `design-rules.md` first.
+after the coding agent's `verify-r<N-1>.md`, each round in a fresh chat: the mailbox carries the
+state. Read `design-rules.md` first.
 
 A condense slice is docs-only. It runs when a PR review took a living doc over its budget and
 Duncan chose to condense it or split it by subsystem (`workflow/budgets.md#over-budget`), before
@@ -66,7 +67,8 @@ row per unit, in old-file order.
 
 ## Round N (after `verify-r<N-1>.md`)
 
-1. Read `verify-r<N-1>.md`. Fix each finding, or say in this round why it isn't one.
+1. Read the slice's `brief.md`, `inventory.md`, every round of `verify-request.md`, and
+   `verify-r<N-1>.md`. Fix each finding, or say in this round why it isn't one.
 2. Bring every "spec and code disagree" item to Duncan, as in round 1.
 3. Re-run the inventory check, and append `## Round <N>` to `verify-request.md`: each finding and
    what changed.
