@@ -64,6 +64,18 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
   rest of the clean-up.
 - **From 4.2-F:** stale `src/` comment: `data/balance.ts:1-4` says the 4.1-H2d balancing pass "tunes
   the rest" and every number is parked "until then" (the pass ran; the numbers are tuned).
+- **From 4.2-F's verify:** three New-home anchors in B's inventory no longer exist, because later
+  slices rewrote their files: `specializations/shieldbarer.md:59` →
+  `spec/progression.md#9-player-specializations`; `species/species-locked.md:186` →
+  `spec/run.md#4-the-cave-world--structure`; `species/species-locked.md:143` →
+  `OPEN_QUESTIONS.md#13-open-questions--parked-items` (now `OPEN_QUESTIONS.md#sacrifice-revive`, F
+  inventory "Base-only text"). A citation mapped through B's inventory must resolve each to today's
+  heading; the plan lists the three mappings. `inventory B` can't re-check them (its base files are
+  gone).
+- **From 4.2-F's verify:** more `GAME_DESIGN §13` citations in `src/` for the script, where §13 is
+  now `OPEN_QUESTIONS.md` "Balance numbers": `app/demoFight.ts:17`; "parked balance (GAME_DESIGN
+  §13)" in `data/species/glimmerdark.ts:12`, `overgrowth.ts:16`, `rotcap-hollow.ts:13`,
+  `engine/curves.ts:3` and `state/rewards.ts:108`.
 
 ## Known from 4.2-A's review
 

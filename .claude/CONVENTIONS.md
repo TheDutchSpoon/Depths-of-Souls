@@ -67,8 +67,9 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - **Progression and economy numbers** live in an injected **`BalanceConfig`**: the engine defines
   its shape, `data/balance.ts` its values. It holds the level range (the multiplier curve), the
   fight count, the enemy party size, the boss level offset, the rarity spawn weights, the soul gain,
-  the XP curve, XP per kill, currency drops and the summon cost. What each number does is in its
-  spec rule (`spec/run.md`, `spec/creatures.md`).
+  the XP curve, XP per kill, currency drops and the summon cost (free: nothing reads it until
+  Phase 8's Soul Altar names the currency it is paid in). What each number does is in its spec rule
+  (`spec/run.md`, `spec/creatures.md`).
 - **Curves are parameters, not functions** (`{ fightCountBase: 10, fightCountPerFloor: 1 }`, never
   a closure), so the config is plain data a simulator can sweep and a save can ignore.
 - Generation and the store **receive the config as an argument**; tests pin their own config
@@ -280,13 +281,14 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 ### Every pull request runs the gates
 
 - GitHub Actions runs lint, the format check and every test (unit, golden, corpus digest, the
-  balance thresholds) on every pull request and every push to `main`, so a regression is caught
-  *before* merge and `main` stays green and deployable.
+  balance thresholds) on every pull request, every push to `main` and every manual run, so a
+  regression is caught *before* merge and `main` stays green and deployable.
 
 ### Deploy only from main, only if tests pass
 
-- The build-and-publish job is gated on the test job and guarded to the `main` branch: tests on
-  every change, deploy on `main`.
+- Three jobs in order: `test` (the gates), `build`, `deploy`. `build` runs on every change, so a
+  pull request also proves the site builds; only `deploy` is guarded to a push to `main`. Tests and
+  build on every change, deploy on `main`.
 
 ### Local runs match CI's toolchain
 
@@ -342,8 +344,9 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 ```
 src/
   engine/    pure TS, no React: combat resolver, interpreter, RNG, scaling, cave generation.
-  data/      content as data: creatures, traits, spells, biomes, facilities, config. No logic.
-  state/     the store, save/load, migrations.
+  data/      content as data: creatures, traits, spells, biomes, config (facilities from Phase 8).
+             No logic.
+  state/     the store and the balance simulator (save/load and migrations from Phase 5).
   ui/        React components: render state, dispatch intents. No game rules.
   app/       wiring, game loop, top-level screens (no router; hash routing only if ever needed).
 ```
@@ -353,9 +356,11 @@ src/
 - Effect-carrier definitions (traits and spells; later gem augments and equipment infusions, all
   instances of the one effect framework, `spec/effects.md` "One effect framework") live in a
   **library** directory per carrier type: `data/traits/`, `data/spells/`.
-- Each is split by grouping, `core.ts` (cross-cutting), `starters.ts` and **one file per biome**
-  (`overgrowth.ts`, …), and aggregated to its registry by an `index.ts` that keeps the **stable
-  exported names** (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the spell equivalents).
+- Each is split by grouping, `core.ts` (cross-cutting) and **one file per biome**
+  (`overgrowth.ts`, …), plus `starters.ts` for the starters' and the Unicorn's signature traits (no
+  spell is starter-only, so `data/spells/` has none). Each is aggregated to its registry by an
+  `index.ts` that keeps the **stable exported names** (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the
+  spell equivalents).
 - Affinity is a **field** on a spell, never the file axis; spawn pools are biome-scoped.
 - `data/statuses.ts` stays **flat**: global vocabulary, not organised by biome.
 

@@ -167,3 +167,82 @@ Each states what `main` does; none changes a design. Flag any you think needed D
   IndexedDB namespacing, moved from ROADMAP Phase 5.
 - `phases/4.2/G/brief.md`: notes from F.
 - `phases/4.2/F/inventory.md`, `phases/4.2/F/verify-request.md`: this step's mailbox files.
+
+## Round 2
+
+For `/slice-verify 4.2-F 2`, after `verify-r1.md`. `npm run docs:check -- inventory F` passes: 280
+units, 280 rows (the table is unchanged in count; one base-only line is listed below it).
+
+### Findings
+
+1. **`C:1825`, summon cost: fixed.** `CONVENTIONS.md` "Where each number lives" keeps the clause:
+   "the summon cost (free: nothing reads it until Phase 8's Soul Altar names the currency it is
+   paid in)". The row's Reason now says it is kept and why (no other doc says `summonCost` exists
+   unread).
+2. **Sacrifice-revive has no row: fixed as a listing, not a row.** A row can't go in the table:
+   `inventory F` fails any id that isn't one of F's units. The inventory now ends with
+   `## Base-only text (outside the units)`, a table of base lines no unit covers because an earlier
+   slice moved them in. I checked for others with `git diff 6abd67a 298914e` over F's six files:
+   Sacrifice-revive is the only one. The other additions are in `ROADMAP.md`, whose units are read
+   from the base, so they already have rows. B's dead anchor goes to 4.2-G (below); B's merged
+   inventory isn't edited.
+3. **`WORKFLOWS.md:99`, "opens the PR": fixed.** "Who does what" now has the human "commits,
+   pushes, opens the PR, merges, and deletes files". Row `WORKFLOWS.md:99` adds
+   `WORKFLOWS.md#who-does-what` and names the merge. Row `WORKFLOWS.md:19` goes from `kept` to
+   `rewritten`, because its text changed.
+
+`ROADMAP.md:449` ("phase-scoped" vs "Stay in this slice's scope"): accepted by the verify, no
+change.
+
+### Spec and code disagree: Duncan's decisions
+
+All three are **stale docs**: the text now says what `main` does, and no "Decided, not built"
+entry is needed.
+
+1. **CI jobs and triggers.** "Every pull request runs the gates" adds "and every manual run"
+   (`workflow_dispatch`). "Deploy only from main, only if tests pass" now reads: three jobs in
+   order, `test` → `build` → `deploy`; `build` runs on every change, so a pull request also proves
+   the site builds; only `deploy` is guarded to a push to `main`. Recommended as stale: building on
+   pull requests is stricter than the old text's single main-only job, so the code is the better
+   design. Rows `C:2057`, `C:2060`.
+2. **Spell library layout.** "Effect carriers live in libraries": `core.ts` and one file per biome,
+   plus `starters.ts` for the starters' and the Unicorn's signature traits; `data/spells/` has
+   none because no spell is starter-only. Arcane Bolt was deliberately promoted to a biome-1 spell
+   (`data/spells/overgrowth.ts`, its comment). Row `C:2106`.
+3. **Source tree.** "Source folders": `data/` lists "config (facilities from Phase 8)", and
+   `state/` is "the store and the balance simulator (save/load and migrations from Phase 5)".
+   This departs from the letter of the condensing rule (a future placement goes to a "Decided, not
+   built" listing). I recommended it, and Duncan agreed, because CONVENTIONS already marks future
+   folders inline ("Composition files only reference carriers": "and later `data/gems/`,
+   `data/equipment/`"). Marking them inline keeps the folder map in one home, and the tree no
+   longer claims they exist. The simulator is added because it is in `state/` on `main`. Row
+   `C:2094`.
+
+Check: the three rewritten passages against `.github/workflows/deploy.yml`, `src/data/spells/`,
+`src/data/traits/starters.ts` and `src/state/`.
+
+### Not re-measured
+
+Unchanged from round 1: the clean-path levelling and the Brute's 28 / 36 are kept from the old
+text.
+
+### Notes for later slices (round 2)
+
+`phases/4.2/G/brief.md` "Known from earlier slices" gains two bullets from `verify-r1.md`:
+
+- B's three dead New-home anchors, with the Sacrifice-revive one's current anchor;
+- the further `GAME_DESIGN §13` citations in `src/` (`app/demoFight.ts`, the three
+  `data/species/*` files, `engine/curves.ts`, `state/rewards.ts`).
+
+The verify's other stale comments (`engine/config.ts:1-2`, `data/balance.ts:1-4`) were already
+listed there.
+
+### Docs edited (round 2)
+
+- `CONVENTIONS.md`: the summon-cost clause restored (finding 1); the CI triggers and the three
+  jobs, the spell-library layout and the source tree written as `main` has them (decisions 1–3).
+- `WORKFLOWS.md`: "Who does what": the human opens the PR (finding 3).
+- `phases/4.2/G/brief.md`: two notes from F's verify.
+- `phases/4.2/F/inventory.md`: rows `C:1825`, `C:2057`, `C:2060`, `C:2094`, `C:2106`,
+  `WORKFLOWS.md:19` and `WORKFLOWS.md:99` updated; the "Base-only text" table added.
+- `phases/4.2/F/verify-request.md`: this section.
