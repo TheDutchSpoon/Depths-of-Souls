@@ -52,26 +52,29 @@ opens with a "Read this when …" line.
 
 ### How the spec is written
 
-- **The spec describes `main`.** A decision that isn't built lives under "Decided, not built" in
-  its phase brief (or, for a later phase, in its `ROADMAP.md` entry), and moves into the spec at the
-  PR review of the slice that builds it. Two exceptions:
-  - **A bug**: when `main` contradicts a rule that is still the design, the doc keeps the rule and
-    adds a `**Known bug:**` line saying what `main` does and where the fix is listed. The fix's PR
-    review removes the line. A doc never copies the bug.
-  - **A subsystem designed for a later phase** lives in its file's `## Not built` half, the last
-    half. Each rule there names the phase that builds it, and that phase's PR review moves it into
-    `## Design` or `## Engine rules`.
+- **The spec describes `main`.** A decision that isn't built is in its phase brief's "Decided, not
+  built" (for a later phase, its `ROADMAP.md` entry) until the slice that builds it. Two
+  exceptions:
+  - A `**Known bug:**` line marks a rule `main` breaks: the rule is still the design, and the
+    line says what `main` does and where the fix is listed. Don't build against the bug.
+  - A file's `## Not built` half, its last, holds a subsystem designed for a later phase; each
+    rule names the phase that builds it.
 - **One home per rule.** A spec file's `## Design` half holds player-facing behaviour, numbers and
-  content tables; `## Engine rules` holds mechanisms, invariants and data shapes. Never restate a
-  rule elsewhere: link to it.
-- **No provenance.** Rules are present tense; changing a rule rewrites it, and nothing
-  "supersedes". Where a rule was decided is in the mailboxes, the 4.2 inventories and git history.
+  content tables; `## Engine rules` holds mechanisms, invariants and data shapes. A rule is stated
+  once and linked from everywhere else.
+- **No provenance.** Rules are present tense. Where a rule was decided is in the mailboxes, the 4.2
+  inventories and git history.
 - **Every rule is a `###` heading** under its half, its parts bullets under it, and is cited by
-  anchor, within the same file too (`spec/combat.md#damage-channels-and-the-additional`).
+  anchor, within the same file too (`spec/combat.md#damage-channels-and-the-additional`): plain
+  text rooted at `.claude/`, from `src/` and from any doc alike. `npm run docs:check -- citations`
+  fails CI on an anchor that doesn't resolve and on a quoted-label citation.
 - **Content lives in the content docs** (`content/`, `specializations/`), which describe what
-  `main` ships: the code wins over a stale content doc, never over a decided design (a bug gets a
-  `**Known bug:**` line). The spec holds the rules and the system-wide constants, and links to
-  content rather than restating it.
+  `main` ships: the code wins over a stale content doc, never over a decided design. The spec holds
+  the rules and the system-wide constants, and links to content rather than restating it.
+- **Size budgets:** each spec file, `CLAUDE.md` and `CONVENTIONS.md` has one
+  (`workflow/budgets.md`), reported by `npm run docs:check -- budgets`, never a CI failure.
+- How the docs are written, condensed and kept in budget is the design agent's:
+  `workflow/design-rules.md#doc-edits`.
 
 ## Tech stack
 

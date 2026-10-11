@@ -1,7 +1,8 @@
 # 4.2-H — Code comments: the context diet for `src/`
 
 Phase brief: `.claude/phases/4.2/brief.md`. Loop: normal. Golden policy: **byte-identical**; the
-`src/` diff is comment-only (the proof 4.2-G builds, without G's test-title mask). Decided with
+`src/` diff is comment-only, proved by the `comment-proof` mode this slice adds (4.2-G's proof was a
+one-off script, not committed). Decided with
 Duncan at the 4.2-G kickoff (2026-10-11). Runs after 4.2-G merges.
 
 ## Why
@@ -14,24 +15,58 @@ were comments that restated a spec rule or narrated history.
 
 ## Scope
 
-- Bring every comment in `src/` to `CONVENTIONS.md` "Comment why, not what" (rewritten at the 4.2-G
+- Bring every comment in `src/` to `CONVENTIONS.md#comment-why-not-what` (rewritten at the 4.2-G
   kickoff): provenance stripped; a restated spec rule replaced by its anchor plus whatever this code
   adds; history ("was X before") dropped. The *why* a provenance tag carried is kept: an
   `ASSUMPTION 14 -- living-adjacency, because …` comment keeps the "because".
 - The mechanical part (provenance tags and parentheticals) may be done by script; the rest is by
   hand. The plan lists the patterns the script removes and shows a sample of each.
-- Golden fixtures: setup, arithmetic and random draws stay (CONVENTIONS "Two-tier golden
-  discipline"); only provenance goes.
+- Golden fixtures: setup, arithmetic and random draws stay (`CONVENTIONS.md#two-tier-golden-discipline`); only provenance goes.
 - `// ASSUMPTION:` markers tied to a live open question stay (two on 2026-10-11).
-- A `comments` mode in `docs:check`, blocking in CI, fails on the provenance patterns in `src/`
-  comments, reusing 4.2-G's comment scanner. The plan lists the patterns; golden fixtures are not
-  exempt from it.
+- **A quotation beside an anchor is the target's own words, or it goes** (Duncan, at the 4.2-G PR
+  review). 4.2-G's rewrite swapped the old doc name for an anchor and kept the quotation after it,
+  so about 40 comments and one test title now quote old `species-locked.md`, `GAME_DESIGN` or
+  `CONVENTIONS` wording the condensed target doesn't contain
+  (`phases/4.2/G/evidence/review-quotations.txt`, a regex scan: re-derive the list with the
+  scanner). Where the target holds the fact in other words, the comment keeps the anchor and drops
+  the quote; where it doesn't hold it at all, that's a Spec question, not a quote to keep. A test
+  title may change for this (the proof masks titles only where the plan lists them).
+- **A comment scanner and two modes in `docs:check`** (Duncan, at the 4.2-G PR review). 4.2-G
+  committed none: its rewrite and its comment-only proof were one-off scripts, and `citations` reads
+  whole files. Build the scanner on TypeScript's scanner, not a line regex (`//` occurs in strings
+  and URLs), in `scripts/docs-check/`, and on it:
+  - `comments`, blocking in CI: fails on the provenance patterns in `src/` comments. The plan lists
+    the patterns; golden fixtures are not exempt.
+  - `comment-proof <base>`, run by hand: for every `src/` file changed since `<base>`, comments
+    stripped (TypeScript printer, `removeComments: true`), compares the two prints byte for byte,
+    and fails on a changed pragma comment (`@ts-…`, `eslint-…`, `/// <`). Listed test titles may be
+    masked. It reads `<base>` with `git show`, so it never runs in CI. Every later comment-only
+    change reuses it.
 
 Out of scope: any code change; comments that are correct but long (length alone is not a finding).
 
 ## The PR must prove
 
-- Comment-only: with comments stripped, every changed file is byte-identical to `main`'s.
+- Comment-only: `comment-proof origin/main` passes on the branch, and fails on a planted code
+  change and a planted pragma.
+- The quotations: before/after counts of a quotation beside an anchor that isn't in the target's
+  section, the after count zero (the plan says whether `comments` checks it).
 - The `comments` mode passes, fails on a planted tag of each pattern, and runs in CI.
 - Before/after counts of each provenance pattern, the after counts zero.
 - A sample of hand rewrites (at least one per `src/` folder) showing the *why* kept.
+
+## Known from 4.2-G's review
+
+- At this slice's kickoff, the design agent sets `ROADMAP.md`'s Phase 4.2 line to "Done: 4.2-A to
+  4.2-G" (G's kickoff did the same for F).
+- The citation rewrite left residue a hand pass should clean while it's there: a dropped
+  possessive (`` `content/overgrowth.md#the-overgrowth-biome-1-floors-110` own table ``,
+  `` per `spec/responses.md#flat-mode` own named example ``), a label echoed after its anchor
+  (`` `content/overgrowth.md#swarmhive-striker` Swarmhive Striker ``,
+  `` (`CONVENTIONS.md#corpus-digest`, corpus digest) `` in the corpus fixture header and its
+  template in `corpus-digest.test.ts`, which must change together), a file name after it
+  (`` (`specializations/sorcerer.md#starter-glyphmoth-seer` / sorcerer.md) ``), and old rule
+  numbers beside an anchor (`` `spec/responses.md#perform-action` B2 rule 2 `` in
+  `engine/resolution-types.ts`).
+- `ASSUMPTION (Slice F)` blocks in `data/species/starters.ts` quote the old docs at length; the
+  4.2-G fix round rewrote the affinity one only.

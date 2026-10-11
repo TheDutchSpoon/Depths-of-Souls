@@ -41,6 +41,8 @@ npm run lint
 npm run format:check
 npm run build         # runs tsc -b, then vite build
 npx tsc -b            # on its own too, as the agent reports it separately
+npm run docs:check -- citations   # blocking in CI
+npm run docs:check -- budgets     # reported only
 ```
 
 Always `npm ci`, never a reused `node_modules`. If the PR or the agent reports a tool behaving
@@ -62,6 +64,9 @@ Green gates only prove the code agrees with its own fixtures. Proceed to reading
 - Integration goldens must be labeled generated-then-checkpoint-verified.
 - The engine stays pure: no UI, data or state import in `src/engine`.
 - Search for leftovers of anything the PR says it deleted, in `src/` and in the living docs.
+- A citation the diff adds or changes must point at the rule it means. `citations` proves only
+  that the anchor resolves: read the target and check it states what the comment says, and that a
+  quotation beside it is the target's own words.
 
 ## 4. Verify claimed invariants mechanically
 
@@ -107,5 +112,12 @@ that.
   alone: each "decided changes" item the PR builds moves into its doc's body and leaves the pending
   section; content that is new gets its doc (the designed content and a plain-language explanation
   of how it works).
+- **`## Not built` rules:** when the PR builds a rule from a spec file's `## Not built` half, move
+  that rule into the file's `## Design` or `## Engine rules`, written as built.
 - Decisions the review makes go into the living docs in place, on the slice branch while the PR is
   open. Decisions made after approval go on `main` right after the merge.
+
+## Over budget
+
+After the doc sync, run `npm run docs:check -- budgets`. If a file is over its budget, resolve it in
+this review as a decide-point, following `workflow/budgets.md#over-budget`.

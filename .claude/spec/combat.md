@@ -183,8 +183,8 @@ damage     = MAX(1, floor(raw))
 
 ### Turn queue
 
-- At each round start the acting order is built **once**, as a frozen list of creature ids, from
-  current effective Speed, ties player side → slot → id (`buildTurnQueue`; act-first and act-last
+- At each round start the acting order is built **once**, as a frozen list of the living creatures'
+  ids, from current effective Speed, ties player side → slot → id (`buildTurnQueue`; act-first and act-last
   statuses split it into poles, `spec/statuses.md#turn-order`). It is **never recomputed
   mid-round**: Speed changes wait for the next round's rebuild.
 - A creature that dies before its turn keeps its slot as a `TurnStarted`/`TurnEnded` bracket with

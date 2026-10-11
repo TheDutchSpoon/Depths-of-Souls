@@ -1,6 +1,6 @@
 # Coding-agent rules (every slice, every step)
 
-Read by `/slice-plan`, `/slice-build` and `/slice-fix`. The slice's `kickoff.md` adds what is
+Read by `/slice-plan`, `/slice-build`, `/slice-fix` and `/slice-verify`. The slice's `kickoff.md` adds what is
 specific to one slice; these rules hold for all of them. If the kickoff and these rules disagree,
 stop and say so.
 
@@ -45,7 +45,8 @@ before designing around it.
   lives.
 - Engine stays pure (no UI/store/data imports in `src/engine`).
 - Green all gates before reporting done: `npm run test`, `npm run lint`, `npm run format:check`,
-  `npm run build`, `npx tsc -b`.
+  `npm run build`, `npx tsc -b`, and `npm run docs:check -- citations` (CI blocks on it: a comment
+  that cites the docs must cite `<path>.md#<anchor>` and resolve).
 - Leave `main` green and deployable; a demo consumes the engine, it doesn't leak into it.
 - **Never commit, never delete files.** Say what needs deleting; Duncan commits and deletes.
 - **The living docs are the design agent's:** `CLAUDE`, `CONVENTIONS`, `VISION`, `OPEN_QUESTIONS`,
@@ -53,9 +54,6 @@ before designing around it.
   `specializations/`. Don't edit them, even to fold a decided item or flip an "until <slice>"
   marker: put what they need under **Spec questions** (and **Content changes**) in your report.
   Your files are the mailbox, the code and the phase record.
-- **Phase 4.2 exception** (Phase 4.2 only). In 4.2-A and 4.2-G you write living docs **by script**, exactly as
-  `.claude/phases/4.2/brief.md` and the slice's `brief.md` specify, and nothing else in them. In 4.2-B
-  to F you only verify (`/slice-verify`): you never edit the docs.
 
 ## Report format (`report-r<N>.md`)
 
