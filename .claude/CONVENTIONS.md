@@ -174,7 +174,8 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 
 - Vitest `projects` split by folder: `src/engine`, `src/data` and `src/state` run in **Node**
   (which also enforces engine purity: DOM globals are undefined there); `src/ui` and `src/app` run
-  in **jsdom**. A third project, `docs-check`, runs the docs checks' own tests (`scripts/**`) in
+  in **jsdom**. Any other folder under `src/` runs in Node, so a new top-level folder's tests are
+  collected without a config change. A third project, `docs-check`, runs the docs checks' own tests (`scripts/**`) in
   Node, apart from `src/`.
 
 ### Mechanism goldens vs content goldens
@@ -282,8 +283,8 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 
 ### Every pull request runs the gates
 
-- GitHub Actions runs lint, the format check, the docs checks (`citations`, blocking; `budgets`,
-  reported only) and every test (unit, golden, corpus digest, the balance thresholds) on every
+- GitHub Actions runs lint, the format check, the docs checks (`citations` and `comments`,
+  blocking; `budgets`, reported only) and every test (unit, golden, corpus digest, the balance thresholds) on every
   pull request, every push to `main` and every manual run, so a regression is caught *before*
   merge and `main` stays green and deployable.
 

@@ -63,7 +63,8 @@ opens with a "Read this when …" line.
   content tables; `## Engine rules` holds mechanisms, invariants and data shapes. A rule is stated
   once and linked from everywhere else.
 - **No provenance.** Rules are present tense. Where a rule was decided is in the mailboxes, the 4.2
-  inventories and git history.
+  inventories and git history. `src/` comments and test titles follow the same rule
+  (`CONVENTIONS.md#comment-why-not-what`), and `npm run docs:check -- comments` fails CI on it.
 - **Every rule is a `###` heading** under its half, its parts bullets under it, and is cited by
   anchor, within the same file too (`spec/combat.md#damage-channels-and-the-additional`): plain
   text rooted at `.claude/`, from `src/` and from any doc alike. `npm run docs:check -- citations`
