@@ -1,5 +1,24 @@
 # Plan — Phase 4.2 — Slice H1: Comment tooling
 
+## Revision 2: what changed
+
+Addresses `plan-review.md` Round 2: plan fixes 1 and 2 (Duncan took the decide-point: masks keyed by
+new text).
+
+- **Fix 1, `-z` test (§4):** the non-ASCII file-set test runs `gitIn(root, 'config', 'core.quotePath',
+  'true')` in its scratch repo, so a global `core.quotePath false` cannot hide the mutation. The `-z`
+  mutation is "back to newline splitting without `-z`", not "keep `-z`'s NUL split without the flag".
+- **Fix 2, masks keyed by new text (§2 step 4, step 5, §4, mutations):** a file's entries are grouped
+  by `new`; each group has one mask token. In the base, a literal whose cooked text equals one of the
+  group's `old` texts **or** its `new` gets the token; in the head, a literal equal to `new` gets it.
+  Counts: each entry's `old` occurs exactly `count` times in the base; `new` occurs in the head exactly
+  (its base occurrences) + (the group's summed `count`s). Two usage errors (exit 2), before any file is
+  read: same `file`+`old` (as Revision 1), and an entry whose `new` is another entry's `old` in the
+  same file (chain or swap). Four new tests and one new mutation run.
+- **A9 and N3 corrected:** titles converging in different `describe`s now pass the mask and the
+  duplicate-name check alone decides; N3's span edit stands, but what the token covers changes.
+- Assumptions: A1–A8, A10, A11, N1, N2, N4 stand. No new assumption.
+
 ## Revision 1: what changed
 
 Addresses `plan-review.md` Round 1: plan fixes 1–7 (D1 confirmed, so fix 7 applies) and N1's correction.
@@ -191,21 +210,27 @@ besides inventory that calls git, and git is only ever read.
 3. **Pragmas** compared apart (`removeComments` drops them): the scanner's `pragmas` arrays must be
    equal, in order, as (exact text, `tokenIndex`) pairs (D1). A pragma moved above a different
    statement fails even though its text is unchanged.
-4. **Masks.** `--mask` is a JSON array of `{ file, old, new, count? }` (count default 1). Two entries
-   with the same `file` and `old` are a usage error (exit 2), checked before any file is read: the
-   same old text to the same new text is what `count` is for, and the same old text to two different
-   new texts cannot be paired by position. Before
-   printing, in the base text every string literal, substitution-free template, and template part
-   whose **cooked** text equals `old` for that file has its source span replaced by `'MASK<i>'` (a
-   template part keeps its delimiters, its raw span replaced); in the head text the same for `new`.
-   The replacement is a text edit by position (reverse order), then the edited text is parsed and
-   printed, so Prettier's quote switch cannot cause a difference. **Each entry must be consumed exactly
-   `count` times on both sides, else the file named in the entry fails** (a changed unlisted literal
-   fails by print difference; an entry for a file with no change fails as unconsumed). Output:
+4. **Masks, keyed by the new text.** `--mask` is a JSON array of `{ file, old, new, count? }` (count
+   default 1). Two usage errors (exit 2), both checked before any file is read: two entries with the
+   same `file` and `old` (the same old text to the same new text is what `count` is for; to two
+   different new texts it cannot be paired by position), and an entry whose `new` equals another
+   entry's `old` in the same file (a chain or swap cannot be masked).
+   Per file, entries are grouped by `new`; each group gets one token `'MASK<g>'`. In the base text,
+   every string literal, substitution-free template, and template part whose **cooked** text equals
+   one of the group's `old` texts **or** its `new` text has its source span replaced by the token (a
+   template part keeps its delimiters, its raw span replaced); in the head text, every literal whose
+   cooked text equals `new` gets it. The replacement is a text edit by position (reverse order), then
+   the edited text is parsed and printed, so Prettier's quote switch cannot cause a difference, and
+   the print comparison pins every masked position (a pre-existing `new` literal that changed, or one
+   moved, still fails). **Counts, else the file named in the entry fails:** each entry's `old` occurs
+   exactly `count` times in the base; `new` occurs in the head exactly (its occurrences in the base) +
+   (the group's summed `count`s). So a new text may already exist in the file. A changed unlisted
+   literal fails by print difference; an entry for a file with no change fails as unconsumed. Output:
    `OK <path> (masked <n>)` then `  "<old>" -> "<new>"` per masked pair.
 5. **Duplicate names (A9).** For each changed file, the full test names (`chain` + title, template
-   parts joined by `${}`; the same title under two different `describe`s is two names) of the head must not have more duplicated names or more excess copies than
-   the base.
+   parts joined by `${}`; the same title under two different `describe`s is two names) of the head
+   must not have more duplicated names or more excess copies than the base. Titles that converge on
+   one name pass the mask and are decided here alone.
 6. Exit 0 all OK; 1 any `FAIL <path>: <reason>` or a git error (bad rev); 2 usage.
 
 ## 3. Golden policy (restated from the kickoff)
@@ -243,8 +268,9 @@ New test files: `scanner.test.ts`, `comments.test.ts`, `comment-proof.test.ts`; 
 | `comment-proof` print equality | `.ts`, `.tsx`, `.js` | a comment-only change passes in each; a changed identifier, number and string literal fails in each, naming the file |
 | `comment-proof` pragmas | `@ts-expect-error`, `eslint-disable`, `/// <`, trailing `// eslint-disable-line` | changed text fails (prints equal); unchanged passes; a trailing pragma changed fails |
 | `comment-proof` pragma position (D1, fix 7) | `eslint-disable`, `prettier-ignore` | same text moved above a different statement fails (prints equal, text list equal); a comment-only edit elsewhere in the file, which shifts no token, passes |
-| `comment-proof` file set | added, deleted, renamed, untracked-not-ignored, ignored, non-ASCII path | the first four fail with the **reason** asserted (`added`, `deleted`; a rename both); an ignored `.DS_Store` under `src/` does not; a non-ASCII-named unchanged file does not fail; a non-code byte change fails |
+| `comment-proof` file set | added, deleted, renamed, untracked-not-ignored, ignored, non-ASCII path | the first four fail with the **reason** asserted (`added`, `deleted`; a rename both); an ignored `.DS_Store` under `src/` does not; a non-ASCII-named unchanged file does not fail (the test runs `gitIn(root, 'config', 'core.quotePath', 'true')` in its scratch repo so a global `false` cannot hide the `-z` mutation); a non-code byte change fails |
 | `comment-proof` masks | title, template part, non-title literal | listed change passes and prints; unlisted title change fails; unconsumed entry fails; entry consumed twice at count 1 fails; requoted masked title passes; two entries with the same `file` and `old` exit 2 |
+| `comment-proof` masks keyed by new text | title whose new text already exists as a literal | `describe('cheat-death (Phase 4 Slice D, Last Stand)')` → `'cheat-death'` in a file that also has `kind: 'cheat-death'` passes; the same diff that also changes that `kind` literal fails; two different old titles mapped to one new title pass in two `describe`s and fail in one, as a duplicate name; A→B plus B→C in one file exits 2 |
 | `comment-proof` duplicate names | same file | two titles converging on one full name fail; a pre-existing duplicate does not; the same title in two `describe`s is not a duplicate |
 | `comment-proof` reads `<base>` via git | CLI | scratch repo (`gitIn`) with two commits works; bad rev exits 1 |
 | CLI wiring | `cli.ts` | bad-argument table grows: `comments extra`, `comments --counts --quotations`, `citations --counts`, `comment-proof`, `comment-proof x --counts`, `budgets --mask f` → 2 |
@@ -255,7 +281,7 @@ Mutation runs (each removed, tests must fail, then restored; `evidence/mutation-
 first draft's reading, fix 1); walk JSDoc; remove one leader-stripping path (each of the two in turn);
 unanchor the pragma match; drop pragma comparison; compare pragma text only, not `tokenIndex` (fix 7);
 drop the file-set check; drop `--exclude-standard` (the `.DS_Store` test fails); drop the `existsSync`
-filter (the deleted test fails on its asserted reason); drop `-z`; drop the mask-consumed check; pattern 1 back to `ASSUMPTIONS?\b(?!:)`; pattern 11 matching a bare `locked`;
+filter (the deleted test fails on its asserted reason); `-z` back to newline splitting without the flag (the non-ASCII test fails); drop the mask-consumed check; check the head count against `count` alone, the old rule (the `cheat-death` test fails); pattern 1 back to `ASSUMPTIONS?\b(?!:)`; pattern 11 matching a bare `locked`;
 drop the `OPEN_QUESTIONS` citation requirement. The CI-step mutation is out (no CI step).
 
 ## 5. Wiring facts
@@ -329,8 +355,8 @@ A1–A11 are the pre-split plan's, with the review's calls applied. N1–N4 are 
 - **A8** Pragma forms as listed in §2, **matched at the start of the comment body**, `@vitest-` anywhere in the
   leading docblock (fix 7); compared as (exact text, next-token index), in order (D1).
 - **A9** The duplicate-name check is a heuristic (counts of duplicated full names, the full name being
-  the `chain` plus the title, and excess copies), not a per-title mapping; two titles converging in different `describe`s fail the mask count check
-  and fail closed.
+  the `chain` plus the title, and excess copies), not a per-title mapping; titles converging pass the
+  mask (Revision 2) and this check alone decides.
 - **A10** `comment-proof` compares the working tree to `<base>`, counting untracked-not-ignored
   files; non-code files under scope must be byte-identical.
 - **A11** `citations <file>…` applies the `claude` site rules to a named file whatever its extension;
@@ -344,6 +370,7 @@ A1–A11 are the pre-split plan's, with the review's calls applied. N1–N4 are 
   `git ls-files` is read-only.
 - **N3** A mask is applied by editing the source text at the literal's span (reverse order) before
   parsing and printing, matching on cooked text, so quote style cannot matter and raw escapes are
-  irrelevant.
+  irrelevant. Masks are grouped by `new` per file; the group's token covers its `old` and `new` literals
+  in the base and its `new` literals in the head (Revision 2).
 - **N4** Pattern-12 and pattern-11 shapes are kept as written in the pre-split plan; the review verified
   they leave the game uses alone, and `word-patterns.txt` re-verifies on the branch.
