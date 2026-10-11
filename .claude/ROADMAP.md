@@ -55,7 +55,7 @@ deterministic engine) came first. Each phase ships in **slices**, built and revi
 4.2-A to 4.2-G.* Every fresh agent chat read about
 300 KB of living docs, most of it CONVENTIONS and GAME_DESIGN. 4.2 splits them into
 `spec/<subsystem>.md`, one home per rule, condenses every living doc, makes citations anchors
-checked in CI, and strips provenance from code comments (4.2-H). The rules the condensed docs are written to are in `CLAUDE.md#how-the-spec-is-written`.
+checked in CI, and strips provenance from code comments, test titles and `src/` names (4.2-H1 to 4.2-H3). The rules the condensed docs are written to are in `CLAUDE.md#how-the-spec-is-written`.
 
 ## Phase 4.5 — Run-loop demo (interlude)
 *Brief: to be written after Phase 4.2.* The throwaway visual demo for Phase 4 **and** 4.1,

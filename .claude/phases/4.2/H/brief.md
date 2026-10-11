@@ -67,6 +67,29 @@ were comments that restated a spec rule or narrated history.
 
 Out of scope: any code change; comments that are correct but long (length alone is not a finding).
 
+## Split
+
+Built as three slices, in order, each with its own mailbox, PR and record (Duncan, at the plan
+review):
+
+- **4.2-H1, the tooling:** the scanner, `comments` (not in CI yet: it fails on `main` until
+  4.2-H2's sweep), `comment-proof <base>` and `citations <file>…`, each with its tests. No `src/`
+  change.
+- **4.2-H2, the sweep:** every comment and test title in scope brought to
+  `CONVENTIONS.md#comment-why-not-what`, proved by `comment-proof origin/main` with 4.2-H1's tool
+  from `main`; `comments` added to `deploy.yml`.
+- **4.2-H3, the names:** provenance stripped from `src/` file names (121 files carry a slice id,
+  most of them golden fixture/test pairs) and identifiers (`PHASE_4_PLACEHOLDER_BALANCE_CONFIG`),
+  each renamed by hand for what it pins or is for, since stripping the id alone collides
+  (`golden-b2-silenced-refuses-granted-cast`, `golden-f3-silenced-refuses-granted-cast`); comment
+  mentions of the old names follow. Golden policy byte-identical. Proved by a rename map plus each
+  file's content identical except import specifiers and the renamed identifiers (a
+  `comment-proof` option, the plan's to design). `comments`, or a sibling mode, also fails on a
+  phase or slice id in a `src/` file name or identifier, so a new name can't copy the old pattern.
+
+This folder keeps the brief and the pre-split kickoff, plan and plan review, which both slices'
+kickoffs build on.
+
 ## The PR must prove
 
 - Comment-only: `comment-proof origin/main` passes on the branch, and fails on a planted code
@@ -84,8 +107,16 @@ Out of scope: any code change; comments that are correct but long (length alone 
 ## Decided, not built
 
 - `workflow/design-rules.md#writing` gains: before a step file (kickoff, plan review, PR review,
-  hand-out) goes out, run `npm run docs:check -- citations <the file>`. Added at this
-  slice's PR review, once the file argument exists on `main`.
+  hand-out) goes out, run `npm run docs:check -- citations <the file>`. Added at 4.2-H1's PR
+  review, once the file argument exists on `main`.
+- `CONVENTIONS.md#every-pull-request-runs-the-gates` names `comments` among the docs checks
+  (blocking), and `workflow/coding-rules.md#rules`' gate list adds `npm run docs:check -- comments`
+  (4.2-H2's PR review, when the step lands in CI).
+- `spec/progression.md#inert-perks`: each inert perk's code comment cites the perk's own content
+  entry (`specializations/<spec>.md#<perk>`, which states what it waits for), not the
+  `// Inert until Phase 8 (gem system) -- see sorcerer.md` form (4.2-H2's PR review).
+- `CONVENTIONS.md#comment-why-not-what`: file names and identifiers follow the same rules (no
+  phase, slice or plan ids), and the check covers them (4.2-H3's PR review).
 
 ## Known from 4.2-G's review
 

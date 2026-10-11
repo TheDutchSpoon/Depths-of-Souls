@@ -344,7 +344,9 @@ a stale citation.
 | [4.2-E](E/brief.md) | `combat`, `scripting` condensed | condense |
 | [4.2-F](F/brief.md) | The top-level docs: `CONVENTIONS`, `VISION`, `OPEN_QUESTIONS`, `CLAUDE.md`, `ROADMAP`, `WORKFLOWS` | condense |
 | [4.2-G](G/brief.md) | Citations to anchors, budgets, CI, clean-up | normal |
-| [4.2-H](H/brief.md) | Code comments: provenance stripped, restated rules replaced by anchors, a blocking check | normal |
+| [4.2-H1](H/brief.md) | Comment tooling: the scanner, `comments`, `comment-proof`, `citations <file>…` | normal |
+| [4.2-H2](H/brief.md) | Code comments: provenance stripped, restated rules replaced by anchors, `comments` blocking in CI | normal |
+| [4.2-H3](H/brief.md) | Names: provenance stripped from `src/` file names and identifiers, and checked | normal |
 
 Strictly in order. B comes first because once the content docs are the home of content, the spec
 slices can drop GAME_DESIGN's content copies as duplicates; it is also the pilot, settling the
