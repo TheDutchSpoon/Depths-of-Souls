@@ -159,3 +159,36 @@
 #35 cli.ts: cli: --counts together with --quotations allowed
    killed by 1 test(s)
      - cli.test.ts: docs-check cli rejects bad arguments ["comments","--counts","--quotations"] with exit 2
+
+# ---- Round 2 (hand-out r1): 7 more mutations, each applied alone, file restored (hash-checked), docs-check files run; 7 killed ----
+# Mutation 4 (pragma 4 anchor) needs no run: the existing unanchored-pragma mutation (#5) covers it.
+#R2 comment-proof.ts: drop the syntax-error check
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof syntax errors fails a stray token the parser skips, naming the file and the reason
+     - comment-proof.test.ts: comment-proof syntax errors fails a file that was already broken in the base
+#R2 comment-proof.ts: drop the pragma length condition (|| bp.length !== hp.length)
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof pragmas fails a pragma appended after the last pragma, or added to a file with none
+#R2 comment-proof.ts: duplicate check keeps only the names condition
+   killed by 1 test(s)
+     - comment-proof.test.ts: duplicatesGrew fails when the excess copies grow but the duplicated names do not
+#R2 comment-proof.ts: duplicate check keeps only the excess condition
+   killed by 1 test(s)
+     - comment-proof.test.ts: duplicatesGrew fails when the duplicated names grow but the excess copies do not
+#R2 scanner.ts: drop the block-only pragma forms (eslint , global, globals, exported)
+   killed by 5 test(s)
+     - comment-proof.test.ts: comment-proof pragmas fails a reworded ESLint config comment and a deleted /*#__PURE__*/
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* eslint no-console: off */
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* global state */
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* globals a, b */
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* exported name */
+#R2 scanner.ts: block-only pragma forms also in line comments
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block-only forms as line comments
+#R2 scanner.ts: drop the __PURE__ / __NO_SIDE_EFFECTS__ forms
+   killed by 5 test(s)
+     - comment-proof.test.ts: comment-proof pragmas fails a reworded ESLint config comment and a deleted /*#__PURE__*/
+     - scanner.test.ts: scanSource pragmas takes the tool comment /*#__PURE__*/
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* @__PURE__ */
+     - scanner.test.ts: scanSource pragmas takes the tool comment /*#__NO_SIDE_EFFECTS__*/
+     - scanner.test.ts: scanSource pragmas takes the tool comment // @__NO_SIDE_EFFECTS__

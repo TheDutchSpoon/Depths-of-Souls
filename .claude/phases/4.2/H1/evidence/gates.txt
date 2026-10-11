@@ -95,3 +95,13 @@ scripts/docs-check/cli.test.ts                          18 ->    34  (+16)
 scripts/docs-check/comment-proof.test.ts                 0 ->    56  (+56)  new file
 scripts/docs-check/comments.test.ts                      0 ->    61  (+61)  new file
 scripts/docs-check/scanner.test.ts                       0 ->    34  (+34)  new file
+
+# ---- Round 2 (hand-out r1), working tree ----
+# npm run test: Test Files 210 passed (210); Tests 1674 passed | 1 skipped (1675)
+# lint clean; tsc -b clean; build passes; citations: PASS, 547 citations in 436 files; budgets: 12 files, 0 over budget
+# format:check clean on the tree (the generated .vitest/ folder of the --reporter=json runs is not part of it; see report-r2.md "To delete")
+# git diff --stat origin/main -- src vite.config.ts eslint.config.js .github: empty
+# Test counts file by file: outside scripts/ 1357 -> 1357, files whose count differs: 0
+scripts/docs-check/comment-proof.test.ts                56 ->    65  (+9)
+scripts/docs-check/scanner.test.ts                      34 ->    43  (+9)
+# total 1657 -> 1675 (+18); the docs-check project is the only one that moved

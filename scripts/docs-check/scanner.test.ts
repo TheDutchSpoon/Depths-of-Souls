@@ -226,6 +226,24 @@ describe('scanSource pragmas', () => {
     ])
   })
 
+  it.each([
+    '/* eslint no-console: off */',
+    '/* global state */',
+    '/* globals a, b */',
+    '/* exported name */',
+    '/*#__PURE__*/',
+    '/* @__PURE__ */',
+    '/*#__NO_SIDE_EFFECTS__*/',
+    '// @__NO_SIDE_EFFECTS__',
+  ])('takes the tool comment %s', (comment) => {
+    expect(pragmas(`${comment}\nconst a = f()\n`)).toEqual([[comment, 0]])
+  })
+
+  it('does not take the block-only forms as line comments', () => {
+    expect(pragmas('// eslint no-console: off\nconst a = 1\n')).toEqual([])
+    expect(pragmas('// global state is reset\nconst a = 1\n')).toEqual([])
+  })
+
   it('does not take prose that mentions a pragma', () => {
     expect(
       pragmas('// see eslint-disable and @ts-ignore for this\nconst a = 1\n'),

@@ -10,8 +10,9 @@ import { UsageError } from './usage.ts'
 // the inventory modes that calls git, which it only ever reads.
 //
 // For each changed `.ts`/`.tsx`/`.js` file under the scope, both sides are printed with
-// `ts.createPrinter({ removeComments: true })` and compared byte for byte. Pragma comments
-// (`@ts-…`, `eslint-…`, `/// <`) are compared apart, because removing comments strips them: a
+// `ts.createPrinter({ removeComments: true })` and compared byte for byte; a file with a syntax
+// error on either side fails first, because the parser skips a stray token and the prints agree.
+// Pragma comments (`@ts-…`, `eslint-…`, `/// <`, `#__PURE__` and the like) are compared apart, because removing comments strips them: a
 // pragma is its exact text plus the index of the token it governs. A mask lists the string
 // literals (test titles, a fixture template) the change is allowed to reword.
 
@@ -148,6 +149,29 @@ function duplicates(names: string[]): { names: string[]; excess: number } {
   }
 }
 
+/** True when the working tree has more duplicated full names, or more excess copies, than the base. */
+export function duplicatesGrew(baseNames: string[], headNames: string[]): boolean {
+  const base = duplicates(baseNames)
+  const head = duplicates(headNames)
+  return head.names.length > base.names.length || head.excess > base.excess
+}
+
+/** The first syntax error of a file, as `line <n>: <message>`: the parser skips a stray token silently. */
+function syntaxError(file: string, text: string): string | undefined {
+  const { diagnostics } = ts.transpileModule(text, {
+    fileName: file,
+    reportDiagnostics: true,
+    compilerOptions: { jsx: ts.JsxEmit.Preserve },
+  })
+  const d = diagnostics?.[0]
+  if (!d) return undefined
+  const line =
+    d.file && d.start !== undefined
+      ? d.file.getLineAndCharacterOfPosition(d.start).line + 1
+      : 1
+  return `line ${line}: ${ts.flattenDiagnosticMessageText(d.messageText, ' ')}`
+}
+
 interface FileVerdict {
   reasons: string[]
   masked: number
@@ -161,6 +185,11 @@ function compareCode(
   entries: MaskEntry[],
 ): FileVerdict {
   const verdict: FileVerdict = { reasons: [], masked: 0, pairs: [] }
+  const broken = syntaxError(file, head) ?? syntaxError(file, base)
+  if (broken !== undefined) {
+    verdict.reasons.push(`syntax error at ${broken}`)
+    return verdict
+  }
   const baseLits = literalsOf(file, base)
   const headLits = literalsOf(file, head)
 
@@ -223,11 +252,13 @@ function compareCode(
     )
   }
 
-  const baseDup = duplicates(baseScan.titles.map(fullName))
-  const headDup = duplicates(headScan.titles.map(fullName))
-  if (headDup.names.length > baseDup.names.length || headDup.excess > baseDup.excess)
+  const baseNames = baseScan.titles.map(fullName)
+  const headNames = headScan.titles.map(fullName)
+  if (duplicatesGrew(baseNames, headNames))
     verdict.reasons.push(
-      `duplicate test name: ${headDup.names.map((n) => `"${n}"`).join(', ')}`,
+      `duplicate test name: ${duplicates(headNames)
+        .names.map((n) => `"${n}"`)
+        .join(', ')}`,
     )
   return verdict
 }

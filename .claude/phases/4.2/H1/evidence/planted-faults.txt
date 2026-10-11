@@ -68,3 +68,22 @@ exit 0
 M  vite.config.ts
 
 no leftovers
+
+# ---- Round 2 (hand-out r1) ----
+# Same invocation and mask as above, vite.config.ts still reset; clone restored after each run (git status: only the staged vite.config.ts reset).
+# Output below is the FAIL line only; every other line was the same 88 OK lines as the baseline.
+
+## baseline: comment-proof: PASS, 88 changed files, exit 0
+
+## a stray ) appended to src/engine/rng.ts
+FAIL src/engine/rng.ts: syntax error at line 57: Declaration or statement expected.
+comment-proof: FAIL, 1 problems
+exit 1
+
+## a /* eslint no-console: off */ comment appended to src/engine/rng.ts
+# (3fd6a8f holds no /* eslint ... */ comment to reword, so the fault is the comment added; the reword is the unit test)
+FAIL src/engine/rng.ts: pragma differs: base (none), working tree `/* eslint no-console: off */` before token 163
+comment-proof: FAIL, 1 problems
+exit 1
+
+## restored: comment-proof: PASS, 88 changed files, exit 0

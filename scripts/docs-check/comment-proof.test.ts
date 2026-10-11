@@ -2,7 +2,7 @@ import { renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { main } from './cli.ts'
-import { loadMask, runCommentProof } from './comment-proof.ts'
+import { duplicatesGrew, loadMask, runCommentProof } from './comment-proof.ts'
 import type { MaskEntry } from './comment-proof.ts'
 import { capture, cleanUp, gitIn, makeTree, writeTree } from './test-utils.ts'
 import { UsageError } from './usage.ts'
@@ -59,7 +59,7 @@ describe('comment-proof print equality', () => {
     ['src/a.ts', 'export const a = 1', 'export const b = 1'],
     ['src/a.ts', 'export const a = 1', 'export const a = 2'],
     ['src/a.ts', '"x"', '"y"'],
-    ['src/b.tsx', '<p>', '<div>'],
+    ['src/b.tsx', '<p>{"x"}</p>', '<div>{"x"}</div>'],
     ['src/b.tsx', 'n = 1', 'n = 2'],
     ['src/c.js', 'export const a = 1', 'export const b = 1'],
     ['src/c.js', 'export const a = 1', 'export const a = 2'],
@@ -130,6 +130,11 @@ describe('comment-proof pragmas', () => {
       '// eslint-disable-line no-console',
       '// eslint-disable-line no-alert',
     ],
+    [
+      'an ESLint config comment',
+      '/* eslint-disable no-console */',
+      '/* eslint no-console: off */',
+    ],
   ])('fails a changed %s, though the printed code is equal', (_name, from, to) => {
     const root = repo({ 'src/p.ts': BASE })
     writeTree(root, { 'src/p.ts': BASE.replace(from, to) })
@@ -138,12 +143,41 @@ describe('comment-proof pragmas', () => {
     expect(text).toContain('FAIL src/p.ts: pragma differs')
   })
 
+  it('fails a reworded ESLint config comment and a deleted /*#__PURE__*/', () => {
+    const config = 'const a = 1\n/* eslint no-console: off */\nconsole.log(a)\n'
+    const root = repo({
+      'src/q.ts': config,
+      'src/r.ts': 'export const r = /*#__PURE__*/ f()\n',
+    })
+    writeTree(root, { 'src/q.ts': config.replace('off', 'warn') })
+    expect(proof(root).text).toContain('FAIL src/q.ts: pragma differs')
+    writeTree(root, {
+      'src/q.ts': config,
+      'src/r.ts': 'export const r = f()\n',
+    })
+    expect(proof(root).text).toContain('FAIL src/r.ts: pragma differs')
+  })
+
   it('fails an added pragma and a removed pragma', () => {
     const root = repo({ 'src/p.ts': BASE })
     writeTree(root, { 'src/p.ts': `// @ts-ignore\n${BASE}` })
     expect(proof(root).text).toContain('FAIL src/p.ts: pragma differs')
     writeTree(root, { 'src/p.ts': BASE.replace('/* eslint-disable no-console */\n', '') })
     expect(proof(root).text).toContain('FAIL src/p.ts: pragma differs')
+  })
+
+  it('fails a pragma appended after the last pragma, or added to a file with none', () => {
+    const root = repo({
+      'src/p.ts': BASE,
+      'src/n.ts': 'export const a = 1\nexport const b = 2\n',
+    })
+    writeTree(root, { 'src/p.ts': `${BASE}/* eslint-disable */\n` })
+    expect(proof(root).text).toContain('FAIL src/p.ts: pragma differs')
+    writeTree(root, {
+      'src/p.ts': BASE,
+      'src/n.ts': 'export const a = 1\n/* eslint-disable */\nexport const b = 2\n',
+    })
+    expect(proof(root).text).toContain('FAIL src/n.ts: pragma differs')
   })
 
   it('passes prose that merely mentions a pragma, changed', () => {
@@ -491,6 +525,44 @@ describe('comment-proof masks', () => {
       )
       expect(loadMask(path)).toHaveLength(1)
     })
+  })
+})
+
+describe('comment-proof syntax errors', () => {
+  const BASE = 'export function f(x: number) {\n  return x\n}\n'
+
+  it('fails a stray token the parser skips, naming the file and the reason', () => {
+    const root = repo({ 'src/s.ts': BASE })
+    writeTree(root, { 'src/s.ts': BASE.replace('return x', 'return x\n  )') })
+    const { code, text } = proof(root)
+    expect(code).toBe(1)
+    expect(text).toMatch(/FAIL src\/s\.ts: syntax error at line 3: /)
+  })
+
+  it('fails a file that was already broken in the base', () => {
+    const root = repo({ 'src/s.ts': BASE.replace('return x', 'return x\n  )') })
+    writeTree(root, { 'src/s.ts': `// note\n${BASE}` })
+    expect(proof(root).text).toMatch(/FAIL src\/s\.ts: syntax error at line 3: /)
+  })
+
+  it('passes a comment-only change in the same file', () => {
+    const root = repo({ 'src/s.ts': BASE })
+    writeTree(root, { 'src/s.ts': BASE.replace('return x', '// why\n  return x') })
+    expect(proof(root).code).toBe(0)
+  })
+})
+
+describe('duplicatesGrew', () => {
+  it('fails when the excess copies grow but the duplicated names do not', () => {
+    expect(duplicatesGrew(['t', 't'], ['t', 't', 't'])).toBe(true)
+  })
+
+  it('fails when the duplicated names grow but the excess copies do not', () => {
+    expect(duplicatesGrew(['t', 't', 't'], ['t', 't', 'u', 'u'])).toBe(true)
+  })
+
+  it('passes when neither grows', () => {
+    expect(duplicatesGrew(['t', 't'], ['t', 't'])).toBe(false)
   })
 })
 

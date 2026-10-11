@@ -77,7 +77,7 @@ const TITLE_ROOTS = new Set(['describe', 'it', 'test', 'suite'])
 
 /** A pragma starts the comment body; `@vitest-` may sit anywhere in the leading docblock. */
 const PRAGMA =
-  /^(?:@ts-(?:expect-error|ignore|nocheck|check)\b|eslint-|@jsx|@vite-ignore|prettier-ignore|v8 ignore|istanbul)/
+  /^(?:@ts-(?:expect-error|ignore|nocheck|check)\b|eslint-|@jsx|@vite-ignore|prettier-ignore|v8 ignore|istanbul|[#@]__(?:NO_SIDE_EFFECTS|PURE)__)/
 
 export function scriptKind(file: string): ts.ScriptKind {
   if (file.endsWith('.tsx')) return ts.ScriptKind.TSX
@@ -193,9 +193,14 @@ function pragmaBody(comment: Comment): string {
   return comment.text.replace(/^(?:\/\/+|\/\*+)\s*/, '')
 }
 
+/** ESLint reads inline config (`eslint rule: off`, `global x`) from block comments only. */
+const BLOCK_PRAGMA = /^(?:eslint\s|globals?\s|exported\s)/
+
 function isPragma(comment: Comment, tokenIndex: number): boolean {
   if (comment.text.startsWith('///')) return /^\/\/\/\s*</.test(comment.text)
-  if (PRAGMA.test(pragmaBody(comment))) return true
+  const body = pragmaBody(comment)
+  if (PRAGMA.test(body)) return true
+  if (comment.text.startsWith('/*') && BLOCK_PRAGMA.test(body)) return true
   return tokenIndex === 0 && /@vitest-/.test(comment.text)
 }
 
