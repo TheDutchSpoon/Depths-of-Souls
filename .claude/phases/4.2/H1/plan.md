@@ -1,5 +1,34 @@
 # Plan — Phase 4.2 — Slice H1: Comment tooling
 
+## Revision 1: what changed
+
+Addresses `plan-review.md` Round 1: plan fixes 1–7 (D1 confirmed, so fix 7 applies) and N1's correction.
+
+- **Fix 1, scanner range filter (§2, §4):** at each token the scanner reads `getTrailingCommentRanges`
+  **and** `getLeadingCommentRanges` at the token's full start (the token's own leading trivia, which
+  holds the previous line's same-line trailing comments), de-duplicates by `pos`, keeps a range only
+  if `range.end <= token.getStart(sf)`. Reading trailing ranges at `token.end` against the same
+  token's start, as the first draft said, dropped every trailing comment. New tests and a new
+  mutation run (§4). `counts.txt` expects 403 files, 7,178 ranges, 1,627 titles, and explains the
+  difference from the pre-split 6,949 (leading-only reading gives 6,677).
+- **Fix 2, describe chain (§2, §4):** `Title` gains `chain: string[]`, the enclosing titles' text,
+  outermost first, taken while walking (the walk keeps a stack of enclosing title calls). Test: the
+  same title in two `describe`s is not a duplicate.
+- **Fix 3, file set (§2, §4):** `git ls-tree` and `git ls-files` run with `-z`; file-set tests assert
+  the reason (`added`, `deleted`); mutation runs dropping `--exclude-standard` and the `existsSync`
+  filter.
+- **Fix 4, masks (§2, §4):** two entries with the same `file` and `old` are a usage error (exit 2).
+- **Fix 5, rehearsal (§6):** the tool is this branch's entry run against the clone:
+  `node scripts/docs-check.ts comment-proof 3fd6a8f --mask <scratch>/g-mask.json --root <clone>`;
+  the mask file lives in scratch outside both trees and is copied into `g-rehearsal.txt`. Planted
+  faults use the same invocation.
+- **Fix 6 / N1, patterns 16 and 17 (§2):** `[Pp]lan review`, `[Ss]ign-off`.
+- **Fix 7 / D1, pragma position (§2, §4):** a pragma is recorded as (exact text, index of the next
+  real token) and compared as such. A moved pragma with the same text fails. New test and mutation run
+  (text-only comparison).
+- Assumptions: A1–A11, N2–N4 stand as the review confirmed them; A8 and A9 and N1 are restated below.
+  No new assumption.
+
 Standing rules: `.claude/workflow/coding-rules.md`. Read for this plan: `CLAUDE.md`, `kickoff.md`,
 `phases/4.2/H/brief.md`, the pre-split `phases/4.2/H/plan.md` (§0, §1, §3, §7, checklist) and
 `plan-review.md` Round 1, `CONVENTIONS.md#comment-why-not-what`, `#open-questions-get-an-interface`,
@@ -33,16 +62,21 @@ Then the stale-header fixes (`docs-check.ts`, `git.ts`), then the evidence runs 
 ```ts
 interface Comment { pos; end; line; text; standalone: boolean }
 interface Block   { comments: Comment[]; text: string; map: …  }   // text offset -> (comment, line)
-interface Title   { pos; end; line; call: string; parts: { text: string; line: number }[] }
-interface Scan    { comments: Comment[]; blocks: Block[]; titles: Title[]; pragmas: string[] }
+interface Title   { pos; end; line; call: string; parts: { text: string; line: number }[]; chain: string[] }
+interface Pragma  { text: string; tokenIndex: number }             // tokenIndex: next real token
+interface Scan    { comments: Comment[]; blocks: Block[]; titles: Title[]; pragmas: Pragma[] }
 ```
 
 - **Parser, not raw scanner.** `ts.createSourceFile(file, text, Latest, false, kind)`, `ScriptKind`
   by extension (`.ts` TS, `.tsx` TSX, `.js` JS). Walk to the leaf tokens with `getChildren()`.
-  At each token read `getLeadingCommentRanges(text, token.getFullStart())` and
-  `getTrailingCommentRanges(text, token.end)`, de-duplicate by `pos`, and **keep a range only if
-  `range.end <= token.getStart(sf)`** (a `//` that opens a `JsxText` token or sits in template text
-  is not a comment). The EndOfFile token is walked.
+  At each token read **both** `getTrailingCommentRanges(text, token.getFullStart())` (the previous
+  token's same-line trailing comments, which sit in this token's leading trivia) and
+  `getLeadingCommentRanges(text, token.getFullStart())`, de-duplicate by `pos`, and **keep a range
+  only if `range.end <= token.getStart(sf)`** (a `//` that opens a `JsxText` token or sits in
+  template text ends after that token's start, so is not a comment). The EndOfFile token is walked,
+  so a trailing comment on the last line is kept. Reading trailing ranges at `token.end` against the
+  same token's start would drop every trailing comment (501 of 7,178 on today's tree); a test and a
+  mutation run pin it.
 - **JSDoc is not walked (fix 5).** The walk skips any child whose kind is in
   `FirstJSDocNode..LastJSDocNode`. Their text arrives once, as the leading comment of the first real
   token, so `/** see http://x // y */` is one comment.
@@ -57,12 +91,16 @@ interface Scan    { comments: Comment[]; blocks: Block[]; titles: Title[]; pragm
   .concurrent .runIf`), takes its first argument. String literal and substitution-free template
   → one part; template with substitutions → the head/middle/tail literal texts as parts (the
   `${…}` is code and is not checked; a pattern split by it is not seen, pinned by a test); any other
-  expression → no title (A6).
+  expression → no title (A6). `chain` is filled during the walk: a stack of the enclosing title
+  calls' first-part text (a template title contributes its parts joined by `${}`), so a full test name
+  is `chain` + own text (A9).
 - **Pragmas (fix 7).** A comment is a pragma when its body, after the leader and whitespace, **starts**
   with `@ts-(expect-error|ignore|nocheck|check)`, `eslint-`, `@jsx`, `@vite-ignore`,
   `prettier-ignore`, `v8 ignore`, `istanbul`, or (for `///`) `<`; `@vitest-` may be anywhere in a
   leading docblock (a comment before the first token). Prose mentioning "eslint-disable" mid-comment
-  is not a pragma. `pragmas` holds each pragma's exact text, in source order.
+  is not a pragma. `pragmas` holds each pragma's exact text and `tokenIndex`, the 0-based index of the
+  next real token in the walk's token stream (D1), in source order. A comment-only edit or a mask
+  leaves the token stream unchanged, so the index only moves when a pragma moves over code.
 
 ### `comments.ts` (new)
 
@@ -91,8 +129,8 @@ interface Scan    { comments: Comment[]; blocks: Block[]; titles: Title[]; pragm
 | 13 | `§\s?\d+` | n/a |
 | 14 | `\b[Bb]riefs?\b` (fix 3) | n/a (ASSUMPTION N1) |
 | 15 | `\b[Tt]he plan(?:'s)?\b` (fix 3) | "a plan", "planned" (ASSUMPTION N1) |
-| 16 | `\bplan review\b` (fix 3) | n/a |
-| 17 | `\bsign-off\b` (fix 3) | n/a |
+| 16 | `\b[Pp]lan review\b` (fix 3, N1) | n/a |
+| 17 | `\b[Ss]ign-off\b` (fix 3, N1) | n/a |
 
 No pattern bans a bare plan-item id (D1). History words are not a pattern (the hand pass's, 4.2-H2).
 Patterns 11, 12 and 14–17 are the ones that share words with the game: the build lists every hit of
@@ -139,8 +177,10 @@ Run by hand, never in CI. Uses `resolveRev`, `git ls-tree`, `showAt` and `git ls
 besides inventory that calls git, and git is only ever read.
 
 1. **File set.** Scope paths: `src`, `vite.config.ts`, `eslint.config.js`. Base set =
-   `git ls-tree -r --name-only <sha> -- <scope>`. Working-tree set =
-   `git ls-files --cached --others --exclude-standard -- <scope>` filtered by `existsSync`
+   `git ls-tree -r -z --name-only <sha> -- <scope>`. Working-tree set =
+   `git ls-files -z --cached --others --exclude-standard -- <scope>` filtered by `existsSync`
+   (both with `-z`, split on NUL, so a non-ASCII path is not quoted by `core.quotePath` and cannot
+   fail as both added and deleted)
    (cached-but-deleted files drop out). **This is how ignored and untracked files are told apart:**
    git's own ignore rules decide (`.DS_Store`, `*.local`, `*.sw?` are in no set, so they never fail;
    an untracked file `.gitignore` does not cover is in the working set and fails as *added*). A path in
@@ -149,8 +189,12 @@ besides inventory that calls git, and git is only ever read.
    `ts.createPrinter({ removeComments: true })` on both sides and compared byte for byte (first
    differing printed line reported); other files must be byte-identical.
 3. **Pragmas** compared apart (`removeComments` drops them): the scanner's `pragmas` arrays must be
-   equal, in order, exact text.
-4. **Masks.** `--mask` is a JSON array of `{ file, old, new, count? }` (count default 1). Before
+   equal, in order, as (exact text, `tokenIndex`) pairs (D1). A pragma moved above a different
+   statement fails even though its text is unchanged.
+4. **Masks.** `--mask` is a JSON array of `{ file, old, new, count? }` (count default 1). Two entries
+   with the same `file` and `old` are a usage error (exit 2), checked before any file is read: the
+   same old text to the same new text is what `count` is for, and the same old text to two different
+   new texts cannot be paired by position. Before
    printing, in the base text every string literal, substitution-free template, and template part
    whose **cooked** text equals `old` for that file has its source span replaced by `'MASK<i>'` (a
    template part keeps its delimiters, its raw span replaced); in the head text the same for `new`.
@@ -159,8 +203,8 @@ besides inventory that calls git, and git is only ever read.
    `count` times on both sides, else the file named in the entry fails** (a changed unlisted literal
    fails by print difference; an entry for a file with no change fails as unconsumed). Output:
    `OK <path> (masked <n>)` then `  "<old>" -> "<new>"` per masked pair.
-5. **Duplicate names (A9).** For each changed file, the full test names (describe chain + title, template
-   parts joined by `${}`) of the head must not have more duplicated names or more excess copies than
+5. **Duplicate names (A9).** For each changed file, the full test names (`chain` + title, template
+   parts joined by `${}`; the same title under two different `describe`s is two names) of the head must not have more duplicated names or more excess copies than
    the base.
 6. Exit 0 all OK; 1 any `FAIL <path>: <reason>` or a git error (bad rev); 2 usage.
 
@@ -180,6 +224,7 @@ New test files: `scanner.test.ts`, `comments.test.ts`, `comment-proof.test.ts`; 
 | --- | --- | --- |
 | Comments at token positions, `ScriptKind` per extension | `.ts`, `.tsx`, `.js` | one scanner test per kind finds its comment; a `//` in a string, URL, regex literal, template text, JSX text (`<p>http://x</p>`) and the `renderFixture` shape (three `//` lines in a template) give none; `${ /* c */ x }` gives one |
 | Keep only ranges ending before the token start | JSX text | `<p>// not a comment</p>` gives none |
+| Trailing comments read (fix 1) | same-line `x, // Phase 4`; last line of a file; trailing `// eslint-disable-line` | each is returned as its own block/pragma; a trailing `x, // Phase 4` fails `comments` with its line; a trailing comment on the final line (EndOfFile token) is found; no comment is returned twice |
 | JSDoc not walked (fix 5) | `/** … */` | `/** see http://x // y */` gives exactly one comment, with that text |
 | Blocks and wrap-safe matching; leader stripping at both paths (fix 6) | `//` run; `/* */` | `Phase\n// 8` and `/**\n * Phase\n * 8 */` each fail, reporting the line of `Phase`; blank-line-separated runs are two blocks; a trailing comment is its own block; two `//` on non-consecutive lines are two blocks |
 | Title extraction | `it`, `describe`, `it.each(t)(…)`, `test.each`, `describe.skipIf(c)(…)`, `.only`, template with `${}`, identifier | one planted pattern per shape fails with the title's line; identifier title ignored; a pattern split by `${x}` is not seen (pinned) |
@@ -196,18 +241,21 @@ New test files: `scanner.test.ts`, `comments.test.ts`, `comment-proof.test.ts`; 
 | `UsageError` in `usage.ts` | `citations.ts`, `cli.ts` | a path-error test asserts `instanceof UsageError` from `usage.ts` |
 | `citations <file>…` | module + CLI | passes on a clean file under `phases/`; fails on a planted label form and unresolved anchor under `phases/` with `file:line`; fails on an old form; outside root, missing file, directory → exit 2; absolute under `--root` and relative both work; no paths: output on a tree fixture equals a captured string (today's) |
 | `comment-proof` print equality | `.ts`, `.tsx`, `.js` | a comment-only change passes in each; a changed identifier, number and string literal fails in each, naming the file |
-| `comment-proof` pragmas | `@ts-expect-error`, `eslint-disable`, `/// <` | changed text fails (prints equal); unchanged passes |
-| `comment-proof` file set | added, deleted, renamed, untracked-not-ignored, ignored | the first four fail naming the file; an ignored `.DS_Store` under `src/` does not; a non-code byte change fails |
-| `comment-proof` masks | title, template part, non-title literal | listed change passes and prints; unlisted title change fails; unconsumed entry fails; entry consumed twice at count 1 fails; requoted masked title passes |
-| `comment-proof` duplicate names | same file | two titles converging on one full name fail; a pre-existing duplicate does not |
+| `comment-proof` pragmas | `@ts-expect-error`, `eslint-disable`, `/// <`, trailing `// eslint-disable-line` | changed text fails (prints equal); unchanged passes; a trailing pragma changed fails |
+| `comment-proof` pragma position (D1, fix 7) | `eslint-disable`, `prettier-ignore` | same text moved above a different statement fails (prints equal, text list equal); a comment-only edit elsewhere in the file, which shifts no token, passes |
+| `comment-proof` file set | added, deleted, renamed, untracked-not-ignored, ignored, non-ASCII path | the first four fail with the **reason** asserted (`added`, `deleted`; a rename both); an ignored `.DS_Store` under `src/` does not; a non-ASCII-named unchanged file does not fail; a non-code byte change fails |
+| `comment-proof` masks | title, template part, non-title literal | listed change passes and prints; unlisted title change fails; unconsumed entry fails; entry consumed twice at count 1 fails; requoted masked title passes; two entries with the same `file` and `old` exit 2 |
+| `comment-proof` duplicate names | same file | two titles converging on one full name fail; a pre-existing duplicate does not; the same title in two `describe`s is not a duplicate |
 | `comment-proof` reads `<base>` via git | CLI | scratch repo (`gitIn`) with two commits works; bad rev exits 1 |
 | CLI wiring | `cli.ts` | bad-argument table grows: `comments extra`, `comments --counts --quotations`, `citations --counts`, `comment-proof`, `comment-proof x --counts`, `budgets --mask f` → 2 |
 | Stale header comments (fix 10) | `docs-check.ts`, `git.ts` | the existing "entry names no Phase 4.2 mode" test sits beside a new one: the entry header no longer says "no dependencies" and mentions `comment-proof` |
 
 Mutation runs (each removed, tests must fail, then restored; `evidence/mutation-check.txt`): drop the
-`end <= token start` filter; walk JSDoc; remove one leader-stripping path (each of the two in turn);
-unanchor the pragma match; drop pragma comparison; drop the file-set check; drop the
-mask-consumed check; pattern 1 back to `ASSUMPTIONS?\b(?!:)`; pattern 11 matching a bare `locked`;
+`end <= token start` filter; read trailing ranges at `token.end` against the same token's start (the
+first draft's reading, fix 1); walk JSDoc; remove one leader-stripping path (each of the two in turn);
+unanchor the pragma match; drop pragma comparison; compare pragma text only, not `tokenIndex` (fix 7);
+drop the file-set check; drop `--exclude-standard` (the `.DS_Store` test fails); drop the `existsSync`
+filter (the deleted test fails on its asserted reason); drop `-z`; drop the mask-consumed check; pattern 1 back to `ASSUMPTIONS?\b(?!:)`; pattern 11 matching a bare `locked`;
 drop the `OPEN_QUESTIONS` citation requirement. The CI-step mutation is out (no CI step).
 
 ## 5. Wiring facts
@@ -223,19 +271,24 @@ drop the `OPEN_QUESTIONS` citation requirement. The CI-step mutation is out (no 
    tests → `comment-proof` + tests → header/`git.ts` comment fixes. Docs-check project run after each.
 2. Evidence (all under `phases/4.2/H1/evidence/`, outputs only, no scripts kept):
    - `counts.txt`: totals (files, ranges, titles, shapes) against the probe, every difference
-     explained, and `comments --counts` per pattern.
+     explained (expected: 403 files, 7,178 ranges, 1,627 titles; the pre-split 6,949 is neither the
+     leading-only 6,677 nor this reading, and the report names the reading), and `comments --counts`
+     per pattern.
    - `word-patterns.txt`: every hit of 11, 12, 14–17 listed (each provenance), plus the grep for
      `isActionLocked`, `lockedTurns`, SLOW "(locked)", "still locked" with no hit among them.
    - `quotations.txt`: `--quotations` on today's tree against 4.2-G's `review-quotations.txt` (about 40
      comments and one title), both counts, each difference explained.
-   - `g-rehearsal.txt`: a `git clone` into a scratch directory outside the repo; at `a7c4fa2` run
-     `comment-proof 3fd6a8f --mask <file>` with a mask listing exactly the 10 titles of 4.2-G's
+   - `g-rehearsal.txt`: a `git clone` into a scratch directory outside the repo; `a7c4fa2` has no
+     `comment-proof`, so the tool is this branch's entry run against the clone, with the clone checked
+     out at `a7c4fa2`: `node scripts/docs-check.ts comment-proof 3fd6a8f --mask <scratch>/g-mask.json
+     --root <clone>`. The mask file lives in scratch outside both trees, its content copied into the
+     evidence file, and lists exactly the 10 titles of 4.2-G's
      `retitled-tests.md` and the `renderFixture` template part. Expect 88 files OK with masked pairs
      printed and `vite.config.ts` FAIL, exit 1; with it reset to `3fd6a8f` in the clone, exit 0. Any other failure or
      unconsumed entry is reported, never masked away.
-   - `planted-faults.txt`: on that clone, a code change, a pragma change, an unlisted title change, an
-     added file, a deleted file, an unconsumed entry, each exit 1 naming the file; `.DS_Store`
-     under `src/` does not fail.
+   - `planted-faults.txt`: on that clone, with the same invocation, a code change, a pragma change, a
+     pragma moved, an unlisted title change, an added file, a deleted file, an unconsumed entry, each
+     exit 1 naming the file; `.DS_Store` under `src/` does not fail.
    - `citations-files.txt`: this kickoff passes; a planted label form and unresolved anchor under
      `phases/` fail; exit 2 for outside-root, missing, directory; no-paths output identical to `main`'s
      (`git archive main` extracted to scratch, diff shown).
@@ -274,16 +327,17 @@ A1–A11 are the pre-split plan's, with the review's calls applied. N1–N4 are 
   .skip/.todo/.concurrent/.runIf` chains; templates checked on literal parts only; identifiers ignored.
 - **A7** `--quotations` is report-only, 4.2-G's normalisation, four-word window.
 - **A8** Pragma forms as listed in §2, **matched at the start of the comment body**, `@vitest-` anywhere in the
-  leading docblock (fix 7); compared as exact text, in order.
-- **A9** The duplicate-name check is a heuristic (counts of duplicated full names and excess copies),
-  not a per-title mapping; two titles converging in different `describe`s fail the mask count check
+  leading docblock (fix 7); compared as (exact text, next-token index), in order (D1).
+- **A9** The duplicate-name check is a heuristic (counts of duplicated full names, the full name being
+  the `chain` plus the title, and excess copies), not a per-title mapping; two titles converging in different `describe`s fail the mask count check
   and fail closed.
 - **A10** `comment-proof` compares the working tree to `<base>`, counting untracked-not-ignored
   files; non-code files under scope must be byte-identical.
 - **A11** `citations <file>…` applies the `claude` site rules to a named file whatever its extension;
   bad paths are exit 2; no-paths output unchanged.
-- **N1** Patterns 14 and 15 accept a capital first letter (`[Bb]rief`, `[Tt]he plan`) because comments
-  start sentences with them; the kickoff's fix 3 lists them lower-case. The word-patterns run decides
+- **N1** Patterns 14–17 accept a capital first letter (`[Bb]rief`, `[Tt]he plan`, `[Pp]lan review`,
+  `[Ss]ign-off`) because comments start sentences with them; the kickoff's fix 3 lists them lower-case
+  (review: corrected to include 16 and 17). The word-patterns run decides
   whether any game hit forces narrowing; if one does, I narrow and report it.
 - **N2** The working-tree file set is `git ls-files --cached --others --exclude-standard` filtered by
   existence, so git's own ignore rules decide what is "in the tree" (kickoff trap on `.DS_Store`).
