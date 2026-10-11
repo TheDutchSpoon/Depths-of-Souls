@@ -1,6 +1,7 @@
 // Status timing in the bearer's turns -- the born-this-turn clock, the countdown and
-// the Web roll in turn-end cleanup, and the win checks inside a turn. The goldens (golden-f2-*, golden-stun, golden-dot, ...) pin end-to-end logs; each test
-// here is the one that fails with its mechanism removed.
+// the Web roll in turn-end cleanup, and the win checks inside a turn. The goldens (golden-f2-*,
+// golden-stun, golden-dot, ...) pin end-to-end logs; each test here is the one that fails with its
+// mechanism removed.
 
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from './combat'

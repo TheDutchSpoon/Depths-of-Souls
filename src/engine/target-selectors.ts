@@ -166,7 +166,8 @@ export function resolveLowestHpInjuredOtherAlly(
  * (see scripting-types.ts's ActedBeforeTargetCondition doc). Every selector kind but
  * random-enemy is already RNG-free in resolveTargetSelector -- this delegates to it unchanged
  * for those, and returns null for random-enemy rather than drawing (there is no way to "peek"
- * a random pick without consuming randomness, and lookahead must never do that). random-ally follows the exact same rule, for the same reason.
+ * a random pick without consuming randomness, and lookahead must never do that). random-ally
+ * follows the exact same rule, for the same reason.
  */
 export function peekTargetSelector(
   selector: TargetSelector,

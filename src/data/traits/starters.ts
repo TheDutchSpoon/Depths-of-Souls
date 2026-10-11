@@ -6,8 +6,7 @@ import { ARCANE_BOLT } from '../spells'
 // these by id (this file only defines the carriers; the model is composition).
 
 // ---- Sorcerer starter ----
-// "Wit affinity, high Intelligence. Trait: grants one spell as a permanent extra gem + 50%
-// chance on-turn-end to cast a random equipped spell" (`specializations/sorcerer.md#starter-glyphmoth-seer`).
+// Wit affinity, high Intelligence (`specializations/sorcerer.md#starter-glyphmoth-seer`).
 
 /** "50% chance on-turn-end to cast a random equipped spell." An ordinary
  * `on-turn-end` trigger whose `perform-action(self, cast gemSlot 'random')` response queues the
@@ -52,8 +51,9 @@ export const BRUTE_STARTER_TRAIT: Trait = {
 // ---- Shieldbarer starter ----
 // High Defence; on-provoke, your creatures gain +35% Defence (team-wide,
 // `specializations/shieldbarer.md#starter-stonehorn-warden`). A
-// stat-modifier (not grant-action-state -- it's a stat buff, not an action-state flag), targeted at the new `all-allies` ResponseTarget. Permanent-for-fight and re-fired on
-// every Provoke, so repeated provokes stack (a ramping team-Defence engine).
+// stat-modifier (not grant-action-state -- it's a stat buff, not an action-state flag), targeted at
+// the new `all-allies` ResponseTarget. Permanent-for-fight and re-fired on every Provoke, so
+// repeated provokes stack (a ramping team-Defence engine).
 
 export const SHIELDBARER_STARTER_TRAIT: Trait = {
   id: 'shieldbarer-starter-rally',

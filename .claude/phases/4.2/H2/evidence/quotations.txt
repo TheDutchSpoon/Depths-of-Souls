@@ -61,3 +61,33 @@ Zero rows remain, so there is no false positive to show. Each of the 47 comments
 - the target holds the fact in other words: the anchor stays, the quote went (most of them);
 - the anchor named the wrong heading: re-pointed (`spec/responses.md#perform-action` B2 rule 2 -> `spec/combat.md#every-action-source-obeys-the-same-rules`);
 - the fact has no home in the target: the quote went and the fact is under Spec questions in report-r1.md.
+
+## round 2: the by-hand re-scan
+
+`--quotations` misses a quotation that sits before its anchor and one of four words or fewer, so the scan was repeated over every
+comment block of the 346 changed files that holds a `.md#` anchor:
+
+1. Every double-quoted span in such a block: 78 (`1w`..`15w`, before or after the anchor).
+2. Each span compared (lower-cased, whitespace and markdown marks removed, `...` as a gap) against the whole of every doc its
+   block cites: 61 are not in any cited doc.
+3. Of those 61, 28 sit within 110 characters of an anchor (the rest are scare quotes, script rules or error text in a long block
+   with an anchor elsewhere). The 28 were read in place:
+   - **Changed (quote dropped or made exact, the anchor kept), 23:** `specializations.ts` header ("equip gems off-affinity",
+     "equipment Stat Slot benefit") and the four perk comments at `:274`, `:293`, `:331`, `:438` (whose "names this exact perk"
+     claims were also false: they now cite `specializations/brute.md#proficient-warrior`, `#aggressive-caster`, `#cull-the-weak` and
+     `specializations/shieldbarer.md#shield-bash` for the perk and `spec/combat.md#cross-stat-contribution` or
+     `spec/effects.md#conditional-damage-bonus` for the primitive); `species/glimmerdark.ts:58` and `species/rotcap-hollow.ts:66`
+     ("the spells this biome introduces"); `rotcap-hollow.ts:141` ("grows fatter off its kills", not in the Gorgemaw entry);
+     `rotcap-hollow.ts:365` ("adds drawn from the biome's own spawn pool", "spiderlings"); `species/starters.ts:1` ("high X");
+     `spells/core.ts:25` ("30%-Intelligence ... own example"); `statuses.ts:162` ("same tool, opposite pole") and `:173` ("colonies,
+     spores, decay ... spread", "spreads to a living, non-Spored enemy"); `traits/glimmerdark.ts:418` ("attacker", "armor-as-weapon");
+     `traits/rotcap-hollow.ts:359` ("+% to Burning"; the entry says "30% more damage to Burning enemies");
+     `golden-action-observed.fixture.ts:1` (now the spec's own "an ally's multi-cast is observed once per instance");
+     `effects.ts:496` ("board counts") and `:544` ("the existing implicit behavior, made explicit"); `rng.ts:6` ("never mutate",
+     "advance the working copy's bookmark"); `state/store.ts:155` (now the spec's "the fight ends the instant a side has no living
+     creature", singular).
+   - **False positives, 5, kept:** the `"vite/client"` literal in `eslint.config.js:27` and `__corpus__/node-shims.d.ts:1` (a
+     value in `tsconfig.app.json`'s `types`, not a quotation of a doc); the perk name "Brute Force" (and "Spell Focus") in
+     `specializations.ts:1` (names); `actions.ts:660` "draws nothing when inactive" (quotes `targeting.ts`, a code discipline, not
+     the cited spec); `statuses.ts:173` "exclude a status" (names a missing primitive, not a quotation).
+4. `--quotations` after the round: 0 comments and 0 titles.

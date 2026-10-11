@@ -192,7 +192,7 @@ describe("the skip: an 'all' lock", () => {
       'RoundStarted',
       'TurnStarted',
       'TurnSkipped',
-      'StatusExpired', // Stun 1 counts down at the skipped turn's own cleanup (deliberate change)
+      'StatusExpired', // Stun 1 counts down at the skipped turn's own cleanup
       'TurnEnded',
     ])
     expect(events.find((e) => e.type === 'TurnSkipped')).toEqual({

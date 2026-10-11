@@ -1,5 +1,6 @@
-// Golden: a FLAT-mode response on ANOTHER creature is INDIRECT damage: the flat amount is the magnitude, and there is no Defence bypass and no true-damage
-// channel. Hand-derived. All vitality (neutral x1.0), no dealt/taken mods, so
+// Golden: a FLAT-mode response on ANOTHER creature is INDIRECT damage: the flat amount is the
+// magnitude, and there is no Defence bypass and no true-damage channel. Hand-derived. All vitality
+// (neutral x1.0), no dealt/taken mods, so
 //   raw = flat - 0.2 x Defence;  final = MAX(1, floor(raw)).
 //
 // Players (always-wait): U1 (health 100, Defence 20, speed 10), U2 (health 50, Defence 20, speed 5).

@@ -1,8 +1,8 @@
 // Golden: the real-status mirror of golden-b2-silenced-refuses-granted-cast. Silenced
 // is the REAL status, applied by the REAL Silence spell, and a granted cast (a turn-end
 // perform-action, chance 100) is refused by the Cast lock -- while the Silenced creature still
-// attacks (a scoped lock leaves other actions choosable). golden-b2-silenced-refuses-granted-cast (a trait-borne fixture
-// lock) covers the fixture stand-in. Hand-derived.
+// attacks (a scoped lock leaves other actions choosable). golden-b2-silenced-refuses-granted-cast
+// (a trait-borne fixture lock) covers the fixture stand-in. Hand-derived.
 //
 // SILENCER (enemy, speed 30, health 60, defence 0, script: always-cast) holds SILENCE in slot 0.
 // CASTER (player, speed 20, health 40, Attack 10, Int 20, defence 0, script always-attack) holds

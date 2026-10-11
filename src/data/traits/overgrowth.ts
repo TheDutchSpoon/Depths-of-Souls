@@ -46,7 +46,8 @@ export const SPIDER_AMBUSHER_TRAIT: Trait = {
  * Ambusher, not the two of them combined -- it never applies Web itself (that's Weaver's job
  * alone) and never reads a flat conditional bonus off ITS OWN hit (that's Ambusher's job alone).
  * Instead, every attack lands a SEPARATE bonus hit whose power grows with how many enemies are
- * CURRENTLY Webbed -- "rewards multiple Webs out" read as a live count-scaling bonus (deal- damage's own magnitudeSource), a payoff-of-the-payoff that depends entirely on its
+ * CURRENTLY Webbed -- "rewards multiple Webs out" read as a live count-scaling bonus (deal-damage's
+ * own magnitudeSource), a payoff-of-the-payoff that depends entirely on its
  * species-mates having done their own jobs, rather than doing any part of those jobs itself. */
 export const SPIDER_BROODWARDEN_TRAIT: Trait = {
   id: 'spider-broodwarden-entangling-brood',
@@ -87,11 +88,10 @@ export const SWARMHIVE_DRONE_TRAIT: Trait = {
   ],
 }
 
-/** Swarmhive's Striker (payoff): "scales per hive-mate in the team" -- the
- * shape for this exact species (`spec/effects.md#count-scaling` names Swarmhive Striker as
- * apply-stat-modifier's magnitudeSource consumer): fires once on-fight-start, freeze-at-
- * application, count = living-allies-of-species (INCLUDES self) at that moment -- never
- * re-reads live after. */
+/** Swarmhive's Striker (payoff, `content/overgrowth.md#swarmhive-striker`): scales per hive-mate
+ * in the team, through apply-stat-modifier's magnitudeSource (`spec/effects.md#count-scaling`):
+ * fires once on-fight-start, freeze-at-application, count = living-allies-of-species (INCLUDES
+ * self) at that moment -- never re-reads live after. */
 export const SWARMHIVE_STRIKER_TRAIT: Trait = {
   id: 'swarmhive-striker-hive-mind',
   name: 'Hive Mind',
@@ -153,7 +153,8 @@ export const TREANT_SAPLING_TRAIT: Trait = {
   ],
 }
 
-/** Treants' Elder (payoff): "heals the line" -- heal's own scalingStat mode (Treants Elder is the CANONICAL example in that mechanism's own doc comment), scaling off the HEALER's
+/** Treants' Elder (payoff): "heals the line" -- heal's own scalingStat mode (Treants Elder is the
+ * CANONICAL example in that mechanism's own doc comment), scaling off the HEALER's
  * own effective Health, landing on the lowest-HP ally every round-end. */
 export const TREANT_ELDER_TRAIT: Trait = {
   id: 'treant-elder-verdant-ward',
@@ -266,7 +267,7 @@ export const SNAPJAW_LURE_TRAIT: Trait = {
   ],
 }
 
-/** Snapjaws' Jaws (payoff): a retaliate at 60% of its Attack ("a big retaliate", `content/overgrowth.md#snapjaw-jaws`). */
+/** Snapjaws' Jaws (payoff): a retaliate at 60% of its Attack (`content/overgrowth.md#snapjaw-jaws`). */
 export const SNAPJAW_JAWS_TRAIT: Trait = {
   id: 'snapjaw-jaws-snapback',
   name: 'Snapback',

@@ -44,4 +44,4 @@
          17         0       0      0  sign-off
 
 ## after: npm run docs:check -- comments
-    comments: PASS, 6918 comments and 1627 titles in 403 files
+    comments: PASS, 7003 comments and 1627 titles in 403 files

@@ -51,8 +51,9 @@ export function getProvokingMembers(party: readonly Creature[]): readonly Creatu
  * (brute.md) is defined as bypassing Provoke's redirect only, not Confusion's, so a confused
  * Tunnel-Vision creature still rolls Confusion. (2) Tunnel Vision -- if the roll didn't
  * redirect (or the actor isn't confused) and the actor is provoke-immune, skip straight to
- * normal resolution, ignoring enemy Provoke entirely. (3) Provoke -- if the opposing side has >=1 provoking member, draws one seeded-RNG
- * index among them and returns that provoker, `resolveNormally` NEVER CALLED in that case (a
+ * normal resolution, ignoring enemy Provoke entirely. (3) Provoke -- if the opposing side has >=1
+ * provoking member, draws one seeded-RNG index among them and returns that provoker,
+ * `resolveNormally` NEVER CALLED in that case (a
  * selector's own RNG draw, e.g. random-enemy, never happens when it would just be discarded);
  * only when no provoker exists does the normal selector/default-target resolution run.
  *
@@ -138,7 +139,9 @@ export function shouldRedirectAoeToAllies(actor: Creature, state: CombatState): 
 
 /**
  * The living neighbors of `target` within `party`, taken from
- * the alive-filtered, slot-ordered list (living-adjacency, not raw slot-index adjacency: a dead slot-neighbor would make Splashing whiff for no player-visible reason, and living-adjacency degrades gracefully as a side thins out).
+ * the alive-filtered, slot-ordered list (living-adjacency, not raw slot-index adjacency: a dead
+ * slot-neighbor would make Splashing whiff for no player-visible reason, and living-adjacency
+ * degrades gracefully as a side thins out).
  * Returns up to two neighbors (one at each edge of the living list); empty when `target`
  * isn't alive-and-present in `party` or has no living neighbor.
  */

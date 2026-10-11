@@ -139,6 +139,7 @@ Outside the proof (`scripts/` is out of its scope, so no mask entry):
 | src/engine/__golden__/golden-pollinator-pollenlord.test.ts:6 | golden replay: Pollinators Pollenlord (Phase 4 Slice H1, real content) | golden replay: Pollinators Pollenlord (real content) |
 | src/engine/__golden__/golden-resonant-harmonize.test.ts:6 | golden replay: Glimmerdark Resonants Harmonize/Resonate (Phase 4 Slice H2, real content) | golden replay: Glimmerdark Resonants Harmonize/Resonate (real content) |
 | src/engine/__golden__/golden-resonant-overtone.test.ts:6 | golden replay: Glimmerdark Resonant Overtone echo-cast (Phase 4 Slice H2, real content) | golden replay: Glimmerdark Resonant Overtone echo-cast (real content) |
+| src/engine/__golden__/golden-resonant-overtone.test.ts:7 | matches the committed event log exactly (one echo fires, its own re-observation fails, echo damage lands before the original) | matches the committed event log exactly (one echo fires, its own re-observation fails, the original damage lands first, then the echo damage) |
 | src/engine/__golden__/golden-revive.test.ts:6 | golden replay: revive (Phase 4 Slice B) | golden replay: revive |
 | src/engine/__golden__/golden-rot-sovereign.test.ts:6 | golden replay: Rotcap Hollow Rot Sovereign attrition (Phase 4 Slice H3, real content) | golden replay: Rotcap Hollow Rot Sovereign attrition (real content) |
 | src/engine/__golden__/golden-scoped-suppression.test.ts:6 | golden replay: scoped action-lock (Phase 4 Slice B) | golden replay: scoped action-lock |
@@ -170,6 +171,7 @@ Outside the proof (`scripts/` is out of its scope, so no mask entry):
 | src/engine/combat.test.ts:699 | born-this-turn: a status refreshed in its own bearer turn keeps full duration (Phase 4.1-F2) | born-this-turn: a status refreshed in its own bearer turn keeps full duration |
 | src/engine/combat.test.ts:807 | action instance-list composition (Phase 4 Slice B) | action instance-list composition |
 | src/engine/combat.test.ts:916 | Spell.scalingStat (Phase 4 Slice B) | Spell.scalingStat |
+| src/engine/combat.test.ts:939 | absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup | absent scalingStat reads the remap-aware Intelligence |
 | src/engine/combat.test.ts:987 | Web break-free (Phase 4 Slice E2) | Web break-free |
 | src/engine/combat.test.ts:1111 | Arcane Surge-shaped granted cast = on-turn-end perform-action (Phase 4.1-E) | Arcane Surge-shaped granted cast = on-turn-end perform-action |
 | src/engine/combat.test.ts:1144 | on a successful roll, casts the (only) equipped spell before TurnEnded (Phase 4.1-C, D6) | on a successful roll, casts the (only) equipped spell before TurnEnded |
@@ -280,7 +282,7 @@ Outside the proof (`scripts/` is out of its scope, so no mask entry):
 | src/engine/spell-effects.test.ts:889 | ASSUMPTION 35: one landed target's effect list is atomic (no actor check between effects) | One landed target's effect list is atomic (no actor check between effects) |
 | src/engine/spell-effects.test.ts:963 | ASSUMPTION 36: magnitudes read the caster LIVE when each effect runs | Magnitudes read the caster LIVE when each effect runs |
 | src/engine/spell-effects.test.ts:999 | heal.offStat (plan review F2) | heal.offStat |
-| src/engine/spell-effects.test.ts:1224 | rejects %s setting both offStat and scalingStat (it used to throw mid-fight) | rejects %s setting both offStat and scalingStat (a mid-fight throw) |
+| src/engine/spell-effects.test.ts:1224 | rejects %s setting both offStat and scalingStat (it used to throw mid-fight) | rejects %s setting both offStat and scalingStat (at load, not mid-fight) |
 | src/engine/spell-effects.test.ts:1247 | a trait heal scaled by a live count: 26, not the old (stat x sp) x count = 27 | a trait heal scaled by a live count: 26, not (stat x sp) x count = 27 |
 | src/engine/splashing.test.ts:53 | Splashing (Phase 4 Slice C) | Splashing |
 | src/engine/status-containers.test.ts:221 | a lock gained during the actor's own turn-start hooks skips that very turn (ASSUMPTION 45) | a lock gained during the actor's own turn-start hooks skips that very turn |

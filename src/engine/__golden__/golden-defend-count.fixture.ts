@@ -1,6 +1,7 @@
 // Golden: Creature.defendCount + the `magnitudeSource` count-scaling primitive on a
-// `damage-modifier` status, `accumulation: 'multiplicative'` (the DEFAULT mode, a fixture mechanism demo, not real content). This fixture
-// PINS the multiplicative mode (asymptotes toward 0, never clamped) -- the
+// `damage-modifier` status, `accumulation: 'multiplicative'` (the DEFAULT mode, a fixture mechanism
+// demo, not real content). This fixture PINS the multiplicative mode (asymptotes toward 0, never
+// clamped) -- the
 // additive-with-cap mode (real Bulwark's -5%/Defend, cap 80% shape,
 // `specializations/shieldbarer.md#bulwark`) is its own separate golden,
 // golden-defend-count-additive-cap, since a purely multiplicative `magnitude ** count` does NOT
@@ -10,7 +11,9 @@
 // damage-modifier ONCE at fight-start, whose `magnitude` (0.95) is raised to the power of a LIVE
 // `self-defend-count` reading instead of the status's own count (a status is single-instance: 1) -- so the taken
 // factor keeps shrinking round-over-round purely from BEARER defending again, with no
-// re-application needed. Multiplicative mode never clamps (`spec/effects.md#taken-reduction-accumulation`) -- contrast the additive-with-cap fixture, which hard-clamps.
+// re-application needed. Multiplicative mode never clamps
+// (`spec/effects.md#taken-reduction-accumulation`) -- contrast the additive-with-cap fixture, which
+// hard-clamps.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // BEARER is faster (defends first each round, so it's already `defending` when hit that same

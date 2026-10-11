@@ -1,4 +1,5 @@
-// The ONE way a golden test builds its starting state and replays it. Every turn is resolved from a
+// The ONE way a golden test builds its starting state and replays it
+// (`CONVENTIONS.md#every-golden-replays-through-one-shared-runner`). Every turn is resolved from a
 // deep-frozen state (`stepFrozen`), so every golden also proves the engine never writes to its
 // input -- there is no separate sweep and no list of excluded goldens.
 //

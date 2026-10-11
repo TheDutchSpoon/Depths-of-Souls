@@ -60,7 +60,8 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const TURN_STEPS = 3 // P and WRETCH's round-1 turns, then round 2's setup and P's round-2 turn.

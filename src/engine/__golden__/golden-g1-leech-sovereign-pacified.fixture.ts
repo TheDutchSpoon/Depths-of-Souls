@@ -1,5 +1,6 @@
-// Golden: a Pacified Leech Sovereign casts instead of waiting (`spec/scripting.md#role-scripts`). Real content: the real LEECH_SOVEREIGN, on her real
-// role script (`striker`, from `defaultScriptId`), holding one gem (Stinger Swarm: she is Instinct),
+// Golden: a Pacified Leech Sovereign casts instead of waiting (`spec/scripting.md#role-scripts`).
+// Real content: the real LEECH_SOVEREIGN, on her real role script (`striker`, from
+// `defaultScriptId`), holding one gem (Stinger Swarm: she is Instinct),
 // Pacified by the real Pacify spell.
 //
 // Why it exists. A role script that ends in "cast random gem", and a boss that holds a gem, turn a

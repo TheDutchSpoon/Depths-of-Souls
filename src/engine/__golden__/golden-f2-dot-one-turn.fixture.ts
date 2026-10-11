@@ -1,5 +1,6 @@
-// Golden: a 1-turn DoT ticks EXACTLY once (ticks are on-turn-end triggers, run BEFORE the cleanup that counts the status down). Also the born-this-turn rule for ticks: a
-// Poison the bearer applies to ITSELF in its own turn-end hooks (since the action slot) is born:
+// Golden: a 1-turn DoT ticks EXACTLY once (ticks are on-turn-end triggers, run BEFORE the cleanup
+// that counts the status down). Also the born-this-turn rule for ticks: a Poison the bearer applies
+// to ITSELF in its own turn-end hooks (since the action slot) is born:
 // it neither ticks nor counts down that turn, and ticks once at the NEXT turn end. Hand-derived.
 //
 // Poison: a tick is indirect damage from the applier's snapshot, potency 20% of the
@@ -96,7 +97,8 @@ export const traits: ReadonlyMap<string, Trait> = new Map([
   [POISONER_TRAIT.id, POISONER_TRAIT],
   [SELF_POISON_TRAIT.id, SELF_POISON_TRAIT],
 ])
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 type Id = typeof A

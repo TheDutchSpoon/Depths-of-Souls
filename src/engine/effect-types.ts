@@ -174,7 +174,9 @@ export type EffectResponse =
       // applyStatus treats an unknown statusId, rather than silently picking one.
       readonly scalingStat?: Stat
       // Flat mode: a fixed magnitude -- a number, a `StatPercent` of the FIRING creature's stat
-      // (a cost when it targets itself), or the `snapshot-potency` marker (a status's tick: the applier's snapshot, never the bearer's stat). Always indirect (no true- damage channel), scaled by the magnitudeSource count when one is declared.
+      // (a cost when it targets itself), or the `snapshot-potency` marker (a status's tick: the
+      // applier's snapshot, never the bearer's stat). Always indirect (no true-damage channel),
+      // scaled by the magnitudeSource count when one is declared.
       // Mutually exclusive with offStat/scalingStat (enforced -- see above);
       // presence of flatAmount selects this mode and its sibling spellPower field is simply never
       // read. Deliberately NOT `scalingStat` mode: a tick has its own formula (resolution.ts
@@ -240,8 +242,9 @@ export type EffectResponse =
        * carries only the flat, already-computed `finalFactor` -- there is no live recompute
        * afterward (contrast Bulwark's damage-modifier, which DOES recompute on every read); a
        * later change in the live count (e.g. an ally dying) does NOT retroactively change an
-       * already-applied modifier. Absent -- `factor` used directly. This is why Striker is authored as an apply-stat-modifier RESPONSE (fires
-       * once), not a live passive `StatModifierDef` sitting directly in `Trait.effects` (which
+       * already-applied modifier. Absent -- `factor` used directly. This is why Striker is authored
+       * as an apply-stat-modifier RESPONSE (fires once), not a live passive `StatModifierDef`
+       * sitting directly in `Trait.effects` (which
        * would fold LIVE on every getEffectiveStat read -- no "application moment" to freeze at). */
       readonly magnitudeSource?: MagnitudeSource
     }
@@ -309,18 +312,16 @@ export type SelfCondition =
     }
   | { readonly kind: 'has-status'; readonly statusId: string }
 
-// NOTE: `spec/effects.md#count-scaling` names stat-modifier as an eligible magnitudeSource host
-// too (a stat/damage-modifier whose factor reads a live board count, e.g.
-// `content/overgrowth.md#swarmhive-striker`). Deliberately NOT wired
-// HERE, on the standalone EffectDef -- getEffectiveStat(creature, stat) is a pure (creature,
-// stat) function called from ~15+ sites across the codebase (conditions.ts, turn-order.ts,
+// NOTE: `magnitudeSource` is deliberately NOT wired HERE, on the standalone EffectDef
+// (`spec/effects.md#stat-modifier-counts-freeze-at-application`). getEffectiveStat(creature, stat)
+// is called from ~15+ sites across the codebase (conditions.ts, turn-order.ts,
 // target-selectors.ts, ...), several of which have no CombatState in scope at all; giving it
 // access to live board counts would mean an invasive, CombatState-aware signature change to a
-// function the whole damage-formula/scripting pipeline depends on. Instead `magnitudeSource`
-// lives on the `apply-stat-modifier`
-// EffectResponse (see its own doc comment), freeze-at-application -- Swarmhive Striker/
-// Necromoss are authored as a triggered response (fires once, e.g. on-fight-start), never as a
-// live-folding passive `StatModifierDef` sitting directly in a Trait's `effects` array.
+// function the whole damage-formula/scripting pipeline depends on. It lives on the
+// `apply-stat-modifier` EffectResponse (see its own doc comment) instead -- Swarmhive Striker
+// (`content/overgrowth.md#swarmhive-striker`) and Necromoss are authored as a triggered response
+// (fires once, e.g. on-fight-start), never as a live-folding passive `StatModifierDef` sitting
+// directly in a Trait's `effects` array.
 export type StatModifierDef = {
   readonly category: 'stat-modifier'
   readonly stat: Stat
@@ -351,13 +352,13 @@ export function validateStatModifierConditions(defs: readonly EffectDef[]): void
   }
 }
 
-/** The load-time validator for observation
- * filters -- throws if `actionKind`/`excludeActor` sit on a trigger that is not
- * `on-action-observed`, `selfInflicted` on one that is not `on-damage-observed`, or an
- * `observationFilter` of any kind on a hook that is neither. Absent fields stay permissive.
- * Called over EVERY trigger carrier at import: every trait's effects (`data/traits/index.ts`),
- * every perk's effects (`data/specializations.ts`) and every status in the registry
- * (`validateStatusDef`, called from `data/statuses.ts`). */
+/** The load-time validator for observation filters (`spec/effects.md#damage-observation`) --
+ * throws if `actionKind`/`excludeActor` sit on a trigger that is not `on-action-observed`,
+ * `selfInflicted` on one that is not `on-damage-observed`, or an `observationFilter` of any kind
+ * on a hook that is neither. Absent fields stay permissive. Called over EVERY trigger carrier at
+ * import: every trait's effects (`data/traits/index.ts`), every perk's effects
+ * (`data/specializations.ts`) and every status in the registry (`validateStatusDef`, called from
+ * `data/statuses.ts`). */
 export function validateObservationFilters(
   defs: readonly EffectDef[],
   context = 'a trigger',
@@ -388,10 +389,10 @@ export function validateObservationFilters(
 }
 
 /**
- * `'random'` is an INTENT-only
- * `TargetSelector` variant -- it needs the action's intended side, which only an intent (a rule,
- * the fallback, a grant) carries; a response target (`{ kind: 'selector', selector }` on a trait,
- * status, or perk effect) has no such side to resolve it against. `resolveTargetSelector` throws
+ * `'random'` is an INTENT-only `TargetSelector` variant (`spec/combat.md#one-action-pipeline`) --
+ * it needs the action's intended side, which only an intent (a rule, the fallback, a grant)
+ * carries; a response target (`{ kind: 'selector', selector }` on a trait, status, or perk
+ * effect) has no such side to resolve it against. `resolveTargetSelector` throws
  * on it at RESOLUTION time (target-selectors.ts); this is the load-time counterpart, so a data
  * mistake fails fast at import (mirrors `validateStatModifierCondition`'s own precedent) instead
  * of throwing mid-fight the first time the response actually fires. Every response kind either
@@ -463,12 +464,11 @@ export function validateStatusNoRandomSelectorInResponseTargets(def: StatusDef):
   }
 }
 
-/** The load-time validator for a status's effects.
- * Throws if a status carries `stat-modifier` / `stat-remap` (no temporary stat-modifier),
- * `status-immunity` (immunity is read only from non-status carriers, so it can't depend on
- * itself) or `innate-spell` (innate spells are placed at fight setup, so a status's could never
- * take effect), then runs the response-target checks over its triggers. Called over every stock
- * status at import (`data/statuses.ts`). */
+/** The load-time validator for a status's effects. Throws if a status carries `stat-modifier` /
+ * `stat-remap` (`spec/effects.md#no-temporary-stat-modifier`), `status-immunity` (immunity is read
+ * only from non-status carriers, so it can't depend on itself) or `innate-spell` (innate spells
+ * are placed at fight setup, so a status's could never take effect), then runs the response-target
+ * checks over its triggers. Called over every stock status at import (`data/statuses.ts`). */
 export function validateStatusDef(def: StatusDef): void {
   for (const effect of def.effects) {
     switch (effect.category) {
@@ -760,24 +760,26 @@ export type AnnihilateDef = {
  * the CURRENT damage target (gatherConditionalDamageBonus, effects.ts) -- this is what lets the
  * bonus land as ONE clean modified hit (folded into dealtMods alongside gatherDealtMods) rather
  * than a second on-damage-dealt follow-up instance, which would re-fire on-damage-dealt,
- * re-splash, and double-count on-hit effects (`spec/effects.md#splashing-and-annihilate`'s consumption model). */
+ * re-splash, and double-count on-hit effects (`spec/effects.md#conditional-damage-bonus`). */
 export type ConditionalDamageBonusDef = {
   readonly category: 'conditional-damage-bonus'
   readonly percent: number
   readonly condition: Condition
   /** Which action kind(s) this bonus applies to, mirroring
-   * `CrossStatDef.appliesTo`. Absent = `'both'` (no
-   * existing content sets this, so Cull the Weak/Ambusher/Gloomjaws/Sporch's Reaper are
-   * unaffected). First scoped consumers: Brute Force (`'attack'`) and Spell Focus (`'cast'`) --
-   * each an unconditional "+% damage" perk that must NOT leak onto the other action kind. */
+   * `CrossStatDef.appliesTo`. Absent = `'both'`, which Cull the Weak, Ambusher, Lullpollen's Reaper,
+   * Hollowkin Puppeteer, Sporch Ashborn and Gloomjaw Stalker leave. Scoped consumers: Brute Force
+   * (`'attack'`), Spell Focus (`'cast'`) and the Blindclaws Striker (`'attack'`) -- each a
+   * "+% damage" source that must NOT leak onto the other action kind. */
   readonly actionKind?: 'attack' | 'cast' | 'both'
 }
 
 /** The TAKEN-pool mirror of `ConditionalDamageBonusDef` --
  * a permanent-for-fight passive damage REDUCTION, never a status (no `statusId`/`polarity`,
  * unlike `DamageModifierDef`; not surfaced as a status icon). Carries the exact same
- * accumulation shape `DamageModifierDef`'s own `taken` direction already proved (`golden-defend-count-additive-cap`): `magnitude` (the per-unit factor), an optional
- * `magnitudeSource` (a live count -- absent means a flat single application, count 1), `accumulation` (`'multiplicative'` default /
+ * accumulation shape `DamageModifierDef`'s own `taken` direction already proved
+ * (`golden-defend-count-additive-cap`): `magnitude` (the per-unit factor), an optional
+ * `magnitudeSource` (a live count -- absent means a flat single application, count 1),
+ * `accumulation` (`'multiplicative'` default /
  * `'additive'`-with-`reductionCap`), and `reductionCap` (meaningful only for `'additive'`).
  * First (and so far only) consumer: Bulwark, authored as a genuine perk-granted PASSIVE
  * (`{ category: 'taken-reduction', magnitude: 0.95, magnitudeSource: {kind:'count',
@@ -813,8 +815,9 @@ export type CheatDeathDef = {
  * permanent-for-fight `EffectDef` rather than baked into the species data -- so it
  * travels with the trait through fusion (`spec/creatures.md#fusion`) instead of the template.
  * NOT a gem: no level, no augments, un-upgradeable by construction, and NO equip gate
- * (canEquip/affinity) applies, since it's never equipped. `createCombat`'s fight-setup reads every `innate-spell` effect off a
- * creature's just-instantiated `activeEffects`, in canonical order, and PREPENDS their spells
+ * (canEquip/affinity) applies, since it's never equipped. `createCombat`'s fight-setup reads every
+ * `innate-spell` effect off a creature's just-instantiated `activeEffects`, in canonical order, and
+ * PREPENDS their spells
  * onto `equippedSpells` (innate slots first, then the regular gem slots) -- see combat.ts. */
 export type InnateSpellDef = {
   readonly category: 'innate-spell'
@@ -946,7 +949,8 @@ interface StatusInstanceState {
 export type StatModifierEffect = StatModifierDef & InstanceIdentity
 export type StatRemapEffect = StatRemapDef & InstanceIdentity
 export type TriggeredEffect = TriggeredDef & InstanceIdentity
-/** A status instance: the `StatusDef` (its `effects` embedded, as a def spread) plus live duration bookkeeping and the snapshot. `sourceTraitId` is the statusId. */
+/** A status instance: the `StatusDef` (its `effects` embedded, as a def spread) plus live duration
+ * bookkeeping and the snapshot. `sourceTraitId` is the statusId. */
 export type StatusEffect = StatusDef &
   InstanceIdentity &
   StatusInstanceState & { readonly category: 'status' }

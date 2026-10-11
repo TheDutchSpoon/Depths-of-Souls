@@ -1,9 +1,9 @@
 // Golden: Sleep's two-effect composition -- a status carrying BOTH a passive
 // `action-lock 'all'` (like Stun, so the sleeper's own turn is actually skipped)
 // AND `on-damage-taken -> remove-status(self, sleep-fixture)` (the wake-up, firing POST-damage so
-// the waking hit still lands #1's vs-Sleeping bonus). Fixture-shaped, not real
+// the waking hit still lands the vs-Sleeping `conditional-damage-bonus`). Fixture-shaped, not real
 // Sleep content -- proves the underlying lock + trigger + `remove-status`
-// mechanism end-to-end, composed with #1's `conditional-damage-bonus`.
+// mechanism end-to-end, composed with `conditional-damage-bonus`.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // SLEEPER carries a self-inflicted Sleep (an `on-fight-start -> apply-status(self)` trait --

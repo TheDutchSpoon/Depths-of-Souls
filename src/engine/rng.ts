@@ -3,8 +3,9 @@
 //
 // CombatState.rng is plain data, a bookmark { position: number } -- not a
 // closure. `nextRandom(rng)` draws a value and ADVANCES `rng.position` IN PLACE (a deliberate,
-// narrow exception to "never mutate" -- `CONVENTIONS.md#combat-is-reproducible-from-its-inputs` calls this out explicitly: rolls "advance
-// the working copy's bookmark"). This is safe exactly because CALLERS are responsible for never
+// narrow exception to never mutating -- `CONVENTIONS.md#combat-is-reproducible-from-its-inputs`
+// calls this out explicitly: a roll advances the working copy's bookmark). This is safe exactly
+// because CALLERS are responsible for never
 // handing `nextRandom` an rng object that's still shared with an input snapshot someone else
 // might resolve again -- see combat.ts's `resolveTurn`, which clones `state.rng` into a fresh
 // object at entry before any draw can reach it. Every helper below this point (target selectors,

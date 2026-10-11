@@ -79,7 +79,7 @@ const ROLES: Readonly<Record<string, string>> = {
   // Starters and the Unicorn
   'sorcerer-starter': 'caster',
   'brute-starter': 'striker',
-  'shieldbarer-starter': 'warden', // Was 'taunter'
+  'shieldbarer-starter': 'warden', // a Provoke-only script never attacks
   unicorn: 'striker',
 }
 

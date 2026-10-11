@@ -1,6 +1,8 @@
 // Effect-framework runtime helpers (pure). Instantiate innate-trait effects onto a
-// creature's active-effects list, and the HP-vs-effective-max-Health helpers, the status
-// apply/refresh/decrement/expire lifecycle and gatherDealtMods/gatherTakenFactors.
+// creature's active-effects list, and hold the HP-vs-effective-max-Health helpers, the
+// gatherDealtMods/gatherTakenFactors family, the status instance and snapshot builders, and the
+// immunity, action-lock and count reads. Applying a status is `resolution.ts`'s, counting one
+// down is `combat.ts`'s.
 //
 // Dependency direction is one-way: effects.ts -> effective-stats.ts (for getEffectiveStat,
 // hasStatus). effective-stats.ts never imports this module, so there is no cycle.
@@ -254,7 +256,8 @@ function modifierSource(e: FlatEffect & TakenReductionSource): TakenReductionSou
 
 /** The live repetition count a damage-modifier's `magnitude` is
  * multiplied/exponentiated by -- the live resolveCount(...) reading when the effect declares a
- * `magnitudeSource` (recomputed every read), else 1: the flat single application (a status is single-instance, so it has no count of its own). */
+ * `magnitudeSource` (recomputed every read), else 1: the flat single application (a status is
+ * single-instance, so it has no count of its own). */
 function damageModifierCount(
   bearer: Creature,
   state: CombatState,
@@ -461,10 +464,10 @@ export function activeFriendlyFireStatus(
 export type LockableKind = 'attack' | 'cast' | 'defend' | 'provoke' | 'wait'
 
 /**
- * True iff an active `action-lock` makes `kind`
- * illegal for `creature` -- an `'all'` lock refuses EVERY kind (Attack, Cast, Defend, Provoke,
- * Wait), a scoped lock only its own. Read through the iterator, so an immune bearer's status lock
- * doesn't count. `checkLegality` (actions.ts) is the one caller on the action path.
+ * True iff an active `action-lock` makes `kind` illegal for `creature`
+ * (`spec/statuses.md#action-locks`) -- an `'all'` lock refuses EVERY kind (Attack, Cast, Defend,
+ * Provoke, Wait), a scoped lock only its own. Read through the iterator, so an immune bearer's
+ * status lock doesn't count. `checkLegality` (actions.ts) is the one caller on the action path.
  */
 export function isActionLocked(creature: Creature, kind: LockableKind): boolean {
   return flatEffects(creature).some(
@@ -492,7 +495,7 @@ export function firstAllLock(
 // ---- resource & counter primitives ----
 
 /**
- * The count-scaling primitive (`spec/effects.md#count-scaling`): one of the six live "board counts"
+ * The count-scaling primitive (`spec/effects.md#count-scaling`): one of the six live board counts
  * a `magnitudeSource` of kind 'count' can read, resolved relative to `bearer`'s OWN
  * side/affinity/species and recomputed fresh on every call (never cached -- killing an ally
  * mid-fight changes the reading on the very next read, same fight). `living-allies`/`-of-affinity`/
@@ -540,8 +543,8 @@ export function resolveCount(
 }
 
 /**
- * Resolves a MagnitudeSource to a live number. 'flat' is "the existing implicit behavior, made
- * explicit" (`spec/effects.md#count-scaling`); 'count' delegates to resolveCount above.
+ * Resolves a MagnitudeSource to a live number. 'flat' is the existing implicit behavior, made
+ * explicit (`spec/effects.md#count-scaling`); 'count' delegates to resolveCount above.
  */
 export function resolveMagnitudeCount(
   bearer: Creature,

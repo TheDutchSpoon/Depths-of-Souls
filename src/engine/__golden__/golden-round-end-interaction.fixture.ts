@@ -1,5 +1,6 @@
-// Golden: the round-end TRAIT pass's interaction rules (round end has no status work, only `on-round-end` trait triggers, the round-level grant drain and the win check), all in
-// one fixture. P1 carries CATASTROPHIC_COLLAPSE: three effects on ONE trait --
+// Golden: the round-end TRAIT pass's interaction rules (round end has no status work, only
+// `on-round-end` trait triggers, the round-level grant drain and the win check), all in one
+// fixture. P1 carries CATASTROPHIC_COLLAPSE: three effects on ONE trait --
 //   (1) on-round-end: a lethal self-hit (999 flat, no TriggerFired -- matches DoT convention).
 //   (2) on-round-end: would hit the lowest-HP ally -- MUST be skipped, since (1) already killed
 //       P1 earlier in this SAME per-creature effect pass (fireHook's fresh per-effect alive-check).

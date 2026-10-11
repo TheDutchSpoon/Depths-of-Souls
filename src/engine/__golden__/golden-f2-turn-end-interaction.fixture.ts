@@ -49,7 +49,8 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { spore: 15 })
 
 export const setup = (created: CombatState): CombatState => {

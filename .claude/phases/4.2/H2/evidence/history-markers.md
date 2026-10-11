@@ -3,7 +3,8 @@
 A scan of every comment line and title for the words that narrate change (no longer, used to, previously, formerly,
 before this, was ..., now ..., renamed, replacing, reworked, originally, the old, pre-/post-<id>, regression, unchanged,
 byte-identical, legacy, earlier draft, deferred) on the tree after the mechanical pass and on the final tree.
-Hits before the hand pass: 734. After: 300.
+Hits before the hand pass: 734. After: 298 (round 2 moved the two `combat.test.ts:939` title hits from Kept to Rewritten, and
+rewrote the markers of the 30 further lines listed under "Rewritten in round 2" below, which the word list does not see).
 
 ## Rewritten (history, dropped or put in the present tense)
 
@@ -494,11 +495,48 @@ Hits before the hand pass: 734. After: 300.
 | src/ui/CombatDemo.tsx:19 | not yet | // Baseline UI-only demo feature carried forward from Phase 3.5 to all future .5 demos. |
 | vite.config.ts:15 | now+ | // The Node project's `include` is now a single catch-all |
 
+### Rewritten in round 2
+
+| file:line (round 1) | marker | old text |
+| --- | --- | --- |
+| src/engine/combat.test.ts:939 | pre-/post- | TITLE absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup |
+| src/engine/combat.test.ts:939 | Slice/H | TITLE absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup |
+| src/engine/__golden__/golden-stun.fixture.ts:83 | used to | // born in VICTIM's) counts down in VICTIM's own turn-end cleanup, inside its bracket (it used / // to expire at the round-end sweep, after TurnEnded). |
+| src/engine/__golden__/golden-f2-weaken-three-turns.fixture.ts:3 | unchanged | // counting a Weaken applied after the bearer acted covered only two of its three turns. The / // modifier math is unchanged (...); only WHICH turns it covers moves. |
+| src/data/spells/overgrowth.ts:81 | before | // damage, like Pacify and Silence (it dealt 35% before). |
+| src/data/traits/index.ts:129 | became | // (the Glowflies' three became the Flickerlings'.) |
+| src/data/roles.test.ts:82 | was.. | // Was 'taunter' |
+| src/engine/__golden__/golden-spore-spread-dot-kill.fixture.ts:24 | now+ | (a DIFFERENT guard identity / now, per the fix) |
+| src/engine/__golden__/golden-sorcerer-starter.fixture.ts:72 | before | (draw #1, the same draw as before) |
+| src/engine/__golden__/golden-sorcerer-starter.fixture.ts:9 | stays | so the equipped pool stays size 1 |
+| src/engine/__golden__/golden-b2-silenced-refuses-granted-cast.fixture.ts:138 | new | this TriggerFired is the one new event |
+| src/engine/__golden__/golden-b1-granted-cast-default.fixture.ts:7 | gains | (the log gains TriggerFired + ActionGranted |
+| src/engine/__golden__/golden-h2b1-observed-tick.fixture.ts:2 | Slice/H | H2b2 moved the tick's source to the applier and made it indirect, so this case changed alone |
+| src/engine/__golden__/golden-h2b2-tick-self-applied.fixture.ts:4 | Slice/H | the id inference H2b1 refused, in its other spelling |
+| src/data/spells/overgrowth.ts:228 | Slice/H | No tuned numbers (H's job). |
+| src/engine/__golden__/golden-action-observed.fixture.ts:1 | locked | Resonants' own locked consumer shape |
+| src/engine/__golden__/golden-attack-instance-list.fixture.ts:1 | locked | the action instance-list model (locked) |
+| src/engine/combat.ts:51 | review | (design-review B-5) |
+| src/engine/generation.ts:221 | review | (nit, review) |
+| src/engine/perform-action.test.ts:4 | PR | (the PR lists the mutation for each) |
+| src/engine/status-containers.test.ts:195 | deliberate change | Stun 1 counts down at the skipped turn's own cleanup (deliberate change) |
+| src/engine/__golden__/golden-sleep-wake.fixture.ts:4 | plan item | #1's vs-Sleeping bonus / composed with #1's `conditional-damage-bonus` |
+| src/engine/test-utils/rng-draw-count.ts:1 | impossible once | a closure wrapper around `SeededRng.next()`, impossible once `CombatState.rng` is a plain bookmark (the deleted helper) |
+| src/engine/generation.ts:169 | yet | nothing produces a non-null `Instance.scriptId` yet |
+| src/data/statuses.ts:38 | never actually read | this default is never actually read by current content (`MYCONET_ROTCORE_TRAIT` reads it) |
+| src/data/spells/overgrowth.ts:3 | count | 11 real spells ... every other affinity has two (the file has 16) |
+| src/data/spells/overgrowth.ts:97 | fixed slot-0 loadout | the Sorcerer starter's innate spell, not a loadout |
+| src/engine/spell-effects.test.ts:1224 | used to | TITLE rejects %s setting both offStat and scalingStat (a mid-fight throw) |
+| src/data/traits/glimmerdark.ts:247 | flattens to | the biome's affinity spread flattens to 4/4/4/4/2 |
+| src/engine/__golden__/golden-resonant-overtone.test.ts:7 | before | TITLE echo damage lands before the original |
+| src/engine/effect-types.ts:769 | no existing content | no existing content sets this |
+| src/engine/__golden__/golden-necromoss-reclaim.fixture.ts:5 | the species' real | (50, not the species' own real 18) |
+
 ## Kept (a live invariant, a scenario step or a term of the code)
 
 | marker | hits | why it stays |
 | --- | ---: | --- |
-| pre-/post- | 83 | engine and game terms (`pre-hit` hooks, `post-createCombat`, `pre-empts`), not provenance |
+| pre-/post- | 82 | engine and game terms (`pre-hit` hooks, `post-createCombat`, `pre-empts`), not provenance |
 | was.. | 41 | a test scenario`s sequence of events (a status that was applied earlier in the fight), not project history |
 | unchanged | 35 | states an invariant of the code (a default, a pass-through, a no-op), not a change |
 | replac | 30 | the mechanism is replacement (a snapshot replaced by a stronger one, a status replaced in a pass) |
@@ -509,7 +547,7 @@ Hits before the hand pass: 734. After: 300.
 | regression | 12 | a test`s purpose (a regression probe) or the label `CONVENTIONS.md#two-tier-golden-discipline` requires |
 | legacy | 10 | the name of an API or oracle that exists in the code (`legacyCast`, the legacy closure RNG) |
 | deleted | 7 | a verb of the mechanism under test (a status removed, a target deleted from a list) |
-| Slice/H | 3 | the word slice (a slice of a list), not a project slice |
+| Slice/H | 2 | the word slice (a slice of a list), not a project slice |
 | renamed | 2 | see the line |
 | now+ | 2 | see the line |
 | previously | 2 | see the line |
@@ -675,8 +713,6 @@ The kept lines, one per row:
 | src/engine/combat.test.ts:179 | regression | // The regression probe for a shared RNG closure: unlike the test above (which builds two |
 | src/engine/combat.test.ts:1128 | no longer | // mulberry32 math -- an arbitrary-value stub is no longer possible. Instead these tests set |
 | src/engine/combat.test.ts:1273 | now+ | // Round 1: LURE provokes; on-provoke grants itself Defending too. LURE now carries both |
-| src/engine/combat.test.ts:939 | pre-/post- | TITLE absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup |
-| src/engine/combat.test.ts:939 | Slice/H | TITLE absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup |
 | src/engine/combat.ts:80 | unchanged | // activeEffects is [] and effective max == base Health, so currentHp is unchanged. |
 | src/engine/combat.ts:197 | deleted | * status instance is removed and StatusExpired emitted; the frozen current-round turnQueue is |
 | src/engine/conditions.ts:137 | unchanged | // (unchanged path, RNG-free peek); falls back to the already-resolved trigger/gather target |

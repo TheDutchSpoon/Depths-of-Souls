@@ -1347,7 +1347,7 @@
   {
     "file": "src/engine/spell-effects.test.ts",
     "old": "rejects %s setting both offStat and scalingStat (it used to throw mid-fight)",
-    "new": "rejects %s setting both offStat and scalingStat (a mid-fight throw)"
+    "new": "rejects %s setting both offStat and scalingStat (at load, not mid-fight)"
   },
   {
     "file": "src/engine/spell-effects.test.ts",
@@ -1718,5 +1718,15 @@
     "file": "src/state/store.test.ts",
     "old": "boss floors (Phase 4 Slice I, PR #65 review)",
     "new": "boss floors"
+  },
+  {
+    "file": "src/engine/__golden__/golden-resonant-overtone.test.ts",
+    "old": "matches the committed event log exactly (one echo fires, its own re-observation fails, echo damage lands before the original)",
+    "new": "matches the committed event log exactly (one echo fires, its own re-observation fails, the original damage lands first, then the echo damage)"
+  },
+  {
+    "file": "src/engine/combat.test.ts",
+    "old": "absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup",
+    "new": "absent scalingStat reads the remap-aware Intelligence"
   }
 ]

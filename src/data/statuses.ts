@@ -35,9 +35,8 @@ export const POISON: StatusDef = {
     },
   ],
   polarity: 'debuff',
-  // Every real producer (VENOM_BOLT, golden-dot) already
-  // applies Poison with an explicit duration:3, so this default is never actually read by
-  // current content -- picked to match that existing usage for documentation honesty.
+  // VENOM_BOLT applies Poison with an explicit duration:3; `MYCONET_ROTCORE_TRAIT` applies it with
+  // none, so this default is the one it gets -- picked to match the spell's usage.
   defaultDuration: 3,
 }
 
@@ -110,7 +109,8 @@ export const WEAKEN: StatusDef = {
   defaultDuration: 3,
 }
 
-/** Damage-modifier: x1.5 damage TAKEN, once (single-instance, so a re-application refreshes the timer and never compounds to 2.25). Multiplicative: it enters Π(takenFactors). */
+/** Damage-modifier: x1.5 damage TAKEN, once (single-instance, so a re-application refreshes the
+ * timer and never compounds to 2.25). Multiplicative: it enters Π(takenFactors). */
 export const VULNERABILITY: StatusDef = {
   statusId: 'vulnerability',
   effects: [{ category: 'damage-modifier', direction: 'taken', magnitude: 1.5 }],
@@ -161,7 +161,7 @@ export const SLEEP: StatusDef = {
 }
 
 /** The act-FIRST pole of the same `turn-order`
- * primitive Web (act-last) already proved -- "same tool, opposite pole"
+ * primitive Web (act-last) already proved: the same tool at the opposite pole
  * (`content/glimmerdark.md#grant-act-first`). No `breakChancePercent` -- unlike Web, nothing breaks this early; it just
  * runs its duration. Re-applying just refreshes it. */
 export const GRANT_ACT_FIRST: StatusDef = {
@@ -179,10 +179,9 @@ export const GRANT_ACT_FIRST: StatusDef = {
  * this trigger lives on the STATUS itself (not a species trait), so any Spore bearer spreads it
  * on death regardless of which creature/spell originally applied it. When the bearer dies, the
  * contagion spreads to one living, still-healthy member of the BEARER'S OWN side -- host-relative
- * (ratified reading of "spreads to a living, non-Spored enemy": a fungal contagion spreading
- * through the population it already infected, matching the mood "colonies, spores, decay ...
- * spread", `spec/run.md#biomes`). No existing `ResponseTarget` could express "exclude a status" for
- * this pick, so `random-ally-without-status` (effect-types.ts) is a genuinely new
+ * (`content/rotcap-hollow.md#spore`: a fungal contagion spreading through the population it
+ * already infected, matching the biome's mood, `spec/run.md#biomes`). No existing `ResponseTarget`
+ * could express excluding a status for this pick, so `random-ally-without-status` (effect-types.ts) is a genuinely new
  * `ResponseTarget` variant. It resolves relative to `self` (the
  * dying bearer); when every living ally already carries Spore, resolution.ts's
  * `resolveResponseTargets` returns an empty target list, so the trigger's own `TriggerFired` is

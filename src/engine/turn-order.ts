@@ -33,8 +33,9 @@ function sortBySpeed(group: readonly Creature[]): CreatureId[] {
 
 /**
  * Builds the frozen round-start turn queue: all currently-alive creatures across both sides,
- * partitioned into an act-first pole, the normal group, and an act-last pole (Web/Blindclaws' turn-order status), each internally ordered by descending effective
- * Speed with the existing side/slot/id tie-break, then concatenated first -> normal -> last.
+ * partitioned into an act-first pole, the normal group, and an act-last pole (Web/Blindclaws'
+ * turn-order status), each internally ordered by descending effective Speed with the existing
+ * side/slot/id tie-break, then concatenated first -> normal -> last.
  * With no `turn-order` effects present, both poles are empty and this is byte-identical
  * to the plain single-group sort. Called once per round; never called again mid-round
  * even if something changes Speed or position (nothing can mid-round in v1).

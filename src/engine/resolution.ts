@@ -291,8 +291,9 @@ function dealDamageCore(
 /**
  * Applies a computed damage result, emits DamageDealt, then fires the damage-path hooks in the
  * pinned order: on-damage-dealt (source, UNCONDITIONAL — even on a lethal hit) → on-damage-taken
- * (self, survived only) → on-damage-observed (every living creature, UNCONDITIONAL — even on a lethal hit) → if it died: CreatureDied → on-death → on-kill → on-ally-death /
- * on-enemy-death (observers). Death pre-empts the victim's on-damage-taken; hit-reactions
+ * (self, survived only) → on-damage-observed (every living creature, UNCONDITIONAL — even on a
+ * lethal hit) → if it died: CreatureDied → on-death → on-kill → on-ally-death / on-enemy-death
+ * (observers). Death pre-empts the victim's on-damage-taken; hit-reactions
  * (including the observation of the hit) resolve before death-reactions.
  *
  * `origin` is
@@ -433,9 +434,9 @@ export interface FireHookOptions {
     readonly actionKind: 'attack' | 'cast' | 'defend' | 'provoke'
     readonly instanceIndex: number
   }
-  /** Supplied ONLY by `applyDamageAndEmit`'s
-   * `on-damage-observed` call. `selfInflicted` is the cost classification carried from the branch
-   * that chose the cost path. Both observation hooks FAIL CLOSED: a candidate on
+  /** Supplied ONLY by `applyDamageAndEmit`'s `on-damage-observed` call
+   * (`spec/effects.md#damage-observation`). `selfInflicted` is the cost classification carried
+   * from the branch that chose the cost path. Both observation hooks FAIL CLOSED: a candidate on
    * `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
    * `observed` is. */
   readonly observedDamage?: { readonly selfInflicted: boolean }
@@ -636,7 +637,9 @@ export function fireHook(
       }
 
       // Present only when the resolved trigger came from a status; absent for
-      // a plain permanent trait. The snapshot is read from the LIVE owning instance (the safe read -- unobservable today, a same-pass refresh makes the instance born so its tick is skipped, and a corpse can't be re-applied), never carried on the candidate.
+      // a plain permanent trait. The snapshot is read from the LIVE owning instance (the safe read
+      // -- unobservable today, a same-pass refresh makes the instance born so its tick is skipped,
+      // and a corpse can't be re-applied), never carried on the candidate.
       const statusId = effect.statusId
       const snapshot = owner.category === 'status' ? owner.snapshot : undefined
 
@@ -839,8 +842,9 @@ export function executeResponse(
       const bearer = getCreature(state, context.self)
       // magnitudeSource, when present, is the repetition count this response's
       // magnitude is scaled by, a live resolveMagnitudeCount(...) reading (see MagnitudeSource's
-      // own doc comment); absent, the count stays the implicit 1, in flat AND formula mode (a status is single-instance). Resolved ONCE up front (bearer/state don't change
-      // per target); the single `count` feeds whichever mode below actually reads it (only one
+      // own doc comment); absent, the count stays the implicit 1, in flat AND formula mode (a
+      // status is single-instance). Resolved ONCE up front (bearer/state don't change per target);
+      // the single `count` feeds whichever mode below actually reads it (only one
       // does per call).
       const count = response.magnitudeSource
         ? resolveMagnitudeCount(bearer, state, response.magnitudeSource)
@@ -866,7 +870,8 @@ export function executeResponse(
       // (a no-op multiplier on spellPower).
       const flatCount = count ?? 1
       // A spell's cast-instance fraction (`castPowerFraction`) takes the place of the
-      // implicit `1`, in the SAME multiplication order as `spell.spellPower * pf`.
+      // implicit `1`, in the SAME multiplication order (`spellPower * fraction`) as the legacy
+      // cast path, so the result stays byte-identical with what `spell-effects.test.ts`'s oracle pins.
       const formulaMultiplier = count ?? context.castPowerFraction ?? 1
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
@@ -1027,7 +1032,8 @@ export function executeResponse(
         let amount: number
         if (response.offStat !== undefined) {
           // Remap-aware (a stat-remap redirects the slot), the lookup a heal SPELL uses;
-          // `spellPower × multiplier` is associated as `sp * pf`.
+          // `spellPower × multiplier` keeps the legacy cast path's association, so the result
+          // stays byte-identical with what `spell-effects.test.ts`'s oracle pins.
           amount = getOffensiveStat(
             bearer,
             response.offStat,
@@ -1068,7 +1074,8 @@ export function executeResponse(
 
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
-        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts on a dead creature, except `revive`.
+        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts
+        // on a dead creature, except `revive`.
         if (!findCreature(working, targetId)?.alive) continue
         working = applyStatModifier(
           context.self,
@@ -1085,7 +1092,8 @@ export function executeResponse(
     case 'apply-status': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
-        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts on a dead creature, except `revive`.
+        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts
+        // on a dead creature, except `revive`.
         if (!findCreature(working, targetId)?.alive) continue
         // Pass-on by rule: a status's OWN effect applying that same status
         // copies the firing instance's snapshot (Spore's spread, the dying bearer's whole
@@ -1172,7 +1180,8 @@ export function executeResponse(
     case 'grant-action-state': {
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
-        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts on a dead creature, except `revive`.
+        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts
+        // on a dead creature, except `revive`.
         if (!findCreature(working, targetId)?.alive) continue
         working = updateCreature(working, targetId, {
           ...(response.defending ? { defending: true } : {}),
@@ -1191,7 +1200,8 @@ export function executeResponse(
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
         const target = findCreature(working, targetId)
-        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts on a dead creature, except `revive`.
+        // The verb rule (`spec/responses.md#no-response-acts-on-a-dead-target`): no response acts
+        // on a dead creature, except `revive`.
         if (!target || !target.alive) continue
         const existing = target.activeEffects.find(
           (e): e is StatusEffect =>
@@ -1219,10 +1229,10 @@ export function executeResponse(
 }
 
 /**
- * A status's damage tick -- INDIRECT damage computed from the instance's applier
- * snapshot, through the ONE indirect formula (`calculateIndirectDamage`, no third formula):
- * `potency × affinity(snapshot vs bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective
- * Defence`, `MAX(1, floor(...))`. Defend's ×1.5 Defence and ×0.65 taken factor apply, as for all
+ * A status's damage tick -- INDIRECT damage computed from the instance's applier snapshot
+ * (`spec/statuses.md#the-applier-snapshot`), through the ONE indirect formula
+ * (`calculateIndirectDamage`, no third formula): `potency × affinity(snapshot vs bearer) ×
+ * Π(bearer's taken factors) − 0.2 × bearer's effective Defence`, `MAX(1, floor(...))`. Defend's ×1.5 Defence and ×0.65 taken factor apply, as for all
  * indirect damage. There is NO dealt pool (so no `conditional-damage-bonus`), no cross-stat, no
  * armour penetration and no Additional: those are the applier's live build, absent from the
  * snapshot. The source is the applier while it lives, else the bearer (`tickDealer`); the origin
@@ -1317,8 +1327,9 @@ export function applyHeal(
 }
 
 /**
- * Applies (or re-applies) a status. Single instance per (statusId, creature): a fresh application creates a new instance at the status's declared duration; re-applying
- * keeps the instance (and its id), REFRESHES the timer to the new application's duration (even
+ * Applies (or re-applies) a status. Single instance per (statusId, creature): a fresh application
+ * creates a new instance at the status's declared duration; re-applying keeps the instance (and its
+ * id), REFRESHES the timer to the new application's duration (even
  * when shorter) and resets `appliedAt` (born this turn), and replaces the applier snapshot ONLY
  * when the new one's potency is STRICTLY greater -- a tie or a weaker one keeps the current
  * instance whole (applier, affinity and potency), so the source of later ticks does not move on a
@@ -1326,8 +1337,9 @@ export function applyHeal(
  * StatusApplied (`sourceId` = the applying creature) and fires on-status-applied
  * (event-before-hook), weaker or tied included.
  *
- * The candidate snapshot is `inherited` when the caller passes one (a status's own effect applying the same status: Spore's spread) and otherwise the APPLYING creature's own,
- * taken fresh now (`snapshotFor`) -- even when that creature carries the status itself.
+ * The candidate snapshot is `inherited` when the caller passes one (a status's own effect applying
+ * the same status: Spore's spread) and otherwise the APPLYING creature's own, taken fresh now
+ * (`snapshotFor`) -- even when that creature carries the status itself.
  *
  * `spec.duration ?? def.defaultDuration` -- an omitted
  * duration inherits the status's own declared default; an explicit one overrides it.

@@ -1,6 +1,7 @@
 // `summon` and `setPartySlot`, each with its `can…` query, against the real,
 // zero-override content store (real biomes, specs, starters, spells). Every failure reason has a
-// test, and every `can…` query is checked to agree with its action on the same cases. Gem-roll details live in store-gems.test.ts; here only the shape of the result matters.
+// test, and every `can…` query is checked to agree with its action on the same cases. Gem-roll
+// details live in store-gems.test.ts; here only the shape of the result matters.
 
 import { describe, expect, test } from 'vitest'
 import { DEFAULT_GEM_SLOT_COUNT } from '../engine/config'
@@ -90,7 +91,7 @@ describe('summon()', () => {
       source: { kind: 'creature', creatureId: SUMMONABLE.id },
       level: 1,
       xp: 0,
-      scriptId: null, // Null = the role
+      scriptId: null, // null = the role
     })
     expect(instance.gems).toHaveLength(DEFAULT_GEM_SLOT_COUNT)
     expect(state.nextInstanceOrdinal).toBe(ordinalBefore + 1)

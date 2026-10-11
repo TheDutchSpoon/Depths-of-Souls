@@ -1,5 +1,6 @@
-// Golden: a spell whose effect is a `heal` (a `heal` response on `cast-target`) -- a single-target ally-targeting Cast heals through the response executor
-// directly (no TriggerFired -- Cast itself is the chosen-action context, not a trigger).
+// Golden: a spell whose effect is a `heal` (a `heal` response on `cast-target`) -- a single-target
+// ally-targeting Cast heals through the response executor directly (no TriggerFired -- Cast itself
+// is the chosen-action context, not a trigger).
 // Magnitude is the SAME value a damage spell would compute (`offStat: 'cast'` -> remap-aware
 // Intelligence, x spellPower); applied as HP restored,
 // clamped to effective max Health (no overheal).

@@ -105,9 +105,9 @@ export const CHARNEL_FEAST: Spell = {
   ],
 }
 
-/** Withering Bolt: Violence's first spell-authored producer of Burn (statuses.ts's BURN has no
- * other real producer besides Sporch's own on-attack trait -- statuses are never
- * producer-exclusive). `spellPower` is 0.45, not the ~80-90% band: a DoT-applying spell's
+/** Withering Bolt: Violence's first spell-authored producer of Burn (statuses.ts's BURN's other
+ * real producers are the Sporch Igniter's on-attack trait and the Sporch Cinderlord's on-kill
+ * trait -- statuses are never producer-exclusive). `spellPower` is 0.45, not the ~80-90% band: a DoT-applying spell's
  * upfront damage shouldn't lead its
  * band (the same rule applied to Puppet String and Spore Cyst); the reference point is
  * Venom Bolt's own DoT spell, 0.4. Distinct from Ember Lance (0.5) / Thorn Lash (1.0) /

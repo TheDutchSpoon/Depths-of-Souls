@@ -65,8 +65,8 @@ import {
 
 // ---- Rotcap Hollow's own authored spells ----
 // This grouping is documentation only: `generateFloor` rolls from the global spell registry
-// (`spec/run.md#spells-unlock-cumulatively`), not from biome data -- kept as "the spells this
-// biome introduces", every entry here tagged `unlockedAtBiome: 3`.
+// (`spec/run.md#spells-unlock-cumulatively`), not from biome data -- kept as the spells this
+// biome introduces, every entry here tagged `unlockedAtBiome: 3`.
 
 export const ROTCAP_HOLLOW_SPELLS = [
   SPORE_CYST,
@@ -139,7 +139,7 @@ export const ROTFEEDER_RIPPER: SpeciesCreature = {
 }
 
 /** Vitality instead of Violence -- Gorgemaw's identity is HP growth
- * ("grows fatter off its kills"), which reads as Vitality (the soft
+ * (`content/rotcap-hollow.md#rotfeeder-gorgemaw`), which reads as Vitality (the soft
  * affinity->stat mapping, `spec/creatures.md#affinity`) more than the family's default Violence lean. */
 export const ROTFEEDER_GORGEMAW: SpeciesCreature = {
   id: 'rotfeeder-gorgemaw',
@@ -362,9 +362,9 @@ export const ROT_SOVEREIGN: SpeciesCreature = {
   rarity: 'rare', // mechanically meaningless -- never spawn-pool-drawn, an authored boss encounter
 }
 
-/** The adds accompanying her fight -- real Rotcap Hollow roster members, per the boss-authoring
- * checklist's "adds drawn from the biome's own spawn pool" (`content/rotcap-hollow.md#rot-sovereign` names no specific
- * pair for this boss, unlike the Broodmother's explicit "spiderlings"). */
+/** The adds accompanying her fight -- real Rotcap Hollow roster members, drawn from the
+ * biome's own spawn pool (`content/rotcap-hollow.md#rot-sovereign` names no specific pair for this
+ * boss, unlike the Broodmother's spiderlings, `content/overgrowth.md#broodmother`). */
 export const ROT_SOVEREIGN_ADDS: readonly SpeciesCreature[] = [
   SPORECLOUD_SEEDER,
   ROTFEEDER_SCAVENGER,

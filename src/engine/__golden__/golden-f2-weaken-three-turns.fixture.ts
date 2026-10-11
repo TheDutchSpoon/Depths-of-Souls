@@ -1,8 +1,8 @@
 // Golden: a 3-turn Weaken covers its bearer's next three turns whether it was applied before or
 // after the bearer acted that round (`spec/statuses.md#timing`). Under round-end
-// counting a Weaken applied after the bearer acted covered only two of its three turns. The
-// modifier math is unchanged (Weaken -20% dealt, additive into the dealt pool); only WHICH turns it
-// covers moves. Hand-derived.
+// counting a Weaken applied after the bearer acted would cover only two of its three turns. The
+// modifier math is Weaken -20% dealt, additive into the dealt pool; the trap is WHICH turns it
+// covers. Hand-derived.
 //
 // TANK (player, speed 30, health 200, defence 5) waits; its fixture trait applies Weaken (default
 // duration 3) to all enemies at its round-1 turn start. FAST (speed 40) acts BEFORE TANK, SLOW

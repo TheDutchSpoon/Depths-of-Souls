@@ -1,4 +1,6 @@
-// Golden: `accumulation: 'additive'` on a `taken`-direction `damage-modifier` (real Bulwark-SHAPED: `specializations/shieldbarer.md#bulwark`'s -5% damage taken, cap 80%, for each time the creature has Defended this battle). Companion to golden-defend-count, which pins the `'multiplicative'`
+// Golden: `accumulation: 'additive'` on a `taken`-direction `damage-modifier` (real Bulwark-SHAPED:
+// `specializations/shieldbarer.md#bulwark`'s -5% damage taken, cap 80%, for each time the creature
+// has Defended this battle). Companion to golden-defend-count, which pins the `'multiplicative'`
 // (default) mode: a purely multiplicative `magnitude ** count` does NOT implement Bulwark's hard
 // cap -- it sails past 80% toward 100% as count grows (`0.95 ** 32 ≈ 0.19`, an 81% reduction) --
 // so `'additive'` sums the per-unit reduction × count and hard-clamps it instead.

@@ -41,7 +41,7 @@ export interface Instance {
 }
 
 /** Resolves an Instance's static creature id from its `source`. Throws on a `fusion` source
- * -- deriving a fused creature is `spec/creatures.md#fusion`; the variant exists only so the
+ * -- deriving a fused creature is not built yet (`spec/creatures.md#fusion`); the variant exists only so the
  * save shape never needs reshaping once it lands. */
 export function staticCreatureIdFor(instance: Instance): string {
   switch (instance.source.kind) {

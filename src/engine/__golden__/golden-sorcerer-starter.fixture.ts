@@ -1,13 +1,14 @@
 // Golden: the Sorcerer starter's real signature trait (data/traits/starters.ts's
 // SORCERER_STARTER_TRAIT, an on-turn-end `perform-action`) + its real granted spell (ARCANE_BOLT,
 // data/spells/overgrowth.ts -- also a normal biome-1 Wit spawn-pool spell)
-// -- "50% chance on-turn-end to cast a random equipped spell." CASTER carries NO explicit `equippedSpells` -- ARCANE_BOLT comes SOLELY from
-// SORCERER_STARTER_TRAIT's own `innate-spell` effect, which `createCombat`'s fight-setup
+// -- "50% chance on-turn-end to cast a random equipped spell." CASTER carries NO explicit
+// `equippedSpells` -- ARCANE_BOLT comes SOLELY from SORCERER_STARTER_TRAIT's own `innate-spell`
+// effect, which `createCombat`'s fight-setup
 // prepends onto the (otherwise default, all-null) regular gem slots. Hand-authoring
 // `equippedSpells: [ARCANE_BOLT]` alongside the trait's own
 // innate-spell grant would double it to `[Bolt, Bolt]` (pool size 2), which happens to still pick
-// slot 0 at this exact seed (a coincidence, not a proof), so the equipped pool stays size 1,
-// matching the real Seer's starting loadout exactly. A
+// slot 0 at this exact seed (a coincidence, not a proof). This fixture authors no
+// `equippedSpells`, so the pool is size 1, matching the real Seer's starting loadout exactly. A
 // single equipped spell (pool size 1) makes the "random" slot pick deterministic regardless of
 // its own RNG draw, isolating this golden to proving the ONE thing that actually varies: the
 // chancePercent roll succeeding, at real seed 7 (chosen empirically -- its very first mulberry32
@@ -69,7 +70,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnStarted', creatureId: CASTER },
   { type: 'Waited', creatureId: CASTER },
   // Arcane Surge is an on-turn-end `perform-action` trigger -- TriggerFired at the chance
-  // roll (draw #1, the same draw as before), ActionGranted once the queued cast runs.
+  // roll (draw #1), ActionGranted once the queued cast runs.
   {
     type: 'TriggerFired',
     sourceId: CASTER,

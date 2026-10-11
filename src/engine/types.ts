@@ -121,7 +121,8 @@ export interface Creature {
   /** "times Defended this battle" -- cumulative for the whole
    * fight, incremented in executeDefend, NEVER reset (Bulwark's "each time the creature has
    * Defended this battle"). Not derivable from activeEffects (Defend's own action-state flag
-   * clears every turn); a small, explicit field. Feeds the 'self-defend-count' magnitudeSource kind (effects.ts's resolveCount). */
+   * clears every turn); a small, explicit field. Feeds the 'self-defend-count' magnitudeSource kind
+   * (effects.ts's resolveCount). */
   readonly defendCount: number
   /** A static species reference, read by the 'living-allies-of-species' magnitudeSource kind
    * (resolveCount) and the 'all-allies-of-species' response target. `materializeCreature` sets it

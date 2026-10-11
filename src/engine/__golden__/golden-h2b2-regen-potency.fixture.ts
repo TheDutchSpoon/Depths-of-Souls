@@ -1,5 +1,6 @@
-// Golden: Regen is the HEAL site of the applier snapshot. A Regen tick heals the instance's potency -- 10% of the HEALER's (applier's) Health at
-// application -- not a percent of the bearer's own Health, frozen at application, credited to the
+// Golden: Regen is the HEAL site of the applier snapshot. A Regen tick heals the instance's potency
+// -- 10% of the HEALER's (applier's) Health at application -- not a percent of the bearer's own
+// Health, frozen at application, credited to the
 // healer while it lives and to the bearer once the healer is dead (the same tick rule as damage).
 //
 // Hand-derived (independent `node -e` calculator). Players: H (the healer; health 80, Defence 0,

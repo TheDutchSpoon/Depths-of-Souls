@@ -126,7 +126,6 @@ export const STOCK_TRAITS: readonly Trait[] = [
   LULLPOLLEN_DOZER_TRAIT,
   BROODMOTHER_TRAIT,
   // Glimmerdark's 18 species-creature traits + the Leech Sovereign boss trait.
-  // (the Glowflies' three became the Flickerlings'.)
   FLICKERLING_WICK_TRAIT,
   FLICKERLING_FLARE_TRAIT,
   FLICKERLING_LAST_GLEAM_TRAIT,

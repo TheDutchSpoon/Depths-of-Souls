@@ -99,7 +99,8 @@ describe('an AOE cast skips a member that died earlier in the same cast', () => 
 describe('a status is never applied to a dead target', () => {
   // SMITE: single-target, spellPower 1.0 (caster Int 20 vs defence 0 -> final 20), then an
   // `apply-status` Weaken effect on `cast-target`. TARGET has HP 5, so the hit kills it;
-  // `apply-status` then skips the corpse (no response acts on a dead creature but `revive`), so no StatusApplied is emitted for it.
+  // `apply-status` then skips the corpse (no response acts on a dead creature but `revive`), so no
+  // StatusApplied is emitted for it.
   const SMITE: Spell = {
     id: 'smite',
     name: 'Smite',

@@ -1,5 +1,6 @@
-// Golden: a Stun 1 gained in the bearer's OWN turn-start hooks skips exactly one turn (one born window, opened at the action slot). It skips this very
-// turn (the lock is read after the turn-start hooks) and, because it was applied
+// Golden: a Stun 1 gained in the bearer's OWN turn-start hooks skips exactly one turn (one born
+// window, opened at the action slot). It skips this very turn (the lock is read after the
+// turn-start hooks) and, because it was applied
 // BEFORE the action slot, it is not born: it counts down at this turn's own cleanup and is gone
 // for the next. A whole-turn window would have kept it a second turn. Hand-derived.
 //

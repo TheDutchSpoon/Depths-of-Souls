@@ -48,7 +48,9 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
  * `maxHp` is `floor(getEffectiveStat(creature, 'health'))` -- the SAME integer
  * `currentHp` is initialised and clamped to (effects.ts's `effectiveMaxHp`), computed HERE from
  * `creature` directly (not passed in) so there is exactly one place either caller's "what does
- * HP% divide by" reading can come from (an unfloored `getEffectiveStat` reading would make "at full HP" untrue whenever a Health modifier left effective Health fractional -- a creature at its own max is trivially 100% only against the floored value currentHp actually gets clamped to).
+ * HP% divide by" reading can come from (an unfloored `getEffectiveStat` reading would make "at full
+ * HP" untrue whenever a Health modifier left effective Health fractional -- a creature at its own
+ * max is trivially 100% only against the floored value currentHp actually gets clamped to).
  */
 export function hpPercentSatisfied(
   creature: Creature,
@@ -60,8 +62,7 @@ export function hpPercentSatisfied(
 }
 
 /**
- * Evaluates a conditional passive's read-time gate -- DATA, not a function
- * Self-only:
+ * Evaluates a conditional passive's read-time gate -- DATA, not a function. Self-only: it
  * may read OTHER effective stats but must never read the stat it gates (no read-cycle). This is
  * enforced by a load-time validator (data/traits/index.ts, data/specializations.ts), not here --
  * `hp-percent` reads effective Health via `getEffectiveStat`, which only terminates without

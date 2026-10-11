@@ -1,5 +1,6 @@
 // Golden: a tick from a LIVING applier offers no `triggering-source`, so no retaliator answers it,
-// while `on-damage-taken` itself still fires (`spec/responses.md#triggering-source-is-never-the-firing-creature`). Moving a tick's source to
+// while `on-damage-taken` itself still fires
+// (`spec/responses.md#triggering-source-is-never-the-firing-creature`). Moving a tick's source to
 // the applier would otherwise open retaliation: Snapback (the real Snapjaw Jaws) would strike the
 // applier on every tick and the Wretch's Madness Touch would confuse it.
 //
@@ -58,7 +59,8 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState => {

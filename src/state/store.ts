@@ -153,7 +153,7 @@ export interface GameState {
 export interface FloorOutcome {
   readonly floor: number
   /** One result per fight actually resolved -- stops at the first non-win (`spec/combat.md#resolution--timing`: "the
-   * fight ends the instant a side has no living creatures"; a floor's remaining fights are
+   * fight ends the instant a side has no living creature"; a floor's remaining fights are
    * simply never attempted after a wipe). */
   readonly fightResults: readonly FightResult[]
   /** True iff every fight on the floor was won. */
@@ -251,7 +251,8 @@ export interface GameActions {
   /** Pins a biome for a floor (the Biome Atlas facility, `spec/run.md#facilities`). No
    * facility-unlock gating here (the facilities wait, `spec/run.md#facilities`). Player-reachable
    * failure (`spec/store.md#how-store-actions-fail`): returns `{ ok: false, reason }` instead of throwing. Reasons:
-   * `floor-out-of-range` (floor < 1), `unknown-biome`, `biome-has-no-content` (refuses a pin that would otherwise route `descend` into the generator's own throw). */
+   * `floor-out-of-range` (floor < 1), `unknown-biome`, `biome-has-no-content` (refuses a pin that
+   * would otherwise route `descend` into the generator's own throw). */
   pinBiome(floor: number, biomeId: BiomeId): PinBiomeResult
   /** Pure query sharing `pinBiome`'s own check -- lets the UI grey out an invalid pin without
    * performing it. */
@@ -262,7 +263,8 @@ export interface GameActions {
    * generation module, runs each fight through the real resolver in sequence, banks soul%/XP/
    * currency rewards as each fight resolves (never held pending the floor's overall outcome),
    * applies XP-driven level-ups post-fight, and advances deepestFloor only on a full clear.
-   * Player-reachable failure (`spec/store.md#how-store-actions-fail`): returns `{ ok: false, reason }` (state unchanged) instead
+   * Player-reachable failure (`spec/store.md#how-store-actions-fail`): returns `{ ok: false, reason
+   * }` (state unchanged) instead
    * of throwing. */
   descend(floor: number): DescendResult
   /** Pure query sharing `descend`'s own check -- lets the UI grey out an unreachable floor

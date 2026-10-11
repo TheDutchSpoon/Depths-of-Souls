@@ -356,8 +356,9 @@ OK src/engine/__golden__/golden-resonant-harmonize.fixture.ts
 OK src/engine/__golden__/golden-resonant-harmonize.test.ts (masked 1)
   "golden replay: Glimmerdark Resonants Harmonize/Resonate (Phase 4 Slice H2, real content)" -> "golden replay: Glimmerdark Resonants Harmonize/Resonate (real content)"
 OK src/engine/__golden__/golden-resonant-overtone.fixture.ts
-OK src/engine/__golden__/golden-resonant-overtone.test.ts (masked 1)
+OK src/engine/__golden__/golden-resonant-overtone.test.ts (masked 2)
   "golden replay: Glimmerdark Resonant Overtone echo-cast (Phase 4 Slice H2, real content)" -> "golden replay: Glimmerdark Resonant Overtone echo-cast (real content)"
+  "matches the committed event log exactly (one echo fires, its own re-observation fails, echo damage lands before the original)" -> "matches the committed event log exactly (one echo fires, its own re-observation fails, the original damage lands first, then the echo dama…"
 OK src/engine/__golden__/golden-revive.fixture.ts
 OK src/engine/__golden__/golden-revive.test.ts (masked 1)
   "golden replay: revive (Phase 4 Slice B)" -> "golden replay: revive"
@@ -432,7 +433,7 @@ OK src/engine/actions.ts
 OK src/engine/actor-death.test.ts (masked 1)
   "an action ends when its actor dies (spec/combat.md#an-action-ends-when-its-actor-dies, 4.1-C2c)" -> "an action ends when its actor dies (spec/combat.md#an-action-ends-when-its-actor-dies)"
 OK src/engine/balance-types.ts
-OK src/engine/combat.test.ts (masked 9)
+OK src/engine/combat.test.ts (masked 10)
   "resolving the SAME frozen snapshot twice gives identical {state, events} (Phase 4.1-B, B3)" -> "resolving the SAME frozen snapshot twice gives identical {state, events}"
   "born-this-turn: a status refreshed in its own bearer turn keeps full duration (Phase 4.1-F2)" -> "born-this-turn: a status refreshed in its own bearer turn keeps full duration"
   "action instance-list composition (Phase 4 Slice B)" -> "action instance-list composition"
@@ -442,6 +443,7 @@ OK src/engine/combat.test.ts (masked 9)
   "on a successful roll, casts the (only) equipped spell before TurnEnded (Phase 4.1-C, D6)" -> "on a successful roll, casts the (only) equipped spell before TurnEnded"
   "turn-start cleanup (Phase 4.1-C, D6)" -> "turn-start cleanup"
   "taken-reduction passive (Phase 4 Slice F, review amendment -- real Bulwark shape, as a perk)" -> "taken-reduction passive (real Bulwark shape, as a perk)"
+  "absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup" -> "absent scalingStat reads the remap-aware Intelligence"
 OK src/engine/combat.ts
 OK src/engine/conditions.test.ts (masked 1)
   "evaluateCondition -- acted-before-target (Phase 4 Slice C, Blindclaws)" -> "evaluateCondition -- acted-before-target (Blindclaws)"
@@ -584,7 +586,7 @@ OK src/engine/spell-effects.test.ts (masked 11)
   "ASSUMPTION 35: one landed target's effect list is atomic (no actor check between effects)" -> "One landed target's effect list is atomic (no actor check between effects)"
   "ASSUMPTION 36: magnitudes read the caster LIVE when each effect runs" -> "Magnitudes read the caster LIVE when each effect runs"
   "heal.offStat (plan review F2)" -> "heal.offStat"
-  "rejects %s setting both offStat and scalingStat (it used to throw mid-fight)" -> "rejects %s setting both offStat and scalingStat (a mid-fight throw)"
+  "rejects %s setting both offStat and scalingStat (it used to throw mid-fight)" -> "rejects %s setting both offStat and scalingStat (at load, not mid-fight)"
   "a trait heal scaled by a live count: 26, not the old (stat x sp) x count = 27" -> "a trait heal scaled by a live count: 26, not (stat x sp) x count = 27"
 OK src/engine/splashing.test.ts (masked 1)
   "Splashing (Phase 4 Slice C)" -> "Splashing"

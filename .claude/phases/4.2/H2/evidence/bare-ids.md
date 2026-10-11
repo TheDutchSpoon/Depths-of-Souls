@@ -395,3 +395,13 @@ observer `O1`/trigger `T1`, applier `A2`, level `L1`, the design targets `T1`..`
 | src/state/balance-sim.test.ts | 3 | T1, T2, T4 |
 | src/state/balance-sim.ts | 5 | T1, T2, T3, T4, T5 |
 | src/state/rewards.test.ts | 2 | L1, L2, L3, L4 |
+
+## Round 2 (hand-out item 5)
+
+No row above changes: the round-2 rewrites (`#1's` in `golden-sleep-wake.fixture.ts`, `design-review B-5` in `combat.ts`, the slice ids in
+`golden-h2b1-observed-tick` and `golden-h2b2-tick-self-applied`) are not shapes of `\b[A-Z]\d(?:\.\d)?[a-z]?\b`. The same scan on the final tree finds
+the same 45 files (259 lines by a scripted re-count that may differ by one from the table's method); `R1`..`R5`, `E1`, `T1`..`T5` and the
+rest stay derivation labels or design targets.
+
+Plan-item ids in a hyphenated shape (`B-9`, `B-2`), which that regex does not match, remain at `engine/effect-types.ts:337`, `engine/rng.test.ts:64`
+and `engine/rng.ts:48`. They are the same kind as `design-review B-5` and are left for the reviewer's call: the hand-out names only `B-5`.

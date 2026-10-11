@@ -1,7 +1,10 @@
 // Golden: the DoT lifecycle end-to-end -- a spell-applied status (VENOM_BOLT -> Poison),
-// StatusApplied, three on-turn-end ticks in the BEARER's own turn (indirect damage from the applier's snapshot, credited to the living applier CASTER, no TriggerFired, each carrying `statusId: 'poison'` -- the causing status), and the win
-// check right after the killing tick's turn-end hook pass (ticks run at the bearer's turn end; a mid-turn wipe ends the turn at once). The cast's own
-// DamageDealt carries no statusId (it isn't status-caused).
+// StatusApplied, three on-turn-end ticks in the BEARER's own turn (indirect damage from the
+// applier's snapshot, credited to the living applier CASTER, no TriggerFired, each carrying
+// `statusId: 'poison'` -- the causing status), and the win check right after the killing tick's
+// turn-end hook pass (ticks run at the bearer's turn end; a
+// mid-turn wipe ends the turn at once). The cast's own DamageDealt carries no statusId (it isn't
+// status-caused).
 //
 // Hand-derived (independent `node -e` calculator). CASTER casts venom-bolt on round 1 only (a
 // custom script), then waits forever so poison is never refreshed. TARGET always-waits.
@@ -25,8 +28,9 @@
 //     R1 TARGET turn end: tick 9 -> 6; cleanup d3 -> 2.
 //     R2 TARGET turn end: tick 6 -> 3; cleanup d2 -> 1.
 //     R3 TARGET turn end: tick 3 -> 0, TARGET dies. A side is wiped, so the turn ends at once:
-//     TurnEnded, then FightEnded win. The countdown never runs (a corpse's statuses are inert), so there is NO StatusExpired -- the expiry-on-the-killing-tick coverage
-//     is golden-f2-dot-one-turn's.
+//     TurnEnded, then FightEnded win. The countdown never runs (a corpse's statuses are inert), so
+//     there is NO StatusExpired -- the expiry-on-the-killing-tick coverage is
+//     golden-f2-dot-one-turn's.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -83,7 +87,8 @@ export const scripts: ReadonlyMap<string, Script> = new Map([
   ...FIXTURE_SCRIPTS_BY_ID,
   [castOnceThenWait.id, castOnceThenWait],
 ])
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 function dotTick(remainingHp: number): CombatEvent {

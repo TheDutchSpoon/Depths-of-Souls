@@ -1,5 +1,6 @@
-// Golden: scoped action-lock (a passive trait-borne `action-lock`) -- a Silenced-shaped creature's Cast rule is illegal (checkLegality) while its Attack
-// rule -- lower in the SAME script -- still fires. The lock is passive: it fires no hook, so
+// Golden: scoped action-lock (a passive trait-borne `action-lock`) -- a Silenced-shaped creature's
+// Cast rule is illegal (checkLegality) while its Attack rule -- lower in the SAME script -- still
+// fires. The lock is passive: it fires no hook, so
 // there is no per-turn TriggerFired, and its scope is 'cast', not 'all', so the turn is not
 // skipped.
 //

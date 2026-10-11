@@ -1,5 +1,6 @@
-// Golden: Spore's spread passes the dying bearer's WHOLE snapshot on. The spread is the status's own `on-death` effect applying that same status, so
-// the engine copies the firing instance's snapshot (applier id, affinity, potency) onto the new
+// Golden: Spore's spread passes the dying bearer's WHOLE snapshot on. The spread is the status's
+// own `on-death` effect applying that same status, so the engine copies the firing instance's
+// snapshot (applier id, affinity, potency) onto the new
 // host, instead of snapshotting the dying bearer fresh.
 //
 // Hand-derived (independent `node -e` calculator). Player: A (the original applier; Speed 100,
@@ -51,7 +52,8 @@ export const enemyParty = makeParty('enemy', [
 ])
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
-// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { spore: 15 })
 
 export const setup = (created: CombatState): CombatState => {

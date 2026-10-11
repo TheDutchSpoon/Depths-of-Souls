@@ -101,7 +101,9 @@ export const FLICKERLING_LAST_GLEAM_TRAIT: Trait = {
 
 /** Blindclaws' Setter (enabler): every turn, grants the team's hardest hitter the initiative --
  * `grant-act-first` (a `turn-order` effect, position 'first' -- see data/statuses.ts), so that ally
- * acts first starting NEXT round (re-application refreshes; it affects future rounds' turn order only, like Overgrowth's Weaver Webbing an enemy -- though the Weaver places its Web in its turn-end hooks, so its own cleanup never rolls it; this grant stays at turn start). */
+ * acts first starting NEXT round (re-application refreshes; it affects future rounds' turn order
+ * only, like Overgrowth's Weaver Webbing an enemy -- though the Weaver places its Web in its
+ * turn-end hooks, so its own cleanup never rolls it; this grant stays at turn start). */
 export const BLINDCLAWS_SETTER_TRAIT: Trait = {
   id: 'blindclaws-setter-mark-the-prey',
   name: 'Mark the Prey',
@@ -118,8 +120,8 @@ export const BLINDCLAWS_SETTER_TRAIT: Trait = {
   ],
 }
 
-/** Blindclaws' Striker (payoff): "+% while acting before its target" (`content/glimmerdark.md#blindclaws-striker`), the
- * spec'd numeric payoff -- a real `conditional-damage-bonus` on the
+/** Blindclaws' Striker (payoff): a damage bonus while acting before its target
+ * (`content/glimmerdark.md#blindclaws-striker`), the spec'd numeric payoff -- a real `conditional-damage-bonus` on the
  * `acted-before-target` condition, made possible by conditions.ts completing that
  * condition's non-scripting path. Action-selection (attack-or-Defend) is the scripting layer's
  * job, never a creature-identity trait -- Striker runs the plain `striker` role
@@ -160,8 +162,8 @@ export const BLINDCLAWS_VANGUARD_TRAIT: Trait = {
 }
 
 // ---- Resonants (Wit lean) -- closed mechanic: caster synergy (on-action-observed) ----
-// `content/glimmerdark.md#resonants-wit-caster-synergy` names ONE shared mechanic (an ally
-// casting raises the stats of its caster), not a two-role enabler/payoff chain -- all three
+// `content/glimmerdark.md#resonants-wit-caster-synergy` names ONE shared mechanic (when an ally
+// casts, the Resonant gains stats), not a two-role enabler/payoff chain -- all three
 // creatures share the same on-action-observed reaction, escalating scope/strength by rarity
 // (common/uncommon/rare). Resonants are the ONLY on-action-observed
 // consumer across every species/starter/spec tree (`spec/effects.md#action-reactions-actor-self-hooks-or-observation`).
@@ -244,7 +246,8 @@ export const RESONANT_OVERTONE_TRAIT: Trait = {
 // Resonants above), so each creature drains a different stat. Per-creature
 // affinity matches the stat each one drains (`spec/creatures.md#affinity`) --
 // Leech (Attack) -> violence, Gorger (Defence) -> endurance; Voidmaw stays vitality (species/
-// glimmerdark.ts). Side effect: the biome's affinity spread flattens to 4/4/4/4/2.
+// glimmerdark.ts). Side effect: it shapes the biome's affinity spread
+// (`content/glimmerdark.md#affinity-spread`).
 
 /** Sparkeater Leech (common): every attack, permanently steals 10% Attack from its target to
  * itself (two apply-stat-modifier responses on the same hook, no new primitive;
@@ -414,9 +417,9 @@ export const SHELLBACK_WARDEN_TRAIT: Trait = {
   ],
 }
 
-/** Shellback Brawler (payoff/"attacker"): `content/glimmerdark.md#shellback-brawler` -- its
+/** Shellback Brawler (payoff, attacker): `content/glimmerdark.md#shellback-brawler` -- its
  * Attack action reads its own (high) effective Defence instead of Attack
- * entirely, "armor-as-weapon" literally. Pairs with a correspondingly high-Defence/low-Attack
+ * entirely, armor-as-weapon literally. Pairs with a correspondingly high-Defence/low-Attack
  * base stat line (species/glimmerdark.ts). */
 export const SHELLBACK_BRAWLER_TRAIT: Trait = {
   id: 'shellback-brawler-shell-fist',

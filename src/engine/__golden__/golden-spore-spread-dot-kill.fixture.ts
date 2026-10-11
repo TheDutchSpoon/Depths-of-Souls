@@ -20,8 +20,8 @@
 //     snapshot tick 5 (see above). BEARER 1 - 5 -> clamped to 0 ->
 //     dies. No TriggerFired for the tick itself (emitTriggerFired: false). Neither side is wiped
 //     (P and MATE live), so the turn goes on.
-//   CreatureDied(BEARER) -> on-death fires Spore's OWN spread trigger (a DIFFERENT guard identity
-//     now, per the fix) -> TriggerFired(BEARER, on-death, spore) -> random-ally-without-status
+//   CreatureDied(BEARER) -> on-death fires Spore's OWN spread trigger (a distinct per-trigger
+//     guard identity, see the header) -> TriggerFired(BEARER, on-death, spore) -> random-ally-without-status
 //     relative to BEARER: MATE is BEARER's only living ally and doesn't carry Spore -> the sole
 //     candidate (pool size 1, so the draw is deterministic regardless of RNG value) ->
 //     StatusApplied(MATE, spore, duration 3, source BEARER) -- carrying BEARER's whole snapshot (P, 9).
@@ -64,7 +64,8 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Spore 15% of Speed, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { spore: 15 })
 
 export const TURN_STEPS = 4 // P, BEARER and MATE's round-1 turns, then round 2's setup and P's turn.

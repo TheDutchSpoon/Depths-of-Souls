@@ -1,5 +1,6 @@
-// Golden: the triggered `heal` response's `scalingStat` mode (Treants Elder-shaped) -- magnitude = getEffectiveStat(HEALER, scalingStat) x spellPower, mirroring
-// deal-damage's own scalingStat/spellPower pairing exactly, clamped to effective max HP AFTER
+// Golden: the triggered `heal` response's `scalingStat` mode (Treants Elder-shaped) -- magnitude =
+// getEffectiveStat(HEALER, scalingStat) x spellPower, mirroring deal-damage's own
+// scalingStat/spellPower pairing exactly, clamped to effective max HP AFTER
 // scaling (the overheal rule already existed; this proves it composes correctly with the new
 // scaling mode). ELDER self-heals via `on-turn-end` (its own turn's aftermath, no round-end
 // pass needed) -- fixture-shaped, not real Elder content.

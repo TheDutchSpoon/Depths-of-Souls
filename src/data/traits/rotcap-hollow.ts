@@ -9,7 +9,7 @@ import type { Trait } from '../../engine/effect-types'
 //
 // Same enabler/payoff/amplifier framing (common/uncommon/rare) as Overgrowth/Glimmerdark, except
 // Necromoss -- like Resonants -- shares ONE mechanic across all three creatures, escalating
-// scope/strength by rarity (`content/rotcap-hollow.md#myconet-endurancewit-death-network` is a
+// scope/strength by rarity (`content/rotcap-hollow.md#necromoss-witvitality-reclaim` is a
 // single closed mechanic, not a two-role enabler/payoff chain).
 
 // ---- Sporecloud (Wit) -- closed mechanic: Contagion (Spore) ----
@@ -58,7 +58,7 @@ export const SPORECLOUD_REAPER_TRAIT: Trait = {
 
 /** Sporecloud Bloomer (amplifier, rare): a genuinely distinct mechanic from BOTH Seeder and
  * Reaper -- breadth over depth (the same "team-wide burst vs. per-hit trickle" shape the
- * Glimmerdark amplifiers): once at fight-start, it seeds the WHOLE enemy line with Spore at
+ * Glimmerdark amplifiers use): once at fight-start, it seeds the WHOLE enemy line with Spore at
  * once, rather than infecting one target per attack. */
 export const SPORECLOUD_BLOOMER_TRAIT: Trait = {
   id: 'sporecloud-bloomer-spore-burst',
@@ -356,7 +356,8 @@ export const SPORCH_IGNITER_TRAIT: Trait = {
   ],
 }
 
-/** Sporch Ashborn (payoff, uncommon): "+% to Burning" (`content/rotcap-hollow.md#sporch-ashborn`), the target-conditional
+/** Sporch Ashborn (payoff, uncommon): +% damage to Burning enemies
+ * (`content/rotcap-hollow.md#sporch-ashborn`), the target-conditional
  * damage-modifier this species needs -- +% damage to any enemy currently Burning. */
 export const SPORCH_ASHBORN_TRAIT: Trait = {
   id: 'sporch-ashborn-fan-the-flames',

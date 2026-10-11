@@ -936,7 +936,7 @@ describe('Spell.scalingStat', () => {
     return events.find((e) => e.type === 'DamageDealt')
   }
 
-  it('absent scalingStat preserves the pre-Slice-B remap-aware Intelligence lookup', () => {
+  it('absent scalingStat reads the remap-aware Intelligence', () => {
     const spell: Spell = {
       id: 's',
       name: 'S',

@@ -9,8 +9,10 @@
 // Silenced (golden-f3-silenced-refuses-granted-cast uses the real status), like
 // golden-scoped-suppression's. Slots after createCombat
 // (asserted): exactly [BOLT].
-// Round 1, CASTER: (the lock is passive, so no turn-start TriggerFired; scoped, so it does NOT skip the turn), it attacks the lowest-HP enemy (E2 30 < E1 40): core 10 - 0,
-// chip 0.1 -> raw 10.1 -> final 10; E2 30 -> 20. Turn end: granted cast rolls (draw #1) -> then runAction's checkLegality refuses the
+// Round 1, CASTER: (the lock is passive, so no turn-start TriggerFired; scoped, so it does NOT skip
+// the turn), it attacks the lowest-HP enemy (E2 30 < E1 40): core 10 - 0, chip 0.1 -> raw 10.1 ->
+// final 10; E2 30 -> 20. Turn end: granted cast rolls (draw #1) -> then runAction's checkLegality
+// refuses the
 // Cast lock -> no gem draw, no SpellCast.
 //
 // LATER RNG CONSUMER: E1 (speed 10, Attack 10, `random-attack`) picks among player creatures
@@ -135,7 +137,8 @@ export const expectedEvents: CombatEvent[] = [
     damageSource: 'attack',
   },
   // The grant's trigger fired (chance rolled, draw #1) and the grant was then refused by the Cast
-  // lock when it ran: no ActionGranted, no SpellCast, nothing else (a refused grant emits nothing of its own; this TriggerFired is the one new event).
+  // lock when it ran: no ActionGranted, no SpellCast, nothing else (a refused grant emits nothing
+  // of its own; this TriggerFired is the grant's only event).
   {
     type: 'TriggerFired',
     sourceId: CASTER,

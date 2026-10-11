@@ -80,8 +80,8 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnSkipped', creatureId: VICTIM, effectId: 'stun' },
   // No AttackDeclared here -- the skip fills the action slot.
   // Durations count the BEARER's own turns -- Stun 1 (applied in STRIKER's turn, so not
-  // born in VICTIM's) counts down in VICTIM's own turn-end cleanup, inside its bracket (it used
-  // to expire at the round-end sweep, after TurnEnded).
+  // born in VICTIM's) counts down in VICTIM's own turn-end cleanup, inside its bracket (before
+  // TurnEnded).
   { type: 'StatusExpired', creatureId: VICTIM, statusId: 'stun' },
   { type: 'TurnEnded', creatureId: VICTIM },
   { type: 'RoundStarted', round: 2 },

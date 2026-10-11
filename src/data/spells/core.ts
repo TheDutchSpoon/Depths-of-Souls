@@ -22,7 +22,7 @@ export const EMBER_LANCE: Spell = {
   ],
 }
 
-// The "30%-Intelligence" spell anchor from `content/overgrowth.md#spell-power-convention`'s own example.
+// The 30%-Intelligence spell anchor for the spell power convention (`content/overgrowth.md#spell-power-convention`).
 export const CINDER_NOVA: Spell = {
   id: 'cinder-nova',
   name: 'Cinder Nova',

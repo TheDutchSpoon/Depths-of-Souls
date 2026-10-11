@@ -76,7 +76,8 @@ export function calculateAdditional(attackerLevel: number, targetMaxHp: number):
   return Math.min(hpBound, levelCap)
 }
 
-/** A direct hit's result with the Additional added to the integer damage (`rawDamage` stays the formula's pre-clamp value). */
+/** A direct hit's result with the Additional added to the integer damage (`rawDamage` stays the
+ * formula's pre-clamp value). */
 export function withAdditional(result: DamageResult, additional: number): DamageResult {
   return { ...result, finalDamage: result.finalDamage + additional }
 }

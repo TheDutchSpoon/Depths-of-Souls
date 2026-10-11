@@ -1,5 +1,6 @@
-// Golden: a GRANTED Attack (`perform-action`) stays DIRECT damage and gets the Additional. Hand-derived. A response only enqueues a grant; the granted
-// action runs afterwards through the same Attack executor as a scripted one.
+// Golden: a GRANTED Attack (`perform-action`) stays DIRECT damage and gets the Additional.
+// Hand-derived. A response only enqueues a grant; the granted action runs afterwards through the
+// same Attack executor as a scripted one.
 //
 // ATTACKER (level 1, Attack 20, speed 10, `always-attack`) carries a fixture trait: on-turn-end ->
 // perform-action(self, Attack at the lowest-HP enemy). DEFENDER: health 100, defence 5,

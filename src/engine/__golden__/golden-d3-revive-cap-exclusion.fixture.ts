@@ -1,5 +1,6 @@
-// Golden: the revive cap, the mixed-pool exclusion half -- `random-dead-ally` excludes a dead ally already at MAX_REVIVES_PER_CREATURE from the
-// pool BEFORE drawing, so a pool with one capped and one eligible dead ally always lands on the
+// Golden: the revive cap, the mixed-pool exclusion half -- `random-dead-ally` excludes a dead ally
+// already at MAX_REVIVES_PER_CREATURE from the pool BEFORE drawing, so a pool with one capped and
+// one eligible dead ally always lands on the
 // eligible one.
 //
 // REVIVER carries a trait that fires `revive` (target `random-dead-ally`, pct 0.5) at

@@ -1,14 +1,15 @@
 // Golden: Rotcap Hollow's Necromoss Wisp (`content/rotcap-hollow.md#necromoss-wisp`) -- the real,
 // shipped `NECROMOSS_WISP_TRAIT` heals itself every turn scaled by the LIVE count of its own
-// dead allies, proving `heal`'s `magnitudeSource` mode (named for Necromoss in effect-types.ts's own doc comment) against real content for the first time.
+// dead allies, proving `heal`'s `magnitudeSource` mode (named for Necromoss in effect-types.ts's
+// own doc comment) against real content for the first time.
 //
-// WISP's health (50, not the species' own real 18) and dead-ally count (3, not 2)
-// are deliberately chosen so BOTH the 5% rate and the count actually change the FLOORED result --
-// at the species' real numbers (18 max HP, 2 dead allies), 18*0.05*2 = 1.8 floors to 1, which is
-// also what 18*0.03*2 = 1.08 (the wrong rate) floors to, so that scenario couldn't have caught a
-// regression to the wrong rate. Here: 50*0.05*3 = 7.5 -> floors to 7; the WRONG rate (0.03) would
-// give 50*0.03*3 = 4.5 -> 4, and the WRONG count (2) would give 50*0.05*2 = 5.0 -> 5 -- both
-// visibly different from 7, so this scenario is sensitive to either mistake.
+// WISP's health (50) and dead-ally count (3) are deliberately chosen so BOTH the 5% rate and the
+// count actually change the FLOORED result -- at 18 max HP and 2 dead allies, 18*0.05*2 = 1.8
+// floors to 1, which is also what 18*0.03*2 = 1.08 (the wrong rate) floors to, so that scenario
+// couldn't have caught a regression to the wrong rate. Here: 50*0.05*3 = 7.5 -> floors to 7; the
+// WRONG rate (0.03) would give 50*0.03*3 = 4.5 -> 4, and the WRONG count (2) would give
+// 50*0.05*2 = 5.0 -> 5 -- both visibly different from 7, so this scenario is sensitive to either
+// mistake.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). WISP (speed 16) acts
 // before DUMMY (player, speed 5, always-wait, never reached in 1 step) -- WISP's own three dead

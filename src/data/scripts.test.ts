@@ -34,10 +34,10 @@ import { createEffectInstanceId, type ActiveEffect } from '../engine/effect-type
 import type { CombatState, Creature } from '../engine/types'
 import type { Intent, Script } from '../engine/scripting-types'
 
-// The seven role scripts, rule by rule. Every role
-// ends in the same fallback, so each fallback rule has its own test below, in a state where every
-// rule above it is false or illegal, and each fails with that rule removed (the report's mutation
-// table shows it: a role without its last rule waits where it should cast).
+// The seven role scripts, rule by rule (`spec/scripting.md#role-scripts`). Every role ends in the
+// same fallback, so each fallback rule has its own test below, in a state where every rule above
+// it is false or illegal, and each fails with that rule removed (the report's mutation table shows
+// it: a role without its last rule waits where it should cast).
 
 function makeState(overrides: Partial<CombatState> = {}): CombatState {
   return {

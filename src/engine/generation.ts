@@ -166,8 +166,7 @@ export interface MaterializeCreatureOptions {
   /** Overrides `speciesCreature.defaultScriptId` when given
    * (including explicit `null`, which -- like `undefined` -- falls back to the default; both
    * mean "use the creature's default script"). The run layer resolves `Instance.scriptId` into
-   * this option; nothing produces a non-null `Instance.scriptId` yet, but the plumbing is real
-   * end to end. */
+   * this option; the balance simulator's probe sets `Instance.scriptId` (`state/balance-sim.ts`). */
   readonly scriptId?: string | null
   /** An opaque string the run layer may stash an InstanceId in -- see
    * CreatureOrigin's own doc comment (engine/types.ts). Absent for generated enemies. */
@@ -185,8 +184,9 @@ export interface MaterializeCreatureOptions {
  * than embedded on `SpeciesCreature` itself (mirrors `side`/`slot`/`level` already being
  * explicit options) -- `living-allies-of-species` (effects.ts) reads it.
  *
- * `gems` fallback (a starter's granted spell is an `innate-spell` passive on its trait, prepended by `createCombat`'s fight-setup, never by materializeCreature): the caller's own option wins when supplied (generateFloor's per-visit
- * rolled loadout for a spawned enemy), else all-null slots.
+ * `gems` fallback (a starter's granted spell is an `innate-spell` passive on its trait, prepended
+ * by `createCombat`'s fight-setup, never by materializeCreature): the caller's own option wins when
+ * supplied (generateFloor's per-visit rolled loadout for a spawned enemy), else all-null slots.
  *
  * `baselineEffects`/`revivesUsed` are placeholders here -- `createCombat`
  * ALWAYS recomputes `baselineEffects` from the creature's `innateTraitIds` (never trusts an input
@@ -218,7 +218,7 @@ export function materializeCreature(
     // cumulative-per-fight, always starts at 0.
     defendCount: 0,
     speciesId,
-    // `ref` spread only when defined (nit, review) -- origin stays plain data with no explicit
+    // `ref` spread only when defined -- origin stays plain data with no explicit
     // `undefined` keys for a generated enemy, which never gets one.
     origin: {
       templateId: speciesCreature.id,
@@ -288,7 +288,8 @@ export function spellsUnlockedAt(
  * When that runs out (a pool smaller than the slot count) the remaining slots draw from the FULL
  * pool: duplicates only as this safety net. Exactly one draw per slot whenever the pool is
  * non-empty. An empty pool draws nothing and leaves the slots empty, except for a cast-role
- * creature, which throws ("usable" = affinity-matched and unlocked, not castable in any given fight; a cast role with nothing to cast is an authoring mistake, never a runtime state).
+ * creature, which throws ("usable" = affinity-matched and unlocked, not castable in any given
+ * fight; a cast role with nothing to cast is an authoring mistake, never a runtime state).
  *
  * Exported so the store's player gem roll is this same rule, not a
  * copy.
@@ -353,8 +354,9 @@ function resolveAddSpeciesId(biome: BiomeData, add: SpeciesCreature): string {
 }
 
 /**
- * The ordinary spawn path, shared by an ordinary fight's slots and a boss floor's fill: weighted species from `pool`, rarity-weighted creature within it, a level in range, then
- * a loadout -- always in that draw order -- materialized at `slot`.
+ * The ordinary spawn path, shared by an ordinary fight's slots and a boss floor's fill: weighted
+ * species from `pool`, rarity-weighted creature within it, a level in range, then a loadout --
+ * always in that draw order -- materialized at `slot`.
  */
 function spawnEnemy(
   pool: readonly Species[],

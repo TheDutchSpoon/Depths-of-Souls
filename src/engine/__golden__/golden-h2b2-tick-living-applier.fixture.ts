@@ -128,7 +128,8 @@ export const scripts = new Map([
 export const traits: ReadonlyMap<string, Trait> = new Map(
   [SURGE, LIFESTEAL, BONUS_VS_POISON].map((t) => [t.id, t]),
 )
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const setup = (created: CombatState): CombatState => {

@@ -48,7 +48,7 @@ export interface CreateCombatInput {
  *
  * `createCombat` ALWAYS RECOMPUTES `baselineEffects` from each input creature's own
  * `innateTraitIds` (+ that creature's own side's effects) and RESETS `revivesUsed` to `0` -- it
- * never trusts those fields on an input `Creature` (design-review B-5). Fight setup takes FRESH
+ * never trusts those fields on an input `Creature`. Fight setup takes FRESH
  * creatures only: an input creature that already carries setup output
  * (non-empty `baselineEffects` or `activeEffects` -- i.e. pulled from a PREVIOUS `CombatState`
  * rather than fresh `materializeCreature` output) is a thrown error, not silently discarded-and-
@@ -188,8 +188,9 @@ function countDownStatuses(
 }
 
 /**
- * Turn-end cleanup, part 2 -- Web break-free: rolled once per dequeued turn (every creature's, a dead actor's empty bracket
- * included), AFTER the actor's own countdown, against every LIVING bearer of an active
+ * Turn-end cleanup, part 2 -- Web break-free: rolled once per dequeued turn (every creature's, a
+ * dead actor's empty bracket included), AFTER the actor's own countdown, against every LIVING
+ * bearer of an active
  * status-borne `turn-order` effect carrying breakChancePercent (read through the effect iterator:
  * an immune bearer's Web has no effects, so it draws nothing), skipping a Web born this turn. A
  * board with no such Web draws nothing (only-when-present discipline). Bearers are iterated in the
@@ -265,8 +266,9 @@ function resolveRoundEnd(state: CombatState, events: CombatEvent[]): CombatState
   return drainGrantedActions(roundEndCtx, hooked, { stopWhen: fightOver })
 }
 
-// The action executors (attack/cast/defend/provoke/wait) all moved to actions.ts -- combat.ts only orchestrates the turn skeleton, dispatching every action through
-// actions.ts's `runAction`. Every `ResolutionContext` built below is drained exactly once, at
+// The action executors (attack/cast/defend/provoke/wait) all moved to actions.ts -- combat.ts only
+// orchestrates the turn skeleton, dispatching every action through actions.ts's `runAction`. Every
+// `ResolutionContext` built below is drained exactly once, at
 // the end of its own scope, by `drainGrantedActions`.
 
 function finalize(
@@ -296,8 +298,9 @@ export function resolveTurn(state: CombatState): {
   // affect the other's clone.
   let working: CombatState = { ...state, rng: { position: state.rng.position } }
 
-  // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start. Like every other in-fight pass, the hook pass and its drain stop at a
-  // wipe, and win/loss is checked right after both, BEFORE RoundStarted -- a fight-start wipe
+  // Fight-start (once, when round === 0): emit FightStarted, then fire on-fight-start. Like every
+  // other in-fight pass, the hook pass and its drain stop at a wipe, and win/loss is checked right
+  // after both, BEFORE RoundStarted -- a fight-start wipe
   // ends the fight as FightStarted ... FightEnded, with no round and no turn.
   if (working.round === 0) {
     events.push({ type: 'FightStarted' })

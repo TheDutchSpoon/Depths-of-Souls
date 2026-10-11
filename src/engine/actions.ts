@@ -199,8 +199,10 @@ export function castableGemSlots(
 
 /**
  * `checkLegality(actor, intent, state)` -- pure, draws nothing. Can the actor take this action
- * at all: an `action-lock` (an `'all'` lock refuses EVERY kind, Attack/Cast/Defend/Provoke/ Wait; a scoped lock only its own -- read through the effect iterator, so an immune bearer's status lock doesn't count), an empty slot, no castable gem for `gemSlot: 'random'`, no valid
- * target? Used by the interpreter's lookahead over script rules, and by the implicit
+ * at all: an `action-lock` (an `'all'` lock refuses EVERY kind, Attack/Cast/Defend/Provoke/Wait; a
+ * scoped lock only its own -- read through the effect iterator, so an immune bearer's status lock
+ * doesn't count), an empty slot, no castable gem for `gemSlot: 'random'`, no valid target? Used by
+ * the interpreter's lookahead over script rules, and by the implicit
  * fallback to decide whether Attack is legal at all before resolving it.
  */
 export function checkLegality(
@@ -448,7 +450,9 @@ function splashTargetIds(
 
 /**
  * The living neighbors of `target` within `party`, taken from
- * the alive-filtered, slot-ordered list (living-adjacency, not raw slot-index adjacency: a dead slot-neighbor would make Splashing whiff for no player-visible reason, and living-adjacency degrades gracefully as a side thins out).
+ * the alive-filtered, slot-ordered list (living-adjacency, not raw slot-index adjacency: a dead
+ * slot-neighbor would make Splashing whiff for no player-visible reason, and living-adjacency
+ * degrades gracefully as a side thins out).
  * Returns up to two neighbors (one at each edge of the living list); empty when `target`
  * isn't alive-and-present in `party` or has no living neighbor.
  */
@@ -522,8 +526,9 @@ function executeAttack(
       working,
       ctx,
     )
-    // Splashing: recompute the SAME formula (own offStat/spellPower, each splash target's own Defence/affinity/pools -- never a copy of the main hit's number). No
-    // TriggerFired -- it's the same action, not a triggered response. Re-checks aliveness in
+    // Splashing: recompute the SAME formula (own offStat/spellPower, each splash target's own
+    // Defence/affinity/pools -- never a copy of the main hit's number). No TriggerFired -- it's the
+    // same action, not a triggered response. Re-checks aliveness in
     // case an earlier splash hit's own damage-path cascade (e.g. Retaliate) already killed a
     // later one.
     for (const splashId of splashIds) {

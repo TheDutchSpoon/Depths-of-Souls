@@ -144,8 +144,10 @@ const FIXTURE_SPEC: Specialization = {
 
 // ---- Stub RNG (deterministic species/creature/level draws) ----
 // generateFloor's per-slot call order (generation.ts, `spawnEnemy`): species pick,
-// creature-within-species pick, level roll, then (every enemy rolls a full gem set, whatever its role) one loadout draw per gem slot -- 6 draws per spawned enemy. FIXTURE_SPECIES is the pool's only species, so
-// its pick is invariant regardless of the value supplied (a single-item weightedPick always
+// creature-within-species pick, level roll, then (every enemy rolls a full gem set, whatever its
+// role) one loadout draw per gem slot -- 6 draws per spawned enemy. FIXTURE_SPECIES is the pool's
+// only species, so its pick is invariant regardless of the value supplied (a single-item
+// weightedPick always
 // returns that item -- see rewards.test.ts's sibling reasoning in generation.test.ts). The
 // creature-within-species pick uses CFG.rarityDrawWeight (FODDER common=6, JUGGERNAUT rare=1,
 // total=7): a value < 6/7 (~0.857) picks FODDER; >= 6/7 picks JUGGERNAUT. The level roll's value
@@ -577,7 +579,8 @@ const DESCEND_REASON_SCENARIOS: readonly DescendReasonScenario[] = [
   },
   {
     // FIXTURE_BIOME alone gives a content frontier of 10; deepestFloor 15 would otherwise make
-    // floor 11 reachable (reach itself passes), but 11 > the frontier (frontier wins even when reach alone would have been fine).
+    // floor 11 reachable (reach itself passes), but 11 > the frontier (frontier wins even when
+    // reach alone would have been fine).
     reason: 'beyond-content-frontier',
     floor: 11,
     setup: (store) => {

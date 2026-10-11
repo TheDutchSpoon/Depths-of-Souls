@@ -169,7 +169,8 @@ export interface CastSlotRuleAction {
  * included) at resolution time -- see actions.ts's `castableGemSlots`/`resolveIntent`.
  * `gemSide` narrows the draw to gems whose own `targetSide` is that
  * side (the `support` role's "cast random ally-side gem"; AOE spells count by their targetSide).
- * Absent = every castable gem, exactly the draw from before the field existed. Read at both sites that read the castable
+ * Absent = every castable gem, exactly the draw from before the field existed. Read at both sites
+ * that read the castable
  * set: `checkLegality` and `resolveGemSlot`. */
 export interface CastRandomRuleAction {
   readonly kind: 'cast'

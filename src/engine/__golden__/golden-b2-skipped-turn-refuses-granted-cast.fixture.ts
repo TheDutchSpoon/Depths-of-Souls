@@ -12,8 +12,9 @@
 // turn-start hooks, the turn is skipped (TurnSkipped), no action. The turn-end hooks fire in
 // effect order: the grant's trigger (chance roll = draw #1, queued), then the remove-status
 // trigger REMOVES Stun, so by the granted-actions step no lock exists: checkLegality alone would let the cast through. Only the skipped-turn GATE
-// (`drainGrantedActions`' `skippedTurnOf`) refuses it (this is what separates the skip gate from the lock's legality check). The
-// gate sits AFTER the roll: the chance roll is draw #1 at trigger time, whatever the skip.
+// (`drainGrantedActions`' `skippedTurnOf`) refuses it (this is what separates the skip gate from
+// the lock's legality check). The gate sits AFTER the roll: the chance roll is draw #1 at trigger
+// time, whatever the skip.
 //
 // LATER RNG CONSUMER: E1 (enemy, speed 10, Attack 10, script `random-attack` = attack a
 // `random-enemy`) acts next and picks uniformly among the player side's living creatures in slot

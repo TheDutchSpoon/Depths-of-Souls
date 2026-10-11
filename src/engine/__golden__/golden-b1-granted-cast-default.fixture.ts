@@ -4,7 +4,7 @@
 //
 // CASTER (player): Int 20, speed 20, always-wait (so the ONLY hit in the log is the granted cast),
 // trait `granted-caster-fixture` = on-turn-end perform-action(self, cast 'random') at chancePercent
-// 100 (the log gains TriggerFired + ActionGranted
+// 100 (the log has TriggerFired + ActionGranted
 // before the SpellCast). Exactly ONE equipped spell,
 // BOLT (enemy-side single target, spellPower 0.5). The trait has no innate-spell, so the slot
 // list after createCombat is exactly [BOLT] (asserted in the test): the gem draw is a pool of

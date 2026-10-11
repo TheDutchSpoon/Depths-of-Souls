@@ -1,6 +1,7 @@
 // Golden: a status applied during ANOTHER creature's turn ticks at its bearer's own next turn
-// end (the born-this-turn rule only protects a status from the turn it was applied in, for its bearer). The case: Myconet Rotcore (player-side, real
-// `MYCONET_ROTCORE_TRAIT`) dies to its own Poison tick in its own turn-end hooks and Poisons the
+// end (the born-this-turn rule only protects a status from the turn it was applied in, for its
+// bearer). The case: Myconet Rotcore (player-side, real `MYCONET_ROTCORE_TRAIT`) dies to its own
+// Poison tick in its own turn-end hooks and Poisons the
 // enemy side via its on-death trigger.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). ROTCORE starts the fight
@@ -10,7 +11,7 @@
 // both survive the whole fixture. Turn order (speed): ROTCORE(20) > TANK(15) > E1(10) in round 1;
 // TANK(15) > E1(10) in rounds 2-3 (Rotcore excluded, dead).
 //
-//  Poison's potency is 20% of the APPLIER's effective Attack at application. ROTCORE has
+// Poison's potency is 20% of the APPLIER's effective Attack at application. ROTCORE has
 // Attack 50; every bearer has Defence 20 and is vitality (neutral), so every tick here is
 // potency 10 - 0.2 x 20 = 6.
 //
@@ -67,7 +68,8 @@ export const enemyParty = makeParty('enemy', [
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
-// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a mechanism golden). The status is otherwise the real one.
+// Pinned at Poison 20% of Attack, the value this golden's arithmetic uses (tuning never changes a
+// mechanism golden). The status is otherwise the real one.
 export const statuses = holdPotency(STATUS_REGISTRY, { poison: 20 })
 
 export const TURN_STEPS = 6 // ROTCORE, TANK and E1's round-1 turns, then TANK's round-2 turn (with

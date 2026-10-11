@@ -1,4 +1,4 @@
-// Golden: the action instance-list model (locked). ATTACKER carries a
+// Golden: the action instance-list model. ATTACKER carries a
 // Brute-starter-shaped "attack again for 30%" passive (TWO_INSTANCE: an action-instance effect,
 // [100, 30]) plus an on-attack trigger (PING: flat 3 dmg to the target) fired EACH instance --
 // proving on-attack fires per instance, not once per action, and that instance damage composes

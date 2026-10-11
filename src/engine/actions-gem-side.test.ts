@@ -1,8 +1,9 @@
 // The `gemSide` filter on a `gemSlot: 'random'` cast, the `support`
 // role's "cast random ally-side gem". It is read at TWO sites -- `checkLegality` (is any gem of that
 // side castable?) and `resolveGemSlot` (which one?) -- and each has its own test below, so removing
-// either read fails a test. With the field absent, the draw from before the field existed must be unchanged: pinned here
-// against an independent computation, not only by the goldens and the digest.
+// either read fails a test. With the field absent, the draw from before the field existed must be
+// unchanged: pinned here against an independent computation, not only by the goldens and the
+// digest.
 
 import { describe, expect, it } from 'vitest'
 import { castableGemSlots, checkLegality, resolveIntent } from './actions'

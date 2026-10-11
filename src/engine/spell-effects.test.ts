@@ -1221,7 +1221,7 @@ describe("validateSpellEffects: a spell's damage and heal are cast-slot formula 
   )
 
   it.each(['deal-damage', 'heal'] as const)(
-    'rejects %s setting both offStat and scalingStat (a mid-fight throw)',
+    'rejects %s setting both offStat and scalingStat (at load, not mid-fight)',
     (kind) => {
       expect(() =>
         validateSpellEffects(
@@ -1279,7 +1279,8 @@ describe('heal scalingStat mode: stat x (spellPower x multiplier), for a trait t
 
 describe('the verb rule: no response acts on a corpse', () => {
   // Spell: damage the landed target, then a `self` effect. The target retaliates with a lethal
-  // flat 99 on whoever hit it, so the caster (HP 10) is dead BEFORE the self effect runs (the list is atomic, so the effect is attempted).
+  // flat 99 on whoever hit it, so the caster (HP 10) is dead BEFORE the self effect runs (the list
+  // is atomic, so the effect is attempted).
   const RETALIATE = () =>
     eff({
       category: 'triggered',

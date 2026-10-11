@@ -31,7 +31,7 @@ export interface BalanceConfig {
   }
 
   /** enemyLevelRange(floor).max = min + levelRangeWidth.base + floor(floor/10) *
-   * levelRangeWidth.perTenFloors. Default 2, 1. */
+   * levelRangeWidth.perTenFloors. Default 0, 1 (`data/balance.ts`). */
   readonly levelRangeWidth: { readonly base: number; readonly perTenFloors: number }
 
   /** bossLevel(floor) = enemyLevelRange(floor).max + bossLevelOffset. The default is in

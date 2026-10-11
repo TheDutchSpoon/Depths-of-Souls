@@ -213,3 +213,5 @@ src/state/store.test.ts	28	28	=
 main: 1682 tests (1681 passed, 1 skipped), 210 files
 branch: 1682 tests (1681 passed, 1 skipped), 210 files
 files whose count differs: 0
+
+Round 2 re-run (vitest --reporter=json on the branch's working tree, compared with the main column above): 210 files, 1682 tests (1681 passed, 1 skipped), files whose count differs: 0.

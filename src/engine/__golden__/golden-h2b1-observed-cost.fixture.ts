@@ -1,5 +1,6 @@
-// Golden: damage observation of a COST, and the relationship filter. Hand-derived. A creature's own trait response damaging itself is a cost; every
-// living creature then gets an `on-damage-observed` pass (hook source = the DAMAGED creature), in
+// Golden: damage observation of a COST, and the relationship filter. Hand-derived. A creature's own
+// trait response damaging itself is a cost; every living creature then gets an `on-damage-observed`
+// pass (hook source = the DAMAGED creature), in
 // livingIds order (player slots, then enemy slots). An observer filters on `relationship` (observer
 // vs the DAMAGED creature; 'ally' includes self) and `selfInflicted` (true = a cost only).
 //

@@ -1,5 +1,7 @@
-// Golden: the triggered `heal` response's `magnitudeSource` mode (Necromoss- shaped) -- a flat per-unit `flatAmount` scaled by a LIVE count (dead-allies), mirroring deal-damage's own magnitudeSource composition
-// exactly. NECROMOSS self-heals via `on-turn-end` (no round end needed) -- fixture-shaped,
+// Golden: the triggered `heal` response's `magnitudeSource` mode (Necromoss-shaped) -- a flat
+// per-unit `flatAmount` scaled by a LIVE count (dead-allies), mirroring deal-damage's own
+// magnitudeSource composition exactly. NECROMOSS self-heals via `on-turn-end` (no round end needed)
+// -- fixture-shaped,
 // not real Necromoss content.
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.

@@ -14,7 +14,7 @@
 // Arcane Shields/Arcane Versatility/True Wit for Sorcerer, Shield Specialist for Shieldbarer,
 // Proficient's half of Brute's Proficient Warrior) are authored as REAL PerkDefs (full
 // cost/maxLevel, counted toward the 1000-point sum) whose `effects` are simply `[]` -- there is
-// no engine primitive for "equip gems off-affinity" / "equipment Stat Slot benefit" at all (the
+// no engine primitive for equipping gems off-affinity or for an equipment Stat Slot benefit at all (the
 // whole gem/equipment forge economy is unbuilt: `spec/creatures.md#gems-as-items`,
 // `spec/creatures.md#equipment`), so `[]` is the honest, correct dormant reading, not a stub.
 //
@@ -271,8 +271,9 @@ export const BRUTE: Specialization = {
       effects: [{ category: 'status-immunity', statusId: 'pacified' }],
     },
     {
-      // "Your creatures always have Splashing and Proficient." Splashing is real;
-      // Proficient (equipment Stat Slots, `spec/creatures.md#equipment`) has no engine primitive to key off yet -- see
+      // Your creatures always have Splashing and Proficient (`specializations/brute.md#proficient-warrior`).
+      // Splashing is real; Proficient (equipment Stat Slots, `spec/creatures.md#equipment`) has no
+      // engine primitive to key off yet -- see
       // the note on inert perks at the top of this file.
       id: 'proficient-warrior',
       name: 'Proficient Warrior',
@@ -290,9 +291,9 @@ export const BRUTE: Specialization = {
       effects: [{ category: 'annihilate' }],
     },
     {
-      // "On cast, +1% of the caster's Attack per rank is added to the spell's damage." The
-      // textbook cross-stat consumer (`spec/combat.md#cross-stat-contribution` names this exact perk under "Cross-stat
-      // contribution").
+      // On a cast, +1% of the caster's Attack per level is added to the spell's damage
+      // (`specializations/brute.md#aggressive-caster`). The textbook cross-stat consumer
+      // (`spec/combat.md#cross-stat-contribution`).
       id: 'aggressive-caster',
       name: 'Aggressive Caster',
       maxLevel: 25,
@@ -328,8 +329,8 @@ export const BRUTE: Specialization = {
       ],
     },
     {
-      // "+1% damage to Weakened targets per level." The textbook conditional-damage-bonus
-      // consumer (`spec/combat.md#cross-stat-contribution` names this exact perk under that primitive).
+      // +1% damage to Weakened targets per level (`specializations/brute.md#cull-the-weak`). The
+      // textbook conditional-damage-bonus consumer (`spec/effects.md#conditional-damage-bonus`).
       id: 'cull-the-weak',
       name: 'Cull the Weak',
       maxLevel: 50,
@@ -435,8 +436,9 @@ export const SHIELDBARER: Specialization = {
       ],
     },
     {
-      // "Attacks and spells deal additional damage equal to 3% of Defence per level." The
-      // textbook cross-stat consumer for BOTH action kinds (`spec/combat.md#cross-stat-contribution` names this exact perk).
+      // Attacks and spells deal additional damage equal to 3% of the creature's Defence per level
+      // (`specializations/shieldbarer.md#shield-bash`). The textbook cross-stat consumer for BOTH
+      // action kinds (`spec/combat.md#cross-stat-contribution`).
       id: 'shield-bash',
       name: 'Shield Bash',
       maxLevel: 10,

@@ -164,7 +164,7 @@ describe('corpus coverage', () => {
   })
 
   it('the Silence and Pacify spell fights (entries 524-525) cast their spell with the status landing, riding on no draw', () => {
-    // Appended: an always-cast caster against a wall, so the status
+    // An always-cast caster against a wall, so the status
     // lands whatever the seed. Pinned by index because the perk fights also happen to cast them.
     const expected = [
       ['silence', 'silenced'],

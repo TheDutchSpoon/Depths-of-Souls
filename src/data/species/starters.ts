@@ -15,7 +15,7 @@
 // set to 'rare' as a flavor-only placeholder.
 //
 // Exact base stats (10-30 per `spec/creatures.md#core-stats`) are parked balance, picked only
-// to satisfy each starter's qualitative "high X" description (`specializations/brute.md#starter-cragfang-mauler`,
+// to satisfy each starter's qualitative high-stat description (`specializations/brute.md#starter-cragfang-mauler`,
 // `specializations/shieldbarer.md#starter-stonehorn-warden`, `specializations/sorcerer.md#starter-glyphmoth-seer`) --
 // not derived from any design number.
 //
@@ -33,10 +33,9 @@ import {
 } from '../traits'
 
 // ---- Sorcerer starter ----
-// "Wit affinity, high Intelligence. Trait: grants one spell as a permanent extra gem + 50%
-// chance on-turn-end to cast a random equipped spell" (`specializations/sorcerer.md#starter-glyphmoth-seer`). Its
-// own signature trait (SORCERER_STARTER_TRAIT) and granted gem (ARCANE_BOLT) live in the
-// library -- see `../traits`/`../spells`.
+// Wit affinity, high Intelligence (`specializations/sorcerer.md#starter-glyphmoth-seer`). Its own
+// signature trait (SORCERER_STARTER_TRAIT) and innate spell (ARCANE_BOLT) live in the library --
+// see `../traits`/`../spells`.
 
 export const SORCERER_STARTER: SpeciesCreature = {
   id: 'sorcerer-starter',

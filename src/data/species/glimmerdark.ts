@@ -56,7 +56,7 @@ import {
 } from '../traits'
 
 // ---- Glimmerdark's own authored spells ----
-// This grouping is documentation only ("the spells this biome introduces"): `generateFloor`
+// This grouping is documentation only: `generateFloor`
 // rolls from the global spell registry (`spec/run.md#spells-unlock-cumulatively`), not from biome
 // data. Every entry here is tagged `unlockedAtBiome: 2`.
 
@@ -239,7 +239,8 @@ export const SPARKEATERS: Species = {
   creatures: [SPARKEATER_LEECH, SPARKEATER_GORGER, SPARKEATER_VOIDMAW],
 }
 
-// ---- Gloomjaws (Violence lean) -- execute the weak, via three distinct verbs (see traits/glimmerdark.ts's own header comment) ----
+// ---- Gloomjaws (Violence lean) -- execute the weak, via three distinct verbs (see
+// traits/glimmerdark.ts's own header comment) ----
 
 export const GLOOMJAW_STALKER: SpeciesCreature = {
   id: 'gloomjaw-stalker',

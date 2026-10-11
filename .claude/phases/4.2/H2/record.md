@@ -7,14 +7,18 @@ passed, 1 skipped), the same as `main` file by file (210 files).
 ## What was built
 
 - **The sweep.** Every comment and every `describe`/`it`/`test` title in `src/`, `vite.config.ts` and `eslint.config.js` is brought to
-  `CONVENTIONS.md#comment-why-not-what`: `npm run docs:check -- comments` passes (6,918 comments and 1,627 titles in 403 files; it reported
-  2,962 problems in 343 files on `main`). 346 files changed, 343 title parts reworded, no code changed.
+  `CONVENTIONS.md#comment-why-not-what`: `npm run docs:check -- comments` passes (7,003 comments and 1,627 titles in 403 files; it reported
+  2,962 problems in 343 files on `main`). 346 files changed, 345 title parts reworded, no code changed.
   - **A one-off script** (the scratchpad, not the repo) did the mechanical part: 1,182 edits under rules M1-M6 (labels, tag-only
     parentheticals, mixed parentheticals, `(<tag> -- <why>)`, title suffixes). A bare id is removed only inside a parenthetical with a
     non-id tag or directly after one; id-only parentheticals and labels were left for the hand pass.
   - **The hand pass** cleared the 686 problems the script left, then the bare ids (332 rewritten, 259 lines kept as derivation labels and
-    test-data names), the history markers (484 rewritten, 300 kept), the 38 forward pointers, the 48 quotations, the brief's residue and the
+    test-data names), the history markers (516 rewritten, 298 kept), the 38 forward pointers, the 48 quotations, the brief's residue and the
     two `// ASSUMPTION:` markers.
+  - **Review round 1** (`handout-r1.md`) restored the eight anchors the mechanical pass dropped (no hunk of the diff now loses a `.md#` citation
+    without re-citing or moving it), rewrote the comments that had gone false, re-pointed the citations and quotations that did not hold
+    (the perk comments in `data/specializations.ts` now cite the perk entries), cleared the references to deleted history and the review and
+    slice words `comments` cannot see, and rewrapped the lines the join made longer than 120 columns.
   - **Forward pointers cite the rule that states the wait**: the demo harnesses cite `CONVENTIONS.md#every-feature-phase-ships-a-demo`; the nine
     inert perks each cite their own entry (`specializations/<spec>.md#<perk>`), keeping "(gem system)" and "(equipment system)"; the rest cite
     the `## Not built` rule or the facilities rule. A title carries no anchor.
@@ -40,7 +44,7 @@ passed, 1 skipped), the same as `main` file by file (210 files).
 
 ## Evidence
 
-`phases/4.2/H2/evidence/` (see `report-r1.md`): the per-pattern counts before and after, the mask and the proof's output, the planted faults,
+`phases/4.2/H2/evidence/` (see `report-r1.md` and `report-r2.md`): the per-pattern counts before and after, the mask and the proof's output, the planted faults,
 the mechanical rules and their table, the retitled tests, the bare ids, the history markers, the forward pointers, the quotations, the hand
 rewrites, the brief's residue, the fixtures compared with `main`, the test counts, the corpus render, the mutation check on `ci.test.ts`, the
 non-title literals and the gates.

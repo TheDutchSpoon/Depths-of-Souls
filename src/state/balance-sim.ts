@@ -1,7 +1,8 @@
 // The deterministic balance simulator. It drives the REAL store (`newGame`,
 // `setSpec`, `runScriptedIntro`, `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with the
 // documented player policy below, over a fixed list of seeds, and builds a plain-data report of the
-// design targets T1-T5 (`CONVENTIONS.md#balance-simulator`), the watch points and the loose thresholds. It REPORTS; it
+// design targets T1-T5 (`CONVENTIONS.md#balance-simulator`), the watch points (the failed pushes from
+// floor 20 and the largest stacked stat-modifier growth) and the loose thresholds. It REPORTS; it
 // asserts nothing: the CI threshold test is a separate set of test files
 // that calls `runSeed` and `computeThresholds` and asserts the three verdicts. It
 // changes no number and no file under src/.
@@ -890,7 +891,7 @@ function unicornCombatId(state: StoreState): string | null {
   return null
 }
 
-/** True the first time a seed fights a boss floor; records the visit. */
+/** `true` the first time a seed fights a boss floor; records the visit. */
 export function noteBossVisit(seen: Set<number>, floor: number): boolean {
   const first = !seen.has(floor)
   seen.add(floor)
