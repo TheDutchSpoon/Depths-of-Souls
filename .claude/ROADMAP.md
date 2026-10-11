@@ -50,8 +50,9 @@ deterministic engine) came first. Each phase ships in **slices**, built and revi
   `.claude/phases/4.1/brief.md`; record: `.claude/phases/4.1/record.md`.
 
 ## Phase 4.2 — Docs restructure: the context diet (between 4.1 and 4.5)
-*Brief: `.claude/phases/4.2/brief.md`. Docs only: no behaviour change and no golden changes; the one
-`src/` change is comment-only (citations). Done: 4.2-A to 4.2-F.* Every fresh agent chat read about
+*Brief: `.claude/phases/4.2/brief.md`. Docs only: no behaviour change and no golden changes; the
+`src/` changes are comment-only, plus test titles (citations in 4.2-G, provenance in 4.2-H). Done:
+4.2-A to 4.2-G.* Every fresh agent chat read about
 300 KB of living docs, most of it CONVENTIONS and GAME_DESIGN. 4.2 splits them into
 `spec/<subsystem>.md`, one home per rule, condenses every living doc, makes citations anchors
 checked in CI, and strips provenance from code comments (4.2-H). The rules the condensed docs are written to are in `CLAUDE.md#how-the-spec-is-written`.

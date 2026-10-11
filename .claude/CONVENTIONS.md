@@ -423,7 +423,13 @@ src/
   or "review fix", no "was X before". Where code came from is in git and the mailboxes; in a comment
   it only goes stale.
 - **Don't restate a spec rule.** Cite it by anchor (`spec/<file>.md#<anchor>`) and say only what
-  this code adds to it. A restated rule rots silently when the spec changes.
+  this code adds to it. A restated rule rots silently when the spec changes. A quotation beside
+  an anchor is the target's own words, or it goes.
+- **A forward pointer cites the rule, not the phase.** "Inert until Phase 8" becomes a citation of
+  the rule that names the phase (a spec file's `## Not built` rule, a `ROADMAP.md` entry), so the
+  phase lives in one home and the comment never needs to know which phase is current.
+- **Test titles follow the same rules.** A `describe`/`it`/`test` title says what the test pins,
+  with no provenance.
 - `// ASSUMPTION:` is kept for a live open question only (`CONVENTIONS.md#open-questions-get-an-interface`), not
   as a record of a decision a plan once made.
 - A golden fixture's setup, arithmetic and random draws are not commentary: they are required

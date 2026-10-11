@@ -22,7 +22,24 @@ were comments that restated a spec rule or narrated history.
 - The mechanical part (provenance tags and parentheticals) may be done by script; the rest is by
   hand. The plan lists the patterns the script removes and shows a sample of each.
 - Golden fixtures: setup, arithmetic and random draws stay (`CONVENTIONS.md#two-tier-golden-discipline`); only provenance goes.
-- `// ASSUMPTION:` markers tied to a live open question stay (two on 2026-10-11).
+- `// ASSUMPTION:` markers tied to a live open question stay. On 2026-10-11 there are two, and
+  neither qualifies: `data/spells/index.test.ts:21` records a plan's reading of a brief, and
+  `state/store.ts:104`'s default seed is settled by `spec/store.md#newgame` (the seed comes from
+  `src/app`). Both become plain why-comments, keeping the sharp edge each one names.
+- **Decided at the kickoff (Duncan, 2026-10-11):**
+  - **Test titles are in.** About 284 `describe`/`it`/`test` titles in 150 files carry provenance;
+    they follow the same rule (`CONVENTIONS.md#comment-why-not-what`), `comment-proof` masks each
+    changed title the plan lists, and `comments` scans titles as well as comments.
+  - **The hand pass is bounded.** By hand: every comment block the mechanical pass touches (the
+    sentence must still read, and its *why* survive), every history marker ("before this", "was
+    X", "no longer", "previously"), the quotations below and the residue under "Known from 4.2-G's
+    review". A restated rule elsewhere is fixed when found, not hunted.
+  - **Forward phase pointers cite the rule.** "Inert until Phase 8", "Phase 7 replaces them" (38
+    lines) cite the rule that names the phase (`CONVENTIONS.md#comment-why-not-what`), and
+    `comments` fails on every `Phase <n>`, with no forward exception.
+  - **`vite.config.ts` and `eslint.config.js` are in** (4 provenance lines): swept, scanned by
+    `comments` and covered by `comment-proof`. `scripts/` is not: its tests plant provenance on
+    purpose.
 - **A quotation beside an anchor is the target's own words, or it goes** (Duncan, at the 4.2-G PR
   review). 4.2-G's rewrite swapped the old doc name for an anchor and kept the quotation after it,
   so about 40 comments and one test title now quote old `species-locked.md`, `GAME_DESIGN` or
@@ -42,6 +59,11 @@ were comments that restated a spec rule or narrated history.
     and fails on a changed pragma comment (`@ts-…`, `eslint-…`, `/// <`). Listed test titles may be
     masked. It reads `<base>` with `git show`, so it never runs in CI. Every later comment-only
     change reuses it.
+- **`citations <file>…`** (Duncan, after this kickoff): `citations` also takes file paths and
+  checks exactly those files, `phases/` included, by the rules it applies to a living doc (every
+  anchor resolves; no old form, no label form). With no paths it does what it does today, and CI is
+  unchanged. It exists so a step file is checked before it goes out: the 4.2-H kickoff went out with
+  a label-form reading list, because `citations` skips `phases/`.
 
 Out of scope: any code change; comments that are correct but long (length alone is not a finding).
 
@@ -52,8 +74,18 @@ Out of scope: any code change; comments that are correct but long (length alone 
 - The quotations: before/after counts of a quotation beside an anchor that isn't in the target's
   section, the after count zero (the plan says whether `comments` checks it).
 - The `comments` mode passes, fails on a planted tag of each pattern, and runs in CI.
-- Before/after counts of each provenance pattern, the after counts zero.
+- Before/after counts of each provenance pattern, in comments and in titles, the after counts
+  zero.
+- Every changed test title, old → new, and the test count unchanged file by file.
+- `citations <file>…` passes on this slice's own `kickoff.md`, and fails on a planted label form
+  and a planted unresolved anchor in a scratch file under `phases/`.
 - A sample of hand rewrites (at least one per `src/` folder) showing the *why* kept.
+
+## Decided, not built
+
+- `workflow/design-rules.md#writing` gains: before a step file (kickoff, plan review, PR review,
+  hand-out) goes out, run `npm run docs:check -- citations <the file>`. Added at this
+  slice's PR review, once the file argument exists on `main`.
 
 ## Known from 4.2-G's review
 

@@ -2,7 +2,8 @@
 
 **Status: planned.** Docs only. Decided with the design owner on 2026-10-10 (ROADMAP "Phase 4.2").
 Golden policy for every slice: **byte-identical**. `src/` is untouched except in 4.2-G and 4.2-H,
-and there only in comments (plus 4.2-G's 10 test titles).
+and there only in comments and test titles (4.2-G's 10; 4.2-H's provenance sweep, which also takes
+in the comments of `vite.config.ts` and `eslint.config.js`).
 
 ## Why
 
