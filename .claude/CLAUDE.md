@@ -67,7 +67,7 @@ opens with a "Read this when …" line.
 - **No provenance.** Rules are present tense; changing a rule rewrites it, and nothing
   "supersedes". Where a rule was decided is in the mailboxes, the 4.2 inventories and git history.
 - **Every rule is a `###` heading** under its half, its parts bullets under it, and is cited by
-  anchor (`spec/combat.md#damage-channels-and-the-additional`).
+  anchor, within the same file too (`spec/combat.md#damage-channels-and-the-additional`).
 - **Content lives in the content docs** (`content/`, `specializations/`), which describe what
   `main` ships: the code wins over a stale content doc, never over a decided design (a bug gets a
   `**Known bug:**` line). The spec holds the rules and the system-wide constants, and links to
