@@ -65,4 +65,5 @@ All in `scripts/docs-check/`, wired in `cli.ts` and `USAGE`; `scripts/docs-check
 `phases/4.2/H1/evidence/` (see `report-r1.md`): the scanner totals and the per-pattern counts, the
 word-pattern hits, the quotations against 4.2-G's list, the 4.2-G rehearsal (88 files OK,
 `vite.config.ts` FAIL, then exit 0), the planted faults, `citations <file>…`, the mutation check (36,
-then 7 more in round 2) and the gates. Round 2 is `report-r2.md`.
+then 7 more in round 2 and 6 in round 3) and the gates. Rounds 2 and 3 are `report-r2.md` and
+`report-r3.md`.
