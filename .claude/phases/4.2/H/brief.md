@@ -1,7 +1,7 @@
 # 4.2-H — Code comments: the context diet for `src/`
 
-Phase brief: `.claude/phases/4.2/brief.md`. Loop: normal. Golden policy: **byte-identical**; the
-`src/` diff is comment-only, proved by the `comment-proof` mode this slice adds (4.2-G's proof was a
+Phase brief: `.claude/phases/4.2/brief.md`. Loop: normal. Golden policy: **byte-identical** for
+4.2-H1 and 4.2-H2 (4.2-H3's is under `## Split`); their `src/` diff is comment-only, proved by the `comment-proof` mode this slice adds (4.2-G's proof was a
 one-off script, not committed). Decided with
 Duncan at the 4.2-G kickoff (2026-10-11). Runs after 4.2-G merges.
 
@@ -83,14 +83,22 @@ review):
   `CONVENTIONS.md#comment-why-not-what`, proved by `comment-proof origin/main` with 4.2-H1's tool
   from `main`; `comments` added to `deploy.yml`. It takes the plan's mechanical rewrite and hand
   pass, plan-review fixes 1, 4, 8, 9, 11 and 12, D3 and A12–A16.
-- **4.2-H3, the names:** provenance stripped from `src/` file names (121 files carry a slice id,
-  most of them golden fixture/test pairs) and identifiers (`PHASE_4_PLACEHOLDER_BALANCE_CONFIG`),
-  each renamed by hand for what it pins or is for, since stripping the id alone collides
-  (`golden-b2-silenced-refuses-granted-cast`, `golden-f3-silenced-refuses-granted-cast`); comment
-  mentions of the old names follow. Golden policy byte-identical. Proved by a rename map plus each
-  file's content identical except import specifiers and the renamed identifiers (a
-  `comment-proof` option, the plan's to design). `comments`, or a sibling mode, also fails on a
-  phase or slice id in a `src/` file name or identifier, so a new name can't copy the old pattern.
+- **4.2-H3, the names:** provenance stripped from `src/` file names (127 files carry a slice id:
+  121 with a digit, such as `golden-h2b2-reapply`, plus the three `golden-e-…` pairs; most are
+  golden fixture/test pairs), identifiers (`PHASE_4_PLACEHOLDER_BALANCE_CONFIG`, `B5_FIXTURE`) and
+  fixture data ids (about 100 trait, script and status ids in 46 files, such as
+  `'h2b2-reapply-p1'`; Duncan, at the 4.2-H3 kickoff), each renamed by hand for what it pins or is
+  for, since stripping the id alone collides (`golden-b2-silenced-refuses-granted-cast` and
+  `golden-f3-silenced-refuses-granted-cast`; `'b6-always-wait'` and the shared fixture script
+  `'always-wait'`). Comment mentions of the old names follow.
+  - **Golden policy: deliberate changes, one kind only.** A fixture data id appears in expected
+    events (`effectId: trait.id`), so a golden whose fixture renames one changes in those ids and
+    nothing else. The corpus digest is unchanged.
+  - **Proved by** a rename map plus each file's content identical except import specifiers, the
+    renamed identifiers and the renamed ids (a `comment-proof` option, the plan's to design), and by
+    every fixture's exports deep-equal to `main`'s under the id map.
+  - `comments`, or a sibling mode, also fails on a phase or slice id in a `src/` file name or
+    identifier, so a new name can't copy the old pattern.
 
 This folder keeps the brief and the pre-split kickoff, plan and plan review, which each slice's
 kickoff builds on.
@@ -111,14 +119,16 @@ kickoff builds on.
 
 ## Decided, not built
 
-- `CONVENTIONS.md#comment-why-not-what`: file names and identifiers follow the same rules (no
-  phase, slice or plan ids), and the check covers them (4.2-H3's PR review).
+- `CONVENTIONS.md#comment-why-not-what`: file names, identifiers and fixture data ids follow the
+  same rules (no phase, slice or plan ids), and the check covers file names and identifiers
+  (4.2-H3's PR review).
 - `comments` catches the shapes it misses today: a lower-case `pre-` before a slice name
   (`pre-Slice-B`), `Slice-<X>` with a hyphen, a plan-item id with a hyphen (`B-2`), and review
   words without "fix" or "round" (`design-review`, `(nit, review)`, `Nit (review)`).
   `--quotations` also catches a quotation placed before its anchor and one of four words or fewer
   (4.2-H3's PR review).
-- No string literal in `src/` carries provenance. The six that do are reworded: the
+- No string literal in `src/` carries provenance: the fixture data ids are renamed (`## Split`),
+  and the six strings that carry a provenance word are reworded: the
   `state/rewards.ts` error message ("before Phase 8") with the `rewards.test.ts` regex that matches
   it, the three `state/balance-sim.ts` report strings ("ASSUMPTION 22", "ASSUMPTION 108") with
   `balance-sim.test.ts`'s assertion, and `engine/corpus-coverage.test.ts`'s reason string
