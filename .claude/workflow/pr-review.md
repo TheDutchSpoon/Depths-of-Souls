@@ -77,7 +77,8 @@ Green gates only prove the code agrees with its own fixtures. Proceed to reading
   `-last-gleam`), and a shared registry export (`traits`, `statuses`) moves with content, which is
   expected and must be told apart from an expected-value change (4.1-H2d). Then diff each
   changed old fixture: only comments, exports or driving code may differ, as the PR claims.
-- Comment-only edits: with comments stripped, old and new are identical.
+- Comment-only edits: `npm run docs:check -- comment-proof <base>` passes, run in your clone (with
+  comments stripped, old and new are identical; pragmas are compared apart).
 - Corpus digest: diff the fixture against `main`'s; the number of changed rows and changed results
   must match the PR's attribution. If the PR says "reverting all flips reproduces main's digest",
   reproduce that.

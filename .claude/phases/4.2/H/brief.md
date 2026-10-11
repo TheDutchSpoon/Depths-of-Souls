@@ -56,10 +56,11 @@ were comments that restated a spec rule or narrated history.
     the patterns; golden fixtures are not exempt.
   - `comment-proof <base>`, run by hand: for every `src/` file changed since `<base>`, comments
     stripped (TypeScript printer, `removeComments: true`), compares the two prints byte for byte,
-    and fails on a changed pragma comment (`@ts-…`, `eslint-…`, `/// <`): its text, or the token it
-    sits before, since a moved pragma governs different code. Listed test titles may be masked.
-    It reads `<base>` with `git show`, so it never runs in CI. Every later comment-only change
-    reuses it.
+    and fails on a changed pragma comment (`@ts-…`, `eslint-…`, `/// <`, ESLint's `/* eslint … */`,
+    `/* global … */` and `/* exported … */`, the bundler's `#__PURE__` annotations): its text, or
+    the token it sits before, since a moved pragma governs different code. Listed test titles may be
+    masked. It reads `<base>` with `git show`, so it never runs in CI. Every later comment-only
+    change reuses it.
 - **`citations <file>…`** (Duncan, after this kickoff): `citations` also takes file paths and
   checks exactly those files, `phases/` included, by the rules it applies to a living doc (every
   anchor resolves; no old form, no label form). With no paths it does what it does today, and CI is
@@ -110,12 +111,11 @@ kickoff builds on.
 
 ## Decided, not built
 
-- `workflow/design-rules.md#writing` gains: before a step file (kickoff, plan review, PR review,
-  hand-out) goes out, run `npm run docs:check -- citations <the file>`. Added at 4.2-H1's PR
-  review, once the file argument exists on `main`.
 - `CONVENTIONS.md#every-pull-request-runs-the-gates` names `comments` among the docs checks
   (blocking), and `workflow/coding-rules.md#rules`' gate list adds `npm run docs:check -- comments`
-  (4.2-H2's PR review, when the step lands in CI).
+  (4.2-H2's PR review, when the step lands in CI). The other lists of the modes CI runs follow:
+  `CLAUDE.md#how-the-spec-is-written`, `workflow/pr-review.md#2-install-and-run-the-gates` and
+  `skills/slice-verify/SKILL.md`.
 - `spec/progression.md#inert-perks`: each inert perk's code comment cites the perk's own content
   entry (`specializations/<spec>.md#<perk>`, which states what it waits for), not the
   `// Inert until Phase 8 (gem system) -- see sorcerer.md` form (4.2-H2's PR review).

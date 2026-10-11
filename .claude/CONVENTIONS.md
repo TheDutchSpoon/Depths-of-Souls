@@ -220,9 +220,9 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - A fixture's comments are its derivation, and a stale one misleads the next reader. Any PR may fix
   comments in an existing golden fixture, byte-identical policy included, provided **the diff
   changes no code token** (a trailing comment on a code line may change; the code on that line may
-  not). The PR lists each such file, and the reviewer checks that, with comments stripped, the old
-  and new file are identical. Any change beyond comments falls under "Goldens are layered and
-  additive".
+  not). The PR lists each such file, and `npm run docs:check -- comment-proof <base>` passes: with
+  comments stripped, the old and new file are identical, and every pragma keeps its text and place.
+  Any change beyond comments falls under "Goldens are layered and additive".
 
 ### Two-tier golden discipline
 
