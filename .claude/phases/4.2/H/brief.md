@@ -114,9 +114,10 @@ kickoff builds on.
 - `CONVENTIONS.md#comment-why-not-what`: file names and identifiers follow the same rules (no
   phase, slice or plan ids), and the check covers them (4.2-H3's PR review).
 - `comments` catches the shapes it misses today: a lower-case `pre-` before a slice name
-  (`pre-Slice-B`), `Slice-<X>` with a hyphen, and review words without "fix" or "round"
-  (`design-review`, `(nit, review)`). `--quotations` also catches a quotation placed before its
-  anchor and one of four words or fewer (4.2-H3's PR review).
+  (`pre-Slice-B`), `Slice-<X>` with a hyphen, a plan-item id with a hyphen (`B-2`), and review
+  words without "fix" or "round" (`design-review`, `(nit, review)`, `Nit (review)`).
+  `--quotations` also catches a quotation placed before its anchor and one of four words or fewer
+  (4.2-H3's PR review).
 - No string literal in `src/` carries provenance. The six that do are reworded: the
   `state/rewards.ts` error message ("before Phase 8") with the `rewards.test.ts` regex that matches
   it, the three `state/balance-sim.ts` report strings ("ASSUMPTION 22", "ASSUMPTION 108") with
