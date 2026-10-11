@@ -20,8 +20,8 @@ drifts and stale decisions silently outlive their correction.
 ## Who does what
 
 - **Human (TheDutchSpoon):** the decision-maker. Makes every decide-point call, runs the commands
-  that move a slice from step to step, commits, pushes, opens the PR, merges, and deletes files. Nothing reaches
-  `main` without the human.
+  that move a slice from step to step, commits, pushes, opens the PR, merges, and deletes files.
+  Nothing reaches `main` without the human.
 - **Coding agent (Claude Code in VS Code):** writes the implementation plan, then the code, tests,
   reports and the slice's record; never edits the living docs. Its rules:
   `workflow/coding-rules.md`.
@@ -71,7 +71,8 @@ reports. Once merged they're immutable, like records.
 
 The folder itself holds only the step files above, all Markdown. Generated output that a step file
 cites as evidence (a simulator report, a corpus scan, a table a script printed) goes in
-`<slice>/evidence/`, as plain text or Markdown, and the citing file names it by that path. Not kept, anywhere in the mailbox:
+`<slice>/evidence/`, as plain text or Markdown, and the citing file names it by that path. Not
+kept, anywhere in the mailbox:
 
 - marker files, logs and other scratch output of a run;
 - a run whose content another kept file already holds (keep one copy);

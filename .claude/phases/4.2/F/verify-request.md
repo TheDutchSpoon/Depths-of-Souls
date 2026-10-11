@@ -246,3 +246,45 @@ listed there.
 - `phases/4.2/F/inventory.md`: rows `C:1825`, `C:2057`, `C:2060`, `C:2094`, `C:2106`,
   `WORKFLOWS.md:19` and `WORKFLOWS.md:99` updated; the "Base-only text" table added.
 - `phases/4.2/F/verify-request.md`: this section.
+
+## Round 3
+
+For `/slice-verify 4.2-F 3`, after `verify-r2.md`. `npm run docs:check -- inventory F` passes: 280
+units, 280 rows.
+
+### Findings
+
+1. **`WORKFLOWS.md:23`, an unwrapped line: fixed.** "Who does what" now wraps at 100: the line ends at
+   "deletes files.", and "Nothing reaches `main` without the human." starts the next line. The
+   text is unchanged. While checking line lengths I found a second line of the same kind from round
+   1 (`WORKFLOWS.md` "What a mailbox keeps", 125 characters, ending "Not kept, anywhere in the
+   mailbox:"). I rewrapped it too, with no text change. No row changes for either. The only other
+   prose line over 100 in F's six files is the base's `(Phase 4.2 only)` paragraph in
+   `WORKFLOWS.md`, which G's brief already lists for removal, so I left it alone.
+2. **`CONVENTIONS.md` "Source folders", the `data/` list: fixed (Duncan's decision, stale doc).**
+   The line now reads "content as data: species (creatures), traits, spells, statuses, role scripts,
+   specializations, biomes, balance config (facilities from Phase 8). No logic." That matches
+   `src/data/` on `main`: `species/`, `traits/`, `spells/`, `statuses.ts`, `scripts.ts` (the seven
+   role scripts), `specializations.ts`, `biomes.ts` and `balance.ts`. I recommended completing the
+   list rather than making it generic, for the round-2 reason: the tree is the folder map's one home.
+   Row `C:2094` records the change.
+
+### Spec and code disagree: Duncan's decisions
+
+Only finding 2, as above: a **stale doc**. The text says what `main` has, and no "Decided, not
+built" entry is needed.
+
+Check: the `data/` line against `ls src/data`, and the two rewrapped `WORKFLOWS.md` lines in `git
+diff`. Each should change only where it breaks.
+
+### Notes for later slices (round 3)
+
+None.
+
+### Docs edited (round 3)
+
+- `CONVENTIONS.md`: "Source folders": the `data/` list completed (finding 2).
+- `WORKFLOWS.md`: "Who does what" and "What a mailbox keeps": two over-long lines rewrapped, no
+  text change (finding 1).
+- `phases/4.2/F/inventory.md`: row `C:2094` gains the round-3 change.
+- `phases/4.2/F/verify-request.md`: this section.

@@ -344,8 +344,8 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 ```
 src/
   engine/    pure TS, no React: combat resolver, interpreter, RNG, scaling, cave generation.
-  data/      content as data: creatures, traits, spells, biomes, config (facilities from Phase 8).
-             No logic.
+  data/      content as data: species (creatures), traits, spells, statuses, role scripts,
+             specializations, biomes, balance config (facilities from Phase 8). No logic.
   state/     the store and the balance simulator (save/load and migrations from Phase 5).
   ui/        React components: render state, dispatch intents. No game rules.
   app/       wiring, game loop, top-level screens (no router; hash routing only if ever needed).
