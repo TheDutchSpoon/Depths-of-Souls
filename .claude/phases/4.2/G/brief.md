@@ -54,6 +54,17 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the
   script; `citations` and `budgets` stay.
 
+## Known from earlier slices
+
+- **From 4.2-F:** `CLAUDE.md` "How the spec is written" is now the lasting home of the phase brief's
+  "Rules for the new spec" (Duncan's decision at the 4.2-F condense). When this slice builds the
+  citations check and the budgets, add them there in one line each (citations checked in CI; each
+  spec file's size budget, reported), and point the over-budget rule it adds to
+  `workflow/pr-review.md` at it. The `(Phase 4.2 only)` paragraph below the section goes with the
+  rest of the clean-up.
+- **From 4.2-F:** stale `src/` comment: `data/balance.ts:1-4` says the 4.1-H2d balancing pass "tunes
+  the rest" and every number is parked "until then" (the pass ran; the numbers are tuned).
+
 ## Known from 4.2-A's review
 
 `scripts/docs-check.ts` as 4.2-A built it, for this slice's plan:
