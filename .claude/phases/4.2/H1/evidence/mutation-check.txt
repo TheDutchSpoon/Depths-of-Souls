@@ -192,3 +192,28 @@
      - scanner.test.ts: scanSource pragmas takes the tool comment /* @__PURE__ */
      - scanner.test.ts: scanSource pragmas takes the tool comment /*#__NO_SIDE_EFFECTS__*/
      - scanner.test.ts: scanSource pragmas takes the tool comment // @__NO_SIDE_EFFECTS__
+
+# ---- Round 3 (hand-out r2) ----
+# Same method: one mutation, the whole docs-check project, file restored and hash-checked. 6 mutations, 6 killed.
+# (#0 is fix 1; #1-#4 are fix 2; #5 is the side label of fix 3.) 43 + 6 = 49.
+#R3-0 comment-proof.ts: syntax check back through ts.transpileModule (a .d.ts crashes it)
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof syntax errors passes a comment-only change to a declaration file
+     - comment-proof.test.ts: comment-proof syntax errors fails a stray token in a declaration file, naming the file
+#R3-1 scanner.ts: BLOCK_PRAGMA: drop the ^ anchor
+   killed by 2 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block prose /* reset the global state */
+     - scanner.test.ts: scanSource pragmas does not take the block prose /** The global spell registry */
+#R3-2 scanner.ts: BLOCK_PRAGMA: drop the \s after eslint
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block prose /* eslintrc is gone */
+#R3-3 scanner.ts: BLOCK_PRAGMA: drop the \s after globals?
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block prose /* globalThis is the window here */
+#R3-4 scanner.ts: BLOCK_PRAGMA: drop the \s after exported
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block prose /* exportedNames lists them */
+#R3-5 comment-proof.ts: syntax message does not say which side (back to "syntax error at")
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof syntax errors fails a stray token the parser skips, naming the file and the reason
+     - comment-proof.test.ts: comment-proof syntax errors fails a stray token in a declaration file, naming the file

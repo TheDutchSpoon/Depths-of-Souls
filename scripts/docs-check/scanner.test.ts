@@ -244,6 +244,16 @@ describe('scanSource pragmas', () => {
     expect(pragmas('// global state is reset\nconst a = 1\n')).toEqual([])
   })
 
+  it.each([
+    '/* reset the global state */',
+    '/** The global spell registry */',
+    '/* globalThis is the window here */',
+    '/* exportedNames lists them */',
+    '/* eslintrc is gone */',
+  ])('does not take the block prose %s', (comment) => {
+    expect(pragmas(`${comment}\nconst a = 1\n`)).toEqual([])
+  })
+
   it('does not take prose that mentions a pragma', () => {
     expect(
       pragmas('// see eslint-disable and @ts-ignore for this\nconst a = 1\n'),

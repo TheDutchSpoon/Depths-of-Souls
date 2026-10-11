@@ -105,3 +105,13 @@ scripts/docs-check/scanner.test.ts                       0 ->    34  (+34)  new 
 scripts/docs-check/comment-proof.test.ts                56 ->    65  (+9)
 scripts/docs-check/scanner.test.ts                      34 ->    43  (+9)
 # total 1657 -> 1675 (+18); the docs-check project is the only one that moved
+
+# ---- Round 3 (hand-out r2), working tree ----
+# npm run test: Test Files 210 passed (210); Tests 1681 passed | 1 skipped (1682)
+# lint clean; format:check clean; tsc -b clean; build passes; citations: PASS, 547 citations in 436 files; budgets: 12 files, 0 over budget
+# git diff --stat origin/main -- src vite.config.ts eslint.config.js .github: empty
+# The JSON reporter wrote to a scratch path (--outputFile), outside the repo.
+# Test counts file by file: outside scripts/ 1357 -> 1357, files whose count differs: 0
+scripts/docs-check/comment-proof.test.ts                65 ->    67  (+2)
+scripts/docs-check/scanner.test.ts                      43 ->    48  (+5)
+# total 1675 -> 1682 (+7); the docs-check project is the only one that moved

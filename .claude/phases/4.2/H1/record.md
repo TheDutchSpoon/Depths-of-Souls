@@ -1,8 +1,8 @@
 # Record — Phase 4.2 — Slice H1: Comment tooling
 
 **Status: built.** Golden policy byte-identical, trivially: no file under `src/`, `vite.config.ts`,
-`eslint.config.js` or `.github/` changed. Test count 1675 (1674 passed, 1 skipped): `main`'s 1357 file
-by file outside `scripts/`, plus 318 tests of the docs checks (121 before this slice, 197 added).
+`eslint.config.js` or `.github/` changed. Test count 1682 (1681 passed, 1 skipped): `main`'s 1357 file
+by file outside `scripts/`, plus 325 tests of the docs checks (121 before this slice, 204 added).
 
 ## What was built
 
@@ -52,8 +52,11 @@ All in `scripts/docs-check/`, wired in `cli.ts` and `USAGE`; `scripts/docs-check
 - A mask text is shown JSON-escaped and clipped at 140 characters; a string literal is masked over its
   whole span, a template part over its inside.
 - `comment-proof` prints `OK` only for changed files.
-- The syntax check uses `ts.transpileModule(…, { reportDiagnostics: true })` (public API) with
-  `jsx: Preserve`; the first diagnostic of the working tree, else of the base, is reported.
+- The syntax check builds a one-file program (`ts.createProgram([file], { noLib: true, noResolve: true,
+  allowJs: true }, host)`, the host serving `ts.createSourceFile`) and reads `program.getSyntacticDiagnostics`;
+  it works for a `.d.ts` too, which `ts.transpileModule` crashes on. No `jsx` option: no test needs one. The
+  first diagnostic of the working tree, else of the base, is reported, labelled "in the working tree" or
+  "in the base".
 - The duplicate-name comparison is the exported `duplicatesGrew(baseNames, headNames)`: true when the
   head has more duplicated names or more excess copies than the base.
 

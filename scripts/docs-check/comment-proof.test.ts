@@ -536,13 +536,31 @@ describe('comment-proof syntax errors', () => {
     writeTree(root, { 'src/s.ts': BASE.replace('return x', 'return x\n  )') })
     const { code, text } = proof(root)
     expect(code).toBe(1)
-    expect(text).toMatch(/FAIL src\/s\.ts: syntax error at line 3: /)
+    expect(text).toMatch(/FAIL src\/s\.ts: syntax error in the working tree at line 3: /)
   })
 
   it('fails a file that was already broken in the base', () => {
     const root = repo({ 'src/s.ts': BASE.replace('return x', 'return x\n  )') })
     writeTree(root, { 'src/s.ts': `// note\n${BASE}` })
-    expect(proof(root).text).toMatch(/FAIL src\/s\.ts: syntax error at line 3: /)
+    expect(proof(root).text).toMatch(
+      /FAIL src\/s\.ts: syntax error in the base at line 3: /,
+    )
+  })
+
+  it('passes a comment-only change to a declaration file', () => {
+    const root = repo({ 'src/x.d.ts': 'declare const p: number\n' })
+    writeTree(root, { 'src/x.d.ts': '// shim\ndeclare const p: number\n' })
+    expect(proof(root).code).toBe(0)
+  })
+
+  it('fails a stray token in a declaration file, naming the file', () => {
+    const root = repo({ 'src/x.d.ts': '// shim\ndeclare const p: number\n' })
+    writeTree(root, { 'src/x.d.ts': '// shim\ndeclare const p: number\n)\n' })
+    const { code, text } = proof(root)
+    expect(code).toBe(1)
+    expect(text).toMatch(
+      /FAIL src\/x\.d\.ts: syntax error in the working tree at line 3: /,
+    )
   })
 
   it('passes a comment-only change in the same file', () => {

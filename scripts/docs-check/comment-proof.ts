@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import ts from 'typescript'
 import { git, resolveRev } from './git.ts'
-import { fullName, parse, scanSource } from './scanner.ts'
+import { fullName, parse, scanSource, scriptKind } from './scanner.ts'
 import { UsageError } from './usage.ts'
 
 // `comment-proof <base>` proves a change is comment-only: the working tree's code is the same as
@@ -12,9 +12,10 @@ import { UsageError } from './usage.ts'
 // For each changed `.ts`/`.tsx`/`.js` file under the scope, both sides are printed with
 // `ts.createPrinter({ removeComments: true })` and compared byte for byte; a file with a syntax
 // error on either side fails first, because the parser skips a stray token and the prints agree.
-// Pragma comments (`@ts-…`, `eslint-…`, `/// <`, `#__PURE__` and the like) are compared apart, because removing comments strips them: a
-// pragma is its exact text plus the index of the token it governs. A mask lists the string
-// literals (test titles, a fixture template) the change is allowed to reword.
+// Pragma comments (`@ts-…`, `eslint-…`, `/// <`, `#__PURE__` and the like) are compared apart,
+// because removing comments strips them: a pragma is its exact text plus the index of the token it
+// governs. A mask lists the string literals (test titles, a fixture template) the change is allowed
+// to reword.
 
 const SCOPE = ['src', 'vite.config.ts', 'eslint.config.js']
 const CODE = /\.(?:tsx?|jsx?|[cm]js)$/
@@ -156,14 +157,31 @@ export function duplicatesGrew(baseNames: string[], headNames: string[]): boolea
   return head.names.length > base.names.length || head.excess > base.excess
 }
 
-/** The first syntax error of a file, as `line <n>: <message>`: the parser skips a stray token silently. */
+/**
+ * The first syntax error of a file, as `line <n>: <message>`: the parser skips a stray token
+ * silently. It reads the syntactic diagnostics of a one-file program, which works for a `.d.ts`
+ * too (`ts.transpileModule` throws on a declaration file).
+ */
 function syntaxError(file: string, text: string): string | undefined {
-  const { diagnostics } = ts.transpileModule(text, {
-    fileName: file,
-    reportDiagnostics: true,
-    compilerOptions: { jsx: ts.JsxEmit.Preserve },
-  })
-  const d = diagnostics?.[0]
+  const sf = ts.createSourceFile(
+    file,
+    text,
+    ts.ScriptTarget.Latest,
+    false,
+    scriptKind(file),
+  )
+  const host: ts.CompilerHost = {
+    ...ts.createCompilerHost({}),
+    getSourceFile: (name) => (name === file ? sf : undefined),
+    fileExists: (name) => name === file,
+    readFile: (name) => (name === file ? text : undefined),
+  }
+  const program = ts.createProgram(
+    [file],
+    { noLib: true, noResolve: true, allowJs: true },
+    host,
+  )
+  const d = program.getSyntacticDiagnostics(sf)[0]
   if (!d) return undefined
   const line =
     d.file && d.start !== undefined
@@ -185,9 +203,14 @@ function compareCode(
   entries: MaskEntry[],
 ): FileVerdict {
   const verdict: FileVerdict = { reasons: [], masked: 0, pairs: [] }
-  const broken = syntaxError(file, head) ?? syntaxError(file, base)
-  if (broken !== undefined) {
-    verdict.reasons.push(`syntax error at ${broken}`)
+  const headBroken = syntaxError(file, head)
+  const baseBroken = headBroken === undefined ? syntaxError(file, base) : undefined
+  if (headBroken !== undefined || baseBroken !== undefined) {
+    verdict.reasons.push(
+      headBroken !== undefined
+        ? `syntax error in the working tree at ${headBroken}`
+        : `syntax error in the base at ${baseBroken}`,
+    )
     return verdict
   }
   const baseLits = literalsOf(file, base)

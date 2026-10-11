@@ -87,3 +87,21 @@ comment-proof: FAIL, 1 problems
 exit 1
 
 ## restored: comment-proof: PASS, 88 changed files, exit 0
+
+# ---- Round 3 (hand-out r2) ----
+# Same invocation and mask as above, vite.config.ts still reset; clone restored after each run (git status: only the staged vite.config.ts reset).
+# Output below is the verdict lines only; every other line was the same OK lines and mask pairs as the baseline.
+
+## baseline: comment-proof: PASS, 88 changed files, exit 0
+
+## src/engine/__corpus__/node-shims.d.ts with one comment word changed (line 1, "Phase" -> "Stage")
+OK src/engine/__corpus__/node-shims.d.ts
+comment-proof: PASS, 89 changed files
+exit 0
+
+## a stray ) appended to src/engine/__corpus__/node-shims.d.ts
+FAIL src/engine/__corpus__/node-shims.d.ts: syntax error in the working tree at line 27: Declaration or statement expected.
+comment-proof: FAIL, 1 problems
+exit 1
+
+## restored: git status in the clone shows only the staged vite.config.ts reset
