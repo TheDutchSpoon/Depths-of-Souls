@@ -193,7 +193,15 @@ describe('citations: where it looks', () => {
     expect(findProblems(root).problems).toEqual([])
   })
 
-  it('passes a src/ comment wrapped with a block-comment leader only for the anchor form', () => {
+  it('fails a label form wrapped over a block-comment leader in src/', () => {
+    const root = makeTree({
+      ...DOCS,
+      'src/x.ts': '/**\n * see `spec/combat.md`\n * "Damage formula"\n */\n',
+    })
+    expect(findProblems(root).problems[0].what).toContain('label form')
+  })
+
+  it('fails an old form wrapped over a block-comment leader in src/', () => {
     const root = makeTree({
       ...DOCS,
       'src/x.ts': '/**\n * see CONVENTIONS\n * "Testing"\n */\n',

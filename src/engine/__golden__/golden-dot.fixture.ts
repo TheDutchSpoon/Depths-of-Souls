@@ -12,8 +12,7 @@
 //
 // TARGET's max HP is 100 but the golden needs TARGET to start the fight already wounded to 20, to keep the exact same 3-tick
 // kill this golden exists to exercise. `createCombat` unconditionally resets every creature's
-// currentHp to its effective max at fight-start (`spec/combat.md#fight-setup`: "currentHp inits to effective max
-// Health at fight-start") -- so a `currentHp` override on the raw creature object below would be
+// currentHp to its effective max at fight-start (`spec/statuses.md#health-is-a-modifiable-stat`) -- so a `currentHp` override on the raw creature object below would be
 // silently discarded. `TARGET_STARTING_HP` is exported so golden-dot.test.ts can apply the wound
 // via `updateCreature` AFTER `createCombat`, the same idiom every other "wounded creature" test
 // in this codebase already uses (e.g. resolution.test.ts's heal-scaling/Necromoss tests).
@@ -168,7 +167,7 @@ export const expectedResult: FightResult = 'win'
 /** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
-  // createCombat resets currentHp to effective max at fight-start (`spec/combat.md#fight-setup`), so TARGET's
+  // createCombat resets currentHp to effective max at fight-start (`spec/statuses.md#health-is-a-modifiable-stat`), so TARGET's
   // wounded starting HP has to be applied here, after creation -- see golden-dot.fixture.ts's
   // header comment.
   const initial = updateCreature(created, TARGET, { currentHp: TARGET_STARTING_HP })

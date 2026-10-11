@@ -105,3 +105,16 @@ FAIL src/engine/rng.ts pragma differs
 OK   src/engine/scripting-types.ts
 --
 88 changed files, 1 failing, 290 masked strings (test titles and the corpus template)
+
+# Round 2: node proof.mjs over every src/ file changed against main (same script and rules as round 1)
+OK   src/data/species/overgrowth.test.ts (masked 15)
+OK   src/data/species/overgrowth.ts
+OK   src/data/species/starters.test.ts (masked 20)
+OK   src/data/species/starters.ts
+OK   src/data/traits/glimmerdark.ts
+OK   src/engine/__golden__/golden-dot.fixture.ts
+OK   src/engine/__golden__/golden-shieldbarer-starter.fixture.ts
+OK   src/engine/__golden__/golden-spore-spread.fixture.ts
+OK   src/engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts
+OK   src/state/integration.test.ts (masked 9)
+88 changed files, 0 failing, 290 masked strings (test titles and the corpus template)

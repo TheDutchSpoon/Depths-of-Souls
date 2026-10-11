@@ -10,7 +10,7 @@ export interface BudgetRow {
   kb: number
 }
 
-/** The rows of the first table in `workflow/budgets.md` whose first cell is a backticked path. */
+/** Every table row of `workflow/budgets.md` whose first cell is a backticked path and second a number. */
 export function parseBudgets(text: string): BudgetRow[] {
   const rows: BudgetRow[] = []
   for (const line of splitLines(text)) {

@@ -16,3 +16,5 @@ New files (the third Vitest project, docs-check; 120 tests):
   scripts/docs-check/inventory.test.ts: 27
 
 Reconciliation: 1357 + 120 = 1477 (branch total 1477); every src/ file keeps its count.
+
+# Round 2: 1478 tests (1477 passed, 1 skipped) in 207 files; +1 test, in scripts/docs-check/citations.test.ts (59 -> 60), not under describe.each; src/ unchanged

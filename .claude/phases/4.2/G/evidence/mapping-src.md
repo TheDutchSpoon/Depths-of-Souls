@@ -42,7 +42,7 @@ after species-locked, stays. The span becomes the anchor in backticks (bare in a
 | data/species/overgrowth.ts:7 | comment | `species-locked.md's` | `content/overgrowth.md#enabler-payoff-amplifier` | hand-map B4 |
 | data/species/overgrowth.ts:15 | comment | `GAME_DESIGN §5` | `spec/creatures.md#core-stats` | hand-map B1 |
 | data/species/overgrowth.ts:16 | comment | `GAME_DESIGN §13` | `OPEN_QUESTIONS.md#content-numbers` | hand-map B1 |
-| data/species/overgrowth.ts:19 | comment | `species-locked.md's` | `content/overgrowth.md#reading-this-biome` | hand-map B4 |
+| data/species/overgrowth.ts:19 | comment | `species-locked.md's` | `spec/creatures.md#affinity` | review-r1 fix 1 |
 | data/species/overgrowth.ts:363 | comment | `species-locked.md` | `content/overgrowth.md#broodmother` | hand-map B4 |
 | data/species/overgrowth.ts:373 | comment | `CONVENTIONS' "Boss floors"` | `spec/run.md#boss-floor-generation` | inventory row C:84 |
 | data/species/overgrowth.ts:388 | comment | `species-locked.md's` | `content/overgrowth.md#broodmother` | hand-map B4 |
@@ -64,8 +64,8 @@ after species-locked, stays. The span becomes the anchor in backticks (bare in a
 | data/species/starters.ts:7 | comment | `CONVENTIONS "Data layer — carriers vs. composition"` | `CONVENTIONS.md#composition-files-only-reference-carriers` | hand-map B2 |
 | data/species/starters.ts:11 | comment | `species-locked.md` | `spec/progression.md#starter-species-are-stubs` | hand-map B4 |
 | data/species/starters.ts:18 | comment | `GAME_DESIGN` | `spec/creatures.md#core-stats` | hand-map B3 |
-| data/species/starters.ts:19 | comment | `species-locked.md` | `spec/progression.md#starter-species-are-stubs` | hand-map B4 |
-| data/species/starters.ts:22 | comment | `species-locked.md` | `spec/progression.md#starter-species-are-stubs` | hand-map B4 |
+| data/species/starters.ts:19 | comment | `species-locked.md` | `specializations/brute.md#starter-cragfang-mauler`, `specializations/shieldbarer.md#starter-stonehorn-warden`, `specializations/sorcerer.md#starter-glyphmoth-seer` | review-r1 fix 1 |
+| data/species/starters.ts:22 | comment | `species-locked.md` | (none: no citation of that rule remains) | rewritten whole (review-r1 fix 2): the old citation and its quotation are gone, the comment now says where each affinity is set; see `stale-comments.md` row 23 |
 | data/species/starters.ts:41 | comment | `species-locked.md` | `specializations/sorcerer.md#starter-glyphmoth-seer` | hand-map B4 |
 | data/species/starters.ts:48 | comment | `species-locked.md` | `spec/progression.md#starter-species-are-stubs` | hand-map B4 |
 | data/species/starters.ts:106 | comment | `species-locked.md` | `content/overgrowth.md#unicorn-lightbearer` | hand-map B4 |
@@ -96,7 +96,7 @@ after species-locked, stays. The span becomes the anchor in backticks (bare in a
 | data/traits/glimmerdark.ts:256 | comment | `species-locked.md's` | `content/glimmerdark.md#sparkeater-leech` | hand-map B4 |
 | data/traits/glimmerdark.ts:349 | comment | `species-locked.md's` | `content/glimmerdark.md#gloomjaws-violence-execute-the-weak` | hand-map B4 |
 | data/traits/glimmerdark.ts:428 | comment | `species-locked.md's` | `content/glimmerdark.md#shellback-brawler` | hand-map B4 |
-| data/traits/glimmerdark.ts:440 | comment | `CONVENTIONS'` | `spec/responses.md#flat-mode` | hand-map B3 |
+| data/traits/glimmerdark.ts:440 | comment | `CONVENTIONS'` | `spec/responses.md#magnitude-modes` | review-r1 fix 1 |
 | data/traits/glimmerdark.ts:460 | comment | `species-locked.md` | `content/glimmerdark.md#leech-sovereign` | hand-map B4 |
 | data/traits/index.ts:85 | comment | `CONVENTIONS "Data layer — carriers vs. composition"` | `CONVENTIONS.md#effect-carriers-live-in-libraries` | hand-map B2 |
 | data/traits/overgrowth.ts:70 | comment | `species-locked.md` | `content/overgrowth.md#swarmhive-drone` | hand-map B4 |
@@ -122,8 +122,8 @@ after species-locked, stays. The span becomes the anchor in backticks (bare in a
 | engine/__golden__/golden-brute-starter.fixture.ts:11 | comment | ``.claude/species/species-locked.md`` | `specializations/brute.md#starter-cragfang-mauler` | hand-map B4 |
 | engine/__golden__/golden-defend-count-additive-cap.fixture.ts:11 | comment | `CONVENTIONS'` | `CONVENTIONS.md#golden-replay-tests` | hand-map B3 |
 | engine/__golden__/golden-defend-count.fixture.ts:14 | comment | `CONVENTIONS` | `spec/effects.md#taken-reduction-accumulation` | hand-map B3 |
-| engine/__golden__/golden-dot.fixture.ts:15 | comment | `GAME_DESIGN` | `spec/combat.md#fight-setup` | hand-map B3 |
-| engine/__golden__/golden-dot.fixture.ts:171 | comment | `GAME_DESIGN` | `spec/combat.md#fight-setup` | hand-map B3 |
+| engine/__golden__/golden-dot.fixture.ts:15 | comment | `GAME_DESIGN` | `spec/statuses.md#health-is-a-modifiable-stat` | review-r1 fix 1 |
+| engine/__golden__/golden-dot.fixture.ts:171 | comment | `GAME_DESIGN` | `spec/statuses.md#health-is-a-modifiable-stat` | review-r1 fix 1 |
 | engine/__golden__/golden-f2-stun-one-turn.fixture.ts:2 | comment | `CONVENTIONS "Status lifecycle"` | `spec/statuses.md#timing` | inventory row C:1610 |
 | engine/__golden__/golden-f2-weaken-three-turns.fixture.ts:2 | comment | `CONVENTIONS "Status lifecycle"` | `spec/statuses.md#timing` | inventory row C:1610 |
 | engine/__golden__/golden-g1-leech-sovereign-pacified.fixture.ts:2 | comment | `CONVENTIONS "Role scripts"` | `spec/scripting.md#role-scripts` | hand-map B2 |
@@ -139,11 +139,11 @@ after species-locked, stays. The span becomes the anchor in backticks (bare in a
 | engine/__golden__/golden-resonant-harmonize.fixture.ts:1 | comment | `species-locked.md` | `content/glimmerdark.md#resonants-wit-caster-synergy` | hand-map B4 |
 | engine/__golden__/golden-revive.fixture.ts:3 | comment | `CONVENTIONS'` | `spec/responses.md#revive` | hand-map B3 |
 | engine/__golden__/golden-rot-sovereign.fixture.ts:1 | comment | `species-locked.md's` | `content/rotcap-hollow.md#rot-sovereign` | hand-map B4 |
-| engine/__golden__/golden-shieldbarer-starter.fixture.ts:9 | comment | `CONVENTIONS'` | `CONVENTIONS.md#golden-replay-tests` | hand-map B3 |
+| engine/__golden__/golden-shieldbarer-starter.fixture.ts:9 | comment | `CONVENTIONS'` | `CONVENTIONS.md#every-golden-replays-through-one-shared-runner` | review-r1 fix 1 |
 | engine/__golden__/golden-spore-spread-fizzle.fixture.ts:2 | comment | `species-locked.md's` | `content/rotcap-hollow.md#spore` | hand-map B4 |
 | engine/__golden__/golden-spore-spread.fixture.ts:1 | comment | `species-locked.md` | `content/rotcap-hollow.md#sporecloud-seeder` | hand-map B4 |
-| engine/__golden__/golden-spore-spread.fixture.ts:21 | comment | `CONVENTIONS` | `spec/effects.md#hook-execution` | hand-map B3 |
-| engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts:14 | comment | `CONVENTIONS` | `spec/effects.md#hook-execution` | hand-map B3 |
+| engine/__golden__/golden-spore-spread.fixture.ts:21 | comment | `CONVENTIONS` | `spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles` | review-r1 fix 1 |
+| engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts:14 | comment | `CONVENTIONS` | `spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles` | review-r1 fix 1 |
 | engine/actions.ts:334 | comment | `GAME_DESIGN §7` | `spec/combat.md#targeting-override` | hand-map B1 |
 | engine/actions.ts:383 | comment | `CONVENTIONS "Every action source obeys the same rules"` | `spec/combat.md#every-action-source-obeys-the-same-rules` | inventory row C:1082 |
 | engine/actions.ts:390 | comment | `GAME_DESIGN §7` | `spec/combat.md#provoke` | hand-map B1 |
@@ -232,7 +232,7 @@ after species-locked, stays. The span becomes the anchor in backticks (bare in a
 | state/integration.test.ts:192 | comment | `CONVENTIONS` | `spec/responses.md#fizzles` | hand-map B3 |
 | state/integration.test.ts:326 | comment | `CONVENTIONS` | `spec/run.md#rewards` | hand-map B3 |
 | state/integration.test.ts:330 | comment | `GAME_DESIGN §9` | `spec/progression.md#perk-points` | hand-map B1 |
-| state/integration.test.ts:397 | comment | `CONVENTIONS'` | `spec/run.md#fights-per-floor` | hand-map B3 |
+| state/integration.test.ts:397 | comment | `CONVENTIONS'` | `OPEN_QUESTIONS.md#fight-count` | review-r1 fix 1 |
 | state/integration.test.ts:399 | comment | `CONVENTIONS` | `spec/run.md#a-descent-is-atomic` | hand-map B3 |
 | state/rewards.ts:59 | comment | `CONVENTIONS "XP goes to the whole active party regardless of survival"` | `spec/run.md#rewards` | hand-map B2 |
 | state/rewards.ts:61 | comment | `CONVENTIONS` | `spec/run.md#rewards` | hand-map B2 |

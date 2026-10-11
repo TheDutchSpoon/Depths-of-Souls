@@ -16,7 +16,7 @@
 // balance number are parked balance (`OPEN_QUESTIONS.md#content-numbers`), picked only to be flavorful and
 // internally consistent -- not derived from any locked design number. Per-creature affinity
 // deliberately departs from a species' own "lean" in a few places (documented inline) per
-// `content/overgrowth.md#reading-this-biome` own "Coverage" note: "balance at creature-stamping (affinity is
+// `spec/creatures.md#affinity` own "Coverage" note: "balance at creature-stamping (affinity is
 // per-creature)" -- Endurance/Instinct are thin at the LEAN level across this biome's table, so
 // individual creatures are stamped into those affinities to round out the full 5-affinity spread.
 //

@@ -31,3 +31,10 @@
  ✓ src/engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts
  Test Files  1 passed (1)
       Tests  30 passed (30)
+
+# Round 2: the four golden fixtures this round touches, imported from main and from the branch (same compare, fixtures list narrowed to these four)
+ ✓ src/engine/__golden__/golden-dot.fixture.ts
+ ✓ src/engine/__golden__/golden-spore-spread.fixture.ts
+ ✓ src/engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts
+ ✓ src/engine/__golden__/golden-shieldbarer-starter.fixture.ts
+ Tests  4 passed (4)

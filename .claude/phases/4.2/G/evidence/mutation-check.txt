@@ -20,3 +20,6 @@ FAILS    inventory: missing-row check removed: 2 test(s) e.g. inventory: the gua
 FAILS    inventory: Reason check removed: 1 test(s) e.g. inventory: the guard row checks fails a rewritten unit with no Reason
 FAILS    cli: move still accepted: 1 test(s) e.g. docs-check cli rejects the mode move with usage and exit 2
 FAILS    cli: --root ignored: 2 test(s) e.g. docs-check cli runs citations and budgets against --root, from any cwd | docs-check cli fails the real entry on a planted fault, with file:line
+
+# Round 2 (review-r1 hand-out 3): the * leader removed from SITES.src.gap in scripts/docs-check/citations.ts (`(?://+|\*)?` -> `(?://+)?`), citations.test.ts re-run, file restored
+FAILS    src/ gap: no * comment leader allowed across a line break: 2 test(s) e.g. citations: where it looks fails a label form wrapped over a block-comment leader in src/ | citations: where it looks fails an old form wrapped over a block-comment leader in src/

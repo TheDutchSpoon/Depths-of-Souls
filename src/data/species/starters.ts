@@ -16,17 +16,14 @@
 // set to 'rare' as a flavor-only placeholder.
 //
 // ASSUMPTION (Slice F): exact base stats (10-30 per `spec/creatures.md#core-stats`) are parked balance, picked only
-// to satisfy each starter's qualitative "high X" description (`spec/progression.md#starter-species-are-stubs`/the spec docs) --
+// to satisfy each starter's qualitative "high X" description (`specializations/brute.md#starter-cragfang-mauler`,
+// `specializations/shieldbarer.md#starter-stonehorn-warden`, `specializations/sorcerer.md#starter-glyphmoth-seer`) --
 // not exercised by any locked design number.
 //
-// ASSUMPTION (Slice F): `spec/progression.md#starter-species-are-stubs` explicitly left the Brute/Shieldbarer starters'
-// affinity unpinned ("affinities settle when their species are authored -- ideally distinct").
-// Resolved here via CLAUDE.md's own affinity->stat soft-mapping (Violence->Attack, Wit->
-// Intelligence, Endurance->Defence): Sorcerer starter = wit (already pinned), Brute starter =
-// violence (matches "high Attack"), Shieldbarer starter = endurance (matches "high Defence") --
-// three distinct affinities, satisfying "ideally distinct." The Unicorn's affinity is likewise
-// unpinned by any doc; picked as vitality (Health-flavored, fits its revive/support role, and
-// matches golden-revive.fixture.ts's own Unicorn-shaped fixture for continuity).
+// Each affinity is set in its entry's content doc: the three starters' in the specialization docs
+// above, the Unicorn's (Vitality) in `content/overgrowth.md#unicorn-lightbearer`. Each starter's
+// affinity matches its high stat through the soft affinity-to-stat correspondence
+// (`spec/creatures.md#affinity`).
 
 import type { SpeciesCreature } from '../../engine/generation'
 import {

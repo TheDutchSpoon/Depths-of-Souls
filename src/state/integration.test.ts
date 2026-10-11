@@ -394,7 +394,7 @@ describe('Phase 4.1-A defaults: real store, real content, the new BalanceConfig'
 
     // Generated-then-checkpoint-verified (this describe block's own header comment): under the
     // real default config, floor 1 is 10 fights (not CFG's 3). Before 4.1-G1 the level-1 Brute/
-    // Unicorn party lost the 10th (`spec/run.md#fights-per-floor` accepted "per-fight loss rate compounds" risk);
+    // Unicorn party lost the 10th (`OPEN_QUESTIONS.md#fight-count` accepted "per-fight loss rate compounds" risk);
     // with this draw (roles and full gem sets shifted the stream) it wins all ten. `fightResults`
     // stops at the first non-win per `spec/run.md#a-descent-is-atomic`, so ten wins means a cleared floor. Checkpoint:
     // one result per fight, ten fights.
