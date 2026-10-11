@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import { anchorsOfFile } from './anchors.ts'
 import { lineOf } from './text.ts'
+import { UsageError } from './usage.ts'
 
 // `citations` reads the working tree only (no git), so it runs in CI's shallow checkout.
 //
@@ -29,7 +30,7 @@ const SITES: Record<'src' | 'claude', Site> = {
   claude: { gap: String.raw`\s*`, strictNames: false },
 }
 
-const ANCHOR_CITATION =
+export const ANCHOR_CITATION =
   /(?<![A-Za-z0-9_./:@-])([A-Za-z0-9_./-]*\.md)#([\p{L}\p{N}\p{M}_-]+)/gu
 
 export interface Problem {
@@ -198,6 +199,11 @@ export function findProblems(root: string): CitationsResult {
     const text = readFileSync(join(root, file), 'utf8').replace(/\r/g, '')
     citations += scanText(file, text, SITES.claude, anchorsFor, problems)
   }
+  sortProblems(problems)
+  return { problems, citations, files: files.src.length + files.claude.length }
+}
+
+function sortProblems(problems: Problem[]): void {
   problems.sort((a, b) =>
     a.file !== b.file
       ? a.file < b.file
@@ -205,12 +211,53 @@ export function findProblems(root: string): CitationsResult {
         : 1
       : a.line - b.line || (a.what < b.what ? -1 : 1),
   )
-  return { problems, citations, files: files.src.length + files.claude.length }
 }
 
-/** Prints the result and returns the exit code (1 when anything is wrong). */
-export function runCitations(root: string, log: (line: string) => void): number {
-  const { problems, citations, files } = findProblems(root)
+/**
+ * Checks exactly the named files by the living-doc rules (`SITES.claude`), `phases/` included and
+ * whatever the extension. A path is repo-relative or absolute under `root`; one that escapes the
+ * root, is missing or is a directory is a `UsageError`.
+ */
+export function findProblemsForFiles(root: string, paths: string[]): CitationsResult {
+  const rootAbs = resolve(root)
+  const named = paths.map((path) => {
+    const abs = resolve(rootAbs, path)
+    const rel = relative(rootAbs, abs)
+    if (rel === '' || rel.startsWith('..') || isAbsolute(rel))
+      throw new UsageError(`${path}: outside the root`)
+    let stat
+    try {
+      stat = statSync(abs)
+    } catch {
+      throw new UsageError(`${path}: no such file`)
+    }
+    if (!stat.isFile()) throw new UsageError(`${path}: not a file`)
+    return { abs, rel: rel.replace(/\\/g, '/') }
+  })
+  const cache = new Map<string, Set<string> | null>()
+  const anchorsFor = (path: string) => {
+    if (!cache.has(path)) cache.set(path, anchorsOfFile(join(root, '.claude', path)))
+    return cache.get(path) ?? null
+  }
+  const problems: Problem[] = []
+  let citations = 0
+  for (const { abs, rel } of named) {
+    const text = readFileSync(abs, 'utf8').replace(/\r/g, '')
+    citations += scanText(rel, text, SITES.claude, anchorsFor, problems)
+  }
+  sortProblems(problems)
+  return { problems, citations, files: named.length }
+}
+
+/** Prints the result and returns the exit code (1 when anything is wrong); `paths` limits it to those files. */
+export function runCitations(
+  root: string,
+  log: (line: string) => void,
+  paths?: string[],
+): number {
+  const { problems, citations, files } = paths?.length
+    ? findProblemsForFiles(root, paths)
+    : findProblems(root)
   for (const p of problems) log(`${p.file}:${p.line}: ${p.what}`)
   if (problems.length > 0) {
     log(`citations: FAIL, ${problems.length} problems`)

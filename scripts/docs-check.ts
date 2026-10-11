@@ -1,19 +1,27 @@
-// Docs checks, run as `npm run docs:check -- <mode>` (Node's type stripping, no dependencies).
+// Docs checks, run as `npm run docs:check -- <mode>` (Node's type stripping; the only import
+// outside Node is `typescript`, a devDependency `npm ci` installs).
 //
 // Modes:
-//   citations                 blocking in CI: every citation is a resolving `<path>.md#<anchor>`
+//   citations [<file>...]     blocking in CI: every citation is a resolving `<path>.md#<anchor>`;
+//                             with files, checks exactly those by the living-doc rules
 //   budgets                   reported in CI, never fails: each budgeted doc's size against
 //                             `.claude/workflow/budgets.md`
+//   comments                  fails on a comment or test title that records history (not in CI yet);
+//                             `--counts` and `--quotations` only report
+//   comment-proof <base>      by hand: fails unless the working tree differs from <base> only in
+//                             comments, apart from the literals a `--mask <file>` lists
 //   inventory-skeleton        write the inventory of a living-doc condense (the units of the files
 //                             as committed at a base revision)
 //   inventory                 check that inventory against the units at the base it records
 //
-// `citations` and `budgets` read the working tree and never call git (CI's checkout is shallow).
-// Only the inventory modes call git, to read the pre-condense text at the recorded base sha.
+// `citations`, `comments` and `budgets` read the working tree and never call git (CI's checkout is
+// shallow). `comment-proof` and the inventory modes call git, read-only, to read the text at a base
+// revision.
 //
-// The logic is in `scripts/docs-check/`: `anchors` (GitHub's heading slugs), `citations`,
-// `budgets`, `inventory`, `git` and `text` (shared helpers), and `cli` (argument handling). This
-// file only wires them to the process.
+// The logic is in `scripts/docs-check/`: `anchors` (GitHub's heading slugs), `citations`, `comments`
+// and `scanner` (the comment scanner it and `comment-proof` share), `comment-proof`, `budgets`,
+// `inventory`, `git` and `text` (shared helpers), `usage` (the usage error) and `cli` (argument
+// handling). This file only wires them to the process.
 
 import { dirname, join } from 'node:path'
 import process from 'node:process'

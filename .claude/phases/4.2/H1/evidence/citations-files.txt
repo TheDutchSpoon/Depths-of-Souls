@@ -1,0 +1,72 @@
+# citations <file>... (branch 4.2-h1)
+#
+# 1. This kickoff passes (the repo, working tree):
+$ node scripts/docs-check.ts citations .claude/phases/4.2/H1/kickoff.md
+citations: PASS, 5 citations in 1 files
+exit 0
+
+# 2. A planted label form and a planted unresolved anchor in a scratch file under phases/ (scratch clone at a7c4fa2; the full run skips phases/):
+# file content: line 1 'planted', line 2 a label form, line 3 an unresolved anchor
+$ node scripts/docs-check.ts citations .claude/phases/4.2/H1/planted.md --root C:/Users/dunca/AppData/Local/Temp/claude/c--Users-dunca-MyProjects-Depths-of-Souls/368e1439-82c3-4053-817a-cf1a19e51cca/scratchpad/clone
+.claude/phases/4.2/H1/planted.md:2: label form: `<path>.md` "Label" (cite `<path>.md#<anchor>`)
+.claude/phases/4.2/H1/planted.md:3: citation .claude/spec/combat.md#no-such-anchor-here: no such heading anchor in spec/combat.md
+citations: FAIL, 2 problems
+exit 1
+
+# the same file is invisible to the full run:
+$ node scripts/docs-check.ts citations --root C:/Users/dunca/AppData/Local/Temp/claude/c--Users-dunca-MyProjects-Depths-of-Souls/368e1439-82c3-4053-817a-cf1a19e51cca/scratchpad/clone
+citations: PASS, 545 citations in 436 files
+exit 0
+
+# 3. Exit 2: a path outside the root, a missing file, a directory
+$ node scripts/docs-check.ts citations ../outside.md
+../outside.md: outside the root
+usage: npm run docs:check -- <mode> [--root <dir>]
+  citations [<file>...]                              fail on a citation that is not a resolving <path>.md#<anchor> (all files, or the named ones)
+  comments [--counts | --quotations]                 fail on a comment or test title that records history; or report pattern counts / quotations
+  comment-proof <base> [--mask <file>]               fail unless the working tree differs from <base> only in comments (and the masked literals)
+  budgets                                            print each budgeted doc's size against workflow/budgets.md
+  inventory-skeleton <mailbox> <file>... [--base <rev>]  write <mailbox>/inventory.md for living docs under .claude/
+  inventory <mailbox>                                check <mailbox>/inventory.md
+exit 2
+
+$ node scripts/docs-check.ts citations .claude/phases/4.2/H1/none.md
+.claude/phases/4.2/H1/none.md: no such file
+usage: npm run docs:check -- <mode> [--root <dir>]
+  citations [<file>...]                              fail on a citation that is not a resolving <path>.md#<anchor> (all files, or the named ones)
+  comments [--counts | --quotations]                 fail on a comment or test title that records history; or report pattern counts / quotations
+  comment-proof <base> [--mask <file>]               fail unless the working tree differs from <base> only in comments (and the masked literals)
+  budgets                                            print each budgeted doc's size against workflow/budgets.md
+  inventory-skeleton <mailbox> <file>... [--base <rev>]  write <mailbox>/inventory.md for living docs under .claude/
+  inventory <mailbox>                                check <mailbox>/inventory.md
+exit 2
+
+$ node scripts/docs-check.ts citations .claude/phases
+.claude/phases: not a file
+usage: npm run docs:check -- <mode> [--root <dir>]
+  citations [<file>...]                              fail on a citation that is not a resolving <path>.md#<anchor> (all files, or the named ones)
+  comments [--counts | --quotations]                 fail on a comment or test title that records history; or report pattern counts / quotations
+  comment-proof <base> [--mask <file>]               fail unless the working tree differs from <base> only in comments (and the masked literals)
+  budgets                                            print each budgeted doc's size against workflow/budgets.md
+  inventory-skeleton <mailbox> <file>... [--base <rev>]  write <mailbox>/inventory.md for living docs under .claude/
+  inventory <mailbox>                                check <mailbox>/inventory.md
+exit 2
+
+# 4. With no paths: output on the branch vs main's, same tree each time
+# main's tool is 'git archive main' extracted to scratch, run with --root pointing at the tree below.
+## tree: Depths-of-Souls  branch: citations: PASS, 547 citations in 436 files
+## diff main vs branch (empty = identical):
+(no difference)
+## tree: clone  branch: citations: PASS, 545 citations in 436 files
+## diff main vs branch (empty = identical):
+(no difference)
+
+## tree: a scratch tree with three planted faults in src/x.ts (an old form, a CONVENTIONS label, an unresolved anchor)
+## main's output:
+src/x.ts:1: old form: GAME_DESIGN §… (cite the spec file by anchor)
+src/x.ts:2: old form: CONVENTIONS "…" (cite `CONVENTIONS.md#<anchor>`)
+src/x.ts:3: citation spec/combat.md#nope: no such heading anchor in spec/combat.md
+citations: FAIL, 3 problems
+exit 1
+## diff main vs branch (empty = identical):
+(no difference)

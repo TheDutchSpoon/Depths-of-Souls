@@ -1,0 +1,117 @@
+# Gates (branch 4.2-h1, working tree, 2026-10-11)
+# node v24.19.0, npm 11.12.1; package-lock.json pins typescript 6.0.3 (installed) — CI uses node 24 (deploy.yml)
+
+$ npm run test
+
+> depths-of-souls@0.0.0 test
+> vitest run
+
+
+ RUN  v5.0.3 C:/Users/dunca/MyProjects/Depths-of-Souls
+
+
+ Test Files  210 passed (210)
+      Tests  1656 passed | 1 skipped (1657)
+   Start at  17:55:18
+   Duration  25.54s (tests 72%, import 14%, transform 10%, environment 2%, worker 2%)
+
+exit 0
+
+$ npm run lint
+
+> depths-of-souls@0.0.0 lint
+> eslint .
+
+exit 0
+
+$ npm run format:check
+
+> depths-of-souls@0.0.0 format:check
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+exit 0
+
+$ npm run build
+
+> depths-of-souls@0.0.0 build
+> tsc -b && vite build
+
+[36mvite v8.3.2 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 48 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.51 kB │ gzip:  0.31 kB
+dist/assets/index-CpQxvG1H.css    0.32 kB │ gzip:  0.20 kB
+dist/assets/index-CPteU_Xa.js   295.23 kB │ gzip: 86.22 kB
+
+[32m✓ built in 267ms[39m
+exit 0
+
+$ npx tsc -b
+exit 0
+
+$ npm run docs:check -- citations
+
+> depths-of-souls@0.0.0 docs:check
+> node scripts/docs-check.ts citations
+
+citations: PASS, 547 citations in 436 files
+exit 0
+
+$ npm run docs:check -- budgets
+file                 size     budget  used  status
+CLAUDE.md            5.3 KB   7 KB    76%   ok
+CONVENTIONS.md       24.8 KB  29 KB   85%   ok
+spec/combat.md       35.7 KB  43 KB   83%   ok
+spec/creatures.md    18.1 KB  22 KB   82%   ok
+spec/effects.md      32.0 KB  39 KB   82%   ok
+spec/progression.md  4.6 KB   6 KB    77%   ok
+spec/responses.md    12.1 KB  15 KB   81%   ok
+spec/run.md          17.6 KB  22 KB   80%   ok
+spec/saves.md        3.9 KB   5 KB    78%   ok
+spec/scripting.md    11.6 KB  14 KB   83%   ok
+spec/statuses.md     17.1 KB  21 KB   82%   ok
+spec/store.md        2.8 KB   4 KB    70%   ok
+budgets: 12 files, 0 over budget
+exit 0
+
+$ npm run docs:check -- comments   (not a gate: fails on this branch until 4.2-H2)
+comments: FAIL, 2962 problems
+
+$ git diff --stat origin/main -- src vite.config.ts eslint.config.js .github
+(empty above = no change)
+
+# Test counts, file by file against main (a JSON-reporter run of main's tree at the start of the build, and of this branch now):
+files: 207 -> 210
+tests: 1478 -> 1657 (+179)
+outside scripts/ (the src and demo projects): 1357 -> 1357; files whose count differs: 0
+files whose count differs:
+scripts/docs-check/anchors.test.ts                       5 ->    10  (+5)
+scripts/docs-check/citations.test.ts                    60 ->    67  (+7)
+scripts/docs-check/cli.test.ts                          18 ->    34  (+16)
+scripts/docs-check/comment-proof.test.ts                 0 ->    56  (+56)  new file
+scripts/docs-check/comments.test.ts                      0 ->    61  (+61)  new file
+scripts/docs-check/scanner.test.ts                       0 ->    34  (+34)  new file
+
+# ---- Round 2 (hand-out r1), working tree ----
+# npm run test: Test Files 210 passed (210); Tests 1674 passed | 1 skipped (1675)
+# lint clean; tsc -b clean; build passes; citations: PASS, 547 citations in 436 files; budgets: 12 files, 0 over budget
+# format:check clean on the tree (the generated .vitest/ folder of the --reporter=json runs is not part of it; see report-r2.md "To delete")
+# git diff --stat origin/main -- src vite.config.ts eslint.config.js .github: empty
+# Test counts file by file: outside scripts/ 1357 -> 1357, files whose count differs: 0
+scripts/docs-check/comment-proof.test.ts                56 ->    65  (+9)
+scripts/docs-check/scanner.test.ts                      34 ->    43  (+9)
+# total 1657 -> 1675 (+18); the docs-check project is the only one that moved
+
+# ---- Round 3 (hand-out r2), working tree ----
+# npm run test: Test Files 210 passed (210); Tests 1681 passed | 1 skipped (1682)
+# lint clean; format:check clean; tsc -b clean; build passes; citations: PASS, 547 citations in 436 files; budgets: 12 files, 0 over budget
+# git diff --stat origin/main -- src vite.config.ts eslint.config.js .github: empty
+# The JSON reporter wrote to a scratch path (--outputFile), outside the repo.
+# Test counts file by file: outside scripts/ 1357 -> 1357, files whose count differs: 0
+scripts/docs-check/comment-proof.test.ts                65 ->    67  (+2)
+scripts/docs-check/scanner.test.ts                      43 ->    48  (+5)
+# total 1675 -> 1682 (+7); the docs-check project is the only one that moved

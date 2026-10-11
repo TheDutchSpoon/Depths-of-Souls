@@ -220,9 +220,10 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - A fixture's comments are its derivation, and a stale one misleads the next reader. Any PR may fix
   comments in an existing golden fixture, byte-identical policy included, provided **the diff
   changes no code token** (a trailing comment on a code line may change; the code on that line may
-  not). The PR lists each such file, and the reviewer checks that, with comments stripped, the old
-  and new file are identical. Any change beyond comments falls under "Goldens are layered and
-  additive".
+  not). The PR lists each such file, and `npm run docs:check -- comment-proof <base>` passes: both
+  sides parse without a syntax error, with comments stripped the old and new file are identical, and
+  every pragma keeps its text and place.
+  Any change beyond comments falls under "Goldens are layered and additive".
 
 ### Two-tier golden discipline
 
@@ -423,7 +424,13 @@ src/
   or "review fix", no "was X before". Where code came from is in git and the mailboxes; in a comment
   it only goes stale.
 - **Don't restate a spec rule.** Cite it by anchor (`spec/<file>.md#<anchor>`) and say only what
-  this code adds to it. A restated rule rots silently when the spec changes.
+  this code adds to it. A restated rule rots silently when the spec changes. A quotation beside
+  an anchor is the target's own words, or it goes.
+- **A forward pointer cites the rule, not the phase.** "Inert until Phase 8" becomes a citation of
+  the rule that names the phase (a spec file's `## Not built` rule, a `ROADMAP.md` entry), so the
+  phase lives in one home and the comment never needs to know which phase is current.
+- **Test titles follow the same rules.** A `describe`/`it`/`test` title says what the test pins,
+  with no provenance.
 - `// ASSUMPTION:` is kept for a live open question only (`CONVENTIONS.md#open-questions-get-an-interface`), not
   as a record of a decision a plan once made.
 - A golden fixture's setup, arithmetic and random draws are not commentary: they are required

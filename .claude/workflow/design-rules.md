@@ -84,3 +84,5 @@ How to write them (the reader's side is `CLAUDE.md#how-the-spec-is-written`):
 - Coding-agent hand-outs are standalone: they make sense without the review notes or any earlier
   hand-out, because the coding agent sees only the hand-out.
 - When a recommendation changes from an earlier round, say why it changed.
+- Before a step file (kickoff, plan review, PR review, hand-out) goes out, run
+  `npm run docs:check -- citations <the file>`: the full run skips `phases/`.

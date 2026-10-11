@@ -50,7 +50,17 @@ describe('docs-check cli', () => {
 
   it.each([
     [['citations', 'extra']],
+    [['citations', '--counts']],
+    [['citations', '../outside.md']],
     [['budgets', 'extra']],
+    [['budgets', '--mask', 'f']],
+    [['comments', 'extra']],
+    [['comments', '--counts', '--quotations']],
+    [['comments', '--mask', 'f']],
+    [['comment-proof']],
+    [['comment-proof', 'a', 'b']],
+    [['comment-proof', 'x', '--counts']],
+    [['comment-proof', 'x', '--mask']],
     [['inventory']],
     [['inventory', 'a', 'b']],
     [['inventory-skeleton', 'mailbox']],
@@ -66,11 +76,11 @@ describe('docs-check cli', () => {
     expect(run(['inventory', '.claude/phases/none', '--root', root]).code).toBe(1)
   })
 
-  // `citations` and `budgets` must not call git: CI's checkout is shallow. With PATH empty and no
-  // .git in the tree, a git call would fail the run.
-  it('runs citations and budgets with no git on PATH and no .git directory', () => {
+  // `citations`, `comments` and `budgets` must not call git: CI's checkout is shallow. With PATH
+  // empty and no .git in the tree, a git call would fail the run.
+  it('runs citations, comments and budgets with no git on PATH and no .git directory', () => {
     const root = makeTree(TREE)
-    for (const mode of ['citations', 'budgets']) {
+    for (const mode of ['citations', 'comments', 'budgets']) {
       const result = spawnSync(process.execPath, [ENTRY, mode, '--root', root], {
         env: { PATH: '' },
         encoding: 'utf8',
@@ -95,5 +105,49 @@ describe('the Phase 4.2 modes are gone', () => {
 
   it('the entry names no Phase 4.2 mode', () => {
     expect(source).not.toMatch(/Phase 4\.2|line-proof|runMove/)
+  })
+})
+
+describe('the entry file header', () => {
+  const source = readFileSync(ENTRY, 'utf8')
+
+  it('names the comment modes and no longer claims to have no dependencies', () => {
+    expect(source).not.toMatch(/no dependencies/)
+    expect(source).toMatch(/typescript/)
+    expect(source).toMatch(/comment-proof/)
+    expect(source).toMatch(/\bcomments\b/)
+  })
+
+  it('says which modes call git', () => {
+    expect(source).toMatch(/citations.*comments.*budgets.*never call git/s)
+    expect(readFileSync(join(SCRIPTS, 'docs-check', 'git.ts'), 'utf8')).toMatch(
+      /comment-proof.*inventory modes/s,
+    )
+  })
+})
+
+describe('docs-check cli comment modes', () => {
+  it('runs comments against --root and fails with file:line', () => {
+    const root = makeTree({ 'src/x.ts': '\n// Phase 4 note\nexport const a = 1\n' })
+    const result = run(['comments', '--root', root])
+    expect(result.code).toBe(1)
+    expect(result.lines[0]).toContain('src/x.ts:2: ')
+  })
+
+  it('reports --counts and --quotations on a failing tree with exit 0', () => {
+    const root = makeTree({ 'src/x.ts': '// Phase 4 note\nexport const a = 1\n' })
+    expect(run(['comments', '--counts', '--root', root]).code).toBe(0)
+    expect(run(['comments', '--root', root, '--quotations']).code).toBe(0)
+  })
+
+  it('runs citations on named files', () => {
+    const root = makeTree(TREE)
+    expect(run(['citations', 'src/x.ts', '--root', root]).code).toBe(0)
+    expect(run(['citations', 'src/none.ts', '--root', root]).code).toBe(2)
+  })
+
+  it('exits 1 for comment-proof on a bad revision', () => {
+    const root = makeTree(TREE)
+    expect(run(['comment-proof', 'nope', '--root', root]).code).toBe(1)
   })
 })

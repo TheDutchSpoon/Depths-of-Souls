@@ -1,0 +1,283 @@
+# 4.2-G rehearsal: comment-proof on a real comment-only diff
+#
+# Setup: `git clone -c core.autocrlf=false <repo> <scratch>/clone`, then `git checkout a7c4fa2` in the clone
+# (4.2-G's merge; the clone is outside both trees). a7c4fa2 has no comment-proof, so the tool is this
+# branch's entry, run from the repo against the clone:
+#
+#   node scripts/docs-check.ts comment-proof 3fd6a8f --mask <scratch>/g-mask.json --root <scratch>/clone
+#
+# The mask file lives in scratch. It was derived from 4.2-G's diff, not by hand: for each of the 89 code files
+# in `git diff 3fd6a8f a7c4fa2 -- src vite.config.ts eslint.config.js`, every string literal and template part
+# whose cooked text differs, paired by position (a scratch script, not kept). It gives 11 entries: the 10 titles
+# of 4.2-G's retitled-tests.md (the shared "base stats fall within ... ranges" title once in each of 4 files) and
+# the renderFixture template part in src/engine/corpus-digest.test.ts. vite.config.ts is the one file whose
+# literal count differs (14 vs 17: 4.2-G added the docs-check Vitest project), so it gets no entries.
+#
+# g-mask.json:
+[
+  {
+    "file": "src/data/biomes.test.ts",
+    "old": "ships exactly 10 slots (GAME_DESIGN §4 decade cadence)",
+    "new": "ships exactly 10 slots (spec/run.md#biomes decade cadence)"
+  },
+  {
+    "file": "src/data/species/glimmerdark.test.ts",
+    "old": "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat",
+    "new": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+  },
+  {
+    "file": "src/data/species/overgrowth.test.ts",
+    "old": "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat",
+    "new": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+  },
+  {
+    "file": "src/data/species/overgrowth.test.ts",
+    "old": "her adds are real Spider-roster members (species-locked.md: \"adds: spiderlings\")",
+    "new": "her adds are real Spider-roster members (content/overgrowth.md#broodmother: \"adds: spiderlings\")"
+  },
+  {
+    "file": "src/data/species/rotcap-hollow.test.ts",
+    "old": "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat",
+    "new": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat",
+    "new": "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "the three specs settle on distinct affinities (species-locked.md: \"ideally distinct\")",
+    "new": "the three specs settle on distinct affinities (spec/progression.md#specializations)"
+  },
+  {
+    "file": "src/data/species/starters.test.ts",
+    "old": "Brute starter: a second FULL-power attack instance (species-locked.md: \"twice at 100%\")",
+    "new": "Brute starter: a second FULL-power attack instance (specializations/brute.md#starter-cragfang-mauler: \"twice at 100%\")"
+  },
+  {
+    "file": "src/engine/actor-death.test.ts",
+    "old": "an action ends when its actor dies (CONVENTIONS, 4.1-C2c)",
+    "new": "an action ends when its actor dies (spec/combat.md#an-action-ends-when-its-actor-dies, 4.1-C2c)"
+  },
+  {
+    "file": "src/engine/corpus-digest.test.ts",
+    "old": "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate-change PR that attributes every changed\n// fight (CONVENTIONS \"Testing\", corpus digest).\n\nexport interface CorpusDigestEntry {\n  readonly hash: string\n  readonly events: number\n  readonly result: 'win' | 'loss' | 'draw'\n}\n\nexport const CORPUS_DIGEST: readonly CorpusDigestEntry[] = [\n",
+    "new": "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate-change PR that attributes every changed\n// fight (`CONVENTIONS.md#corpus-digest`, corpus digest).\n\nexport interface CorpusDigestEntry {\n  readonly hash: string\n  readonly events: number\n  readonly result: 'win' | 'loss' | 'draw'\n}\n\nexport const CORPUS_DIGEST: readonly CorpusDigestEntry[] = [\n"
+  },
+  {
+    "file": "src/engine/damage-observation.test.ts",
+    "old": "hook order in the damage path (4.1-H2b1; CONVENTIONS \"Hook execution model\")",
+    "new": "hook order in the damage path (4.1-H2b1; spec/effects.md#hook-execution)"
+  }
+]
+
+# ---- Run 1: as 4.2-G left it. Expected: 88 files OK, vite.config.ts FAIL, exit 1.
+# $ node scripts/docs-check.ts comment-proof 3fd6a8f --mask g-mask.json --root <clone>
+OK eslint.config.js
+OK src/app/demoFight.ts
+OK src/data/balance.ts
+OK src/data/biomes.test.ts (masked 1)
+  "ships exactly 10 slots (GAME_DESIGN §4 decade cadence)" -> "ships exactly 10 slots (spec/run.md#biomes decade cadence)"
+OK src/data/biomes.ts
+OK src/data/perform-action.data.test.ts
+OK src/data/scripts.test.ts
+OK src/data/scripts.ts
+OK src/data/specializations.ts
+OK src/data/species/glimmerdark.test.ts (masked 1)
+  "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat" -> "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+OK src/data/species/glimmerdark.ts
+OK src/data/species/overgrowth.test.ts (masked 2)
+  "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat" -> "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+  "her adds are real Spider-roster members (species-locked.md: \"adds: spiderlings\")" -> "her adds are real Spider-roster members (content/overgrowth.md#broodmother: \"adds: spiderlings\")"
+OK src/data/species/overgrowth.ts
+OK src/data/species/rotcap-hollow.test.ts (masked 1)
+  "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat" -> "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+OK src/data/species/rotcap-hollow.ts
+OK src/data/species/starters.test.ts (masked 3)
+  "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat" -> "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+  "the three specs settle on distinct affinities (species-locked.md: \"ideally distinct\")" -> "the three specs settle on distinct affinities (spec/progression.md#specializations)"
+  "Brute starter: a second FULL-power attack instance (species-locked.md: \"twice at 100%\")" -> "Brute starter: a second FULL-power attack instance (specializations/brute.md#starter-cragfang-mauler: \"twice at 100%\")"
+OK src/data/species/starters.ts
+OK src/data/spells/core.ts
+OK src/data/spells/glimmerdark.ts
+OK src/data/spells/index.test.ts
+OK src/data/spells/index.ts
+OK src/data/spells/rotcap-hollow.ts
+OK src/data/statuses.ts
+OK src/data/traits/core.test.ts
+OK src/data/traits/glimmerdark.ts
+OK src/data/traits/index.ts
+OK src/data/traits/overgrowth.ts
+OK src/data/traits/rotcap-hollow.ts
+OK src/data/traits/starters.ts
+OK src/engine/__corpus__/corpus-digest.fixture.ts
+OK src/engine/__corpus__/corpus.ts
+OK src/engine/__fixtures__/biomes.ts
+OK src/engine/__golden__/golden-6v6-scripted.fixture.ts
+OK src/engine/__golden__/golden-action-observed.fixture.ts
+OK src/engine/__golden__/golden-blindclaws-striker.fixture.ts
+OK src/engine/__golden__/golden-broodmother.fixture.ts
+OK src/engine/__golden__/golden-brute-starter.fixture.ts
+OK src/engine/__golden__/golden-defend-count-additive-cap.fixture.ts
+OK src/engine/__golden__/golden-defend-count.fixture.ts
+OK src/engine/__golden__/golden-dot.fixture.ts
+OK src/engine/__golden__/golden-f2-stun-one-turn.fixture.ts
+OK src/engine/__golden__/golden-f2-weaken-three-turns.fixture.ts
+OK src/engine/__golden__/golden-g1-leech-sovereign-pacified.fixture.ts
+OK src/engine/__golden__/golden-gloomjaw-ravager.fixture.ts
+OK src/engine/__golden__/golden-gloomjaw-stalker.fixture.ts
+OK src/engine/__golden__/golden-h2b1-observed-lethal.fixture.ts
+OK src/engine/__golden__/golden-h2b2-tick-no-retaliation.fixture.ts
+OK src/engine/__golden__/golden-heal-scaling-count.fixture.ts
+OK src/engine/__golden__/golden-hollowkin-wretch.fixture.ts
+OK src/engine/__golden__/golden-leech-sovereign.fixture.ts
+OK src/engine/__golden__/golden-necromoss-reclaim.fixture.ts
+OK src/engine/__golden__/golden-overgrowth-web-exploit.fixture.ts
+OK src/engine/__golden__/golden-resonant-harmonize.fixture.ts
+OK src/engine/__golden__/golden-revive.fixture.ts
+OK src/engine/__golden__/golden-rot-sovereign.fixture.ts
+OK src/engine/__golden__/golden-shieldbarer-starter.fixture.ts
+OK src/engine/__golden__/golden-spore-spread-fizzle.fixture.ts
+OK src/engine/__golden__/golden-spore-spread.fixture.ts
+OK src/engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts
+OK src/engine/actions.ts
+OK src/engine/actor-death.test.ts (masked 1)
+  "an action ends when its actor dies (CONVENTIONS, 4.1-C2c)" -> "an action ends when its actor dies (spec/combat.md#an-action-ends-when-its-actor-dies, 4.1-C2c)"
+OK src/engine/balance-types.ts
+OK src/engine/combat.ts
+OK src/engine/config.ts
+OK src/engine/corpus-digest.test.ts (masked 1)
+  "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate…" -> "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate…"
+OK src/engine/curves.ts
+OK src/engine/damage-observation.test.ts (masked 1)
+  "hook order in the damage path (4.1-H2b1; CONVENTIONS \"Hook execution model\")" -> "hook order in the damage path (4.1-H2b1; spec/effects.md#hook-execution)"
+OK src/engine/effect-types.ts
+OK src/engine/effects.ts
+OK src/engine/environment.test.ts
+OK src/engine/generation.ts
+OK src/engine/leveling.test.ts
+OK src/engine/leveling.ts
+OK src/engine/resolution-types.ts
+OK src/engine/resolution.ts
+OK src/engine/rng.ts
+OK src/engine/scripting-types.ts
+OK src/engine/status-snapshot.test.ts
+OK src/engine/support-spells.test.ts
+OK src/engine/target-selectors.ts
+OK src/engine/targeting.ts
+OK src/engine/test-utils/golden-runner.ts
+OK src/engine/turn-order.test.ts
+OK src/engine/types.ts
+OK src/state/integration.test.ts
+OK src/state/rewards.ts
+OK src/state/store.test.ts
+OK src/state/store.ts
+FAIL vite.config.ts: code differs at printed line 26: base `],`, working tree `{`
+comment-proof: FAIL, 1 problems
+exit 1
+
+# ---- Run 2: vite.config.ts reset to 3fd6a8f in the clone (git checkout 3fd6a8f -- vite.config.ts). Expected: exit 0.
+OK eslint.config.js
+OK src/app/demoFight.ts
+OK src/data/balance.ts
+OK src/data/biomes.test.ts (masked 1)
+  "ships exactly 10 slots (GAME_DESIGN §4 decade cadence)" -> "ships exactly 10 slots (spec/run.md#biomes decade cadence)"
+OK src/data/biomes.ts
+OK src/data/perform-action.data.test.ts
+OK src/data/scripts.test.ts
+OK src/data/scripts.ts
+OK src/data/specializations.ts
+OK src/data/species/glimmerdark.test.ts (masked 1)
+  "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat" -> "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+OK src/data/species/glimmerdark.ts
+OK src/data/species/overgrowth.test.ts (masked 2)
+  "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat" -> "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+  "her adds are real Spider-roster members (species-locked.md: \"adds: spiderlings\")" -> "her adds are real Spider-roster members (content/overgrowth.md#broodmother: \"adds: spiderlings\")"
+OK src/data/species/overgrowth.ts
+OK src/data/species/rotcap-hollow.test.ts (masked 1)
+  "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat" -> "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+OK src/data/species/rotcap-hollow.ts
+OK src/data/species/starters.test.ts (masked 3)
+  "base stats fall within GAME_DESIGN's ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat" -> "base stats fall within spec/creatures.md#core-stats ranges: Health 20-45 (4.1-H2c, ASSUMPTION 125), 10-30 for every other stat"
+  "the three specs settle on distinct affinities (species-locked.md: \"ideally distinct\")" -> "the three specs settle on distinct affinities (spec/progression.md#specializations)"
+  "Brute starter: a second FULL-power attack instance (species-locked.md: \"twice at 100%\")" -> "Brute starter: a second FULL-power attack instance (specializations/brute.md#starter-cragfang-mauler: \"twice at 100%\")"
+OK src/data/species/starters.ts
+OK src/data/spells/core.ts
+OK src/data/spells/glimmerdark.ts
+OK src/data/spells/index.test.ts
+OK src/data/spells/index.ts
+OK src/data/spells/rotcap-hollow.ts
+OK src/data/statuses.ts
+OK src/data/traits/core.test.ts
+OK src/data/traits/glimmerdark.ts
+OK src/data/traits/index.ts
+OK src/data/traits/overgrowth.ts
+OK src/data/traits/rotcap-hollow.ts
+OK src/data/traits/starters.ts
+OK src/engine/__corpus__/corpus-digest.fixture.ts
+OK src/engine/__corpus__/corpus.ts
+OK src/engine/__fixtures__/biomes.ts
+OK src/engine/__golden__/golden-6v6-scripted.fixture.ts
+OK src/engine/__golden__/golden-action-observed.fixture.ts
+OK src/engine/__golden__/golden-blindclaws-striker.fixture.ts
+OK src/engine/__golden__/golden-broodmother.fixture.ts
+OK src/engine/__golden__/golden-brute-starter.fixture.ts
+OK src/engine/__golden__/golden-defend-count-additive-cap.fixture.ts
+OK src/engine/__golden__/golden-defend-count.fixture.ts
+OK src/engine/__golden__/golden-dot.fixture.ts
+OK src/engine/__golden__/golden-f2-stun-one-turn.fixture.ts
+OK src/engine/__golden__/golden-f2-weaken-three-turns.fixture.ts
+OK src/engine/__golden__/golden-g1-leech-sovereign-pacified.fixture.ts
+OK src/engine/__golden__/golden-gloomjaw-ravager.fixture.ts
+OK src/engine/__golden__/golden-gloomjaw-stalker.fixture.ts
+OK src/engine/__golden__/golden-h2b1-observed-lethal.fixture.ts
+OK src/engine/__golden__/golden-h2b2-tick-no-retaliation.fixture.ts
+OK src/engine/__golden__/golden-heal-scaling-count.fixture.ts
+OK src/engine/__golden__/golden-hollowkin-wretch.fixture.ts
+OK src/engine/__golden__/golden-leech-sovereign.fixture.ts
+OK src/engine/__golden__/golden-necromoss-reclaim.fixture.ts
+OK src/engine/__golden__/golden-overgrowth-web-exploit.fixture.ts
+OK src/engine/__golden__/golden-resonant-harmonize.fixture.ts
+OK src/engine/__golden__/golden-revive.fixture.ts
+OK src/engine/__golden__/golden-rot-sovereign.fixture.ts
+OK src/engine/__golden__/golden-shieldbarer-starter.fixture.ts
+OK src/engine/__golden__/golden-spore-spread-fizzle.fixture.ts
+OK src/engine/__golden__/golden-spore-spread.fixture.ts
+OK src/engine/__golden__/golden-sporecloud-reaper-no-spore.fixture.ts
+OK src/engine/actions.ts
+OK src/engine/actor-death.test.ts (masked 1)
+  "an action ends when its actor dies (CONVENTIONS, 4.1-C2c)" -> "an action ends when its actor dies (spec/combat.md#an-action-ends-when-its-actor-dies, 4.1-C2c)"
+OK src/engine/balance-types.ts
+OK src/engine/combat.ts
+OK src/engine/config.ts
+OK src/engine/corpus-digest.test.ts (masked 1)
+  "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate…" -> "// GENERATED behaviour tripwire -- not hand-derived, not a spec. Regenerate only via\n// `npm run corpus:update`, and only in a deliberate…"
+OK src/engine/curves.ts
+OK src/engine/damage-observation.test.ts (masked 1)
+  "hook order in the damage path (4.1-H2b1; CONVENTIONS \"Hook execution model\")" -> "hook order in the damage path (4.1-H2b1; spec/effects.md#hook-execution)"
+OK src/engine/effect-types.ts
+OK src/engine/effects.ts
+OK src/engine/environment.test.ts
+OK src/engine/generation.ts
+OK src/engine/leveling.test.ts
+OK src/engine/leveling.ts
+OK src/engine/resolution-types.ts
+OK src/engine/resolution.ts
+OK src/engine/rng.ts
+OK src/engine/scripting-types.ts
+OK src/engine/status-snapshot.test.ts
+OK src/engine/support-spells.test.ts
+OK src/engine/target-selectors.ts
+OK src/engine/targeting.ts
+OK src/engine/test-utils/golden-runner.ts
+OK src/engine/turn-order.test.ts
+OK src/engine/types.ts
+OK src/state/integration.test.ts
+OK src/state/rewards.ts
+OK src/state/store.test.ts
+OK src/state/store.ts
+comment-proof: PASS, 88 changed files
+exit 0
+
+# No other file failed and no mask entry went unconsumed, so there is no finding about 4.2-G or the tool.

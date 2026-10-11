@@ -1,0 +1,219 @@
+# Mutation check (branch 4.2-h1)
+#
+# Each mutation below is applied to one file under scripts/docs-check/, the whole docs-check Vitest
+# project is run, and the file is restored (checked by hash after every run). A mutation passes when
+# at least one test fails. Driven by a scratch script that is not kept; the mutations are the text
+# edits listed here. 36 mutations, 36 killed, 0 survived or not applied.
+#
+# Beyond plan §4's list (no CI step, so that one is out): JSDoc walked (fix 5), each leader-stripping path
+# (fix 6), an unanchored pragma match (fix 7), pattern 1 back to ASSUMPTIONS?\b(?!:) (fix 2), the pragma
+# token index (fix 7), the unconsumed-entry loop (round 3 correction 1), and the usage errors (correction 2).
+#
+# Two first-run findings, fixed before this list was final:
+#   - mutation 18 (head count against count alone) could not be applied by the first script because of a
+#     formatting difference in the search text; re-run after fixing the script, it is killed.
+#   - mutation 32 (citations: the outside-the-root check dropped) survived: the old test used paths that
+#     do not exist, so the missing-file error hid it. The test now also uses a file that exists beside the
+#     root (absolute and by a relative path), and the mutation is killed.
+#   - mutation 2 (JSDoc walked) was first killed only by incidental tests: walking JSDoc does not
+#     duplicate a comment here (the end-before-token-start filter drops the re-scanned text), it
+#     inflates the token index, which moves every later pragma. Two dedicated tests were added (a
+#     reworded JSDoc above a later pragma passes comment-proof; the scanner's pragma index ignores
+#     JSDoc content), and the mutation is killed by them.
+#
+#0 scanner.ts: drop the end <= token-start filter (JSX text, template text)
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource comments finds no comment in JSX text
+#1 scanner.ts: read trailing ranges at token.end, kept only if they end before the same token's start (the first draft)
+   killed by 12 test(s)
+     - comment-proof.test.ts: comment-proof pragmas fails a changed a trailing eslint-disable-line, though the printed code is equal
+     - comments.test.ts: comments patterns fails a trailing comment, at its own line
+     - comments.test.ts: comments --counts reports per pattern and exits 0 on a failing tree
+#2 scanner.ts: walk JSDoc nodes
+   killed by 4 test(s)
+     - comment-proof.test.ts: comment-proof pragmas position passes a reworded JSDoc comment above a later pragma
+     - comments.test.ts: comments patterns fails a pattern that wraps over comment lines, at the line of its first word
+     - scanner.test.ts: scanSource pragmas takes @vitest- anywhere in the leading docblock but not later
+#3 scanner.ts: leader stripping: remove the // path
+   killed by 7 test(s)
+     - comments.test.ts: comments patterns fails a pattern that wraps over comment lines, at the line of its first word
+     - comments.test.ts: comments --quotations reads a quote that wraps over comment lines whole, and a title
+     - scanner.test.ts: scanSource blocks joins consecutive standalone // lines into one block
+#4 scanner.ts: leader stripping: remove the /* */ path (the leading * of each line)
+   killed by 4 test(s)
+     - comments.test.ts: comments patterns fails a pattern that wraps over comment lines, at the line of its first word
+     - comments.test.ts: comments --quotations reads a quote that wraps over comment lines whole, and a title
+     - scanner.test.ts: scanSource blocks reports the line of the first word of a pattern that wraps in a block comment
+#5 scanner.ts: pragma match unanchored
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof pragmas passes prose that merely mentions a pragma, changed
+     - scanner.test.ts: scanSource pragmas does not take prose that mentions a pragma
+#6 scanner.ts: ScriptKind: parse every file as TS (a .tsx file loses its JSX)
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof print equality passes a comment-only change in src/b.tsx
+     - scanner.test.ts: scanSource comments finds no comment in JSX text
+#7 scanner.ts: title chain: enclosing titles not recorded
+   killed by 3 test(s)
+     - comment-proof.test.ts: comment-proof masks keyed by the new text passes two old titles reworded to one title under different describes
+     - comment-proof.test.ts: comment-proof masks keyed by the new text fails them as a duplicate name under one describe
+     - scanner.test.ts: scanSource titles gives each title the titles that enclose it
+#8 comment-proof.ts: drop the pragma comparison
+   killed by 6 test(s)
+     - comment-proof.test.ts: comment-proof pragmas fails a changed a triple-slash directive, though the printed code is equal
+     - comment-proof.test.ts: comment-proof pragmas fails a changed @ts-expect-error, though the printed code is equal
+     - comment-proof.test.ts: comment-proof pragmas fails a changed an eslint-disable block, though the printed code is equal
+#9 comment-proof.ts: compare pragma text only, not the governed token index
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof pragmas position fails the same pragma moved above a different statement
+#10 comment-proof.ts: drop the deleted-file check
+   killed by 3 test(s)
+     - comment-proof.test.ts: comment-proof file set fails a deleted file, as deleted
+     - comment-proof.test.ts: comment-proof file set fails a renamed file as both deleted and added
+     - comment-proof.test.ts: comment-proof file set fails a deleted file that git still tracks in its index
+#11 comment-proof.ts: drop the added-file check
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof file set fails an untracked file that git does not ignore, as added
+     - comment-proof.test.ts: comment-proof file set fails a renamed file as both deleted and added
+#12 comment-proof.ts: drop --exclude-standard
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof file set does not fail on files git ignores
+#13 comment-proof.ts: drop the existsSync filter
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof file set fails a deleted file, as deleted
+     - comment-proof.test.ts: comment-proof file set fails a renamed file as both deleted and added
+#14 comment-proof.ts: back to newline splitting, without -z
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof file set does not fail on an unchanged file with a non-ASCII name
+#15 comment-proof.ts: check mask entries only while visiting changed files (drop the final unconsumed loop)
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof masks fails an entry for an unchanged file, and for a path in neither file set
+     - comment-proof.test.ts: comment-proof masks fails an entry written with backslash separators instead of skipping it
+#16 comment-proof.ts: drop the in-file base count check of each entry
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof masks fails a listed entry whose old text is not in the changed file
+     - comment-proof.test.ts: comment-proof masks fails an entry that would be consumed twice at count 1, and passes it at count 2
+#17 comment-proof.ts: drop the in-file head count check of each new text
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof masks keyed by the new text fails the same diff when it also changes that other literal
+#18 comment-proof.ts: check the head count against count alone (the old rule, ignoring the new text's base occurrences)
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof masks keyed by the new text passes a title whose new text already exists as another literal in the file
+     - comment-proof.test.ts: comment-proof masks keyed by the new text fails the same diff when it also changes that other literal
+#19 comment-proof.ts: drop the duplicate-name check
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof masks keyed by the new text fails them as a duplicate name under one describe
+#20 comment-proof.ts: drop the usage error for the same file and old text
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof masks usage errors rejects two entries with the same file and old before reading any file
+#21 comment-proof.ts: drop the usage error for a chain or swap
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof masks usage errors rejects a chain before reading any file
+     - comment-proof.test.ts: comment-proof masks usage errors rejects a swap before reading any file
+#22 comment-proof.ts: drop the usage error for an entry that maps to itself
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof masks usage errors rejects an entry that maps to itself before reading any file
+#23 comment-proof.ts: drop the mask-token replacement of the new text in the base (masks only the old texts)
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof masks keyed by the new text passes a title whose new text already exists as another literal in the file
+#24 comments.ts: pattern 1 back to ASSUMPTIONS?\b(?!:)
+   killed by 1 test(s)
+     - comments.test.ts: comments ASSUMPTION fails ASSUMPTIONS: and a numbered ASSUMPTION
+#25 comments.ts: pattern 11 matching a bare "locked"
+   killed by 2 test(s)
+     - comments.test.ts: comments patterns pattern 11 passes the game and process wording
+     - comments.test.ts: comments patterns passes the game words that "locked" and "decided" share
+#26 comments.ts: drop the OPEN_QUESTIONS citation requirement
+   killed by 3 test(s)
+     - comments.test.ts: comments ASSUMPTION fails ASSUMPTION: with no citation
+     - comments.test.ts: comments ASSUMPTION fails ASSUMPTION: when the citation is in the next block
+     - comments.test.ts: comments ASSUMPTION fails ASSUMPTION: in a title, even with a citation
+#27 comments.ts: comments calls git
+   killed by 58 test(s)
+     - cli.test.ts: docs-check cli runs citations, comments and budgets with no git on PATH and no .git directory
+     - cli.test.ts: docs-check cli comment modes runs comments against --root and fails with file:line
+     - cli.test.ts: docs-check cli comment modes reports --counts and --quotations on a failing tree with exit 0
+#28 comments.ts: quotation window: no word limit
+   killed by 1 test(s)
+     - comments.test.ts: comments --quotations looks four words past the anchor and not five
+#29 comments.ts: quotation attribution: skip the nearest-anchor rule
+   killed by 1 test(s)
+     - comments.test.ts: comments --quotations gives a quote to the nearest anchor before it, not to an earlier one
+#30 comments.ts: scope: leave __golden__ out of the walk
+   killed by 1 test(s)
+     - comments.test.ts: comments scope checks src/engine/__golden__/g.fixture.ts, with no exemption
+#31 anchors.ts: sectionOf stops only at a higher heading
+   killed by 3 test(s)
+     - anchors.test.ts: sectionOf runs from the heading through its sub-headings
+     - anchors.test.ts: sectionOf does not stop at a fenced #
+     - anchors.test.ts: sectionOf numbers repeated headings with the same -<n> slugs as resolveAnchors
+#32 citations.ts: named files: drop the outside-the-root check
+   killed by 1 test(s)
+     - citations.test.ts: citations of named files raises a usage error for a path outside the root, a missing file and a directory
+#33 citations.ts: named files: a directory is read as a file
+   killed by 1 test(s)
+     - citations.test.ts: citations of named files raises a usage error for a path outside the root, a missing file and a directory
+#34 cli.ts: cli: --mask allowed on any mode
+   killed by 2 test(s)
+     - cli.test.ts: docs-check cli rejects bad arguments ["budgets","--mask","f"] with exit 2
+     - cli.test.ts: docs-check cli rejects bad arguments ["comments","--mask","f"] with exit 2
+#35 cli.ts: cli: --counts together with --quotations allowed
+   killed by 1 test(s)
+     - cli.test.ts: docs-check cli rejects bad arguments ["comments","--counts","--quotations"] with exit 2
+
+# ---- Round 2 (hand-out r1): 7 more mutations, each applied alone, file restored (hash-checked), docs-check files run; 7 killed ----
+# Mutation 4 (pragma 4 anchor) needs no run: the existing unanchored-pragma mutation (#5) covers it.
+#R2 comment-proof.ts: drop the syntax-error check
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof syntax errors fails a stray token the parser skips, naming the file and the reason
+     - comment-proof.test.ts: comment-proof syntax errors fails a file that was already broken in the base
+#R2 comment-proof.ts: drop the pragma length condition (|| bp.length !== hp.length)
+   killed by 1 test(s)
+     - comment-proof.test.ts: comment-proof pragmas fails a pragma appended after the last pragma, or added to a file with none
+#R2 comment-proof.ts: duplicate check keeps only the names condition
+   killed by 1 test(s)
+     - comment-proof.test.ts: duplicatesGrew fails when the excess copies grow but the duplicated names do not
+#R2 comment-proof.ts: duplicate check keeps only the excess condition
+   killed by 1 test(s)
+     - comment-proof.test.ts: duplicatesGrew fails when the duplicated names grow but the excess copies do not
+#R2 scanner.ts: drop the block-only pragma forms (eslint , global, globals, exported)
+   killed by 5 test(s)
+     - comment-proof.test.ts: comment-proof pragmas fails a reworded ESLint config comment and a deleted /*#__PURE__*/
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* eslint no-console: off */
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* global state */
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* globals a, b */
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* exported name */
+#R2 scanner.ts: block-only pragma forms also in line comments
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block-only forms as line comments
+#R2 scanner.ts: drop the __PURE__ / __NO_SIDE_EFFECTS__ forms
+   killed by 5 test(s)
+     - comment-proof.test.ts: comment-proof pragmas fails a reworded ESLint config comment and a deleted /*#__PURE__*/
+     - scanner.test.ts: scanSource pragmas takes the tool comment /*#__PURE__*/
+     - scanner.test.ts: scanSource pragmas takes the tool comment /* @__PURE__ */
+     - scanner.test.ts: scanSource pragmas takes the tool comment /*#__NO_SIDE_EFFECTS__*/
+     - scanner.test.ts: scanSource pragmas takes the tool comment // @__NO_SIDE_EFFECTS__
+
+# ---- Round 3 (hand-out r2) ----
+# Same method: one mutation, the whole docs-check project, file restored and hash-checked. 6 mutations, 6 killed.
+# (#0 is fix 1; #1-#4 are fix 2; #5 is the side label of fix 3.) 43 + 6 = 49.
+#R3-0 comment-proof.ts: syntax check back through ts.transpileModule (a .d.ts crashes it)
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof syntax errors passes a comment-only change to a declaration file
+     - comment-proof.test.ts: comment-proof syntax errors fails a stray token in a declaration file, naming the file
+#R3-1 scanner.ts: BLOCK_PRAGMA: drop the ^ anchor
+   killed by 2 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block prose /* reset the global state */
+     - scanner.test.ts: scanSource pragmas does not take the block prose /** The global spell registry */
+#R3-2 scanner.ts: BLOCK_PRAGMA: drop the \s after eslint
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block prose /* eslintrc is gone */
+#R3-3 scanner.ts: BLOCK_PRAGMA: drop the \s after globals?
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block prose /* globalThis is the window here */
+#R3-4 scanner.ts: BLOCK_PRAGMA: drop the \s after exported
+   killed by 1 test(s)
+     - scanner.test.ts: scanSource pragmas does not take the block prose /* exportedNames lists them */
+#R3-5 comment-proof.ts: syntax message does not say which side (back to "syntax error at")
+   killed by 2 test(s)
+     - comment-proof.test.ts: comment-proof syntax errors fails a stray token the parser skips, naming the file and the reason
+     - comment-proof.test.ts: comment-proof syntax errors fails a stray token in a declaration file, naming the file

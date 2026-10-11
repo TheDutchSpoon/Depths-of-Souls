@@ -1,0 +1,116 @@
+# Word patterns on today's tree (branch 4.2-h1, working tree)
+#
+# Every hit of patterns 11 (locked), 12 (decided) and 14-17 (brief, the plan, plan review, sign-off):
+# `node scripts/docs-check.ts comments`, filtered to those patterns. The snippet is the match with a
+# few characters around it. Each hit is provenance (the design process, or a quotation of it), none is
+# a game word. Read one by one; the ones that could be argued are noted at the end.
+#
+# pattern 11: 9 hits
+# pattern 12: 4 hits
+# pattern 14: 36 hits
+# pattern 15: 6 hits
+# pattern 16: 7 hits
+# pattern 17: 2 hits
+#
+# file:line: pattern, snippet
+src/app/demoFight.ts:66: pattern 14, brief: "the Phase 3.5 brief's recommendation) rather"
+src/data/specializations.ts:5: pattern 15, the plan: "ices A-E2 (per the plan's own "Response reuse chec"
+src/data/species/overgrowth.ts:11: pattern 11, locked as a decision: "rder). Per the locked design principle ("rarity gover"
+src/data/species/overgrowth.ts:17: pattern 11, locked as a decision: "rived from any locked design number. Per-creature aff"
+src/data/species/starters.ts:21: pattern 11, locked as a decision: "ercised by any locked design number. Each affinity is"
+src/data/species/starters.ts:66: pattern 15, the plan: "ic needed (per the plan's own "Response reuse chec"
+src/data/spells/glimmerdark.ts:37: pattern 17, sign-off: "- surfaced for sign-off): Disorient, suggested b"
+src/data/spells/glimmerdark.ts:38: pattern 14, brief: "ggested by the brief as "apply act-last to an"
+src/data/spells/glimmerdark.ts:51: pattern 17, sign-off: "r design-owner sign-off same as any other new ba"
+src/data/spells/index.test.ts:21: pattern 14, brief: "SSUMPTION: the brief's own guard wording is ""
+src/data/statuses.test.ts:54: pattern 12, decided at a point in history: "the potencies decided at the 4.1-H2d grill (perce"
+src/data/statuses.ts:46: pattern 12, decided at a point in history: "when applied (decided at the 4.1-H2d grill; 25% b"
+src/data/statuses.ts:179: pattern 12, decided at a point in history: "fective Speed (decided at the 4.1-H2d grill; 15% b"
+src/data/traits/starters.ts:44: pattern 15, the plan: "ic needed (per the plan's own "Response reuse chec"
+src/engine/__golden__/golden-attack-instance-list.fixture.ts:1: pattern 11, locked as a decision: "Phase 4 Slice B, locked). ATTACKER carries a Brut"
+src/engine/__golden__/golden-brute-starter.fixture.ts:7: pattern 14, brief: "-in. NOTE on a brief/docs conflict, flagged r"
+src/engine/__golden__/golden-brute-starter.fixture.ts:8: pattern 14, brief: "nything in the brief if they disagree"): `.cl"
+src/engine/__golden__/golden-brute-starter.fixture.ts:9: pattern 14, brief: "claude/archive/briefs/phase-4-implementation-p"
+src/engine/__golden__/golden-brute-starter.fixture.ts:13: pattern 14, brief: "t doc, not the brief; the brief's own prose n"
+src/engine/__golden__/golden-brute-starter.fixture.ts:13: pattern 14, brief: "the brief; the brief's own prose needs a corr"
+src/engine/__golden__/golden-dot.fixture.ts:22: pattern 14, brief: "ondition-ticks brief). Poison (duration 3), s"
+src/engine/__golden__/golden-h2a-additional-levels.fixture.ts:1: pattern 14, brief: "Phase 4.1-H2a, brief ASSUMPTIONS 110, 135) on"
+src/engine/__golden__/golden-heal-cast.fixture.ts:48: pattern 14, brief: "ntent (per the brief: "at least one demo/fixt"
+src/engine/actions.ts:411: pattern 11, locked as a decision: "-instance-list`, locked): an Attack or Cast resol"
+src/engine/combat.test.ts:233: pattern 14, brief: "labeling): the brief's own B3 acceptance crit"
+src/engine/config.ts:11: pattern 14, brief: "Phase 4.1-H2a, brief ASSUMPTION 110/135): a f"
+src/engine/config.ts:18: pattern 14, brief: "Phase 4.1-H2a, brief ASSUMPTION 112): meets o"
+src/engine/curves.ts:16: pattern 16, plan review: "d) + the 4.1-A plan review's own correction, with t"
+src/engine/curves.ts:23: pattern 15, the plan: "across floors (the plan's own "no intermediate rou"
+src/engine/effect-types.ts:83: pattern 14, brief: "scaling` + the brief's magnitudeSource vocabu"
+src/engine/effect-types.ts:98: pattern 14, brief: "shaped by the brief -- `spec/effects.md#coun"
+src/engine/effect-types.ts:215: pattern 16, plan review: "ase 4.1-D (A4, plan review F2): the remap-aware for"
+src/engine/effect-types.ts:225: pattern 11, locked as a decision: "e deferred, no locked content needs them."
+src/engine/effect-types.ts:650: pattern 14, brief: "/shaped by the brief -- its prose only specif"
+src/engine/effect-types.ts:656: pattern 11, locked as a decision: "satisfies the locked semantics (linear composition, e.g"
+src/engine/effect-types.ts:733: pattern 11, locked as a decision: "lice F) in the locked seed content, never surfaced"
+src/engine/effect-types.ts:781: pattern 11, locked as a decision: "nd-annihilate` locked "option a" consumption mod"
+src/engine/effect-types.ts:1081: pattern 16, plan review: "ase 4.1-D (A4, plan review F1): the load-time valid"
+src/engine/generation.test.ts:321: pattern 14, brief: "holders -- the brief's own acceptance example"
+src/engine/generation.ts:112: pattern 14, brief: "terpreting the brief's `biomeForFloor(floor,"
+src/engine/resolution.test.ts:788: pattern 14, brief: "ondition-ticks brief)"
+src/engine/resolution.test.ts:1115: pattern 14, brief: "loat trap this brief exists to avoid"
+src/engine/resolution.ts:182: pattern 14, brief: "pinned by the brief): a scalingStat-based de"
+src/engine/spell-effects.test.ts:13: pattern 15, the plan: "and check site the plan names (P2, P5, P8, B5 on"
+src/engine/spell-effects.test.ts:999: pattern 16, plan review: "heal.offStat (plan review F2)"
+src/engine/status-timing.test.ts:734: pattern 14, brief: "ith the ticks (brief, PR #78 review) ----"
+src/engine/support-spells.test.ts:2: pattern 14, brief: "mechanisms the brief's own Tests bullet calls"
+src/engine/types.ts:382: pattern 14, brief: "pinned by the brief) -- follows the existing"
+src/state/balance-sim-report.test.ts:1: pattern 15, the plan: "S 126, 127 and the plan review's per-trait stack"
+src/state/balance-sim-report.test.ts:1: pattern 16, plan review: "6, 127 and the plan review's per-trait stack fold)."
+src/state/balance-sim-report.test.ts:254: pattern 16, plan review: "stack maxima (plan review, fix 4)"
+src/state/balance-sim.ts:11: pattern 14, brief: "player policy (brief ASSUMPTIONS 21, 96-102)"
+src/state/balance-sim.ts:374: pattern 16, plan review: "H2c (plan review, fix 4): the largest sta"
+src/state/ids.ts:5: pattern 14, brief: "or that by the brief); the engine's CreatureI"
+src/state/rewards.ts:4: pattern 12, decided at a point in history: "save-v1 shape, decided before Phase 5."
+src/state/rewards.ts:79: pattern 14, brief: "MPTION 26, the brief) -- tracked now, unbound"
+src/state/store.test.ts:1: pattern 14, brief: "test (per the brief's own test list), built"
+src/state/store.ts:4: pattern 14, brief: "esale, per the brief's scope boundary). Depen"
+src/state/store.ts:9: pattern 14, brief: "ION beyond the brief's literal "store.ts" fra"
+src/state/store.ts:153: pattern 14, brief: "t named by the brief): a monotonic counter us"
+src/state/store.ts:255: pattern 14, brief: "t named by the brief) -- needed for bossesCle"
+src/state/store.ts:258: pattern 14, brief: "t named by the brief, but directly described"
+src/state/store.ts:399: pattern 14, brief: "ASSUMPTION 92, brief ASSUMPTION 11). Shared b"
+src/ui/CombatDemo.tsx:43: pattern 14, brief: "ful beats" the brief paces playback on, not r"
+
+# The game's own uses of the words, by grep (isActionLocked, lockedTurns, '(locked)', 'still locked',
+# 'a locked ', 'locked rounds'): 23 file:line locations. The locations that are also a hit above:
+#
+# (none)
+#
+# The grep, for the record:
+src/engine/actions.test.ts:445:  it('a locked CASTER refuses the echo: the trigger shows, but no grant event and no cast', () => {
+src/engine/actions.ts:24:  isActionLocked,
+src/engine/actions.ts:212:  if (isActionLocked(actor, intent.action.kind)) return false
+src/engine/effects.ts:470:export function isActionLocked(creature: Creature, kind: LockableKind): boolean {
+src/engine/generation.test.ts:458:  // (FIXTURE_VIOLENCE_BOLT is filtered out before the roll; the tier-2 bolt is still locked), so
+src/engine/status-containers.test.ts:28:  isActionLocked,
+src/engine/status-containers.test.ts:629:      expect(isActionLocked(x, 'attack')).toBe(!immune)
+src/engine/__golden__/golden-f3-pacify-three-turns.fixture.ts:14://   FAST acts BEFORE S1 in round 1, so the Pacify lands after its R1 turn: locked rounds 2-4, expiring i
+src/engine/__golden__/golden-f3-pacify-three-turns.fixture.ts:15://   its R4 cleanup. SLOW acts AFTER S2, so it is locked rounds 1-3, expiring in its R3 cleanup.
+src/engine/__golden__/golden-f3-pacify-three-turns.fixture.ts:17://     R1  FAST attack 15 -> 385; (S1, S2 apply); SLOW waits (locked)
+src/engine/__golden__/golden-f3-silence-three-turns.fixture.ts:15://   FAST acts BEFORE S1 in round 1, so the Silence lands after its R1 turn: locked rounds 2-4, expiring
+src/engine/__golden__/golden-f3-silence-three-turns.fixture.ts:16://   its R4 cleanup. SLOW acts AFTER S2, so it is locked rounds 1-3, expiring in its R3 cleanup.
+src/engine/__golden__/golden-f3-silence-three-turns.fixture.ts:18://     R1  FAST cast 25 -> 375; (S1, S2 apply); SLOW attack (locked) 15 -> 360
+src/state/balance-sim.test.ts:687:      expect(stats.lockedTurns).toBe(3)
+src/state/balance-sim.test.ts:711:      expect(stats.lockedTurns).toBe(2)
+src/state/balance-sim.test.ts:714:        bossLockStats([applied(BOSS, 'dazed'), turn(BOSS)], BOSS, scopes).lockedTurns,
+src/state/balance-sim.test.ts:741:      lockedTurns: locked,
+src/state/balance-sim.ts:467:  readonly lockedTurns: number
+src/state/balance-sim.ts:483:  let lockedTurns = 0
+src/state/balance-sim.ts:507:        if (scopes.size > 0) lockedTurns += 1
+src/state/balance-sim.ts:515:  return { bossTurns, lockedTurns, lockedByScope: byScope, pacifyLands }
+src/state/balance-sim.ts:1516:        policyLockedTurns: policyMetrics.reduce((s, m) => s + m.lockedTurns, 0),
+src/state/balance-sim.ts:1519:        probeLockedTurns: probeMetrics.reduce((s, m) => s + m.lockedTurns, 0),
+
+# Hits that could be argued, and why they are provenance:
+#  effect-types.ts:225 'no locked content needs them': 'locked content' is the design's locked seed content, a decision, not a spell lock.
+#  effect-types.ts:656/733/781 'locked semantics', 'locked seed content', locked "option a": design locks (decisions).
+#  actions.ts:411 and golden-attack-instance-list:1 '(... locked)': the action instance-list model was a locked design.
+#  rewards.ts:4 'decided before Phase 5', statuses.ts '(decided at the 4.1-H2d grill ...)': where a number was decided.
+#  resolution.test.ts:1115 'the float trap this brief exists to avoid': the brief is the slice brief.

@@ -104,7 +104,7 @@ Each step's rules are in its file: kickoff `workflow/kickoff.md`, plan and build
 - **The first commit on the slice branch** holds the kickoff, the plan, the plan review and their
   doc edits, so the PR carries the spec it was built against.
 - **Fix rounds** repeat steps 7 and 6 (`/slice-fix <id> <N>` → `report-r<N+1>.md` → `/pr-review`
-  in the same review chat) until the PR is approved. After the merge, the next slice starts at
+  in a fresh chat, scoped by `workflow/pr-review.md#later-rounds`) until the PR is approved. After the merge, the next slice starts at
   step 0.
 
 Duncan can merge steps when a slice is small (for example, skip a separate plan review for a pure

@@ -1,7 +1,8 @@
 # Step 6 — PR review (design agent)
 
-Command in Cowork: `/pr-review <slice-id>`. Read `design-rules.md` first. One chat per PR; later
-rounds continue in the same chat.
+Command in Cowork: `/pr-review <slice-id>`. Read `design-rules.md` first. Fresh chat per round:
+a later round takes its state from the mailbox, not from an earlier chat
+(`workflow/pr-review.md#later-rounds`).
 
 The GitHub web UI is blocked. Review by pulling, building, running and reading the code, **in your
 own sandbox** (never in Duncan's working tree, where the coding agent works). `<branch>` is the
@@ -76,7 +77,8 @@ Green gates only prove the code agrees with its own fixtures. Proceed to reading
   `-last-gleam`), and a shared registry export (`traits`, `statuses`) moves with content, which is
   expected and must be told apart from an expected-value change (4.1-H2d). Then diff each
   changed old fixture: only comments, exports or driving code may differ, as the PR claims.
-- Comment-only edits: with comments stripped, old and new are identical.
+- Comment-only edits: `npm run docs:check -- comment-proof <base>` passes, run in your clone (with
+  comments stripped, old and new are identical; pragmas are compared apart).
 - Corpus digest: diff the fixture against `main`'s; the number of changed rows and changed results
   must match the PR's attribution. If the PR says "reverting all flips reproduces main's digest",
   reproduce that.
@@ -99,11 +101,25 @@ finds things no golden looks for (PR #73: a creature still acting after its own 
 5 fights). If a PR parks a spec question as hypothetical, check the corpus for it before accepting
 that.
 
+## Later rounds
+
+Round `N` (`N` ≥ 2) reviews `report-r<N>.md`, after `/slice-fix <slice-id> <N-1>`, in a fresh chat.
+
+- **Inputs:** the ones above, plus `review-r<N-1>.md` and `handout-r<N-1>.md`. The previous
+  review's verification and commit say what is settled and where the fix diff starts.
+- **Each hand-out item:** check it is fixed in the code and the tests, not on the report's word.
+- **Steps 1, 2 and 4 in full**, against `main` and the previous round's commit: a fix can break
+  anything, and these are cheap.
+- **Step 5 for what the fix touched:** each mechanism the fix diff
+  (`git diff <previous commit> <branch>`) adds or changes, and each pin the hand-out asked for.
+- **Don't reopen** what the previous round approved unless the fix diff touches it. A problem found
+  in untouched code is still a finding.
+
 ## Output, in the mailbox
 
-- **`review-r<N>.md`** (`N` matches the report it reviews): verdict (approved / fixes); real fixes;
-  scope and labeling; decide-points with your recommendation each; what was verified and
-  how, including counts; **Docs edited** at the end.
+- **`review-r<N>.md`** (`N` matches the report it reviews): the branch and commit reviewed; verdict
+  (approved / fixes); real fixes; scope and labeling; decide-points with your recommendation each;
+  what was verified and how, including counts; **Docs edited** at the end.
 - **`handout-r<N>.md`**, only when there are fixes: a standalone hand-out for the coding agent, who
   sees nothing else. Duncan runs `/slice-fix <slice-id> <N>`; the coding agent answers with
   `report-r<N+1>.md`, and the next round reviews that.
