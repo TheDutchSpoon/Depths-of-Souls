@@ -19,7 +19,7 @@ passed, 1 skipped), the same as `main` file by file (210 files).
     without re-citing or moving it), rewrote the comments that had gone false, re-pointed the citations and quotations that did not hold
     (the perk comments in `data/specializations.ts` now cite the perk entries), cleared the references to deleted history and the review and
     slice words `comments` cannot see, and rewrapped the lines the join made longer than 120 columns.
-  - **Review round 2** (`handout-r2.md`) dropped the last three plan-item ids (`B-2`, `B-9`), the "Nit (review)" label and "moved to" history in `combat.ts`, named the Sporch Ashborn where two comments named a creature that does not exist, replaced three quotations of an older Sorcerer-starter description (the innate spell is an `innate-spell` effect on the trait, not a gem), and rewrapped the comment lines whose inline code spans the rewrap had split. 11 comment lines hold an odd number of backticks that differ from `main`'s; each continues a span `main` already wrapped.
+  - **Review round 2** (`handout-r2.md`) dropped the last three plan-item ids (`B-2`, `B-9`), the "Nit (review)" label and "moved to" history in `combat.ts`, named the Sporch Ashborn where two comments named a creature that does not exist, replaced three quotations of an older Sorcerer-starter description (the innate spell is an `innate-spell` effect on the trait, not a gem), and rewrapped the comment lines whose inline code spans the rewrap had split. 11 comment lines hold an odd number of backticks that differ from `main`'s: 9 continue a span `main` already wrapped, and 2 (`engine/__fixtures__/balance.ts:23-24`) are a span the first rewrap split, which round 2 accepted.
   - **Forward pointers cite the rule that states the wait**: the demo harnesses cite `CONVENTIONS.md#every-feature-phase-ships-a-demo`; the nine
     inert perks each cite their own entry (`specializations/<spec>.md#<perk>`), keeping "(gem system)" and "(equipment system)"; the rest cite
     the `## Not built` rule or the facilities rule. A title carries no anchor.
@@ -45,7 +45,7 @@ passed, 1 skipped), the same as `main` file by file (210 files).
 
 ## Evidence
 
-`phases/4.2/H2/evidence/` (see `report-r1.md` and `report-r2.md`): the per-pattern counts before and after, the mask and the proof's output, the planted faults,
+`phases/4.2/H2/evidence/` (see `report-r1.md`, `report-r2.md` and `report-r3.md`): the per-pattern counts before and after, the mask and the proof's output, the planted faults,
 the mechanical rules and their table, the retitled tests, the bare ids, the history markers, the forward pointers, the quotations, the hand
 rewrites, the brief's residue, the fixtures compared with `main`, the test counts, the corpus render, the mutation check on `ci.test.ts`, the
 non-title literals and the gates.

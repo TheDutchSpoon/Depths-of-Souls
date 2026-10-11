@@ -141,3 +141,10 @@ kickoff builds on.
   `engine/resolution-types.ts`).
 - `ASSUMPTION (Slice F)` blocks in `data/species/starters.ts` quote the old docs at length; the
   4.2-G fix round rewrote the affinity one only.
+
+## Known from 4.2-H2's review
+
+- `SORCERER_STARTER_TRAIT`'s doc comment in `data/traits/starters.ts` has one 135-column line
+  ("through fusion, whichever parent the Seer is. … fight-setup prepends"), left by the sweep's
+  rewrap. Rewrap the block at the width of the lines around it (about 100); the proof strips
+  comments, so it costs nothing under 4.2-H3's.
