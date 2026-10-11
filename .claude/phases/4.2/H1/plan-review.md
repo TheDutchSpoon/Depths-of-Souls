@@ -255,3 +255,88 @@ new title must not equal another literal in its file.
 - `phases/4.2/H1/kickoff.md`, Traps, the mask bullet: an entry's `old` is consumed exactly `count`
   times in the base and `new` is counted per group against the base's own occurrences; same
   `file`+`old` and chains or swaps are exit 2 (the decide-point).
+
+## Round 3
+
+Reviewed `plan.md` at `ecc42d1` (Revision 2) against Round 2, `kickoff.md` (its mask trap as edited
+in Round 2), `phases/4.2/H/brief.md` and `scripts/docs-check/test-utils.ts`. This round checks that
+Round 2's two edits landed, and checks the new mask rule for soundness. Round 2 said a third round
+would only do that check. No design question is open, so this is not the "pull it back into a
+design pass" signal.
+
+**Verdict: approved, with three corrections the build applies** (`/slice-build` builds "to the
+approved plan, including its corrections"). None of them changes the design. Each one either names
+a test site or turns a misleading failure into a usage error, so a Round 4 would only check that
+they landed.
+
+Both Round 2 fixes are in:
+- **Fix 1:** §4's file-set row runs `gitIn(root, 'config', 'core.quotePath', 'true')`. `gitIn`
+  passes its arguments through after the identity `-c` flags, so this is a repo-local `git config`
+  and overrides a global `false`. The mutation is "newline splitting without `-z`".
+- **Fix 2:** §2 step 4 groups the entries by `new` and has one token per group. The base masks
+  each group's `old` texts and its `new` text, and the head masks the `new` text. The counts are
+  `count` in the base and base + summed counts in the head. Same `file`+`old` and chains or swaps
+  are exit 2, checked before any file is read. §4 has the four tests. The mutation run (head count
+  against `count` alone) fails the `cheat-death` test. This matches the kickoff's mask trap word for
+  word.
+
+**Soundness of the new mask rule, checked case by case.** The print comparison pins every masked
+position, and the counts add exactness. The cases:
+- a pre-existing `new` literal that changes: it fails on the print and on the head count;
+- an unlisted literal that becomes `new` while its title stays `old`: the base's `old` is masked
+  and the head's is not, so it fails on the print;
+- a positional swap of `old` and `new`: it fails on the print and on the count;
+- an `old` occurring more often than `count`: it fails on the base count;
+- a partly applied rename (`count: 2`, one changed): it fails on the print.
+
+A literal that already reads `MASK0` could stand in for a token, but the head count still catches
+it. That case is contrived, and it needs no change.
+
+### Corrections (the build applies these; no new round)
+
+1. **§4 masks: test the unconsumed check at both sites.** §2 says "an entry for a file with no
+   change fails as unconsumed", but the loop in step 2 only visits files whose text differs. So
+   checking entries for files the loop never visits is a separate mechanism from the count check
+   inside a visited file (`CONVENTIONS.md#a-mechanism-at-more-than-one-site-is-tested-at-each-site`).
+   §4's "unconsumed entry fails" names neither site. Test both:
+   - an entry in a changed file whose `old` isn't there;
+   - an entry for an unchanged file, and an entry for a path in neither file set.
+
+   Both fail as unconsumed, naming the entry's file. Add the mutation run "check entries only
+   while visiting changed files": the unchanged-file test fails. Why this matters on Windows: an
+   entry written with `\` separators would never match git's `/` paths. Without this check it would
+   be skipped silently. The rehearsal's "any unconsumed entry is reported" claim depends on that
+   case failing loudly.
+2. **§2 step 4: an entry whose `old` equals its `new` is a usage error (exit 2)**, checked with the
+   other two. It is the degenerate case of a chain. As written, it fails later as a count mismatch,
+   and the reason it gives is misleading. Add the case to the exit-2 tests.
+3. **Line 59 is stale. §6 governs.** Line 59 says the build "reproduces" 6,949. Since Revision 1,
+   the expected total is 7,178, explained against the pre-split 6,949 and the leading-only 6,677
+   (§6, `counts.txt`). This is a labeling slip, not a change. The report follows §6.
+
+### Assumptions
+
+| # | Call | Note |
+| --- | --- | --- |
+| A1–A8, A10, A11 | **confirm** | unchanged |
+| A9 | **confirm** | restated as corrected in Round 2: converging titles pass the mask, and the duplicate-name check alone decides |
+| N1, N2, N4 | **confirm** | unchanged; N2's test is now deterministic with fix 1 |
+| N3 | **confirm** | restated as corrected in Round 2: one token per `new` group |
+
+**Bring-it-back check:** the plan changes nothing in the brief. The kickoff's mask trap already
+carries Round 2's decision, and the plan matches it.
+
+**Golden policy:** matches the kickoff (byte-identical, trivially).
+
+**Mechanism coverage:** with correction 1, every mechanism has its test at each site. The base also
+masks literals that already read `new`. That has no mutation run of its own, but the `cheat-death`
+pass test fails without it, which is what the table needs. The kickoff's mutation list is all
+there.
+
+### Decide-points
+
+None. The three corrections are labeling and test-site fixes inside decisions already made.
+
+### Docs edited
+
+None this round.
