@@ -320,8 +320,8 @@ describe('evaluateCondition -- has-status', () => {
     ).toBe(false)
   })
 
-  // subject=target -- Ambusher/Sporch's Reaper shape ("+% dmg to
-  // Webbed/Burning targets") reads has-status against the resolvingAgainst creature.
+  // subject=target -- Ambusher/Sporch Ashborn shape (+% damage to
+  // Webbed/Burning targets) reads has-status against the resolvingAgainst creature.
   it('subject=target checks the resolvingAgainst creature, false without one', () => {
     const player = makeParty('player', [{ id: 'me' }])
     const enemy = makeParty('enemy', [{ id: 'poisoned', activeEffects: [poisonEffect] }])

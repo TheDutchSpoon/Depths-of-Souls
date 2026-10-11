@@ -8,7 +8,7 @@ passed, 1 skipped), the same as `main` file by file (210 files).
 
 - **The sweep.** Every comment and every `describe`/`it`/`test` title in `src/`, `vite.config.ts` and `eslint.config.js` is brought to
   `CONVENTIONS.md#comment-why-not-what`: `npm run docs:check -- comments` passes (7,003 comments and 1,627 titles in 403 files; it reported
-  2,962 problems in 343 files on `main`). 346 files changed, 345 title parts reworded, no code changed.
+  2,962 problems in 343 files on `main`). 347 files changed, 345 title parts reworded, no code changed.
   - **A one-off script** (the scratchpad, not the repo) did the mechanical part: 1,182 edits under rules M1-M6 (labels, tag-only
     parentheticals, mixed parentheticals, `(<tag> -- <why>)`, title suffixes). A bare id is removed only inside a parenthetical with a
     non-id tag or directly after one; id-only parentheticals and labels were left for the hand pass.
@@ -19,6 +19,7 @@ passed, 1 skipped), the same as `main` file by file (210 files).
     without re-citing or moving it), rewrote the comments that had gone false, re-pointed the citations and quotations that did not hold
     (the perk comments in `data/specializations.ts` now cite the perk entries), cleared the references to deleted history and the review and
     slice words `comments` cannot see, and rewrapped the lines the join made longer than 120 columns.
+  - **Review round 2** (`handout-r2.md`) dropped the last three plan-item ids (`B-2`, `B-9`), the "Nit (review)" label and "moved to" history in `combat.ts`, named the Sporch Ashborn where two comments named a creature that does not exist, replaced three quotations of an older Sorcerer-starter description (the innate spell is an `innate-spell` effect on the trait, not a gem), and rewrapped the comment lines whose inline code spans the rewrap had split. 11 comment lines hold an odd number of backticks that differ from `main`'s; each continues a span `main` already wrapped.
   - **Forward pointers cite the rule that states the wait**: the demo harnesses cite `CONVENTIONS.md#every-feature-phase-ships-a-demo`; the nine
     inert perks each cite their own entry (`specializations/<spec>.md#<perk>`), keeping "(gem system)" and "(equipment system)"; the rest cite
     the `## Not built` rule or the facilities rule. A title carries no anchor.

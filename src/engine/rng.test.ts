@@ -61,7 +61,7 @@ describe('nextRandom / createRngState', () => {
     }
   })
 
-  // B-2: exactly one implementation of the mulberry32 math backs both APIs -- this is a
+  // Exactly one implementation of the mulberry32 math backs both APIs -- this is a
   // regression check, not just a parity assertion, since createSeededRng is implemented on top
   // of nextRandom (see rng.ts). A future edit that broke the sequence for either API would fail
   // this test long before it could silently drift a golden.

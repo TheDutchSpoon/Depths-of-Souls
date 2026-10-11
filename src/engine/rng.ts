@@ -45,7 +45,7 @@ export interface SeededRng {
 }
 
 /** A closure-based SeededRng, implemented on top of RngState/nextRandom so there is exactly one
- * copy of the mulberry32 math (B-2). Used only by generation.ts's own, unrelated RNG stream --
+ * copy of the mulberry32 math. Used only by generation.ts's own, unrelated RNG stream --
  * never by CombatState, which holds a plain RngState instead. */
 export function createSeededRng(seed: number): SeededRng {
   const state = createRngState(seed)

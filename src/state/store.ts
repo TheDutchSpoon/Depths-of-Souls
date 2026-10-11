@@ -263,9 +263,8 @@ export interface GameActions {
    * generation module, runs each fight through the real resolver in sequence, banks soul%/XP/
    * currency rewards as each fight resolves (never held pending the floor's overall outcome),
    * applies XP-driven level-ups post-fight, and advances deepestFloor only on a full clear.
-   * Player-reachable failure (`spec/store.md#how-store-actions-fail`): returns `{ ok: false, reason
-   * }` (state unchanged) instead
-   * of throwing. */
+   * Player-reachable failure (`spec/store.md#how-store-actions-fail`): returns
+   * `{ ok: false, reason }` (state unchanged) instead of throwing. */
   descend(floor: number): DescendResult
   /** Pure query sharing `descend`'s own check -- lets the UI grey out an unreachable floor
    * without resolving anything. */

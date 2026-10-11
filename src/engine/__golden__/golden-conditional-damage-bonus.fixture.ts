@@ -1,5 +1,5 @@
 // Golden: the `conditional-damage-bonus` passive EffectDef (Cull the Weak / Ambusher / Gloomjaws /
-// Sporch's Reaper-shaped) -- ATTACKER carries +50% dealt, gated on a `hp-percent` condition with
+// Sporch Ashborn-shaped) -- ATTACKER carries +50% dealt, gated on a `hp-percent` condition with
 // subject `'target'` (< 50%), evaluated against the CURRENT damage
 // target at hit time via gatherConditionalDamageBonus, folded into dealtMods alongside
 // gatherDealtMods -- one clean modified hit, never a second `on-damage-dealt` instance.

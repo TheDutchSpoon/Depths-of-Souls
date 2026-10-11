@@ -4,8 +4,8 @@
 // does not keep Defend/Provoke through its own skipped turn -- Provoke would otherwise keep
 // redirecting HERO's attacks at PROVOKER in round 2 even after it was Stunned.
 //
-// PROVOKER carries a fixture trait that self-inflicts a Stun-shaped status (a passive `action-lock
-// { scope: 'all' }`) the instant it takes damage (on-damage-taken -> apply-status).
+// PROVOKER carries a fixture trait that self-inflicts a Stun-shaped status (a passive
+// `action-lock { scope: 'all' }`) the instant it takes damage (on-damage-taken -> apply-status).
 // WEAKLING has less HP than PROVOKER throughout, so HERO's "attack the lowest-HP enemy" rule is
 // the discriminator: whichever enemy it actually hits reveals whether Provoke's redirect is still
 // active.

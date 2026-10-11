@@ -91,3 +91,13 @@ comment block of the 346 changed files that holds a `.md#` anchor:
      `specializations.ts:1` (names); `actions.ts:660` "draws nothing when inactive" (quotes `targeting.ts`, a code discipline, not
      the cited spec); `statuses.ts:173` "exclude a status" (names a missing primitive, not a quotation).
 4. `--quotations` after the round: 0 comments and 0 titles.
+
+## round 3: Sorcerer starter and nonexistent creature
+
+Quotes dropped because they quote nothing a cited doc holds (`specializations/sorcerer.md#starter-glyphmoth-seer` says "a 50% chance at the end
+of its turn to cast a random equipped spell", an innate spell and not a gem):
+
+- src/data/traits/starters.ts:11 `"50% chance on-turn-end to cast a random equipped spell."` -> plain statement, no quote marks.
+- src/data/traits/starters.ts:16-17 `"grants one spell as a permanent extra gem"` -> stated as what the code does (an `innate-spell` effect on the trait).
+- src/engine/__golden__/golden-sorcerer-starter.fixture.ts:4 the same quotation as starters.ts:11 -> plain statement, no quote marks.
+- src/engine/conditions.test.ts:323 `("+% dmg to Webbed/Burning targets")` -> quote marks dropped (it quoted nothing).

@@ -403,5 +403,14 @@ No row above changes: the round-2 rewrites (`#1's` in `golden-sleep-wake.fixture
 the same 45 files (259 lines by a scripted re-count that may differ by one from the table's method); `R1`..`R5`, `E1`, `T1`..`T5` and the
 rest stay derivation labels or design targets.
 
-Plan-item ids in a hyphenated shape (`B-9`, `B-2`), which that regex does not match, remain at `engine/effect-types.ts:337`, `engine/rng.test.ts:64`
-and `engine/rng.ts:48`. They are the same kind as `design-review B-5` and are left for the reviewer's call: the hand-out names only `B-5`.
+## Round 3 (hand-out item 1)
+
+Plan-item ids in a hyphenated shape (the regex above does not match them), dropped with the reason kept:
+
+| file:line | old | new |
+| --- | --- | --- |
+| src/engine/rng.ts:48 | `one copy of the mulberry32 math (B-2).` | `one copy of the mulberry32 math.` |
+| src/engine/rng.test.ts:64 | `// B-2: exactly one implementation of the mulberry32 math` | `// Exactly one implementation of the mulberry32 math` |
+| src/engine/effect-types.ts:337 | `(over every perk's effects, B-9 -- perks are stat-modifier carriers too)` | `(over every perk's effects -- perks are stat-modifier carriers too)` |
+
+A scan for `[A-Z]-d` over every comment line and title now finds none outside derivation labels.

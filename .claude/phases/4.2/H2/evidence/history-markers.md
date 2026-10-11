@@ -532,6 +532,13 @@ rewrote the markers of the 30 further lines listed under "Rewritten in round 2" 
 | src/engine/effect-types.ts:769 | no existing content | no existing content sets this |
 | src/engine/__golden__/golden-necromoss-reclaim.fixture.ts:5 | the species' real | (50, not the species' own real 18) |
 
+### Rewritten in round 3
+
+| file:line (round 2) | marker | old text |
+| --- | --- | --- |
+| src/engine/generation.test.ts:180 | review | // Nit (review): `ref` is spread only when defined -- no explicit `undefined` key. |
+| src/engine/combat.ts:269 | moved | // The action executors (attack/cast/defend/provoke/wait) all moved to actions.ts -- combat.ts only |
+
 ## Kept (a live invariant, a scenario step or a term of the code)
 
 | marker | hits | why it stays |

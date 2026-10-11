@@ -1231,13 +1231,14 @@ export function executeResponse(
 /**
  * A status's damage tick -- INDIRECT damage computed from the instance's applier snapshot
  * (`spec/statuses.md#the-applier-snapshot`), through the ONE indirect formula
- * (`calculateIndirectDamage`, no third formula): `potency × affinity(snapshot vs bearer) ×
- * Π(bearer's taken factors) − 0.2 × bearer's effective Defence`, `MAX(1, floor(...))`. Defend's ×1.5 Defence and ×0.65 taken factor apply, as for all
- * indirect damage. There is NO dealt pool (so no `conditional-damage-bonus`), no cross-stat, no
- * armour penetration and no Additional: those are the applier's live build, absent from the
- * snapshot. The source is the applier while it lives, else the bearer (`tickDealer`); the origin
- * is a `tick` carrying that dealer, so the bearer's hooks see no `triggering-source` and the
- * dealer-side hooks fire only for a living applier. Never self-inflicted.
+ * (`calculateIndirectDamage`, no third formula):
+ * `potency × affinity(snapshot vs bearer) × Π(bearer's taken factors) − 0.2 × bearer's effective Defence`,
+ * `MAX(1, floor(...))`. Defend's ×1.5 Defence and ×0.65 taken factor apply, as for all indirect
+ * damage. There is NO dealt pool (so no `conditional-damage-bonus`), no cross-stat, no armour
+ * penetration and no Additional: those are the applier's live build, absent from the snapshot. The
+ * source is the applier while it lives, else the bearer (`tickDealer`); the origin is a `tick`
+ * carrying that dealer, so the bearer's hooks see no `triggering-source` and the dealer-side
+ * hooks fire only for a living applier. Never self-inflicted.
  */
 function applyTickDamage(
   bearerId: CreatureId,

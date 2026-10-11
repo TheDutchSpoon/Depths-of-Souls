@@ -574,6 +574,7 @@ OK src/engine/resolution.test.ts (masked 31)
   "a cost goes through applyDamageAndEmit (4.1-H2a, ASSUMPTION 132)" -> "a cost goes through applyDamageAndEmit"
   "a status-sourced flat hit on ANOTHER creature is indirect, not a tick (4.1-H2a, ASSUMPTION 131)" -> "a status-sourced flat hit on ANOTHER creature is indirect, not a tick"
 OK src/engine/resolution.ts
+OK src/engine/rng.test.ts
 OK src/engine/rng.ts
 OK src/engine/scripting-types.ts
 OK src/engine/spell-effects.test.ts (masked 11)
@@ -694,4 +695,4 @@ OK src/state/store.test.ts (masked 5)
 OK src/state/store.ts
 OK src/ui/CombatDemo.tsx
 OK vite.config.ts
-comment-proof: PASS, 346 changed files
+comment-proof: PASS, 347 changed files

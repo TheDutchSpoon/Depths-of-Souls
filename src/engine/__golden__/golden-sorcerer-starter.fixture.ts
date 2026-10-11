@@ -1,7 +1,7 @@
 // Golden: the Sorcerer starter's real signature trait (data/traits/starters.ts's
 // SORCERER_STARTER_TRAIT, an on-turn-end `perform-action`) + its real granted spell (ARCANE_BOLT,
 // data/spells/overgrowth.ts -- also a normal biome-1 Wit spawn-pool spell)
-// -- "50% chance on-turn-end to cast a random equipped spell." CASTER carries NO explicit
+// -- a 50% chance at the end of its turn to cast a random equipped spell. CASTER carries NO explicit
 // `equippedSpells` -- ARCANE_BOLT comes SOLELY from SORCERER_STARTER_TRAIT's own `innate-spell`
 // effect, which `createCombat`'s fight-setup
 // prepends onto the (otherwise default, all-null) regular gem slots. Hand-authoring

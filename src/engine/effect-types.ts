@@ -334,7 +334,7 @@ export type StatModifierDef = {
  * `hp-percent` condition gating the very stat (`health`) it reads. `has-status`/`always` never
  * read a stat, so every other combination is safe. Called eagerly wherever `StatModifierDef`s are
  * assembled into a registry -- `data/traits/index.ts` (over every trait's effects) AND
- * `data/specializations.ts` (over every perk's effects, B-9 -- perks are stat-modifier carriers
+ * `data/specializations.ts` (over every perk's effects -- perks are stat-modifier carriers
  * too). */
 export function validateStatModifierCondition(def: StatModifierDef): void {
   if (def.condition?.kind === 'hp-percent' && def.stat === 'health') {

@@ -55,7 +55,7 @@ node v24.19.0; npm 11.12.1; lockfile: package-lock.json (node_modules not reinst
     exit 0
 
 ## npm run docs:check -- comment-proof origin/main --mask evidence/mask.json
-    comment-proof: PASS, 346 changed files
+    comment-proof: PASS, 347 changed files
     exit 0
 
 ## npm run docs:check -- citations <report-r2.md> <record.md>

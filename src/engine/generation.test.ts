@@ -177,7 +177,7 @@ describe('materializeCreature', () => {
       speciesId: 'fixture-species',
     })
     expect(withoutRef.origin).toEqual({ templateId: 'fixture-bruiser', level: 5 })
-    // Nit (review): `ref` is spread only when defined -- no explicit `undefined` key.
+    // `ref` is spread only when defined -- no explicit `undefined` key.
     expect('ref' in withoutRef.origin).toBe(false)
 
     const withRef = materializeCreature(FIXTURE_BRUISER, {

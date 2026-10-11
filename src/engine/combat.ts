@@ -266,10 +266,10 @@ function resolveRoundEnd(state: CombatState, events: CombatEvent[]): CombatState
   return drainGrantedActions(roundEndCtx, hooked, { stopWhen: fightOver })
 }
 
-// The action executors (attack/cast/defend/provoke/wait) all moved to actions.ts -- combat.ts only
+// The action executors (attack/cast/defend/provoke/wait) live in actions.ts; combat.ts only
 // orchestrates the turn skeleton, dispatching every action through actions.ts's `runAction`. Every
-// `ResolutionContext` built below is drained exactly once, at
-// the end of its own scope, by `drainGrantedActions`.
+// `ResolutionContext` built below is drained exactly once, at the end of its own scope, by
+// `drainGrantedActions`.
 
 function finalize(
   state: CombatState,
