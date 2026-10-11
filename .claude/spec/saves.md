@@ -15,6 +15,8 @@ Read this when changing saving or loading. None of it is built: Phase 5 builds i
 - Phase 5 builds it. Assume big rosters, large inventories and many script templates.
 - **IndexedDB is the primary store** (via `idb` or Dexie); `localStorage` holds only tiny things
   (settings, a last-save pointer), never the main save.
+- The database name is namespaced by environment (`CONVENTIONS.md` "IndexedDB is namespaced by
+  environment").
 
 ### References, not copies
 
@@ -40,6 +42,8 @@ Read this when changing saving or loading. None of it is built: Phase 5 builds i
 
 - Phase 5 builds it. The save is split into **logical records**, `meta`, `collection`, `inventory`,
   `facilities` and `scripts`, so a small change (spending a perk point) rewrites only its record.
+- In the first format, `collection` holds each instance with its stored `gems` set
+  (`spec/creatures.md` "Player gem sets"), and `facilities` and `scripts` start empty.
 - **Don't pre-optimize** to per-creature records: split `collection` finer only if its write
   becomes a **measured** bottleneck on very large rosters.
 - If a partition is **missing or fails to parse** on load (corruption, tampering, a bug), only that
@@ -52,6 +56,7 @@ Read this when changing saving or loading. None of it is built: Phase 5 builds i
   save**, partitions or not; a migration may touch only the partitions it changes.
 - On load, pure migrations `v(n) → v(n+1)` run in sequence up to the current version. An
   unversioned blob is never loaded.
+- Phase 5 ships the migration scaffold, even with no migration to run yet.
 
 ### Autosave
 

@@ -1,13 +1,16 @@
 # Slice workflow
 
+Read this before starting or reviewing any slice: the overview of the process. The rules for each
+step live in `workflow/*.md`.
+
 Each step of a slice runs in its **own fresh chat**. The **docs are the memory**, not chat
 scrollback, and every hand-off between agents is a **file in the slice's mailbox**, not a paste.
 Two habits keep that true:
 
-1. Every locked decision lives in `.claude/`, never only in a chat.
+1. Every decision lives in `.claude/`, never only in a chat.
 2. When a plan review or PR review surfaces a **new** decision, it's written into `.claude/`
-   **before** the next slice's kickoff. Otherwise a fresh build runs against a stale spec. This
-   review → sync → next-slice rhythm is the connective tissue between slices.
+   **before** the next slice's kickoff, or a fresh build runs against a stale spec. This review →
+   sync → next-slice rhythm is the connective tissue between slices.
 
 The failure mode to avoid: a long-lived chat where decisions live only in scrollback, so the spec
 drifts and stale decisions silently outlive their correction.
@@ -17,17 +20,14 @@ drifts and stale decisions silently outlive their correction.
 ## Who does what
 
 - **Human (TheDutchSpoon):** the decision-maker. Makes every decide-point call, runs the commands
-  that move a slice from step to step, commits, pushes, merges, and deletes files. Nothing reaches
-  `main` without the human.
+  that move a slice from step to step, commits, pushes, opens the PR, merges, and deletes files.
+  Nothing reaches `main` without the human.
 - **Coding agent (Claude Code in VS Code):** writes the implementation plan, then the code, tests,
-  reports and the slice's record. Never commits and never deletes files; says what needs deleting.
-  Never edits the living docs, content docs included: its report says what they need.
-  Standing rules: `workflow/coding-rules.md`.
+  reports and the slice's record; never edits the living docs. Its rules:
+  `workflow/coding-rules.md`.
 - **Design & review agent (Cowork, with the local repo connected):** writes kickoffs, reviews plans
-  and PRs, writes fix hand-outs, and edits the living docs in place: every decision, and the
-  content docs for the content a slice ships (folded at the PR review). Never writes engine
-  or app code, never commits. Re-reads the living docs from the working tree at the start of every
-  session. Standing rules: `workflow/design-rules.md`.
+  and PRs, writes fix hand-outs, and owns the living docs, content docs included; never writes
+  code. Its rules: `workflow/design-rules.md`.
 
 ## Where things live
 
@@ -57,30 +57,29 @@ drifts and stale decisions silently outlive their correction.
   archive/         Phases 0–4's briefs and records, untouched. History, not current truth.
 ```
 
-A slice id maps to its mailbox: `4.1-H2b2` → `.claude/phases/4.1/H2b2/`.
+A slice id maps to its mailbox: `4.1-H2b2` → `.claude/phases/4.1/H2b2/`. A brief is kept, never
+deleted; a slice's `record.md` existing is what marks it shipped.
 
-**Phase 4.1 was the transition.** Its slices from H2b1 on used the mailbox (`phases/4.1/<slice>/`),
-but its brief and record stayed in the old places, `briefs/phase-4.1-implementation-plan.md` and
-`phases/phase-4.1-fix-and-consolidation.md`, with each remaining slice's section moved out of the
-brief into its mailbox `brief.md` at kickoff. When 4.1 closed, the two files moved unchanged to
-`phases/4.1/brief.md` and `phases/4.1/record.md`; references under the old names (in the 4.1
-mailboxes and records) mean those files. Phase 4.2's brief
-is the first written in the new shape.
+Phase 4.1's mailboxes and records name its brief and record by their old paths,
+`briefs/phase-4.1-implementation-plan.md` and `phases/phase-4.1-fix-and-consolidation.md`: those
+are `phases/4.1/brief.md` and `phases/4.1/record.md`.
 
 Mailbox files are committed on the slice branch, so the PR carries its own plan, reviews and
 reports. Once merged they're immutable, like records.
 
-**What a mailbox keeps.** The folder itself holds only the step files above, all Markdown.
-Generated output that a step file cites as evidence (a simulator report, a corpus scan, a table a
-script printed) goes in `<slice>/evidence/`, as plain text or Markdown, and the citing file names
-it by that path. Not kept, anywhere in the mailbox:
+### What a mailbox keeps
+
+The folder itself holds only the step files above, all Markdown. Generated output that a step file
+cites as evidence (a simulator report, a corpus scan, a table a script printed) goes in
+`<slice>/evidence/`, as plain text or Markdown, and the citing file names it by that path. Not
+kept, anywhere in the mailbox:
 
 - marker files, logs and other scratch output of a run;
 - a run whose content another kept file already holds (keep one copy);
 - a one-off script that rewrites `src/` (a data remap, say): it can't safely run twice, so keep its
   printed table in `evidence/` and quote the rule it applied in the report.
 
-Anything else the step needs lives in a scratch clone outside the repo, as before.
+Anything else the step needs lives in a scratch clone outside the repo.
 
 ## The loop, per slice
 
@@ -96,30 +95,16 @@ Anything else the step needs lives in a scratch clone outside the repo, as befor
 | 7   | Fix (per round)    | VS Code | `/slice-fix <id> <N>`        | code, `report-r<N+1>.md`                   |
 | 8   | Merge              | —       | merges                       | —                                          |
 
-0. **Pre-flight.** `main` has the previous slice merged and every doc-sync from its reviews
-   committed. Duncan creates the slice branch from `main`. Locally: `npm ci`, and the toolchain
-   matches the lockfile (CONVENTIONS "Local runs match CI's toolchain").
-1. **Kickoff** (`workflow/kickoff.md`). The design agent writes the slice-specific kickoff into the
-   mailbox. The standing rules aren't repeated in it: they live in `workflow/coding-rules.md`.
-2. **Plan.** The coding agent writes `plan.md` with every ASSUMPTION marked inline and collected in
-   a checklist, then **stops**. No code before the plan is approved.
-3. **Plan review** (`workflow/plan-review.md`). The design agent reviews the plan against the docs
-   and the ASSUMPTION checklist, separates plan fixes from decide-points, and recommends an answer
-   for each decide-point. Duncan decides; the design agent writes the decisions into the docs in
-   place. "Changes needed" → Duncan runs `/slice-plan` again for a revision, then another round.
-4. **First commit.** Duncan reviews the doc edits as a git diff and commits the kickoff, plan, plan
-   review and doc edits as the **first commit on the slice branch**, so the PR carries the spec it
-   was built against.
-5. **Build.** The coding agent builds to the approved plan, runs every gate, writes `report-r1.md`
-   and the slice's record. The report lists anything that surfaced a spec question.
-6. **PR review** (`workflow/pr-review.md`). Duncan pushes and opens the PR; the design agent
-   reviews it in its own sandbox and ends in a verdict: approved, or fixes. Fixes go to the coding
-   agent as a standalone `handout-r<N>.md`. Decisions the review makes go into the docs in place,
-   on the slice branch while the PR is open; decisions made after approval go on `main` right
-   after the merge.
-7. **Fix.** One round per fix batch: `/slice-fix <id> <N>` → `report-r<N+1>.md` → `/pr-review`
-   again (same review chat), until approved.
-8. **Merge**, then the next slice starts at step 0.
+Each step's rules are in its file: kickoff `workflow/kickoff.md`, plan and build
+`workflow/coding-rules.md`, plan review `workflow/plan-review.md`, PR review
+`workflow/pr-review.md`. Between them:
+
+- **No code before the plan is approved**: the plan step stops at `plan.md`.
+- **The first commit on the slice branch** holds the kickoff, the plan, the plan review and their
+  doc edits, so the PR carries the spec it was built against.
+- **Fix rounds** repeat steps 7 and 6 (`/slice-fix <id> <N>` → `report-r<N+1>.md` → `/pr-review`
+  in the same review chat) until the PR is approved. After the merge, the next slice starts at
+  step 0.
 
 Duncan can merge steps when a slice is small (for example, skip a separate plan review for a pure
 docs or tooling change), but the review → sync → next-slice order never changes.
@@ -138,7 +123,8 @@ Every slice declares its golden policy in the brief, and a PR never mixes two:
   through `npm run corpus:update`, and every changed fight is attributed to a listed change.
 
 In both cases every new behaviour lands with a new hand-derived test that is shown failing with
-its mechanism removed, at **every** site the mechanism lives (CONVENTIONS "Testing").
+its mechanism removed, at every site (CONVENTIONS "A mechanism at more than one site is tested at
+each site").
 
 ## When a slice is too big
 
@@ -148,12 +134,8 @@ brief records the split when it's decided.
 
 ## Docs and records
 
-- **Doc edits are made in place**, in Duncan's working tree, by the design agent: the exact lines
-  that change, never a regenerated whole file. Duncan reviews them as a git diff and commits them.
-  Each step's file ends with the list of docs it edited.
-- **Records** are written by the coding agent and are immutable once merged. Living docs
-  (`CLAUDE`, `CONVENTIONS`, `VISION`, `OPEN_QUESTIONS`, `spec/`, `ROADMAP`, briefs, `WORKFLOWS`,
-  `workflow/`) are the mutable source of truth.
+- The living docs are the mutable source of truth; records are immutable once merged. How doc
+  edits are made and reviewed: `workflow/design-rules.md` "Doc edits".
 - **Changing the process** is a normal doc change: edit `WORKFLOWS.md`, `workflow/` or
   `skills/`, in its own commit.
 

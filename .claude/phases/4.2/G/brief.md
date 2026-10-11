@@ -54,6 +54,29 @@ Golden policy: **byte-identical**; the `src/` diff is comment-only.
 - Remove the 4.2-only modes (`move`, `line-proof`, `inventory-skeleton`, `inventory`) from the
   script; `citations` and `budgets` stay.
 
+## Known from earlier slices
+
+- **From 4.2-F:** `CLAUDE.md` "How the spec is written" is now the lasting home of the phase brief's
+  "Rules for the new spec" (Duncan's decision at the 4.2-F condense). When this slice builds the
+  citations check and the budgets, add them there in one line each (citations checked in CI; each
+  spec file's size budget, reported), and point the over-budget rule it adds to
+  `workflow/pr-review.md` at it. The `(Phase 4.2 only)` paragraph below the section goes with the
+  rest of the clean-up.
+- **From 4.2-F:** stale `src/` comment: `data/balance.ts:1-4` says the 4.1-H2d balancing pass "tunes
+  the rest" and every number is parked "until then" (the pass ran; the numbers are tuned).
+- **From 4.2-F's verify:** three New-home anchors in B's inventory no longer exist, because later
+  slices rewrote their files: `specializations/shieldbarer.md:59` →
+  `spec/progression.md#9-player-specializations`; `species/species-locked.md:186` →
+  `spec/run.md#4-the-cave-world--structure`; `species/species-locked.md:143` →
+  `OPEN_QUESTIONS.md#13-open-questions--parked-items` (now `OPEN_QUESTIONS.md#sacrifice-revive`, F
+  inventory "Base-only text"). A citation mapped through B's inventory must resolve each to today's
+  heading; the plan lists the three mappings. `inventory B` can't re-check them (its base files are
+  gone).
+- **From 4.2-F's verify:** more `GAME_DESIGN §13` citations in `src/` for the script, where §13 is
+  now `OPEN_QUESTIONS.md` "Balance numbers": `app/demoFight.ts:17`; "parked balance (GAME_DESIGN
+  §13)" in `data/species/glimmerdark.ts:12`, `overgrowth.ts:16`, `rotcap-hollow.ts:13`,
+  `engine/curves.ts:3` and `state/rewards.ts:108`.
+
 ## Known from 4.2-A's review
 
 `scripts/docs-check.ts` as 4.2-A built it, for this slice's plan:
