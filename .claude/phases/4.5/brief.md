@@ -25,7 +25,7 @@ the docs win: flag the conflict, don't guess.
 | **4.5-A** | [Placeholder traits move to test fixtures](#placeholder-traits-move-to-test-fixtures), [one copy of Splashing's adjacency lookup](#one-copy-of-splashings-adjacency-lookup), retire the 3.5 demo | Byte-identical |
 | **4.5-B** | [`on-death-observed`](#on-death-observed), [`createCombat` validates its trait registry](#createcombat-validates-its-trait-registry) | Deliberate, listed |
 | **4.5-B2** | [Every pass over the living creatures goes in turn order](#every-pass-over-the-living-creatures-goes-in-turn-order) | Deliberate, listed; CI balance verdicts re-checked |
-| **4.5-C** | [A dead creature's turn is skipped entirely](#a-dead-creatures-turn-is-skipped-entirely) | Deliberate, listed; CI balance verdicts re-checked |
+| **4.5-C** | [A dead creature's turn is skipped entirely](#a-dead-creatures-turn-is-skipped-entirely), [`resolveTurn` refuses a finished fight](#resolveturn-refuses-a-finished-fight) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-D** | [HP% qualifiers](#hp-qualifiers-pick-by-hp), [Thorns](#thorns-answers-only-attacks-and-spells), [Last Stand](#last-stand-rolls-only-above-1-damage) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-E** | [Spell clean-up and Thorn Volley](#spell-clean-up-and-thorn-volley) | Deliberate content change; CI balance verdicts re-checked |
 | **4.5-F** | [Level-ups after each fight](#level-ups-after-each-fight), [the per-fight record](#the-per-fight-record) | Engine goldens and the corpus digest byte-identical; store tests change; CI balance verdicts re-checked |
@@ -177,14 +177,34 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   Every born-this-turn read (the countdown, the turn-end tick gate, the Web roll) runs after the
   acting creature's own clock bump, so fewer bumps change no born-this-turn result. The frozen
   queue keeps its dead entries; they are skipped when dequeued, not removed from the queue.
+- **One `resolveTurn` call is one turn.** A call dequeues past dead entries to the next living
+  creature and resolves its turn, crossing the round boundary (round end, the round-cap gate, the
+  next round's queue) when the dead entries end the round; or it ends the fight. A dead slot never
+  gets a call of its own, so a stepping caller (manual mode, a golden's `TURN_STEPS`) counts only
+  turns that happen.
 - A creature acts if it is alive when its slot comes up (`spec/combat.md#turn-queue`): the slice's
   tests pin a revive before the slot (it acts) and a creature dead at round start (no turn that
   round).
-- Deliberate golden change for every fight where a creature dies before its turn (the bracket
-  events, the turn clock, the Web roll's RNG draws).
-- The PR review rewrites `spec/combat.md#turn-queue`, `spec/statuses.md#self-clearing-statuses`
+- Deliberate golden change for every fight where a creature dies before its turn: the bracket
+  events, and the Web roll's RNG draws. A stepped golden's `TURN_STEPS` drops by the dead slots in
+  its window. The turn clock appears in no event.
+- The PR review rewrites `spec/combat.md#resolver-shape`, `spec/combat.md#turn-queue`,
+  `spec/combat.md#turn-structure`, `spec/statuses.md#self-clearing-statuses`
   (the 72%), `spec/statuses.md#born-this-turn` and `spec/statuses.md#turn-order`, and
   `content/overgrowth.md#web`.
+
+### `resolveTurn` refuses a finished fight
+
+- `resolveTurn` throws when the state it is given already has a result. Today it plays on: the
+  next creature's turn, round-end triggers, Web rolls and a second `FightEnded`, all after the
+  fight ended (the result itself never changes).
+- No shipped caller reaches it (`resolveFight` stops at the result), but manual mode and playback
+  step with `resolveTurn` (`spec/combat.md#resolver-shape`). A stepping caller that misses the
+  end, or a golden whose `TURN_STEPS` overshoots it, fails loudly instead of logging events after
+  the fight.
+- Byte-identical: no existing golden or test steps past the end.
+- It rides in 4.5-C, which already changes what one `resolveTurn` call does.
+- The PR review adds the rule to `spec/combat.md#resolver-shape`.
 
 ### HP% qualifiers pick by HP%
 
