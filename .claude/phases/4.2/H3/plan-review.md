@@ -173,3 +173,126 @@ change.
   before its anchor" (D1).
 - `phases/4.2/H/brief.md#decided-not-built`: the corpus item says the committed fixture is exactly
   `renderFixture`'s formatted output for its own rows (D2).
+
+## Round 2
+
+Reviewed `plan.md` Revision 1 (`753d65c`) against Round 1, `kickoff.md` and the code on `4.2-h3`. Re-measured:
+the six new or widened comment regexes (pattern 8 as D3 widens it included) have 0 hits under `src/` and the
+two configs; `TEST_BALANCE_CONFIG`, `LOCK_SPELL_FIGHTS`, `FIZZLE_ATTACK_FIXTURE` and `FIZZLE_CAST_FIXTURE` don't
+exist on the tree; no golden stem starts with any of the new family prefixes; no renamed fixture imports
+another golden fixture.
+
+### Verdict
+
+**Approved, with the plan fixes below binding at build**, as in 4.2-H1 and 4.2-H2. Revision 1 lands fixes 1–9,
+nit 10 and D1–D3. What's left is one hole in the proof that the kickoff left (D4) and small, fully specified
+gaps. None of them changes the design, so a third round would only check that they landed.
+
+### Round 1, checked
+
+- Fixes 1, 2, 4, 5, 6, 8, 9 and D1–D3 are in as asked. Fix 1's exact matching needs fix 3 below, and fix 8's
+  needs fix 6 below.
+- Fix 3 is in, and fix 4 below narrows it. **My recommendation changed:** see fix 4 for why.
+- Nit 10 is settled here, not at build: `golden-cost-and-tick-exclusion` stays. "A cost" is the spec's own term
+  (`spec/combat.md#damage-channels-and-the-additional`), so `self-damage-cost-` would say it twice.
+  `generation-floor-loadouts` is fine.
+
+### Plan fixes (binding at build)
+
+1. **`comment-proof` can't pass with two of the planned code changes.** Rule 5 fails any change that isn't a
+   listed literal, identifier or specifier. `balance-sim.test.ts:164`'s two `toContain`s add a statement, and
+   `corpus-digest.test.ts` gains an `it`.
+   - `balance-sim.test.ts:164` stays one assertion with a masked literal: `'ASSUMPTION 22'` → `'CI thresholds'`.
+     It is as strong as `main`'s (it matched either line, and so does this), and it still fails with both
+     lines reverted: the report has no other "CI thresholds" (the phrase appears in `balance-sim.ts` only in
+     comments).
+   - `corpus-digest.test.ts`: drop the `FIXTURE_HEADER` extraction. Under D2 the test compares
+     `renderFixture`'s whole output, so the constant adds a second code change and buys nothing. The file's
+     diff is the one new `it` (skipped in `corpus-update` mode) and the `readFileSync` import.
+   - The proof's expected result is then D4.
+2. **A shorthand mention the old-name grep can't find.** `data/traits/glimmerdark.test.ts:2` says
+   `(golden-h2b1-wick-*, -observed-lethal, -last-gleam)`: the two suffixes borrow the `golden-h2b1-` prefix.
+   After the renames the three have different prefixes, so it would read as `golden-wick-observed-lethal`.
+   `grep -F` for old stems doesn't see it. Write the three names out in full. It is the only shorthand of this
+   kind in `src/`; I searched.
+3. **Names derived from ids in the fixtures compare.** Three renamed fixtures build a trait's name from its id
+   (`` name: `${id} (fixture)` ``): `golden-e-grant-during-granted-action.fixture.ts:70`,
+   `golden-h2a-flat-indirect.fixture.ts:36`, `golden-h2a-indirect.fixture.ts:42`. The exported trait's `name`
+   is `'h2a-flat-20 (fixture)'` on `main` and `'<new id> (fixture)'` on the branch. Exact whole-string
+   replacement doesn't map it, so the compare fails on them. Don't fix that with substring replacement. The
+   compare script takes an explicit list of derived strings (old → new, per fixture). Each one must be used,
+   and the list is printed in `fixtures-compare.txt`. `comment-proof` is unaffected: the template holds no id.
+4. **The literal arm skips only one shape in test titles.** Round 1 said to skip titles entirely, but only the
+   third shape (`^[A-I]\d[a-z]?\d?\s`) collides with derivation labels. The two hyphen shapes (`^id-` and
+   `-id-`) don't collide, and nothing else checks a title for them: patterns 4 and 8 need a prefix or an
+   uppercase letter, so `it('h2b2-reapply-p1 ticks once')` passes every check today. Titles get the two hyphen
+   shapes and skip the third. No title hits either one today. Test rows: a title `'d7-thing ticks'` fails, and
+   `'E1 ticks first'` passes.
+5. **The literal arm reads template parts.** Arm 20 reads string and no-substitution template literals, so a
+   head like `` `h2b2-${n}` `` gets past it. `literalsOf` in `comment-proof.ts` already reads heads, middles
+   and tails, and the arm uses the same set. 0 hits today. Test row: `` `d7-${x}` `` is reported.
+6. **Export names in the fixtures compare.** Two renamed identifiers are exports
+   (`golden-b5-fizzle-rule4-retarget.fixture.ts:43`, `golden-b5-cast-fizzle.fixture.ts:65`). The comparator
+   pairs `main`'s export names through the identifier map. An export that exists on only one side fails.
+7. **The quotation window's edge.** Add a control: a quote that ends five words before an anchor is not
+   listed. Without it, a mutation that widens the before-anchor window, or skips the `QUOTE_WINDOW_WORDS`
+   check on that path, survives. Add a mutation-check row.
+8. **Text.**
+   - `b4-tick-fixture` (`engine/resolution.test.ts`, 6 uses) gets its own new id, not the one
+     `b4-golden-tick` gets. The tag table's "maps to the same new id" reads as if they share one, and rule 7
+     refuses that.
+   - A23's regex lost its backslashes: it is `\b[A-I]\d[a-z]\d?\b`.
+   - The plan says "92 ids + 3 names" in one place and "92 ids + 2 names + `random-target-b3-fixture`" in
+     another. Use one count in both places.
+
+### Assumptions
+
+- **A1–A3** confirm (Round 1).
+- **A4** correct: fixes 4 and 5.
+- **A5–A12** confirm (Round 1).
+- **A13** confirm, with fix 1: `balance-sim.test.ts:164` is one masked assertion.
+- **A14** confirm, with fix 1 (no `FIXTURE_HEADER`).
+- **A15** confirm; nit 10 is settled above.
+- **A16** confirm; fix 8 clarifies `b4-tick-fixture`.
+- **A17** correct: fixes 3 and 6.
+- **A18–A22** confirm.
+- **A23** confirm (fix 8 for its text).
+
+### Golden policy
+
+Unchanged from Round 1. It matches the kickoff.
+
+### Mechanism → test
+
+Complete once fixes 4, 5 and 7 add their rows.
+
+### Decide-points
+
+**D4 — What "`comment-proof` passes on the branch" means, now that one `src/` file has a real code change.**
+The kickoff says the proof passes on the branch. With the corpus test in `engine/corpus-digest.test.ts` it
+can't, because rule 5 fails any code change. That is the kickoff's wording (mine), not a plan error.
+- **(a) Recommended.** The expected result is exit 1 with exactly one FAIL, `engine/corpus-digest.test.ts`, and
+  every other changed file OK. `comment-proof.txt` holds the full output, and `corpus.txt` shows that file's
+  whole diff (the one `it` and its import) for the PR review to read line by line. The tool stays strict.
+- (b) An `--allow <file>` option. That puts an exemption flag in the tool whose job is to refuse unproved
+  changes, and it would be built and proved in the same PR. No.
+- (c) Move the corpus test to a later slice. The proof is clean, but a brief item gets split for a one-test
+  diff.
+
+If (a): I'll change the kickoff's **Proof** item in place to say this, so `/slice-build` doesn't stop on a
+conflict between the kickoff and the approved plan.
+
+### Decisions
+
+Duncan, 2026-10-12: **D4 (a)**, as recommended. The plan fixes stand as written.
+
+- `comment-proof` with the maps and the mask reports every changed file OK except
+  `engine/corpus-digest.test.ts`, the one real code change in `src/`. It exits 1 with that single FAIL.
+  `evidence/corpus.txt` shows that file's whole diff (the new `it` and its import) for the PR review to read.
+  No exemption option is added to the tool.
+
+### Docs edited
+
+- `phases/4.2/H3/kickoff.md`, **The PR must prove → Proof**: the expected `comment-proof` result is one FAIL,
+  `engine/corpus-digest.test.ts`, with its diff in `evidence/corpus.txt` (D4). This keeps the kickoff and the
+  approved plan in agreement for `/slice-build`.

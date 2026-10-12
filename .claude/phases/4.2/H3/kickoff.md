@@ -180,8 +180,10 @@ map, plus the one header test. Under `scripts/` it grows by the new checks' test
   configs and `scripts/` returns nothing. A planted test string in `scripts/` that uses one on
   purpose is allowed, and is listed.
 - **Proof:** the new `comment-proof` option, with `evidence/renames.json`, the identifier and id
-  maps and the mask, passes on the branch and prints every changed file → `evidence/comment-proof.txt`.
-  It fails on each of these, with exit 1 naming the file:
+  maps and the mask, prints every changed file → `evidence/comment-proof.txt`. On the branch it reports
+  every changed file OK except one, `engine/corpus-digest.test.ts`: the corpus test is the one real code
+  change in `src/`, so it exits 1 with that single FAIL, and `evidence/corpus.txt` shows that file's whole
+  diff. It fails on each of these, with exit 1 naming the file:
   - a planted code change in a renamed file;
   - an unlisted rename;
   - an unused map entry;
