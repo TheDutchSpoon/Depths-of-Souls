@@ -23,7 +23,7 @@ the docs win: flag the conflict, don't guess.
 | Slice | Contents | Golden policy |
 | --- | --- | --- |
 | **4.5-A** | [Placeholder traits move to test fixtures](#placeholder-traits-move-to-test-fixtures), [one copy of Splashing's adjacency lookup](#one-copy-of-splashings-adjacency-lookup), retire the 3.5 demo | Byte-identical |
-| **4.5-B** | [`on-death-observed`](#on-death-observed) | Deliberate, listed |
+| **4.5-B** | [`on-death-observed`](#on-death-observed), [`createCombat` validates its trait registry](#createcombat-validates-its-trait-registry) | Deliberate, listed |
 | **4.5-C** | [A dead creature's turn is skipped entirely](#a-dead-creatures-turn-is-skipped-entirely) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-D** | [HP% qualifiers](#hp-qualifiers-pick-by-hp), [Thorns](#thorns-answers-only-attacks-and-spells), [Last Stand](#last-stand-rolls-only-above-1-damage) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-E** | [Spell clean-up and Thorn Volley](#spell-clean-up-and-thorn-volley) | Deliberate content change; CI balance verdicts re-checked |
@@ -108,6 +108,19 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   death (today the dead creature's allies all fire before its enemies).
 - The PR review rewrites `spec/effects.md#hooks`, `spec/effects.md#damage-path-hook-order` and
   `spec/effects.md#action-reactions-actor-self-hooks-or-observation` to match (17 hooks become 16).
+
+### createCombat validates its trait registry
+
+- `validateTrait` moves to `engine/effect-types.ts`, beside `validateStatusDef`, and `createCombat`
+  runs it over the trait registry it is given, as it already does for statuses
+  (`spec/effects.md#validators`): a test fixture's trait is held to the same rules as a shipped
+  one. `data/traits/index.ts` keeps its load-time loop over `STOCK_TRAITS`, calling the engine
+  export; the test that validates the fixture traits stays, since some of them never reach
+  `createCombat`.
+- Byte-identical for every valid fight. A test that hands `createCombat` an invalid inline trait
+  starts throwing: a stop-and-ask, never a quiet fix.
+- It rides in 4.5-B because that slice already changes the trait validator for the new hook.
+- The PR review adds the trait rule to `spec/effects.md#validators`.
 
 ### A dead creature's turn is skipped entirely
 
@@ -272,7 +285,7 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 
 Choices this brief made that the grill didn't pin. Each slice's plan confirms or corrects its own.
 
-- [ ] **ASSUMPTION (A):** the stub that replaces the 3.5 demo is one line of text with the game's
+- [x] **ASSUMPTION (A):** the stub that replaces the 3.5 demo is one line of text with the game's
       title; no controls.
 - [ ] **ASSUMPTION (G1, G2):** player-facing strings carry no phase ids, because
       `npm run docs:check -- comments` fails a string literal holding one
