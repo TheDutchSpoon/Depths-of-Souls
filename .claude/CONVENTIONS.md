@@ -186,8 +186,6 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - Mechanism goldens stay on **stable test fixtures** (small, hand-derived, independent of content
   tuning); real content is covered by the per-biome goldens and the integration test.
 - Placeholder content does not live in production registries.
-  **Known bug:** the nine Phase-3 placeholder traits are still in game data. The fix is listed in
-  `phases/4.5/brief.md#placeholder-traits-move-to-test-fixtures`.
 
 ### Tuning never changes a mechanism golden
 
@@ -363,11 +361,11 @@ src/
 - Effect-carrier definitions (traits and spells; later gem augments and equipment infusions, all
   instances of the one effect framework, `spec/effects.md#one-effect-framework`) live in a
   **library** directory per carrier type: `data/traits/`, `data/spells/`.
-- Each is split by grouping, `core.ts` (cross-cutting) and **one file per biome**
-  (`overgrowth.ts`, …), plus `starters.ts` for the starters' and the Unicorn's signature traits (no
-  spell is starter-only, so `data/spells/` has none). Each is aggregated to its registry by an
-  `index.ts` that keeps the **stable exported names** (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the
-  spell equivalents).
+- Each is split by grouping, **one file per biome** (`overgrowth.ts`, …), plus `starters.ts` in
+  `data/traits/` for the starters' and the Unicorn's signature traits (no spell is starter-only, so
+  `data/spells/` has none) and `core.ts` in `data/spells/` for its affinity-generic spells. Each is
+  aggregated to its registry by an `index.ts` that keeps the **stable exported names**
+  (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the spell equivalents).
 - Affinity is a **field** on a spell, never the file axis; spawn pools are biome-scoped.
 - `data/statuses.ts` stays **flat**: global vocabulary, not organised by biome.
 
