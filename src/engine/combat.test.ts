@@ -188,7 +188,7 @@ describe('determinism', () => {
     // forces this turn to actually draw, so the countDraws assertion below proves the test can't
     // go vacuous.
     const randomTargetScript: Script = {
-      id: 'random-target-b3-fixture',
+      id: 'random-target-fixture',
       rules: [
         {
           condition: { kind: 'always' },

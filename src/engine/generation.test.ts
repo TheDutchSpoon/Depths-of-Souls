@@ -17,7 +17,7 @@ import {
 } from './generation'
 import { resolveCount } from './effects'
 import { DEFAULT_GEM_SLOT_COUNT } from './config'
-import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from './__fixtures__/balance'
+import { TEST_BALANCE_CONFIG as CFG } from './__fixtures__/balance'
 import {
   FIXTURE_ALL_SPELLS,
   FIXTURE_BIOME,

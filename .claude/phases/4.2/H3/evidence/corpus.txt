@@ -1,0 +1,73 @@
+# Corpus evidence
+
+## 1. The digest fixture is byte-equal to main's (origin/main = 590d82a)
+git diff --exit-code origin/main -- src/engine/__corpus__/corpus-digest.fixture.ts: exit 0 (no diff)
+blob on origin/main: 44a87ad3613e17dcfd2443233c8d2ca3ac70770f
+blob in the working tree: 44a87ad3613e17dcfd2443233c8d2ca3ac70770f
+
+## 2. No renamed id reaches the corpus
+corpus.ts and corpus-digest.fixture.ts import from __golden__ or __fixtures__:
+src/engine/__corpus__/corpus.ts:5:// This module imports `src/data`, exactly like `__golden__` fixtures do. Engine SOURCE must
+src/engine/__corpus__/corpus.ts:8:// rule. It sits outside `__golden__/` because it is a corpus builder, not a `GoldenFixture`: it
+src/engine/__corpus__/corpus.ts:44:} from '../__fixtures__/scripts'
+(none above = none)
+diff of corpus.ts against origin/main (code lines only):
+-const F3_SPELL_FIGHTS: readonly SpellFightSpec[] = [
++const LOCK_SPELL_FIGHTS: readonly SpellFightSpec[] = [
+-    ...F3_SPELL_FIGHTS.map((spec, i) => buildSpellFight(SPELL_FIGHTS.length + i, spec)),
++    ...LOCK_SPELL_FIGHTS.map((spec, i) => buildSpellFight(SPELL_FIGHTS.length + i, spec)),
+
+## 3. The header test fails on a one-character drift, and passes restored
+### 3a. one character of the committed header changed (line 1: 'GENERATED' -> 'GENERATEd')
+     × the committed fixture is exactly what renderFixture writes for its own rows 90ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |engine-data-state| src/engine/corpus-digest.test.ts > corpus digest fixture > the committed fixture is exactly what renderFixture writes for its own rows
+AssertionError: expected '// GENERATEd behaviour tripwire -- no…' to be '// GENERATED behaviour tripwire -- no…' // Object.is equality
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+### 3b. one character of the template changed (renderFixture's header: 'tripwire' -> 'tripwirE')
+     × the committed fixture is exactly what renderFixture writes for its own rows 95ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |engine-data-state| src/engine/corpus-digest.test.ts > corpus digest fixture > the committed fixture is exactly what renderFixture writes for its own rows
+AssertionError: expected '// GENERATED behaviour tripwire -- no…' to be '// GENERATED behaviour tripwirE -- no…' // Object.is equality
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+### 3c. both restored
+files restored byte-for-byte
+fixture vs origin/main: exit 0
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+
+## 4. The whole diff of engine/corpus-digest.test.ts (the one real code change in src/)
+diff --git a/src/engine/corpus-digest.test.ts b/src/engine/corpus-digest.test.ts
+index 257e436..e88c1ba 100644
+--- a/src/engine/corpus-digest.test.ts
++++ b/src/engine/corpus-digest.test.ts
+@@ -12,6 +12,7 @@ import prettier from 'prettier'
+ import { resolveFight } from './combat'
+ import { buildCorpus, createCorpusCombat } from './__corpus__/corpus'
+ import { CORPUS_DIGEST } from './__corpus__/corpus-digest.fixture'
++import committedFixture from './__corpus__/corpus-digest.fixture.ts?raw'
+ import type { CorpusFight } from './__corpus__/corpus'
+ import type { CorpusDigestEntry } from './__corpus__/corpus-digest.fixture'
+ 
+@@ -114,3 +115,19 @@ describe('corpus digest (behaviour tripwire)', () => {
+     expect(actual.length).toBe(CORPUS_DIGEST.length)
+   }, 60_000) // ~4.1s measured vs. Vitest's 5s default -- explicit headroom, not a tuned budget.
+ })
++
++describe('corpus digest fixture', () => {
++  // The header, the interface, the row layout and the formatting are all `renderFixture`'s, so a
++  // hand edit of any of them, or a template change nobody regenerated from, fails here.
++  it.skipIf(import.meta.env.MODE === 'corpus-update')(
++    'the committed fixture is exactly what renderFixture writes for its own rows',
++    async () => {
++      const config = await prettier.resolveConfig(FIXTURE_PATH)
++      const formatted = await prettier.format(renderFixture(CORPUS_DIGEST), {
++        ...config,
++        filepath: FIXTURE_PATH,
++      })
++      expect(committedFixture).toBe(formatted)
++    },
++  )
++})

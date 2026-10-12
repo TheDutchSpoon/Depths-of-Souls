@@ -6,10 +6,12 @@
 //                             with files, checks exactly those by the living-doc rules
 //   budgets                   reported in CI, never fails: each budgeted doc's size against
 //                             `.claude/workflow/budgets.md`
-//   comments                  fails on a comment or test title that records history (not in CI yet);
+//   comments                  blocking in CI: fails on a comment or test title that records history,
+//                             or a slice or phase id in a `src/` file name, identifier or string;
 //                             `--counts` and `--quotations` only report
 //   comment-proof <base>      by hand: fails unless the working tree differs from <base> only in
-//                             comments, apart from the literals a `--mask <file>` lists
+//                             comments, apart from the literals a `--mask <file>` lists and the
+//                             renames a `--renames <file>` lists
 //   inventory-skeleton        write the inventory of a living-doc condense (the units of the files
 //                             as committed at a base revision)
 //   inventory                 check that inventory against the units at the base it records
@@ -19,7 +21,8 @@
 // revision.
 //
 // The logic is in `scripts/docs-check/`: `anchors` (GitHub's heading slugs), `citations`, `comments`
-// and `scanner` (the comment scanner it and `comment-proof` share), `comment-proof`, `budgets`,
+// and `scanner` (the comment scanner it and `comment-proof` share), `names` (the name guard),
+// `tokens` (identifiers and literals), `comment-proof`, `renames` (its rename map), `budgets`,
 // `inventory`, `git` and `text` (shared helpers), `usage` (the usage error) and `cli` (argument
 // handling). This file only wires them to the process.
 

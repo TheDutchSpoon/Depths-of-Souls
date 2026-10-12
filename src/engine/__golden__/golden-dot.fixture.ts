@@ -30,7 +30,7 @@
 //     R3 TARGET turn end: tick 3 -> 0, TARGET dies. A side is wiped, so the turn ends at once:
 //     TurnEnded, then FightEnded win. The countdown never runs (a corpse's statuses are inert), so
 //     there is NO StatusExpired -- the expiry-on-the-killing-tick coverage is
-//     golden-f2-dot-one-turn's.
+//     golden-status-timing-dot-one-turn's.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'

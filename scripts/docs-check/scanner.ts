@@ -153,7 +153,7 @@ function calleeShape(expression: ts.Expression): string {
 }
 
 /** A call is a title call when its callee's root is `describe|it|test|suite` and it is not the inner call of a curried one such as `it.each(t)`. */
-function isTitleCall(node: ts.CallExpression): boolean {
+export function isTitleCall(node: ts.CallExpression): boolean {
   if (calleeRoot(node.expression) === undefined) return false
   if (!TITLE_ROOTS.has(calleeRoot(node.expression) ?? '')) return false
   const parent = node.parent

@@ -1,0 +1,64 @@
+# Counts
+
+## comments --counts on main (origin/main 590d82a), with the new tool
+totals: 403 files, 7003 comment ranges, 1627 titles (1598 plain, 19 each, 2 skipIf/runIf, 8 template)
+pattern  comments  titles  files  what
+      1         0       0      0  ASSUMPTION marker
+      2         0       0      0  phase number
+      3         0       0      0  phase id
+      4         0       0      0  slice id
+      5         0       0      0  slice name
+      6         0       0      0  PR number
+      7         0       0      0  review round
+      8         0       0      0  plan item id
+      9         0       0      0  plan item range or rule
+     10         0       0      0  workflow word
+     11         0       0      0  locked as a decision
+     12         0       0      0  decided at a point in history
+     13         0       0      0  section sign
+     14         0       0      0  brief
+     15         0       0      0  the plan
+     16         0       0      0  plan review
+     17         0       0      0  sign-off
+     18  file names: 127 hits in 127 files
+     19  identifiers: 25 hits in 12 files
+     20  string literals: 111 hits in 47 files
+
+## comments --counts on the branch
+totals: 403 files, 7008 comment ranges, 1629 titles (1599 plain, 19 each, 3 skipIf/runIf, 8 template)
+pattern  comments  titles  files  what
+      1         0       0      0  ASSUMPTION marker
+      2         0       0      0  phase number
+      3         0       0      0  phase id
+      4         0       0      0  slice id
+      5         0       0      0  slice name
+      6         0       0      0  PR number
+      7         0       0      0  review round
+      8         0       0      0  plan item id
+      9         0       0      0  plan item range or rule
+     10         0       0      0  workflow word
+     11         0       0      0  locked as a decision
+     12         0       0      0  decided at a point in history
+     13         0       0      0  section sign
+     14         0       0      0  brief
+     15         0       0      0  the plan
+     16         0       0      0  plan review
+     17         0       0      0  sign-off
+     18  file names: 0 hits in 0 files
+     19  identifiers: 0 hits in 0 files
+     20  string literals: 0 hits in 0 files
+
+## comments on the branch
+comments: PASS, 7008 comments and 1629 titles in 403 files
+
+## The name guard's false positives on the renamed tree
+The guard fires 0 times on the branch (comments passes above; the three name rows read 0 hits).
+
+## comments --quotations on the branch (the after-list)
+src/engine/__corpus__/node-shims.d.ts:3: CONVENTIONS.md#test-environments "vite/client"
+quotations: 1 comments and 0 titles
+The one hit is a false positive: node-shims.d.ts:3 quotes "vite/client", a JSON value inside a code span, just before CONVENTIONS.md#test-environments. Its lines:
+// Minimal ambient shims for the three Node built-ins `corpus-digest.test.ts`
+// needs to write its own generated fixture. `tsconfig.app.json`'s `types` array is deliberately
+// `["vite/client"]` only (`CONVENTIONS.md#test-environments`: engine tests run in Node, but `src/`
+// as a whole must not gain Node-only globals that would leak into UI/browser code) -- `@types/node`

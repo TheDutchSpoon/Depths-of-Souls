@@ -9,7 +9,7 @@ import { UsageError } from './usage.ts'
 export const USAGE = `usage: npm run docs:check -- <mode> [--root <dir>]
   citations [<file>...]                              fail on a citation that is not a resolving <path>.md#<anchor> (all files, or the named ones)
   comments [--counts | --quotations]                 fail on a comment or test title that records history; or report pattern counts / quotations
-  comment-proof <base> [--mask <file>]               fail unless the working tree differs from <base> only in comments (and the masked literals)
+  comment-proof <base> [--mask <file>] [--renames <file>]  fail unless the working tree differs from <base> only in comments (and the masked literals, and the listed renames)
   budgets                                            print each budgeted doc's size against workflow/budgets.md
   inventory-skeleton <mailbox> <file>... [--base <rev>]  write <mailbox>/inventory.md for living docs under .claude/
   inventory <mailbox>                                check <mailbox>/inventory.md`
@@ -48,6 +48,7 @@ export function main(argv: string[], defaultRoot: string, io: Io): number {
     const root = resolve(takeOption(args, '--root') ?? defaultRoot)
     const base = takeOption(args, '--base')
     const mask = takeOption(args, '--mask')
+    const renames = takeOption(args, '--renames')
     const counts = takeFlag(args, '--counts')
     const quotations = takeFlag(args, '--quotations')
     const [mode, ...rest] = args
@@ -57,6 +58,8 @@ export function main(argv: string[], defaultRoot: string, io: Io): number {
       throw new UsageError('--base belongs to inventory-skeleton')
     if (mask !== undefined && mode !== 'comment-proof')
       throw new UsageError('--mask belongs to comment-proof')
+    if (renames !== undefined && mode !== 'comment-proof')
+      throw new UsageError('--renames belongs to comment-proof')
     if ((counts || quotations) && mode !== 'comments')
       throw new UsageError('--counts and --quotations belong to comments')
     if (counts && quotations)
@@ -70,7 +73,7 @@ export function main(argv: string[], defaultRoot: string, io: Io): number {
       case 'comment-proof':
         if (rest.length !== 1)
           throw new UsageError('comment-proof needs one base revision')
-        return runCommentProof(root, rest[0], mask, io.log)
+        return runCommentProof(root, rest[0], mask, io.log, renames)
       case 'budgets':
         if (rest.length > 0) throw new UsageError('budgets takes no arguments')
         return runBudgets(root, io.log)

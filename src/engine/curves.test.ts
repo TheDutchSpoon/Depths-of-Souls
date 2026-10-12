@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
-import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from './__fixtures__/balance'
+import { TEST_BALANCE_CONFIG as CFG } from './__fixtures__/balance'
 import { bossLevel, enemyLevelRange, enemyPartySize, fightCount } from './curves'
 
 describe('enemyLevelRange (placeholder config)', () => {

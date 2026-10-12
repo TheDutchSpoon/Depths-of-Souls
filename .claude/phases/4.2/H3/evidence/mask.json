@@ -1,0 +1,37 @@
+[
+  {
+    "file": "src/state/rewards.ts",
+    "old": "staticCreatureIdFor: fused instances are not materializable before Phase 8",
+    "new": "staticCreatureIdFor: a fused instance has no static creature id"
+  },
+  {
+    "file": "src/state/rewards.test.ts",
+    "old": "/not materializable before Phase 8/",
+    "new": "/a fused instance has no static creature id/"
+  },
+  {
+    "file": "src/state/balance-sim.ts",
+    "old": "T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below ",
+    "new": "T4 walls' size: most failed pushes on one floor below "
+  },
+  {
+    "file": "src/state/balance-sim.ts",
+    "old": "ASSUMPTION 22: floor-1 clear >= ",
+    "new": "CI thresholds: floor-1 clear >= "
+  },
+  {
+    "file": "src/state/balance-sim.ts",
+    "old": "ASSUMPTION 22 summary (reported, not asserted):",
+    "new": "CI thresholds summary (reported, not asserted):"
+  },
+  {
+    "file": "src/state/balance-sim.test.ts",
+    "old": "ASSUMPTION 22",
+    "new": "CI thresholds"
+  },
+  {
+    "file": "src/engine/corpus-coverage.test.ts",
+    "old": "applied only by the Phase-3 mechanism trait 'reeling' (data/traits/core.ts), which is in the ",
+    "new": "applied only by the placeholder trait 'reeling' (data/traits/core.ts), which is in the "
+  }
+]

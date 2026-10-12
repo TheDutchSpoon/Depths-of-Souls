@@ -2132,7 +2132,7 @@ describe('on-action-observed end-to-end', () => {
     // `perform-action` is a response that queues a real action, so a chain through
     // on-action-observed can now be built from responses alone. Its depth coverage is in the
     // "echo = perform-action(triggering-source)" describe block below and in
-    // golden-e-echo-chain-truncated. This fixture's plain apply-stat-modifier response still can't
+    // golden-echo-chain-truncated. This fixture's plain apply-stat-modifier response still can't
     // chain, which is why the test white-boxes the cascade at the cap. This is the same
     // white-box technique the 'loop safety' describe block above uses for on-damage-taken: fire
     // the hook with a cascade already AT the cap, proving the guard is wired for this hook too,
@@ -2434,7 +2434,7 @@ describe('apply-stat-modifier magnitudeSource (Swarmhive Striker-shaped: freeze-
 
 describe('exact-instance rule', () => {
   const TICK_STATUS: StatusDef = {
-    statusId: 'b4-tick-fixture',
+    statusId: 'exact-instance-tick-fixture',
     effects: [
       {
         category: 'triggered',
@@ -2453,7 +2453,7 @@ describe('exact-instance rule', () => {
 
   it('cleanse-then-tick: an earlier candidate in the SAME hook pass removes a status whose trigger would fire later in that pass -- the later trigger does not fire at all (not even TriggerFired)', () => {
     const CLEANSER_TRAIT: Trait = {
-      id: 'b4-cleanser-fixture',
+      id: 'exact-instance-cleanser-fixture',
       name: 'Cleanser (fixture)',
       effects: [
         {
@@ -2462,7 +2462,7 @@ describe('exact-instance rule', () => {
           response: {
             kind: 'remove-status',
             target: { kind: 'self' },
-            filter: { statusId: 'b4-tick-fixture' },
+            filter: { statusId: 'exact-instance-tick-fixture' },
           },
         },
       ],
@@ -2494,7 +2494,7 @@ describe('exact-instance rule', () => {
     const withStatus = applyStatus(
       createCreatureId('bearer'),
       createCreatureId('bearer'),
-      { statusId: 'b4-tick-fixture', duration: 3 },
+      { statusId: 'exact-instance-tick-fixture', duration: 3 },
       created,
       createResolutionContext([], newCascade()),
     )
@@ -2514,7 +2514,7 @@ describe('exact-instance rule', () => {
 
   it("remove-then-reapply: a status removed and reapplied inside one cascade -- the old instance's pending trigger does not fire; the new instance follows normal rules", () => {
     const REAPPLY_TRAIT: Trait = {
-      id: 'b4-reapply-fixture',
+      id: 'exact-instance-reapply-fixture',
       name: 'Reapply (fixture)',
       effects: [
         {
@@ -2523,7 +2523,7 @@ describe('exact-instance rule', () => {
           response: {
             kind: 'remove-status',
             target: { kind: 'self' },
-            filter: { statusId: 'b4-tick-fixture' },
+            filter: { statusId: 'exact-instance-tick-fixture' },
           },
         },
         {
@@ -2532,7 +2532,7 @@ describe('exact-instance rule', () => {
           response: {
             kind: 'apply-status',
             target: { kind: 'self' },
-            status: { statusId: 'b4-tick-fixture', duration: 3 },
+            status: { statusId: 'exact-instance-tick-fixture', duration: 3 },
           },
         },
       ],
@@ -2560,7 +2560,7 @@ describe('exact-instance rule', () => {
     const withStatus = applyStatus(
       createCreatureId('bearer'),
       createCreatureId('bearer'),
-      { statusId: 'b4-tick-fixture', duration: 3 },
+      { statusId: 'exact-instance-tick-fixture', duration: 3 },
       created,
       createResolutionContext([], newCascade()),
     )

@@ -1,0 +1,1468 @@
+{
+  "files": [
+    {
+      "old": "src/engine/__golden__/golden-b1-fallback-lowest-hp.fixture.ts",
+      "new": "src/engine/__golden__/golden-fallback-attacks-lowest-hp.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the script-less fallback attacks the lowest-HP enemy"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b1-fallback-lowest-hp.test.ts",
+      "new": "src/engine/__golden__/golden-fallback-attacks-lowest-hp.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the script-less fallback attacks the lowest-HP enemy"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b1-granted-cast-default.fixture.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-default-lowest-hp.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a granted cast defaults to the lowest-HP enemy"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b1-granted-cast-default.test.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-default-lowest-hp.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a granted cast defaults to the lowest-HP enemy"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b1-support-heals-own-side.fixture.ts",
+      "new": "src/engine/__golden__/golden-support-heals-own-lowest-hp-ally.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: an enemy support caster under always-cast heals its own lowest-HP ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b1-support-heals-own-side.test.ts",
+      "new": "src/engine/__golden__/golden-support-heals-own-lowest-hp-ally.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: an enemy support caster under always-cast heals its own lowest-HP ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b2-confused-granted-cast-redirects.fixture.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-confused-redirects.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a confused caster's granted cast can redirect onto an ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b2-confused-granted-cast-redirects.test.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-confused-redirects.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a confused caster's granted cast can redirect onto an ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b2-provoke-redirects-echo.fixture.ts",
+      "new": "src/engine/__golden__/golden-echo-provoke-redirects.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a Provoke redirects an echo, once, onto the provoker"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b2-provoke-redirects-echo.test.ts",
+      "new": "src/engine/__golden__/golden-echo-provoke-redirects.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a Provoke redirects an echo, once, onto the provoker"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b2-silenced-refuses-granted-cast.fixture.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-refused-by-fixture-lock.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a trait-borne fixture lock refuses a granted cast and draws nothing"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b2-silenced-refuses-granted-cast.test.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-refused-by-fixture-lock.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a trait-borne fixture lock refuses a granted cast and draws nothing"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-silenced-refuses-granted-cast.fixture.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-refused-by-silenced-status.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the real Silenced status from the real Silence spell refuses a granted cast (the real-status mirror of the fixture-lock golden)"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-silenced-refuses-granted-cast.test.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-refused-by-silenced-status.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the real Silenced status from the real Silence spell refuses a granted cast (the real-status mirror of the fixture-lock golden)"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b2-skipped-turn-refuses-granted-cast.fixture.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-refused-on-skipped-turn.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a skipped turn refuses the granted cast, after rolling"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b2-skipped-turn-refuses-granted-cast.test.ts",
+      "new": "src/engine/__golden__/golden-granted-cast-refused-on-skipped-turn.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a skipped turn refuses the granted cast, after rolling"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b4-cleanse-then-tick.fixture.ts",
+      "new": "src/engine/__golden__/golden-exact-instance-cleanse-then-tick.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: exact-instance rule: cleanse, then tick"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b4-cleanse-then-tick.test.ts",
+      "new": "src/engine/__golden__/golden-exact-instance-cleanse-then-tick.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: exact-instance rule: cleanse, then tick"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b4-remove-then-reapply.fixture.ts",
+      "new": "src/engine/__golden__/golden-exact-instance-remove-then-reapply.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: exact-instance rule: remove, then reapply"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b4-remove-then-reapply.test.ts",
+      "new": "src/engine/__golden__/golden-exact-instance-remove-then-reapply.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: exact-instance rule: remove, then reapply"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b5-cast-fizzle.fixture.ts",
+      "new": "src/engine/__golden__/golden-fizzle-retarget-cast.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: pre-hit-hook fizzle on the Cast path, then the rule-4 re-target"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b5-cast-fizzle.test.ts",
+      "new": "src/engine/__golden__/golden-fizzle-retarget-cast.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: pre-hit-hook fizzle on the Cast path, then the rule-4 re-target"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b5-fizzle-rule4-retarget.fixture.ts",
+      "new": "src/engine/__golden__/golden-fizzle-retarget-attack.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: pre-hit-hook fizzle on the Attack path, then the rule-4 re-target"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b5-fizzle-rule4-retarget.test.ts",
+      "new": "src/engine/__golden__/golden-fizzle-retarget-attack.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: pre-hit-hook fizzle on the Attack path, then the rule-4 re-target"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b6-provoke-stun-cleanup.fixture.ts",
+      "new": "src/engine/__golden__/golden-provoke-stun-cleanup.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a provoker Stunned before its next turn stops provoking at that turn start"
+    },
+    {
+      "old": "src/engine/__golden__/golden-b6-provoke-stun-cleanup.test.ts",
+      "new": "src/engine/__golden__/golden-provoke-stun-cleanup.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a provoker Stunned before its next turn stops provoking at that turn start"
+    },
+    {
+      "old": "src/engine/__golden__/golden-d3-revive-cap-exclusion.fixture.ts",
+      "new": "src/engine/__golden__/golden-revive-cap-exclusion.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: revive cap: a capped dead ally is excluded from the pool"
+    },
+    {
+      "old": "src/engine/__golden__/golden-d3-revive-cap-exclusion.test.ts",
+      "new": "src/engine/__golden__/golden-revive-cap-exclusion.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: revive cap: a capped dead ally is excluded from the pool"
+    },
+    {
+      "old": "src/engine/__golden__/golden-d3-revive-cap-fizzle.fixture.ts",
+      "new": "src/engine/__golden__/golden-revive-cap-fizzle.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: revive cap: the 11th attempt fizzles and draws nothing"
+    },
+    {
+      "old": "src/engine/__golden__/golden-d3-revive-cap-fizzle.test.ts",
+      "new": "src/engine/__golden__/golden-revive-cap-fizzle.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: revive cap: the 11th attempt fizzles and draws nothing"
+    },
+    {
+      "old": "src/engine/__golden__/golden-e-echo-chain-truncated.fixture.ts",
+      "new": "src/engine/__golden__/golden-echo-chain-truncated.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: an echo chain through the same Overtone, truncated at the real cap"
+    },
+    {
+      "old": "src/engine/__golden__/golden-e-echo-chain-truncated.test.ts",
+      "new": "src/engine/__golden__/golden-echo-chain-truncated.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: an echo chain through the same Overtone, truncated at the real cap"
+    },
+    {
+      "old": "src/engine/__golden__/golden-e-grant-actor-dies-first.fixture.ts",
+      "new": "src/engine/__golden__/golden-grant-actor-dies-first.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a queued grant whose actor died first emits nothing"
+    },
+    {
+      "old": "src/engine/__golden__/golden-e-grant-actor-dies-first.test.ts",
+      "new": "src/engine/__golden__/golden-grant-actor-dies-first.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a queued grant whose actor died first emits nothing"
+    },
+    {
+      "old": "src/engine/__golden__/golden-e-grant-during-granted-action.fixture.ts",
+      "new": "src/engine/__golden__/golden-grant-during-granted-action.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a grant raised during a granted action queues FIFO"
+    },
+    {
+      "old": "src/engine/__golden__/golden-e-grant-during-granted-action.test.ts",
+      "new": "src/engine/__golden__/golden-grant-during-granted-action.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a grant raised during a granted action queues FIFO"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-dot-one-turn.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-timing-dot-one-turn.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a 1-turn DoT ticks once; a self-applied one is born and ticks next turn"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-dot-one-turn.test.ts",
+      "new": "src/engine/__golden__/golden-status-timing-dot-one-turn.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a 1-turn DoT ticks once; a self-applied one is born and ticks next turn"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-stun-one-turn.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-timing-stun-one-turn.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: Stun 1 skips exactly one turn, applied before or after the applier in the queue"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-stun-one-turn.test.ts",
+      "new": "src/engine/__golden__/golden-status-timing-stun-one-turn.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: Stun 1 skips exactly one turn, applied before or after the applier in the queue"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-turn-end-interaction.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-timing-turn-end-interaction.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a tick-kill spreads on-death, the spread follows the born rule, a tick-kill wins the fight"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-turn-end-interaction.test.ts",
+      "new": "src/engine/__golden__/golden-status-timing-turn-end-interaction.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a tick-kill spreads on-death, the spread follows the born rule, a tick-kill wins the fight"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-turnstart-self-stun-once.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-timing-turnstart-self-stun-once.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a Stun 1 gained in the own turn-start hooks skips exactly one turn"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-turnstart-self-stun-once.test.ts",
+      "new": "src/engine/__golden__/golden-status-timing-turnstart-self-stun-once.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a Stun 1 gained in the own turn-start hooks skips exactly one turn"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-weaken-three-turns.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-timing-weaken-three-turns.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a 3-turn Weaken covers the next three bearer turns"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-weaken-three-turns.test.ts",
+      "new": "src/engine/__golden__/golden-status-timing-weaken-three-turns.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a 3-turn Weaken covers the next three bearer turns"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-web-turn-end-roll.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-timing-web-turn-end-roll.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the Web roll is in turn-end cleanup and skips a Web applied this turn"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-web-turn-end-roll.test.ts",
+      "new": "src/engine/__golden__/golden-status-timing-web-turn-end-roll.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the Web roll is in turn-end cleanup and skips a Web applied this turn"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-win-over-own-tick.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-timing-win-over-own-tick.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the last survivor empties the enemy side and wins over its own tick"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f2-win-over-own-tick.test.ts",
+      "new": "src/engine/__golden__/golden-status-timing-win-over-own-tick.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the last survivor empties the enemy side and wins over its own tick"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-fight-start-wipe.fixture.ts",
+      "new": "src/engine/__golden__/golden-fight-start-wipe.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a fight-start wipe ends the fight before RoundStarted"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-fight-start-wipe.test.ts",
+      "new": "src/engine/__golden__/golden-fight-start-wipe.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a fight-start wipe ends the fight before RoundStarted"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-immunity.fixture.ts",
+      "new": "src/engine/__golden__/golden-lock-immunity.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: Clear Mind and Aggressive let the locked action through while the status lands"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-immunity.test.ts",
+      "new": "src/engine/__golden__/golden-lock-immunity.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: Clear Mind and Aggressive let the locked action through while the status lands"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-pacify-three-turns.fixture.ts",
+      "new": "src/engine/__golden__/golden-pacify-three-turns.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: Pacify locks its target's Attack for its next three own turns"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-pacify-three-turns.test.ts",
+      "new": "src/engine/__golden__/golden-pacify-three-turns.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: Pacify locks its target's Attack for its next three own turns"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-silence-three-turns.fixture.ts",
+      "new": "src/engine/__golden__/golden-silence-three-turns.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: Silence locks its target's Cast for its next three own turns"
+    },
+    {
+      "old": "src/engine/__golden__/golden-f3-silence-three-turns.test.ts",
+      "new": "src/engine/__golden__/golden-silence-three-turns.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: Silence locks its target's Cast for its next three own turns"
+    },
+    {
+      "old": "src/engine/__golden__/golden-g1-leech-sovereign-pacified.fixture.ts",
+      "new": "src/engine/__golden__/golden-leech-sovereign-pacified.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a Pacified Leech Sovereign casts instead of waiting (real content)"
+    },
+    {
+      "old": "src/engine/__golden__/golden-g1-leech-sovereign-pacified.test.ts",
+      "new": "src/engine/__golden__/golden-leech-sovereign-pacified.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a Pacified Leech Sovereign casts instead of waiting (real content)"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-granted.fixture.ts",
+      "new": "src/engine/__golden__/golden-additional-granted.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a granted Attack stays direct and gets the Additional"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-granted.test.ts",
+      "new": "src/engine/__golden__/golden-additional-granted.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a granted Attack stays direct and gets the Additional"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-hp-bound.fixture.ts",
+      "new": "src/engine/__golden__/golden-additional-hp-bound.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the Additional is bounded by 20% of the target's max Health"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-hp-bound.test.ts",
+      "new": "src/engine/__golden__/golden-additional-hp-bound.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the Additional is bounded by 20% of the target's max Health"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-levels.fixture.ts",
+      "new": "src/engine/__golden__/golden-additional-levels.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the Additional at attacker levels 1, 8 and 11"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-levels.test.ts",
+      "new": "src/engine/__golden__/golden-additional-levels.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the Additional at attacker levels 1, 8 and 11"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-second-instance.fixture.ts",
+      "new": "src/engine/__golden__/golden-additional-second-instance.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the Additional lands on the second attack instance too"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-second-instance.test.ts",
+      "new": "src/engine/__golden__/golden-additional-second-instance.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the Additional lands on the second attack instance too"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-spell.fixture.ts",
+      "new": "src/engine/__golden__/golden-additional-spell.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the Additional lands on every direct hit of a spell"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-spell.test.ts",
+      "new": "src/engine/__golden__/golden-additional-spell.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the Additional lands on every direct hit of a spell"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-splashing.fixture.ts",
+      "new": "src/engine/__golden__/golden-additional-splashing.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the Additional lands on every Splashing hit"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-additional-splashing.test.ts",
+      "new": "src/engine/__golden__/golden-additional-splashing.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the Additional lands on every Splashing hit"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-cost.fixture.ts",
+      "new": "src/engine/__golden__/golden-cost-and-tick-exclusion.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the cost rule and the DoT-tick exclusion"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-cost.test.ts",
+      "new": "src/engine/__golden__/golden-cost-and-tick-exclusion.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the cost rule and the DoT-tick exclusion"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-flat-indirect.fixture.ts",
+      "new": "src/engine/__golden__/golden-indirect-flat-response.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: flat-mode response damage on another creature is indirect"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-flat-indirect.test.ts",
+      "new": "src/engine/__golden__/golden-indirect-flat-response.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: flat-mode response damage on another creature is indirect"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-indirect-keeps.fixture.ts",
+      "new": "src/engine/__golden__/golden-indirect-keeps-terms.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: indirect damage keeps affinity, dealt, conditional, taken and penetration terms, and gets no Additional"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-indirect-keeps.test.ts",
+      "new": "src/engine/__golden__/golden-indirect-keeps-terms.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: indirect damage keeps affinity, dealt, conditional, taken and penetration terms, and gets no Additional"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-indirect.fixture.ts",
+      "new": "src/engine/__golden__/golden-indirect-trait-response.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a trait response is indirect damage: a fifth of Defence, Defend, no cross-stat"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-indirect.test.ts",
+      "new": "src/engine/__golden__/golden-indirect-trait-response.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a trait response is indirect damage: a fifth of Defence, Defend, no cross-stat"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-spell-on-caster.fixture.ts",
+      "new": "src/engine/__golden__/golden-spell-on-caster-direct.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a spell effect on its own caster is direct damage"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2a-spell-on-caster.test.ts",
+      "new": "src/engine/__golden__/golden-spell-on-caster-direct.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a spell effect on its own caster is direct damage"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-last-gleam.fixture.ts",
+      "new": "src/engine/__golden__/golden-last-gleam.fixture.ts",
+      "imports": 1,
+      "pins": "fixture of the golden that pins: an ally dying gives every living ally +20% Attack; the Last Gleam dying does not trigger itself"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-last-gleam.test.ts",
+      "new": "src/engine/__golden__/golden-last-gleam.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: an ally dying gives every living ally +20% Attack; the Last Gleam dying does not trigger itself"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-observed-cost.fixture.ts",
+      "new": "src/engine/__golden__/golden-damage-observed-cost.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: damage observation of a cost"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-observed-cost.test.ts",
+      "new": "src/engine/__golden__/golden-damage-observed-cost.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: damage observation of a cost"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-observed-lethal.fixture.ts",
+      "new": "src/engine/__golden__/golden-damage-observed-lethal.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a lethal burn: the Flare reacts before CreatureDied, the Last Gleam after it"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-observed-lethal.test.ts",
+      "new": "src/engine/__golden__/golden-damage-observed-lethal.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a lethal burn: the Flare reacts before CreatureDied, the Last Gleam after it"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-observed-silent.fixture.ts",
+      "new": "src/engine/__golden__/golden-damage-observed-silent.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: what damage observation must not see"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-observed-silent.test.ts",
+      "new": "src/engine/__golden__/golden-damage-observed-silent.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: what damage observation must not see"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-observed-tick.fixture.ts",
+      "new": "src/engine/__golden__/golden-damage-observed-tick.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a DoT tick is not a cost"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-observed-tick.test.ts",
+      "new": "src/engine/__golden__/golden-damage-observed-tick.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a DoT tick is not a cost"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-wick-burn-heal.fixture.ts",
+      "new": "src/engine/__golden__/golden-wick-burn-heal.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the Wick burns, the Flare reacts, the heal lands on the lowest-HP hurt ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-wick-burn-heal.test.ts",
+      "new": "src/engine/__golden__/golden-wick-burn-heal.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the Wick burns, the Flare reacts, the heal lands on the lowest-HP hurt ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-wick-gates.fixture.ts",
+      "new": "src/engine/__golden__/golden-wick-gates.fixture.ts",
+      "imports": 1,
+      "pins": "fixture of the golden that pins: the Wick gate: no burn and no heal without another hurt ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-wick-gates.test.ts",
+      "new": "src/engine/__golden__/golden-wick-gates.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the Wick gate: no burn and no heal without another hurt ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-wick-skips-self.fixture.ts",
+      "new": "src/engine/__golden__/golden-wick-skips-self.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the heal skips the Wick itself even when it is the most hurt ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b1-wick-skips-self.test.ts",
+      "new": "src/engine/__golden__/golden-wick-skips-self.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the heal skips the Wick itself even when it is the most hurt ally"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-carrier-fresh.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-carrier-fresh.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a carrier applying the same status snapshots fresh from itself"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-carrier-fresh.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-carrier-fresh.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a carrier applying the same status snapshots fresh from itself"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-reapply.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-reapply.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a status re-applied keeps one instance and replaces its snapshot only when strictly stronger"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-reapply.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-reapply.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a status re-applied keeps one instance and replaces its snapshot only when strictly stronger"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-regen-potency.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-regen-potency.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: Regen heals the frozen potency of its healer"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-regen-potency.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-regen-potency.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: Regen heals the frozen potency of its healer"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-spore-spread.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-spore-spread.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: Spore spreads with the dying bearer's whole snapshot"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-spore-spread.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-spore-spread.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: Spore spreads with the dying bearer's whole snapshot"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-dead-applier.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-dead-applier.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a tick whose applier died keeps its frozen amount and is sourced from the bearer"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-dead-applier.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-dead-applier.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a tick whose applier died keeps its frozen amount and is sourced from the bearer"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-kill-on-death.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-kill-on-death.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a tick that kills its bearer offers no triggering-source on death"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-kill-on-death.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-kill-on-death.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a tick that kills its bearer offers no triggering-source on death"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-living-applier.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-living-applier.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a status tick is indirect damage from the applier snapshot, credited to the living applier"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-living-applier.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-living-applier.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a status tick is indirect damage from the applier snapshot, credited to the living applier"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-no-retaliation.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-no-retaliation.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a tick from a living applier offers no triggering-source: no retaliator answers"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-no-retaliation.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-no-retaliation.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a tick from a living applier offers no triggering-source: no retaliator answers"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-self-applied.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-self-applied.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a self-applied tick makes its bearer the dealer, and is never self-inflicted"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-self-applied.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-self-applied.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a self-applied tick makes its bearer the dealer, and is never self-inflicted"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-taken-factors.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-taken-factors.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: a tick passes through the bearer's taken factors, Defend's then Vulnerability's"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-tick-taken-factors.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-tick-taken-factors.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: a tick passes through the bearer's taken factors, Defend's then Vulnerability's"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-vulnerability-once.fixture.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-vulnerability-once.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: Vulnerability x1.5 once, even when applied twice"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2b2-vulnerability-once.test.ts",
+      "new": "src/engine/__golden__/golden-status-snapshot-vulnerability-once.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: Vulnerability x1.5 once, even when applied twice"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2c-snapback.fixture.ts",
+      "new": "src/engine/__golden__/golden-snapjaw-snapback.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the real Snapjaw Jaws counterattacks at 60% of its Attack, as indirect damage"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2c-snapback.test.ts",
+      "new": "src/engine/__golden__/golden-snapjaw-snapback.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the real Snapjaw Jaws counterattacks at 60% of its Attack, as indirect damage"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2d-dot-ticks.fixture.ts",
+      "new": "src/engine/__golden__/golden-poison-burn-spore-ticks.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: one tick each of the real Poison, Burn and Spore"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2d-dot-ticks.test.ts",
+      "new": "src/engine/__golden__/golden-poison-burn-spore-ticks.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: one tick each of the real Poison, Burn and Spore"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2d-pollen-cloud.fixture.ts",
+      "new": "src/engine/__golden__/golden-pollen-cloud-sleep.fixture.ts",
+      "imports": 2,
+      "pins": "fixture of the golden that pins: the real Pollen Cloud puts Sleep on every enemy and deals no damage"
+    },
+    {
+      "old": "src/engine/__golden__/golden-h2d-pollen-cloud.test.ts",
+      "new": "src/engine/__golden__/golden-pollen-cloud-sleep.test.ts",
+      "imports": 0,
+      "pins": "golden that pins: the real Pollen Cloud puts Sleep on every enemy and deals no damage"
+    },
+    {
+      "old": "src/engine/generation-g1.test.ts",
+      "new": "src/engine/generation-floor-loadouts.test.ts",
+      "imports": 0,
+      "pins": "floor loadouts: distinct gem sets, cast-role and boss fill"
+    }
+  ],
+  "identifiers": [
+    {
+      "file": "src/data/biomes.test.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/engine/__fixtures__/balance.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/engine/curves.test.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/engine/generation-floor-loadouts.test.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/engine/generation.test.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/engine/leveling.test.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "count": 3,
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/state/integration.test.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/state/rewards.test.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/state/store.test.ts",
+      "old": "PHASE_4_PLACEHOLDER_BALANCE_CONFIG",
+      "new": "TEST_BALANCE_CONFIG",
+      "pins": "the balance config the tests run on"
+    },
+    {
+      "file": "src/engine/__golden__/golden-fizzle-retarget-attack.fixture.ts",
+      "old": "B5_FIXTURE",
+      "new": "FIZZLE_ATTACK_FIXTURE",
+      "count": 6,
+      "pins": "the attack-path fizzle fixture's creature"
+    },
+    {
+      "file": "src/engine/__golden__/golden-fizzle-retarget-cast.fixture.ts",
+      "old": "B5_CAST_FIXTURE",
+      "new": "FIZZLE_CAST_FIXTURE",
+      "count": 6,
+      "pins": "the cast-path fizzle fixture's creature"
+    },
+    {
+      "file": "src/engine/__corpus__/corpus.ts",
+      "old": "F3_SPELL_FIGHTS",
+      "new": "LOCK_SPELL_FIGHTS",
+      "count": 2,
+      "pins": "the corpus fights that cast Silence and Pacify"
+    }
+  ],
+  "literals": [
+    {
+      "file": "src/engine/__golden__/golden-granted-cast-confused-redirects.fixture.ts",
+      "old": "b2-confused-granted-caster-fixture",
+      "new": "granted-confused-caster-fixture",
+      "pins": "fixture id in the golden that pins: a confused caster's granted cast can redirect onto an ally"
+    },
+    {
+      "file": "src/engine/__golden__/golden-echo-provoke-redirects.fixture.ts",
+      "old": "b2-echo-fixture",
+      "new": "echo-provoke-echo-fixture",
+      "pins": "fixture id in the golden that pins: a Provoke redirects an echo, once, onto the provoker"
+    },
+    {
+      "file": "src/engine/__golden__/golden-granted-cast-refused-by-fixture-lock.fixture.ts",
+      "old": "b2-silenced-granted-caster-fixture",
+      "new": "fixture-lock-granted-caster-fixture",
+      "pins": "fixture id in the golden that pins: a trait-borne fixture lock refuses a granted cast and draws nothing"
+    },
+    {
+      "file": "src/engine/__golden__/golden-granted-cast-refused-on-skipped-turn.fixture.ts",
+      "old": "b2-stunned-granted-caster-fixture",
+      "new": "granted-skipped-stunned-caster-fixture",
+      "pins": "fixture id in the golden that pins: a skipped turn refuses the granted cast, after rolling"
+    },
+    {
+      "file": "src/engine/__golden__/golden-exact-instance-cleanse-then-tick.fixture.ts",
+      "old": "b4-golden-tick",
+      "new": "exact-instance-cleanse-tick",
+      "pins": "fixture id in the golden that pins: exact-instance rule: cleanse, then tick"
+    },
+    {
+      "file": "src/engine/__golden__/golden-exact-instance-cleanse-then-tick.fixture.ts",
+      "old": "b4-cleanse-then-tick-fixture",
+      "new": "exact-instance-cleanse-then-tick-fixture",
+      "pins": "fixture id in the golden that pins: exact-instance rule: cleanse, then tick"
+    },
+    {
+      "file": "src/engine/__golden__/golden-exact-instance-remove-then-reapply.fixture.ts",
+      "old": "b4-golden-tick-2",
+      "new": "exact-instance-reapply-tick",
+      "pins": "fixture id in the golden that pins: exact-instance rule: remove, then reapply"
+    },
+    {
+      "file": "src/engine/__golden__/golden-exact-instance-remove-then-reapply.fixture.ts",
+      "old": "b4-remove-then-reapply-fixture",
+      "new": "exact-instance-remove-then-reapply-fixture",
+      "pins": "fixture id in the golden that pins: exact-instance rule: remove, then reapply"
+    },
+    {
+      "file": "src/engine/__golden__/golden-fizzle-retarget-cast.fixture.ts",
+      "old": "b5-cast-fixture",
+      "new": "fizzle-cast-fixture",
+      "pins": "fixture id in the golden that pins: pre-hit-hook fizzle on the Cast path, then the rule-4 re-target"
+    },
+    {
+      "file": "src/engine/__golden__/golden-fizzle-retarget-cast.fixture.ts",
+      "old": "B5 cast (fixture)",
+      "new": "fizzle cast (fixture)",
+      "pins": "fixture id in the golden that pins: pre-hit-hook fizzle on the Cast path, then the rule-4 re-target"
+    },
+    {
+      "file": "src/engine/__golden__/golden-fizzle-retarget-attack.fixture.ts",
+      "old": "b5-fixture",
+      "new": "fizzle-attack-fixture",
+      "pins": "fixture id in the golden that pins: pre-hit-hook fizzle on the Attack path, then the rule-4 re-target"
+    },
+    {
+      "file": "src/engine/__golden__/golden-fizzle-retarget-attack.fixture.ts",
+      "old": "B5 (fixture)",
+      "new": "fizzle attack (fixture)",
+      "pins": "fixture id in the golden that pins: pre-hit-hook fizzle on the Attack path, then the rule-4 re-target"
+    },
+    {
+      "file": "src/engine/__golden__/golden-provoke-stun-cleanup.fixture.ts",
+      "old": "b6-stun-fixture",
+      "new": "provoke-stun-stun-fixture",
+      "pins": "fixture id in the golden that pins: a provoker Stunned before its next turn stops provoking at that turn start"
+    },
+    {
+      "file": "src/engine/__golden__/golden-provoke-stun-cleanup.fixture.ts",
+      "old": "b6-stun-on-hit-fixture",
+      "new": "provoke-stun-stun-on-hit-fixture",
+      "pins": "fixture id in the golden that pins: a provoker Stunned before its next turn stops provoking at that turn start"
+    },
+    {
+      "file": "src/engine/__golden__/golden-provoke-stun-cleanup.fixture.ts",
+      "old": "b6-attack-lowest",
+      "new": "provoke-stun-attack-lowest",
+      "count": 2,
+      "pins": "fixture id in the golden that pins: a provoker Stunned before its next turn stops provoking at that turn start"
+    },
+    {
+      "file": "src/engine/__golden__/golden-provoke-stun-cleanup.fixture.ts",
+      "old": "b6-always-provoke",
+      "new": "provoke-stun-always-provoke",
+      "count": 2,
+      "pins": "fixture id in the golden that pins: a provoker Stunned before its next turn stops provoking at that turn start"
+    },
+    {
+      "file": "src/engine/__golden__/golden-provoke-stun-cleanup.fixture.ts",
+      "old": "b6-always-wait",
+      "new": "provoke-stun-always-wait",
+      "count": 2,
+      "pins": "fixture id in the golden that pins: a provoker Stunned before its next turn stops provoking at that turn start"
+    },
+    {
+      "file": "src/engine/__golden__/golden-revive-cap-exclusion.fixture.ts",
+      "old": "d3-revive-exclusion-fixture",
+      "new": "revive-cap-exclusion-fixture",
+      "pins": "fixture id in the golden that pins: revive cap: a capped dead ally is excluded from the pool"
+    },
+    {
+      "file": "src/engine/__golden__/golden-revive-cap-fizzle.fixture.ts",
+      "old": "d3-revive-fizzle-fixture",
+      "new": "revive-cap-fizzle-fixture",
+      "pins": "fixture id in the golden that pins: revive cap: the 11th attempt fizzles and draws nothing"
+    },
+    {
+      "file": "src/engine/__golden__/golden-echo-chain-truncated.fixture.ts",
+      "old": "e-overtone-fixture",
+      "new": "echo-chain-overtone-fixture",
+      "pins": "fixture id in the golden that pins: an echo chain through the same Overtone, truncated at the real cap"
+    },
+    {
+      "file": "src/engine/__golden__/golden-grant-actor-dies-first.fixture.ts",
+      "old": "e-echo-fixture",
+      "new": "grant-queue-echo-fixture",
+      "pins": "fixture id in the golden that pins: a queued grant whose actor died first emits nothing"
+    },
+    {
+      "file": "src/engine/__golden__/golden-grant-actor-dies-first.fixture.ts",
+      "old": "e-retaliate-fixture",
+      "new": "grant-queue-retaliate-fixture",
+      "pins": "fixture id in the golden that pins: a queued grant whose actor died first emits nothing"
+    },
+    {
+      "file": "src/engine/__golden__/golden-grant-during-granted-action.fixture.ts",
+      "old": "e-t1-defend-fixture",
+      "new": "grant-queue-t1-defend-fixture",
+      "pins": "fixture id in the golden that pins: a grant raised during a granted action queues FIFO"
+    },
+    {
+      "file": "src/engine/__golden__/golden-grant-during-granted-action.fixture.ts",
+      "old": "e-t2-provoke-fixture",
+      "new": "grant-queue-t2-provoke-fixture",
+      "pins": "fixture id in the golden that pins: a grant raised during a granted action queues FIFO"
+    },
+    {
+      "file": "src/engine/__golden__/golden-grant-during-granted-action.fixture.ts",
+      "old": "e-t3-wait-fixture",
+      "new": "grant-queue-t3-wait-fixture",
+      "pins": "fixture id in the golden that pins: a grant raised during a granted action queues FIFO"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-timing-dot-one-turn.fixture.ts",
+      "old": "f2-poisoner-fixture",
+      "new": "status-timing-poisoner-fixture",
+      "pins": "fixture id in the golden that pins: a 1-turn DoT ticks once; a self-applied one is born and ticks next turn"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-timing-dot-one-turn.fixture.ts",
+      "old": "f2-self-poison-fixture",
+      "new": "status-timing-self-poison-fixture",
+      "pins": "fixture id in the golden that pins: a 1-turn DoT ticks once; a self-applied one is born and ticks next turn"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-timing-stun-one-turn.fixture.ts",
+      "old": "f2-stunner-fixture",
+      "new": "status-timing-stunner-fixture",
+      "pins": "fixture id in the golden that pins: Stun 1 skips exactly one turn, applied before or after the applier in the queue"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-timing-turnstart-self-stun-once.fixture.ts",
+      "old": "f2-self-stun-fixture",
+      "new": "status-timing-self-stun-fixture",
+      "pins": "fixture id in the golden that pins: a Stun 1 gained in the own turn-start hooks skips exactly one turn"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-timing-weaken-three-turns.fixture.ts",
+      "old": "f2-weakener-fixture",
+      "new": "status-timing-weakener-fixture",
+      "pins": "fixture id in the golden that pins: a 3-turn Weaken covers the next three bearer turns"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-timing-web-turn-end-roll.fixture.ts",
+      "old": "f2-web-cast-fixture",
+      "new": "status-timing-web-cast-fixture",
+      "pins": "fixture id in the golden that pins: the Web roll is in turn-end cleanup and skips a Web applied this turn"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-timing-web-turn-end-roll.fixture.ts",
+      "old": "f2-cast-once-then-wait",
+      "new": "status-timing-cast-once-then-wait",
+      "pins": "fixture id in the golden that pins: the Web roll is in turn-end cleanup and skips a Web applied this turn"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-timing-win-over-own-tick.fixture.ts",
+      "old": "f2-self-poison-at-start-fixture",
+      "new": "status-timing-self-poison-at-start-fixture",
+      "pins": "fixture id in the golden that pins: the last survivor empties the enemy side and wins over its own tick"
+    },
+    {
+      "file": "src/engine/__golden__/golden-fight-start-wipe.fixture.ts",
+      "old": "f3-opening-strike-fixture",
+      "new": "lock-timing-opening-strike-fixture",
+      "pins": "fixture id in the golden that pins: a fight-start wipe ends the fight before RoundStarted"
+    },
+    {
+      "file": "src/engine/__golden__/golden-lock-immunity.fixture.ts",
+      "old": "f3-bolt-fixture",
+      "new": "lock-timing-bolt-fixture",
+      "pins": "fixture id in the golden that pins: Clear Mind and Aggressive let the locked action through while the status lands"
+    },
+    {
+      "file": "src/engine/__golden__/golden-lock-immunity.fixture.ts",
+      "old": "f3-granted-cast-fixture",
+      "new": "lock-timing-granted-cast-fixture",
+      "pins": "fixture id in the golden that pins: Clear Mind and Aggressive let the locked action through while the status lands"
+    },
+    {
+      "file": "src/engine/__golden__/golden-lock-immunity.fixture.ts",
+      "old": "f3-mage-if-silenced",
+      "new": "lock-timing-mage-if-silenced",
+      "pins": "fixture id in the golden that pins: Clear Mind and Aggressive let the locked action through while the status lands"
+    },
+    {
+      "file": "src/engine/__golden__/golden-lock-immunity.fixture.ts",
+      "old": "f3-brawler-if-pacified",
+      "new": "lock-timing-brawler-if-pacified",
+      "pins": "fixture id in the golden that pins: Clear Mind and Aggressive let the locked action through while the status lands"
+    },
+    {
+      "file": "src/engine/__golden__/golden-lock-immunity.fixture.ts",
+      "old": "f3-silencer-script",
+      "new": "lock-timing-silencer-script",
+      "pins": "fixture id in the golden that pins: Clear Mind and Aggressive let the locked action through while the status lands"
+    },
+    {
+      "file": "src/engine/__golden__/golden-lock-immunity.fixture.ts",
+      "old": "f3-pacifier-script",
+      "new": "lock-timing-pacifier-script",
+      "pins": "fixture id in the golden that pins: Clear Mind and Aggressive let the locked action through while the status lands"
+    },
+    {
+      "file": "src/engine/__golden__/golden-pacify-three-turns.fixture.ts",
+      "old": "f3-bolt-fixture",
+      "new": "lock-timing-bolt-fixture",
+      "pins": "fixture id in the golden that pins: Pacify locks its target's Attack for its next three own turns"
+    },
+    {
+      "file": "src/engine/__golden__/golden-pacify-three-turns.fixture.ts",
+      "old": "f3-apply-lowest",
+      "new": "lock-timing-apply-lowest",
+      "pins": "fixture id in the golden that pins: Pacify locks its target's Attack for its next three own turns"
+    },
+    {
+      "file": "src/engine/__golden__/golden-pacify-three-turns.fixture.ts",
+      "old": "f3-apply-highest",
+      "new": "lock-timing-apply-highest",
+      "pins": "fixture id in the golden that pins: Pacify locks its target's Attack for its next three own turns"
+    },
+    {
+      "file": "src/engine/__golden__/golden-silence-three-turns.fixture.ts",
+      "old": "f3-bolt-fixture",
+      "new": "lock-timing-bolt-fixture",
+      "pins": "fixture id in the golden that pins: Silence locks its target's Cast for its next three own turns"
+    },
+    {
+      "file": "src/engine/__golden__/golden-silence-three-turns.fixture.ts",
+      "old": "f3-apply-lowest",
+      "new": "lock-timing-apply-lowest",
+      "pins": "fixture id in the golden that pins: Silence locks its target's Cast for its next three own turns"
+    },
+    {
+      "file": "src/engine/__golden__/golden-silence-three-turns.fixture.ts",
+      "old": "f3-apply-highest",
+      "new": "lock-timing-apply-highest",
+      "pins": "fixture id in the golden that pins: Silence locks its target's Cast for its next three own turns"
+    },
+    {
+      "file": "src/engine/__golden__/golden-granted-cast-refused-by-silenced-status.fixture.ts",
+      "old": "f3-bolt-fixture",
+      "new": "lock-timing-bolt-fixture",
+      "pins": "fixture id in the golden that pins: the real Silenced status from the real Silence spell refuses a granted cast (the real-status mirror of the fixture-lock golden)"
+    },
+    {
+      "file": "src/engine/__golden__/golden-granted-cast-refused-by-silenced-status.fixture.ts",
+      "old": "f3-granted-cast-fixture",
+      "new": "lock-timing-granted-cast-fixture",
+      "pins": "fixture id in the golden that pins: the real Silenced status from the real Silence spell refuses a granted cast (the real-status mirror of the fixture-lock golden)"
+    },
+    {
+      "file": "src/engine/__golden__/golden-additional-granted.fixture.ts",
+      "old": "h2a-grant-attack",
+      "new": "additional-grant-attack",
+      "pins": "fixture id in the golden that pins: a granted Attack stays direct and gets the Additional"
+    },
+    {
+      "file": "src/engine/__golden__/golden-additional-second-instance.fixture.ts",
+      "old": "h2a-two-instance",
+      "new": "additional-two-instance",
+      "pins": "fixture id in the golden that pins: the Additional lands on the second attack instance too"
+    },
+    {
+      "file": "src/engine/__golden__/golden-additional-spell.fixture.ts",
+      "old": "h2a-nova",
+      "new": "additional-nova",
+      "pins": "fixture id in the golden that pins: the Additional lands on every direct hit of a spell"
+    },
+    {
+      "file": "src/engine/__golden__/golden-additional-spell.fixture.ts",
+      "old": "h2a-bolt",
+      "new": "additional-bolt",
+      "pins": "fixture id in the golden that pins: the Additional lands on every direct hit of a spell"
+    },
+    {
+      "file": "src/engine/__golden__/golden-additional-spell.fixture.ts",
+      "old": "h2a-cast-slot-0",
+      "new": "additional-cast-slot-0",
+      "pins": "fixture id in the golden that pins: the Additional lands on every direct hit of a spell"
+    },
+    {
+      "file": "src/engine/__golden__/golden-additional-spell.fixture.ts",
+      "old": "h2a-wait",
+      "new": "additional-wait",
+      "pins": "fixture id in the golden that pins: the Additional lands on every direct hit of a spell"
+    },
+    {
+      "file": "src/engine/__golden__/golden-additional-splashing.fixture.ts",
+      "old": "h2a-splashing",
+      "new": "additional-splashing",
+      "pins": "fixture id in the golden that pins: the Additional lands on every Splashing hit"
+    },
+    {
+      "file": "src/engine/__golden__/golden-cost-and-tick-exclusion.fixture.ts",
+      "old": "h2a-cost-via-selector",
+      "new": "cost-via-selector",
+      "pins": "fixture id in the golden that pins: the cost rule and the DoT-tick exclusion"
+    },
+    {
+      "file": "src/engine/__golden__/golden-cost-and-tick-exclusion.fixture.ts",
+      "old": "h2a-zero-cost-dot-label",
+      "new": "cost-zero-cost-dot-label",
+      "pins": "fixture id in the golden that pins: the cost rule and the DoT-tick exclusion"
+    },
+    {
+      "file": "src/engine/__golden__/golden-cost-and-tick-exclusion.fixture.ts",
+      "old": "h2a-mini-poison",
+      "new": "cost-mini-poison",
+      "pins": "fixture id in the golden that pins: the cost rule and the DoT-tick exclusion"
+    },
+    {
+      "file": "src/engine/__golden__/golden-cost-and-tick-exclusion.fixture.ts",
+      "old": "h2a-poison-self",
+      "new": "cost-poison-self",
+      "pins": "fixture id in the golden that pins: the cost rule and the DoT-tick exclusion"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-flat-response.fixture.ts",
+      "old": "h2a-flat-20",
+      "new": "indirect-flat-20",
+      "pins": "fixture id in the golden that pins: flat-mode response damage on another creature is indirect"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-flat-response.fixture.ts",
+      "old": "h2a-flat-3",
+      "new": "indirect-flat-3",
+      "pins": "fixture id in the golden that pins: flat-mode response damage on another creature is indirect"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-keeps-terms.fixture.ts",
+      "old": "h2a-keeps-hit",
+      "new": "indirect-keeps-hit",
+      "pins": "fixture id in the golden that pins: indirect damage keeps affinity, dealt, conditional, taken and penetration terms, and gets no Additional"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-keeps-terms.fixture.ts",
+      "old": "h2a-keeps-dealt",
+      "new": "indirect-keeps-dealt",
+      "pins": "fixture id in the golden that pins: indirect damage keeps affinity, dealt, conditional, taken and penetration terms, and gets no Additional"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-keeps-terms.fixture.ts",
+      "old": "h2a-keeps-conditional",
+      "new": "indirect-keeps-conditional",
+      "pins": "fixture id in the golden that pins: indirect damage keeps affinity, dealt, conditional, taken and penetration terms, and gets no Additional"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-keeps-terms.fixture.ts",
+      "old": "h2a-keeps-taken",
+      "new": "indirect-keeps-taken",
+      "pins": "fixture id in the golden that pins: indirect damage keeps affinity, dealt, conditional, taken and penetration terms, and gets no Additional"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-keeps-terms.fixture.ts",
+      "old": "h2a-keeps-penetration",
+      "new": "indirect-keeps-penetration",
+      "pins": "fixture id in the golden that pins: indirect damage keeps affinity, dealt, conditional, taken and penetration terms, and gets no Additional"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-trait-response.fixture.ts",
+      "old": "h2a-hit-highest",
+      "new": "indirect-hit-highest",
+      "pins": "fixture id in the golden that pins: a trait response is indirect damage: a fifth of Defence, Defend, no cross-stat"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-trait-response.fixture.ts",
+      "old": "h2a-hit-lowest",
+      "new": "indirect-hit-lowest",
+      "pins": "fixture id in the golden that pins: a trait response is indirect damage: a fifth of Defence, Defend, no cross-stat"
+    },
+    {
+      "file": "src/engine/__golden__/golden-indirect-trait-response.fixture.ts",
+      "old": "h2a-shield-bash",
+      "new": "indirect-shield-bash",
+      "pins": "fixture id in the golden that pins: a trait response is indirect damage: a fifth of Defence, Defend, no cross-stat"
+    },
+    {
+      "file": "src/engine/__golden__/golden-spell-on-caster-direct.fixture.ts",
+      "old": "h2a-cast-slot-0",
+      "new": "spell-on-caster-cast-slot-0",
+      "pins": "fixture id in the golden that pins: a spell effect on its own caster is direct damage"
+    },
+    {
+      "file": "src/engine/__golden__/golden-spell-on-caster-direct.fixture.ts",
+      "old": "h2a-wait",
+      "new": "spell-on-caster-wait",
+      "pins": "fixture id in the golden that pins: a spell effect on its own caster is direct damage"
+    },
+    {
+      "file": "src/engine/__golden__/golden-spell-on-caster-direct.fixture.ts",
+      "old": "h2a-self-hit",
+      "new": "spell-on-caster-self-hit",
+      "pins": "fixture id in the golden that pins: a spell effect on its own caster is direct damage"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-cost.fixture.ts",
+      "old": "h2b1-pay",
+      "new": "damage-observed-pay",
+      "pins": "fixture id in the golden that pins: damage observation of a cost"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-cost.fixture.ts",
+      "old": "h2b1-watch-ally",
+      "new": "damage-observed-watch-ally",
+      "pins": "fixture id in the golden that pins: damage observation of a cost"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-cost.fixture.ts",
+      "old": "h2b1-watch-enemy",
+      "new": "damage-observed-watch-enemy",
+      "pins": "fixture id in the golden that pins: damage observation of a cost"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-silent.fixture.ts",
+      "old": "h2b1-self-hit",
+      "new": "damage-observed-self-hit",
+      "pins": "fixture id in the golden that pins: what damage observation must not see"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-silent.fixture.ts",
+      "old": "h2b1-cast-slot-0",
+      "new": "damage-observed-cast-slot-0",
+      "pins": "fixture id in the golden that pins: what damage observation must not see"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-silent.fixture.ts",
+      "old": "h2b1-zero-cost",
+      "new": "damage-observed-zero-cost",
+      "pins": "fixture id in the golden that pins: what damage observation must not see"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-silent.fixture.ts",
+      "old": "h2b1-watch",
+      "new": "damage-observed-watch",
+      "pins": "fixture id in the golden that pins: what damage observation must not see"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-tick.fixture.ts",
+      "old": "h2b1-mini-poison",
+      "new": "damage-observed-mini-poison",
+      "pins": "fixture id in the golden that pins: a DoT tick is not a cost"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-tick.fixture.ts",
+      "old": "h2b1-poison-self",
+      "new": "damage-observed-poison-self",
+      "pins": "fixture id in the golden that pins: a DoT tick is not a cost"
+    },
+    {
+      "file": "src/engine/__golden__/golden-damage-observed-tick.fixture.ts",
+      "old": "h2b1-tick-watch",
+      "new": "damage-observed-tick-watch",
+      "pins": "fixture id in the golden that pins: a DoT tick is not a cost"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-reapply.fixture.ts",
+      "old": "h2b2-reapply-p1",
+      "new": "status-snapshot-reapply-p1",
+      "pins": "fixture id in the golden that pins: a status re-applied keeps one instance and replaces its snapshot only when strictly stronger"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-reapply.fixture.ts",
+      "old": "h2b2-reapply-p2",
+      "new": "status-snapshot-reapply-p2",
+      "pins": "fixture id in the golden that pins: a status re-applied keeps one instance and replaces its snapshot only when strictly stronger"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-reapply.fixture.ts",
+      "old": "h2b2-reapply-p3",
+      "new": "status-snapshot-reapply-p3",
+      "pins": "fixture id in the golden that pins: a status re-applied keeps one instance and replaces its snapshot only when strictly stronger"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-reapply.fixture.ts",
+      "old": "h2b2-reapply-p4",
+      "new": "status-snapshot-reapply-p4",
+      "pins": "fixture id in the golden that pins: a status re-applied keeps one instance and replaces its snapshot only when strictly stronger"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-regen-potency.fixture.ts",
+      "old": "h2b2-regen-halve",
+      "new": "status-snapshot-regen-halve",
+      "pins": "fixture id in the golden that pins: Regen heals the frozen potency of its healer"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-regen-potency.fixture.ts",
+      "old": "h2b2-wait-then-attack",
+      "new": "status-snapshot-wait-then-attack",
+      "pins": "fixture id in the golden that pins: Regen heals the frozen potency of its healer"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-dead-applier.fixture.ts",
+      "old": "h2b2-dead-dealer",
+      "new": "status-snapshot-dead-dealer",
+      "pins": "fixture id in the golden that pins: a tick whose applier died keeps its frozen amount and is sourced from the bearer"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-dead-applier.fixture.ts",
+      "old": "h2b2-dead-wait-then-attack",
+      "new": "status-snapshot-dead-wait-then-attack",
+      "pins": "fixture id in the golden that pins: a tick whose applier died keeps its frozen amount and is sourced from the bearer"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-kill-on-death.fixture.ts",
+      "old": "h2b2-last-words",
+      "new": "status-snapshot-last-words",
+      "pins": "fixture id in the golden that pins: a tick that kills its bearer offers no triggering-source on death"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-living-applier.fixture.ts",
+      "old": "h2b2-living-surge",
+      "new": "status-snapshot-living-surge",
+      "pins": "fixture id in the golden that pins: a status tick is indirect damage from the applier snapshot, credited to the living applier"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-living-applier.fixture.ts",
+      "old": "h2b2-living-lifesteal",
+      "new": "status-snapshot-living-lifesteal",
+      "pins": "fixture id in the golden that pins: a status tick is indirect damage from the applier snapshot, credited to the living applier"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-living-applier.fixture.ts",
+      "old": "h2b2-living-bonus",
+      "new": "status-snapshot-living-bonus",
+      "pins": "fixture id in the golden that pins: a status tick is indirect damage from the applier snapshot, credited to the living applier"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-living-applier.fixture.ts",
+      "old": "h2b2-wait-then-defend",
+      "new": "status-snapshot-wait-then-defend",
+      "pins": "fixture id in the golden that pins: a status tick is indirect damage from the applier snapshot, credited to the living applier"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-self-applied.fixture.ts",
+      "old": "h2b2-self-dealer",
+      "new": "status-snapshot-self-dealer",
+      "pins": "fixture id in the golden that pins: a self-applied tick makes its bearer the dealer, and is never self-inflicted"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-self-applied.fixture.ts",
+      "old": "h2b2-self-watch",
+      "new": "status-snapshot-self-watch",
+      "pins": "fixture id in the golden that pins: a self-applied tick makes its bearer the dealer, and is never self-inflicted"
+    },
+    {
+      "file": "src/engine/__golden__/golden-status-snapshot-tick-taken-factors.fixture.ts",
+      "old": "h2b2-taken-wait-then-defend",
+      "new": "status-snapshot-taken-wait-then-defend",
+      "pins": "fixture id in the golden that pins: a tick passes through the bearer's taken factors, Defend's then Vulnerability's"
+    },
+    {
+      "file": "src/engine/combat.test.ts",
+      "old": "random-target-b3-fixture",
+      "new": "random-target-fixture",
+      "pins": "fixture id in this unit test"
+    },
+    {
+      "file": "src/engine/resolution.test.ts",
+      "old": "b4-tick-fixture",
+      "new": "exact-instance-tick-fixture",
+      "count": 6,
+      "pins": "fixture id in this unit test"
+    },
+    {
+      "file": "src/engine/resolution.test.ts",
+      "old": "b4-cleanser-fixture",
+      "new": "exact-instance-cleanser-fixture",
+      "pins": "fixture id in this unit test"
+    },
+    {
+      "file": "src/engine/resolution.test.ts",
+      "old": "b4-reapply-fixture",
+      "new": "exact-instance-reapply-fixture",
+      "pins": "fixture id in this unit test"
+    },
+    {
+      "file": "src/engine/status-snapshot.test.ts",
+      "old": "h2b2-seeder",
+      "new": "status-snapshot-seeder",
+      "pins": "fixture id in this unit test"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+import { describe, expect, it } from 'vitest'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-spell-on-caster-direct.fixture'
+import { expectedEvents } from './golden-spell-on-caster-direct.fixture'
+
+describe('golden replay: a spell effect on its own caster is direct damage', () => {
+  it('deals the formula plus the Additional (22), not a cost (20) and not indirect (18)', () => {
+    const { events } = runGolden(fixture)
+
+    expect(events).toEqual(expectedEvents)
+  })
+})

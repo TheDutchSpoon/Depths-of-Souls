@@ -12,6 +12,7 @@ import prettier from 'prettier'
 import { resolveFight } from './combat'
 import { buildCorpus, createCorpusCombat } from './__corpus__/corpus'
 import { CORPUS_DIGEST } from './__corpus__/corpus-digest.fixture'
+import committedFixture from './__corpus__/corpus-digest.fixture.ts?raw'
 import type { CorpusFight } from './__corpus__/corpus'
 import type { CorpusDigestEntry } from './__corpus__/corpus-digest.fixture'
 
@@ -113,4 +114,20 @@ describe('corpus digest (behaviour tripwire)', () => {
 
     expect(actual.length).toBe(CORPUS_DIGEST.length)
   }, 60_000) // ~4.1s measured vs. Vitest's 5s default -- explicit headroom, not a tuned budget.
+})
+
+describe('corpus digest fixture', () => {
+  // The header, the interface, the row layout and the formatting are all `renderFixture`'s, so a
+  // hand edit of any of them, or a template change nobody regenerated from, fails here.
+  it.skipIf(import.meta.env.MODE === 'corpus-update')(
+    'the committed fixture is exactly what renderFixture writes for its own rows',
+    async () => {
+      const config = await prettier.resolveConfig(FIXTURE_PATH)
+      const formatted = await prettier.format(renderFixture(CORPUS_DIGEST), {
+        ...config,
+        filepath: FIXTURE_PATH,
+      })
+      expect(committedFixture).toBe(formatted)
+    },
+  )
 })

@@ -12,7 +12,7 @@
 // stays deterministic, and that real species-signature mechanics actually fire along the way.
 //
 // The two original scenarios below pin
-// `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` so every non-XP number (fight count, enemy level range,
+// `TEST_BALANCE_CONFIG` so every non-XP number (fight count, enemy level range,
 // soul gain, instance ids aside) is the placeholder config's; per-kill XP is the victim's own
 // level (`spec/creatures.md#levels-and-xp`). A separate describe block below (the real defaults)
 // exercises the REAL, zero-override store (the default BalanceConfig) instead.
@@ -34,7 +34,7 @@
 import { describe, expect, test } from 'vitest'
 import type { CombatEvent } from '../engine/types'
 import { contentFrontier } from '../engine/generation'
-import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
+import { TEST_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { OVERGROWTH_BIOME_ID } from '../data/species/overgrowth'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { BIOMES } from '../data/biomes'
@@ -182,7 +182,7 @@ describe('integration: real Brute party through real floor 1 (Overgrowth)', () =
     // No Revived event: nobody dies in these fights, so the Unicorn's trigger fires on every
     // Unicorn attack but its `random-dead-ally` pool is empty: a targeting fizzle
     // (`spec/responses.md#fizzles`), not a suppressed trigger. The revive response itself stays
-    // pinned end to end by golden-revive, golden-unicorn-starter and the golden-d3-revive-cap-*
+    // pinned end to end by golden-revive, golden-unicorn-starter and the golden-revive-cap-*
     // goldens.
     //
     // Generated-then-checkpoint-verified derivation of fight 2: the Snapjaw Jaws alone, effective

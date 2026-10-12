@@ -25,9 +25,17 @@ const PATTERNS: [number, string, string][] = [
   [3, 'from Pre-5 work', 'a Prelude-like step'],
   [4, 'added in 4.1-H2c', 'a 1.5-second delay'],
   [5, 'Slice D rules', 'a slice of the list, slice 3'],
+  [5, 'the Slice-C2 rules', 'a slice-of-life piece'],
+  [5, 'from pre-slice work', 'a pre-sliced loaf'],
   [6, 'PR #81 comment', 'the PR process'],
   [7, 'Review fix F2', 'after a review'],
+  [7, 'the design-review said', 'a designer reviews it'],
+  [7, 'a nit (nit, review)', 'it needs a review'],
+  [7, 'Nit (review)', 'it needs a (careful) review'],
   [8, 'see E2a for it', 'scenario S1 and P2'],
+  [8, 'see H2b2 for it', 'scenario S1b2 and P2b'],
+  [8, 'the Slice-H2b2 rules', 'a 4-2 split'],
+  [8, 'item B-2 was it', 'a 4-2 split'],
   [9, 'from H2+ only', 'script rule 4: skip'],
   [10, 'the kickoff said so', 'kicks off a fight'],
   [11, 'the locked design principle', 'a locked CASTER, locked rounds 2-4, still locked'],
@@ -41,7 +49,7 @@ const PATTERNS: [number, string, string][] = [
 
 describe('comments patterns', () => {
   it.each(PATTERNS)(
-    'pattern %i fails in a comment and in a title, with file:line',
+    'pattern %i fails in a comment and in a title, with file:line (%s)',
     (id, bad) => {
       const comment = check(asComment(bad))
       expect(comment.code).toBe(1)
@@ -53,7 +61,7 @@ describe('comments patterns', () => {
   )
 
   it.each(PATTERNS)(
-    'pattern %i passes the game and process wording',
+    'pattern %i passes the game and process wording (%#)',
     (_id, _bad, good) => {
       expect(check(asComment(good)).lines.at(-1)).toMatch(/^comments: PASS/)
       expect(check(asTitle(good)).lines.at(-1)).toMatch(/^comments: PASS/)
@@ -95,7 +103,7 @@ describe('comments patterns', () => {
     expect(
       check({ 'src/x.test.ts': 'it(`${n} added in Phase 4`, () => {})\n' }).code,
     ).toBe(1)
-    expect(check({ 'src/x.test.ts': 'it(Phase4, () => {})\n' }).code).toBe(0)
+    expect(check({ 'src/x.test.ts': 'it(title, () => {})\n' }).code).toBe(0)
   })
 
   it('checks a title of each call shape', () => {
@@ -259,8 +267,8 @@ describe('comments --quotations', () => {
         ...claude,
         'src/x.ts': [
           '// spec/combat.md#provoke one two three four "absent"',
-          '// spec/combat.md#provoke one two three four five "absent"',
           'export const a = 1',
+          '// spec/combat.md#provoke one two three four five "absent"',
           '',
         ].join('\n'),
       },
@@ -302,5 +310,58 @@ describe('comments --quotations', () => {
       { quotations: true },
     )
     expect(lines).toEqual(['quotations: 0 comments and 0 titles'])
+  })
+})
+
+describe('comments --quotations, before an anchor', () => {
+  const claude = {
+    '.claude/spec/combat.md':
+      '# Spec\n\n### Provoke\nProvoke forces the **target** to hit you.\n\n### Other\nSomething else.\n',
+  }
+  const run = (comment: string) =>
+    check({ ...claude, 'src/x.ts': `// ${comment}\n` }, { quotations: true }).lines
+
+  it('lists a quote that ends right before its anchor, and not one the section contains', () => {
+    expect(run('"never expires" spec/combat.md#provoke')).toEqual([
+      'src/x.ts:1: spec/combat.md#provoke "never expires"',
+      'quotations: 1 comments and 0 titles',
+    ])
+    expect(run('"forces the target to hit you" spec/combat.md#provoke')).toEqual([
+      'quotations: 0 comments and 0 titles',
+    ])
+  })
+
+  it('lists a short quote on either side of the anchor', () => {
+    for (const short of ['"gone"', '"two words"', '"a b c d"']) {
+      expect(run(`${short} spec/combat.md#provoke`)[0], short).toContain('src/x.ts:1:')
+      expect(run(`spec/combat.md#provoke ${short}`)[0], short).toContain('src/x.ts:1:')
+    }
+  })
+
+  it('looks four words before the anchor and not five', () => {
+    expect(run('"absent" one two three four spec/combat.md#provoke')).toEqual([
+      'src/x.ts:1: spec/combat.md#provoke "absent"',
+      'quotations: 1 comments and 0 titles',
+    ])
+    expect(run('"absent" one two three four five spec/combat.md#provoke')).toEqual([
+      'quotations: 0 comments and 0 titles',
+    ])
+  })
+
+  it('gives a quote between two anchors to the nearer one, the earlier on a tie, listed once', () => {
+    expect(run('spec/combat.md#other "absent" spec/combat.md#provoke')).toEqual([
+      'src/x.ts:1: spec/combat.md#other "absent"',
+      'quotations: 1 comments and 0 titles',
+    ])
+    expect(run('spec/combat.md#other one two "absent" spec/combat.md#provoke')).toEqual([
+      'src/x.ts:1: spec/combat.md#provoke "absent"',
+      'quotations: 1 comments and 0 titles',
+    ])
+  })
+
+  it('does not read an opening quote before the anchor as a closing one', () => {
+    expect(run('"x" and "a b spec/combat.md#provoke"')).toEqual([
+      'quotations: 0 comments and 0 titles',
+    ])
   })
 })

@@ -1,0 +1,82 @@
+file (main -> branch)  main  branch  note
+src/engine/__golden__/golden-b1-fallback-lowest-hp.test.ts -> src/engine/__golden__/golden-fallback-attacks-lowest-hp.test.ts  1  1  renamed
+src/engine/__golden__/golden-b1-granted-cast-default.test.ts -> src/engine/__golden__/golden-granted-cast-default-lowest-hp.test.ts  1  1  renamed
+src/engine/__golden__/golden-b1-support-heals-own-side.test.ts -> src/engine/__golden__/golden-support-heals-own-lowest-hp-ally.test.ts  1  1  renamed
+src/engine/__golden__/golden-b2-confused-granted-cast-redirects.test.ts -> src/engine/__golden__/golden-granted-cast-confused-redirects.test.ts  1  1  renamed
+src/engine/__golden__/golden-b2-provoke-redirects-echo.test.ts -> src/engine/__golden__/golden-echo-provoke-redirects.test.ts  1  1  renamed
+src/engine/__golden__/golden-b2-silenced-refuses-granted-cast.test.ts -> src/engine/__golden__/golden-granted-cast-refused-by-fixture-lock.test.ts  1  1  renamed
+src/engine/__golden__/golden-b2-skipped-turn-refuses-granted-cast.test.ts -> src/engine/__golden__/golden-granted-cast-refused-on-skipped-turn.test.ts  1  1  renamed
+src/engine/__golden__/golden-b4-cleanse-then-tick.test.ts -> src/engine/__golden__/golden-exact-instance-cleanse-then-tick.test.ts  1  1  renamed
+src/engine/__golden__/golden-b4-remove-then-reapply.test.ts -> src/engine/__golden__/golden-exact-instance-remove-then-reapply.test.ts  1  1  renamed
+src/engine/__golden__/golden-b5-cast-fizzle.test.ts -> src/engine/__golden__/golden-fizzle-retarget-cast.test.ts  1  1  renamed
+src/engine/__golden__/golden-b5-fizzle-rule4-retarget.test.ts -> src/engine/__golden__/golden-fizzle-retarget-attack.test.ts  1  1  renamed
+src/engine/__golden__/golden-b6-provoke-stun-cleanup.test.ts -> src/engine/__golden__/golden-provoke-stun-cleanup.test.ts  1  1  renamed
+src/engine/__golden__/golden-d3-revive-cap-exclusion.test.ts -> src/engine/__golden__/golden-revive-cap-exclusion.test.ts  1  1  renamed
+src/engine/__golden__/golden-d3-revive-cap-fizzle.test.ts -> src/engine/__golden__/golden-revive-cap-fizzle.test.ts  1  1  renamed
+src/engine/__golden__/golden-e-echo-chain-truncated.test.ts -> src/engine/__golden__/golden-echo-chain-truncated.test.ts  3  3  renamed
+src/engine/__golden__/golden-e-grant-actor-dies-first.test.ts -> src/engine/__golden__/golden-grant-actor-dies-first.test.ts  2  2  renamed
+src/engine/__golden__/golden-e-grant-during-granted-action.test.ts -> src/engine/__golden__/golden-grant-during-granted-action.test.ts  2  2  renamed
+src/engine/__golden__/golden-f2-dot-one-turn.test.ts -> src/engine/__golden__/golden-status-timing-dot-one-turn.test.ts  1  1  renamed
+src/engine/__golden__/golden-f2-stun-one-turn.test.ts -> src/engine/__golden__/golden-status-timing-stun-one-turn.test.ts  1  1  renamed
+src/engine/__golden__/golden-f2-turn-end-interaction.test.ts -> src/engine/__golden__/golden-status-timing-turn-end-interaction.test.ts  1  1  renamed
+src/engine/__golden__/golden-f2-turnstart-self-stun-once.test.ts -> src/engine/__golden__/golden-status-timing-turnstart-self-stun-once.test.ts  1  1  renamed
+src/engine/__golden__/golden-f2-weaken-three-turns.test.ts -> src/engine/__golden__/golden-status-timing-weaken-three-turns.test.ts  1  1  renamed
+src/engine/__golden__/golden-f2-web-turn-end-roll.test.ts -> src/engine/__golden__/golden-status-timing-web-turn-end-roll.test.ts  1  1  renamed
+src/engine/__golden__/golden-f2-win-over-own-tick.test.ts -> src/engine/__golden__/golden-status-timing-win-over-own-tick.test.ts  1  1  renamed
+src/engine/__golden__/golden-f3-fight-start-wipe.test.ts -> src/engine/__golden__/golden-fight-start-wipe.test.ts  1  1  renamed
+src/engine/__golden__/golden-f3-immunity.test.ts -> src/engine/__golden__/golden-lock-immunity.test.ts  1  1  renamed
+src/engine/__golden__/golden-f3-pacify-three-turns.test.ts -> src/engine/__golden__/golden-pacify-three-turns.test.ts  1  1  renamed
+src/engine/__golden__/golden-f3-silence-three-turns.test.ts -> src/engine/__golden__/golden-silence-three-turns.test.ts  1  1  renamed
+src/engine/__golden__/golden-f3-silenced-refuses-granted-cast.test.ts -> src/engine/__golden__/golden-granted-cast-refused-by-silenced-status.test.ts  1  1  renamed
+src/engine/__golden__/golden-g1-leech-sovereign-pacified.test.ts -> src/engine/__golden__/golden-leech-sovereign-pacified.test.ts  2  2  renamed
+src/engine/__golden__/golden-h2a-additional-granted.test.ts -> src/engine/__golden__/golden-additional-granted.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-additional-hp-bound.test.ts -> src/engine/__golden__/golden-additional-hp-bound.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-additional-levels.test.ts -> src/engine/__golden__/golden-additional-levels.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-additional-second-instance.test.ts -> src/engine/__golden__/golden-additional-second-instance.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-additional-spell.test.ts -> src/engine/__golden__/golden-additional-spell.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-additional-splashing.test.ts -> src/engine/__golden__/golden-additional-splashing.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-cost.test.ts -> src/engine/__golden__/golden-cost-and-tick-exclusion.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-flat-indirect.test.ts -> src/engine/__golden__/golden-indirect-flat-response.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-indirect-keeps.test.ts -> src/engine/__golden__/golden-indirect-keeps-terms.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-indirect.test.ts -> src/engine/__golden__/golden-indirect-trait-response.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2a-spell-on-caster.test.ts -> src/engine/__golden__/golden-spell-on-caster-direct.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b1-last-gleam.test.ts -> src/engine/__golden__/golden-last-gleam.test.ts  2  2  renamed
+src/engine/__golden__/golden-h2b1-observed-cost.test.ts -> src/engine/__golden__/golden-damage-observed-cost.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b1-observed-lethal.test.ts -> src/engine/__golden__/golden-damage-observed-lethal.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b1-observed-silent.test.ts -> src/engine/__golden__/golden-damage-observed-silent.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b1-observed-tick.test.ts -> src/engine/__golden__/golden-damage-observed-tick.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b1-wick-burn-heal.test.ts -> src/engine/__golden__/golden-wick-burn-heal.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b1-wick-gates.test.ts -> src/engine/__golden__/golden-wick-gates.test.ts  2  2  renamed
+src/engine/__golden__/golden-h2b1-wick-skips-self.test.ts -> src/engine/__golden__/golden-wick-skips-self.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-carrier-fresh.test.ts -> src/engine/__golden__/golden-status-snapshot-carrier-fresh.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-reapply.test.ts -> src/engine/__golden__/golden-status-snapshot-reapply.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-regen-potency.test.ts -> src/engine/__golden__/golden-status-snapshot-regen-potency.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-spore-spread.test.ts -> src/engine/__golden__/golden-status-snapshot-spore-spread.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-tick-dead-applier.test.ts -> src/engine/__golden__/golden-status-snapshot-tick-dead-applier.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-tick-kill-on-death.test.ts -> src/engine/__golden__/golden-status-snapshot-tick-kill-on-death.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-tick-living-applier.test.ts -> src/engine/__golden__/golden-status-snapshot-tick-living-applier.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-tick-no-retaliation.test.ts -> src/engine/__golden__/golden-status-snapshot-tick-no-retaliation.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-tick-self-applied.test.ts -> src/engine/__golden__/golden-status-snapshot-tick-self-applied.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-tick-taken-factors.test.ts -> src/engine/__golden__/golden-status-snapshot-tick-taken-factors.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2b2-vulnerability-once.test.ts -> src/engine/__golden__/golden-status-snapshot-vulnerability-once.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2c-snapback.test.ts -> src/engine/__golden__/golden-snapjaw-snapback.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2d-dot-ticks.test.ts -> src/engine/__golden__/golden-poison-burn-spore-ticks.test.ts  1  1  renamed
+src/engine/__golden__/golden-h2d-pollen-cloud.test.ts -> src/engine/__golden__/golden-pollen-cloud-sleep.test.ts  1  1  renamed
+src/engine/corpus-digest.test.ts  1  2  the corpus fixture test
+src/engine/generation-g1.test.ts -> src/engine/generation-floor-loadouts.test.ts  14  14  renamed
+
+files: main 201, branch 201; files with an unexpected count: 0
+tests: main 1357 (1 skipped), branch 1358 (1 skipped); difference 1 (the one corpus fixture test)
+scripts/ test files (main -> branch)
+scripts/docs-check/anchors.test.ts  10  10
+scripts/docs-check/budgets.test.ts  9  9
+scripts/docs-check/ci.test.ts  2  2
+scripts/docs-check/citations.test.ts  67  67
+scripts/docs-check/cli.test.ts  34  34
+scripts/docs-check/comment-proof.test.ts  67  67
+scripts/docs-check/comments.test.ts  61  82  (the new checks)
+scripts/docs-check/inventory.test.ts  27  27
+scripts/docs-check/names.test.ts  -  58  (the new checks)
+scripts/docs-check/renames.test.ts  -  59  (the new checks)
+scripts/docs-check/scanner.test.ts  48  48
+total  325  463

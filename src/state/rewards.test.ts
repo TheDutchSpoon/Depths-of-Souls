@@ -7,7 +7,7 @@ import { createBiomeId } from '../engine/ids'
 import type { BiomeData, Species, SpeciesCreature } from '../engine/generation'
 import { makeCreature } from '../engine/__fixtures__/creatures'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
-import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
+import { TEST_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { createInstanceId } from './ids'
 import {
   addCurrencies,
@@ -173,7 +173,7 @@ describe('staticCreatureIdFor', () => {
       gems: EMPTY_GEM_SLOTS,
     }
     expect(() => staticCreatureIdFor(instance)).toThrow(
-      /not materializable before Phase 8/,
+      /a fused instance has no static creature id/,
     )
   })
 })

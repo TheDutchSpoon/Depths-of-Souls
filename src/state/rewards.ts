@@ -48,9 +48,7 @@ export function staticCreatureIdFor(instance: Instance): string {
     case 'creature':
       return instance.source.creatureId
     case 'fusion':
-      throw new Error(
-        'staticCreatureIdFor: fused instances are not materializable before Phase 8',
-      )
+      throw new Error('staticCreatureIdFor: a fused instance has no static creature id')
   }
 }
 

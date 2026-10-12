@@ -1,0 +1,29 @@
+# No old name left
+
+Tokens searched (226): every old file stem (with and without 'golden-'), identifier and fixture data id in evidence/renames.json.
+Where: src/, vite.config.ts, eslint.config.js, scripts/, .github/.
+
+## grep -rnwF (whole-word): hits
+(exit 1 ; 1 = no hit)
+
+## grep -rnF (substring): hits, each inside a longer new name
+src/engine/__golden__/golden-echo-provoke-redirects.fixture.ts:62:  id: 'echo-provoke-echo-fixture',
+src/engine/__golden__/golden-grant-actor-dies-first.fixture.ts:6:// `always-wait`, trait `grant-queue-echo-fixture`: on-action-observed, ally, cast, chancePercent 100 ->
+src/engine/__golden__/golden-grant-actor-dies-first.fixture.ts:8:// defence 0, Attack 30, `always-wait`), trait `grant-queue-retaliate-fixture`: on-damage-taken ->
+src/engine/__golden__/golden-grant-actor-dies-first.fixture.ts:51:  id: 'grant-queue-echo-fixture',
+src/engine/__golden__/golden-grant-actor-dies-first.fixture.ts:72:  id: 'grant-queue-retaliate-fixture',
+src/engine/__golden__/golden-grant-during-granted-action.fixture.ts:73:export const T1 = observer('grant-queue-t1-defend-fixture', 'cast', 'triggering-source', {
+src/engine/__golden__/golden-grant-during-granted-action.fixture.ts:77:  'grant-queue-t2-provoke-fixture',
+src/engine/__golden__/golden-grant-during-granted-action.fixture.ts:84:export const T3 = observer('grant-queue-t3-wait-fixture', 'defend', 'self', {
+
+## The five comment globs, each matching at least one file and only intended ones
+golden-status-snapshot-*: golden-status-snapshot-carrier-fresh golden-status-snapshot-reapply golden-status-snapshot-regen-potency golden-status-snapshot-spore-spread golden-status-snapshot-tick-dead-applier golden-status-snapshot-tick-kill-on-death golden-status-snapshot-tick-living-applier golden-status-snapshot-tick-no-retaliation golden-status-snapshot-tick-self-applied golden-status-snapshot-tick-taken-factors golden-status-snapshot-vulnerability-once 
+golden-wick-*: golden-wick-burn-heal golden-wick-gates golden-wick-skips-self 
+golden-damage-observed-*: golden-damage-observed-cost golden-damage-observed-lethal golden-damage-observed-silent golden-damage-observed-tick 
+golden-status-timing-*: golden-status-timing-dot-one-turn golden-status-timing-stun-one-turn golden-status-timing-turn-end-interaction golden-status-timing-turnstart-self-stun-once golden-status-timing-weaken-three-turns golden-status-timing-web-turn-end-roll golden-status-timing-win-over-own-tick 
+golden-revive-cap-*: golden-revive-cap-exclusion golden-revive-cap-fizzle 
+golden-grant-*: golden-grant-actor-dies-first golden-grant-during-granted-action 
+golden-granted-cast-*: golden-granted-cast-confused-redirects golden-granted-cast-default-lowest-hp golden-granted-cast-refused-by-fixture-lock golden-granted-cast-refused-by-silenced-status golden-granted-cast-refused-on-skipped-turn 
+
+## Any other slice-shaped token left in src/ (golden-<letter><digit>…, golden-e-…)
+(none above = none)

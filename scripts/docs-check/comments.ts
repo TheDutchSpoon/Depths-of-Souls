@@ -2,14 +2,17 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { sectionOf } from './anchors.ts'
 import { ANCHOR_CITATION } from './citations.ts'
+import { findNameProblems } from './names.ts'
 import { blockLine, scanSource } from './scanner.ts'
 import type { Title } from './scanner.ts'
 import { splitLines } from './text.ts'
 
 // `comments` reads the working tree only (no git). It checks that a comment or a test title says
 // why the code is the way it is, not where in the project's history it was decided
-// (`CONVENTIONS.md#comment-why-not-what`, `CONVENTIONS.md#open-questions-get-an-interface`). It is
-// not wired into CI yet: it fails until the comment sweep has run.
+// (`CONVENTIONS.md#comment-why-not-what`, `CONVENTIONS.md#open-questions-get-an-interface`). It
+// runs in CI's `test` job (`.github/workflows/deploy.yml`), before the tests. The same walk also
+// runs the name guard (`names.ts`): a slice or phase id in a file name, an identifier or a string
+// literal.
 
 export interface Pattern {
   id: number
@@ -24,7 +27,15 @@ export const PATTERNS: Pattern[] = [
   { id: 2, what: 'phase number', res: [/\bPhases?\s+\d/g] },
   { id: 3, what: 'phase id', res: [/\b(?:Pre|Phase)-\d/g] },
   { id: 4, what: 'slice id', res: [/\b\d+\.\d+-[A-Z]\w*/g] },
-  { id: 5, what: 'slice name', res: [/\b[Ss]lice\s+[A-Z]\d*[a-z]?\b/g] },
+  {
+    id: 5,
+    what: 'slice name',
+    res: [
+      /\b[Ss]lice\s+[A-Z]\d*[a-z]?\b/g,
+      /\b[Ss]lice-[A-Z]\d*[a-z]?\b/g,
+      /\bpre-[Ss]lice\b/g,
+    ],
+  },
   { id: 6, what: 'PR number', res: [/\bPRs?\s*#?\d+/g] },
   {
     id: 7,
@@ -32,9 +43,11 @@ export const PATTERNS: Pattern[] = [
     res: [
       /\b(?:[Rr]eview|content-review|PR) (?:fix|round|amendment|revision|finding|review)s?\b/g,
       /\bcontent-review\b/g,
+      /\bdesign-review\b/g,
+      /\((?:[A-Za-z]+,\s*)?review\)/g,
     ],
   },
-  { id: 8, what: 'plan item id', res: [/\b[A-I]\d[a-z]\b/g] },
+  { id: 8, what: 'plan item id', res: [/\b[A-I]\d[a-z]\d?\b/g, /\b[A-I]-\d\b/g] },
   {
     id: 9,
     what: 'plan item range or rule',
@@ -76,7 +89,7 @@ export interface CommentProblem {
   pattern: number
   what: string
   snippet: string
-  kind: 'comment' | 'title'
+  kind: 'comment' | 'title' | 'file' | 'identifier' | 'literal'
   /** Identifies the comment block or title, so one block counts once per pattern. */
   unit: string
 }
@@ -191,6 +204,8 @@ export function findCommentProblems(root: string): CommentsResult {
         )
     })
   }
+  for (const p of findNameProblems(root, files))
+    problems.push({ ...p, unit: `${p.file}:${p.kind}:${p.line}:${p.snippet}` })
   problems.sort((a, b) =>
     a.file !== b.file
       ? a.file < b.file
@@ -240,23 +255,63 @@ export function findQuotations(root: string): Quotation[] {
     return sections.get(key) ?? null
   }
   const out: Quotation[] = []
+  const wordsIn = (gap: string) =>
+    gap.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length
+  const hasAnchor = (gap: string) => new RegExp(ANCHOR_CITATION.source, 'u').test(gap)
   const scanText = (
     file: string,
     text: string,
     kind: 'comment' | 'title',
     lineOf: (offset: number) => number,
   ) => {
+    // A quote has one owner: the nearer anchor within the window, the earlier one on a tie.
+    interface Claim {
+      match: RegExpMatchArray
+      at: number
+      quote: string
+      words: number
+    }
+    const claims = new Map<number, Claim>()
+    const claim = (quoteStart: number, next: Claim) => {
+      const held = claims.get(quoteStart)
+      if (
+        !held ||
+        next.words < held.words ||
+        (next.words === held.words && next.at < held.at)
+      )
+        claims.set(quoteStart, next)
+    }
     for (const m of text.matchAll(ANCHOR_CITATION)) {
-      const rest = text.slice(m.index + m[0].length)
+      const at = m.index
+      const rest = text.slice(at + m[0].length)
       const open = rest.indexOf('"')
-      if (open < 0) continue
-      const gap = rest.slice(0, open)
-      // The quote belongs to the nearest anchor before it; punctuation on its own is not a word.
-      if (new RegExp(ANCHOR_CITATION.source, 'u').test(gap)) continue
-      const words = gap.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w))
-      if (words.length > QUOTE_WINDOW_WORDS) continue
-      const close = rest.indexOf('"', open + 1)
-      const quote = rest.slice(open + 1, close < 0 ? undefined : close)
+      if (open >= 0) {
+        // The quote belongs to the nearest anchor before it; punctuation on its own is not a word.
+        const gap = rest.slice(0, open)
+        const words = wordsIn(gap)
+        if (!hasAnchor(gap) && words <= QUOTE_WINDOW_WORDS) {
+          const close = rest.indexOf('"', open + 1)
+          claim(at + m[0].length + open, {
+            match: m,
+            at,
+            quote: rest.slice(open + 1, close < 0 ? undefined : close),
+            words,
+          })
+        }
+      }
+      // A quote that ends within four words before this anchor: its closing mark is the last
+      // one before the anchor, and an even number of marks precede it, so it is a closing one.
+      const before = text.slice(0, at)
+      const end = before.lastIndexOf('"')
+      if (end < 0) continue
+      const gap = before.slice(end + 1)
+      const words = wordsIn(gap)
+      if (hasAnchor(gap) || words > QUOTE_WINDOW_WORDS) continue
+      if ((before.slice(0, end + 1).split('"').length - 1) % 2 !== 0) continue
+      const start = before.lastIndexOf('"', end - 1)
+      claim(start, { match: m, at, quote: before.slice(start + 1, end), words })
+    }
+    for (const [, { match: m, at, quote }] of [...claims].sort((a, b) => a[0] - b[0])) {
       const prefix = normalise(quote).slice(0, QUOTE_PREFIX).trim()
       if (prefix === '') continue
       const path = m[1].startsWith('.claude/') ? m[1].slice('.claude/'.length) : m[1]
@@ -264,7 +319,7 @@ export function findQuotations(root: string): Quotation[] {
       if (section === null || section.includes(prefix)) continue
       out.push({
         file,
-        line: lineOf(m.index),
+        line: lineOf(at),
         anchor: `${m[1]}#${m[2]}`,
         quote: collapse(quote),
         kind,
@@ -300,6 +355,18 @@ function runCounts(root: string, log: (line: string) => void): number {
     const files = new Set(hits.map((p) => p.file)).size
     log(
       `${String(pattern.id).padStart(7)}  ${String(units('comment')).padStart(8)}  ${String(units('title')).padStart(6)}  ${String(files).padStart(5)}  ${pattern.what}`,
+    )
+  }
+  const names = (kind: CommentProblem['kind']) =>
+    result.problems.filter((p) => p.kind === kind)
+  for (const [id, kind, label] of [
+    [18, 'file', 'file names'],
+    [19, 'identifier', 'identifiers'],
+    [20, 'literal', 'string literals'],
+  ] as const) {
+    const hits = names(kind)
+    log(
+      `${String(id).padStart(7)}  ${label}: ${hits.length} hits in ${new Set(hits.map((p) => p.file)).size} files`,
     )
   }
   return 0
