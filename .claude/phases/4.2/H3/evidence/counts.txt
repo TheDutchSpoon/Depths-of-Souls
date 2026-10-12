@@ -85,3 +85,26 @@ comments: PASS, 7008 comments and 1629 titles in 403 files
      18  file names: 0 hits in 0 files
      19  identifiers: 0 hits in 0 files
      20  string literals: 0 hits in 0 files
+
+## Round 3: JSX text nodes (non-blank) in the three src/*.tsx files, as jsxTextsOf reads them (line:text)
+branch:
+src/app/App.tsx 1 ["14:Depths of Souls"]
+src/main.tsx 0 []
+src/ui/CombatDemo.tsx 5 ["138:Skip to end\n          ","144:Seed:","151:Run this seed","155:Seed: ","156:Result: "]
+origin/main 590d82a (git archive):
+src/app/App.tsx 1 ["14:Depths of Souls"]
+src/main.tsx 0 []
+src/ui/CombatDemo.tsx 5 ["138:Skip to end\n          ","144:Seed:","151:Run this seed","155:Seed: ","156:Result: "]
+6 nodes in 2 files, none a hit, on both.
+
+## Round 3: the branch's scripts/ over the git archive extraction of 590d82a
+node scripts/docs-check.ts comments --root <extraction of 590d82a> --counts
+     18  file names: 127 hits in 127 files
+     19  identifiers: 25 hits in 12 files
+     20  string literals: 118 hits in 52 files
+Same as round 2: 118 hits in 52 files (the 7 value literals), nothing new.
+
+## Round 3: the branch
+     18  file names: 0 hits in 0 files
+     19  identifiers: 0 hits in 0 files
+     20  string literals: 0 hits in 0 files

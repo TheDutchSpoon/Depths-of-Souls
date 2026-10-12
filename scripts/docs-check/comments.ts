@@ -80,7 +80,7 @@ export const PATTERNS: Pattern[] = [
 ]
 
 /** `ASSUMPTION:` is allowed when its comment cites the open question it points at. */
-const ASSUMPTION_COLON = /\bASSUMPTION:/g
+export const ASSUMPTION_COLON = /\bASSUMPTION:/g
 const OPEN_QUESTION_CITATION = /OPEN_QUESTIONS\.md#[\p{L}\p{N}_-]+/u
 
 export interface CommentProblem {
@@ -204,7 +204,7 @@ export function findCommentProblems(root: string): CommentsResult {
         )
     })
   }
-  for (const p of findNameProblems(root, files, PATTERNS))
+  for (const p of findNameProblems(root, files, PATTERNS, ASSUMPTION_COLON))
     problems.push({ ...p, unit: `${p.file}:${p.kind}:${p.line}:${p.snippet}` })
   problems.sort((a, b) =>
     a.file !== b.file

@@ -186,3 +186,18 @@ M68 name guard: the title exclusion removed (a title reported by the guard too):
 M69 name guard: the mid-camel phase case removed: 2 test(s) fail
     names.test.ts > name guard, identifiers fails placeholderPhase4Config, wherever it is used
     names.test.ts > name guard, identifiers fails configPHASE_4, wherever it is used
+
+## Round 3 (hand-out items 1-3), run on the final code
+Each removed in turn from names.ts in place (restored byte-equal after each), the names.test.ts file run, the failing tests named. 4 mutations, 0 survive. Rows 70-73 continue the numbering above.
+
+M70 name guard: the `ASSUMPTION:` branch of the value check removed: 2 test(s) fail
+    names.test.ts > name guard, provenance words in value literals fails 'ASSUMPTION: floor-1 clear', naming the file and line
+    names.test.ts > name guard, provenance words in value literals fails `ASSUMPTION: ${x} clear`, naming the file and line
+M71 name guard: LAST_VALUE_PATTERN = 8 (pattern 9 not run on a value): 1 test(s) fail
+    names.test.ts > name guard, provenance words in value literals fails 'items B2+ only', naming the file and line
+M72 name guard: the identifier lookbehind narrowed from (?<=[a-z0-9]) to (?<=[a-z]): 1 test(s) fail (no other arm catches tier2Phase3)
+    names.test.ts > name guard, identifiers fails tier2Phase3, wherever it is used
+M73 name guard: the JSX text read removed: 3 test(s) fail
+    names.test.ts > name guard, JSX text fails <p>not available before Phase 8</p>, naming the file and line
+    names.test.ts > name guard, JSX text fails <p>h2b2-x</p>, naming the file and line
+    names.test.ts > name guard, JSX text names the line of the text in a multi-line element

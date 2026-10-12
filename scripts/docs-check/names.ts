@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Pattern } from './comments.ts'
-import { identifiersOf, literalsOf } from './tokens.ts'
+import { identifiersOf, jsxTextsOf, literalsOf } from './tokens.ts'
 
 // The name guard behind `comments`: provenance in the code itself, not in a comment
 // (`CONVENTIONS.md#comment-why-not-what`). It reads:
@@ -9,8 +9,10 @@ import { identifiersOf, literalsOf } from './tokens.ts'
 // - every identifier, for a slice id or a phase id (`PHASE_4_X`, `placeholderPhase4Config`);
 // - every string, template and regex literal that is not a module specifier or a test title,
 //   for a slice id and for the provenance words of `comments`' patterns 1-9 (ASSUMPTION, phase
-//   and slice names, PR numbers, review words, plan-item ids). Patterns 10-17 are not run there:
-//   "brief", "grill" and "the plan" are English a player-facing string can hold;
+//   and slice names, PR numbers, review words, plan-item ids) and for `ASSUMPTION:`, which a value
+//   cannot excuse by citing an open question. Patterns 10-17 are not run there: "brief", "grill"
+//   and "the plan" are English a player-facing string can hold;
+// - every JSX text node, read as a value literal;
 // - a test title for the two hyphen shapes of a slice id only, because `comments` already runs
 //   every pattern over a title.
 // Plan-item letters are A-I, so `D7_THING` is flagged and the derivation handle `S1_SCRIPT` is
@@ -102,15 +104,57 @@ function provenanceHit(text: string, patterns: Pattern[]): Pattern | undefined {
   )
 }
 
+/** `ASSUMPTION:` is pattern 1's colon form; a value cannot cite an open question, so it always fails. */
+const ASSUMPTION_MARKER = 1
+
+interface ValueHit {
+  id: number
+  what: string
+}
+
+/** The provenance word in a value's `text`: the first of patterns 1-9, then `ASSUMPTION:`. */
+function valueHit(
+  text: string,
+  patterns: Pattern[],
+  assumptionColon: RegExp,
+): ValueHit | undefined {
+  const word = provenanceHit(text, patterns)
+  if (word !== undefined) return word
+  if (text.matchAll(assumptionColon).next().done === false)
+    return patterns.find((p) => p.id === ASSUMPTION_MARKER)
+  return undefined
+}
+
+/** One pattern-20 problem: a slice id when `word` is undefined, else the provenance word. */
+function literalProblem(
+  file: string,
+  line: number,
+  text: string,
+  word: ValueHit | undefined,
+): NameProblem {
+  return {
+    file,
+    line,
+    pattern: LITERAL_PATTERN,
+    what:
+      word === undefined
+        ? 'pattern 20, slice id in a string literal'
+        : `pattern 20, provenance in a string literal (pattern ${word.id}, ${word.what})`,
+    snippet: text.length > 60 ? `${text.slice(0, 59)}…` : text,
+    kind: 'literal',
+  }
+}
+
 /**
  * The name guard over `root`: file names (every extension), identifiers and string literals. The
- * source files are the ones `comments` already reads, so one walk feeds both; `patterns` are
- * `comments`' own.
+ * source files are the ones `comments` already reads, so one walk feeds both; `patterns` and
+ * `assumptionColon` are `comments`' own.
  */
 export function findNameProblems(
   root: string,
   sourceFiles: string[],
   patterns: Pattern[],
+  assumptionColon: RegExp,
 ): NameProblem[] {
   const problems: NameProblem[] = []
   for (const path of allPaths(root)) {
@@ -144,20 +188,17 @@ export function findNameProblems(
       const hit = literalHit(lit.text, lit.context === 'title')
       const word =
         hit === undefined && lit.context === 'value'
-          ? provenanceHit(lit.text, patterns)
+          ? valueHit(lit.text, patterns, assumptionColon)
           : undefined
       if (hit !== undefined || word !== undefined)
-        problems.push({
-          file,
-          line: lit.line,
-          pattern: LITERAL_PATTERN,
-          what:
-            word === undefined
-              ? 'pattern 20, slice id in a string literal'
-              : `pattern 20, provenance in a string literal (pattern ${word.id}, ${word.what})`,
-          snippet: lit.text.length > 60 ? `${lit.text.slice(0, 59)}…` : lit.text,
-          kind: 'literal',
-        })
+        problems.push(literalProblem(file, lit.line, lit.text, word))
+    }
+    for (const jsx of jsxTextsOf(file, text)) {
+      const hit = literalHit(jsx.text, false)
+      const word =
+        hit === undefined ? valueHit(jsx.text, patterns, assumptionColon) : undefined
+      if (hit !== undefined || word !== undefined)
+        problems.push(literalProblem(file, jsx.line, jsx.text, word))
     }
   }
   return problems

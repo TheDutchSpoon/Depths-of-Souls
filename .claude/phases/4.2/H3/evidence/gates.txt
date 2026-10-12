@@ -1,6 +1,6 @@
 # Gates
 
-Round 2. node v24.19.0, npm 11.12.1, origin/main 590d82a
+Round 3. node v24.19.0, npm 11.12.1, origin/main 590d82a
 
 ## npm run test
 
@@ -13,9 +13,9 @@ Round 2. node v24.19.0, npm 11.12.1, origin/main 590d82a
 
 
  Test Files  212 passed (212)
-      Tests  1839 passed | 1 skipped (1840)
-   Start at  12:10:30
-   Duration  29.22s (tests 76%, import 13%, transform 8%, worker 2%, environment 2%)
+      Tests  1848 passed | 1 skipped (1849)
+   Start at  12:41:19
+   Duration  26.20s (tests 77%, import 12%, transform 7%, environment 2%, worker 2%)
 
 exit: 0
 
@@ -43,7 +43,7 @@ exit: 0
 > depths-of-souls@0.0.0 build
 > tsc -b && vite build
 
-[36mvite v8.3.3 [32mbuilding client environment for production...[36m[39m
+vite v8.3.3 building client environment for production...
 transforming...
 ✓ 48 modules transformed.
 rendering chunks...
@@ -52,7 +52,7 @@ dist/index.html                   0.51 kB │ gzip:  0.31 kB
 dist/assets/index-CpQxvG1H.css    0.32 kB │ gzip:  0.20 kB
 dist/assets/index-CPteU_Xa.js   295.23 kB │ gzip: 86.22 kB
 
-[32m✓ built in 103ms[39m
+✓ built in 95ms
 exit: 0
 
 ## npx tsc -b
@@ -68,6 +68,15 @@ exit: 0
 citations: PASS, 642 citations in 436 files
 exit: 0
 
+## npm run docs:check -- comments
+
+
+> depths-of-souls@0.0.0 docs:check
+> node scripts/docs-check.ts comments
+
+comments: PASS, 7008 comments and 1629 titles in 403 files
+exit: 0
+
 ## npm run docs:check -- budgets
 
 
@@ -76,7 +85,7 @@ exit: 0
 
 file                 size     budget  used  status
 CLAUDE.md            5.5 KB   7 KB    79%   ok
-CONVENTIONS.md       26.1 KB  29 KB   90%   ok
+CONVENTIONS.md       26.6 KB  29 KB   92%   ok
 spec/combat.md       35.7 KB  43 KB   83%   ok
 spec/creatures.md    18.1 KB  22 KB   82%   ok
 spec/effects.md      32.0 KB  39 KB   82%   ok
@@ -89,17 +98,3 @@ spec/statuses.md     17.1 KB  21 KB   82%   ok
 spec/store.md        2.8 KB   4 KB    70%   ok
 budgets: 12 files, 0 over budget
 exit: 0
-
-## npm run docs:check -- comments
-
-
-> depths-of-souls@0.0.0 docs:check
-> node scripts/docs-check.ts comments
-
-comments: PASS, 7008 comments and 1629 titles in 403 files
-exit: 0
-
-## comment-proof origin/main --mask evidence/mask.json --renames evidence/renames.json
-
-151 OK, 1 FAIL (engine/corpus-digest.test.ts); the whole output is in comment-proof.txt, byte-equal to round 1's.
-

@@ -16,6 +16,13 @@ export interface Literal {
   line: number
 }
 
+export interface JsxTextNode {
+  /** The text from its first non-blank character, as written. */
+  text: string
+  /** 1-based line of that first non-blank character. */
+  line: number
+}
+
 export interface Ident {
   text: string
   from: number
@@ -71,6 +78,25 @@ export function literalsOf(file: string, text: string): Literal[] {
     else if (ts.isTemplateTail(node)) add(start + 1, node.end - 1, false, node.text)
     else if (ts.isRegularExpressionLiteral(node))
       add(start, node.end, true, node.getText(sf))
+    ts.forEachChild(node, visit)
+  }
+  visit(sf)
+  return out
+}
+
+/** Every JSX text node of `text` that holds more than whitespace, in source order. */
+export function jsxTextsOf(file: string, text: string): JsxTextNode[] {
+  const out: JsxTextNode[] = []
+  const sf = parse(file, text)
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxText(node) && !node.containsOnlyTriviaWhiteSpaces) {
+      const raw = text.slice(node.pos, node.end)
+      const lead = raw.length - raw.trimStart().length
+      out.push({
+        text: raw.trimStart(),
+        line: sf.getLineAndCharacterOfPosition(node.pos + lead).line + 1,
+      })
+    }
     ts.forEachChild(node, visit)
   }
   visit(sf)

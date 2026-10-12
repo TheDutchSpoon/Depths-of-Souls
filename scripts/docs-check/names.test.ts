@@ -69,6 +69,7 @@ describe('name guard, identifiers', () => {
     'x_B5_y',
     'placeholderPhase4Config',
     'configPHASE_4',
+    'tier2Phase3',
   ])('fails %s, wherever it is used', (name) => {
     for (const code of [
       `export const ${name} = 1`,
@@ -173,6 +174,9 @@ describe('name guard, provenance words in value literals', () => {
     ['/before Phase 8/', 'pattern 2, phase number'],
     ["'see PR #12'", 'pattern 6, PR number'],
     ["'item B-2'", 'pattern 8, plan item id'],
+    ["'items B2+ only'", 'pattern 9, plan item range or rule'],
+    ["'ASSUMPTION: floor-1 clear'", 'pattern 1, ASSUMPTION marker'],
+    ['`ASSUMPTION: ${x} clear`', 'pattern 1, ASSUMPTION marker'],
   ])('fails %s, naming the file and line', (literal, pattern) => {
     const { code, text } = check({ 'src/x.ts': `\nexport const a = ${literal}\n` })
     expect(code).toBe(1)
@@ -200,6 +204,16 @@ describe('name guard, provenance words in value literals', () => {
     expect(lines.filter((line) => line.startsWith('src/x.test.ts:'))).toHaveLength(1)
   })
 
+  it('leaves an ASSUMPTION: title to the comments patterns, and reports it once', () => {
+    const { code, text, lines } = check({
+      'src/x.test.ts': "it('ASSUMPTION: x', () => {})\n",
+    })
+    expect(code).toBe(1)
+    expect(text).toContain('pattern 1, ASSUMPTION: in a title')
+    expect(text).not.toContain('pattern 20')
+    expect(lines.filter((line) => line.startsWith('src/x.test.ts:'))).toHaveLength(1)
+  })
+
   it('reads a value inside a test body, and a module specifier not at all', () => {
     expect(
       check({ 'src/x.test.ts': "it('ok', () => { const a = 'before Phase 8' })\n" }).text,
@@ -213,6 +227,36 @@ describe('name guard, provenance words in value literals', () => {
       { counts: true },
     )
     expect(lines.at(-1)).toBe('     20  string literals: 1 hits in 1 files')
+  })
+})
+
+describe('name guard, JSX text', () => {
+  const inJsx = (body: string) =>
+    check({ 'src/x.tsx': `export const a = (\n${body}\n)\n` })
+
+  it.each([
+    [
+      '<p>not available before Phase 8</p>',
+      'pattern 20, provenance in a string literal (pattern 2,',
+    ],
+    ['<p>h2b2-x</p>', 'pattern 20, slice id in a string literal'],
+  ])('fails %s, naming the file and line', (jsx, what) => {
+    const { code, text } = inJsx(jsx)
+    expect(code).toBe(1)
+    expect(text).toContain(`src/x.tsx:2: ${what}`)
+  })
+
+  it('names the line of the text in a multi-line element', () => {
+    const { code, text } = check({
+      'src/x.tsx':
+        'export const a = <div>\n  <b>ok</b>\n  not available before Phase 8\n</div>\n',
+    })
+    expect(code).toBe(1)
+    expect(text).toContain('src/x.tsx:3: pattern 20, provenance')
+  })
+
+  it('passes ordinary text', () => {
+    expect(inJsx('<p>a brief stun</p>').code).toBe(0)
   })
 })
 
