@@ -287,6 +287,30 @@ describe('comment-proof --renames, specifiers', () => {
     }
   })
 
+  it('fails when the base has more importers than the entry says, and the working tree matches it', () => {
+    const root = repo({ ...BASE, 'src/user.ts': "import './golden-h9z-a.fixture'\n" })
+    renameSync(join(root, FIXTURE_OLD), join(root, FIXTURE_NEW))
+    renameSync(join(root, TEST_OLD), join(root, TEST_NEW))
+    writeTree(root, { ...HEAD, 'src/user.ts': '// no longer imports it\n' })
+    const { code, text } = proof(root, MAP)
+    expect(code).toBe(1)
+    expect(text).toContain(
+      `FAIL ${FIXTURE_NEW}: renames entry ${FIXTURE_OLD} -> ${FIXTURE_NEW} expects 1 importing specifiers, found 2 in the base and 1 in the working tree`,
+    )
+  })
+
+  it('fails when the working tree has more importers than the entry says, and the base matches it', () => {
+    const root = repo({ ...BASE, 'src/user.ts': 'export const u = 1\n' })
+    renameSync(join(root, FIXTURE_OLD), join(root, FIXTURE_NEW))
+    renameSync(join(root, TEST_OLD), join(root, TEST_NEW))
+    writeTree(root, { ...HEAD, 'src/user.ts': "import './golden-tick-a.fixture'\n" })
+    const { code, text } = proof(root, MAP)
+    expect(code).toBe(1)
+    expect(text).toContain(
+      `FAIL ${FIXTURE_NEW}: renames entry ${FIXTURE_OLD} -> ${FIXTURE_NEW} expects 1 importing specifiers, found 1 in the base and 2 in the working tree`,
+    )
+  })
+
   it('fails an importer that keeps the old specifier', () => {
     const root = moved()
     writeTree(root, {

@@ -60,21 +60,27 @@ describe('name guard, file names', () => {
 })
 
 describe('name guard, identifiers', () => {
-  it.each(['D7_THING', 'd7Thing', 'H2b2', 'PHASE_4_X', 'Phase4Thing', 'x_B5_y'])(
-    'fails %s, wherever it is used',
-    (name) => {
-      for (const code of [
-        `export const ${name} = 1`,
-        `const o = { ${name}: 1 }\nexport const a = o.${name}`,
-        `import { ${name} as y } from './z'\nexport const a = y`,
-        `export type ${name} = number`,
-      ]) {
-        const { code: exit, text } = inSource(code)
-        expect(exit, code).toBe(1)
-        expect(text, code).toContain('pattern 19,')
-      }
-    },
-  )
+  it.each([
+    'D7_THING',
+    'd7Thing',
+    'H2b2',
+    'PHASE_4_X',
+    'Phase4Thing',
+    'x_B5_y',
+    'placeholderPhase4Config',
+    'configPHASE_4',
+  ])('fails %s, wherever it is used', (name) => {
+    for (const code of [
+      `export const ${name} = 1`,
+      `const o = { ${name}: 1 }\nexport const a = o.${name}`,
+      `import { ${name} as y } from './z'\nexport const a = y`,
+      `export type ${name} = number`,
+    ]) {
+      const { code: exit, text } = inSource(code)
+      expect(exit, code).toBe(1)
+      expect(text, code).toContain('pattern 19,')
+    }
+  })
 
   it.each([
     'A2',
@@ -89,6 +95,8 @@ describe('name guard, identifiers', () => {
     'E0',
     'phase',
     'sliceOf',
+    'runA1',
+    'biphase4',
   ])('passes %s', (name) => {
     expect(inSource(`export const ${name} = 1`).code).toBe(0)
   })
@@ -154,6 +162,57 @@ describe('name guard, string literals', () => {
     expect(
       check({ 'src/x.test.ts': "it('ok', () => { const a = 'D7 thing' })\n" }).code,
     ).toBe(1)
+  })
+})
+
+describe('name guard, provenance words in value literals', () => {
+  it.each([
+    ["'not available before Phase 8'", 'pattern 2, phase number'],
+    ["'ASSUMPTION 22: floor-1 clear'", 'pattern 1, ASSUMPTION marker'],
+    ['`the Phase-3 ${x} trait`', 'pattern 3, phase id'],
+    ['/before Phase 8/', 'pattern 2, phase number'],
+    ["'see PR #12'", 'pattern 6, PR number'],
+    ["'item B-2'", 'pattern 8, plan item id'],
+  ])('fails %s, naming the file and line', (literal, pattern) => {
+    const { code, text } = check({ 'src/x.ts': `\nexport const a = ${literal}\n` })
+    expect(code).toBe(1)
+    expect(text).toContain(
+      `src/x.ts:2: pattern 20, provenance in a string literal (${pattern})`,
+    )
+  })
+
+  it.each([
+    "'a brief stun'",
+    "'the plan of attack'",
+    "'hp-percent'",
+    "'grill the kickoff'",
+  ])('passes %s: patterns 10-17 are not run on a value', (literal) => {
+    expect(inSource(`export const a = ${literal}`).code).toBe(0)
+  })
+
+  it('leaves a test title to the comments patterns, and reports it once', () => {
+    const { code, text, lines } = check({
+      'src/x.test.ts': "it('pins Phase 4 numbers', () => {})\n",
+    })
+    expect(code).toBe(1)
+    expect(text).toContain('pattern 2, phase number')
+    expect(text).not.toContain('pattern 20')
+    expect(lines.filter((line) => line.startsWith('src/x.test.ts:'))).toHaveLength(1)
+  })
+
+  it('reads a value inside a test body, and a module specifier not at all', () => {
+    expect(
+      check({ 'src/x.test.ts': "it('ok', () => { const a = 'before Phase 8' })\n" }).text,
+    ).toContain('pattern 20, provenance')
+    expect(inSource("import './phase 4 thing'").text).not.toContain('pattern 20')
+  })
+
+  it('counts a value hit under the string-literal row of --counts', () => {
+    const { lines } = check(
+      { 'src/x.ts': "export const a = 'before Phase 8'\n" },
+      { counts: true },
+    )
+    expect(lines.at(-1)).toBe('     20  string literals: 1 hits in 1 files')
   })
 })
 

@@ -1,9 +1,18 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import type { Pattern } from './comments.ts'
 import { identifiersOf, literalsOf } from './tokens.ts'
 
-// The name guard behind `comments`: a phase or slice id in a file name, an identifier or a string
-// literal under `src/` is provenance in the code itself (`CONVENTIONS.md#comment-why-not-what`).
+// The name guard behind `comments`: provenance in the code itself, not in a comment
+// (`CONVENTIONS.md#comment-why-not-what`). It reads:
+// - every path under `src/`, for a slice or phase id in a file name;
+// - every identifier, for a slice id or a phase id (`PHASE_4_X`, `placeholderPhase4Config`);
+// - every string, template and regex literal that is not a module specifier or a test title,
+//   for a slice id and for the provenance words of `comments`' patterns 1-9 (ASSUMPTION, phase
+//   and slice names, PR numbers, review words, plan-item ids). Patterns 10-17 are not run there:
+//   "brief", "grill" and "the plan" are English a player-facing string can hold;
+// - a test title for the two hyphen shapes of a slice id only, because `comments` already runs
+//   every pattern over a title.
 // Plan-item letters are A-I, so `D7_THING` is flagged and the derivation handle `S1_SCRIPT` is
 // not: the letter, not a shape heuristic, tells them apart. A future `E1_FOO` handle would be
 // flagged and need another name.
@@ -54,10 +63,14 @@ function fileHit(path: string): string | undefined {
   return undefined
 }
 
+/** A phase id opening an identifier or following `_`, or inside a camel or upper-case run. */
+const PHASE_IN_IDENTIFIER =
+  /(?:^|_)(?:PHASE|Phase|phase)(?:_\d+|\d+)|(?<=[a-z0-9])(?:PHASE|Phase)_?\d+/
+
 /** The id inside an identifier, if any. */
 function identifierHit(name: string): string | undefined {
   if (/^[A-I]\d[a-z]\d?$/.test(name)) return name
-  const phase = /(?:^|_)(?:PHASE|Phase|phase)(?:_\d+|\d+)/.exec(name)
+  const phase = PHASE_IN_IDENTIFIER.exec(name)
   if (phase) return phase[0].replace(/^_/, '')
   const camel = /^[a-i]\d[a-z]?\d?(?=[A-Z])/.exec(name)
   if (camel) return camel[0]
@@ -78,11 +91,27 @@ function literalHit(text: string, title: boolean): string | undefined {
   return hit?.[0].trim()
 }
 
+const LAST_VALUE_PATTERN = 9
+
+/** The first of `comments`' patterns 1-9 that `text` matches, if any. */
+function provenanceHit(text: string, patterns: Pattern[]): Pattern | undefined {
+  return patterns.find(
+    (p) =>
+      p.id <= LAST_VALUE_PATTERN &&
+      p.res.some((re) => text.matchAll(re).next().done === false),
+  )
+}
+
 /**
  * The name guard over `root`: file names (every extension), identifiers and string literals. The
- * source files are the ones `comments` already reads, so one walk feeds both.
+ * source files are the ones `comments` already reads, so one walk feeds both; `patterns` are
+ * `comments`' own.
  */
-export function findNameProblems(root: string, sourceFiles: string[]): NameProblem[] {
+export function findNameProblems(
+  root: string,
+  sourceFiles: string[],
+  patterns: Pattern[],
+): NameProblem[] {
   const problems: NameProblem[] = []
   for (const path of allPaths(root)) {
     const hit = fileHit(path)
@@ -113,12 +142,19 @@ export function findNameProblems(root: string, sourceFiles: string[]): NameProbl
     for (const lit of literalsOf(file, text)) {
       if (lit.context === 'specifier') continue
       const hit = literalHit(lit.text, lit.context === 'title')
-      if (hit !== undefined)
+      const word =
+        hit === undefined && lit.context === 'value'
+          ? provenanceHit(lit.text, patterns)
+          : undefined
+      if (hit !== undefined || word !== undefined)
         problems.push({
           file,
           line: lit.line,
           pattern: LITERAL_PATTERN,
-          what: 'pattern 20, slice id in a string literal',
+          what:
+            word === undefined
+              ? 'pattern 20, slice id in a string literal'
+              : `pattern 20, provenance in a string literal (pattern ${word.id}, ${word.what})`,
           snippet: lit.text.length > 60 ? `${lit.text.slice(0, 59)}…` : lit.text,
           kind: 'literal',
         })

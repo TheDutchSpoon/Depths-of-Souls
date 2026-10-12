@@ -76,7 +76,7 @@ scripts/docs-check/cli.test.ts  34  34
 scripts/docs-check/comment-proof.test.ts  67  67
 scripts/docs-check/comments.test.ts  61  82  (the new checks)
 scripts/docs-check/inventory.test.ts  27  27
-scripts/docs-check/names.test.ts  -  58  (the new checks)
-scripts/docs-check/renames.test.ts  -  59  (the new checks)
+scripts/docs-check/names.test.ts  -  75  (the new checks; 58 in round 1)
+scripts/docs-check/renames.test.ts  -  61  (the new checks; 59 in round 1)
 scripts/docs-check/scanner.test.ts  48  48
-total  325  463
+total  325  482  (463 in round 1)

@@ -12,7 +12,7 @@ import { splitLines } from './text.ts'
 // (`CONVENTIONS.md#comment-why-not-what`, `CONVENTIONS.md#open-questions-get-an-interface`). It
 // runs in CI's `test` job (`.github/workflows/deploy.yml`), before the tests. The same walk also
 // runs the name guard (`names.ts`): a slice or phase id in a file name, an identifier or a string
-// literal.
+// literal, and the provenance words of patterns 1-9 in a string literal.
 
 export interface Pattern {
   id: number
@@ -204,7 +204,7 @@ export function findCommentProblems(root: string): CommentsResult {
         )
     })
   }
-  for (const p of findNameProblems(root, files))
+  for (const p of findNameProblems(root, files, PATTERNS))
     problems.push({ ...p, unit: `${p.file}:${p.kind}:${p.line}:${p.snippet}` })
   problems.sort((a, b) =>
     a.file !== b.file

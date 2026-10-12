@@ -165,3 +165,24 @@ M63 cli: --renames reaches the proof [cli.ts]: 1 test(s) fail
     renames.test.ts > loadRenames rejects a missing or malformed file as a usage error, through the cli
 (node:170324) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
+
+## Round 2 (hand-out items 1 and 2), run on the final code
+Each removed in turn from a fresh scratch copy of scripts/ (outside the repo), the docs-check project run, the failing tests named (first three shown). 6 mutations, 0 survive. Rows 64-69 continue the numbering above.
+
+M64 importer count: the base half (specBase[i] !== expected) removed: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, specifiers fails when the base has more importers than the entry says, and the working tree matches it
+M65 importer count: the working-tree half (specHead[i] !== expected) removed: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, specifiers fails when the working tree has more importers than the entry says, and the base matches it
+M66 name guard: the value-literal pattern loop removed: 8 test(s) fail
+    names.test.ts > name guard, provenance words in value literals fails 'not available before Phase 8', naming the file and line
+    names.test.ts > name guard, provenance words in value literals fails 'ASSUMPTION 22: floor-1 clear', naming the file and line
+    names.test.ts > name guard, provenance words in value literals fails `the Phase-3 ${x} trait`, naming the file and line
+M67 name guard: the 1-9 bound removed (patterns 10-17 run on a value): 3 test(s) fail
+    names.test.ts > name guard, provenance words in value literals passes 'a brief stun': patterns 10-17 are not run on a value
+    names.test.ts > name guard, provenance words in value literals passes 'the plan of attack': patterns 10-17 are not run on a value
+    names.test.ts > name guard, provenance words in value literals passes 'grill the kickoff': patterns 10-17 are not run on a value
+M68 name guard: the title exclusion removed (a title reported by the guard too): 1 test(s) fail
+    names.test.ts > name guard, provenance words in value literals leaves a test title to the comments patterns, and reports it once
+M69 name guard: the mid-camel phase case removed: 2 test(s) fail
+    names.test.ts > name guard, identifiers fails placeholderPhase4Config, wherever it is used
+    names.test.ts > name guard, identifiers fails configPHASE_4, wherever it is used

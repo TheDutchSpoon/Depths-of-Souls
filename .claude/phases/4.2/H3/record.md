@@ -3,7 +3,7 @@
 **Status: built.** Golden policy: one deliberate kind, fixture data ids. 35 golden fixtures carry a renamed id into their expected events and
 export the same values as `main`'s once the id map is applied to `main`'s side; the other golden fixtures export values deep-equal to `main`'s as
 they are. The corpus digest fixture is byte-unchanged and `npm run corpus:update` was not run. Test count under `src/` is 1358 (1357 passed,
-1 skipped): `main`'s 1357 file by file, under the rename map, plus the corpus fixture test. Under `scripts/` it is 463 (`main`: 325), all in the new
+1 skipped): `main`'s 1357 file by file, under the rename map, plus the corpus fixture test. Under `scripts/` it is 482 (`main`: 325), all in the new
 checks.
 
 ## What was built
@@ -25,9 +25,14 @@ checks.
     (a trait-borne lock) and `golden-granted-cast-refused-by-silenced-status` (the real Silenced status from the real Silence spell).
   - **Every comment that named an old thing** follows (34 lines in 27 files), read against the code each describes.
 - **The name guard**, folded into `comments` (`scripts/docs-check/names.ts`; patterns 18-20; one CI step, `ci.test.ts` unchanged). It fails on a
-  slice or phase id in a `src/` file name of any extension, in an identifier, and in a string literal; `--counts` prints a row per arm. The slice
-  letters are `A`-`I`: that is how `B5_FIXTURE` is flagged and the derivation handle `S1_SCRIPT` is not. A test title may open with a
-  derivation label (`'E1 ticks first'`). Module specifiers are left to the file arm.
+  slice or phase id in a `src/` file name of any extension and in an identifier (`PHASE_4_X`, `phase4Thing`, `placeholderPhase4Config`), and in a
+  string, template or regex literal; `--counts` prints a row per arm. A literal that is not a module specifier or a test title is also read with
+  `comments`' patterns 1-9 (ASSUMPTION, phase number and id, slice id and name, PR number, review words, plan-item id, range and rule), so
+  "before Phase 8" or "ASSUMPTION 22" in an error message or a report label fails; patterns 10-17 are not run there ("a brief stun" is English). A
+  title gets the two hyphen shapes of a slice id only, because `comments` already runs every pattern over it, and is never reported twice.
+  A hit is reported under pattern 20, with the matched pattern in the message. The slice letters are `A`-`I`: that is how `B5_FIXTURE` is flagged
+  and the derivation handle `S1_SCRIPT` is not. A test title may open with a derivation label (`'E1 ticks first'`). Module specifiers are left to
+  the file arm.
 - **The missed shapes**: `Slice-B`, `pre-Slice`, `B-2`, a bare suffixed `H2b2` (pattern 8 widens to `\b[A-I]\d[a-z]\d?\b`), `design-review` and
   `(nit, review)`; `--quotations` also reads a quotation that ends within four words before its anchor (the nearer anchor owns a quote, the earlier one on
   a tie).

@@ -125,3 +125,43 @@ node-shims.d.ts:3 is the one expected false positive; its target lines:
 // needs to write its own generated fixture. `tsconfig.app.json`'s `types` array is deliberately
 // `["vite/client"]` only (`CONVENTIONS.md#test-environments`: engine tests run in Node, but `src/`
 // as a whole must not gain Node-only globals that would leak into UI/browser code) -- `@types/node`
+
+## D. comments: provenance words in value literals and a mid-camel phase id (round 2; a scratch tree, one file src/plant.ts or src/plant.test.ts)
+--- baseline: no plant
+comments: PASS, 0 comments and 0 titles in 1 files
+exit 0
+--- a provenance word in an error message: 'not available before Phase 8'
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 2, phase number): "not available before Phase 8"
+comments: FAIL, 1 problems
+exit 1
+--- an ASSUMPTION in a report label: 'ASSUMPTION 22: floor-1 clear'
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 1, ASSUMPTION marker): "ASSUMPTION 22: floor-1 clear"
+comments: FAIL, 1 problems
+exit 1
+--- a phase id in a template: `the Phase-3 ${x} trait`
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 3, phase id): "the Phase-3 "
+comments: FAIL, 1 problems
+exit 1
+--- a phase number in a regex literal: /before Phase 8/
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 2, phase number): "/before Phase 8/"
+comments: FAIL, 1 problems
+exit 1
+--- a PR number: 'see PR #12'
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 6, PR number): "see PR #12"
+comments: FAIL, 1 problems
+exit 1
+--- a plan-item id: 'item B-2'
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 8, plan item id): "item B-2"
+comments: FAIL, 1 problems
+exit 1
+--- a mid-camel phase id in an identifier: placeholderPhase4Config
+src/plant.ts:1: pattern 19, slice or phase id in an identifier: "placeholderPhase4Config"
+comments: FAIL, 1 problems
+exit 1
+--- not flagged: 'a brief stun', 'the plan of attack', 'hp-percent', runA1
+comments: PASS, 0 comments and 0 titles in 1 files
+exit 0
+--- a title is reported once, by pattern 2: it('pins Phase 4 numbers')
+src/plant.test.ts:1: pattern 2, phase number: "pins Phase 4 numbers"
+comments: FAIL, 1 problems
+exit 1

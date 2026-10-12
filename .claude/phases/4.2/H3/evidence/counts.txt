@@ -62,3 +62,26 @@ The one hit is a false positive: node-shims.d.ts:3 quotes "vite/client", a JSON 
 // needs to write its own generated fixture. `tsconfig.app.json`'s `types` array is deliberately
 // `["vite/client"]` only (`CONVENTIONS.md#test-environments`: engine tests run in Node, but `src/`
 // as a whole must not gain Node-only globals that would leak into UI/browser code) -- `@types/node`
+
+## Round 2: value literals on main (origin/main 590d82a), the branch's scripts/ run over a git archive extraction
+node scripts/docs-check.ts comments --root <extraction of 590d82a>
+
+src/engine/corpus-coverage.test.ts:27: pattern 20, provenance in a string literal (pattern 3, phase id): "applied only by the Phase-3 mechanism trait 'reeling' (data…"
+src/state/balance-sim.test.ts:164: pattern 20, provenance in a string literal (pattern 1, ASSUMPTION marker): "ASSUMPTION 22"
+src/state/balance-sim.ts:1789: pattern 20, provenance in a string literal (pattern 1, ASSUMPTION marker): "T4 walls' size (ASSUMPTION 108): most failed pushes on one …"
+src/state/balance-sim.ts:1867: pattern 20, provenance in a string literal (pattern 1, ASSUMPTION marker): "ASSUMPTION 22: floor-1 clear >= "
+src/state/balance-sim.ts:1877: pattern 20, provenance in a string literal (pattern 1, ASSUMPTION marker): "ASSUMPTION 22 summary (reported, not asserted):"
+src/state/rewards.test.ts:176: pattern 20, provenance in a string literal (pattern 2, phase number): "/not materializable before Phase 8/"
+src/state/rewards.ts:52: pattern 20, provenance in a string literal (pattern 2, phase number): "staticCreatureIdFor: fused instances are not materializable…"
+
+--counts (patterns 18-20; 1-17 are 0 as above):
+     18  file names: 127 hits in 127 files
+     19  identifiers: 25 hits in 12 files
+     20  string literals: 118 hits in 52 files
+Before round 2, row 20 read 111 hits in 47 files: the 7 above are the whole difference (118 in 52 files); rows 18 and 19 are unchanged.
+
+## Round 2: the branch
+comments: PASS, 7008 comments and 1629 titles in 403 files
+     18  file names: 0 hits in 0 files
+     19  identifiers: 0 hits in 0 files
+     20  string literals: 0 hits in 0 files

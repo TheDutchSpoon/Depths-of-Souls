@@ -1,18 +1,26 @@
 # Gates
 
-node v24.19.0, npm 11.12.1, origin/main 590d82a
+Round 2. node v24.19.0, npm 11.12.1, origin/main 590d82a
 
 ## npm run test
 
 
+> depths-of-souls@0.0.0 test
+> vitest run
+
+
+ RUN  v5.0.3 C:/Users/dunca/MyProjects/Depths-of-Souls
+
+
  Test Files  212 passed (212)
-      Tests  1820 passed | 1 skipped (1821)
-   Start at  11:13:37
-   Duration  31.81s (tests 77%, import 12%, transform 8%, environment 2%, worker 2%)
+      Tests  1839 passed | 1 skipped (1840)
+   Start at  12:10:30
+   Duration  29.22s (tests 76%, import 13%, transform 8%, worker 2%, environment 2%)
 
 exit: 0
 
 ## npm run lint
+
 
 > depths-of-souls@0.0.0 lint
 > eslint .
@@ -20,6 +28,7 @@ exit: 0
 exit: 0
 
 ## npm run format:check
+
 
 > depths-of-souls@0.0.0 format:check
 > prettier --check .
@@ -29,27 +38,49 @@ All matched files use Prettier code style!
 exit: 0
 
 ## npm run build
+
+
+> depths-of-souls@0.0.0 build
+> tsc -b && vite build
+
+[36mvite v8.3.3 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 48 modules transformed.
 rendering chunks...
 computing gzip size...
 dist/index.html                   0.51 kB │ gzip:  0.31 kB
 dist/assets/index-CpQxvG1H.css    0.32 kB │ gzip:  0.20 kB
 dist/assets/index-CPteU_Xa.js   295.23 kB │ gzip: 86.22 kB
 
-[32m✓ built in 99ms[39m
+[32m✓ built in 103ms[39m
 exit: 0
 
 ## npx tsc -b
+
 exit: 0
 
 ## npm run docs:check -- citations
 
+
 > depths-of-souls@0.0.0 docs:check
 > node scripts/docs-check.ts citations
 
-citations: PASS, 641 citations in 436 files
+citations: PASS, 642 citations in 436 files
 exit: 0
 
 ## npm run docs:check -- budgets
+
+
+> depths-of-souls@0.0.0 docs:check
+> node scripts/docs-check.ts budgets
+
+file                 size     budget  used  status
+CLAUDE.md            5.5 KB   7 KB    79%   ok
+CONVENTIONS.md       26.1 KB  29 KB   90%   ok
+spec/combat.md       35.7 KB  43 KB   83%   ok
+spec/creatures.md    18.1 KB  22 KB   82%   ok
+spec/effects.md      32.0 KB  39 KB   82%   ok
+spec/progression.md  4.7 KB   6 KB    78%   ok
 spec/responses.md    12.1 KB  15 KB   81%   ok
 spec/run.md          17.6 KB  22 KB   80%   ok
 spec/saves.md        3.9 KB   5 KB    78%   ok
@@ -61,9 +92,14 @@ exit: 0
 
 ## npm run docs:check -- comments
 
+
 > depths-of-souls@0.0.0 docs:check
 > node scripts/docs-check.ts comments
 
 comments: PASS, 7008 comments and 1629 titles in 403 files
 exit: 0
+
+## comment-proof origin/main --mask evidence/mask.json --renames evidence/renames.json
+
+151 OK, 1 FAIL (engine/corpus-digest.test.ts); the whole output is in comment-proof.txt, byte-equal to round 1's.
 
