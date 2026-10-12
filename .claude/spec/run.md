@@ -159,7 +159,7 @@ Read this when changing descent, generation or the hub.
   party fights the floor's next fight at its new levels.
   **Known bug:** `main` materializes the party once per descent and applies the floor's XP after the
   whole floor, so levels never change between the fights of one floor. The fix is listed in
-  `ROADMAP.md` Phase 4.5 "Decided, not built".
+  `phases/4.5/brief.md#level-ups-after-each-fight`.
 - **A boss kill** banks XP and currency through the same per-kill path, but **no soul%**.
 - **Winning** a boss fight records the boss as cleared; perk points come from the **first clear
   only**. A cleared boss floor can be fought again for ordinary rewards. A loss banks the adds'
