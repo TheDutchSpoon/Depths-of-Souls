@@ -10,8 +10,9 @@ PR's source branch; Duncan gives it with the command, or it's the branch his wor
 
 ## Inputs
 
-`kickoff.md`, `plan.md`, `plan-review.md` and the latest `report-r<N>.md` from the mailbox, and the
-living docs on `main`.
+`kickoff.md`, `plan.md`, `plan-review.md`, the approving round's `plan-handout-r<N>.md`
+and the latest `report-r<N>.md` from the mailbox, and the living docs on `main`. The build answers
+to the plan as that hand-out corrects it: check each item in the code, not on the report's word.
 
 ## 1. Pull the branch and main
 

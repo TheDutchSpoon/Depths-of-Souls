@@ -29,10 +29,24 @@ One section per round (`## Round 1`, `## Round 2`, …), each with:
 Then wait for Duncan's calls. Write his decisions into the round as **Decisions**, and into the
 living docs in place. End the round with **Docs edited** (file + one-line reason each).
 
-If the verdict is "changes needed", Duncan runs `/slice-plan <slice-id>` again; the coding agent
-revises `plan.md` and adds what changed at its top, and the next round reviews that. A third round
-is a signal to pull the slice back into a design pass instead.
+## Output: `plan-handout-r<N>.md` in the mailbox
 
-When the plan is approved, tell Duncan it's ready to commit: the kickoff, the plan, this review and
-the doc edits go in as **the first commit on the slice branch**, so the PR carries the spec it was
-built against.
+After Duncan's calls, write the round's hand-out (`N` is the round), every round: the coding agent
+reads it and never this review. It holds the round's verdict, its plan fixes and every decision that
+changes what is built, and nothing else:
+
+- each item is the end state, standalone: what to build, not what changed or why;
+- each item names the plan section or ASSUMPTION it amends;
+- a kickoff or living-doc line a decision edited is named, for the coding agent to re-read.
+
+A round approved with nothing to correct still gets one, saying so in a line: build `plan.md` as it
+stands. A missing hand-out is then always a mistake, never a signal.
+
+- **Changes needed:** Duncan runs `/slice-plan <slice-id>` again; the coding agent folds the
+  hand-out into `plan.md`, adds what changed at its top, and the next round reviews that, the
+  fold-in included. A third round is a signal to pull the slice back into a design pass instead.
+- **Approved:** the build reads `plan.md` and this round's hand-out; where they disagree, the
+  hand-out wins. Earlier rounds' hand-outs are already in the plan. Tell Duncan it's
+  ready to commit: the kickoff, the plan, this review, the hand-outs and the doc edits go in as
+  **the first commit on the slice branch**, so the PR carries the spec it was built against.
+
