@@ -145,10 +145,16 @@ status lifecycle in `spec/statuses.md`.
   `on-round-end` (round end has no status work). It runs over the stock statuses at import **and**
   over the status registry `createCombat` is given, so a test fixture's status is held to the same
   rules.
+- `validateTrait` rejects, inside a trait, what the rules in this file forbid a trait: a
+  stat-modifier gated on the stat it changes, the intent-only `random` selector in a response
+  target, the status-only `turn-order.breakChancePercent` and `snapshot-potency`, and a misplaced
+  observation filter. It runs over the stock traits at import **and** over every trait in the
+  registry `createCombat` is given, carried or not, so a test fixture's trait is held to the same
+  rules.
 - `turn-order.breakChancePercent` is status-only, since breaking free removes the status instance:
   a trait or perk carrying it is rejected at load.
-- An `ObservationFilter` field on the wrong hook is rejected for every trigger carrier ("Damage
-  observation").
+- An `ObservationFilter` field on the wrong hook, and `relationship: 'self'` on
+  `on-death-observed`, are rejected for every trigger carrier ("Damage observation").
 
 ### Effect order
 
@@ -178,14 +184,14 @@ status lifecycle in `spec/statuses.md`.
 
 ### Hooks
 
-- The hook vocabulary (17): `on-fight-start`, `on-turn-start`, `on-turn-end`, `on-round-end`,
+- The hook vocabulary (16): `on-fight-start`, `on-turn-start`, `on-turn-end`, `on-round-end`,
   `on-damage-dealt`, `on-damage-taken`, `on-damage-observed`, `on-kill` (dealt a killing blow),
-  `on-death` (self died), `on-ally-death`, `on-enemy-death`, `on-status-applied`,
+  `on-death` (self died), `on-death-observed`, `on-status-applied`,
   `on-action-observed`, and the actor-self family `on-attack`, `on-cast`, `on-defend` and
   `on-provoke` (no `on-wait`).
 - A hook is a firing point plus a context: the firing creature and, where the hook has one, the
   other creature involved (the attacker for `on-damage-taken`, the victim for `on-kill`, the dead
-  ally for `on-ally-death`).
+  creature for `on-death-observed`).
 - The actor-self hooks fire **once per action instance** (`spec/combat.md#action-instance-list`): an Attack resolving as three instances fires `on-attack` three times. They fire
   on the action, not on its damage.
 - Adding a hook is additive and golden-safe (a firing point nothing listens to emits nothing),
@@ -234,7 +240,7 @@ status lifecycle in `spec/statuses.md`.
   `on-damage-taken` (the target) **only if it survived** → `on-damage-observed` (every living
   creature) **always**; on a lethal hit the victim isn't among the observers, because `alive` flips
   before `DamageDealt` → then, if it died: `CreatureDied` → `on-death` (the victim) → `on-kill` (the
-  dealer) → `on-ally-death` / `on-enemy-death` (the observers).
+  dealer) → `on-death-observed` (every living creature but the victim).
 - So hit reactions (dealt always, taken if survived, observed always) resolve **before** death
   reactions. A lethal Wick burn: the Flare's reaction precedes `CreatureDied`, the Last Gleam's
   follows it.
@@ -281,8 +287,9 @@ status lifecycle in `spec/statuses.md`.
 - It uses the same `ObservationFilter`: `relationship` compares the observer with the **damaged
   creature** (`ally` includes the observer itself), plus **`selfInflicted?: boolean`** (absent:
   either). `actionKind` and `excludeActor` belong to `on-action-observed` only, `selfInflicted` to
-  `on-damage-observed` only, and a filter on any other hook is invalid: a load-time validator over
-  every trigger carrier (traits, perks, statuses) enforces it.
+  `on-damage-observed` only, `on-death-observed` takes `relationship` alone, and a filter on any
+  other hook is invalid: a load-time validator over every trigger carrier (traits, perks,
+  statuses) enforces it.
 - The hook's `source` is the **damaged creature**, so `triggering-source` and the `'target'`
   condition subject resolve to it; its channel is indirect, as for every hook.
 - **Self-inflicted means exactly a cost**: a creature's own trait, status or perk response damaging
@@ -294,8 +301,15 @@ status lifecycle in `spec/statuses.md`.
   (`applyCostDamage`) passes; the direct path passes `hit`, the tick path `tick`. Never `source ===
   target`: a DoT tick and a direct action landing on its own actor have equal ids and are not
   self-inflicted. A zero cost emits nothing, so there is nothing to observe.
-- **Both observation hooks fail closed**: a candidate on `on-action-observed` fired without the
-  action details, or on `on-damage-observed` without the damage details, is skipped, never fired
+- Deaths are observed through the third sibling, **`on-death-observed`**, fired once per death
+  after `on-kill`, in one pass over every living creature in the standard tie-break order **except
+  the dead creature, left out by id**. A creature never observes its own death (that is
+  `on-death`), not even one its own `on-death` revived before the pass, so `relationship: 'self'`
+  is rejected on it. Its `source` is the dead creature, and `relationship` compares the observer
+  with it. One pass, so a `stacks: false` death observer gets one chance across both sides.
+- **All three observation hooks fail closed**: a candidate on `on-action-observed` fired without
+  the action details, on `on-damage-observed` without the damage details, or on
+  `on-death-observed` without a dead creature it can find, is skipped, filter or not, never fired
   unfiltered.
 - No hook-type index: the fan-out scans every living creature per damage event, as
   `on-action-observed` does per action instance (`spec/effects.md#hook-execution`).
@@ -378,7 +392,7 @@ status lifecycle in `spec/statuses.md`.
   host already scales its authored rate by (`magnitude × count`, `magnitude ** count`, `flatAmount
   × count`), **never** for the rate itself. Absent, the count is 1.
 - **Never put `magnitudeSource` on a trigger that already fires once per counted event.** An
-  `on-ally-death` trigger already *is* the count; adding `dead-allies` counts every earlier death
+  `on-death-observed` trigger already *is* the count; adding `dead-allies` counts every earlier death
   again on each firing, compounding as Π(1 + r·k) (5 deaths at r = 10% give ×3.60, not ×1.61). A
   per-event trigger uses a flat per-event factor; `magnitudeSource` belongs on fire-once hosts (an
   `on-fight-start` trigger) or on instantaneous responses read fresh each firing (a `heal` or

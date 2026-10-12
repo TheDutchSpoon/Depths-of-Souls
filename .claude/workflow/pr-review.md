@@ -133,8 +133,10 @@ Round `N` (`N` ≥ 2) reviews `report-r<N>.md`, after `/slice-fix <slice-id> <N-
 - **`review-r<N>.md`** (`N` matches the report it reviews): the branch and commit reviewed; verdict
   (approved / fixes); real fixes; scope and labeling; decide-points with your recommendation each;
   what was verified and how, including counts; **Docs edited** at the end.
-- **`handout-r<N>.md`**, only when there are fixes: a standalone hand-out for the coding agent, who
-  sees nothing else. Duncan runs `/slice-fix <slice-id> <N>`; the coding agent answers with
+- **`handout-r<N>.md`**, whenever there is anything to fix: real fixes and every cleanup item the
+  slice can make (a stale or incomplete comment, a golden header, evidence wording). A review
+  never approves with cleanup left in, nor parks it for a later slice. A standalone hand-out for
+  the coding agent, who sees nothing else. Duncan runs `/slice-fix <slice-id> <N>`; the coding agent answers with
   `report-r<N+1>.md`, and the next round reviews that.
 - **Content docs:** fold the slice's content changes into `content/`, `species/` and
   `specializations/` on the slice branch, written from the code as verified, not from the report
