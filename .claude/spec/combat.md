@@ -189,6 +189,9 @@ damage     = MAX(1, floor(raw))
   mid-round**: Speed changes wait for the next round's rebuild.
 - A creature that dies before its turn keeps its slot as a `TurnStarted`/`TurnEnded` bracket with
   no hooks, no action and no countdown; the Web roll still runs in it (`spec/statuses.md#turn-order`).
+- Whether a creature acts is read when its slot comes up: one revived before its slot acts in it.
+  One dead at round start isn't in the queue, so a revive later in the round gives it no turn until
+  the next round's rebuild.
 - A granted extra action takes no queue slot: it runs at the end of the step that raised it,
   inside the current turn, or at round level for a fight-start or round-end grant
   (`spec/responses.md#perform-action`). An "insert an extra turn" effect would be a separate

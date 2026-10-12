@@ -187,7 +187,7 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
   tuning); real content is covered by the per-biome goldens and the integration test.
 - Placeholder content does not live in production registries.
   **Known bug:** the nine Phase-3 placeholder traits are still in game data. The fix is listed in
-  `ROADMAP.md` Phase 4.5 "Decided, not built" ("Content clean-up").
+  `phases/4.5/brief.md#placeholder-traits-move-to-test-fixtures`.
 
 ### Tuning never changes a mechanism golden
 

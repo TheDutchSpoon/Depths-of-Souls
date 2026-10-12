@@ -1,6 +1,6 @@
 # Phase 4.2 — Docs restructure: the context diet
 
-**Status: planned.** Docs only. Decided with the design owner on 2026-10-10 (ROADMAP "Phase 4.2").
+**Status: shipped** (record: `.claude/phases/4.2/record.md`). Docs only. Decided with the design owner on 2026-10-10 (ROADMAP "Phase 4.2").
 Golden policy for every slice: **byte-identical**, except 4.2-H3's, whose one deliberate change is
 the fixture data ids it renames (`phases/4.2/H/brief.md#split`). `src/` is untouched except in 4.2-G
 and 4.2-H, and there only in comments and test titles (4.2-G's 10; 4.2-H's provenance sweep, which

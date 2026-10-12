@@ -47,8 +47,8 @@ equal to 15% of the creature's Defence, as indirect damage (a fifth of the enemy
 applies).
 
 **Known bug:** `main` answers any damage that has a source, trait and perk hits and other
-retaliations included (never a damage-over-time tick). The fix is listed in `ROADMAP.md` Phase 4.5
-"Decided, not built".
+retaliations included (never a damage-over-time tick). The fix is listed in
+`phases/4.5/brief.md#thorns-answers-only-attacks-and-spells`.
 
 ### Shield Bash
 
@@ -66,7 +66,7 @@ Confused for any "target is Confused" payoff, but the creature ignores the chaos
 be left at 1 HP.
 
 **Known bug:** `main` rolls on any lethal damage, so a creature left at 1 HP rolls again on a
-1-damage hit. The fix is listed in `ROADMAP.md` Phase 4.5 "Decided, not built".
+1-damage hit. The fix is listed in `phases/4.5/brief.md#last-stand-rolls-only-above-1-damage`.
 
 ### Phalanx
 

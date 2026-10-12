@@ -130,8 +130,8 @@ How the chosen action then resolves is `spec/combat.md`.
   among statuses, never stat-modifiers.
 - **Known bug:** `main` picks the `lowest` or `highest` creature by **current HP**, not HP%
   (`conditions.ts` `evaluateCondition`), so a `warden` or `support` whose ally at 30/100 HP sits
-  beside one at 20/25 tests the 80% one and doesn't act. The fix is listed in `ROADMAP.md` Phase
-  4.5 "Decided, not built".
+  beside one at 20/25 tests the 80% one and doesn't act. The fix is listed in
+  `phases/4.5/brief.md#hp-qualifiers-pick-by-hp`.
 - **`'target'`** is the creature an effect is being resolved against (`spec/effects.md#trigger-conditions`). A script rule has none, so in lookahead a `'target'` condition is **false**. The
   qualifier is ignored for it, since it is a single creature.
 

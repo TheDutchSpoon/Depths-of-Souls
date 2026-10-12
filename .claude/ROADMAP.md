@@ -48,74 +48,17 @@ deterministic engine) came first. Each phase ships in **slices**, built and revi
 - **Phase 4.1 — Fix and consolidation:** the Phase 4 close review's fixes, in slices A to H. A fix
   phase, so no demo of its own: the Phase 4.5 demo covers Phase 4 and 4.1. Brief:
   `.claude/phases/4.1/brief.md`; record: `.claude/phases/4.1/record.md`.
-
-## Phase 4.2 — Docs restructure: the context diet (between 4.1 and 4.5)
-*Brief: `.claude/phases/4.2/brief.md`. Docs only: no behaviour change; the `src/` changes are
-comments and test titles (citations in 4.2-G, provenance in 4.2-H1 and 4.2-H2), then names
-(4.2-H3: file names, identifiers and fixture data ids, its only golden change). Done: 4.2-A to
-4.2-H2.* Every fresh agent chat read about
-300 KB of living docs, most of it CONVENTIONS and GAME_DESIGN. 4.2 splits them into
-`spec/<subsystem>.md`, one home per rule, condenses every living doc, makes citations anchors
-checked in CI, and strips provenance from code comments, test titles and `src/` names (4.2-H1 to 4.2-H3). The rules the condensed docs are written to are in `CLAUDE.md#how-the-spec-is-written`.
+- **Phase 4.2 — Docs restructure (the context diet):** the living docs split into `spec/`, condensed
+  to one home per rule, with anchor citations and no provenance, both checked in CI. Docs only, no
+  behaviour change. Brief: `.claude/phases/4.2/brief.md`; record: `.claude/phases/4.2/record.md`.
 
 ## Phase 4.5 — Run-loop demo (interlude)
-*Brief: to be written after Phase 4.2.* The throwaway visual demo for Phase 4 **and** 4.1,
-replacing the 3.5 demo on the live site. It comes **after the fixes and before Phase 5**
-deliberately: if the run loop were first exercised in a browser after persistence lands, run-loop
-bugs and save bugs couldn't be told apart. Rough intent (the brief pins scope): spec pick →
-scripted intro → floor-by-floor descent with the paced log viewer, plus a side panel (floor, biome,
-soul %, XP/level, currencies), party arrangement and summoning, fast-travel, boss floors, and perks
-(inert perks labelled "inactive until Phase 8"). The baseline demo UX carries forward. Same
-guardrails as every demo; own brief and phase record.
-
-**Decided, not built** (the 4.5 brief takes these in):
-- **Content clean-up:** the nine Phase-3 placeholder traits move out of game data into test-only
-  fixtures (goldens byte-identical); Ember Lance and Venom Bolt are deleted (no niche: Venom Bolt
-  overlaps Stinger Swarm); Cinder Nova is promoted to real biome-1 content (the pool's only plain
-  AOE damage spell, with reviewed name and numbers). `CONVENTIONS.md#mechanism-goldens-vs-content-goldens` carries a "Known bug" line that the fix's PR review removes.
-- **One copy of Splashing's adjacency lookup:** Splashing (`engine/actions.ts`) uses a private
-  copy of `adjacentLivingTargets`, byte-identical to the export in `engine/targeting.ts` that only
-  `targeting.test.ts` calls, so that test pins code Splashing doesn't run. `actions.ts` imports the
-  `targeting.ts` export and the private copy is deleted (goldens byte-identical).
-- **Two Shieldbarer perk bugs** (the code doesn't match the perks' design): **Thorns** must answer
-  only damage from an attack or a spell (today it answers any damage with a source, trait and perk
-  hits and other retaliations included); **Last Stand** must roll only when the lethal damage is
-  more than 1 (today it rolls on any lethal damage, so a creature left at 1 HP rolls again on a
-  1-damage hit). `specializations/shieldbarer.md` states the design, with a "Known bug" line on each
-  perk that the fix's PR review removes.
-- **Level-ups after each fight** (a bug): `descend` must apply each fight's XP before the floor's
-  next fight, so the party fights it at its new levels. Today it materializes the party once per
-  descent and applies the floor's XP after the whole floor. The fix moves balance, so the CI
-  balance bands are re-checked in the same PR. `spec/run.md#rewards` states the design, with a
-  "Known bug" line that the fix's PR review removes.
-- **`on-death-observed`** (a new direction, not a bug): death observation joins the other two
-  observation hooks. `on-ally-death` and `on-enemy-death` become one `on-death-observed`, fired on
-  every living creature when a creature dies, with the same `ObservationFilter` `relationship`
-  (`self`, `ally`, `enemy`, `any`), compared with the dead creature, in the standard tie-break order
-  (side → slot → id), like `on-action-observed` and `on-damage-observed`. `on-death` and `on-kill`
-  stay separate (actor-self hooks). The 8 trait triggers on the two old hooks
-  (`data/traits/core.ts`, `glimmerdark.ts`, `rotcap-hollow.ts`) move over; the Rot Sovereign's pair
-  becomes one `any` trigger. Deliberate golden change: the hook name in `TriggerFired`, and the
-  firing order on an enemy's death (today the dead creature's allies all fire before its enemies).
-  The PR review rewrites `spec/effects.md#hooks`, `spec/effects.md#damage-path-hook-order` and `spec/effects.md#action-reactions-actor-self-hooks-or-observation` to match (17 hooks become 16).
-- **HP% qualifiers pick by HP%** (a bug): an `hp-percent` condition's `lowest` or `highest`
-  qualifier must test the creature with the lowest or highest HP%, compared by integer
-  cross-multiplication with the shared tie-break. Today `evaluateCondition` picks it by current HP.
-  Users: the `warden` and `support` role scripts' first rules, so the fix is a deliberate golden
-  change for fights with either role, and the CI balance bands are re-checked in the same PR.
-  `spec/scripting.md#conditions-in-the-engine` states the design, with a "Known bug" line that the
-  fix's PR review removes.
-- **A dead creature's turn is skipped entirely** (a new direction, not a bug): a creature that is
-  dead when its slot in the frozen queue comes up gets no `TurnStarted`/`TurnEnded` bracket, no
-  turn-clock bump and no Web roll; nothing happens for it. A creature that dies during its own turn
-  keeps that turn's cleanup and Web roll, since the turn happened. Web's break-free roll becomes "at
-  every living creature's turn", so a Web gets stickier as the board empties (about 72% per round
-  only in a full 6v6), still capped by its 3-turn duration. Open for the 4.5 grill: whether anything
-  else reads dead slots (the act-first and act-last poles). Deliberate golden change for every fight
-  where a creature dies before its turn (the bracket events, the turn clock, the Web roll's RNG
-  draws), and the CI balance bands are re-checked in the same PR. The PR review rewrites
-  `spec/combat.md#turn-queue`, `spec/statuses.md#self-clearing-statuses` (the 72%),
-  `spec/statuses.md#born-this-turn` and `spec/statuses.md#turn-order`, and `content/overgrowth.md`'s Web entry.
+*Brief: `.claude/phases/4.5/brief.md`; slices 4.5-A to 4.5-G2.* First the fixes in
+`phases/4.5/brief.md#decided-not-built` (4.5-A to 4.5-F), then the throwaway visual demo for Phase
+4 **and** 4.1 (`phases/4.5/brief.md#the-demo`, 4.5-G1 and 4.5-G2), replacing the 3.5 demo on the
+live site. It comes **after the fixes and before Phase 5** deliberately: if the run loop were first
+exercised in a browser after persistence lands, run-loop bugs and save bugs couldn't be told apart.
+Same guardrails as every demo; own brief and phase record.
 
 ## Phase 5 — Persistence (large saves)
 - Builds `spec/saves.md` (all of it is its `## Not built` half) and the IndexedDB namespacing
@@ -137,6 +80,7 @@ guardrails as every demo; own brief and phase record.
 ## Phase 7 — Combat UI & feedback
 - Render combat from the event log: turn-by-turn playback, fast-forward, speed control.
 - Clear "why did this happen" surfacing (which rule fired): core to the legibility pillar.
+- **Perk text:** perks need player-facing descriptions; `PerkDef` carries only a name.
 
 **Decided, not built:**
 - **The scripted intro's story beat:** the intro's outcome is presented as a story beat, the
