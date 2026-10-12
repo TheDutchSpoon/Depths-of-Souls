@@ -83,8 +83,4 @@ durations are unchanged, only their comments.
 ## To delete
 
 - `demoFight.ts`, `demoFight.test.ts`: done by Duncan.
-- Scratch `main` worktree: `git worktree remove` on
-  `C:\Users\dunca\AppData\Local\Temp\claude\c--Users-dunca-MyProjects-Depths-of-Souls\dcba771b-88d1-4d19-b4f1-9a161e582c99\scratchpad\main-wt`
-  (it holds a `node_modules` junction to the repo's; remove the junction first, or use
-  `git worktree remove --force`), then `git worktree prune`. It is outside the repo tree but
-  registered in `.git`.
+- Nothing outstanding. The scratch `main` worktree was removed afterwards, with Duncan's permission.
