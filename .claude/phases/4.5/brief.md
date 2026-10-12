@@ -2,7 +2,7 @@
 
 **Status: planned.** Decided with the design owner on 2026-10-12. Two parts: the fixes listed under
 "Decided, not built" (4.5-A to 4.5-F), then the throwaway run-loop demo (4.5-G1, 4.5-G2), which
-replaces the 3.5 demo on the live site and covers Phases 4 and 4.1. The docs are the spec; this
+replaces the stub on the live site and covers Phases 4 and 4.1. The docs are the spec; this
 brief places each decision in a slice, with its golden policy. If this brief and the docs disagree,
 the docs win: flag the conflict, don't guess.
 
