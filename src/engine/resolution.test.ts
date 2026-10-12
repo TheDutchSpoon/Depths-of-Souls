@@ -366,9 +366,10 @@ describe('triggered condition (self-scoped)', () => {
 
 describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
   it('gives each application a distinct instance id and stacks multiplicatively', () => {
-    // Fire GRUDGE's on-ally-death twice on the same bearer (as if two allies fell).
+    // Fire GRUDGE's on-death-observed twice on the same bearer (as if two allies fell).
     const player = makeParty('player', [
       { id: 'bearer', attack: 20, scriptId: 'always-wait', innateTraitIds: ['grudge'] },
+      { id: 'ally', scriptId: 'always-wait' },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', health: 30 }])
     let state = createCombat({
@@ -380,16 +381,18 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
     const events: CombatEvent[] = []
     const bearerId = createCreatureId('bearer')
     const allyId = createCreatureId('ally')
+    // The hook fails closed on a dead creature it can't find, so the ally is real, and dead.
+    state = updateCreature(state, allyId, { alive: false, currentHp: 0 })
 
     state = fireHook(
-      'on-ally-death',
+      'on-death-observed',
       [bearerId],
       allyId,
       state,
       createResolutionContext(events, newCascade()),
     ).state
     state = fireHook(
-      'on-ally-death',
+      'on-death-observed',
       [bearerId],
       allyId,
       state,

@@ -34,6 +34,7 @@ import {
   createEffectInstanceId,
   validateNoBreakChanceOutsideStatus,
   validateStatusDef,
+  validateTrait,
 } from './effect-types'
 import { makeParty } from './__fixtures__/creatures'
 import { countDraws } from './test-utils/rng-draw-count'
@@ -49,7 +50,6 @@ import {
   WEAKEN,
   WEB,
 } from '../data/statuses'
-import { validateTrait } from '../data/traits'
 import { SORCERER, validateSpecialization } from '../data/specializations'
 import type { CreatureOverrides } from './__fixtures__/creatures'
 import type { CombatEvent, CombatState, Spell } from './types'

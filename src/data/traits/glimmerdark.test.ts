@@ -77,7 +77,8 @@ describe('the Flickerling Last Gleam', () => {
     expect(FLICKERLING_LAST_GLEAM_TRAIT.effects).toEqual([
       {
         category: 'triggered',
-        hook: 'on-ally-death',
+        hook: 'on-death-observed',
+        observationFilter: { relationship: 'ally' },
         response: {
           kind: 'apply-stat-modifier',
           target: { kind: 'all-allies' },

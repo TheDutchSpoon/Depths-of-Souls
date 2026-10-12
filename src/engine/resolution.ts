@@ -22,7 +22,7 @@ import {
   withAdditional,
 } from './damage'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
-import { getCreature, findCreature, updateCreature } from './creature-lookup'
+import { getCreature, findCreature, livingIdsOf, updateCreature } from './creature-lookup'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
 import {
   resolveLowestHpInjuredOtherAlly,
@@ -66,6 +66,7 @@ import type {
   EffectInstanceId,
   EffectResponse,
   Hook,
+  ObservationFilter,
   ResponseTarget,
   SnapshotPotency,
   StatPercent,
@@ -92,7 +93,7 @@ interface HookContext {
   readonly channel: DamageChannel
   readonly self: CreatureId
   /** The other creature involved in the trigger (attacker for on-damage-taken, victim for
-   * on-damage-dealt/on-kill, dead ally for on-ally-death, ...). */
+   * on-damage-dealt/on-kill, dead creature for on-death-observed, ...). */
   readonly source?: CreatureId
   /** The firing effect's statusId, when it's a status; absent for a plain
    * triggered trait. Threaded onto DamageDealt so a DoT tick's causing status is attributable. */
@@ -292,8 +293,8 @@ function dealDamageCore(
  * Applies a computed damage result, emits DamageDealt, then fires the damage-path hooks in the
  * pinned order: on-damage-dealt (source, UNCONDITIONAL — even on a lethal hit) → on-damage-taken
  * (self, survived only) → on-damage-observed (every living creature, UNCONDITIONAL — even on a
- * lethal hit) → if it died: CreatureDied → on-death → on-kill → on-ally-death / on-enemy-death
- * (observers). Death pre-empts the victim's on-damage-taken; hit-reactions
+ * lethal hit) → if it died: CreatureDied → on-death → on-kill → on-death-observed (every living
+ * creature but the dead one). Death pre-empts the victim's on-damage-taken; hit-reactions
  * (including the observation of the hit) resolve before death-reactions.
  *
  * `origin` is
@@ -392,34 +393,40 @@ export function applyDamageAndEmit(
   return working
 }
 
-/** All living creatures' ids in tie-break order (player slots, then enemy slots): the scope of an
- * observation hook. (actions.ts keeps its own private copy for `on-action-observed`.) */
-function livingIdsOf(state: CombatState): CreatureId[] {
-  return [...state.playerParty, ...state.enemyParty]
-    .filter((c) => c.alive)
-    .map((c) => c.id)
-}
-
+/** One `on-death-observed` pass over every living creature in tie-break order, the dead creature
+ * left out BY ID: a creature revived by its own `on-death` is alive again here, and an `alive`
+ * test alone would let it observe its own death. A single `fireHook` call, so a `stacks: false`
+ * observer claims its one slot across both sides. */
 function fireDeathObservers(
   deadId: CreatureId,
   state: CombatState,
   ctx: ResolutionContext,
 ): CombatState {
-  const dead = findCreature(state, deadId)
-  if (!dead) return state
-  const sameSide = dead.side === 'player' ? state.playerParty : state.enemyParty
-  const otherSide = dead.side === 'player' ? state.enemyParty : state.playerParty
-  const allies = sameSide.filter((c) => c.alive && c.id !== deadId).map((c) => c.id)
-  const enemies = otherSide.filter((c) => c.alive).map((c) => c.id)
+  const observers = livingIdsOf(state).filter((id) => id !== deadId)
+  return fireHook('on-death-observed', observers, deadId, state, ctx).state
+}
 
-  let working = state
-  for (const id of allies) {
-    working = fireHook('on-ally-death', [id], deadId, working, ctx).state
+/** Whether an observation hook's `relationship` holds between the observer and the creature the
+ * hook is about (the actor, the damaged creature or the dead creature). 'ally' includes self. */
+function relationshipMatches(
+  relationship: NonNullable<ObservationFilter['relationship']>,
+  observer: Creature,
+  subject: Creature,
+): boolean {
+  switch (relationship) {
+    case 'any':
+      return true
+    case 'self':
+      return subject.id === observer.id
+    case 'ally':
+      return subject.side === observer.side
+    case 'enemy':
+      return subject.side !== observer.side
+    default: {
+      const exhaustive: never = relationship
+      throw new Error(`Unhandled relationship: ${String(exhaustive)}`)
+    }
   }
-  for (const id of enemies) {
-    working = fireHook('on-enemy-death', [id], deadId, working, ctx).state
-  }
-  return working
 }
 
 // ---- Hook firing ----
@@ -436,9 +443,10 @@ export interface FireHookOptions {
   }
   /** Supplied ONLY by `applyDamageAndEmit`'s `on-damage-observed` call
    * (`spec/effects.md#damage-observation`). `selfInflicted` is the cost classification carried
-   * from the branch that chose the cost path. Both observation hooks FAIL CLOSED: a candidate on
-   * `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
-   * `observed` is. */
+   * from the branch that chose the cost path. All three observation hooks FAIL CLOSED: a candidate
+   * on `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
+   * `observed` is, and one on `on-death-observed` when its `source` (the dead creature) is absent
+   * or not in the state. */
   readonly observedDamage?: { readonly selfInflicted: boolean }
   /** The born-this-turn tick gate, supplied ONLY by `resolveTurn`'s
    * `on-turn-end` call. Consulted for every STATUS-sourced candidate (trait-sourced triggers are
@@ -531,10 +539,12 @@ export function fireHook(
       // BEFORE the generic `condition` (a cheaper, more fundamental "is this candidate even
       // relevant" gate); a non-matching observer draws nothing and consumes no depth budget,
       // same silent-skip discipline as a false condition.
-      // BOTH observation hooks fail closed. A candidate on `on-action-observed` is
+      // ALL THREE observation hooks fail closed. A candidate on `on-action-observed` is
       // skipped when the caller passed no `observed`, one on `on-damage-observed` when it passed
-      // no `observedDamage` -- a call site that forgets its option can never make every observer
-      // fire on every event. (All five action call sites and the one damage call site pass theirs.)
+      // no `observedDamage`, one on `on-death-observed` when its `source` (the dead creature) is
+      // absent or not in the state -- a call site that forgets its option can never make every
+      // observer fire on every event. (All five action call sites, the one damage call site and
+      // `fireDeathObservers` pass theirs.)
       if (hook === 'on-action-observed') {
         if (!observed) continue
         if (effect.observationFilter) {
@@ -546,11 +556,7 @@ export function fireHook(
           } = effect.observationFilter
           if (actionKind && actionKind !== observed.actionKind) continue
           if (excludeActor && actor && actor.id === self.id) continue
-          if (relationship !== 'any' && actor) {
-            if (relationship === 'self' && actor.id !== self.id) continue
-            if (relationship === 'ally' && actor.side !== self.side) continue
-            if (relationship === 'enemy' && actor.side === self.side) continue
-          }
+          if (actor && !relationshipMatches(relationship, self, actor)) continue
         }
       } else if (hook === 'on-damage-observed') {
         if (!observedDamage) continue
@@ -566,9 +572,16 @@ export function fireHook(
           ) {
             continue
           }
-          if (relationship === 'self' && damaged.id !== self.id) continue
-          if (relationship === 'ally' && damaged.side !== self.side) continue
-          if (relationship === 'enemy' && damaged.side === self.side) continue
+          if (!relationshipMatches(relationship, self, damaged)) continue
+        }
+      } else if (hook === 'on-death-observed') {
+        // `source` is the DEAD creature, looked up before the filter: with or without one, a
+        // candidate whose death can't be found is skipped.
+        const dead = source ? findCreature(working, source) : undefined
+        if (!dead) continue
+        if (effect.observationFilter) {
+          const { relationship = 'any' } = effect.observationFilter
+          if (!relationshipMatches(relationship, self, dead)) continue
         }
       }
 
@@ -578,9 +591,10 @@ export function fireHook(
       // isn't firing: it emits nothing and consumes none of the depth/truncation budget.
       // evaluateCondition is pure (never draws RNG), safe to call for every candidate effect.
       // `source` (the trigger's OTHER creature -- attacker for on-damage-taken,
-      // dead ally for on-ally-death, etc.) is threaded through as the 'target'-subject condition's
-      // resolving-against creature; absent for hooks with no such creature (on-round-end,
-      // on-fight-start), in which case 'target' simply evaluates false, same as scripting lookahead.
+      // dead creature for on-death-observed, etc.) is threaded through as the 'target'-subject
+      // condition's resolving-against creature; absent for hooks with no such creature
+      // (on-round-end, on-fight-start), in which case 'target' simply evaluates false, same as
+      // scripting lookahead.
       if (
         effect.condition &&
         !evaluateTriggerCondition(effect.condition, self, working, source)

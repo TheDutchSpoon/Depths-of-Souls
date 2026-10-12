@@ -79,16 +79,17 @@ export const SPORECLOUD_BLOOMER_TRAIT: Trait = {
 // ---- Rotfeeders (Violence) -- closed mechanic: Carrion snowball ----
 
 /** Rotfeeder Scavenger (enabler, common): permanently grows its own Attack whenever ANY enemy
- * dies -- not just its own kills (`on-enemy-death`, an OBSERVER hook, unlike `on-kill`'s
- * actor-self scoping) -- a fresh StatModifierEffect each firing, compounding as the fight thins
- * out the opposing side. */
+ * dies -- not just its own kills (`on-death-observed` on an enemy, an OBSERVER hook, unlike
+ * `on-kill`'s actor-self scoping) -- a fresh StatModifierEffect each firing, compounding as the
+ * fight thins out the opposing side. */
 export const ROTFEEDER_SCAVENGER_TRAIT: Trait = {
   id: 'rotfeeder-scavenger-carrion-hunger',
   name: 'Carrion Hunger',
   effects: [
     {
       category: 'triggered',
-      hook: 'on-enemy-death',
+      hook: 'on-death-observed',
+      observationFilter: { relationship: 'enemy' },
       response: {
         kind: 'apply-stat-modifier',
         target: { kind: 'self' },
@@ -161,7 +162,8 @@ export const MYCONET_WARDER_TRAIT: Trait = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-ally-death',
+      hook: 'on-death-observed',
+      observationFilter: { relationship: 'ally' },
       response: {
         kind: 'apply-stat-modifier',
         target: { kind: 'all-allies' },
@@ -199,7 +201,8 @@ export const MYCONET_GRAVEDIGGER_TRAIT: Trait = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-ally-death',
+      hook: 'on-death-observed',
+      observationFilter: { relationship: 'ally' },
       response: {
         kind: 'heal',
         target: { kind: 'self' },
@@ -247,7 +250,8 @@ export const NECROMOSS_THICKET_TRAIT: Trait = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-ally-death',
+      hook: 'on-death-observed',
+      observationFilter: { relationship: 'ally' },
       response: {
         kind: 'apply-stat-modifier',
         target: { kind: 'self' },
@@ -395,13 +399,12 @@ export const SPORCH_CINDERLORD_TRAIT: Trait = {
 }
 
 // ---- The Rot Sovereign (floor-30 boss, the biome-3 finale) ----
-// `content/rotcap-hollow.md#rot-sovereign`. Two death-reactive growth hooks, BOTH a flat +10%
-// Attack per death -- `on-ally-death` (her own adds dying) and `on-enemy-death` (the player's
-// own creatures dying), the SAME rate either way, so ANY creature that dies feeds her without
-// needing the death side to change the magnitude. A flat per-event factor (no `magnitudeSource`
-// freeze-at-application) still compounds across repeated firings without needing a live count
-// (see Necromoss Thicket's own comment). Plus the spreading-Spore blanket, unconditional each
-// of her own turns.
+// `content/rotcap-hollow.md#rot-sovereign`. One death-reactive growth hook: a flat +10% Attack per
+// death, ONE `on-death-observed` trigger with relationship `any` (her own adds and the player's
+// creatures dying alike), so ANY creature that dies feeds her at the same rate. A flat per-event
+// factor (no `magnitudeSource` freeze-at-application) still compounds across repeated firings
+// without needing a live count (see Necromoss Thicket's own comment). Plus the spreading-Spore
+// blanket, unconditional each of her own turns.
 
 export const ROT_SOVEREIGN_TRAIT: Trait = {
   id: 'rot-sovereign-attrition',
@@ -409,17 +412,8 @@ export const ROT_SOVEREIGN_TRAIT: Trait = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-ally-death',
-      response: {
-        kind: 'apply-stat-modifier',
-        target: { kind: 'self' },
-        stat: 'attack',
-        factor: 1.1,
-      },
-    },
-    {
-      category: 'triggered',
-      hook: 'on-enemy-death',
+      hook: 'on-death-observed',
+      observationFilter: { relationship: 'any' },
       response: {
         kind: 'apply-stat-modifier',
         target: { kind: 'self' },

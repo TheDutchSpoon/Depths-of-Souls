@@ -10,8 +10,11 @@ import { dealDamage, executeResponse, fireHook, newCascade } from './resolution'
 import { makeParty } from './__fixtures__/creatures'
 import { createCreatureId } from './ids'
 import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
-import { validateObservationFilters, validateStatusDef } from './effect-types'
-import { validateTrait } from '../data/traits'
+import {
+  validateObservationFilters,
+  validateStatusDef,
+  validateTrait,
+} from './effect-types'
 import { validateSpecialization } from '../data/specializations'
 import type { CombatEvent, CombatState } from './types'
 import type { EffectDef, ObservationFilter, StatusDef, Trait } from './effect-types'
@@ -303,6 +306,16 @@ describe('the filter matrix: relationship x selfInflicted', () => {
     }
   }
 
+  it('an explicit relationship of any fires for an observer on either side', () => {
+    const trait = watcherTrait('watch', { relationship: 'any' })
+    const state = world({
+      traits: { w: [trait.id], y: [trait.id] },
+      registry: [trait],
+    })
+
+    expect(observedBy(inflict('enemy-hit', state))).toEqual(['w', 'y'])
+  })
+
   it('self-inflicted is the cost classification, never source === target: a tick and an own-actor direct hit both have equal ids and neither is a cost', () => {
     const trait = watcherTrait('watch', { selfInflicted: true })
     const state = world({ traits: { w: [trait.id] }, registry: [trait] })
@@ -316,7 +329,7 @@ describe('the filter matrix: relationship x selfInflicted', () => {
   })
 })
 
-describe('both observation hooks fail closed', () => {
+describe('on-action-observed and on-damage-observed fail closed', () => {
   it('on-damage-observed without observedDamage fires nothing, filtered or not', () => {
     const plain = watcherTrait('plain', undefined)
     const filtered = watcherTrait('filtered', { relationship: 'ally' })
@@ -494,7 +507,8 @@ describe('hook order in the damage path (spec/effects.md#hook-execution)', () =>
     effects: [
       {
         category: 'triggered',
-        hook: 'on-ally-death',
+        hook: 'on-death-observed',
+        observationFilter: { relationship: 'ally' },
         response: {
           kind: 'apply-stat-modifier',
           target: { kind: 'self' },
@@ -545,7 +559,7 @@ describe('hook order in the damage path (spec/effects.md#hook-execution)', () =>
     )
   })
 
-  it('a lethal hit: the observation sits between DamageDealt and CreatureDied, before on-ally-death', () => {
+  it('a lethal hit: the observation sits between DamageDealt and CreatureDied, before on-death-observed', () => {
     const state = world({
       traits: { w: [WATCH_ANY.id, ALLY_DEATH.id] },
       registry: [WATCH_ANY, ALLY_DEATH],
@@ -559,7 +573,7 @@ describe('hook order in the damage path (spec/effects.md#hook-execution)', () =>
       'DamageDealt@v',
       'on-damage-observed@w',
       'CreatureDied@v',
-      'on-ally-death@w',
+      'on-death-observed@w',
     ])
   })
 
@@ -698,7 +712,8 @@ describe('loop safety on the damage -> observer -> damage route', () => {
 
 describe('the validator keeps each filter field on its own hook, on every trigger carrier', () => {
   const triggered = (
-    hook: 'on-damage-observed' | 'on-action-observed' | 'on-turn-start',
+    hook:
+      'on-damage-observed' | 'on-action-observed' | 'on-death-observed' | 'on-turn-start',
     observationFilter: ObservationFilter,
   ): EffectDef => ({
     category: 'triggered',
@@ -738,12 +753,57 @@ describe('the validator keeps each filter field on its own hook, on every trigge
     ).toThrow(/only an observation hook/)
   })
 
+  it('on-death-observed accepts a relationship of ally, enemy or any (or no filter), and rejects self', () => {
+    expect(() =>
+      validateObservationFilters([
+        triggered('on-death-observed', { relationship: 'ally' }),
+        triggered('on-death-observed', { relationship: 'enemy' }),
+        triggered('on-death-observed', { relationship: 'any' }),
+        triggered('on-death-observed', {}),
+      ]),
+    ).not.toThrow()
+    expect(() =>
+      validateObservationFilters([
+        triggered('on-death-observed', { relationship: 'self' }),
+      ]),
+    ).toThrow(/never observes its own death/)
+  })
+
+  it('on-death-observed rejects actionKind, excludeActor and selfInflicted', () => {
+    for (const filter of [
+      { actionKind: 'cast' },
+      { excludeActor: false },
+      { selfInflicted: true },
+    ] as const) {
+      expect(() =>
+        validateObservationFilters([triggered('on-death-observed', filter)]),
+      ).toThrow(/belongs? to on-/)
+    }
+  })
+
   it('a TRAIT carrier is checked (validateTrait)', () => {
     expect(() =>
       validateTrait({
         id: 'bad-trait',
         name: 'bad',
         effects: [triggered('on-action-observed', { selfInflicted: true })],
+      }),
+    ).toThrow(/selfInflicted/)
+  })
+
+  it('a trait handed to createCombat is checked, even one no creature carries', () => {
+    const bad: Trait = {
+      id: 'bad-trait',
+      name: 'bad',
+      effects: [triggered('on-action-observed', { selfInflicted: true })],
+    }
+
+    expect(() =>
+      createCombat({
+        seed: 1,
+        player: { party: makeParty('player', [{ id: 'p' }]) },
+        enemy: { party: makeParty('enemy', [{ id: 'e' }]) },
+        registries: { traits: new Map([[bad.id, bad]]) },
       }),
     ).toThrow(/selfInflicted/)
   })

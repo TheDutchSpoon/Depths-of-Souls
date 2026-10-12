@@ -67,7 +67,8 @@ export const GRUDGE: Trait = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-ally-death',
+      hook: 'on-death-observed',
+      observationFilter: { relationship: 'ally' },
       response: {
         kind: 'apply-stat-modifier',
         target: { kind: 'self' },

@@ -19,11 +19,11 @@ import {
   validateNoSnapshotPotencyOutsideStatus,
   validateSpellEffects,
   validateStatusDef,
+  validateTrait,
 } from './effect-types'
 import { STATUS_REGISTRY } from '../data/statuses'
 import { SORCERER } from '../data/specializations'
 import { validateSpecialization } from '../data/specializations'
-import { validateTrait } from '../data/traits'
 import type { CombatEvent, CombatState, Creature, Spell } from './types'
 import type { EffectDef, StatusDef, StatusEffect, StatusSnapshot } from './effect-types'
 

@@ -2,7 +2,7 @@ import { createRngState, nextRandom } from './rng'
 import { ROUND_CAP } from './config'
 import { buildTurnQueue } from './turn-order'
 import { compareBySideSlotId } from './tie-break'
-import { getCreature, updateCreature } from './creature-lookup'
+import { getCreature, livingIdsOf, updateCreature } from './creature-lookup'
 import {
   resolveBaselineEffects,
   instantiateEffectDefs,
@@ -14,7 +14,7 @@ import { fireHook, newCascade } from './resolution'
 import { createResolutionContext, drainGrantedActions } from './actions'
 import { decideAction } from './interpreter'
 import type { CreatureId } from './ids'
-import { validateStatusDef } from './effect-types'
+import { validateStatusDef, validateTrait } from './effect-types'
 import type { ActiveEffect, EffectDef, InnateSpellEffect } from './effect-types'
 import type { CombatEvent, CombatState, Creature, FightResult } from './types'
 import type { Intent, Script } from './scripting-types'
@@ -67,6 +67,10 @@ export function createCombat(input: CreateCombatInput): CombatState {
   // well as at data import, so an inline status carrying a forbidden effect (e.g. an
   // `on-round-end` trigger -- round end has no status work) fails at fight setup.
   for (const def of statuses.values()) validateStatusDef(def)
+
+  // The trait registry is held to the same rules as a shipped trait: an inline trait that breaks
+  // one fails at fight setup, whether or not a creature carries it.
+  for (const trait of traits.values()) validateTrait(trait)
 
   if (player.party.length === 0 || enemy.party.length === 0) {
     throw new Error('createCombat: both parties must have at least one creature')
@@ -139,14 +143,6 @@ export function createCombat(input: CreateCombatInput): CombatState {
 /** The literal expiry point of Defend/Provoke's "until its next turn." */
 function clearOwnTransientStatus(state: CombatState, id: CreatureId): CombatState {
   return updateCreature(state, id, { defending: false, provoking: false })
-}
-
-/** All living creatures' ids in tie-break order (player slots, then enemy slots) -- the order
- * global phase-point hooks (fight-start, round-end) iterate. */
-function livingIds(state: CombatState): CreatureId[] {
-  return [...state.playerParty, ...state.enemyParty]
-    .filter((c) => c.alive)
-    .map((c) => c.id)
 }
 
 /** Born this turn: applied or refreshed since this turn's action
@@ -254,7 +250,7 @@ function resolveRoundEnd(state: CombatState, events: CombatEvent[]): CombatState
   const roundEndCtx = createResolutionContext(events, newCascade())
   const hooked = fireHook(
     'on-round-end',
-    livingIds(state),
+    livingIdsOf(state),
     undefined,
     state,
     roundEndCtx,
@@ -307,7 +303,7 @@ export function resolveTurn(state: CombatState): {
     const fightStartCtx = createResolutionContext(events, newCascade())
     working = fireHook(
       'on-fight-start',
-      livingIds(working),
+      livingIdsOf(working),
       undefined,
       working,
       fightStartCtx,

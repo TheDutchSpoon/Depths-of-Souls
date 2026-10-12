@@ -9,14 +9,14 @@
 // CASE 1, `allyDies`: players GLEAM (28 / 24 / 10 / 14 / 18, violence), F (health 20, Defence 10,
 //   speed 5), G (health 40, speed 4). TURN_STEPS = 1: K's turn. Lowest HP = F (20 < 28 < 40). Attack
 //   40 vs Defence 10: core 30, chip 0.01 x 40 = 0.4 -> raw 30.4 -> 30 >= 20: F dies (remainingHp 0).
-//   CreatureDied F; no on-death/on-kill trait; the death observers run over F's living allies in
-//   party order: GLEAM fires Last Light -> Attack x1.2 to every LIVING ally: GLEAM 24, G 20 (the dead F
-//   gets nothing). K's own side has no on-enemy-death trait.
+//   CreatureDied F; no on-death/on-kill trait; the death observers run over every living creature
+//   but F in tie-break order: GLEAM fires Last Light (`ally`) -> Attack x1.2 to every LIVING ally:
+//   GLEAM 24, G 20 (the dead F gets nothing). G and K carry no death observer.
 //
 // CASE 2, `gleamDies`: players GLEAM (the lowest HP, 28) and G (40); K's Attack is 100. Attack 100
 //   vs Defence 14: core 86, chip 1.0 -> raw 87 -> 87 >= 28: GLEAM dies. CreatureDied GLEAM; the death
-//   observers run over its LIVING allies (G, no trait) -- the dead GLEAM does not observe its own
-//   death, so there is no TriggerFired and no stat modifier.
+//   observers run over every living creature but GLEAM (G and K, no trait) -- the dead GLEAM does
+//   not observe its own death, so there is no TriggerFired and no stat modifier.
 
 import { createCreatureId } from '../ids'
 import { makeParty } from '../__fixtures__/creatures'
@@ -86,7 +86,7 @@ export const allyDiesExpected: CombatEvent[] = [
   {
     type: 'TriggerFired',
     sourceId: GLEAM,
-    hook: 'on-ally-death',
+    hook: 'on-death-observed',
     effectId: FLICKERLING_LAST_GLEAM_TRAIT.id,
   },
   {

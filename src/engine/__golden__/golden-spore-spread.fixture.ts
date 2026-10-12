@@ -27,9 +27,9 @@
 //     `random-ally-without-status(spore)` relative to BEARER (self) -- BEARER's only living ally
 //     is ALLY, which does not carry spore -> the sole candidate, no RNG draw needed (pool size
 //     1). StatusApplied(ALLY, spore, duration 3, source BEARER).
-//   on-kill (SEEDER): no matching effect -> nothing. fireDeathObservers: on-ally-death fires on
-//     ALLY (BEARER's only living ally) -- ALLY carries no trait -> nothing. on-enemy-death fires
-//     on SEEDER -- no matching effect -> nothing.
+//   on-kill (SEEDER): no matching effect -> nothing. fireDeathObservers: on-death-observed runs
+//     over every living creature but BEARER, in tie-break order: SEEDER -- no matching effect ->
+//     nothing; ALLY carries no trait -> nothing.
 //   Enemy side still has ALLY alive (BEARER dead) -> not wiped; state.result stays null.
 
 import { makeParty } from '../__fixtures__/creatures'

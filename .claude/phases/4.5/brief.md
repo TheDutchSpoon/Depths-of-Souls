@@ -24,6 +24,7 @@ the docs win: flag the conflict, don't guess.
 | --- | --- | --- |
 | **4.5-A** | [Placeholder traits move to test fixtures](#placeholder-traits-move-to-test-fixtures), [one copy of Splashing's adjacency lookup](#one-copy-of-splashings-adjacency-lookup), retire the 3.5 demo | Byte-identical |
 | **4.5-B** | [`on-death-observed`](#on-death-observed), [`createCombat` validates its trait registry](#createcombat-validates-its-trait-registry) | Deliberate, listed |
+| **4.5-B2** | [Every pass over the living creatures goes in turn order](#every-pass-over-the-living-creatures-goes-in-turn-order) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-C** | [A dead creature's turn is skipped entirely](#a-dead-creatures-turn-is-skipped-entirely) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-D** | [HP% qualifiers](#hp-qualifiers-pick-by-hp), [Thorns](#thorns-answers-only-attacks-and-spells), [Last Stand](#last-stand-rolls-only-above-1-damage) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-E** | [Spell clean-up and Thorn Volley](#spell-clean-up-and-thorn-volley) | Deliberate content change; CI balance verdicts re-checked |
@@ -34,9 +35,10 @@ the docs win: flag the conflict, don't guess.
 
 Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
-- **B and C are separate** because both change event order in any fight with a death: in one PR, a
-  single golden's diff would interleave two kinds of change, and "only the listed kind" could no
-  longer be checked line by line.
+- **B, B2 and C are separate** because each changes event order: B and C in any fight with a
+  death, B2 wherever two creatures react to one hook. In one PR, a single golden's diff would
+  interleave two kinds of change, and "only the listed kind" could no longer be checked line by
+  line.
 - **D is one slice**: the HP% fix touches `warden` and `support` role-script fights, the two perks
   only Shieldbarer-perk fights. They barely overlap and both are small.
 - **E carries the whole spell change**: deleting two spells changes every generated loadout, so it
@@ -55,7 +57,7 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 ### Balance verdicts
 
-- C, D, E and F each re-run the balance simulator and report the CI verdicts (floor 1, first soul,
+- B2, C, D, E and F each re-run the balance simulator and report the CI verdicts (floor 1, first soul,
   floor 5) and the round-cap draw rate before and after.
 - **No tuning inside a fix slice.** A fix that flips a CI verdict stops and asks Duncan. At most one
   tuning slice (4.5-F2) runs after F, against all the fixes together: tuning after each fix would
@@ -97,17 +99,26 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 ### on-death-observed
 
 - Death observation joins the other two observation hooks: `on-ally-death` and `on-enemy-death`
-  become one `on-death-observed`, fired on every living creature when a creature dies, with the
-  same `ObservationFilter` `relationship` (`self`, `ally`, `enemy`, `any`), compared with the dead
-  creature, in the standard tie-break order (side → slot → id), like `on-action-observed` and
-  `on-damage-observed`. `on-death` and `on-kill` stay separate (actor-self hooks).
+  become one `on-death-observed`, fired when a creature dies on every living creature except the
+  dead one, with the same `ObservationFilter` `relationship` (`ally`, `enemy`, `any`), compared
+  with the dead creature, in the standard tie-break order (side → slot → id), like
+  `on-action-observed` and `on-damage-observed`. `on-death` and `on-kill` stay separate
+  (actor-self hooks).
+- **A creature never observes its own death**: its own death is `on-death`. The dead creature is
+  left out by id, not by `alive`, so one revived before its death's observers fire still doesn't
+  observe it, and the load-time validator rejects `relationship: 'self'` on `on-death-observed`.
+- It **fails closed** like the other two observation hooks: a candidate is skipped when the dead
+  creature can't be found, with or without a filter, so the hook never fires without the death it
+  observes.
 - The 8 trait triggers on the two old hooks move over: 7 in game data (`data/traits/glimmerdark.ts`,
   `data/traits/rotcap-hollow.ts`) and Grudge's, in the test fixtures after 4.5-A. The Rot
   Sovereign's pair becomes one `any` trigger.
 - Deliberate golden change: the hook name in `TriggerFired`, and the firing order on an enemy's
   death (today the dead creature's allies all fire before its enemies).
-- The PR review rewrites `spec/effects.md#hooks`, `spec/effects.md#damage-path-hook-order` and
-  `spec/effects.md#action-reactions-actor-self-hooks-or-observation` to match (17 hooks become 16).
+- The PR review rewrites `spec/effects.md#hooks`, `spec/effects.md#damage-path-hook-order`,
+  `spec/effects.md#action-reactions-actor-self-hooks-or-observation`,
+  `spec/effects.md#damage-observation` (which filter field belongs to which hook) and
+  `spec/effects.md#count-scaling` (its `on-ally-death` example) to match (17 hooks become 16).
 
 ### createCombat validates its trait registry
 
@@ -121,6 +132,33 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   starts throwing: a stop-and-ask, never a quiet fix.
 - It rides in 4.5-B because that slice already changes the trait validator for the new hook.
 - The PR review adds the trait rule to `spec/effects.md#validators`.
+
+### Every pass over the living creatures goes in turn order
+
+- Every pass over the living creatures goes in **turn order**: the hooks fired over all of them
+  (`on-action-observed`, `on-damage-observed`, `on-death-observed`, `on-fight-start`,
+  `on-round-end`) and the Web break-free roll. Turn order is the act-first pole, the normal
+  group, then the act-last pole, each by descending effective Speed, ties side → slot → id. It is
+  `buildTurnQueue`'s ordering read live when the pass runs, not the round's frozen queue: there is no queue at fight start, and a creature revived mid-round has no
+  place in it. The order is taken once per pass, so a response that changes a creature's Speed
+  doesn't reorder the rest of that pass. Side → slot → id remains only as turn order's tie-break
+  and the extremum picks' (`spec/scripting.md#conditions-in-the-engine`).
+- Design intent: under side → slot → id the player side always reacts first, an advantage nobody
+  chose (two carriers of one `stacks: false` trigger, one per side: the player's always gets the
+  roll). In turn order the faster creature reacts first, a lever the player can see and build for:
+  acting first and reacting first are one rule.
+- The order reads `slot`, so no pass depends on a party array being in slot order.
+- In the Web break-free roll (`spec/statuses.md#turn-order`) each bearer's chance is its own, so
+  the order decides only which draw goes to which bearer: no bearer's odds change.
+- Deliberate golden change: the order of the firings within one multi-creature hook call, each
+  `TriggerFired` with its consequences, where two or more creatures fire on one call; the Web
+  rolls' draw assignment where two or more bearers roll in one cleanup; and any fight whose RNG
+  draws move with either.
+- The PR review rewrites `spec/effects.md#hook-execution`,
+  `spec/effects.md#action-reactions-actor-self-hooks-or-observation`,
+  `spec/effects.md#damage-observation`, `spec/effects.md#stacks-false` (which carrier gets the
+  chance), `spec/combat.md#turn-queue` (the ordering is shared) and `spec/statuses.md#turn-order`
+  (the Web roll's order) to match.
 
 ### A dead creature's turn is skipped entirely
 
@@ -296,3 +334,6 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
 - [ ] **ASSUMPTION (F):** the per-fight record's type and field names are the plan's; its contents
       are fixed above.
 - [ ] **ASSUMPTION (F2):** the tuning slice is named 4.5-F2 if it runs.
+- [ ] **ASSUMPTION (B2):** turn order covers every hook fired over all living creatures (the three
+      observation hooks, `on-fight-start` and `on-round-end`), not the observation hooks only. (The
+      Web break-free roll is in by Duncan's call.)
