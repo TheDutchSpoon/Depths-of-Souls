@@ -13,8 +13,9 @@
 // -> final 30 >= 20, V dies (remainingHp 0). No RNG is consumed. V also carries the `any` trait:
 // it is dead, and a creature never observes its own death, so it stays silent.
 //
-// Traits: OBSERVE_ENEMY (`enemy`, x1.1), OBSERVE_ALLY (`ally`, x1.2), OBSERVE_ANY (`any`, x1.3),
-// OBSERVE_ABSENT (no filter, x1.4: absent matches everything).
+// Traits (effectiveAfter = 20 x factor, exact in JS): OBSERVE_ENEMY (`enemy`, x1.1 -> 22),
+// OBSERVE_ALLY (`ally`, x1.2 -> 24), OBSERVE_ANY (`any`, x1.3 -> 26), OBSERVE_ABSENT (no filter,
+// x1.4 -> 28: absent matches everything).
 //
 // CASE 1, `enemyDies`: players A (the killer, no trait, slot 0), PE (OBSERVE_ENEMY), PA
 //   (OBSERVE_ALLY), PY (OBSERVE_ANY); enemies V (slot 0), EA (OBSERVE_ALLY), EE (OBSERVE_ENEMY),
@@ -131,7 +132,12 @@ export const enemyDies = {
   traits,
 }
 
-function fires(id: typeof PE, traitId: string, factor: number): CombatEvent[] {
+function fires(
+  id: typeof PE,
+  traitId: string,
+  factor: number,
+  effectiveAfter: number,
+): CombatEvent[] {
   return [
     { type: 'TriggerFired', sourceId: id, hook: 'on-death-observed', effectId: traitId },
     {
@@ -141,7 +147,7 @@ function fires(id: typeof PE, traitId: string, factor: number): CombatEvent[] {
       stat: 'attack',
       factor,
       effectiveBefore: 20,
-      effectiveAfter: 20 * factor,
+      effectiveAfter,
     },
   ]
 }
@@ -168,11 +174,11 @@ const lethalHit = (killerId: typeof K, victimId: typeof V): CombatEvent[] => [
 export const enemyDiesExpected: CombatEvent[] = [
   ...lethalHit(A, V),
   // The player side first, in slot order: PE (`enemy`), PY (`any`); PA (`ally`) is silent.
-  ...fires(PE, OBSERVE_ENEMY.id, 1.1),
-  ...fires(PY, OBSERVE_ANY.id, 1.3),
+  ...fires(PE, OBSERVE_ENEMY.id, 1.1, 22),
+  ...fires(PY, OBSERVE_ANY.id, 1.3, 26),
   // Then the enemy side: EA (`ally`), EB (no filter); EE (`enemy`) is silent; V is left out.
-  ...fires(EA, OBSERVE_ALLY.id, 1.2),
-  ...fires(EB, OBSERVE_ABSENT.id, 1.4),
+  ...fires(EA, OBSERVE_ALLY.id, 1.2, 24),
+  ...fires(EB, OBSERVE_ABSENT.id, 1.4, 28),
   { type: 'TurnEnded', creatureId: A },
 ]
 
@@ -198,10 +204,10 @@ export const playerDies = {
 export const playerDiesExpected: CombatEvent[] = [
   ...lethalHit(K, V),
   // The player side: PA (`ally`), PB (no filter); PE (`enemy`) is silent; V is left out.
-  ...fires(PA, OBSERVE_ALLY.id, 1.2),
-  ...fires(PB, OBSERVE_ABSENT.id, 1.4),
+  ...fires(PA, OBSERVE_ALLY.id, 1.2, 24),
+  ...fires(PB, OBSERVE_ABSENT.id, 1.4, 28),
   // The enemy side: EE (`enemy`), EY (`any`); EA (`ally`) is silent.
-  ...fires(EE, OBSERVE_ENEMY.id, 1.1),
-  ...fires(EY, OBSERVE_ANY.id, 1.3),
+  ...fires(EE, OBSERVE_ENEMY.id, 1.1, 22),
+  ...fires(EY, OBSERVE_ANY.id, 1.3, 26),
   { type: 'TurnEnded', creatureId: K },
 ]

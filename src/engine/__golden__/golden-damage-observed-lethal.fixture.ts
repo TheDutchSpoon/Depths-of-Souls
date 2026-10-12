@@ -1,8 +1,8 @@
 // Golden: a LETHAL cost, in the damage-path hook order (`spec/effects.md#hook-execution`):
 // DamageDealt -> (on-damage-taken, survivors only) -> on-damage-observed -> CreatureDied ->
-// on-death -> on-kill -> on-death-observed. The Wick's burn can
-// kill it; the Flare's reaction then sits BEFORE CreatureDied and the Last Gleam's `on-death-observed`
-// AFTER it, and the lethal burn skips the heal (fireHook re-checks `alive` per effect).
+// on-death -> on-kill -> on-death-observed. The Wick's burn can kill it; the Flare's reaction then
+// sits BEFORE CreatureDied and the Last Gleam's `on-death-observed` AFTER it, and the lethal burn
+// skips the heal (fireHook re-checks `alive` per effect).
 // Hand-derived; the Wick, the Flare and the Last Gleam are the REAL species with their real traits.
 //
 // Players (party order = slot): WICK (38 / 10 / 16 / 14 / 16; wounded to 3/38 by `setup`), FLARE
@@ -20,7 +20,8 @@
 //  3. CreatureDied wick.
 //  4. on-death (none); on-kill (the killer is the dead Wick itself: skipped); then the death
 //     observers over every living creature but the Wick, in tie-break order: FLARE (no death
-//     observer), then GLEAM, which fires its Last Light: Attack x1.2 to every living ally -- FLARE 14, GLEAM 24, A 20.
+//     observer), GLEAM (fires its Last Light: Attack x1.2 to every living ally -- FLARE 14,
+//     GLEAM 24, A 20), then A and E (no death observer).
 //  5. The heal (the Wick's second effect) is SKIPPED: the Wick is no longer alive, so no
 //     TriggerFired for it. There is no action (dead), no turn-end hook; only TurnEnded.
 

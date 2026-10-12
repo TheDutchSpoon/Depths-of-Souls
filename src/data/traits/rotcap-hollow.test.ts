@@ -1,7 +1,7 @@
-// The Rotcap Hollow death-observer triggers' shape, against `.claude/content/rotcap-hollow.md`. The
-// behaviour is pinned by goldens (golden-rot-sovereign, golden-death-observed); these tests pin the
-// data a golden cannot see: that every trigger writes its `relationship` out. An absent filter means
-// `any`, so a dropped `ally` filter would silently start firing on enemy deaths too.
+// The Rotcap Hollow death-observer triggers' shape, against `.claude/content/rotcap-hollow.md`.
+// The behaviour is pinned by goldens (golden-rot-sovereign, golden-death-observed); these tests
+// pin the data a golden cannot see: that every trigger writes its `relationship` out. An absent
+// filter means `any`, so a dropped `ally` filter would silently start firing on enemy deaths too.
 
 import { describe, expect, it } from 'vitest'
 import {

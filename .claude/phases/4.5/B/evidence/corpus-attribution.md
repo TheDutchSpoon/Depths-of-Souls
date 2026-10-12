@@ -2,7 +2,7 @@
 
 Corpus: 527 fights. Changed digest rows: 143 (130 name only, 13 name + order). The other 384 fights are byte-identical to `main`.
 
-Method: `main` and the branch each resolved every corpus fight to completion (`buildCorpus` + `createCorpusCombat` + `resolveFight`); the full event logs were compared with `on-ally-death` / `on-enemy-death` mapped to `on-death-observed` in `main`'s. Every changed fight has the same result, round count and final HPs. "name only": the mapped logs are byte-identical. "name + order": the mapped logs hold the same multiset of events, in a different order, the reordered firings being death-observer firings of a death whose observers sit on both sides (a player-side observer now fires before an enemy-side one; a fight with several such deaths spans several blocks). No fight differs in any other way.
+Method: `main` and the branch each resolved every corpus fight to completion (`buildCorpus` + `createCorpusCombat` + `resolveFight`); the full event logs were compared with `on-ally-death` / `on-enemy-death` mapped to `on-death-observed` in `main`'s. Every changed fight has the same result, round count and final HPs. "name only": the mapped logs are byte-identical. "name + order": the mapped logs hold the same multiset of events, in a different order, the reordered firings being death-observer firings of a death whose observers sit on both sides (a player-side observer now fires before an enemy-side one; a fight with several such deaths spans several blocks). No fight differs in any other way. A block is the shortest run of events, from a first difference, over which `main`'s mapped log and the branch's hold the same multiset; the Order change column gives each fight's block count (30 across the 13 fights), its first block's event range (0-based log indices, inclusive) and that block's `on-death-observed` firings (`sourceId`) in `main`'s order and in the branch's.
 
 | Fight | Change | Death-observer firings renamed | Events | Result | Rounds | Order change |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -12,14 +12,14 @@ Method: `main` and the branch each resolved every corpus fight to completion (`b
 | 16 | name only | 6 | 703 | loss | 12 | |
 | 19 | name only | 2 | 280 | loss | 7 | |
 | 20 | name only | 6 | 3883 | win | 95 | |
-| 24 | name + order | 11 | 3496 | draw | 100 | first diverging span (events 505-797), first firings: main myconet-warder-enemy-2,myconet-gravedigger-enemy-3,rotfeeder-scavenger-player-4,hollowkin-wretch-player-3,...; branch rotfeeder-scavenger-player-4,myconet-warder-enemy-2,myconet-gravedigger-enemy-3,hollowkin-wretch-player-3,... |
+| 24 | name + order | 11 | 3496 | draw | 100 | 2 blocks; first block events 505-514, `on-death-observed` firings: main myconet-warder-enemy-2,myconet-gravedigger-enemy-3,rotfeeder-scavenger-player-4; branch rotfeeder-scavenger-player-4,myconet-warder-enemy-2,myconet-gravedigger-enemy-3 |
 | 25 | name only | 7 | 4724 | draw | 100 | |
 | 28 | name only | 5 | 455 | win | 9 | |
 | 29 | name only | 10 | 4886 | win | 88 | |
 | 37 | name only | 6 | 131 | win | 3 | |
 | 38 | name only | 18 | 100 | win | 1 | |
 | 41 | name only | 6 | 128 | win | 3 | |
-| 42 | name + order | 7 | 104 | win | 2 | first diverging span (events 13-20), first firings: main flickerling-last-gleam-enemy-2,rotfeeder-scavenger-player-0; branch rotfeeder-scavenger-player-0,flickerling-last-gleam-enemy-2 |
+| 42 | name + order | 7 | 104 | win | 2 | 1 block; first block events 13-20, `on-death-observed` firings: main flickerling-last-gleam-enemy-2,rotfeeder-scavenger-player-0; branch rotfeeder-scavenger-player-0,flickerling-last-gleam-enemy-2 |
 | 50 | name only | 7 | 1431 | win | 26 | |
 | 52 | name only | 12 | 117 | loss | 2 | |
 | 53 | name only | 5 | 4125 | loss | 94 | |
@@ -36,23 +36,23 @@ Method: `main` and the branch each resolved every corpus fight to completion (`b
 | 82 | name only | 6 | 76 | loss | 2 | |
 | 83 | name only | 12 | 585 | win | 12 | |
 | 84 | name only | 4 | 2931 | loss | 91 | |
-| 85 | name + order | 9 | 3819 | win | 77 | first diverging span (events 21-357), first firings: main myconet-warder-enemy-0,rotfeeder-scavenger-player-1,sporch-igniter-enemy-3,necromoss-wisp-enemy-5,...; branch rotfeeder-scavenger-player-1,myconet-warder-enemy-0,sporch-igniter-enemy-3,necromoss-wisp-enemy-5,... |
+| 85 | name + order | 9 | 3819 | win | 77 | 3 blocks; first block events 21-28, `on-death-observed` firings: main myconet-warder-enemy-0,rotfeeder-scavenger-player-1; branch rotfeeder-scavenger-player-1,myconet-warder-enemy-0 |
 | 86 | name only | 6 | 96 | loss | 2 | |
 | 87 | name only | 6 | 119 | loss | 2 | |
 | 88 | name only | 5 | 554 | loss | 12 | |
-| 89 | name + order | 30 | 303 | loss | 5 | first diverging span (events 79-82), first firings: main rot-sovereign-enemy-0,rotfeeder-scavenger-player-0; branch rotfeeder-scavenger-player-0,rot-sovereign-enemy-0 |
+| 89 | name + order | 30 | 303 | loss | 5 | 1 block; first block events 79-82, `on-death-observed` firings: main rot-sovereign-enemy-0,rotfeeder-scavenger-player-0; branch rotfeeder-scavenger-player-0,rot-sovereign-enemy-0 |
 | 93 | name only | 4 | 41 | win | 1 | |
 | 97 | name only | 6 | 130 | win | 3 | |
 | 98 | name only | 12 | 107 | win | 2 | |
 | 101 | name only | 10 | 863 | loss | 22 | |
 | 102 | name only | 6 | 165 | win | 3 | |
 | 106 | name only | 2 | 224 | win | 5 | |
-| 110 | name + order | 14 | 3395 | draw | 100 | first diverging span (events 182-201), first firings: main myconet-warder-enemy-0,myconet-gravedigger-enemy-2,myconet-warder-enemy-3,necromoss-thicket-enemy-4,...; branch rotfeeder-scavenger-player-3,myconet-warder-enemy-0,myconet-gravedigger-enemy-2,myconet-warder-enemy-3,... |
+| 110 | name + order | 14 | 3395 | draw | 100 | 1 block; first block events 182-201, `on-death-observed` firings: main myconet-warder-enemy-0,myconet-gravedigger-enemy-2,myconet-warder-enemy-3,necromoss-thicket-enemy-4,myconet-gravedigger-enemy-5,rotfeeder-scavenger-player-3; branch rotfeeder-scavenger-player-3,myconet-warder-enemy-0,myconet-gravedigger-enemy-2,myconet-warder-enemy-3,necromoss-thicket-enemy-4,myconet-gravedigger-enemy-5 |
 | 111 | name only | 1 | 11 | loss | 1 | |
 | 112 | name only | 6 | 101 | loss | 2 | |
 | 113 | name only | 5 | 817 | win | 16 | |
-| 114 | name + order | 14 | 1278 | loss | 25 | first diverging span (events 227-1211), first firings: main myconet-warder-enemy-3,rotfeeder-scavenger-player-0,rotfeeder-scavenger-enemy-4,myconet-warder-enemy-3,...; branch rotfeeder-scavenger-player-0,myconet-warder-enemy-3,rotfeeder-scavenger-enemy-4,myconet-warder-enemy-3,... |
-| 115 | name + order | 8 | 4245 | draw | 100 | first diverging span (events 63-177), first firings: main myconet-gravedigger-enemy-0,myconet-warder-enemy-3,myconet-warder-enemy-5,rotfeeder-scavenger-player-4,...; branch rotfeeder-scavenger-player-4,myconet-gravedigger-enemy-0,myconet-warder-enemy-3,myconet-warder-enemy-5,... |
+| 114 | name + order | 14 | 1278 | loss | 25 | 3 blocks; first block events 227-234, `on-death-observed` firings: main myconet-warder-enemy-3,rotfeeder-scavenger-player-0; branch rotfeeder-scavenger-player-0,myconet-warder-enemy-3 |
+| 115 | name + order | 8 | 4245 | draw | 100 | 2 blocks; first block events 63-78, `on-death-observed` firings: main myconet-gravedigger-enemy-0,myconet-warder-enemy-3,myconet-warder-enemy-5,rotfeeder-scavenger-player-4; branch rotfeeder-scavenger-player-4,myconet-gravedigger-enemy-0,myconet-warder-enemy-3,myconet-warder-enemy-5 |
 | 116 | name only | 6 | 59 | loss | 1 | |
 | 118 | name only | 6 | 331 | loss | 6 | |
 | 119 | name only | 16 | 759 | loss | 13 | |
@@ -60,12 +60,12 @@ Method: `main` and the branch each resolved every corpus fight to completion (`b
 | 128 | name only | 12 | 109 | win | 2 | |
 | 131 | name only | 6 | 139 | win | 3 | |
 | 135 | name only | 1 | 464 | win | 12 | |
-| 140 | name + order | 10 | 828 | win | 17 | first diverging span (events 25-574), first firings: main myconet-warder-enemy-4,rotfeeder-scavenger-player-5,sporecloud-seeder-enemy-0,necromoss-wisp-player-4,...; branch rotfeeder-scavenger-player-5,myconet-warder-enemy-4,sporecloud-seeder-enemy-0,necromoss-wisp-player-4,... |
-| 144 | name + order | 3 | 2023 | loss | 62 | first diverging span (events 125-138), first firings: main myconet-warder-enemy-2,myconet-warder-enemy-5,rotfeeder-scavenger-player-5; branch rotfeeder-scavenger-player-5,myconet-warder-enemy-2,myconet-warder-enemy-5 |
-| 145 | name + order | 3 | 662 | loss | 14 | first diverging span (events 90-99), first firings: main myconet-warder-enemy-5,rotfeeder-scavenger-player-2,rotfeeder-scavenger-player-5; branch rotfeeder-scavenger-player-2,rotfeeder-scavenger-player-5,myconet-warder-enemy-5 |
+| 140 | name + order | 10 | 828 | win | 17 | 4 blocks; first block events 25-32, `on-death-observed` firings: main myconet-warder-enemy-4,rotfeeder-scavenger-player-5; branch rotfeeder-scavenger-player-5,myconet-warder-enemy-4 |
+| 144 | name + order | 3 | 2023 | loss | 62 | 1 block; first block events 125-138, `on-death-observed` firings: main myconet-warder-enemy-2,myconet-warder-enemy-5,rotfeeder-scavenger-player-5; branch rotfeeder-scavenger-player-5,myconet-warder-enemy-2,myconet-warder-enemy-5 |
+| 145 | name + order | 3 | 662 | loss | 14 | 1 block; first block events 90-99, `on-death-observed` firings: main myconet-warder-enemy-5,rotfeeder-scavenger-player-2,rotfeeder-scavenger-player-5; branch rotfeeder-scavenger-player-2,rotfeeder-scavenger-player-5,myconet-warder-enemy-5 |
 | 146 | name only | 6 | 89 | loss | 2 | |
 | 148 | name only | 3 | 629 | win | 10 | |
-| 149 | name + order | 14 | 288 | loss | 5 | first diverging span (events 78-81), first firings: main rot-sovereign-enemy-0,rotfeeder-scavenger-player-5; branch rotfeeder-scavenger-player-5,rot-sovereign-enemy-0 |
+| 149 | name + order | 14 | 288 | loss | 5 | 1 block; first block events 78-81, `on-death-observed` firings: main rot-sovereign-enemy-0,rotfeeder-scavenger-player-5; branch rotfeeder-scavenger-player-5,rot-sovereign-enemy-0 |
 | 153 | name only | 8 | 61 | win | 1 | |
 | 158 | name only | 12 | 83 | win | 1 | |
 | 161 | name only | 6 | 182 | win | 4 | |
@@ -82,9 +82,9 @@ Method: `main` and the branch each resolved every corpus fight to completion (`b
 | 187 | name only | 6 | 111 | win | 2 | |
 | 188 | name only | 12 | 74 | win | 1 | |
 | 196 | name only | 6 | 217 | win | 4 | |
-| 200 | name + order | 29 | 948 | win | 23 | first diverging span (events 20-359), first firings: main myconet-gravedigger-enemy-0,necromoss-thicket-enemy-1,necromoss-thicket-enemy-5,rotfeeder-scavenger-player-3,...; branch rotfeeder-scavenger-player-3,rotfeeder-scavenger-player-4,rotfeeder-scavenger-player-5,myconet-gravedigger-enemy-0,... |
+| 200 | name + order | 29 | 948 | win | 23 | 5 blocks; first block events 20-31, `on-death-observed` firings: main myconet-gravedigger-enemy-0,necromoss-thicket-enemy-1,necromoss-thicket-enemy-5,rotfeeder-scavenger-player-3,rotfeeder-scavenger-player-4,rotfeeder-scavenger-player-5; branch rotfeeder-scavenger-player-3,rotfeeder-scavenger-player-4,rotfeeder-scavenger-player-5,myconet-gravedigger-enemy-0,necromoss-thicket-enemy-1,necromoss-thicket-enemy-5 |
 | 202 | name only | 18 | 126 | loss | 2 | |
-| 204 | name + order | 12 | 1846 | win | 30 | first diverging span (events 1070-1805), first firings: main myconet-gravedigger-enemy-3,myconet-warder-enemy-4,rotfeeder-scavenger-player-0,necromoss-hollowroot-player-5,...; branch rotfeeder-scavenger-player-0,myconet-gravedigger-enemy-3,myconet-warder-enemy-4,necromoss-hollowroot-player-5,... |
+| 204 | name + order | 12 | 1846 | win | 30 | 5 blocks; first block events 1070-1079, `on-death-observed` firings: main myconet-gravedigger-enemy-3,myconet-warder-enemy-4,rotfeeder-scavenger-player-0; branch rotfeeder-scavenger-player-0,myconet-gravedigger-enemy-3,myconet-warder-enemy-4 |
 | 205 | name only | 5 | 2863 | win | 73 | |
 | 207 | name only | 12 | 129 | loss | 2 | |
 | 209 | name only | 10 | 5845 | draw | 100 | |

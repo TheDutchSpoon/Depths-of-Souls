@@ -356,8 +356,8 @@ export function validateStatModifierConditions(defs: readonly EffectDef[]): void
  * throws if `actionKind`/`excludeActor` sit on a trigger that is not `on-action-observed`,
  * `selfInflicted` on one that is not `on-damage-observed`, `relationship: 'self'` on
  * `on-death-observed` (its own death is `on-death`), or an `observationFilter` of any kind on a
- * hook that is none of the three. Absent fields stay permissive. Called over EVERY trigger carrier at
- * import: every trait's effects (`data/traits/index.ts`), every perk's effects
+ * hook that is none of the three. Absent fields stay permissive. Called over EVERY trigger carrier
+ * at import: every trait's effects (`data/traits/index.ts`), every perk's effects
  * (`data/specializations.ts`) and every status in the registry (`validateStatusDef`, called from
  * `data/statuses.ts`). */
 export function validateObservationFilters(
@@ -686,8 +686,9 @@ export type ActionInstanceDef = {
  *  - `relationship`: shared. On `on-action-observed` it compares the OBSERVER (self) to the ACTOR
  *    (the hook's `source`); on `on-damage-observed` it compares the observer to the DAMAGED
  *    creature (the hook's `source` there); on `on-death-observed` it compares the observer to the
- *    DEAD creature (the hook's `source`), which is never an observer itself. 'ally' includes self (matches livingAlliesOf's own
- *    convention). `excludeActor` drops the case where the observer IS the actor.
+ *    DEAD creature (the hook's `source`), which is never an observer itself. 'ally' includes self
+ *    (matches livingAlliesOf's own convention). `excludeActor` drops the case where the observer
+ *    IS the actor.
  * Resonants are the `on-action-observed` consumer: `{ relationship: 'ally', actionKind:
  * 'cast' }`; the Flickerling Flare is the `on-damage-observed` one: `{ relationship: 'ally',
  * selfInflicted: true }`. */
@@ -1004,9 +1005,9 @@ export type ResolvedHookEffect = {
   readonly condition?: TriggerCondition
   readonly chancePercent?: number
   /** Meaningful only when this resolved trigger's hook is an observation hook
-   * ('on-action-observed' / 'on-damage-observed' / 'on-death-observed'). A status carries ordinary effects
-   * and `flatEffects` spreads a status trigger's fields through, so a status trigger can carry
-   * one too; it is undefined only when none was authored. */
+   * ('on-action-observed' / 'on-damage-observed' / 'on-death-observed'). A status carries ordinary
+   * effects and `flatEffects` spreads a status trigger's fields through, so a status trigger can
+   * carry one too; it is undefined only when none was authored. */
   readonly observationFilter?: ObservationFilter
   readonly response: EffectResponse
   readonly statusId?: string

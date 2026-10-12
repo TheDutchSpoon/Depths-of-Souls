@@ -590,9 +590,10 @@ export function fireHook(
       // isn't firing: it emits nothing and consumes none of the depth/truncation budget.
       // evaluateCondition is pure (never draws RNG), safe to call for every candidate effect.
       // `source` (the trigger's OTHER creature -- attacker for on-damage-taken,
-      // dead creature for on-death-observed, etc.) is threaded through as the 'target'-subject condition's
-      // resolving-against creature; absent for hooks with no such creature (on-round-end,
-      // on-fight-start), in which case 'target' simply evaluates false, same as scripting lookahead.
+      // dead creature for on-death-observed, etc.) is threaded through as the 'target'-subject
+      // condition's resolving-against creature; absent for hooks with no such creature
+      // (on-round-end, on-fight-start), in which case 'target' simply evaluates false, same as
+      // scripting lookahead.
       if (
         effect.condition &&
         !evaluateTriggerCondition(effect.condition, self, working, source)

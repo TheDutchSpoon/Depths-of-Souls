@@ -79,9 +79,9 @@ export const SPORECLOUD_BLOOMER_TRAIT: Trait = {
 // ---- Rotfeeders (Violence) -- closed mechanic: Carrion snowball ----
 
 /** Rotfeeder Scavenger (enabler, common): permanently grows its own Attack whenever ANY enemy
- * dies -- not just its own kills (`on-death-observed` on an enemy, an OBSERVER hook, unlike `on-kill`'s
- * actor-self scoping) -- a fresh StatModifierEffect each firing, compounding as the fight thins
- * out the opposing side. */
+ * dies -- not just its own kills (`on-death-observed` on an enemy, an OBSERVER hook, unlike
+ * `on-kill`'s actor-self scoping) -- a fresh StatModifierEffect each firing, compounding as the
+ * fight thins out the opposing side. */
 export const ROTFEEDER_SCAVENGER_TRAIT: Trait = {
   id: 'rotfeeder-scavenger-carrion-hunger',
   name: 'Carrion Hunger',
@@ -404,8 +404,7 @@ export const SPORCH_CINDERLORD_TRAIT: Trait = {
 // creatures dying alike), so ANY creature that dies feeds her at the same rate. A flat per-event
 // factor (no `magnitudeSource` freeze-at-application) still compounds across repeated firings
 // without needing a live count (see Necromoss Thicket's own comment). Plus the spreading-Spore
-// blanket, unconditional each
-// of her own turns.
+// blanket, unconditional each of her own turns.
 
 export const ROT_SOVEREIGN_TRAIT: Trait = {
   id: 'rot-sovereign-attrition',
