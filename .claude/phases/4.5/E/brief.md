@@ -15,6 +15,9 @@ Nova becomes Thorn Volley (45%) in `data/spells/overgrowth.ts`; `data/spells/cor
   Venom Bolt in a comment: both move to surviving spells.
 - `engine/__corpus__/corpus.ts` lists all three spells; its coverage entries follow the content.
 - Instinct is left with exactly 3 biome-1 spells, the data test's minimum.
+- With `data/spells/core.ts` gone the spell library has no `core.ts`: this slice's PR review drops it
+  from `CONVENTIONS.md#effect-carriers-live-in-libraries` for spells, as 4.5-A's did for traits
+  (`phases/4.5/brief.md#placeholder-traits-move-to-test-fixtures`).
 
 ## Done when
 

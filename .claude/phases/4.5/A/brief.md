@@ -22,6 +22,9 @@ test and the corpus digest unchanged). Small: Duncan may merge steps.
   dedupe; once deduped, that comment is rewritten.
 - `CONVENTIONS.md#mechanism-goldens-vs-content-goldens` carries the `**Known bug:**` line this
   slice's PR review removes.
+- `data/traits/core.ts` is left empty and deleted, so the trait library has no `core.ts`: this
+  slice's PR review drops it from `CONVENTIONS.md#effect-carriers-live-in-libraries` for traits
+  (`phases/4.5/brief.md#placeholder-traits-move-to-test-fixtures`).
 
 ## Done when
 

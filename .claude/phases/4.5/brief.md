@@ -82,6 +82,10 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   byte-identical: the goldens that use them read them from the fixtures.
 - Placeholder content does not live in production registries
   (`CONVENTIONS.md#mechanism-goldens-vs-content-goldens`).
+- `data/traits/core.ts` is left empty and is deleted. A carrier library has no `core.ts`: it is one
+  file per biome, plus `starters.ts` for the trait library. The PR review rewrites
+  `CONVENTIONS.md#effect-carriers-live-in-libraries` to match for traits; 4.5-E's does it for
+  spells.
 
 ### One copy of Splashing's adjacency lookup
 
@@ -154,7 +158,9 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   spell: Violence · every enemy · **45%** of the caster's Intelligence to each, the area sibling of
   Thorn Lash. 45% is "about 50%" under `content/overgrowth.md#spell-power-convention`, so the
   convention stands. It moves to `data/spells/overgrowth.ts` and the Overgrowth spell list;
-  `data/spells/core.ts` and the content doc's "Core spells" section are deleted.
+  `data/spells/core.ts` and the content doc's "Core spells" section are deleted, so the spell
+  library has no `core.ts` either
+  (`phases/4.5/brief.md#placeholder-traits-move-to-test-fixtures`).
 - All three spells are in the biome-1 roll pool (`unlockedAtBiome: 1`), so this changes every
   generated loadout: a deliberate content change (content goldens, the corpus digest, the balance
   bands). After it, Instinct has exactly 3 biome-1 spells (Howling Instinct, Pounce, Stinger
