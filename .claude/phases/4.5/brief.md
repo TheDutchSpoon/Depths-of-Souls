@@ -142,7 +142,7 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   `buildTurnQueue`'s ordering read live when the pass runs, not the round's frozen queue: there is no queue at fight start, and a creature revived mid-round has no
   place in it. The order is taken once per pass, so a response that changes a creature's Speed
   doesn't reorder the rest of that pass. Side → slot → id remains only as turn order's tie-break
-  and the extremum picks' (`spec/scripting.md#conditions-in-the-engine`).
+  and the extremum picks' (`spec/scripting.md#target-selectors-in-the-engine`).
 - Design intent: under side → slot → id the player side always reacts first, an advantage nobody
   chose (two carriers of one `stacks: false` trigger, one per side: the player's always gets the
   roll). In turn order the faster creature reacts first, a lever the player can see and build for:

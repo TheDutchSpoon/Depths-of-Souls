@@ -236,7 +236,7 @@ Confusion). They are defined in `src/data/statuses.ts`.
 ### Turn order
 
 - `turn-order { position: 'first' | 'last', breakChancePercent? }` is a passive effect, never
-  hook-fired, read by `buildTurnQueue`, which partitions the living combatants into an act-first
+  hook-fired, read by the turn order (`spec/combat.md#turn-queue`), which partitions the living combatants into an act-first
   pole, the normal group and an act-last pole, each sorted by Speed, concatenated first → normal →
   last. A bearer carrying both poles acts first.
 - **Web's break-free roll** is `breakChancePercent: 10` on Web's `turn-order` effect: a field, not a
@@ -249,7 +249,10 @@ Confusion). They are defined in `src/data/statuses.ts`.
   turn's own cleanup rolls it.
 - It runs on every dequeued turn's cleanup, a dead actor's empty bracket and a turn whose actor
   died mid-turn included (so the rate stays "at every creature's turn"), never after a mid-turn
-  wipe, over living bearers in side → slot → id order. It follows the `chancePercent` discipline: it
+  wipe, over living bearers in turn order (`spec/effects.md#pass-order`), taken once when the
+  cleanup starts: a bearer that breaks free doesn't reorder the rolls after it. Each bearer's chance
+  is its own, so the order decides only which draw goes to which bearer. It follows the
+  `chancePercent` discipline: it
   rolls only when a Web is present, and a board with no Web never touches the RNG. The 3-turn cap
   is Web's duration.
 
