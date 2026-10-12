@@ -440,8 +440,12 @@ src/
   status id) says what the thing pins or is for, never the phase, slice or plan item it came from,
   and a string literal (an error message, a report label) carries no provenance word.
   `npm run docs:check -- comments` fails CI on a phase or slice id in a `src/` file name of any
-  extension, in an identifier (`B5_FIXTURE`, `PHASE_4_…`) and in a string literal
-  (`'h2b2-reapply-p1'`). Plan-item letters are `A`-`I`, so a derivation handle such as `S1_SCRIPT`
+  extension, in an identifier (`B5_FIXTURE`, `PHASE_4_…`, `placeholderPhase4Config`) and in a
+  string literal (`'h2b2-reapply-p1'`). A string, template or regex literal that is not a module
+  specifier or a test title also fails on `ASSUMPTION:` and on the markers `comments` reads in a
+  comment (ASSUMPTION, phase and slice ids, PR numbers, review words, plan-item ids), so
+  `'…before Phase 8'` fails; the workflow words ("brief", "the plan", "grill") are not read there,
+  because a player-facing string can hold them. Plan-item letters are `A`-`I`, so a derivation handle such as `S1_SCRIPT`
   or `T98` passes, and a test title may open with one (`'E1 ticks first'`). A rename is proved with
   `comment-proof <base> --renames <map>` (`workflow/pr-review.md#4-verify-claimed-invariants-mechanically`).
 - `// ASSUMPTION:` is kept for a live open question only (`CONVENTIONS.md#open-questions-get-an-interface`), not
