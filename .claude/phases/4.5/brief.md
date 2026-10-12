@@ -252,6 +252,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 - `FloorOutcome` gains one record per fight resolved: that fight's events, the XP it banked, the
   party's levels after it, **the fight's combat seed**, and **both parties as they entered the
   fight** (the `Creature` snapshots: name, level, gems, role script).
+- The record replaces `FloorOutcome.fightEnemyIds`: the balance simulator reads each fight's enemy
+  roster from the record's enemy party, and the field goes.
 - Seed and parties reproduce the fight outside the store (`createCombat` + `resolveFight`), so a
   fight seen in the demo becomes a test. The demo reads names, gems and per-fight levels from the
   record; it never parses creature ids (`spec/run.md#rewards-are-a-run-layer-consumer-of-the-event-log`).

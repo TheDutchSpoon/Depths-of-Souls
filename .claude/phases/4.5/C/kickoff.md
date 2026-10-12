@@ -42,8 +42,11 @@ today. The frozen queue keeps its dead entries.
 The balance simulator's matchup roster (`enemyTemplateIds`) comes from the fight's enemy party,
 not from the round-1 `TurnStarted` brackets. Today an enemy killed before its first turn still
 has a bracket, and without one it would silently drop out of the matchup table.
-`firstRoundEnemyIds` and the "boss-run restore" test that uses it change to match. The matchup
-table must count exactly the enemies it counts on `main`.
+`firstRoundEnemyIds` and the "boss-run restore" test that uses it change to match. The roster
+is every enemy in the party, read from `FloorOutcome.fightEnemyIds` (one array of enemy creature
+ids per fight resolved, in fight order, filled by `descend` from `fight.enemyParty`). This also
+counts an enemy `main` misses: one whose round-1 slot never came up because the fight ended
+first (on floor 1, with its single enemy, such a fight drops out of `main`'s matchup table).
 
 `resolveTurn` throws when the state it is given already has a result, before it does anything
 else. Today a call on a finished fight plays on (`phases/4.5/C/evidence/kickoff-probe.md#stepping-past-the-end`).
@@ -154,8 +157,10 @@ regeneration.
   call returning without crossing the boundary fails test 5; removing the guard fails test 8.
 - **The guard is byte-identical on its own:** `main` plus only the guard passes every existing
   test and the committed corpus digest.
-- **The matchup roster:** over the simulator's fights, the new roster equals `main`'s
-  `firstRoundEnemyIds`-derived set fight by fight.
+- **The matchup roster:** over the simulator's fights, fight by fight, the new roster contains
+  `main`'s `firstRoundEnemyIds`-derived set, and every fight where they differ ended in round 1
+  before each missing enemy's first slot (checked from `main`'s log). The matchup table before
+  and after, with that delta attributed.
 - **Balance** (`phases/4.5/brief.md#balance-verdicts`): `npm run sim` before and after, per spec:
   the CI verdicts (floor 1, first soul, floor 5), the round-cap draw rate, and any move in the
   boss lock stats, attributed. A flipped verdict stops and asks; no tuning.
