@@ -329,7 +329,7 @@ describe('the filter matrix: relationship x selfInflicted', () => {
   })
 })
 
-describe('both observation hooks fail closed', () => {
+describe('on-action-observed and on-damage-observed fail closed', () => {
   it('on-damage-observed without observedDamage fires nothing, filtered or not', () => {
     const plain = watcherTrait('plain', undefined)
     const filtered = watcherTrait('filtered', { relationship: 'ally' })

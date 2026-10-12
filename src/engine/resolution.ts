@@ -443,9 +443,10 @@ export interface FireHookOptions {
   }
   /** Supplied ONLY by `applyDamageAndEmit`'s `on-damage-observed` call
    * (`spec/effects.md#damage-observation`). `selfInflicted` is the cost classification carried
-   * from the branch that chose the cost path. Both observation hooks FAIL CLOSED: a candidate on
-   * `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
-   * `observed` is. */
+   * from the branch that chose the cost path. All three observation hooks FAIL CLOSED: a candidate
+   * on `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
+   * `observed` is, and one on `on-death-observed` when its `source` (the dead creature) is absent
+   * or not in the state. */
   readonly observedDamage?: { readonly selfInflicted: boolean }
   /** The born-this-turn tick gate, supplied ONLY by `resolveTurn`'s
    * `on-turn-end` call. Consulted for every STATUS-sourced candidate (trait-sourced triggers are

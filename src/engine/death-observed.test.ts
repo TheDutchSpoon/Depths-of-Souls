@@ -136,7 +136,8 @@ describe('a creature never observes its own death', () => {
 
     const { events, state: after } = kill(V, state)
 
-    expect(events.some((e) => e.type === 'Revived')).toBe(true) // V is alive when its observers fire
+    // V is alive when its observers fire
+    expect(events.some((e) => e.type === 'Revived')).toBe(true)
     expect(after.playerParty.find((c) => c.id === V)!.alive).toBe(true)
     expect(observers(events)).toEqual([W])
   })
