@@ -739,8 +739,8 @@ export type ProvokeImmunityDef = {
  * living enemy ADJACENT to that target for its own recomputed damage -- own Defence/affinity/
  * pools, never a copy of the main hit's number. Attacks only; a Cast never splashes
  * (`specializations/brute.md#proficient-warrior`). Upgraded to all-other-living-enemies by a
- * simultaneously-active AnnihilateDef. The adjacency lookup is
- * `spec/combat.md#adjacency-targeting`. Never emits TriggerFired --
+ * simultaneously-active AnnihilateDef. Adjacency is living adjacency
+ * (`spec/combat.md#adjacency-targeting`). Never emits TriggerFired --
  * it's the same action, not a triggered response. */
 export type SplashingDef = {
   readonly category: 'splashing'

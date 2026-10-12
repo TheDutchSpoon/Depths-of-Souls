@@ -22,11 +22,7 @@ import type { CombatEvent, Spell } from './types'
 
 /** Statuses no shipped content can apply yet, each with its reason. */
 const STATUS_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
-  [
-    'stun',
-    'applied by no shipped spell, perk or trait; the only trait that applies it is a test ' +
-      'fixture (the mechanism-test trait that stuns its bearer)',
-  ],
+  ['stun', 'applied by no shipped spell, perk or trait; only test fixtures apply it'],
 ])
 
 /** Perks whose effect cannot show in any fight yet, each with its reason. Empty: Clear Mind and
