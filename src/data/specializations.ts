@@ -489,7 +489,8 @@ export const SHIELDBARER: Specialization = {
     },
     {
       // "On defend, +1% Defence per level." apply-stat-modifier fired on-defend, re-stacking
-      // every Defend (the same repeated-trigger-apply shape traits.ts's GRUDGE already proves).
+      // every Defend (`spec/responses.md#apply-stat-modifier`: a stat-modifier added by a
+      // response is permanent for the fight, so each Defend adds one).
       id: 'defensive-stance',
       name: 'Defensive Stance',
       maxLevel: 10,

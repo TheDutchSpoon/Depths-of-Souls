@@ -8,51 +8,42 @@ import {
   VENGEFUL,
   REELING,
   CATASTROPHIC_COLLAPSE,
-} from './core'
-import { STARTER_TRAITS } from './starters'
-import { BROODMOTHER_TRAIT } from './overgrowth'
-import { STOCK_TRAITS, TRAIT_REGISTRY } from './index'
-import { getEffectiveStat, getOffensiveStat } from '../../engine/effective-stats'
-import { resolveBaselineEffects, instantiateEffectDefs } from '../../engine/effects'
-import { makeCreature } from '../../engine/__fixtures__/creatures'
-import type { Creature } from '../../engine/types'
+  FIXTURE_TRAITS,
+  FIXTURE_TRAITS_BY_ID,
+} from './traits'
+import { validateTrait } from '../../data/traits'
+import { getEffectiveStat, getOffensiveStat } from '../effective-stats'
+import { resolveBaselineEffects, instantiateEffectDefs } from '../effects'
+import { makeCreature } from './creatures'
+import type { Creature } from '../types'
 
 function instantiateTraitEffects(
   c: Pick<Creature, 'innateTraitIds' | 'side'>,
-  registry: typeof TRAIT_REGISTRY,
+  registry: typeof FIXTURE_TRAITS_BY_ID,
 ) {
   return instantiateEffectDefs(resolveBaselineEffects(c, registry), 0).effects
 }
 
-describe('stock traits (representative content)', () => {
-  it('registers every stock trait by id', () => {
-    expect([...TRAIT_REGISTRY.keys()].sort()).toEqual(
-      STOCK_TRAITS.map((t) => t.id).sort(),
-    )
-  })
-
-  // Guardrail against an unwired library grouping (`CONVENTIONS.md#effect-carriers-live-in-libraries`): a representative const from each of core/starters/overgrowth must actually
-  // land in STOCK_TRAITS, not just exist in its own file.
-  it('every library grouping (core/starters/overgrowth) is actually spread into STOCK_TRAITS', () => {
-    expect(STOCK_TRAITS).toContain(BRUTISH)
-    for (const starterTrait of STARTER_TRAITS) {
-      expect(STOCK_TRAITS).toContain(starterTrait)
+describe('the nine mechanism-test fixture traits', () => {
+  it('every fixture trait passes the load-time trait validators', () => {
+    expect(FIXTURE_TRAITS).toHaveLength(9)
+    for (const trait of FIXTURE_TRAITS) {
+      expect(() => validateTrait(trait)).not.toThrow()
     }
-    expect(STOCK_TRAITS).toContain(BROODMOTHER_TRAIT)
   })
 
   it('BRUTISH is a flat +30% Attack passive', () => {
     const c = makeCreature({ attack: 20, innateTraitIds: [BRUTISH.id] })
     const withEffects = {
       ...c,
-      activeEffects: instantiateTraitEffects(c, TRAIT_REGISTRY),
+      activeEffects: instantiateTraitEffects(c, FIXTURE_TRAITS_BY_ID),
     }
     expect(getEffectiveStat(withEffects, 'attack')).toBe(26)
   })
 
   it('BLOODLUST grants +25% Attack only at full HP', () => {
     const c = makeCreature({ attack: 20, health: 40, innateTraitIds: [BLOODLUST.id] })
-    const full = { ...c, activeEffects: instantiateTraitEffects(c, TRAIT_REGISTRY) }
+    const full = { ...c, activeEffects: instantiateTraitEffects(c, FIXTURE_TRAITS_BY_ID) }
     expect(getEffectiveStat(full, 'attack')).toBe(25)
 
     const hurt = { ...full, currentHp: 39 }
@@ -63,7 +54,7 @@ describe('stock traits (representative content)', () => {
     const c = makeCreature({ attack: 8, speed: 24, innateTraitIds: [SWIFT_STRIKER.id] })
     const withEffects = {
       ...c,
-      activeEffects: instantiateTraitEffects(c, TRAIT_REGISTRY),
+      activeEffects: instantiateTraitEffects(c, FIXTURE_TRAITS_BY_ID),
     }
     expect(getOffensiveStat(withEffects, 'attack')).toBe(24)
   })

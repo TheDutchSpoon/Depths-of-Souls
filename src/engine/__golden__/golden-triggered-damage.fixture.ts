@@ -16,7 +16,7 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
-import { TRAIT_REGISTRY } from '../../data/traits'
+import { FIXTURE_TRAITS_BY_ID } from '../__fixtures__/traits'
 import type { CombatEvent, FightResult } from '../types'
 
 export const SEED = 5005 // No RNG consumed (deterministic targeting, no provokers); seed is inert.
@@ -50,7 +50,7 @@ export const enemyParty = makeParty('enemy', [
 ])
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
-export const traits = TRAIT_REGISTRY
+export const traits = FIXTURE_TRAITS_BY_ID
 
 function heroHit(remainingHp: number): CombatEvent {
   return {

@@ -46,7 +46,7 @@ export type RemapSlot = 'attack' | 'cast'
 
 /** An alternative to a literal flat-mode magnitude (`deal-damage.flatAmount` / `heal.flatAmount`)
  * -- a percentage of a creature's effective stat. Two readers: a response's own cost or heal reads
- * the FIRING creature's stat live (the Wick's burn and heal, `CATASTROPHIC_COLLAPSE`); a status's
+ * the FIRING creature's stat live (the Wick's burn and heal); a status's
  * `potency` reads the APPLIER's stat once, at application (`snapshotFor`, effects.ts).
  * `percent` is a positive integer, not a float fraction: `floor(floor(stat) * percent * count /
  * 100)` is exact in integer arithmetic, whereas a float fraction (e.g. `stat * 0.03`) can land
@@ -739,9 +739,8 @@ export type ProvokeImmunityDef = {
  * living enemy ADJACENT to that target for its own recomputed damage -- own Defence/affinity/
  * pools, never a copy of the main hit's number. Attacks only; a Cast never splashes
  * (`specializations/brute.md#proficient-warrior`). Upgraded to all-other-living-enemies by a
- * simultaneously-active AnnihilateDef. The adjacency lookup is `actions.ts`'s private
- * `adjacentLivingTargets`; `targeting.ts` exports a second copy that Splashing does not use
- * (`ROADMAP.md#phase-45--run-loop-demo-interlude` dedupes them). Never emits TriggerFired --
+ * simultaneously-active AnnihilateDef. The adjacency lookup is
+ * `spec/combat.md#adjacency-targeting`. Never emits TriggerFired --
  * it's the same action, not a triggered response. */
 export type SplashingDef = {
   readonly category: 'splashing'
@@ -1048,7 +1047,7 @@ export interface Trait {
 
 /** One entry of a creature's resolved `baselineEffects` -- an `EffectDef` paired
  * with the `sourceTraitId` label it must carry once instantiated (a bare `EffectDef[]` would lose
- * this: a trait-sourced def's label is its owning trait's id, e.g. `'brutish'`; a side-effect
+ * this: a trait-sourced def's label is its owning trait's id, e.g. `'flickerling-wick-burn-bright'`; a side-effect
  * def's label is `'<sideLabel>-<ordinal>'` -- `'perk-<ordinal>'` for the player side,
  * `'enemy-effect-<ordinal>'` for the enemy side) -- see effects.ts's
  * `resolveBaselineEffects`). Plain data (no functions -- `SelfCondition` is what

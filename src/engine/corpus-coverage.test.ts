@@ -24,8 +24,8 @@ import type { CombatEvent, Spell } from './types'
 const STATUS_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
   [
     'stun',
-    "applied only by the placeholder trait 'reeling' (data/traits/core.ts), which is in the " +
-      'trait registry but carried by no shipped creature; no spell, perk or species trait applies it',
+    'applied by no shipped spell, perk or trait; the only trait that applies it is a test ' +
+      'fixture (the mechanism-test trait that stuns its bearer)',
   ],
 ])
 

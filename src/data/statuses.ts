@@ -83,7 +83,7 @@ export const REGEN: StatusDef = {
     },
   ],
   polarity: 'buff',
-  // Matches demoFight.ts's own real usage (duration: 3), never actually read by it.
+  // Fallback duration for an apply-status that omits `duration` (`applyStatus`).
   defaultDuration: 3,
 }
 
@@ -94,7 +94,7 @@ export const STUN: StatusDef = {
   statusId: 'stun',
   effects: [{ category: 'action-lock', scope: 'all' }],
   polarity: 'debuff',
-  // Matches REELING's own real usage (duration: 1), never actually read by it.
+  // Fallback duration for an apply-status that omits `duration` (`applyStatus`).
   defaultDuration: 1,
 }
 
