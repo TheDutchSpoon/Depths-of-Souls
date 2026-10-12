@@ -124,23 +124,8 @@ Nothing left: 4.2-H3 built the last four items, and its PR review moved them int
 
 ## Known from 4.2-G's review
 
-- At this slice's kickoff, the design agent sets `ROADMAP.md`'s Phase 4.2 line to "Done: 4.2-A to
-  4.2-G" (G's kickoff did the same for F).
-- The citation rewrite left residue a hand pass should clean while it's there: a dropped
-  possessive (`` `content/overgrowth.md#the-overgrowth-biome-1-floors-110` own table ``,
-  `` per `spec/responses.md#flat-mode` own named example ``), a label echoed after its anchor
-  (`` `content/overgrowth.md#swarmhive-striker` Swarmhive Striker ``,
-  `` (`CONVENTIONS.md#corpus-digest`, corpus digest) `` in the corpus fixture header and its
-  template in `corpus-digest.test.ts`, which must change together), a file name after it
-  (`` (`specializations/sorcerer.md#starter-glyphmoth-seer` / sorcerer.md) ``), and old rule
-  numbers beside an anchor (`` `spec/responses.md#perform-action` B2 rule 2 `` in
-  `engine/resolution-types.ts`).
-- `ASSUMPTION (Slice F)` blocks in `data/species/starters.ts` quote the old docs at length; the
-  4.2-G fix round rewrote the affinity one only.
+Nothing left: 4.2-H2 cleared it.
 
 ## Known from 4.2-H2's review
 
-- `SORCERER_STARTER_TRAIT`'s doc comment in `data/traits/starters.ts` has one 135-column line
-  ("through fusion, whichever parent the Seer is. … fight-setup prepends"), left by the sweep's
-  rewrap. Rewrap the block at the width of the lines around it (about 100); the proof strips
-  comments, so it costs nothing under 4.2-H3's.
+Nothing left: 4.2-H3 cleared it.
