@@ -77,7 +77,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnStarted', creatureId: P1 },
   { type: 'Waited', creatureId: P1 },
   { type: 'TurnEnded', creatureId: P1 },
-  // -- round-end trait pass (tie-break order: P1, P2, E1) --
+  // -- round-end trait pass (turn order: P1, P2, E1) --
   // P1's effect (1): lethal self-hit, no TriggerFired (matches DoT convention).
   {
     type: 'DamageDealt',

@@ -860,8 +860,10 @@ export type ActionLockDef = {
   readonly scope: 'all' | 'attack' | 'cast'
 }
 
-/** Web (act-last) / Grant Act First (act-first): read by `buildTurnQueue` (turn-order.ts).
- * `breakChancePercent` is the global per-turn break-free roll (combat.ts's `rollWebBreakFree`, in turn-end cleanup):
+/** Web (act-last) / Grant Act First (act-first): read by the turn order (turn-order.ts), which
+ * the round-start queue and every multi-creature hook pass share.
+ * `breakChancePercent` is the global per-turn break-free roll (combat.ts's `rollWebBreakFree`, in turn-end cleanup,
+ * its bearers in turn order):
  * status-only, since breaking free removes the status instance
  * (`validateNoBreakChanceOutsideStatus`). A bearer carrying both poles resolves to 'first'. */
 export type TurnOrderDef = {

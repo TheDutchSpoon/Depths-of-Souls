@@ -15,7 +15,8 @@
 // fallback is the side-aware default then Provoke; and a hit whose target died in its own pre-hit
 // hooks fizzles (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`).
 
-import { getCreature, findCreature, livingIdsOf, updateCreature } from './creature-lookup'
+import { getCreature, findCreature, updateCreature } from './creature-lookup'
+import { turnOrderIdsOf } from './turn-order'
 import {
   gatherExtraInstances,
   hasAnnihilate,
@@ -486,12 +487,12 @@ function executeAttack(
       targetId: thisTargetId,
     })
     working = fireHook('on-attack', [actor.id], thisTargetId, working, ctx).state
-    // Fires on ALL living creatures
+    // Fires on ALL living creatures in turn order, taken now
     // (cheap -- effectsForHook returns nothing for non-observers), per instance, alongside the
     // actor's own on-attack hook above -- see `spec/effects.md#action-reactions-actor-self-hooks-or-observation` actor-vs-observer routing table.
     working = fireHook(
       'on-action-observed',
-      livingIdsOf(working),
+      turnOrderIdsOf(working),
       actor.id,
       working,
       ctx,
@@ -623,7 +624,7 @@ function executeCastSingle(
     // echo (a `perform-action` grant) raised here is queued, and runs after this whole action.
     working = fireHook(
       'on-action-observed',
-      livingIdsOf(working),
+      turnOrderIdsOf(working),
       actor.id,
       working,
       ctx,
@@ -692,7 +693,7 @@ function executeCastAoe(
     // for relationship filtering), unlike on-cast's own source above.
     working = fireHook(
       'on-action-observed',
-      livingIdsOf(working),
+      turnOrderIdsOf(working),
       actor.id,
       working,
       ctx,
@@ -724,9 +725,14 @@ function executeDefend(
   let working = fireHook('on-defend', [actor.id], undefined, state, ctx).state
   // Defend/Provoke are always
   // single-instance in v1 -- instanceIndex is always 0.
-  working = fireHook('on-action-observed', livingIdsOf(working), actor.id, working, ctx, {
-    observed: { actionKind: 'defend', instanceIndex: 0 },
-  }).state
+  working = fireHook(
+    'on-action-observed',
+    turnOrderIdsOf(working),
+    actor.id,
+    working,
+    ctx,
+    { observed: { actionKind: 'defend', instanceIndex: 0 } },
+  ).state
   // Cumulative for the whole fight, never reset -- read fresh
   // from `working` (not the pre-hook `actor`) in case an on-defend response somehow touched it,
   // matching the project's existing "re-fetch before mutating" discipline (e.g. combat.ts's own
@@ -745,9 +751,14 @@ function executeProvoke(
 ): CombatState {
   ctx.events.push({ type: 'Provoked', creatureId: actor.id })
   let working = fireHook('on-provoke', [actor.id], undefined, state, ctx).state
-  working = fireHook('on-action-observed', livingIdsOf(working), actor.id, working, ctx, {
-    observed: { actionKind: 'provoke', instanceIndex: 0 },
-  }).state
+  working = fireHook(
+    'on-action-observed',
+    turnOrderIdsOf(working),
+    actor.id,
+    working,
+    ctx,
+    { observed: { actionKind: 'provoke', instanceIndex: 0 } },
+  ).state
   return updateCreature(working, actor.id, { provoking: true })
 }
 

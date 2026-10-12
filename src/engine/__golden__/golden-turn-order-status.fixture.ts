@@ -100,7 +100,7 @@ export const TURN_STEPS = 4 // one full round: HASTY, NORMAL_FAST, NORMAL_SLOW, 
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },
-  // on-fight-start fires in livingIds order (player slots then enemy slots): WEBBED, then HASTY
+  // on-fight-start fires in turn order (by Speed, no status yet): WEBBED (30), then HASTY (5)
   // (NORMAL_FAST/NORMAL_SLOW carry no innate traits, so nothing fires for them).
   {
     type: 'TriggerFired',

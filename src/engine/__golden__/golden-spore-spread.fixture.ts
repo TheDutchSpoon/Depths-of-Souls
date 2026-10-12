@@ -28,7 +28,7 @@
 //     is ALLY, which does not carry spore -> the sole candidate, no RNG draw needed (pool size
 //     1). StatusApplied(ALLY, spore, duration 3, source BEARER).
 //   on-kill (SEEDER): no matching effect -> nothing. fireDeathObservers: on-death-observed runs
-//     over every living creature but BEARER, in tie-break order: SEEDER -- no matching effect ->
+//     over every living creature but BEARER, in turn order: SEEDER -- no matching effect ->
 //     nothing; ALLY carries no trait -> nothing.
 //   Enemy side still has ALLY alive (BEARER dead) -> not wiped; state.result stays null.
 

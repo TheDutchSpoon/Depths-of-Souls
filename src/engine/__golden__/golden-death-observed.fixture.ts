@@ -1,7 +1,8 @@
 // Golden: `on-death-observed` and its `relationship` filter (`ally`, `enemy`, `any`, absent) on a
 // death, with a non-matching observer silent in each case, and the firing order: every living
-// creature but the dead one, player side first then enemy side, each in slot order (side -> slot
-// -> id), whichever side the dead creature was on. Hand-derived; four fixture-local traits, one
+// creature but the dead one, in turn order (every Speed but the killer's is equal, so the player side
+// first then the enemy side, each in slot order), whichever side the dead creature was on.
+// Hand-derived; four fixture-local traits, one
 // per filter, each `apply-stat-modifier` on its own bearer with a distinct factor, so one firing
 // is one `TriggerFired` plus one `StatModifierApplied` (effectiveBefore 20: every observer has the
 // default Attack 20).
@@ -20,12 +21,12 @@
 // CASE 1, `enemyDies`: players A (the killer, no trait, slot 0), PE (OBSERVE_ENEMY), PA
 //   (OBSERVE_ALLY), PY (OBSERVE_ANY); enemies V (slot 0), EA (OBSERVE_ALLY), EE (OBSERVE_ENEMY),
 //   EB (OBSERVE_ABSENT). The dead V is an enemy of the players and an ally of EA/EE/EB.
-//   Observers in tie-break order: A (no trait), PE: `enemy`, V is its enemy -> fires (x1.1);
+//   Observers in turn order: A (no trait), PE: `enemy`, V is its enemy -> fires (x1.1);
 //   PA: `ally`, V is not its ally -> silent; PY: `any` -> fires (x1.3); then the enemy side:
 //   V itself is left out; EA: `ally`, V is its ally -> fires (x1.2); EE: `enemy`, V is on its own
 //   side -> silent; EB: no filter -> fires (x1.4).
-//   Firing order: PE, PY, EA, EB. The player side first is the order change: V's allies (EA, EB)
-//   used to fire before its enemies (PE, PY).
+//   Firing order: PE, PY, EA, EB: the player side first, so V's enemies (PE, PY) fire before its
+//   allies (EA, EB).
 //
 // CASE 2, `playerDies`: the mirror, so `ally` and `enemy` are read from the dead creature's side
 //   in both directions. Players V (slot 0), PA (OBSERVE_ALLY), PE (OBSERVE_ENEMY), PB
