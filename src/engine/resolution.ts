@@ -22,7 +22,8 @@ import {
   withAdditional,
 } from './damage'
 import { getEffectiveStat, getOffensiveStat } from './effective-stats'
-import { getCreature, findCreature, livingIdsOf, updateCreature } from './creature-lookup'
+import { getCreature, findCreature, updateCreature } from './creature-lookup'
+import { turnOrderIdsOf } from './turn-order'
 import { livingAlliesOf, livingEnemiesOf } from './targeting'
 import {
   resolveLowestHpInjuredOtherAlly,
@@ -377,7 +378,7 @@ export function applyDamageAndEmit(
   // killed by this hit is already `alive: false`, so it does not observe its own death blow.
   working = fireHook(
     'on-damage-observed',
-    livingIdsOf(working),
+    turnOrderIdsOf(working),
     target.id,
     working,
     ctx,
@@ -393,7 +394,7 @@ export function applyDamageAndEmit(
   return working
 }
 
-/** One `on-death-observed` pass over every living creature in tie-break order, the dead creature
+/** One `on-death-observed` pass over every living creature in turn order, the dead creature
  * left out BY ID: a creature revived by its own `on-death` is alive again here, and an `alive`
  * test alone would let it observe its own death. A single `fireHook` call, so a `stacks: false`
  * observer claims its one slot across both sides. */
@@ -402,8 +403,13 @@ function fireDeathObservers(
   state: CombatState,
   ctx: ResolutionContext,
 ): CombatState {
-  const observers = livingIdsOf(state).filter((id) => id !== deadId)
-  return fireHook('on-death-observed', observers, deadId, state, ctx).state
+  return fireHook(
+    'on-death-observed',
+    turnOrderIdsOf(state).filter((id) => id !== deadId),
+    deadId,
+    state,
+    ctx,
+  ).state
 }
 
 /** Whether an observation hook's `relationship` holds between the observer and the creature the
@@ -467,7 +473,7 @@ export interface FireHookOptions {
 
 /**
  * Fires `hook` for each creature in `selfIds` (the caller supplies the order: a single creature,
- * or tie-break order for a global point). Alive-gated — only on-death fires on a dead creature.
+ * or turn order for a global point). Alive-gated — only on-death fires on a dead creature.
  * Threads the cascade: an effect instance already unwinding on the stack is skipped (self-loop
  * guard), and MAX_TRIGGER_CASCADE_DEPTH bounds chain depth (emitting CascadeTruncated at the cap
  * and NOT executing the over-cap trigger).

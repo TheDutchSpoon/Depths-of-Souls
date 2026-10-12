@@ -1,8 +1,7 @@
 import { createRngState, nextRandom } from './rng'
 import { ROUND_CAP } from './config'
-import { buildTurnQueue } from './turn-order'
-import { compareBySideSlotId } from './tie-break'
-import { getCreature, livingIdsOf, updateCreature } from './creature-lookup'
+import { buildTurnQueue, turnOrderIdsOf } from './turn-order'
+import { getCreature, updateCreature } from './creature-lookup'
 import {
   resolveBaselineEffects,
   instantiateEffectDefs,
@@ -189,19 +188,18 @@ function countDownStatuses(
  * bearer of an active
  * status-borne `turn-order` effect carrying breakChancePercent (read through the effect iterator:
  * an immune bearer's Web has no effects, so it draws nothing), skipping a Web born this turn. A
- * board with no such Web draws nothing (only-when-present discipline). Bearers are iterated in the
- * canonical side->slot->id tie-break order so the draw sequence is deterministic. On success the
+ * board with no such Web draws nothing (only-when-present discipline). Bearers are iterated in
+ * turn order, taken once when the cleanup starts (a bearer that breaks free doesn't reorder the
+ * rolls after it), so the draw sequence is deterministic. On success the
  * status instance is removed and StatusExpired emitted; the frozen current-round turnQueue is
  * untouched (breaking free only changes NEXT round's buildTurnQueue).
  */
 function rollWebBreakFree(state: CombatState, events: CombatEvent[]): CombatState {
-  const bearers = [...state.playerParty, ...state.enemyParty]
-    .filter((c) => c.alive)
-    .sort(compareBySideSlotId)
+  const bearerIds = turnOrderIdsOf(state)
 
   let working = state
-  for (const bearer of bearers) {
-    const current = getCreature(working, bearer.id)
+  for (const bearerId of bearerIds) {
+    const current = getCreature(working, bearerId)
     for (const effect of flatEffects(current)) {
       if (effect.category !== 'turn-order') continue
       if (effect.breakChancePercent === undefined) continue
@@ -213,14 +211,14 @@ function rollWebBreakFree(state: CombatState, events: CombatEvent[]): CombatStat
       )
       if (instance && isBornThisTurn(working, instance)) continue
       if (nextRandom(working.rng) < effect.breakChancePercent / 100) {
-        working = updateCreature(working, bearer.id, {
+        working = updateCreature(working, bearerId, {
           activeEffects: current.activeEffects.filter(
             (e) => e.instanceId !== statusInstanceId,
           ),
         })
         events.push({
           type: 'StatusExpired',
-          creatureId: bearer.id,
+          creatureId: bearerId,
           statusId: effect.statusId,
         })
       }
@@ -250,7 +248,7 @@ function resolveRoundEnd(state: CombatState, events: CombatEvent[]): CombatState
   const roundEndCtx = createResolutionContext(events, newCascade())
   const hooked = fireHook(
     'on-round-end',
-    livingIdsOf(state),
+    turnOrderIdsOf(state),
     undefined,
     state,
     roundEndCtx,
@@ -303,7 +301,7 @@ export function resolveTurn(state: CombatState): {
     const fightStartCtx = createResolutionContext(events, newCascade())
     working = fireHook(
       'on-fight-start',
-      livingIdsOf(working),
+      turnOrderIdsOf(working),
       undefined,
       working,
       fightStartCtx,

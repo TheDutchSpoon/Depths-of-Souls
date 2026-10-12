@@ -1,7 +1,7 @@
 // Golden: damage observation of a COST, and the relationship filter. Hand-derived. A creature's own
 // trait response damaging itself is a cost; every living creature then gets an `on-damage-observed`
-// pass (hook source = the DAMAGED creature), in
-// livingIds order (player slots, then enemy slots). An observer filters on `relationship` (observer
+// pass (hook source = the DAMAGED creature), in turn order (here, with Speeds 10, 9, 2, 1, the
+// player slots, then enemy slots). An observer filters on `relationship` (observer
 // vs the DAMAGED creature; 'ally' includes self) and `selfInflicted` (true = a cost only).
 //
 // Cast (all vitality, level 11 -> no Additional; every creature Attack 20, health 30):
@@ -13,8 +13,8 @@
 // TURN_STEPS = 2: P's turn, then O1's turn.
 //
 // P's turn: PAY's cost 6 (calculateCost(6): raw 6, final 6, affinity 1, not chip-only; 'dot' label
-// because a flat response with no damageSource is tagged 'dot'): P 30 -> 24. Observers in livingIds
-// order p, o1, o2, o3:
+// because a flat response with no damageSource is tagged 'dot'): P 30 -> 24. Observers in turn order
+// p, o1, o2, o3:
 //   p  carries no observer trait.
 //   o1 (ally of the damaged P, same side; selfInflicted true == the cost's true): fires. Attack
 //      20 -> 30.

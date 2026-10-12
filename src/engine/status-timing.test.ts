@@ -393,7 +393,7 @@ describe('the Web roll', () => {
     expect(countDraws(state.rng, after.rng)).toBe(1)
   })
 
-  it('draws one roll per living Web bearer in side-slot order, none when there is no Web', () => {
+  it('draws one roll per living Web bearer, none when there is no Web', () => {
     const state = fight(
       [
         {

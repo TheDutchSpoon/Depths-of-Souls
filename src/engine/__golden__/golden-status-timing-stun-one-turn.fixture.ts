@@ -8,7 +8,7 @@
 // The Stun is applied in STRIKER's turn, so for FAST and SLOW it is never born in their own turn.
 //
 //   Round 1 (queue FAST 40, STRIKER 30, SLOW 10): FAST waits (no Stun yet). STRIKER's turn-start
-//     trigger Stuns both (slot order: FAST then SLOW). SLOW's R1 turn is skipped (TurnSkipped),
+//     trigger Stuns both (its enemies in slot order: FAST then SLOW). SLOW's R1 turn is skipped (TurnSkipped),
 //     then its cleanup counts the Stun down 1 -> 0 and it expires, inside SLOW's bracket.
 //   Round 2: FAST's turn is skipped (TurnSkipped) and the Stun expires in its cleanup -- one
 //     skipped turn, not zero

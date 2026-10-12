@@ -12,7 +12,7 @@
 //   FOE (HP 100, defence 0, speed 1, always-wait).
 //
 // TURN 1 (A; TURN_STEPS = 1). A casts BOLT: Int 20 x 0.5 = 10 vs defence 0 -> raw 10.1 -> 10; FOE
-// 100 -> 90. Observation fires on every living creature in slot order [A, O1, O2, O3]: A has no
+// 100 -> 90. Observation fires on every living creature in turn order (here the slot order [A, O1, O2, O3]): A has no
 // trait; O1 rolls -> TriggerFired, queues G1; O2 rolls -> TriggerFired, queues G2; O3 watches
 // DEFEND only (not a cast) -> nothing. The original's hit lands. QUEUE: [G1, G2].
 // Drain: G1 runs -> ActionGranted(O1 -> A), Defended(A); A's Defend is observed: O3 rolls ->

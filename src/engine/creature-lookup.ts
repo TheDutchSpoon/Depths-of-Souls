@@ -13,14 +13,6 @@ export function getCreature(state: CombatState, id: CreatureId): Creature {
   return creature
 }
 
-/** All living creatures' ids in tie-break order (player slots, then enemy slots): the order the
- * global phase-point hooks iterate and the scope of the observation hooks. */
-export function livingIdsOf(state: CombatState): CreatureId[] {
-  return [...state.playerParty, ...state.enemyParty]
-    .filter((c) => c.alive)
-    .map((c) => c.id)
-}
-
 /** Returns a new state with the matching creature patched (both party arrays rebuilt). */
 export function updateCreature(
   state: CombatState,

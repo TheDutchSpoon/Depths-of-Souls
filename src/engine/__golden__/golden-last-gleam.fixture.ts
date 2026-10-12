@@ -10,7 +10,7 @@
 //   speed 5), G (health 40, speed 4). TURN_STEPS = 1: K's turn. Lowest HP = F (20 < 28 < 40). Attack
 //   40 vs Defence 10: core 30, chip 0.01 x 40 = 0.4 -> raw 30.4 -> 30 >= 20: F dies (remainingHp 0).
 //   CreatureDied F; no on-death/on-kill trait; the death observers run over every living creature
-//   but F in tie-break order: GLEAM fires Last Light (`ally`) -> Attack x1.2 to every LIVING ally:
+//   but F in turn order: GLEAM fires Last Light (`ally`) -> Attack x1.2 to every LIVING ally:
 //   GLEAM 24, G 20 (the dead F gets nothing). G and K carry no death observer.
 //
 // CASE 2, `gleamDies`: players GLEAM (the lowest HP, 28) and G (40); K's Attack is 100. Attack 100

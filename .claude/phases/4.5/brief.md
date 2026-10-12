@@ -142,12 +142,15 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   `buildTurnQueue`'s ordering read live when the pass runs, not the round's frozen queue: there is no queue at fight start, and a creature revived mid-round has no
   place in it. The order is taken once per pass, so a response that changes a creature's Speed
   doesn't reorder the rest of that pass. Side → slot → id remains only as turn order's tie-break
-  and the extremum picks' (`spec/scripting.md#conditions-in-the-engine`).
+  and the extremum picks' (`spec/scripting.md#target-selectors-in-the-engine`).
 - Design intent: under side → slot → id the player side always reacts first, an advantage nobody
   chose (two carriers of one `stacks: false` trigger, one per side: the player's always gets the
   roll). In turn order the faster creature reacts first, a lever the player can see and build for:
   acting first and reacting first are one rule.
 - The order reads `slot`, so no pass depends on a party array being in slot order.
+- The order is computed fresh for every pass and never cached: a cache of it would be derived
+  state that can go stale. The cost, an effective-Speed read per living creature per pass, is
+  accepted.
 - In the Web break-free roll (`spec/statuses.md#turn-order`) each bearer's chance is its own, so
   the order decides only which draw goes to which bearer: no bearer's odds change.
 - Deliberate golden change: the order of the firings within one multi-creature hook call, each
@@ -334,6 +337,6 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
 - [ ] **ASSUMPTION (F):** the per-fight record's type and field names are the plan's; its contents
       are fixed above.
 - [ ] **ASSUMPTION (F2):** the tuning slice is named 4.5-F2 if it runs.
-- [ ] **ASSUMPTION (B2):** turn order covers every hook fired over all living creatures (the three
+- [x] **ASSUMPTION (B2):** turn order covers every hook fired over all living creatures (the three
       observation hooks, `on-fight-start` and `on-round-end`), not the observation hooks only. (The
       Web break-free roll is in by Duncan's call.)

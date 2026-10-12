@@ -119,11 +119,11 @@ describe('on-death-observed filter: relationship compares the observer with the 
 })
 
 describe('on-death-observed order', () => {
-  it('fires the player side first, then the enemy side, whichever side the dead creature was on', () => {
+  it('fires in turn order, which at equal Speed is the player side first, then the enemy side, whichever side the dead creature was on', () => {
     const watcher = deathObserver('watch-any', 'any')
     const state = world({ v: [watcher], w: [watcher], x: [watcher], y: [watcher] })
 
-    // An enemy dies: its ally Y used to fire before its enemies V and W.
+    // An enemy dies: its enemies V and W fire before its ally Y.
     expect(observers(kill(X, state).events)).toEqual([V, W, Y])
     expect(observers(kill(V, state).events)).toEqual([W, X, Y])
   })

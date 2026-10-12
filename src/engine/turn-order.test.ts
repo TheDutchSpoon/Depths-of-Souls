@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildTurnQueue } from './turn-order'
+import { buildTurnQueue, turnOrderIdsOf } from './turn-order'
 import { makeCreature, makeParty } from './__fixtures__/creatures'
 import { createCreatureId } from './ids'
 import { createEffectInstanceId } from './effect-types'
 import type { ActiveEffect } from './effect-types'
+import type { CombatState, Creature } from './types'
 
 describe('buildTurnQueue', () => {
   it('orders combatants by descending effective Speed', () => {
@@ -121,5 +122,63 @@ describe('buildTurnQueue -- turn-order status', () => {
     ])
 
     expect(buildTurnQueue(player, [])).toEqual(['first-fast', 'first-slow'])
+  })
+})
+
+describe('turnOrderIdsOf', () => {
+  const stateOf = (
+    playerParty: ReturnType<typeof makeParty>,
+    enemyParty: ReturnType<typeof makeParty>,
+    turnQueue: CombatState['turnQueue'] = [],
+  ): CombatState => ({
+    rng: { position: 1 },
+    playerParty,
+    enemyParty,
+    turnQueue,
+    turnCursor: 0,
+    round: 1,
+    result: null,
+    scripts: new Map(),
+    statuses: new Map(),
+    effectInstanceCounter: 0,
+    turnClock: 0,
+  })
+
+  it('reads the live parties, not the frozen turn queue', () => {
+    const player = makeParty('player', [
+      { id: 'slow', speed: 5 },
+      { id: 'dead', speed: 50, alive: false },
+    ])
+    const enemy = makeParty('enemy', [{ id: 'fast', speed: 25 }])
+    // A stale queue: round-start Speeds, a corpse and a creature that no longer exists.
+    const stale = ['slow', 'dead', 'gone'].map(createCreatureId)
+
+    expect(turnOrderIdsOf(stateOf(player, enemy, stale))).toEqual(['fast', 'slow'])
+  })
+
+  it('is the round-start ordering, poles included', () => {
+    const player = makeParty('player', [
+      { id: 'webbed', speed: 30, activeEffects: [turnOrderStatus('last', 'web')] },
+      { id: 'normal', speed: 20 },
+    ])
+    const enemy = makeParty('enemy', [
+      { id: 'hasty', speed: 5, activeEffects: [turnOrderStatus('first', 'haste')] },
+    ])
+
+    expect(turnOrderIdsOf(stateOf(player, enemy))).toEqual(buildTurnQueue(player, enemy))
+    expect(turnOrderIdsOf(stateOf(player, enemy))).toEqual(['hasty', 'normal', 'webbed'])
+  })
+
+  it('breaks ties by side, slot and id whatever order the party arrays are in', () => {
+    const [slot0, slot1] = makeParty('player', [
+      { id: 'slot0', speed: 10 },
+      { id: 'slot1', speed: 10 },
+    ]) as [Creature, Creature]
+    const [enemy0] = makeParty('enemy', [{ id: 'enemy0', speed: 10 }]) as [Creature]
+    const reversed = [slot1, slot0]
+    const expected = ['slot0', 'slot1', 'enemy0']
+
+    expect(turnOrderIdsOf(stateOf(reversed, [enemy0]))).toEqual(expected)
+    expect(buildTurnQueue(reversed, [enemy0])).toEqual(expected)
   })
 })

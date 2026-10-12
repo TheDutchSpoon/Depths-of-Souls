@@ -10,7 +10,7 @@
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). Both CHORUS/TARGET are wit
 // -> neutral (x1.0); ADEPT never deals damage in this fixture, so its own affinity is moot.
-// livingIds dispatch order (combat.ts) is player-slot-order then enemy-slot-order: CHORUS(slot 0)
+// The pass is in turn order, here player-slot-order then enemy-slot-order: CHORUS(slot 0)
 // -> ADEPT(slot 1) -> TARGET (enemy slot 0, no matching trait -> no event).
 //
 //   CHORUS casts ARCANE_BOLT (slot 0) at TARGET (lowest-hp-enemy, the only enemy).

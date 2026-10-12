@@ -16,8 +16,8 @@
 //
 //   TARGET->ADD (off 20, def 0): core = 20. chip = 0.01*20 = 0.2. raw = 20.2 -> final =
 //     floor(20.2) = 20. ADD (wounded to 5 post-createCombat) 5 - 20 -> 0, dies.
-//   fireDeathObservers(ADD): on-death-observed runs over every living creature but ADD, in
-//     tie-break order: TARGET carries no matching trait, nothing; it fires on SOVEREIGN ->
+//   fireDeathObservers(ADD): on-death-observed runs over every living creature but ADD, in turn order:
+//     TARGET carries no matching trait, nothing; it fires on SOVEREIGN ->
 //     Attrition's flat +10% Attack: effectiveBefore = 22 (base, unmodified), factor 1.1 ->
 //     effectiveAfter = 22 * 1.1 = 24.200000000000003 (JS float, not hand-rounded -- verified via
 //     node).

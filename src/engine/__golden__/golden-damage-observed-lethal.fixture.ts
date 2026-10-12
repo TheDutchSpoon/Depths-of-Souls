@@ -19,7 +19,7 @@
 //     LIVING ally, in party order: FLARE 22, GLEAM 18, A 5 (the dead Wick gets nothing).
 //  3. CreatureDied wick.
 //  4. on-death (none); on-kill (the killer is the dead Wick itself: skipped); then the death
-//     observers over every living creature but the Wick, in tie-break order: FLARE (no death
+//     observers over every living creature but the Wick, in turn order: FLARE (no death
 //     observer), GLEAM (fires its Last Light: Attack x1.2 to every living ally -- FLARE 14,
 //     GLEAM 24, A 20), then A and E (no death observer).
 //  5. The heal (the Wick's second effect) is SKIPPED: the Wick is no longer alive, so no

@@ -187,6 +187,9 @@ damage     = MAX(1, floor(raw))
   ids, from current effective Speed, ties player side → slot → id (`buildTurnQueue`; act-first and act-last
   statuses split it into poles, `spec/statuses.md#turn-order`). It is **never recomputed
   mid-round**: Speed changes wait for the next round's rebuild.
+- That ordering is **turn order**, the one ordering in the engine: the queue freezes it at round
+  start, and every pass over the living creatures reads it live (`turnOrderIdsOf`,
+  `spec/effects.md#pass-order`).
 - A creature that dies before its turn keeps its slot as a `TurnStarted`/`TurnEnded` bracket with
   no hooks, no action and no countdown; the Web roll still runs in it (`spec/statuses.md#turn-order`).
 - Whether a creature acts is read when its slot comes up: one revived before its slot acts in it.

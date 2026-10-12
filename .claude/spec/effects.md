@@ -201,8 +201,8 @@ status lifecycle in `spec/statuses.md`.
 ### Hook execution
 
 - **Scoped iteration.** A per-creature phase point (that creature's turn start or end) iterates
-  that creature's effects; a global one (fight start, round end) iterates every creature's, in the
-  standard tie-break order (side → slot → id). Every lookup goes through `effectsForHook(creature,
+  that creature's effects; a global one (fight start, round end) iterates every living creature's,
+  in turn order (`spec/effects.md#pass-order`). Every lookup goes through `effectsForHook(creature,
   hook)`, a scan and filter. A hook-type index is **deferred until measured**: it would drop in
   behind that boundary, verified byte-identical against the goldens. Don't build it ahead: it is a
   derived cache that can go stale.
@@ -211,6 +211,30 @@ status lifecycle in `spec/statuses.md`.
   chosen action: a hook is a new trigger origin, not new consequence vocabulary.
 - **`TriggerFired`** precedes a trigger's consequences, as `AttackDeclared` precedes `DamageDealt`,
   so the log explains why they happened. A tick is the exception (`spec/statuses.md#ticks-are-on-turn-end-triggers`).
+
+### Pass order
+
+- Every pass over all the living creatures goes in **turn order** (`spec/combat.md#turn-queue`):
+  the global points (`on-fight-start`, `on-round-end`), the three observation hooks
+  (`on-action-observed`, `on-damage-observed`, `on-death-observed`) and the Web break-free roll
+  (`spec/statuses.md#turn-order`). The faster creature reacts first: acting first and reacting
+  first are one rule, a lever the player can see and build for, not a side's standing advantage.
+- The order is read from the live parties when the pass starts (`turnOrderIdsOf`), never from the
+  round's frozen queue, which is empty at fight start, holds the dead and the round-start Speeds,
+  and lacks a creature revived mid-round. It is taken **once per pass**: a response that changes a
+  Speed or a pole mid-pass doesn't reorder the rest of that pass; the next pass reads the new
+  order. An action's observation is one pass per instance.
+- A pass takes every living creature, carrier or not: `fireHook` reads a creature's candidates
+  when its place in the pass comes, so one given an observer by an earlier response in the same
+  pass still fires. `on-death-observed` leaves the dead creature out by id
+  (`spec/effects.md#damage-observation`).
+- The order reads `slot`, so no pass depends on a party array being in slot order. It is computed
+  fresh for every pass and never cached: a cache would be derived state that can go stale. Its
+  cost, an effective-Speed read per living creature per pass, is accepted.
+- Side → slot → id remains only as turn order's tie-break and the extremum picks'
+  (`spec/scripting.md#target-selectors-in-the-engine`). AOE hit order
+  (`spec/combat.md#aoe-cast`), Splashing's adjacency (`spec/combat.md#adjacency-targeting`) and
+  every random-pick pool keep slot order.
 
 ### Effect instances
 
@@ -268,8 +292,8 @@ status lifecycle in `spec/statuses.md`.
     fires once, on the actor;
   - a trait on a creature **watching** someone else act uses `on-action-observed` ("when an ally
     or enemy acts, *I* react"). It fans out to observers.
-- **`on-action-observed`** fires **per action instance** on every living creature, so an ally's
-  multi-cast is observed once per instance. The candidate filters on itself (`ObservationFilter`):
+- **`on-action-observed`** fires **per action instance** on every living creature, in turn order
+  (`spec/effects.md#pass-order`), so an ally's multi-cast is observed once per instance. The candidate filters on itself (`ObservationFilter`):
   `relationship` (`self`, `ally`, `enemy`, `any`; `ally` includes self), `actionKind` (`attack`,
   `cast`, `defend`, `provoke`) and `excludeActor?`. Its context is the actor, the action kind and
   the instance index. It rides the cascade-depth cap and the re-entry guard.
@@ -280,8 +304,8 @@ status lifecycle in `spec/statuses.md`.
 ### Damage observation
 
 - Observation also covers **damage events**, through a sibling hook, **`on-damage-observed`**,
-  fired from `applyDamageAndEmit` (every damage event passes there) on every living creature, at
-  its place in the damage-path hook order. It is a sibling rather than a second event kind on
+  fired from `applyDamageAndEmit` (every damage event passes there) on every living creature in
+  turn order (`spec/effects.md#pass-order`), at its place in the damage-path hook order. It is a sibling rather than a second event kind on
   `on-action-observed`, so an action observer can't see a damage event, nor a damage observer an
   action, by construction. It extends the one observer; it is not a side channel.
 - It uses the same `ObservationFilter`: `relationship` compares the observer with the **damaged
@@ -302,8 +326,8 @@ status lifecycle in `spec/statuses.md`.
   target`: a DoT tick and a direct action landing on its own actor have equal ids and are not
   self-inflicted. A zero cost emits nothing, so there is nothing to observe.
 - Deaths are observed through the third sibling, **`on-death-observed`**, fired once per death
-  after `on-kill`, in one pass over every living creature in the standard tie-break order **except
-  the dead creature, left out by id**. A creature never observes its own death (that is
+  after `on-kill`, in one pass over every living creature in turn order **except the dead
+  creature, left out by id**. A creature never observes its own death (that is
   `on-death`), not even one its own `on-death` revived before the pass, so `relationship: 'self'`
   is rejected on it. Its `source` is the dead creature, and `relationship` compares the observer
   with it. One pass, so a `stacks: false` death observer gets one chance across both sides.
@@ -355,7 +379,8 @@ status lifecycle in `spec/statuses.md`.
 - `TriggeredDef.stacks?: boolean`, default `true` (every matching effect fires on its own). With
   `false`, across all living creatures **at most one** carrier of that effect's source (its
   trait, status or side-effect slot, matched by `sourceTraitId`) gets its chance per firing of the
-  hook; the claim comes before the roll, so more carriers don't raise the
+  hook: the first in the pass's turn order (`spec/effects.md#pass-order`), so the faster carrier,
+  whichever side it is on. The claim comes before the roll, so more carriers don't raise the
   aggregate chance. That keeps several Resonant Overtones from compounding the echo chance: the
   branching factor stays 1, so an echo chain is linear and ends on its own, and the depth cap is
   only the backstop for a pathological seed.
