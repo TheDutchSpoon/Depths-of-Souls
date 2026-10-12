@@ -1,5 +1,5 @@
 // Status timing in the bearer's turns -- the born-this-turn clock, the countdown and
-// the Web roll in turn-end cleanup, and the win checks inside a turn. The goldens (golden-f2-*,
+// the Web roll in turn-end cleanup, and the win checks inside a turn. The goldens (golden-status-timing-*,
 // golden-stun, golden-dot, ...) pin end-to-end logs; each test here is the one that fails with its
 // mechanism removed.
 

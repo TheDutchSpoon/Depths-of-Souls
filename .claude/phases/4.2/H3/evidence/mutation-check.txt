@@ -1,0 +1,211 @@
+# Mutation check
+
+Each mechanism added in scripts/docs-check/ removed in turn from a fresh scratch copy (outside the repo), the docs-check tests (463) run, and the tests that fail named (first three shown). 63 mutations, 0 survive. A first run left 9 survivors and one dead piece of code (the config files in the guard's file-name walk, removed); tests were added and this is the rerun of all of them.
+
+M1 pattern 5: Slice-B (hyphen form) [comments.ts]: 1 test(s) fail
+    comments.test.ts > comments patterns pattern 5 fails in a comment and in a title, with file:line (the Slice-C2 rules)
+M2 pattern 5: pre-Slice [comments.ts]: 1 test(s) fail
+    comments.test.ts > comments patterns pattern 5 fails in a comment and in a title, with file:line (from pre-slice work)
+M3 pattern 8: B-2 (letter, hyphen, digit) [comments.ts]: 1 test(s) fail
+    comments.test.ts > comments patterns pattern 8 fails in a comment and in a title, with file:line (item B-2 was it)
+M4 pattern 8: widened to a trailing digit (H2b2) [comments.ts]: 2 test(s) fail
+    comments.test.ts > comments patterns pattern 8 fails in a comment and in a title, with file:line (see H2b2 for it)
+    comments.test.ts > comments patterns pattern 8 fails in a comment and in a title, with file:line (the Slice-H2b2 rules)
+M5 pattern 7: design-review [comments.ts]: 1 test(s) fail
+    comments.test.ts > comments patterns pattern 7 fails in a comment and in a title, with file:line (the design-review said)
+M6 pattern 7: (nit, review) / (review) [comments.ts]: 2 test(s) fail
+    comments.test.ts > comments patterns pattern 7 fails in a comment and in a title, with file:line (a nit (nit, review))
+    comments.test.ts > comments patterns pattern 7 fails in a comment and in a title, with file:line (Nit (review))
+M7 --quotations: a quote before its anchor [comments.ts]: 4 test(s) fail
+    comments.test.ts > comments --quotations, before an anchor lists a quote that ends right before its anchor, and not one the section contains
+    comments.test.ts > comments --quotations, before an anchor lists a short quote on either side of the anchor
+    comments.test.ts > comments --quotations, before an anchor looks four words before the anchor and not five
+M8 --quotations: the four-word window before the anchor [comments.ts]: 1 test(s) fail
+    comments.test.ts > comments --quotations, before an anchor looks four words before the anchor and not five
+M9 --quotations: the nearer anchor owns the quote [comments.ts]: 1 test(s) fail
+    comments.test.ts > comments --quotations, before an anchor gives a quote between two anchors to the nearer one, the earlier on a tie, listed once
+M10 --quotations: the earlier anchor owns a tie [comments.ts]: 1 test(s) fail
+    comments.test.ts > comments --quotations, before an anchor gives a quote between two anchors to the nearer one, the earlier on a tie, listed once
+M11 --quotations: only a closing mark ends a quote before the anchor [comments.ts]: 1 test(s) fail
+    comments.test.ts > comments --quotations, before an anchor does not read an opening quote before the anchor as a closing one
+M12 guard reaches both config files [comments.ts]: 3 test(s) fail
+    comments.test.ts > comments scope checks vite.config.ts, with no exemption
+    comments.test.ts > comments scope checks eslint.config.js, with no exemption
+    names.test.ts > name guard, file names reaches the two config files
+M13 guard runs inside comments (CI runs the existing step) [comments.ts]: 26 test(s) fail
+    names.test.ts > name guard, file names fails src/engine/golden-d7-x.test.ts, naming the file at line 1
+    names.test.ts > name guard, file names fails src/engine/__golden__/golden-h9z-x.fixture.ts, naming the file at line 1
+    names.test.ts > name guard, file names fails src/engine/generation-g9.test.ts, naming the file at line 1
+M14 --counts prints the three guard rows [comments.ts]: 1 test(s) fail
+    names.test.ts > name guard in the comments check counts the three arms apart in --counts
+M15 guard, file arm: a slice-shaped piece [names.ts]: 7 test(s) fail
+    names.test.ts > name guard, file names fails src/engine/golden-d7-x.test.ts, naming the file at line 1
+    names.test.ts > name guard, file names fails src/engine/__golden__/golden-h9z-x.fixture.ts, naming the file at line 1
+    names.test.ts > name guard, file names fails src/engine/generation-g9.test.ts, naming the file at line 1
+M16 guard, file arm: golden-e [names.ts]: 1 test(s) fail
+    names.test.ts > name guard, file names fails src/engine/golden-e-thing.test.ts, naming the file at line 1
+M17 guard, file arm: phase or slice + digit [names.ts]: 2 test(s) fail
+    names.test.ts > name guard, file names fails src/engine/phase-4-thing.ts, naming the file at line 1
+    names.test.ts > name guard, file names fails src/engine/slice-3.ts, naming the file at line 1
+M18 guard, file arm: reaches a file that is not TypeScript [names.ts]: 1 test(s) fail
+    names.test.ts > name guard, file names reaches a file that is not TypeScript
+M19 guard, identifier arm: a suffixed whole-word id (H2b2) [names.ts]: 1 test(s) fail
+    names.test.ts > name guard, identifiers fails H2b2, wherever it is used
+M20 guard, identifier arm: PHASE_4 [names.ts]: 2 test(s) fail
+    names.test.ts > name guard, identifiers fails PHASE_4_X, wherever it is used
+    names.test.ts > name guard, identifiers fails Phase4Thing, wherever it is used
+M21 guard, identifier arm: a leading camel id (b5Fixture) [names.ts]: 2 test(s) fail
+    names.test.ts > name guard, file names reaches the two config files
+    names.test.ts > name guard, identifiers fails d7Thing, wherever it is used
+M22 guard, identifier arm: an underscore segment (B5_FIXTURE) [names.ts]: 5 test(s) fail
+    names.test.ts > name guard, file names reaches the two config files
+    names.test.ts > name guard, identifiers fails D7_THING, wherever it is used
+    names.test.ts > name guard, identifiers fails x_B5_y, wherever it is used
+M23 guard, literal arm: a leading id (d7-thing, e-thing) [names.ts]: 5 test(s) fail
+    names.test.ts > name guard, string literals fails 'd7-thing'
+    names.test.ts > name guard, string literals fails 'e-thing'
+    names.test.ts > name guard, string literals fails `d7-${x}`
+M24 guard, literal arm: an interior id (x-d7-y) [names.ts]: 3 test(s) fail
+    names.test.ts > name guard, string literals fails 'x-d7-y'
+    names.test.ts > name guard, string literals fails `${x}-d7-y`
+    names.test.ts > name guard, string literals lets a test title open with a derivation label, and not carry a slice id
+M25 guard, literal arm: a name opening with an id (D7 thing) [names.ts]: 2 test(s) fail
+    names.test.ts > name guard, string literals fails 'D7 thing'
+    names.test.ts > name guard, string literals still reads a value inside a test body
+M26 guard, literal arm: a test title may open with a derivation label [names.ts]: 1 test(s) fail
+    names.test.ts > name guard, string literals lets a test title open with a derivation label, and not carry a slice id
+M27 guard, literal arm: a module specifier is left to the file arm [names.ts]: 1 test(s) fail
+    names.test.ts > name guard, string literals leaves a module specifier to the file-name arm
+M28 tokens: a regex literal is a literal [tokens.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, literals reads a template part and a masked regex literal
+M29 tokens: a module specifier is a specifier [tokens.ts]: 11 test(s) fail
+    names.test.ts > name guard, string literals leaves a module specifier to the file-name arm
+    renames.test.ts > comment-proof --renames, a rename that is listed passes the pair, the importer specifier, the identifier and the id, and prints each
+    renames.test.ts > comment-proof --renames, a rename that is listed composes with a mask in the same file
+M30 tokens: a title is a title [tokens.ts]: 1 test(s) fail
+    names.test.ts > name guard, string literals lets a test title open with a derivation label, and not carry a slice id
+M31 --renames: layout (wrapping, trailing commas) is not compared [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, layout passes a re-wrapped list and a trailing comma under --renames, and not without it
+M32 --renames: an importer specifier for a renamed file [comment-proof.ts]: 7 test(s) fail
+    renames.test.ts > comment-proof --renames, a rename that is listed passes the pair, the importer specifier, the identifier and the id, and prints each
+    renames.test.ts > comment-proof --renames, a rename that is listed composes with a mask in the same file
+    renames.test.ts > comment-proof --renames, a rename that is listed passes a comment-only edit in a renamed file
+M33 --renames: a listed identifier is one token on the base side [comment-proof.ts]: 7 test(s) fail
+    renames.test.ts > comment-proof --renames, a rename that is listed passes the pair, the importer specifier, the identifier and the id, and prints each
+    renames.test.ts > comment-proof --renames, a rename that is listed composes with a mask in the same file
+    renames.test.ts > comment-proof --renames, a rename that is listed passes a comment-only edit in a renamed file
+M34 --renames: a listed identifier is one token on the working-tree side [comment-proof.ts]: 7 test(s) fail
+    renames.test.ts > comment-proof --renames, a rename that is listed passes the pair, the importer specifier, the identifier and the id, and prints each
+    renames.test.ts > comment-proof --renames, a rename that is listed composes with a mask in the same file
+    renames.test.ts > comment-proof --renames, a rename that is listed passes a comment-only edit in a renamed file
+M35 --renames: identifier count in the base [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails an identifier entry whose count is too high, or too low
+M36 --renames: identifier count in the working tree [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, identifiers names an identifier that occurs more often in the working tree than the entry says
+M37 --renames: literal count in the base [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a literal entry whose old text is not in the file, or occurs more often
+M38 --renames: literal count in the working tree [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, literals names a literal that occurs more often in the working tree than the entry says
+M39 --renames: an unlisted rename fails as deleted [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a rename that is not listed
+M40 --renames: an unlisted rename fails as added [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a rename that is not listed
+M41 --renames: rule 1, the old file must be gone [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a file entry for an old file that is still in the working tree
+M42 --renames: rule 1, the old file must be in the base [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a file entry for an old file that is not in the base
+M43 --renames: rule 1, the new file must be in the working tree [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a deleted file listed as renamed to a file that does not exist
+M44 --renames: rule 1, the new file must not be in the base [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a pair whose new file is already in the base
+M45 --renames: rule 1, the directory must not change [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a pair that changes directory or extension, or is not code
+M46 --renames: rule 1, the extension must not change [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a pair that changes directory or extension, or is not code
+M47 --renames: rule 1, a code file [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails a pair that changes directory or extension, or is not code
+M48 --renames: no two paths differ only in case [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, the file set fails a base that already holds two paths differing only in case
+M49 --renames: a new identifier must not exist in the base [comment-proof.ts]: 2 test(s) fail
+    renames.test.ts > comment-proof --renames, identifiers fails a new identifier that is already an identifier in the base, in the same file
+    renames.test.ts > comment-proof --renames, identifiers fails a new identifier that is already an identifier in the base, in another file
+M50 --renames: a new literal must not exist in the base [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, literals fails a new literal that already exists in the base as a literal
+M51 --renames: the importing-specifier count [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, specifiers fails when the entry says 0 or 2 importers and the tree has 1
+M52 --renames: an importer left on the old name fails [comment-proof.ts]: 2 test(s) fail
+    renames.test.ts > comment-proof --renames, specifiers fails an importer that keeps the old specifier
+    renames.test.ts > comment-proof --renames, specifiers fails an unchanged importer that still names the old file
+M53 --renames: an identifier entry that is never consumed [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails an identifier entry and a literal entry for a file that did not change
+M54 --renames: a literal entry that is never consumed [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, what it still refuses fails an identifier entry and a literal entry for a file that did not change
+M55 --renames: a renamed file is compared even when its text is identical [comment-proof.ts]: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, a rename that is listed passes a renamed file whose text is identical, only through its entry
+M56 loadRenames: the id map is injective [renames.ts]: 3 test(s) fail
+    renames.test.ts > loadRenames rejects two literal olds to one new, in one file
+    renames.test.ts > loadRenames rejects two literal olds to one new, in two files
+    renames.test.ts > loadRenames rejects two identifier olds to one new
+M57 loadRenames: no chain or swap [renames.ts]: 1 test(s) fail
+    renames.test.ts > loadRenames rejects a name chain in one file
+M58 loadRenames: no duplicate entry [renames.ts]: 1 test(s) fail
+    renames.test.ts > loadRenames rejects two entries for one old in a file
+M59 loadRenames: imports is a count of 0 or more [renames.ts]: 2 test(s) fail
+    renames.test.ts > loadRenames rejects a negative imports
+    renames.test.ts > loadRenames rejects a fractional imports
+M60 caseCollisions [renames.ts]: 2 test(s) fail
+    renames.test.ts > comment-proof --renames, the file set lists a path that differs from another only in case
+    renames.test.ts > comment-proof --renames, the file set fails a base that already holds two paths differing only in case
+M61 collision lookup reads the parse, not the grep (a comment is not a collision) [renames.ts]: 2 test(s) fail
+    renames.test.ts > comment-proof --renames, identifiers does not call a new identifier that only a comment names a collision
+    renames.test.ts > comment-proof --renames, literals does not call a new literal that only a comment holds a collision
+M62 cli: --renames belongs to comment-proof [cli.ts]: 1 test(s) fail
+    renames.test.ts > loadRenames belongs to comment-proof only
+M63 cli: --renames reaches the proof [cli.ts]: 1 test(s) fail
+    renames.test.ts > loadRenames rejects a missing or malformed file as a usage error, through the cli
+(node:170324) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+## Round 2 (hand-out items 1 and 2), run on the final code
+Each removed in turn from a fresh scratch copy of scripts/ (outside the repo), the docs-check project run, the failing tests named (first three shown). 6 mutations, 0 survive. Rows 64-69 continue the numbering above.
+
+M64 importer count: the base half (specBase[i] !== expected) removed: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, specifiers fails when the base has more importers than the entry says, and the working tree matches it
+M65 importer count: the working-tree half (specHead[i] !== expected) removed: 1 test(s) fail
+    renames.test.ts > comment-proof --renames, specifiers fails when the working tree has more importers than the entry says, and the base matches it
+M66 name guard: the value-literal pattern loop removed: 8 test(s) fail
+    names.test.ts > name guard, provenance words in value literals fails 'not available before Phase 8', naming the file and line
+    names.test.ts > name guard, provenance words in value literals fails 'ASSUMPTION 22: floor-1 clear', naming the file and line
+    names.test.ts > name guard, provenance words in value literals fails `the Phase-3 ${x} trait`, naming the file and line
+M67 name guard: the 1-9 bound removed (patterns 10-17 run on a value): 3 test(s) fail
+    names.test.ts > name guard, provenance words in value literals passes 'a brief stun': patterns 10-17 are not run on a value
+    names.test.ts > name guard, provenance words in value literals passes 'the plan of attack': patterns 10-17 are not run on a value
+    names.test.ts > name guard, provenance words in value literals passes 'grill the kickoff': patterns 10-17 are not run on a value
+M68 name guard: the title exclusion removed (a title reported by the guard too): 1 test(s) fail
+    names.test.ts > name guard, provenance words in value literals leaves a test title to the comments patterns, and reports it once
+M69 name guard: the mid-camel phase case removed: 2 test(s) fail
+    names.test.ts > name guard, identifiers fails placeholderPhase4Config, wherever it is used
+    names.test.ts > name guard, identifiers fails configPHASE_4, wherever it is used
+
+## Round 3 (hand-out items 1-3), run on the final code
+Each removed in turn from names.ts in place (restored byte-equal after each), the names.test.ts file run, the failing tests named. 4 mutations, 0 survive. Rows 70-73 continue the numbering above.
+
+M70 name guard: the `ASSUMPTION:` branch of the value check removed: 2 test(s) fail
+    names.test.ts > name guard, provenance words in value literals fails 'ASSUMPTION: floor-1 clear', naming the file and line
+    names.test.ts > name guard, provenance words in value literals fails `ASSUMPTION: ${x} clear`, naming the file and line
+M71 name guard: LAST_VALUE_PATTERN = 8 (pattern 9 not run on a value): 1 test(s) fail
+    names.test.ts > name guard, provenance words in value literals fails 'items B2+ only', naming the file and line
+M72 name guard: the identifier lookbehind narrowed from (?<=[a-z0-9]) to (?<=[a-z]): 1 test(s) fail (no other arm catches tier2Phase3)
+    names.test.ts > name guard, identifiers fails tier2Phase3, wherever it is used
+M73 name guard: the JSX text read removed: 3 test(s) fail
+    names.test.ts > name guard, JSX text fails <p>not available before Phase 8</p>, naming the file and line
+    names.test.ts > name guard, JSX text fails <p>h2b2-x</p>, naming the file and line
+    names.test.ts > name guard, JSX text names the line of the text in a multi-line element
+
+## Round 4 (hand-out item 1), run on the final code
+Each applied in place to names.ts or tokens.ts (restored byte-equal after each, checked with cmp), the names.test.ts file run, the failing tests named. 2 mutations, 0 survive. Rows 74-75 continue the numbering above.
+
+M74 name guard: `literalHit(jsx.text, false)` turned to `true`: 1 test(s) fail
+    names.test.ts > name guard, JSX text fails a capitalised slice id that opens the text
+M75 jsxTextsOf: `trimStart()` dropped from `text`, line still taken from the first non-blank character: 1 test(s) fail
+    names.test.ts > name guard, JSX text fails a slice id in text that opens on its own wrapped line

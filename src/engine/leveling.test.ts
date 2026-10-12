@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
-import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG } from './__fixtures__/balance'
+import { TEST_BALANCE_CONFIG } from './__fixtures__/balance'
 import { scaleStatsToLevel, xpAwardForKill, xpForNextLevel } from './leveling'
 
 describe('scaleStatsToLevel', () => {
@@ -70,8 +70,8 @@ describe('xpForNextLevel (quadratic default)', () => {
   // {coefficient: 100, exponent: 1}, the same two parameters as the default's {20, 2}
   // (unlike xpAwardForKill's basis, below).
   it('the placeholder config gives a linear curve (100 * level) exactly', () => {
-    expect(xpForNextLevel(1, PHASE_4_PLACEHOLDER_BALANCE_CONFIG)).toBe(100)
-    expect(xpForNextLevel(5, PHASE_4_PLACEHOLDER_BALANCE_CONFIG)).toBe(500)
+    expect(xpForNextLevel(1, TEST_BALANCE_CONFIG)).toBe(100)
+    expect(xpForNextLevel(5, TEST_BALANCE_CONFIG)).toBe(500)
   })
 })
 

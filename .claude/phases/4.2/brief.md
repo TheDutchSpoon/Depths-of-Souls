@@ -1,9 +1,11 @@
 # Phase 4.2 — Docs restructure: the context diet
 
 **Status: planned.** Docs only. Decided with the design owner on 2026-10-10 (ROADMAP "Phase 4.2").
-Golden policy for every slice: **byte-identical**. `src/` is untouched except in 4.2-G and 4.2-H,
-and there only in comments and test titles (4.2-G's 10; 4.2-H's provenance sweep, which also takes
-in the comments of `vite.config.ts` and `eslint.config.js`).
+Golden policy for every slice: **byte-identical**, except 4.2-H3's, whose one deliberate change is
+the fixture data ids it renames (`phases/4.2/H/brief.md#split`). `src/` is untouched except in 4.2-G
+and 4.2-H, and there only in comments and test titles (4.2-G's 10; 4.2-H's provenance sweep, which
+also takes in the comments of `vite.config.ts` and `eslint.config.js`), plus 4.2-H3's renames: file
+names, identifiers, fixture data ids and six provenance strings.
 
 ## Why
 
@@ -316,7 +318,7 @@ comes from the old text's own tags (blank when it has none).
 
   Steps 3 and 4 repeat. A finding that needs Duncan (spec and code disagree) goes to him with a
   recommendation before the next round.
-- **Golden policy:** byte-identical for every slice. B to F change only `.claude/`.
+- **Golden policy:** byte-identical for B to F, which change only `.claude/`.
 
 ## Phase-4.2-only text
 
@@ -346,7 +348,7 @@ a stale citation.
 | [4.2-G](G/brief.md) | Citations to anchors, budgets, CI, clean-up | normal |
 | [4.2-H1](H/brief.md) | Comment tooling: the scanner, `comments`, `comment-proof`, `citations <file>…` | normal |
 | [4.2-H2](H/brief.md) | Code comments: provenance stripped, restated rules replaced by anchors, `comments` blocking in CI | normal |
-| [4.2-H3](H/brief.md) | Names: provenance stripped from `src/` file names and identifiers, and checked | normal |
+| [4.2-H3](H/brief.md) | Names: provenance stripped from `src/` file names, identifiers and fixture data ids, and checked | normal |
 
 Strictly in order. B comes first because once the content docs are the home of content, the spec
 slices can drop GAME_DESIGN's content copies as duplicates; it is also the pilot, settling the

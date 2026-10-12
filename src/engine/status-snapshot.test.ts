@@ -1,5 +1,5 @@
 // The unit tests of the two status rules -- single instance and the applier
-// snapshot (`spec/statuses.md#the-applier-snapshot`). The focused goldens (golden-h2b2-*) pin the
+// snapshot (`spec/statuses.md#the-applier-snapshot`). The focused goldens (golden-status-snapshot-*) pin the
 // mechanisms through whole fights; these pin `snapshotFor`, `applyStatus`'s keep/replace/refresh
 // rules, the resolver invariant and the
 // validators directly.
@@ -268,7 +268,7 @@ describe('pass-on rule: only the SAME status inherits the firing instance’s sn
       },
     }
     const x: StatusDef = {
-      statusId: 'h2b2-seeder',
+      statusId: 'status-snapshot-seeder',
       polarity: 'debuff',
       defaultDuration: 3,
       effects: [xTick, xSeedsPoison],

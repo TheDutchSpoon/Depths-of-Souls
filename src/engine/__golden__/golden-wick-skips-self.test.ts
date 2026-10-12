@@ -1,0 +1,12 @@
+import { describe, expect, it } from 'vitest'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-wick-skips-self.fixture'
+import { expectedEvents } from './golden-wick-skips-self.fixture'
+
+describe('golden replay: wick-skips-self', () => {
+  it('the heal skips the Wick itself even when it is the most hurt ally', () => {
+    const { events } = runGolden(fixture)
+
+    expect(events).toEqual(expectedEvents)
+  })
+})

@@ -162,6 +162,9 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - **Byte-identical PRs leave it unchanged. Deliberate-change PRs regenerate it**, only through its
   update command, and state how many corpus fights changed and which listed change accounts for
   them.
+- **The committed fixture is exactly what `renderFixture` writes** for its own rows: header,
+  interface, row layout and formatting. The default run checks it, so a hand edit, or a template
+  change nobody regenerated from, fails.
 - **Proof it covers a mechanism**: the PR that adds a mechanism to the corpus shows the digest
   failing with that mechanism disabled, the same bar as a discriminating golden.
 
@@ -426,12 +429,25 @@ src/
   it only goes stale.
 - **Don't restate a spec rule.** Cite it by anchor (`spec/<file>.md#<anchor>`) and say only what
   this code adds to it. A restated rule rots silently when the spec changes. A quotation beside
-  an anchor is the target's own words, or it goes.
+  an anchor is the target's own words, or it goes; `npm run docs:check -- comments --quotations`
+  lists one within four words of an anchor, on either side, that the target's section doesn't hold.
 - **A forward pointer cites the rule, not the phase.** "Inert until Phase 8" becomes a citation of
   the rule that names the phase (a spec file's `## Not built` rule, a `ROADMAP.md` entry), so the
   phase lives in one home and the comment never needs to know which phase is current.
 - **Test titles follow the same rules.** A `describe`/`it`/`test` title says what the test pins,
   with no provenance.
+- **So do names.** A `src/` file name, identifier or fixture data id (a test trait, script or
+  status id) says what the thing pins or is for, never the phase, slice or plan item it came from,
+  and a string literal (an error message, a report label) carries no provenance word.
+  `npm run docs:check -- comments` fails CI on a phase or slice id in a `src/` file name of any
+  extension, in an identifier (`B5_FIXTURE`, `PHASE_4_…`, `placeholderPhase4Config`) and in a
+  string literal (`'h2b2-reapply-p1'`). A string, template or regex literal that is not a module
+  specifier or a test title, and the text between JSX tags, also fails on `ASSUMPTION:` and on the
+  markers `comments` reads in a comment (ASSUMPTION, phase and slice ids, PR numbers, review words, plan-item ids), so
+  `'…before Phase 8'` fails; the workflow words ("brief", "the plan", "grill") are not read there,
+  because a player-facing string can hold them. Plan-item letters are `A`-`I`, so a derivation handle such as `S1_SCRIPT`
+  or `T98` passes, and a test title may open with one (`'E1 ticks first'`). A rename is proved with
+  `comment-proof <base> --renames <map>` (`workflow/pr-review.md#4-verify-claimed-invariants-mechanically`).
 - `// ASSUMPTION:` is kept for a live open question only (`CONVENTIONS.md#open-questions-get-an-interface`), not
   as a record of a decision a plan once made.
 - A golden fixture's setup, arithmetic and random draws are not commentary: they are required

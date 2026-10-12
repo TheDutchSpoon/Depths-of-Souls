@@ -1,5 +1,5 @@
 // The Flickerling traits' shape, against `.claude/content/glimmerdark.md`. The
-// behaviour is pinned by goldens (golden-h2b1-wick-*, -observed-lethal, -last-gleam); these tests
+// behaviour is pinned by goldens (golden-wick-*, golden-damage-observed-lethal, golden-last-gleam); these tests
 // pin the data a golden cannot see: which hooks, which filters, the effect order and the gate.
 
 import { describe, expect, it } from 'vitest'

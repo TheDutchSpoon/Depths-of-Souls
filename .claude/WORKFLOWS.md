@@ -47,7 +47,8 @@ drifts and stale decisions silently outlive their correction.
         brief.md        this slice's plan section (written with the phase brief)
         kickoff.md      design agent → coding agent
         plan.md         coding agent → design agent
-        plan-review.md  design agent → coding agent, one section per round
+        plan-review.md  design agent's plan review, one section per round
+        plan-handout-r1.md …  design agent → coding agent, one per plan-review round
         report-r1.md    coding agent's build report
         review-r1.md    design agent's PR review of report-r1
         handout-r1.md   design agent → coding agent, only when there are fixes
@@ -89,7 +90,7 @@ Anything else the step needs lives in a scratch clone outside the repo.
 | 0   | Pre-flight         | —       | creates the slice branch     | —                                          |
 | 1   | Kickoff            | Cowork  | `/slice-kickoff <id>`        | `kickoff.md` (+ doc edits)                 |
 | 2   | Plan               | VS Code | `/slice-plan <id>`           | `plan.md`                                  |
-| 3   | Plan review        | Cowork  | `/plan-review <id>`          | `plan-review.md` + doc edits               |
+| 3   | Plan review        | Cowork  | `/plan-review <id>`          | `plan-review.md` (+ hand-out, doc edits)   |
 | 4   | First commit       | —       | commits steps 1–3            | —                                          |
 | 5   | Build              | VS Code | `/slice-build <id>`          | code, `report-r1.md`, the slice's record   |
 | 6   | PR review          | Cowork  | `/pr-review <id> [<branch>]` | `review-r1.md` (+ `handout-r1.md`, edits)  |
@@ -101,8 +102,8 @@ Each step's rules are in its file: kickoff `workflow/kickoff.md`, plan and build
 `workflow/pr-review.md`. Between them:
 
 - **No code before the plan is approved**: the plan step stops at `plan.md`.
-- **The first commit on the slice branch** holds the kickoff, the plan, the plan review and their
-  doc edits, so the PR carries the spec it was built against.
+- **The first commit on the slice branch** holds the kickoff, the plan, the plan review, its
+  hand-outs and their doc edits, so the PR carries the spec it was built against.
 - **Fix rounds** repeat steps 7 and 6 (`/slice-fix <id> <N>` → `report-r<N+1>.md` → `/pr-review`
   in a fresh chat, scoped by `workflow/pr-review.md#later-rounds`) until the PR is approved. After the merge, the next slice starts at
   step 0.

@@ -1,7 +1,7 @@
 // Damage observation -- the `on-damage-observed`
 // sibling hook, fired from `applyDamageAndEmit` for every damage event, filtered by the DAMAGED
 // creature's relationship to the observer and by whether the damage was self-inflicted (a COST).
-// Mechanism tests; the goldens `golden-h2b1-observed-*` pin the same behaviour as replays.
+// Mechanism tests; the goldens `golden-damage-observed-*` pin the same behaviour as replays.
 
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from './combat'

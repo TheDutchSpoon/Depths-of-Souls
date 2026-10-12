@@ -10,8 +10,9 @@ PR's source branch; Duncan gives it with the command, or it's the branch his wor
 
 ## Inputs
 
-`kickoff.md`, `plan.md`, `plan-review.md` and the latest `report-r<N>.md` from the mailbox, and the
-living docs on `main`.
+`kickoff.md`, `plan.md`, `plan-review.md`, the approving round's `plan-handout-r<N>.md`
+and the latest `report-r<N>.md` from the mailbox, and the living docs on `main`. The build answers
+to the plan as that hand-out corrects it: check each item in the code, not on the report's word.
 
 ## 1. Pull the branch and main
 
@@ -74,12 +75,17 @@ Green gates only prove the code agrees with its own fixtures. Proceed to reading
 
 - "Existing goldens byte-identical": import every `__golden__/*.fixture.ts` on both trees and
   deep-compare **every export** (a throwaway test with `import.meta.glob`), not only `expected*`:
-  some fixtures export sub-fixtures with `*Expected` names (`golden-h2b1-wick-gates`,
-  `-last-gleam`), and a shared registry export (`traits`, `statuses`) moves with content, which is
+  some fixtures export sub-fixtures with `*Expected` names (`golden-wick-gates`,
+  `golden-last-gleam`), and a shared registry export (`traits`, `statuses`) moves with content, which is
   expected and must be told apart from an expected-value change (4.1-H2d). Then diff each
   changed old fixture: only comments, exports or driving code may differ, as the PR claims.
 - Comment-only edits: `npm run docs:check -- comment-proof <base>` passes, run in your clone (with
   comments stripped, old and new are identical; pragmas are compared apart).
+- Renames: `comment-proof <base> --renames <map>` with the PR's rename map. Each listed file pair,
+  importer specifier, identifier and literal is one token on both sides, line wrapping and
+  trailing commas are not compared, and the rest of the code must be equal. Re-derive the map's
+  claims apart from the tool: exports deep-equal under the id map, test counts per file under the
+  file map, and no new name already on `main`.
 - Corpus digest: diff the fixture against `main`'s; the number of changed rows and changed results
   must match the PR's attribution. If the PR says "reverting all flips reproduces main's digest",
   reproduce that.

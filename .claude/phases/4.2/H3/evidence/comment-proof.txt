@@ -1,0 +1,275 @@
+OK src/data/biomes.test.ts (identifiers 1)
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG
+OK src/data/traits/glimmerdark.test.ts
+OK src/data/traits/starters.ts
+OK src/engine/__corpus__/corpus.ts (identifiers 2)
+  identifier F3_SPELL_FIGHTS -> LOCK_SPELL_FIGHTS (x2)
+OK src/engine/__fixtures__/balance.ts (identifiers 1)
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG
+OK src/engine/__golden__/golden-additional-granted.fixture.ts (renamed from src/engine/__golden__/golden-h2a-additional-granted.fixture.ts; imports 2; literals 1)
+  literal "h2a-grant-attack" -> "additional-grant-attack"
+OK src/engine/__golden__/golden-additional-granted.test.ts (renamed from src/engine/__golden__/golden-h2a-additional-granted.test.ts; imports 0)
+OK src/engine/__golden__/golden-additional-hp-bound.fixture.ts (renamed from src/engine/__golden__/golden-h2a-additional-hp-bound.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-additional-hp-bound.test.ts (renamed from src/engine/__golden__/golden-h2a-additional-hp-bound.test.ts; imports 0)
+OK src/engine/__golden__/golden-additional-levels.fixture.ts (renamed from src/engine/__golden__/golden-h2a-additional-levels.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-additional-levels.test.ts (renamed from src/engine/__golden__/golden-h2a-additional-levels.test.ts; imports 0)
+OK src/engine/__golden__/golden-additional-second-instance.fixture.ts (renamed from src/engine/__golden__/golden-h2a-additional-second-instance.fixture.ts; imports 2; literals 1)
+  literal "h2a-two-instance" -> "additional-two-instance"
+OK src/engine/__golden__/golden-additional-second-instance.test.ts (renamed from src/engine/__golden__/golden-h2a-additional-second-instance.test.ts; imports 0)
+OK src/engine/__golden__/golden-additional-spell.fixture.ts (renamed from src/engine/__golden__/golden-h2a-additional-spell.fixture.ts; imports 2; literals 4)
+  literal "h2a-nova" -> "additional-nova"
+  literal "h2a-bolt" -> "additional-bolt"
+  literal "h2a-cast-slot-0" -> "additional-cast-slot-0"
+  literal "h2a-wait" -> "additional-wait"
+OK src/engine/__golden__/golden-additional-spell.test.ts (renamed from src/engine/__golden__/golden-h2a-additional-spell.test.ts; imports 0)
+OK src/engine/__golden__/golden-additional-splashing.fixture.ts (renamed from src/engine/__golden__/golden-h2a-additional-splashing.fixture.ts; imports 2; literals 1)
+  literal "h2a-splashing" -> "additional-splashing"
+OK src/engine/__golden__/golden-additional-splashing.test.ts (renamed from src/engine/__golden__/golden-h2a-additional-splashing.test.ts; imports 0)
+OK src/engine/__golden__/golden-cost-and-tick-exclusion.fixture.ts (renamed from src/engine/__golden__/golden-h2a-cost.fixture.ts; imports 2; literals 4)
+  literal "h2a-cost-via-selector" -> "cost-via-selector"
+  literal "h2a-zero-cost-dot-label" -> "cost-zero-cost-dot-label"
+  literal "h2a-mini-poison" -> "cost-mini-poison"
+  literal "h2a-poison-self" -> "cost-poison-self"
+OK src/engine/__golden__/golden-cost-and-tick-exclusion.test.ts (renamed from src/engine/__golden__/golden-h2a-cost.test.ts; imports 0)
+OK src/engine/__golden__/golden-damage-observed-cost.fixture.ts (renamed from src/engine/__golden__/golden-h2b1-observed-cost.fixture.ts; imports 2; literals 3)
+  literal "h2b1-pay" -> "damage-observed-pay"
+  literal "h2b1-watch-ally" -> "damage-observed-watch-ally"
+  literal "h2b1-watch-enemy" -> "damage-observed-watch-enemy"
+OK src/engine/__golden__/golden-damage-observed-cost.test.ts (renamed from src/engine/__golden__/golden-h2b1-observed-cost.test.ts; imports 0)
+OK src/engine/__golden__/golden-damage-observed-lethal.fixture.ts (renamed from src/engine/__golden__/golden-h2b1-observed-lethal.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-damage-observed-lethal.test.ts (renamed from src/engine/__golden__/golden-h2b1-observed-lethal.test.ts; imports 0)
+OK src/engine/__golden__/golden-damage-observed-silent.fixture.ts (renamed from src/engine/__golden__/golden-h2b1-observed-silent.fixture.ts; imports 2; literals 4)
+  literal "h2b1-self-hit" -> "damage-observed-self-hit"
+  literal "h2b1-cast-slot-0" -> "damage-observed-cast-slot-0"
+  literal "h2b1-zero-cost" -> "damage-observed-zero-cost"
+  literal "h2b1-watch" -> "damage-observed-watch"
+OK src/engine/__golden__/golden-damage-observed-silent.test.ts (renamed from src/engine/__golden__/golden-h2b1-observed-silent.test.ts; imports 0)
+OK src/engine/__golden__/golden-damage-observed-tick.fixture.ts (renamed from src/engine/__golden__/golden-h2b1-observed-tick.fixture.ts; imports 2; literals 3)
+  literal "h2b1-mini-poison" -> "damage-observed-mini-poison"
+  literal "h2b1-poison-self" -> "damage-observed-poison-self"
+  literal "h2b1-tick-watch" -> "damage-observed-tick-watch"
+OK src/engine/__golden__/golden-damage-observed-tick.test.ts (renamed from src/engine/__golden__/golden-h2b1-observed-tick.test.ts; imports 0)
+OK src/engine/__golden__/golden-dot.fixture.ts
+OK src/engine/__golden__/golden-echo-chain-truncated.fixture.ts (renamed from src/engine/__golden__/golden-e-echo-chain-truncated.fixture.ts; imports 2; literals 1)
+  literal "e-overtone-fixture" -> "echo-chain-overtone-fixture"
+OK src/engine/__golden__/golden-echo-chain-truncated.test.ts (renamed from src/engine/__golden__/golden-e-echo-chain-truncated.test.ts; imports 0)
+OK src/engine/__golden__/golden-echo-provoke-redirects.fixture.ts (renamed from src/engine/__golden__/golden-b2-provoke-redirects-echo.fixture.ts; imports 2; literals 1)
+  literal "b2-echo-fixture" -> "echo-provoke-echo-fixture"
+OK src/engine/__golden__/golden-echo-provoke-redirects.test.ts (renamed from src/engine/__golden__/golden-b2-provoke-redirects-echo.test.ts; imports 0)
+OK src/engine/__golden__/golden-exact-instance-cleanse-then-tick.fixture.ts (renamed from src/engine/__golden__/golden-b4-cleanse-then-tick.fixture.ts; imports 2; literals 2)
+  literal "b4-golden-tick" -> "exact-instance-cleanse-tick"
+  literal "b4-cleanse-then-tick-fixture" -> "exact-instance-cleanse-then-tick-fixture"
+OK src/engine/__golden__/golden-exact-instance-cleanse-then-tick.test.ts (renamed from src/engine/__golden__/golden-b4-cleanse-then-tick.test.ts; imports 0)
+OK src/engine/__golden__/golden-exact-instance-remove-then-reapply.fixture.ts (renamed from src/engine/__golden__/golden-b4-remove-then-reapply.fixture.ts; imports 2; literals 2)
+  literal "b4-golden-tick-2" -> "exact-instance-reapply-tick"
+  literal "b4-remove-then-reapply-fixture" -> "exact-instance-remove-then-reapply-fixture"
+OK src/engine/__golden__/golden-exact-instance-remove-then-reapply.test.ts (renamed from src/engine/__golden__/golden-b4-remove-then-reapply.test.ts; imports 0)
+OK src/engine/__golden__/golden-fallback-attacks-lowest-hp.fixture.ts (renamed from src/engine/__golden__/golden-b1-fallback-lowest-hp.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-fallback-attacks-lowest-hp.test.ts (renamed from src/engine/__golden__/golden-b1-fallback-lowest-hp.test.ts; imports 0)
+OK src/engine/__golden__/golden-fight-start-wipe.fixture.ts (renamed from src/engine/__golden__/golden-f3-fight-start-wipe.fixture.ts; imports 2; literals 1)
+  literal "f3-opening-strike-fixture" -> "lock-timing-opening-strike-fixture"
+OK src/engine/__golden__/golden-fight-start-wipe.test.ts (renamed from src/engine/__golden__/golden-f3-fight-start-wipe.test.ts; imports 0)
+OK src/engine/__golden__/golden-fizzle-retarget-attack.fixture.ts (renamed from src/engine/__golden__/golden-b5-fizzle-rule4-retarget.fixture.ts; imports 2; identifiers 6; literals 2)
+  identifier B5_FIXTURE -> FIZZLE_ATTACK_FIXTURE (x6)
+  literal "b5-fixture" -> "fizzle-attack-fixture"
+  literal "B5 (fixture)" -> "fizzle attack (fixture)"
+OK src/engine/__golden__/golden-fizzle-retarget-attack.test.ts (renamed from src/engine/__golden__/golden-b5-fizzle-rule4-retarget.test.ts; imports 0)
+OK src/engine/__golden__/golden-fizzle-retarget-cast.fixture.ts (renamed from src/engine/__golden__/golden-b5-cast-fizzle.fixture.ts; imports 2; identifiers 6; literals 2)
+  identifier B5_CAST_FIXTURE -> FIZZLE_CAST_FIXTURE (x6)
+  literal "b5-cast-fixture" -> "fizzle-cast-fixture"
+  literal "B5 cast (fixture)" -> "fizzle cast (fixture)"
+OK src/engine/__golden__/golden-fizzle-retarget-cast.test.ts (renamed from src/engine/__golden__/golden-b5-cast-fizzle.test.ts; imports 0)
+OK src/engine/__golden__/golden-grant-actor-dies-first.fixture.ts (renamed from src/engine/__golden__/golden-e-grant-actor-dies-first.fixture.ts; imports 2; literals 2)
+  literal "e-echo-fixture" -> "grant-queue-echo-fixture"
+  literal "e-retaliate-fixture" -> "grant-queue-retaliate-fixture"
+OK src/engine/__golden__/golden-grant-actor-dies-first.test.ts (renamed from src/engine/__golden__/golden-e-grant-actor-dies-first.test.ts; imports 0)
+OK src/engine/__golden__/golden-grant-during-granted-action.fixture.ts (renamed from src/engine/__golden__/golden-e-grant-during-granted-action.fixture.ts; imports 2; literals 3)
+  literal "e-t1-defend-fixture" -> "grant-queue-t1-defend-fixture"
+  literal "e-t2-provoke-fixture" -> "grant-queue-t2-provoke-fixture"
+  literal "e-t3-wait-fixture" -> "grant-queue-t3-wait-fixture"
+OK src/engine/__golden__/golden-grant-during-granted-action.test.ts (renamed from src/engine/__golden__/golden-e-grant-during-granted-action.test.ts; imports 0)
+OK src/engine/__golden__/golden-granted-cast-confused-redirects.fixture.ts (renamed from src/engine/__golden__/golden-b2-confused-granted-cast-redirects.fixture.ts; imports 2; literals 1)
+  literal "b2-confused-granted-caster-fixture" -> "granted-confused-caster-fixture"
+OK src/engine/__golden__/golden-granted-cast-confused-redirects.test.ts (renamed from src/engine/__golden__/golden-b2-confused-granted-cast-redirects.test.ts; imports 0)
+OK src/engine/__golden__/golden-granted-cast-default-lowest-hp.fixture.ts (renamed from src/engine/__golden__/golden-b1-granted-cast-default.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-granted-cast-default-lowest-hp.test.ts (renamed from src/engine/__golden__/golden-b1-granted-cast-default.test.ts; imports 0)
+OK src/engine/__golden__/golden-granted-cast-refused-by-fixture-lock.fixture.ts (renamed from src/engine/__golden__/golden-b2-silenced-refuses-granted-cast.fixture.ts; imports 2; literals 1)
+  literal "b2-silenced-granted-caster-fixture" -> "fixture-lock-granted-caster-fixture"
+OK src/engine/__golden__/golden-granted-cast-refused-by-fixture-lock.test.ts (renamed from src/engine/__golden__/golden-b2-silenced-refuses-granted-cast.test.ts; imports 0)
+OK src/engine/__golden__/golden-granted-cast-refused-by-silenced-status.fixture.ts (renamed from src/engine/__golden__/golden-f3-silenced-refuses-granted-cast.fixture.ts; imports 2; literals 2)
+  literal "f3-bolt-fixture" -> "lock-timing-bolt-fixture"
+  literal "f3-granted-cast-fixture" -> "lock-timing-granted-cast-fixture"
+OK src/engine/__golden__/golden-granted-cast-refused-by-silenced-status.test.ts (renamed from src/engine/__golden__/golden-f3-silenced-refuses-granted-cast.test.ts; imports 0)
+OK src/engine/__golden__/golden-granted-cast-refused-on-skipped-turn.fixture.ts (renamed from src/engine/__golden__/golden-b2-skipped-turn-refuses-granted-cast.fixture.ts; imports 2; literals 1)
+  literal "b2-stunned-granted-caster-fixture" -> "granted-skipped-stunned-caster-fixture"
+OK src/engine/__golden__/golden-granted-cast-refused-on-skipped-turn.test.ts (renamed from src/engine/__golden__/golden-b2-skipped-turn-refuses-granted-cast.test.ts; imports 0)
+OK src/engine/__golden__/golden-hollowkin-wretch-self-dot.fixture.ts
+OK src/engine/__golden__/golden-indirect-flat-response.fixture.ts (renamed from src/engine/__golden__/golden-h2a-flat-indirect.fixture.ts; imports 2; literals 2)
+  literal "h2a-flat-20" -> "indirect-flat-20"
+  literal "h2a-flat-3" -> "indirect-flat-3"
+OK src/engine/__golden__/golden-indirect-flat-response.test.ts (renamed from src/engine/__golden__/golden-h2a-flat-indirect.test.ts; imports 0)
+OK src/engine/__golden__/golden-indirect-keeps-terms.fixture.ts (renamed from src/engine/__golden__/golden-h2a-indirect-keeps.fixture.ts; imports 2; literals 5)
+  literal "h2a-keeps-hit" -> "indirect-keeps-hit"
+  literal "h2a-keeps-dealt" -> "indirect-keeps-dealt"
+  literal "h2a-keeps-conditional" -> "indirect-keeps-conditional"
+  literal "h2a-keeps-taken" -> "indirect-keeps-taken"
+  literal "h2a-keeps-penetration" -> "indirect-keeps-penetration"
+OK src/engine/__golden__/golden-indirect-keeps-terms.test.ts (renamed from src/engine/__golden__/golden-h2a-indirect-keeps.test.ts; imports 0)
+OK src/engine/__golden__/golden-indirect-trait-response.fixture.ts (renamed from src/engine/__golden__/golden-h2a-indirect.fixture.ts; imports 2; literals 3)
+  literal "h2a-hit-highest" -> "indirect-hit-highest"
+  literal "h2a-hit-lowest" -> "indirect-hit-lowest"
+  literal "h2a-shield-bash" -> "indirect-shield-bash"
+OK src/engine/__golden__/golden-indirect-trait-response.test.ts (renamed from src/engine/__golden__/golden-h2a-indirect.test.ts; imports 0)
+OK src/engine/__golden__/golden-last-gleam.fixture.ts (renamed from src/engine/__golden__/golden-h2b1-last-gleam.fixture.ts; imports 1)
+OK src/engine/__golden__/golden-last-gleam.test.ts (renamed from src/engine/__golden__/golden-h2b1-last-gleam.test.ts; imports 0)
+OK src/engine/__golden__/golden-leech-sovereign-pacified.fixture.ts (renamed from src/engine/__golden__/golden-g1-leech-sovereign-pacified.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-leech-sovereign-pacified.test.ts (renamed from src/engine/__golden__/golden-g1-leech-sovereign-pacified.test.ts; imports 0)
+OK src/engine/__golden__/golden-lock-immunity.fixture.ts (renamed from src/engine/__golden__/golden-f3-immunity.fixture.ts; imports 2; literals 6)
+  literal "f3-bolt-fixture" -> "lock-timing-bolt-fixture"
+  literal "f3-granted-cast-fixture" -> "lock-timing-granted-cast-fixture"
+  literal "f3-mage-if-silenced" -> "lock-timing-mage-if-silenced"
+  literal "f3-brawler-if-pacified" -> "lock-timing-brawler-if-pacified"
+  literal "f3-silencer-script" -> "lock-timing-silencer-script"
+  literal "f3-pacifier-script" -> "lock-timing-pacifier-script"
+OK src/engine/__golden__/golden-lock-immunity.test.ts (renamed from src/engine/__golden__/golden-f3-immunity.test.ts; imports 0)
+OK src/engine/__golden__/golden-pacify-three-turns.fixture.ts (renamed from src/engine/__golden__/golden-f3-pacify-three-turns.fixture.ts; imports 2; literals 3)
+  literal "f3-bolt-fixture" -> "lock-timing-bolt-fixture"
+  literal "f3-apply-lowest" -> "lock-timing-apply-lowest"
+  literal "f3-apply-highest" -> "lock-timing-apply-highest"
+OK src/engine/__golden__/golden-pacify-three-turns.test.ts (renamed from src/engine/__golden__/golden-f3-pacify-three-turns.test.ts; imports 0)
+OK src/engine/__golden__/golden-poison-burn-spore-ticks.fixture.ts (renamed from src/engine/__golden__/golden-h2d-dot-ticks.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-poison-burn-spore-ticks.test.ts (renamed from src/engine/__golden__/golden-h2d-dot-ticks.test.ts; imports 0)
+OK src/engine/__golden__/golden-pollen-cloud-sleep.fixture.ts (renamed from src/engine/__golden__/golden-h2d-pollen-cloud.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-pollen-cloud-sleep.test.ts (renamed from src/engine/__golden__/golden-h2d-pollen-cloud.test.ts; imports 0)
+OK src/engine/__golden__/golden-provoke-stun-cleanup.fixture.ts (renamed from src/engine/__golden__/golden-b6-provoke-stun-cleanup.fixture.ts; imports 2; literals 8)
+  literal "b6-stun-fixture" -> "provoke-stun-stun-fixture"
+  literal "b6-stun-on-hit-fixture" -> "provoke-stun-stun-on-hit-fixture"
+  literal "b6-attack-lowest" -> "provoke-stun-attack-lowest" (x2)
+  literal "b6-always-provoke" -> "provoke-stun-always-provoke" (x2)
+  literal "b6-always-wait" -> "provoke-stun-always-wait" (x2)
+OK src/engine/__golden__/golden-provoke-stun-cleanup.test.ts (renamed from src/engine/__golden__/golden-b6-provoke-stun-cleanup.test.ts; imports 0)
+OK src/engine/__golden__/golden-revive-cap-exclusion.fixture.ts (renamed from src/engine/__golden__/golden-d3-revive-cap-exclusion.fixture.ts; imports 2; literals 1)
+  literal "d3-revive-exclusion-fixture" -> "revive-cap-exclusion-fixture"
+OK src/engine/__golden__/golden-revive-cap-exclusion.test.ts (renamed from src/engine/__golden__/golden-d3-revive-cap-exclusion.test.ts; imports 0)
+OK src/engine/__golden__/golden-revive-cap-fizzle.fixture.ts (renamed from src/engine/__golden__/golden-d3-revive-cap-fizzle.fixture.ts; imports 2; literals 1)
+  literal "d3-revive-fizzle-fixture" -> "revive-cap-fizzle-fixture"
+OK src/engine/__golden__/golden-revive-cap-fizzle.test.ts (renamed from src/engine/__golden__/golden-d3-revive-cap-fizzle.test.ts; imports 0)
+OK src/engine/__golden__/golden-silence-three-turns.fixture.ts (renamed from src/engine/__golden__/golden-f3-silence-three-turns.fixture.ts; imports 2; literals 3)
+  literal "f3-bolt-fixture" -> "lock-timing-bolt-fixture"
+  literal "f3-apply-lowest" -> "lock-timing-apply-lowest"
+  literal "f3-apply-highest" -> "lock-timing-apply-highest"
+OK src/engine/__golden__/golden-silence-three-turns.test.ts (renamed from src/engine/__golden__/golden-f3-silence-three-turns.test.ts; imports 0)
+OK src/engine/__golden__/golden-snapjaw-snapback.fixture.ts (renamed from src/engine/__golden__/golden-h2c-snapback.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-snapjaw-snapback.test.ts (renamed from src/engine/__golden__/golden-h2c-snapback.test.ts; imports 0)
+OK src/engine/__golden__/golden-spell-on-caster-direct.fixture.ts (renamed from src/engine/__golden__/golden-h2a-spell-on-caster.fixture.ts; imports 2; literals 3)
+  literal "h2a-cast-slot-0" -> "spell-on-caster-cast-slot-0"
+  literal "h2a-wait" -> "spell-on-caster-wait"
+  literal "h2a-self-hit" -> "spell-on-caster-self-hit"
+OK src/engine/__golden__/golden-spell-on-caster-direct.test.ts (renamed from src/engine/__golden__/golden-h2a-spell-on-caster.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-carrier-fresh.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-carrier-fresh.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-status-snapshot-carrier-fresh.test.ts (renamed from src/engine/__golden__/golden-h2b2-carrier-fresh.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-reapply.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-reapply.fixture.ts; imports 2; literals 4)
+  literal "h2b2-reapply-p1" -> "status-snapshot-reapply-p1"
+  literal "h2b2-reapply-p2" -> "status-snapshot-reapply-p2"
+  literal "h2b2-reapply-p3" -> "status-snapshot-reapply-p3"
+  literal "h2b2-reapply-p4" -> "status-snapshot-reapply-p4"
+OK src/engine/__golden__/golden-status-snapshot-reapply.test.ts (renamed from src/engine/__golden__/golden-h2b2-reapply.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-regen-potency.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-regen-potency.fixture.ts; imports 2; literals 2)
+  literal "h2b2-regen-halve" -> "status-snapshot-regen-halve"
+  literal "h2b2-wait-then-attack" -> "status-snapshot-wait-then-attack"
+OK src/engine/__golden__/golden-status-snapshot-regen-potency.test.ts (renamed from src/engine/__golden__/golden-h2b2-regen-potency.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-spore-spread.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-spore-spread.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-status-snapshot-spore-spread.test.ts (renamed from src/engine/__golden__/golden-h2b2-spore-spread.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-tick-dead-applier.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-tick-dead-applier.fixture.ts; imports 2; literals 2)
+  literal "h2b2-dead-dealer" -> "status-snapshot-dead-dealer"
+  literal "h2b2-dead-wait-then-attack" -> "status-snapshot-dead-wait-then-attack"
+OK src/engine/__golden__/golden-status-snapshot-tick-dead-applier.test.ts (renamed from src/engine/__golden__/golden-h2b2-tick-dead-applier.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-tick-kill-on-death.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-tick-kill-on-death.fixture.ts; imports 2; literals 1)
+  literal "h2b2-last-words" -> "status-snapshot-last-words"
+OK src/engine/__golden__/golden-status-snapshot-tick-kill-on-death.test.ts (renamed from src/engine/__golden__/golden-h2b2-tick-kill-on-death.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-tick-living-applier.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-tick-living-applier.fixture.ts; imports 2; literals 4)
+  literal "h2b2-living-surge" -> "status-snapshot-living-surge"
+  literal "h2b2-living-lifesteal" -> "status-snapshot-living-lifesteal"
+  literal "h2b2-living-bonus" -> "status-snapshot-living-bonus"
+  literal "h2b2-wait-then-defend" -> "status-snapshot-wait-then-defend"
+OK src/engine/__golden__/golden-status-snapshot-tick-living-applier.test.ts (renamed from src/engine/__golden__/golden-h2b2-tick-living-applier.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-tick-no-retaliation.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-tick-no-retaliation.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-status-snapshot-tick-no-retaliation.test.ts (renamed from src/engine/__golden__/golden-h2b2-tick-no-retaliation.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-tick-self-applied.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-tick-self-applied.fixture.ts; imports 2; literals 2)
+  literal "h2b2-self-dealer" -> "status-snapshot-self-dealer"
+  literal "h2b2-self-watch" -> "status-snapshot-self-watch"
+OK src/engine/__golden__/golden-status-snapshot-tick-self-applied.test.ts (renamed from src/engine/__golden__/golden-h2b2-tick-self-applied.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-tick-taken-factors.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-tick-taken-factors.fixture.ts; imports 2; literals 1)
+  literal "h2b2-taken-wait-then-defend" -> "status-snapshot-taken-wait-then-defend"
+OK src/engine/__golden__/golden-status-snapshot-tick-taken-factors.test.ts (renamed from src/engine/__golden__/golden-h2b2-tick-taken-factors.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-snapshot-vulnerability-once.fixture.ts (renamed from src/engine/__golden__/golden-h2b2-vulnerability-once.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-status-snapshot-vulnerability-once.test.ts (renamed from src/engine/__golden__/golden-h2b2-vulnerability-once.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-timing-dot-one-turn.fixture.ts (renamed from src/engine/__golden__/golden-f2-dot-one-turn.fixture.ts; imports 2; literals 2)
+  literal "f2-poisoner-fixture" -> "status-timing-poisoner-fixture"
+  literal "f2-self-poison-fixture" -> "status-timing-self-poison-fixture"
+OK src/engine/__golden__/golden-status-timing-dot-one-turn.test.ts (renamed from src/engine/__golden__/golden-f2-dot-one-turn.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-timing-stun-one-turn.fixture.ts (renamed from src/engine/__golden__/golden-f2-stun-one-turn.fixture.ts; imports 2; literals 1)
+  literal "f2-stunner-fixture" -> "status-timing-stunner-fixture"
+OK src/engine/__golden__/golden-status-timing-stun-one-turn.test.ts (renamed from src/engine/__golden__/golden-f2-stun-one-turn.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-timing-turn-end-interaction.fixture.ts (renamed from src/engine/__golden__/golden-f2-turn-end-interaction.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-status-timing-turn-end-interaction.test.ts (renamed from src/engine/__golden__/golden-f2-turn-end-interaction.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-timing-turnstart-self-stun-once.fixture.ts (renamed from src/engine/__golden__/golden-f2-turnstart-self-stun-once.fixture.ts; imports 2; literals 1)
+  literal "f2-self-stun-fixture" -> "status-timing-self-stun-fixture"
+OK src/engine/__golden__/golden-status-timing-turnstart-self-stun-once.test.ts (renamed from src/engine/__golden__/golden-f2-turnstart-self-stun-once.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-timing-weaken-three-turns.fixture.ts (renamed from src/engine/__golden__/golden-f2-weaken-three-turns.fixture.ts; imports 2; literals 1)
+  literal "f2-weakener-fixture" -> "status-timing-weakener-fixture"
+OK src/engine/__golden__/golden-status-timing-weaken-three-turns.test.ts (renamed from src/engine/__golden__/golden-f2-weaken-three-turns.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-timing-web-turn-end-roll.fixture.ts (renamed from src/engine/__golden__/golden-f2-web-turn-end-roll.fixture.ts; imports 2; literals 2)
+  literal "f2-web-cast-fixture" -> "status-timing-web-cast-fixture"
+  literal "f2-cast-once-then-wait" -> "status-timing-cast-once-then-wait"
+OK src/engine/__golden__/golden-status-timing-web-turn-end-roll.test.ts (renamed from src/engine/__golden__/golden-f2-web-turn-end-roll.test.ts; imports 0)
+OK src/engine/__golden__/golden-status-timing-win-over-own-tick.fixture.ts (renamed from src/engine/__golden__/golden-f2-win-over-own-tick.fixture.ts; imports 2; literals 1)
+  literal "f2-self-poison-at-start-fixture" -> "status-timing-self-poison-at-start-fixture"
+OK src/engine/__golden__/golden-status-timing-win-over-own-tick.test.ts (renamed from src/engine/__golden__/golden-f2-win-over-own-tick.test.ts; imports 0)
+OK src/engine/__golden__/golden-support-heals-own-lowest-hp-ally.fixture.ts (renamed from src/engine/__golden__/golden-b1-support-heals-own-side.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-support-heals-own-lowest-hp-ally.test.ts (renamed from src/engine/__golden__/golden-b1-support-heals-own-side.test.ts; imports 0)
+OK src/engine/__golden__/golden-wick-burn-heal.fixture.ts (renamed from src/engine/__golden__/golden-h2b1-wick-burn-heal.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-wick-burn-heal.test.ts (renamed from src/engine/__golden__/golden-h2b1-wick-burn-heal.test.ts; imports 0)
+OK src/engine/__golden__/golden-wick-gates.fixture.ts (renamed from src/engine/__golden__/golden-h2b1-wick-gates.fixture.ts; imports 1)
+OK src/engine/__golden__/golden-wick-gates.test.ts (renamed from src/engine/__golden__/golden-h2b1-wick-gates.test.ts; imports 0)
+OK src/engine/__golden__/golden-wick-skips-self.fixture.ts (renamed from src/engine/__golden__/golden-h2b1-wick-skips-self.fixture.ts; imports 2)
+OK src/engine/__golden__/golden-wick-skips-self.test.ts (renamed from src/engine/__golden__/golden-h2b1-wick-skips-self.test.ts; imports 0)
+OK src/engine/combat.test.ts (literals 1)
+  literal "random-target-b3-fixture" -> "random-target-fixture"
+OK src/engine/corpus-coverage.test.ts (masked 1)
+  "applied only by the Phase-3 mechanism trait 'reeling' (data/traits/core.ts), which is in the " -> "applied only by the placeholder trait 'reeling' (data/traits/core.ts), which is in the "
+OK src/engine/curves.test.ts (identifiers 1)
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG
+OK src/engine/damage-observation.test.ts
+OK src/engine/generation-floor-loadouts.test.ts (renamed from src/engine/generation-g1.test.ts; imports 0; identifiers 1)
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG
+OK src/engine/generation.test.ts (identifiers 1)
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG
+OK src/engine/leveling.test.ts (identifiers 3)
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG (x3)
+OK src/engine/perform-action.test.ts
+OK src/engine/resolution.test.ts (literals 8)
+  literal "b4-tick-fixture" -> "exact-instance-tick-fixture" (x6)
+  literal "b4-cleanser-fixture" -> "exact-instance-cleanser-fixture"
+  literal "b4-reapply-fixture" -> "exact-instance-reapply-fixture"
+OK src/engine/status-containers.test.ts
+OK src/engine/status-snapshot.test.ts (literals 1)
+  literal "h2b2-seeder" -> "status-snapshot-seeder"
+OK src/engine/status-timing.test.ts
+OK src/state/balance-sim.test.ts (masked 1)
+  "ASSUMPTION 22" -> "CI thresholds"
+OK src/state/balance-sim.ts (masked 3)
+  "T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below " -> "T4 walls' size: most failed pushes on one floor below "
+  "ASSUMPTION 22: floor-1 clear >= " -> "CI thresholds: floor-1 clear >= "
+  "ASSUMPTION 22 summary (reported, not asserted):" -> "CI thresholds summary (reported, not asserted):"
+OK src/state/integration.test.ts (identifiers 1)
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG
+OK src/state/rewards.test.ts (identifiers 1; masked 1)
+  "/not materializable before Phase 8/" -> "/a fused instance has no static creature id/"
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG
+OK src/state/rewards.ts (masked 1)
+  "staticCreatureIdFor: fused instances are not materializable before Phase 8" -> "staticCreatureIdFor: a fused instance has no static creature id"
+OK src/state/store.test.ts (identifiers 1)
+  identifier PHASE_4_PLACEHOLDER_BALANCE_CONFIG -> TEST_BALANCE_CONFIG
+FAIL src/engine/corpus-digest.test.ts: code differs at printed line 20: base `import type {`, working tree `import committedFixture from './__corpus__/corpus-digest.fixture.ts?raw' ;`
+comment-proof: FAIL, 1 problems

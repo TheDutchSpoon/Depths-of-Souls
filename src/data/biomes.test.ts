@@ -4,7 +4,7 @@ import { generateFloor } from '../engine/generation'
 import { enemyPartySize } from '../engine/curves'
 import { DEFAULT_GEM_SLOT_COUNT } from '../engine/config'
 import { DEFAULT_BALANCE_CONFIG } from './balance'
-import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
+import { TEST_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { BIOMES, BIOMES_BY_ID } from './biomes'
 import { ALL_SPELLS } from './spells'
 import {

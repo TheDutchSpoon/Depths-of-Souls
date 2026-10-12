@@ -161,7 +161,7 @@ describe.skipIf(isSim)('balance simulator', () => {
         expect(spec.t4).toHaveProperty('runsToFirstFloor10Clear')
         expect(spec).toHaveProperty('largestStacks')
       }
-      expect(formatReport(report)).toContain('ASSUMPTION 22')
+      expect(formatReport(report)).toContain('CI thresholds')
     })
   })
 

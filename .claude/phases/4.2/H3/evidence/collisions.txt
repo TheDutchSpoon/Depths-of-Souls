@@ -1,0 +1,3 @@
+new names checked: 356 (127 new paths, 4 new identifiers, 97 new literals)
+main: 403 files, 4466 distinct literals, 2918 distinct identifiers
+collisions: 0; case collisions: 0

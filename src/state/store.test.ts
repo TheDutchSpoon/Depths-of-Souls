@@ -7,7 +7,7 @@
 //
 // descend()/pinBiome() return `{ ok, ... }` (`spec/store.md#how-store-actions-fail`); the
 // collection is a flat `Map<InstanceId, Instance>`; every fixture pins
-// `PHASE_4_PLACEHOLDER_BALANCE_CONFIG`, so the non-XP numbers below are the placeholder config's
+// `TEST_BALANCE_CONFIG`, so the non-XP numbers below are the placeholder config's
 // and the XP expectations are noted inline.
 //
 // The fixture creatures run the `always-*` fixture scripts, so every
@@ -23,7 +23,7 @@ import type {
   SpeciesCreature,
 } from '../engine/generation'
 import type { SeededRng } from '../engine/rng'
-import { PHASE_4_PLACEHOLDER_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
+import { TEST_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { FIXTURE_SCRIPTS_BY_ID } from '../engine/__fixtures__/scripts'
 import { enemyLevelRange } from '../engine/curves'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'

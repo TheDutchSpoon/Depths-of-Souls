@@ -1,0 +1,167 @@
+# Planted faults (a scratch copy of the working tree; src/ untouched)
+
+## A. comment-proof with --mask and --renames, base 590d82a0496d9ad1886227276d983555524fa43d
+--- baseline: no plant (only the corpus test FAILs)
+exit 1
+comment-proof: FAIL, 1 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+--- 1. a planted code change in a renamed file (src/engine/__golden__/golden-indirect-trait-response.fixture.ts: TURN_STEPS 4 -> 5)
+exit 1
+FAIL src/engine/__golden__/golden-indirect-trait-response.fixture.ts: code differs at printed line 17: base `export const TURN_STEPS = 4 ;`, working tree `export const TURN_STEPS = 5 ;`
+comment-proof: FAIL, 2 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+--- 2. an unlisted rename (src/engine/ids.ts -> src/engine/ids-moved.ts)
+exit 1
+FAIL src/engine/ids-moved.ts: added (not in 590d82a0496d9ad1886227276d983555524fa43d)
+FAIL src/engine/ids.ts: deleted (in 590d82a0496d9ad1886227276d983555524fa43d, not in the working tree)
+comment-proof: FAIL, 3 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+--- 3a. an unused map entry: a files entry whose old file is still in the working tree (unused-file)
+exit 1
+FAIL src/engine/ids-renamed.ts: renames entry src/engine/ids.ts -> src/engine/ids-renamed.ts not consumed (src/engine/ids.ts is still in the working tree)
+comment-proof: FAIL, 2 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+--- 3b. an unused map entry: an identifier entry for a file that did not change (unused-identifier)
+exit 1
+FAIL src/engine/ids.ts: renames identifier createCreatureId -> makeCreatureId not consumed (no code change in that path, or it is not a file in scope)
+comment-proof: FAIL, 2 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+--- 3c. an unused map entry: an identifier entry whose count is 99 (count-too-high)
+exit 1
+FAIL src/engine/__golden__/golden-fizzle-retarget-attack.fixture.ts: renames identifier B5_FIXTURE -> FIZZLE_ATTACK_FIXTURE expects 99 in the base, found 6
+FAIL src/engine/__golden__/golden-fizzle-retarget-attack.fixture.ts: renames: identifier FIZZLE_ATTACK_FIXTURE occurs 6 times in the working tree, expected 99
+comment-proof: FAIL, 3 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+--- 4. an identifier renamed outside the map (src/engine/__golden__/golden-indirect-trait-response.fixture.ts: hitTrait -> hitTrait2, 3 uses)
+exit 1
+FAIL src/engine/__golden__/golden-indirect-trait-response.fixture.ts: code differs at printed line 22: base `function hitTrait ( id : string , selectorKind : 'highest-hp-enemy' | 'lowest-hp-enemy' ) : Trait {`, working tree `funct
+comment-proof: FAIL, 2 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+--- 5. an id changed outside the map (src/engine/__golden__/golden-pacify-three-turns.fixture.ts: 'always-wait' -> 'always-waits')
+exit 1
+FAIL src/engine/__golden__/golden-pacify-three-turns.fixture.ts: code differs at printed line 61: base `id : 'tank' , health : 400 , defence : 5 , speed : 20 , scriptId : 'always-wait' }`, working tree `id : 'tank' , health : 400 
+comment-proof: FAIL, 2 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+--- baseline again: restored, only the corpus test FAILs
+exit 1
+comment-proof: FAIL, 1 problems
+(plus the expected FAIL src/engine/corpus-digest.test.ts)
+
+## B. comments: the name guard and each new shape (a scratch copy)
+--- baseline: the branch passes
+exit 0
+comments: PASS, 7008 comments and 1629 titles in 403 files
+--- a slice id in an identifier (D7_PLANT)
+exit 1
+src/engine/plant-ident.ts:1: pattern 19, slice or phase id in an identifier: "D7_PLANT"
+comments: FAIL, 1 problems
+--- a phase id in an identifier (phase4Thing)
+exit 1
+src/engine/plant-ident.ts:1: pattern 19, slice or phase id in an identifier: "phase4Thing"
+comments: FAIL, 1 problems
+--- a slice id in a string literal ('d7-plant')
+exit 1
+src/engine/plant-ident.ts:1: pattern 20, slice id in a string literal: "d7-plant"
+comments: FAIL, 1 problems
+--- a slice name in a string literal ('D7 plant')
+exit 1
+src/engine/plant-ident.ts:1: pattern 20, slice id in a string literal: "D7 plant"
+comments: FAIL, 1 problems
+--- shape: Slice-B (pattern 5)
+exit 1
+src/engine/plant-comment.ts:1: pattern 5, slice name: "the Slice-B rules"
+comments: FAIL, 1 problems
+--- shape: pre-Slice (pattern 5)
+exit 1
+src/engine/plant-comment.ts:1: pattern 5, slice name: "from pre-Slice work"
+comments: FAIL, 1 problems
+--- shape: B-2 (pattern 8)
+exit 1
+src/engine/plant-comment.ts:1: pattern 8, plan item id: "item B-2 says so"
+comments: FAIL, 1 problems
+--- shape: H2b2 (pattern 8, widened)
+exit 1
+src/engine/plant-comment.ts:1: pattern 8, plan item id: "see H2b2 for it"
+comments: FAIL, 1 problems
+--- shape: design-review (pattern 7)
+exit 1
+src/engine/plant-comment.ts:1: pattern 7, review round: "the design-review said so"
+comments: FAIL, 1 problems
+--- shape: (nit, review) (pattern 7)
+exit 1
+src/engine/plant-comment.ts:1: pattern 7, review round: "tidy this (nit, review)"
+comments: FAIL, 1 problems
+--- shape: (review) (pattern 7)
+exit 1
+src/engine/plant-comment.ts:1: pattern 7, review round: "tidy this (review)"
+comments: FAIL, 1 problems
+--- a slice id in a file name (src/engine/golden-d7-plant.test.ts)
+exit 1
+src/engine/golden-d7-plant.test.ts:1: pattern 18, slice or phase id in a file name: "d7"
+comments: FAIL, 1 problems
+--- a slice id in a non-TypeScript file name (src/ui/d7-plant.css), the first file name still planted
+exit 1
+src/engine/golden-d7-plant.test.ts:1: pattern 18, slice or phase id in a file name: "d7"
+src/ui/d7-plant.css:1: pattern 18, slice or phase id in a file name: "d7"
+comments: FAIL, 2 problems
+
+## C. comments --quotations
+--- a quote before its anchor
+src/engine/plant-quote.ts:1: spec/combat.md#damage-channels-and-the-additional "never in the section"
+quotations: 2 comments and 0 titles
+--- a short quote (two words) before its anchor
+src/engine/plant-quote.ts:1: spec/combat.md#damage-channels-and-the-additional "two words"
+quotations: 2 comments and 0 titles
+--- a short quote (two words) after its anchor
+src/engine/plant-quote.ts:1: spec/combat.md#damage-channels-and-the-additional "two words"
+quotations: 2 comments and 0 titles
+--- a quote in the section, before its anchor (not listed)
+quotations: 1 comments and 0 titles
+--- the branch's own list (no plant)
+src/engine/__corpus__/node-shims.d.ts:3: CONVENTIONS.md#test-environments "vite/client"
+quotations: 1 comments and 0 titles
+node-shims.d.ts:3 is the one expected false positive; its target lines:
+// Minimal ambient shims for the three Node built-ins `corpus-digest.test.ts`
+// needs to write its own generated fixture. `tsconfig.app.json`'s `types` array is deliberately
+// `["vite/client"]` only (`CONVENTIONS.md#test-environments`: engine tests run in Node, but `src/`
+// as a whole must not gain Node-only globals that would leak into UI/browser code) -- `@types/node`
+
+## D. comments: provenance words in value literals and a mid-camel phase id (round 2; a scratch tree, one file src/plant.ts or src/plant.test.ts)
+--- baseline: no plant
+comments: PASS, 0 comments and 0 titles in 1 files
+exit 0
+--- a provenance word in an error message: 'not available before Phase 8'
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 2, phase number): "not available before Phase 8"
+comments: FAIL, 1 problems
+exit 1
+--- an ASSUMPTION in a report label: 'ASSUMPTION 22: floor-1 clear'
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 1, ASSUMPTION marker): "ASSUMPTION 22: floor-1 clear"
+comments: FAIL, 1 problems
+exit 1
+--- a phase id in a template: `the Phase-3 ${x} trait`
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 3, phase id): "the Phase-3 "
+comments: FAIL, 1 problems
+exit 1
+--- a phase number in a regex literal: /before Phase 8/
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 2, phase number): "/before Phase 8/"
+comments: FAIL, 1 problems
+exit 1
+--- a PR number: 'see PR #12'
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 6, PR number): "see PR #12"
+comments: FAIL, 1 problems
+exit 1
+--- a plan-item id: 'item B-2'
+src/plant.ts:1: pattern 20, provenance in a string literal (pattern 8, plan item id): "item B-2"
+comments: FAIL, 1 problems
+exit 1
+--- a mid-camel phase id in an identifier: placeholderPhase4Config
+src/plant.ts:1: pattern 19, slice or phase id in an identifier: "placeholderPhase4Config"
+comments: FAIL, 1 problems
+exit 1
+--- not flagged: 'a brief stun', 'the plan of attack', 'hp-percent', runA1
+comments: PASS, 0 comments and 0 titles in 1 files
+exit 0
+--- a title is reported once, by pattern 2: it('pins Phase 4 numbers')
+src/plant.test.ts:1: pattern 2, phase number: "pins Phase 4 numbers"
+comments: FAIL, 1 problems
+exit 1

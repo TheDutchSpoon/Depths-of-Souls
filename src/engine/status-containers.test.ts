@@ -1,8 +1,8 @@
 // Statuses as effect containers. Every test here is the one that fails with its
 // mechanism removed. Numbers are hand-derived in
 // the comments; the log-level behaviour is also pinned by the goldens (golden-stun,
-// golden-b6-provoke-stun-cleanup, golden-b2-skipped-turn-refuses-granted-cast,
-// golden-scoped-suppression, golden-b2-silenced-refuses-granted-cast) and the corpus digest.
+// golden-provoke-stun-cleanup, golden-granted-cast-refused-on-skipped-turn,
+// golden-scoped-suppression, golden-granted-cast-refused-by-fixture-lock) and the corpus digest.
 
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn } from './combat'

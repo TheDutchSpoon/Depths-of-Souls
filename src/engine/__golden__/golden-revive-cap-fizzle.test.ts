@@ -1,0 +1,15 @@
+import { describe, expect, it } from 'vitest'
+import { runGolden } from '../test-utils/golden-runner'
+import * as fixture from './golden-revive-cap-fizzle.fixture'
+import { expectedEvents } from './golden-revive-cap-fizzle.fixture'
+
+describe('golden replay: revive cap -- 11th-attempt fizzle', () => {
+  it('emits TriggerFired only, and draws zero RNG, when the sole dead ally is already at the cap', () => {
+    const { initial, events, state } = runGolden(fixture)
+
+    expect(events).toEqual(expectedEvents)
+    // Zero draws -- proves the pool-empty check runs BEFORE any random() call, not merely that
+    // the outcome happens to match.
+    expect(state.rng.position).toBe(initial.rng.position)
+  })
+})

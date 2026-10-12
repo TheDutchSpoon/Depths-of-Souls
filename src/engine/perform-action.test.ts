@@ -1,6 +1,7 @@
 // `perform-action` unit coverage beyond the goldens -- where each scope drains its
 // grants, who may act, the load-time rejections and the guard lint helpers. The goldens
-// (golden-e-*, the granted-cast/echo goldens) pin the end-to-end logs; each test here is the one
+// (golden-echo-chain-truncated, golden-grant-*, golden-granted-cast-*, golden-echo-provoke-redirects)
+// pin the end-to-end logs; each test here is the one
 // that fails with its mechanism removed.
 
 import { describe, expect, it } from 'vitest'

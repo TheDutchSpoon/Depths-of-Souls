@@ -29,7 +29,7 @@ import type { BalanceConfig } from '../balance-types'
  *    every store/integration test's `xpBanked` expectation follows the victim's level
  *    (`spec/creatures.md#levels-and-xp`).
  */
-export const PHASE_4_PLACEHOLDER_BALANCE_CONFIG: BalanceConfig = {
+export const TEST_BALANCE_CONFIG: BalanceConfig = {
   fightCountBase: 3,
   fightCountPerFloor: 0,
   enemyPartySizeCap: 6,

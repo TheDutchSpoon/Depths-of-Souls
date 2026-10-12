@@ -4,7 +4,7 @@
 // `on-damage-taken -> apply-status(triggering-source, confusion)` trait would resolve
 // `triggering-source` to WRETCH itself and confuse its own bearer off its own Poison tick.
 // (A tick offers no `triggering-source` at all, applier alive or not --
-// golden-h2b2-tick-no-retaliation covers a living OTHER applier; this golden keeps the
+// golden-status-snapshot-tick-no-retaliation covers a living OTHER applier; this golden keeps the
 // self-applied case.)
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). P (speed 20) acts before

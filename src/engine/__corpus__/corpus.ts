@@ -4,8 +4,10 @@
 //
 // This module imports `src/data`, exactly like `__golden__` fixtures do. Engine SOURCE must
 // never import it (it lives outside `src/engine`'s own files, in a leaf-only, test-facing
-// directory) -- `src/engine` stays pure per `CONVENTIONS.md#the-engine-is-pure-and-deterministic` rule. It sits outside
-// `__golden__/` on purpose, so `frozen-replay-sweep.test.ts`'s fixture glob doesn't pick it up.
+// directory) -- `src/engine` stays pure per the `CONVENTIONS.md#the-engine-is-pure-and-deterministic`
+// rule. It sits outside `__golden__/` because it is a corpus builder, not a `GoldenFixture`: it
+// exports no party for the shared runner to replay
+// (`CONVENTIONS.md#every-golden-replays-through-one-shared-runner`).
 
 import { generateFloor, materializeCreature } from '../generation'
 import { createSeededRng } from '../rng'
@@ -322,7 +324,7 @@ const SPELL_FIGHTS: readonly SpellFightSpec[] = [
 
 /** Silence (a Brute caster, Violence) and Pacify (a Pollinator Beneficiary, Wit, no
  * innate spell). */
-const F3_SPELL_FIGHTS: readonly SpellFightSpec[] = [
+const LOCK_SPELL_FIGHTS: readonly SpellFightSpec[] = [
   { spell: SILENCE, caster: BRUTE_STARTER, speciesId: BRUTE_STARTER_SPECIES_ID },
   {
     spell: PACIFY,
@@ -650,7 +652,7 @@ export function buildCorpus(): readonly CorpusFight[] {
     // (entries 524-525, seeds 2015-2016): appended, never interleaved. Same shape as
     // SPELL_FIGHTS (an `always-cast` caster against WALL_ENEMY), so the status landing rides on
     // no random draw.
-    ...F3_SPELL_FIGHTS.map((spec, i) => buildSpellFight(SPELL_FIGHTS.length + i, spec)),
+    ...LOCK_SPELL_FIGHTS.map((spec, i) => buildSpellFight(SPELL_FIGHTS.length + i, spec)),
     // Life Siphon's coverage fight, appended after entry 525 (entry 526).
     buildLifeSiphonFight(),
   ]

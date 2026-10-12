@@ -1,0 +1,132 @@
+# Gates
+
+Round 4. node v24.19.0, npm 11.12.1, origin/main 590d82a
+
+## npm run test
+warning: in the working copy of 'src/p-h9z.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/a.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/a.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/golden-h9z-a.fixture.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/golden-h9z-a.test.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/other.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/s.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/l.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/s.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/l.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/x.d.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/l.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/x.d.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/l.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/s.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/l.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/d.test.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/s.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/d.test.ts', LF will be replaced by CRLF the next time Git touches it
+
+ Test Files  212 passed (212)
+      Tests  1850 passed | 1 skipped (1851)
+   Start at  13:18:57
+   Duration  26.17s (tests 76%, import 13%, transform 7%, environment 2%, worker 2%)
+
+exit: 0
+
+## npm run lint
+
+> depths-of-souls@0.0.0 lint
+> eslint .
+
+exit: 0
+
+## npm run format:check
+
+> depths-of-souls@0.0.0 format:check
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+exit: 0
+
+## npm run build
+
+> depths-of-souls@0.0.0 build
+> tsc -b && vite build
+
+[36mvite v8.3.3 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 48 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.51 kB │ gzip:  0.31 kB
+dist/assets/index-CpQxvG1H.css    0.32 kB │ gzip:  0.20 kB
+dist/assets/index-CPteU_Xa.js   295.23 kB │ gzip: 86.22 kB
+
+[32m✓ built in 89ms[39m
+exit: 0
+
+## npm run docs:check -- citations
+
+> depths-of-souls@0.0.0 docs:check
+> node scripts/docs-check.ts citations
+
+citations: PASS, 642 citations in 436 files
+exit: 0
+
+## npm run docs:check -- comments
+
+> depths-of-souls@0.0.0 docs:check
+> node scripts/docs-check.ts comments
+
+comments: PASS, 7008 comments and 1629 titles in 403 files
+exit: 0
+
+## npm run docs:check -- budgets
+
+> depths-of-souls@0.0.0 docs:check
+> node scripts/docs-check.ts budgets
+
+file                 size     budget  used  status
+CLAUDE.md            5.5 KB   7 KB    79%   ok
+CONVENTIONS.md       26.6 KB  29 KB   92%   ok
+spec/combat.md       35.7 KB  43 KB   83%   ok
+spec/creatures.md    18.1 KB  22 KB   82%   ok
+spec/effects.md      32.0 KB  39 KB   82%   ok
+spec/progression.md  4.7 KB   6 KB    78%   ok
+spec/responses.md    12.1 KB  15 KB   81%   ok
+spec/run.md          17.6 KB  22 KB   80%   ok
+spec/saves.md        3.9 KB   5 KB    78%   ok
+spec/scripting.md    11.6 KB  14 KB   83%   ok
+spec/statuses.md     17.1 KB  21 KB   82%   ok
+spec/store.md        2.8 KB   4 KB    70%   ok
+budgets: 12 files, 0 over budget
+exit: 0
+
+## npm run docs:check -- comments --counts
+> depths-of-souls@0.0.0 docs:check
+> node scripts/docs-check.ts comments --counts
+
+totals: 403 files, 7008 comment ranges, 1629 titles (1599 plain, 19 each, 3 skipIf/runIf, 8 template)
+pattern  comments  titles  files  what
+      1         0       0      0  ASSUMPTION marker
+      2         0       0      0  phase number
+      3         0       0      0  phase id
+      4         0       0      0  slice id
+      5         0       0      0  slice name
+      6         0       0      0  PR number
+      7         0       0      0  review round
+      8         0       0      0  plan item id
+      9         0       0      0  plan item range or rule
+     10         0       0      0  workflow word
+     11         0       0      0  locked as a decision
+     12         0       0      0  decided at a point in history
+     13         0       0      0  section sign
+     14         0       0      0  brief
+     15         0       0      0  the plan
+     16         0       0      0  plan review
+     17         0       0      0  sign-off
+     18  file names: 0 hits in 0 files
+     19  identifiers: 0 hits in 0 files
+     20  string literals: 0 hits in 0 files
+exit: 0
+
+## npx tsc -b
+exit: 0

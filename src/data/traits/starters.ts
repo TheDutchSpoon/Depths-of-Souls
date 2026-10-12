@@ -15,8 +15,9 @@ import { ARCANE_BOLT } from '../spells'
  * chance is rolled at trigger time; the gem, then the target, are drawn when the grant runs.
  * The innate spell is an `innate-spell { spell: ARCANE_BOLT }` effect on the trait rather than a
  * fixed `SpeciesCreature.equippedSpells` loadout baked into the species template, so it travels
- * through fusion, whichever parent the Seer is. Not a gem: no level, no augments, no equip gate. `createCombat`'s fight-setup prepends
- * every `innate-spell` effect's spell onto the creature's `equippedSpells`, innate slots first. */
+ * through fusion, whichever parent the Seer is. Not a gem: no level, no augments, no equip gate.
+ * `createCombat`'s fight-setup prepends every `innate-spell` effect's spell onto the creature's
+ * `equippedSpells`, innate slots first. */
 export const SORCERER_STARTER_TRAIT: Trait = {
   id: 'sorcerer-starter-arcane-surge',
   name: 'Arcane Surge',

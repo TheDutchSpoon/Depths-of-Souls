@@ -1786,7 +1786,7 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     `T4 stop: frontier ${spec.t4.stopReasons.frontier}, cap ${spec.t4.stopReasons.cap}; walled seeds ${spec.t4.seedsWalled} (before floor 10: ${spec.t4.seedsWalledBeforeFloor10}); first-wall floors ${walls || 'none'}; deepest floor median ${fmt(median(spec.t4.deepestFloors))}`,
   )
   out.push(
-    `T4 walls' size (ASSUMPTION 108): most failed pushes on one floor below ${FIRST_BOSS_FLOOR}, per seed: ${fmtSpread(spec.t4.worstFailedPushesBelow10)}; floor runs to the first floor-${FIRST_BOSS_FLOOR} clear: ${fmtSpread(spec.t4.runsToFirstFloor10Clear.spread)} over the seeds that clear it, ${spec.t4.runsToFirstFloor10Clear.neverClearing} never do`,
+    `T4 walls' size: most failed pushes on one floor below ${FIRST_BOSS_FLOOR}, per seed: ${fmtSpread(spec.t4.worstFailedPushesBelow10)}; floor runs to the first floor-${FIRST_BOSS_FLOOR} clear: ${fmtSpread(spec.t4.runsToFirstFloor10Clear.spread)} over the seeds that clear it, ${spec.t4.runsToFirstFloor10Clear.neverClearing} never do`,
   )
   out.push(
     `T5/compounding per floor (p = per-fight win rate, p^n = predicted clear for n fights):`,
@@ -1864,7 +1864,7 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     `Rot Sovereign's Attrition (policy runs): ${a.visits} visits, ${a.policyClears} cleared, mean deaths ${fmt(a.meanDeaths)}, max Attrition stacks ${a.maxAttritionStacks}, peak boss Attack ${fmt(a.maxPeakAttack)}`,
   )
   out.push(
-    `ASSUMPTION 22: floor-1 clear >= ${FLOOR1_MIN_CLEAR_PCT}%: ${fmt(t.floor1ClearRatePct)}% ${verdict(t.floor1Pass)}; first soul median <= ${FIRST_SOUL_MAX_RUNS} floor runs: ${fmtMedian(t.medianRunsToFirstSoul)} ${verdict(t.firstSoulPass)}; a seed fights on floor ${SESSION_TARGET_FLOOR}+ in its first ${FLOOR5_WINDOW_RUNS} floor runs: ${t.seedsReachingFloor5InWindow} seeds ${verdict(t.floor5Pass)}`,
+    `CI thresholds: floor-1 clear >= ${FLOOR1_MIN_CLEAR_PCT}%: ${fmt(t.floor1ClearRatePct)}% ${verdict(t.floor1Pass)}; first soul median <= ${FIRST_SOUL_MAX_RUNS} floor runs: ${fmtMedian(t.medianRunsToFirstSoul)} ${verdict(t.firstSoulPass)}; a seed fights on floor ${SESSION_TARGET_FLOOR}+ in its first ${FLOOR5_WINDOW_RUNS} floor runs: ${t.seedsReachingFloor5InWindow} seeds ${verdict(t.floor5Pass)}`,
   )
   return out
 }
@@ -1874,7 +1874,7 @@ export function formatReport(report: BalanceReport): string {
     `Balance report: ${report.seeds.length} seeds (${report.seeds[0]}..${report.seeds[report.seeds.length - 1]}), run cap ${report.runCap}, content frontier floor ${report.frontier}`,
   ]
   for (const spec of report.specs) lines.push(...formatSpec(spec, report.frontier))
-  lines.push('', 'ASSUMPTION 22 summary (reported, not asserted):')
+  lines.push('', 'CI thresholds summary (reported, not asserted):')
   for (const spec of report.specs) {
     const t = spec.thresholds
     lines.push(

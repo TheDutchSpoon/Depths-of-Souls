@@ -1,8 +1,19 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join, posix, resolve } from 'node:path'
 import ts from 'typescript'
 import { git, resolveRev } from './git.ts'
+import {
+  baseHits,
+  caseCollisions,
+  countOfName,
+  loadRenames,
+  specifierStem,
+  stemOf,
+} from './renames.ts'
+import type { RenameFile, RenameName } from './renames.ts'
 import { fullName, parse, scanSource, scriptKind } from './scanner.ts'
+import { identifiersOf, literalsOf } from './tokens.ts'
+import type { Literal } from './tokens.ts'
 import { UsageError } from './usage.ts'
 
 // `comment-proof <base>` proves a change is comment-only: the working tree's code is the same as
@@ -16,6 +27,14 @@ import { UsageError } from './usage.ts'
 // because removing comments strips them: a pragma is its exact text plus the index of the token it
 // governs. A mask lists the string literals (test titles, a fixture template) the change is allowed
 // to reword.
+//
+// `--renames <file>` also lets the change rename files, identifiers and string literals
+// (`renames.ts`). A listed file pair is one file: the importers' specifiers for it, and each listed
+// identifier or literal, are read as one token on both sides, and the rest of the code must be
+// equal. A listed name that matches more or fewer occurrences than it says, a new name that is
+// already a name in the base, or a pair that is not a rename fails. With `--renames` the line
+// wrapping and trailing commas of the code are not compared: a renamed import is a different
+// width, so the formatter wraps it differently.
 
 const SCOPE = ['src', 'vite.config.ts', 'eslint.config.js']
 const CODE = /\.(?:tsx?|jsx?|[cm]js)$/
@@ -79,55 +98,75 @@ export function loadMask(path: string): MaskEntry[] {
   return entries
 }
 
-interface Literal {
-  /** Cooked text. */
-  text: string
-  /** The span a mask replaces: the whole literal for a string, the inside of a template part. */
-  from: number
-  to: number
-  quoted: boolean
-}
-
-function literalsOf(file: string, text: string): Literal[] {
-  const out: Literal[] = []
-  const visit = (node: ts.Node, sf: ts.SourceFile) => {
-    const start = node.getStart(sf)
-    if (ts.isStringLiteral(node))
-      out.push({ text: node.text, from: start, to: node.end, quoted: true })
-    else if (ts.isNoSubstitutionTemplateLiteral(node))
-      out.push({ text: node.text, from: start + 1, to: node.end - 1, quoted: false })
-    else if (ts.isTemplateHead(node) || ts.isTemplateMiddle(node))
-      out.push({ text: node.text, from: start + 1, to: node.end - 2, quoted: false })
-    else if (ts.isTemplateTail(node))
-      out.push({ text: node.text, from: start + 1, to: node.end - 1, quoted: false })
-    ts.forEachChild(node, (child) => visit(child, sf))
-  }
-  const sf = parse(file, text)
-  visit(sf, sf)
-  return out
-}
-
 function occurrences(literals: Literal[], text: string): number {
   return literals.filter((l) => l.text === text).length
 }
 
-/** `text` with every literal whose cooked text is in `tokens` replaced by that token. */
-function maskLiterals(
-  text: string,
-  literals: Literal[],
-  tokens: Map<string, string>,
-): string {
+interface Edit {
+  from: number
+  to: number
+  text: string
+}
+
+/** `text` with each edit's span replaced; the edits must not overlap. */
+function applyEdits(text: string, edits: Edit[]): string {
   let out = text
-  for (const l of [...literals].sort((a, b) => b.from - a.from)) {
-    const token = tokens.get(l.text)
-    if (token === undefined) continue
-    out = out.slice(0, l.from) + (l.quoted ? `'${token}'` : token) + out.slice(l.to)
-  }
+  for (const e of [...edits].sort((a, b) => b.from - a.from))
+    out = out.slice(0, e.from) + e.text + out.slice(e.to)
   return out
 }
 
-function printed(file: string, text: string): string {
-  return ts.createPrinter({ removeComments: true }).printFile(parse(file, text))
+/** `text` with every literal that has a token replaced by it: quoted for a string, bare inside a template. */
+function literalEdits(
+  literals: Literal[],
+  tokenOf: (literal: Literal) => string | undefined,
+): Edit[] {
+  const edits: Edit[] = []
+  for (const l of literals) {
+    const token = tokenOf(l)
+    if (token !== undefined)
+      edits.push({ from: l.from, to: l.to, text: l.quoted ? `'${token}'` : token })
+  }
+  return edits
+}
+
+/** The tokens of a printed file, one statement or block edge per line, without trailing commas. */
+function layoutFree(file: string, printedText: string): string {
+  const tokens: string[] = []
+  const sf = parse(file, printedText)
+  const visit = (node: ts.Node) => {
+    const children = node
+      .getChildren(sf)
+      .filter(
+        (c) =>
+          c.kind < ts.SyntaxKind.FirstJSDocNode || c.kind > ts.SyntaxKind.LastJSDocNode,
+      )
+    if (children.length === 0) {
+      if (
+        node.kind !== ts.SyntaxKind.SyntaxList &&
+        node.kind !== ts.SyntaxKind.EndOfFileToken
+      )
+        tokens.push(node.getText(sf))
+      return
+    }
+    for (const child of children) visit(child)
+  }
+  visit(sf)
+  return tokens
+    .filter((t, i) => !(t === ',' && /^[)\]}>]$/.test(tokens[i + 1] ?? '')))
+    .map((t) => (/^[;{}]$/.test(t) ? `${t}\n` : `${t} `))
+    .join('')
+}
+
+/**
+ * The file printed without its comments. With `layoutFree`, line wrapping and trailing commas
+ * are dropped as well: the printer keeps the source's line breaks, and a longer or shorter name
+ * makes the formatter wrap a line differently. The printer ends every statement with a semicolon,
+ * so joining its tokens loses no statement boundary.
+ */
+function printed(file: string, text: string, layout: boolean): string {
+  const out = ts.createPrinter({ removeComments: true }).printFile(parse(file, text))
+  return layout ? layoutFree(file, out) : out
 }
 
 function firstDifference(a: string, b: string): string {
@@ -190,10 +229,28 @@ function syntaxError(file: string, text: string): string | undefined {
   return `line ${line}: ${ts.flattenDiagnosticMessageText(d.messageText, ' ')}`
 }
 
+interface RenameScope {
+  baseDir: string
+  headDir: string
+  /** The listed file renames that passed their own check; a specifier token is an index into this. */
+  files: RenameFile[]
+  identifiers: RenameName[]
+  literals: RenameName[]
+}
+
 interface FileVerdict {
   reasons: string[]
   masked: number
   pairs: string[]
+  specifiers: number
+  identifiers: number
+  literals: number
+}
+
+function groupByNew(entries: RenameName[]): Map<string, RenameName[]> {
+  const groups = new Map<string, RenameName[]>()
+  for (const e of entries) groups.set(e.new, [...(groups.get(e.new) ?? []), e])
+  return groups
 }
 
 function compareCode(
@@ -201,8 +258,16 @@ function compareCode(
   base: string,
   head: string,
   entries: MaskEntry[],
+  rename?: RenameScope,
 ): FileVerdict {
-  const verdict: FileVerdict = { reasons: [], masked: 0, pairs: [] }
+  const verdict: FileVerdict = {
+    reasons: [],
+    masked: 0,
+    pairs: [],
+    specifiers: 0,
+    identifiers: 0,
+    literals: 0,
+  }
   const headBroken = syntaxError(file, head)
   const baseBroken = headBroken === undefined ? syntaxError(file, base) : undefined
   if (headBroken !== undefined || baseBroken !== undefined) {
@@ -245,11 +310,78 @@ function compareCode(
         `mask: ${shown(newText)} occurs ${found} times in the working tree, expected ${expected}`,
       )
   }
+
+  // The rename map: each listed literal and identifier is one token on both sides, a name that
+  // is not listed stays as it is, so it must be equal.
+  const idBase = new Map<string, string>()
+  const idHead = new Map<string, string>()
+  const baseIds = rename ? identifiersOf(file, base) : []
+  const headIds = rename ? identifiersOf(file, head) : []
+  if (rename) {
+    let r = 0
+    for (const [newText, group] of groupByNew(rename.literals)) {
+      const token = `RENLIT${r++}`
+      for (const e of group) {
+        tokens.set(e.old, token)
+        const found = occurrences(baseLits, e.old)
+        if (found !== countOfName(e))
+          countReasons.push(
+            `renames literal ${shown(e.old)} -> ${shown(e.new)} expects ${countOfName(e)} in the base, found ${found}`,
+          )
+      }
+      headTokens.set(newText, token)
+      const expected = group.reduce((sum, e) => sum + countOfName(e), 0)
+      const found = occurrences(headLits, newText)
+      if (found !== expected)
+        countReasons.push(
+          `renames: literal ${shown(newText)} occurs ${found} times in the working tree, expected ${expected}`,
+        )
+      verdict.literals += expected
+    }
+    for (const [newText, group] of groupByNew(rename.identifiers)) {
+      const token = `RENID${r++}`
+      for (const e of group) {
+        idBase.set(e.old, token)
+        const found = baseIds.filter((t) => t.text === e.old).length
+        if (found !== countOfName(e))
+          countReasons.push(
+            `renames identifier ${e.old} -> ${e.new} expects ${countOfName(e)} in the base, found ${found}`,
+          )
+      }
+      idHead.set(newText, token)
+      const expected = group.reduce((sum, e) => sum + countOfName(e), 0)
+      const found = headIds.filter((t) => t.text === newText).length
+      if (found !== expected)
+        countReasons.push(
+          `renames: identifier ${newText} occurs ${found} times in the working tree, expected ${expected}`,
+        )
+      verdict.identifiers += expected
+    }
+  }
   verdict.reasons.push(...countReasons)
 
   if (countReasons.length === 0) {
-    const a = printed(file, maskLiterals(base, baseLits, tokens))
-    const b = printed(file, maskLiterals(head, headLits, headTokens))
+    const specifierToken = (dir: string, side: 'old' | 'new') => (l: Literal) => {
+      if (!rename || l.context !== 'specifier') return undefined
+      const stem = specifierStem(dir, l.text)
+      const i = rename.files.findIndex((f) => stemOf(f[side]) === stem)
+      return i < 0 ? undefined : `SPEC${i}`
+    }
+    const baseSpec = specifierToken(rename?.baseDir ?? '', 'old')
+    const headSpec = specifierToken(rename?.headDir ?? '', 'new')
+    const baseEdits = literalEdits(baseLits, (l) => baseSpec(l) ?? tokens.get(l.text))
+    const headEdits = literalEdits(headLits, (l) => headSpec(l) ?? headTokens.get(l.text))
+    verdict.specifiers = baseLits.filter((l) => baseSpec(l) !== undefined).length
+    for (const t of baseIds) {
+      const token = idBase.get(t.text)
+      if (token !== undefined) baseEdits.push({ from: t.from, to: t.to, text: token })
+    }
+    for (const t of headIds) {
+      const token = idHead.get(t.text)
+      if (token !== undefined) headEdits.push({ from: t.from, to: t.to, text: token })
+    }
+    const a = printed(file, applyEdits(base, baseEdits), rename !== undefined)
+    const b = printed(file, applyEdits(head, headEdits), rename !== undefined)
     if (a !== b) verdict.reasons.push(`code differs at ${firstDifference(a, b)}`)
     for (const e of entries) {
       verdict.masked += countOf(e)
@@ -257,6 +389,14 @@ function compareCode(
         `  ${shown(e.old)} -> ${shown(e.new)}${countOf(e) > 1 ? ` (x${countOf(e)})` : ''}`,
       )
     }
+    for (const e of rename?.identifiers ?? [])
+      verdict.pairs.push(
+        `  identifier ${e.old} -> ${e.new}${countOfName(e) > 1 ? ` (x${countOfName(e)})` : ''}`,
+      )
+    for (const e of rename?.literals ?? [])
+      verdict.pairs.push(
+        `  literal ${shown(e.old)} -> ${shown(e.new)}${countOfName(e) > 1 ? ` (x${countOfName(e)})` : ''}`,
+      )
   }
 
   const baseScan = scanSource(file, base)
@@ -290,14 +430,41 @@ function lines(output: Buffer): string[] {
   return output.toString('utf8').split('\0').filter(Boolean)
 }
 
+/** Why a listed file rename is not a rename, or undefined when it is one. */
+function pairProblem(
+  f: RenameFile,
+  baseFiles: Set<string>,
+  headFiles: Set<string>,
+  baseRev: string,
+): string | undefined {
+  if (!baseFiles.has(f.old)) return `${f.old} is not in ${baseRev}`
+  if (headFiles.has(f.old)) return `${f.old} is still in the working tree`
+  if (!headFiles.has(f.new)) return `${f.new} is not in the working tree`
+  if (baseFiles.has(f.new)) return `${f.new} is already in ${baseRev}`
+  if (posix.dirname(f.old) !== posix.dirname(f.new)) return 'the directory changes'
+  if (posix.extname(f.old) !== posix.extname(f.new)) return 'the extension changes'
+  if (!CODE.test(f.new)) return 'not a code file'
+  return undefined
+}
+
+interface Loaded {
+  basePath: string
+  headPath: string
+  baseText: string
+  headText: string
+  pair: boolean
+}
+
 /** Runs the proof and returns the exit code: 0 when every file is OK, 1 on any FAIL or git error. */
 export function runCommentProof(
   root: string,
   baseRev: string,
   maskPath: string | undefined,
   log: (line: string) => void,
+  renamesPath?: string,
 ): number {
   const entries = maskPath === undefined ? [] : loadMask(maskPath)
+  const renames = renamesPath === undefined ? undefined : loadRenames(renamesPath)
   const sha = resolveRev(root, baseRev)
   const baseFiles = new Set(
     lines(git(root, ['ls-tree', '-r', '-z', '--name-only', sha, '--', ...SCOPE])),
@@ -321,35 +488,141 @@ export function runCommentProof(
   const fails: string[] = []
   const oks: string[] = []
   const visited = new Set<string>()
+
+  // The listed renames that are renames; the rest fail here and, being unpaired, as deleted or added.
+  const pairs: RenameFile[] = []
+  const byNew = new Map<string, RenameFile>()
+  const byOld = new Set<string>()
+  if (renames) {
+    for (const f of renames.files) {
+      const problem = pairProblem(f, baseFiles, headFiles, baseRev)
+      if (problem !== undefined) {
+        fails.push(
+          `FAIL ${f.new}: renames entry ${f.old} -> ${f.new} not consumed (${problem})`,
+        )
+        continue
+      }
+      byNew.set(f.new, f)
+      byOld.add(f.old)
+      pairs.push(f)
+    }
+    for (const [path, other] of caseCollisions([
+      ...new Set([...baseFiles, ...headFiles]),
+    ]))
+      fails.push(`FAIL ${path}: differs from ${other} only in case`)
+    const collide = (
+      kind: 'identifier' | 'literal',
+      names: RenameName[],
+      label: string,
+    ) => {
+      const hits = baseHits(root, sha, SCOPE, kind, [...new Set(names.map((n) => n.new))])
+      for (const e of names) {
+        const where = hits.get(e.new)
+        if (where !== undefined)
+          fails.push(
+            `FAIL ${e.file}: ${label} ${shown(e.new)} already exists in ${baseRev} (${where})`,
+          )
+      }
+    }
+    collide('identifier', renames.identifiers, 'new identifier')
+    collide('literal', renames.literals, 'new literal')
+  }
+
+  const loaded: Loaded[] = []
   for (const path of [...new Set([...baseFiles, ...headFiles])].sort()) {
+    if (byOld.has(path)) continue
     if (!headFiles.has(path)) {
       fails.push(`FAIL ${path}: deleted (in ${baseRev}, not in the working tree)`)
       continue
     }
-    if (!baseFiles.has(path)) {
+    const pair = byNew.get(path)
+    const basePath = pair?.old ?? path
+    if (!baseFiles.has(basePath)) {
       fails.push(`FAIL ${path}: added (not in ${baseRev})`)
       continue
     }
-    const baseBytes = git(root, ['show', `${sha}:${path}`])
+    const baseBytes = git(root, ['show', `${sha}:${basePath}`])
     const headBytes = readFileSync(join(root, path))
     if (!CODE.test(path)) {
       if (!baseBytes.equals(headBytes)) fails.push(`FAIL ${path}: non-code file changed`)
       continue
     }
-    const baseText = baseBytes.toString('utf8').replace(/\r/g, '')
-    const headText = headBytes.toString('utf8').replace(/\r/g, '')
-    if (baseText === headText) continue
-    visited.add(path)
+    loaded.push({
+      basePath,
+      headPath: path,
+      baseText: baseBytes.toString('utf8').replace(/\r/g, ''),
+      headText: headBytes.toString('utf8').replace(/\r/g, ''),
+      pair: pair !== undefined,
+    })
+  }
+
+  // Specifiers are counted over the whole tree, changed or not: an importer left on the old name
+  // is a break the importer's own diff would not show.
+  const specBase = pairs.map(() => 0)
+  const specHead = pairs.map(() => 0)
+  if (pairs.length > 0) {
+    const needles = pairs.flatMap((f) => [
+      posix.basename(stemOf(f.old)),
+      posix.basename(stemOf(f.new)),
+    ])
+    const specifiersOf = (path: string, text: string, dir: string) =>
+      needles.some((n) => text.includes(n))
+        ? literalsOf(path, text)
+            .filter((l) => l.context === 'specifier')
+            .map((l) => specifierStem(dir, l.text))
+        : []
+    for (const l of loaded) {
+      for (const stem of specifiersOf(l.basePath, l.baseText, posix.dirname(l.basePath)))
+        pairs.forEach((f, i) => {
+          if (stem === stemOf(f.old)) specBase[i]++
+        })
+      for (const stem of specifiersOf(l.headPath, l.headText, posix.dirname(l.headPath)))
+        pairs.forEach((f, i) => {
+          if (stem === stemOf(f.new)) specHead[i]++
+          if (stem === stemOf(f.old))
+            fails.push(
+              `FAIL ${l.headPath}: imports ${f.old}, which was renamed to ${f.new}`,
+            )
+        })
+    }
+    pairs.forEach((f, i) => {
+      const expected = f.imports ?? 0
+      if (specBase[i] !== expected || specHead[i] !== expected)
+        fails.push(
+          `FAIL ${f.new}: renames entry ${f.old} -> ${f.new} expects ${expected} importing specifiers, found ${specBase[i]} in the base and ${specHead[i]} in the working tree`,
+        )
+    })
+  }
+
+  for (const l of loaded) {
+    if (!l.pair && l.baseText === l.headText) continue
+    visited.add(l.headPath)
+    const scope: RenameScope | undefined = renames && {
+      baseDir: posix.dirname(l.basePath),
+      headDir: posix.dirname(l.headPath),
+      files: pairs,
+      identifiers: renames.identifiers.filter((e) => e.file === l.headPath),
+      literals: renames.literals.filter((e) => e.file === l.headPath),
+    }
     const verdict = compareCode(
-      path,
-      baseText,
-      headText,
-      entries.filter((e) => e.file === path),
+      l.headPath,
+      l.baseText,
+      l.headText,
+      entries.filter((e) => e.file === l.headPath),
+      scope,
     )
     if (verdict.reasons.length > 0)
-      for (const reason of verdict.reasons) fails.push(`FAIL ${path}: ${reason}`)
+      for (const reason of verdict.reasons) fails.push(`FAIL ${l.headPath}: ${reason}`)
     else {
-      oks.push(`OK ${path}${verdict.masked > 0 ? ` (masked ${verdict.masked})` : ''}`)
+      const notes: string[] = []
+      if (l.pair) {
+        const i = pairs.findIndex((f) => f.new === l.headPath)
+        notes.push(`renamed from ${l.basePath}`, `imports ${specBase[i]}`)
+      } else if (verdict.specifiers > 0) notes.push(`specifiers ${verdict.specifiers}`)
+      if (verdict.identifiers > 0) notes.push(`identifiers ${verdict.identifiers}`)
+      if (verdict.literals > 0) notes.push(`literals ${verdict.literals}`)
+      if (verdict.masked > 0) notes.push(`masked ${verdict.masked}`)
+      oks.push(`OK ${l.headPath}${notes.length > 0 ? ` (${notes.join('; ')})` : ''}`)
       oks.push(...verdict.pairs)
     }
   }
@@ -359,6 +632,16 @@ export function runCommentProof(
     if (!visited.has(e.file))
       fails.push(
         `FAIL ${e.file}: mask entry ${shown(e.old)} -> ${shown(e.new)} not consumed (no code change in that path, or it is not a file in scope)`,
+      )
+  for (const e of renames?.identifiers ?? [])
+    if (!visited.has(e.file))
+      fails.push(
+        `FAIL ${e.file}: renames identifier ${e.old} -> ${e.new} not consumed (no code change in that path, or it is not a file in scope)`,
+      )
+  for (const e of renames?.literals ?? [])
+    if (!visited.has(e.file))
+      fails.push(
+        `FAIL ${e.file}: renames literal ${shown(e.old)} -> ${shown(e.new)} not consumed (no code change in that path, or it is not a file in scope)`,
       )
 
   for (const line of oks) log(line)
