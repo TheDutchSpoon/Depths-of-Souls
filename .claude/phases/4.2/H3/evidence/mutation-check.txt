@@ -201,3 +201,11 @@ M73 name guard: the JSX text read removed: 3 test(s) fail
     names.test.ts > name guard, JSX text fails <p>not available before Phase 8</p>, naming the file and line
     names.test.ts > name guard, JSX text fails <p>h2b2-x</p>, naming the file and line
     names.test.ts > name guard, JSX text names the line of the text in a multi-line element
+
+## Round 4 (hand-out item 1), run on the final code
+Each applied in place to names.ts or tokens.ts (restored byte-equal after each, checked with cmp), the names.test.ts file run, the failing tests named. 2 mutations, 0 survive. Rows 74-75 continue the numbering above.
+
+M74 name guard: `literalHit(jsx.text, false)` turned to `true`: 1 test(s) fail
+    names.test.ts > name guard, JSX text fails a capitalised slice id that opens the text
+M75 jsxTextsOf: `trimStart()` dropped from `text`, line still taken from the first non-blank character: 1 test(s) fail
+    names.test.ts > name guard, JSX text fails a slice id in text that opens on its own wrapped line

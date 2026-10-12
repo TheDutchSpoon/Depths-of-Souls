@@ -255,6 +255,20 @@ describe('name guard, JSX text', () => {
     expect(text).toContain('src/x.tsx:3: pattern 20, provenance')
   })
 
+  it('fails a capitalised slice id that opens the text', () => {
+    const { code, text } = inJsx('<p>H3 shipped</p>')
+    expect(code).toBe(1)
+    expect(text).toContain('src/x.tsx:2: pattern 20, slice id in a string literal')
+  })
+
+  it('fails a slice id in text that opens on its own wrapped line', () => {
+    const { code, text } = check({
+      'src/x.tsx': 'export const a = (\n  <div>\n    h2b2-x is live\n  </div>\n)\n',
+    })
+    expect(code).toBe(1)
+    expect(text).toContain('src/x.tsx:3: pattern 20, slice id in a string literal')
+  })
+
   it('passes ordinary text', () => {
     expect(inJsx('<p>a brief stun</p>').code).toBe(0)
   })

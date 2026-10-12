@@ -3,7 +3,7 @@
 **Status: built.** Golden policy: one deliberate kind, fixture data ids. 35 golden fixtures carry a renamed id into their expected events and
 export the same values as `main`'s once the id map is applied to `main`'s side; the other golden fixtures export values deep-equal to `main`'s as
 they are. The corpus digest fixture is byte-unchanged and `npm run corpus:update` was not run. Test count under `src/` is 1358 (1357 passed,
-1 skipped): `main`'s 1357 file by file, under the rename map, plus the corpus fixture test. Under `scripts/` it is 491 (`main`: 325), all in the new
+1 skipped): `main`'s 1357 file by file, under the rename map, plus the corpus fixture test. Under `scripts/` it is 493 (`main`: 325), all in the new
 checks.
 
 ## What was built
