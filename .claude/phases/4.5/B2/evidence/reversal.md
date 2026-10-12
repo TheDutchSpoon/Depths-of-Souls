@@ -1,8 +1,10 @@
 # 4.5-B2 reversal proof: order alone
 
-The patch below puts `main`'s two orders back and changes nothing else: the helper returns
-party-array order, and `rollWebBreakFree` sorts the helper's list by `compareBySideSlotId`. It was
-applied to the finished tree, run, and reverted; it is not in `src/`.
+The patch below puts `main`'s two orders back: the helper returns party-array order, and
+`rollWebBreakFree` sorts the helper's list by `compareBySideSlotId`. For the run, `main`'s committed
+`src/engine/__corpus__/corpus-digest.fixture.ts` was swapped in (the finished tree's committed
+fixture is the regenerated one, which the reversal can't match); the patch and that swap were
+applied to the finished tree, run, and both restored; neither is in `src/`.
 
 ```diff
 --- src/engine/turn-order.ts	2026-10-12 21:03:32.366493000 +0200

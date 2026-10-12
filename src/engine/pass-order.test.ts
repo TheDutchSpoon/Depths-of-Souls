@@ -195,7 +195,7 @@ describe('the other multi-creature passes take turn order', () => {
     expect(firingOrder('on-damage-observed', {}, watch)).toEqual([F, S])
   })
 
-  it('on-death-observed, the dead creature left out', () => {
+  it('on-death-observed', () => {
     const watch = observer('watch-death', 'on-death-observed')
 
     // T has 1 HP and carries nothing: A's attack kills it.

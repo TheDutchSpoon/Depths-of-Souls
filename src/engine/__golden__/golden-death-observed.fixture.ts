@@ -1,7 +1,8 @@
 // Golden: `on-death-observed` and its `relationship` filter (`ally`, `enemy`, `any`, absent) on a
 // death, with a non-matching observer silent in each case, and the firing order: every living
-// creature but the dead one, in turn order (every Speed but the killer's is equal, so the player side
-// first then the enemy side, each in slot order), whichever side the dead creature was on.
+// creature but the dead one, in turn order (the killer, Speed 30, is first; every other Speed is
+// equal, so then the player side before the enemy side, each in slot order), whichever side the dead
+// creature was on.
 // Hand-derived; four fixture-local traits, one
 // per filter, each `apply-stat-modifier` on its own bearer with a distinct factor, so one firing
 // is one `TriggerFired` plus one `StatModifierApplied` (effectiveBefore 20: every observer has the
@@ -31,9 +32,10 @@
 // CASE 2, `playerDies`: the mirror, so `ally` and `enemy` are read from the dead creature's side
 //   in both directions. Players V (slot 0), PA (OBSERVE_ALLY), PE (OBSERVE_ENEMY), PB
 //   (OBSERVE_ABSENT); enemies K (the killer, no trait, slot 0), EE (OBSERVE_ENEMY), EA
-//   (OBSERVE_ALLY), EY (OBSERVE_ANY). V is dead; PA: `ally` -> fires (x1.2); PE: `enemy`, V is
-//   its ally -> silent; PB: no filter -> fires (x1.4); K no trait; EE: `enemy`, V is its enemy ->
-//   fires (x1.1); EA: `ally`, V is not its ally -> silent; EY: `any` -> fires (x1.3).
+//   (OBSERVE_ALLY), EY (OBSERVE_ANY). V is dead. Observers in turn order: K (no trait) first;
+//   PA: `ally` -> fires (x1.2); PE: `enemy`, V is its ally -> silent; PB: no filter -> fires
+//   (x1.4); EE: `enemy`, V is its enemy -> fires (x1.1); EA: `ally`, V is not its ally -> silent;
+//   EY: `any` -> fires (x1.3).
 //   Firing order: PA, PB, EE, EY.
 
 import { createCreatureId } from '../ids'
