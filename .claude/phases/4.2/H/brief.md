@@ -124,8 +124,9 @@ kickoff builds on.
   (4.2-H3's PR review).
 - `comments` catches the shapes it misses today: a lower-case `pre-` before a slice name
   (`pre-Slice-B`), `Slice-<X>` with a hyphen, a plan-item id with a hyphen (`B-2`), and review
-  words without "fix" or "round" (`design-review`, `(nit, review)`, `Nit (review)`).
-  `--quotations` also catches a quotation placed before its anchor and one of four words or fewer
+  words without "fix" or "round" (`design-review`, `(nit, review)`, `Nit (review)`); and a bare
+  suffixed plan-item id (`H2b2`): pattern 8 becomes `\b[A-I]\d[a-z]\d?\b`.
+  `--quotations` also catches a quotation that ends within four words before its anchor
   (4.2-H3's PR review).
 - No string literal in `src/` carries provenance: the fixture data ids are renamed (`## Split`),
   and the six strings that carry a provenance word are reworded: the
@@ -133,8 +134,9 @@ kickoff builds on.
   it, the three `state/balance-sim.ts` report strings ("ASSUMPTION 22", "ASSUMPTION 108") with
   `balance-sim.test.ts`'s assertion, and `engine/corpus-coverage.test.ts`'s reason string
   (4.2-H3's PR review).
-- `CONVENTIONS.md#corpus-digest`: the committed fixture's header is `renderFixture`'s, and the
-  default test run checks that, so the two can't drift apart (4.2-H3's PR review).
+- `CONVENTIONS.md#corpus-digest`: the committed fixture is exactly `renderFixture`'s formatted
+  output for its own rows (header, body template and formatting), and the default test run checks
+  that, so the two can't drift apart (4.2-H3's PR review).
 
 ## Known from 4.2-G's review
 
