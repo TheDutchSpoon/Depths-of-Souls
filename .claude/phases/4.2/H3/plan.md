@@ -1,5 +1,21 @@
 # Plan — Phase 4.2 — Slice H3: Names
 
+## Revision 1: what changed
+
+Answers `plan-review.md` round 1 (fixes 1-9, nit 10, decisions D1-D3, all as recommended).
+
+- **Fix 1**: `loadRenames` requires an injective id map (two different `old` to one `new` is exit 2, for `literals` and `identifiers`); the comparator uses exact whole-string replacement per fixture file. New rule 7, test row.
+- **Fix 2**: the `main` baseline extracts `src` plus `vite.config.ts`, `tsconfig*.json`, `package.json`, `.prettierrc.json`; its total is checked against a run on `main` (step 2, A18).
+- **Fix 3**: the literal arm skips test titles; table corrected; test row added.
+- **Fix 4**: the file arm has its own `readdir` walk; non-TS plant test added.
+- **Fix 5**: `h2b2` stems and tag become `status-snapshot-`; `h2b1-observed` becomes `damage-observed-` (the `damage-observation.test.ts:4` glob changes with it). Glob list updated.
+- **Fix 6**: counts corrected (11 tokens, seven `as CFG` aliases).
+- **Fix 7 / D3**: pattern 8 widens to `\b[A-I]\d[a-z]\d?\b`; plant row and 0-hit count added.
+- **Fix 8**: function exports are compared by transformed source with both maps; one `setup` shown.
+- **Fix 9**: the `node-shims.d.ts:3` `--quotations` false positive is expected and listed in `counts.txt`.
+- **Nit 10**: the generation test is `generation-floor-loadouts`; `golden-cost-and-tick-exclusion` says whose cost after the header is read; `corpus.ts:7`'s dropped possessive is fixed with the `:8` residue.
+- **D1**: the quotation blind spot is a quote ending within four words before its anchor (A11 unchanged). **D2**: the corpus test asserts the whole formatted render (A14 unchanged).
+
 Reads: `CLAUDE.md`, `workflow/coding-rules.md`, the kickoff, `phases/4.2/H/brief.md`,
 `CONVENTIONS.md` (the sections the kickoff lists), H1's and H2's records' tool sections, and the
 code the kickoff names (`scripts/docs-check/*`, `deploy.yml`, `golden-runner.ts`,
@@ -37,8 +53,7 @@ Tool first, proof second, renames third (kickoff: "build and test the tool chang
 1. **Tool** in `scripts/docs-check/`, test-first: new `comments` patterns, the name guard,
    the quotation scan, `comment-proof --renames`, the `--renames` plumbing in `cli.ts`. Mutation
    check each mechanism. Gates for `scripts/` green.
-2. **Baselines on `main`** (scratch, outside the repo): `git archive 590d82a src` extracted to
-   the scratchpad with a junction to `node_modules`; per-file test counts from
+2. **Baselines on `main`** (scratch, outside the repo): `git archive 590d82a` of `src` plus every root file the runs read (`vite.config.ts`, `tsconfig*.json`, `package.json`, `.prettierrc.json`, which `corpus-digest.test.ts` resolves) extracted to the scratchpad with a junction to `node_modules`, so vitest runs with the same `projects` split as the branch. Sanity check: the copy's total test count equals a run on `main` itself (or CI's count for `590d82a`); per-file test counts from
    `vitest run --reporter=json`; the collision sets (every identifier, string literal and file
    stem on `main`'s `src/`).
 3. **The maps**, by hand: `evidence/renames.json` (files, identifiers, literals) and
@@ -59,21 +74,22 @@ built in step 2 and re-run in step 6.
 
 - **Header**: "not wired into CI yet: it fails until the comment sweep has run" is replaced by
   what is true (it runs in CI's `test` job, `deploy.yml`). Pure comment.
-- **Five missed shapes** (A12), added to existing patterns so ids 1–17 stay stable. Each has 0
-  hits on today's tree (grepped; `\bpre-[Ss]lice` and the rest returned nothing):
+- **Six missed shapes** (A12; the sixth is D3), added to existing patterns so ids 1–17 stay stable. Each has 0
+  hits on today's tree (the widened pattern 8 included, re-measured at build) (grepped; `\bpre-[Ss]lice` and the rest returned nothing):
 
   | Pattern | Added regex | Plants |
   | --- | --- | --- |
   | 5 slice name | `/\b[Ss]lice-[A-Z]\d*[a-z]?\b/g` | `Slice-B`, `slice-C2` |
   | 5 slice name | `/\bpre-[Ss]lice\b/g` | `pre-Slice-B`, `pre-slice` |
   | 8 plan item id | `/\b[A-I]-\d\b/g` | `B-2` |
+  | 8 plan item id (D3) | the existing `\b[A-I]\d[a-z]\b` becomes `\b[A-I]\d[a-z]\d?\b` | `H2b2`, `Slice-H2b2` |
   | 7 review round | `/\bdesign-review\b/g` | `design-review` |
   | 7 review round | `/\((?:[A-Za-z]+,\s*)?review\)/g` | `(nit, review)`, `Nit (review)` |
 
   The bare word "review" stays legal (`engine/effect-types.ts:269` "needs a review").
 - **Name guard** (A1–A4), folded into `comments`: same walk, same CI step, `ci.test.ts`
   unchanged. New module `scripts/docs-check/names.ts` holds the three arms and is called from
-  `findCommentProblems`. `CommentProblem.kind` gains `'file' | 'identifier' | 'literal'`;
+  `findCommentProblems`. The file arm has its own walk: `commentFiles` collects `.ts`/`.tsx` only, so `names.ts` lists every path under `src/` (any extension) with `readdir`, plus the two configs; the identifier and literal arms use `commentFiles`. `CommentProblem.kind` gains `'file' | 'identifier' | 'literal'`;
   pattern ids 18–20. Output keeps the `file:line: what: "snippet"` form (a file-name problem
   is line 1).
 
@@ -81,7 +97,7 @@ built in step 2 and re-run in step 6.
   | --- | --- | --- | --- |
   | 18, file name | every path under `src/` (any extension) and the two configs; pieces from splitting on `/`, `-`, `.` | a piece `^[a-i]\d[a-z]?\d?$` (`g1`, `b5`, `h2b2`, `h2c`); the piece `e` right after `golden`; `phase` or `slice` followed by a digit piece | `1v1`, `6v6`, `t1`-style pieces outside a–i |
   | 19, identifier | every `ts.Identifier` token (declarations, uses, property names, import specifiers, types) | a `_`-segment `^[A-I]\d[a-z]?\d?$` in an identifier with more than one segment (`B5_FIXTURE`, `F3_SPELL_FIGHTS`); a leading camel `^[a-i]\d[a-z]?\d?(?=[A-Z])` (`b5Fixture`); a whole-word suffixed id `^[A-I]\d[a-z]\d?$` (`H2b2`, as pattern 8); `PHASE`/`Phase`/`phase` then `_`+digit or a digit (`PHASE_4_…`) | bare `A2`, `E0`–`E3`, `L1`, `P1`, `O1`, `R1`, `U1`, `T98`; `S1_SCRIPT`/`S2_SCRIPT` (S is not a slice letter) |
-  | 20, literal | every string and no-substitution template literal except a module specifier | `^(?:[a-i]\d[a-z]?\d?\|e)-` (`'h2b2-reapply-p1'`, `'e-echo-fixture'`); `-[a-i]\d[a-z]?\d?-` interior (`'random-target-b3-fixture'`); `^[A-I]\d[a-z]?\d?\s` (`'B5 cast (fixture)'`) | `'a-player-0'`, `'perk-N'`, `'hp-percent'`, `'a2'`, `'e0'`, `'e'` (no hyphen after), prose such as "E1 ticks at its own turn end" |
+  | 20, literal | every string and no-substitution template literal except a module specifier and a test title (fix 3) | `^(?:[a-i]\d[a-z]?\d?\|e)-` (`'h2b2-reapply-p1'`, `'e-echo-fixture'`); `-[a-i]\d[a-z]?\d?-` interior (`'random-target-b3-fixture'`); `^[A-I]\d[a-z]?\d?\s` (`'B5 cast (fixture)'`) | `'a-player-0'`, `'perk-N'`, `'hp-percent'`, `'a2'`, `'e0'`, `'e'` (no hyphen after); **test titles** (the first argument of `describe`/`it`/`test`, which the scanner already knows), so a title opening with a derivation label (`'E1 ticks first'`) passes |
 
   - **Why the guard reads string literals** (kickoff asks): the 92 distinct fixture ids and the
     three names are the largest provenance left in `src/`, and without an arm they come straight
@@ -96,9 +112,10 @@ built in step 2 and re-run in step 6.
     on the renamed tree and records 0 in `evidence/counts.txt`. (Today's measured identifier
     hits are `B5_FIXTURE`, `B5_CAST_FIXTURE`, `PHASE_4_PLACEHOLDER_BALANCE_CONFIG`,
     `F3_SPELL_FIGHTS`.)
+  - Expected `--quotations` false positive: `engine/__corpus__/node-shims.d.ts:3` (`"vite/client"`, a JSON value in a code span, just before `CONVENTIONS.md#test-environments`). Listed in `counts.txt` with its target lines; no code-span rule is added in this slice.
   - `--counts` prints three extra lines, one per arm (files / identifiers / literals), under
     the existing table.
-- **`--quotations`** (A11): `findQuotations` also attributes a quote that ends within four words
+- **`--quotations`** (A11, D1: there is no separate short-quote item; the blind spot is a quote that ends within four words before its anchor): `findQuotations` also attributes a quote that ends within four words
   *before* an anchor. Each quote has one owner: the nearer anchor within four words, the earlier
   anchor on a tie, so a quote between two anchors is not listed twice. The after-anchor path is
   unchanged. Planted short (≤4-word) quotes are tested in both positions.
@@ -153,7 +170,8 @@ The rules, each a failure naming the file and exit 1:
 6. **Not consumed.** An entry whose file did not change, an `identifiers`/`literals` entry whose
    `old` count differs from `count`, a `files` entry failing rule 1, all fail ("not consumed" /
    "expects N, found M"), as the mask does.
-7. **Mask composes.** `--mask` runs in the same pass over the same file (the six strings sit in
+7. **The id map is injective** (fix 1), checked in `loadRenames` (exit 2). Across the whole map, two `literals` entries with the same `new` must have the same `old`, and likewise `identifiers`. One `old` may map to one `new` in several files (`f3-bolt-fixture` is defined separately in four fixtures); two different olds to one new, in any files, may not.
+8. **Mask composes.** `--mask` runs in the same pass over the same file (the six strings sit in
    files that are not renamed, `state/` and `engine/corpus-coverage.test.ts`; a renamed test
    file may also have titles masked).
 - **Collision lookup** reads the base once: `git ls-tree` for the file list, `git grep -l -F`
@@ -174,8 +192,7 @@ as `--mask`), passed to `runCommentProof`; `USAGE` line updated.
 ### `src/` (after the tool)
 
 - **127 files renamed** (table below), `import` specifiers follow.
-- **Identifiers**: `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` → `TEST_BALANCE_CONFIG` (9 files, 13
-  uses; the six `as CFG` aliases keep `CFG`); `B5_FIXTURE` → `FIZZLE_ATTACK_FIXTURE`;
+- **Identifiers**: `PHASE_4_PLACEHOLDER_BALANCE_CONFIG` → `TEST_BALANCE_CONFIG` (11 identifier tokens in 9 files, 13 with the two comment mentions; the seven `as CFG` aliases, in `curves`, `generation`, `generation-g1`, `biomes`, `store`, `rewards` and `integration`, keep `CFG`); `B5_FIXTURE` → `FIZZLE_ATTACK_FIXTURE`;
   `B5_CAST_FIXTURE` → `FIZZLE_CAST_FIXTURE`; `F3_SPELL_FIGHTS` → `LOCK_SPELL_FIGHTS` (it holds
   Silence and Pacify). Final spellings are checked for collision by the tool.
 - **Fixture data ids and names**: 92 distinct ids + 2 names + `random-target-b3-fixture`, in 47
@@ -203,7 +220,7 @@ as `--mask`), passed to `runCommentProof`; `USAGE` line updated.
   the body template and the rows can't drift apart. It sits next to the digest test and skips
   under `--mode corpus-update` (that run rewrites the file). The fixture is not edited.
 - **Residue** (comment-only): `data/traits/starters.ts:18` rewrapped to ~100 columns;
-  `engine/__corpus__/corpus.ts:8`: "so `frozen-replay-sweep.test.ts`'s fixture glob doesn't pick
+  `engine/__corpus__/corpus.ts:7-8` (line 7 also has the dropped possessive in "per `CONVENTIONS.md#…` rule", fixed with it): "so `frozen-replay-sweep.test.ts`'s fixture glob doesn't pick
   it up" becomes what is true (no test globs `__golden__/`; the module is a corpus builder, not a
   `GoldenFixture` — `CONVENTIONS.md#every-golden-replays-through-one-shared-runner`); verified
   against the code before writing (A19).
@@ -241,23 +258,23 @@ case (the tool checks).
 | `f3-pacify-three-turns` / `f3-silence-three-turns` | `pacify-three-turns` / `silence-three-turns` |
 | `g1-leech-sovereign-pacified` | `leech-sovereign-pacified` |
 | `h2a-additional-{granted,hp-bound,levels,second-instance,spell,splashing}` | `additional-` + the same tail |
-| `h2a-cost` | `cost-and-tick-exclusion` |
+| `h2a-cost` | `cost-and-tick-exclusion` (the build reads the header and says whose cost it is, e.g. `self-damage-cost-…`, if it is one) |
 | `h2a-flat-indirect` / `h2a-indirect-keeps` / `h2a-indirect` | `indirect-flat-response` / `indirect-keeps-terms` / `indirect-trait-response` |
 | `h2a-spell-on-caster` | `spell-on-caster-direct` |
-| `h2b1-observed-{cost,lethal,silent,tick}` | `observed-` + the same tail |
+| `h2b1-observed-{cost,lethal,silent,tick}` | `damage-observed-` + the same tail |
 | `h2b1-wick-{burn-heal,gates,skips-self}` | `wick-` + the same tail |
 | `h2b1-last-gleam` | `last-gleam` |
-| `h2b2-{carrier-fresh,reapply,regen-potency,spore-spread,tick-dead-applier,tick-kill-on-death,tick-living-applier,tick-no-retaliation,tick-self-applied,tick-taken-factors,vulnerability-once}` | `applier-snapshot-` + the same tail |
+| `h2b2-{carrier-fresh,reapply,regen-potency,spore-spread,tick-dead-applier,tick-kill-on-death,tick-living-applier,tick-no-retaliation,tick-self-applied,tick-taken-factors,vulnerability-once}` | `status-snapshot-` + the same tail (the family spans `spec/statuses.md#no-stacking` and `#the-applier-snapshot`, as `status-snapshot.test.ts:1-2` says) |
 | `h2c-snapback` | `snapjaw-snapback` |
 | `h2d-dot-ticks` / `h2d-pollen-cloud` | `poison-burn-spore-ticks` / `pollen-cloud-sleep` |
-| (`engine/`) `generation-g1.test.ts` | `generation-cast-role-and-boss-fill.test.ts` |
+| (`engine/`) `generation-g1.test.ts` | `generation-floor-loadouts.test.ts` (covers all three `describe`s, including full distinct gem sets; the build re-reads them and may pick a closer name) |
 
 - **The collision pair** (trap 1): `granted-cast-refused-by-fixture-lock` (a trait-borne lock in
   the fixture) and `granted-cast-refused-by-silenced-status` (the real `Silenced` status from
   the real Silence spell), read from both headers. They pin the same refusal; both stay, and the
   report says so. If another pair turns out to pin the same thing it is reported, not merged.
-- **Globs** (trap 2), the six: `golden-h2b2-*` → `golden-applier-snapshot-*`;
-  `golden-h2b1-wick-*` → `golden-wick-*`; `golden-h2b1-observed-*` → `golden-observed-*`;
+- **Globs** (trap 2), the six: `golden-h2b2-*` → `golden-status-snapshot-*`;
+  `golden-h2b1-wick-*` → `golden-wick-*`; `golden-h2b1-observed-*` → `golden-damage-observed-*` (this also changes the glob at `damage-observation.test.ts:4`, and avoids the unrelated `golden-action-observed`);
   `golden-f2-*` → `golden-status-timing-*`; `golden-d3-revive-cap-*` →
   `golden-revive-cap-*` (still matches nothing it shouldn't: `golden-revive` has no `-cap-`);
   `golden-e-*` has no single mechanism (echo, grant), so its one mention
@@ -283,8 +300,8 @@ case (the tool checks).
   | `f2-` | `status-timing` |
   | `f3-` | `lock-timing` |
   | `h2a-` | `additional`, `indirect`, `cost` (by file) |
-  | `h2b1-` | `observed`, `wick` (by file) |
-  | `h2b2-` | `applier-snapshot` (also used by `status-snapshot.test.ts`'s `h2b2-seeder`) |
+  | `h2b1-` | `damage-observed`, `wick` (by file) |
+  | `h2b2-` | `status-snapshot` (also used by `status-snapshot.test.ts`'s `h2b2-seeder`) |
 
   One id used in several files keeps one new id; the map is per `(file, old)` so a file can
   differ if its fixture is separate, and the table in `names.md` shows each.
@@ -330,7 +347,8 @@ listed).
 | `(nit, review)` / `Nit (review)` | pattern 7 | both plants reported; bare "needs a review" not |
 | Name guard: file arm | `names.ts`, called from `comments` | planted `golden-d7-x.test.ts` fails with exit 1 naming the file; `golden-1v1.test.ts`, `stable-name.ts` pass |
 | Name guard: identifier arm | `names.ts` | planted `D7_THING`, `d7Thing`, `H2b2`, `PHASE_4_X` each reported; `A2`, `E1`, `T98`, `S1_SCRIPT` pass |
-| Name guard: literal arm | `names.ts` | planted `'d7-thing'`, `'x-d7-y'`, `'D7 thing'` each reported; `'a-player-0'`, `'hp-percent'`, `'a2'`, a module specifier `'./golden-d7-x'` (the file arm owns it) pass |
+| Name guard: literal arm | `names.ts` | planted `'d7-thing'`, `'x-d7-y'`, `'D7 thing'` each reported; a test title `'E1 ticks first'` passes (fix 3); `'a-player-0'`, `'hp-percent'`, `'a2'`, a module specifier `'./golden-d7-x'` (the file arm owns it) pass |
+| File arm reaches non-TS files | `names.ts` own walk | planted `src/ui/d7-thing.css` fails naming the file (fix 4) |
 | Guard reaches both configs | `commentFiles` | planted identifier in `vite.config.ts` reported |
 | Guard in CI | `deploy.yml` | `ci.test.ts` unchanged: guard rides the existing `comments` step. **Site check**: a test running `main()` (cli) on a planted tree exits 1 |
 | `--counts` rows | `runCounts` | `comments.test.ts`: the three name rows are printed with the planted counts |
@@ -340,6 +358,7 @@ listed).
 | Unlisted rename | rule 1 | one of two renames listed → FAIL naming the unlisted file |
 | Unused entry | rule 6 | listed pair whose old file is still in the working tree; a `files` entry for an unrelated path; an identifier entry with `count` too high; a literal entry whose file didn't change → each FAIL |
 | Specifier rewrite | rule 2 | importer of a renamed fixture changes only its specifier → passes with `imports: 1`; with `imports: 0` or 2 → FAIL; an importer that keeps the old specifier → FAIL; a specifier to an unlisted new name → FAIL |
+| Widened pattern 8 | pattern 8 | planted `H2b2` and `Slice-H2b2` reported; a bare `A2` not |
 | Planted code change in a renamed file | rule 5 | `finalDamage: 12` → `13` in the renamed file → FAIL naming the file |
 | Identifier renamed outside the map | rule 3 | a second identifier renamed → FAIL; a listed one with extra occurrences renamed (count mismatch) → FAIL |
 | Aliased import | rule 3 | `import { OLD as CFG }` → `import { NEW as CFG }` passes; alias dropped → FAIL |
@@ -348,6 +367,7 @@ listed).
 | Literal collision | rule 4 | `new` already a literal in the base → FAIL; `new` only in a comment on the base → passes |
 | Case-only collision | rule 1 | `Golden-X.ts` vs `golden-x.ts` → FAIL |
 | Regex literal in the mask | `literalsOf` | masked regex passes; an unlisted regex change → FAIL |
+| Injective map | `loadRenames` | two literal entries (same or different files) with different `old` and the same `new` exit 2; two identifier entries likewise; one `old` to one `new` in two files passes |
 | Renames usage errors | `loadRenames` | not an array/object, missing field, `old === new`, chain, bad `imports` → exit 2; cli: `--renames` with a non-`comment-proof` mode → exit 2 |
 | Renames pragma/titles | rule 5 | a pragma moved in a renamed file → FAIL (pragmas still checked) |
 | Corpus header test | `engine/corpus-digest.test.ts` | with one character of the committed header flipped it fails; with one character of the template flipped it fails (both shown in `evidence/corpus.txt`); restored it passes |
@@ -375,7 +395,7 @@ failing test named, at every site above (both quotation positions, all three gua
   `__fixtures__` module of `main` (extracted copy) and of the branch with Vite's SSR loader
   (two servers, one per root), deep-compares exports (objects, arrays, `Map`/`Set` entries,
   primitives); `main`'s side gets the id map applied to strings and keys, and a function export
-  (`setup`) is compared by its source text with the same substitution (A17). Lists the goldens
+  (`setup`; 18 renamed fixtures export one) is compared by its Vite-transformed source (esbuild drops comments, so fixture comment edits don't show) with the id map and the identifier map applied, and one `setup` comparison is shown in the output (A17). Replacement is exact whole-string, using only the entries whose `file` is the fixture being compared, never a substring replace (fix 1). Lists the goldens
   whose expected values changed by id; plants a `finalDamage` change and shows it caught.
 - `evidence/corpus.txt`: fixture byte-equal to `main`'s (`git diff --exit-code`, plus a hash);
   the header test failing on a one-character drift and passing restored; the digest test green.
@@ -423,14 +443,14 @@ the `rename map` goes in the report. Any scratch checkout lives outside the repo
   22/108 strings; "placeholder trait" for the Phase-3 string).
 - [ ] **A14** The corpus header test asserts the whole formatted render equals the committed
   file (header, body template and rows), not the header alone.
-- [ ] **A15** The 63 new file stems and `generation-cast-role-and-boss-fill`, as tabled; the
+- [ ] **A15** The 63 new file stems and `generation-floor-loadouts`, as tabled; the
   `b2`/`f3` Silenced pair keeps both, named by lock source.
 - [ ] **A16** Id scheme: mechanism tag + remainder, per-`(file, old)`; the tag table above;
   `TEST_BALANCE_CONFIG`, `FIZZLE_ATTACK_FIXTURE`, `FIZZLE_CAST_FIXTURE`.
 - [ ] **A17** The fixtures comparator loads both trees with Vite's SSR loader and compares
-  function exports by source text under the id map.
+  function exports by transformed source under the id and identifier maps, exact whole-string replacement per fixture file.
 - [ ] **A18** `main`'s per-file test counts come from `vitest run --reporter=json` on an
-  extracted copy of `590d82a` in the scratchpad, `node_modules` junctioned in.
+  extracted copy of `590d82a` (`src` plus `vite.config.ts`, `tsconfig*.json`, `package.json`, `.prettierrc.json`) in the scratchpad, `node_modules` junctioned in; the total is sanity-checked against a run on `main`.
 - [ ] **A19** Residue wording is written against the code at build time (`corpus.ts:8`,
   `starters.ts:18`, `comments.ts` header); no `src/` behaviour is read from the old comment.
 - [ ] **A20** `golden-e-*` has no single mechanism; its one citation lists the new names. The
@@ -439,3 +459,4 @@ the `rename map` goes in the report. Any scratch checkout lives outside the repo
   nothing to list.
 - [ ] **A22** Evidence scripts (compare, collision scan, test counts, id-map apply) stay in the
   scratchpad; the report quotes each one's rule and keeps its printed output.
+- [ ] **A23** (revision 1) Beyond the first plan: pattern 8 widens to `[A-I]d[a-z]d?` (D3); `loadRenames` enforces an injective id map and the literal arm skips test titles (fixes 1, 3); `generation-floor-loadouts` and any `self-damage-cost-…` name are the agent's call, subject to the build re-reading the headers.
