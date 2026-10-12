@@ -15,7 +15,7 @@
 // fallback is the side-aware default then Provoke; and a hit whose target died in its own pre-hit
 // hooks fizzles (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`).
 
-import { getCreature, findCreature, updateCreature } from './creature-lookup'
+import { getCreature, findCreature, livingIdsOf, updateCreature } from './creature-lookup'
 import {
   gatherExtraInstances,
   hasAnnihilate,
@@ -489,9 +489,16 @@ function executeAttack(
     // Fires on ALL living creatures
     // (cheap -- effectsForHook returns nothing for non-observers), per instance, alongside the
     // actor's own on-attack hook above -- see `spec/effects.md#action-reactions-actor-self-hooks-or-observation` actor-vs-observer routing table.
-    working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
-      observed: { actionKind: 'attack', instanceIndex },
-    }).state
+    working = fireHook(
+      'on-action-observed',
+      livingIdsOf(working),
+      actor.id,
+      working,
+      ctx,
+      {
+        observed: { actionKind: 'attack', instanceIndex },
+      },
+    ).state
     // (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`) the pre-hit hooks may have killed the target -- that hit fizzles (no
     // damage, no Splashing for this instance). AttackDeclared stays in the log; no fizzle event.
     // The next instance re-targets per rule 4. A dead ACTOR ends the whole action instead (site 2).
@@ -614,9 +621,16 @@ function executeCastSingle(
     // Resonants' own consumer shape
     // (relationship 'ally', actionKind 'cast') -- see `spec/effects.md#action-reactions-actor-self-hooks-or-observation` actor-vs-observer routing. An
     // echo (a `perform-action` grant) raised here is queued, and runs after this whole action.
-    working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
-      observed: { actionKind: 'cast', instanceIndex },
-    }).state
+    working = fireHook(
+      'on-action-observed',
+      livingIdsOf(working),
+      actor.id,
+      working,
+      ctx,
+      {
+        observed: { actionKind: 'cast', instanceIndex },
+      },
+    ).state
     // Same pre-hit-hook fizzle as executeAttack (no payload, no status); SpellCast stays.
     if (actorDied(actor, working)) break // site 2
     if (!findCreature(working, thisTargetId)?.alive) continue
@@ -676,9 +690,16 @@ function executeCastAoe(
     working = fireHook('on-cast', [actor.id], undefined, working, ctx).state
     // Source here IS the actor (needed
     // for relationship filtering), unlike on-cast's own source above.
-    working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
-      observed: { actionKind: 'cast', instanceIndex },
-    }).state
+    working = fireHook(
+      'on-action-observed',
+      livingIdsOf(working),
+      actor.id,
+      working,
+      ctx,
+      {
+        observed: { actionKind: 'cast', instanceIndex },
+      },
+    ).state
 
     for (const targetId of targetIds) {
       if (actorDied(actor, working)) break // site 4: before each AOE member's hit
@@ -703,7 +724,7 @@ function executeDefend(
   let working = fireHook('on-defend', [actor.id], undefined, state, ctx).state
   // Defend/Provoke are always
   // single-instance in v1 -- instanceIndex is always 0.
-  working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
+  working = fireHook('on-action-observed', livingIdsOf(working), actor.id, working, ctx, {
     observed: { actionKind: 'defend', instanceIndex: 0 },
   }).state
   // Cumulative for the whole fight, never reset -- read fresh
@@ -724,7 +745,7 @@ function executeProvoke(
 ): CombatState {
   ctx.events.push({ type: 'Provoked', creatureId: actor.id })
   let working = fireHook('on-provoke', [actor.id], undefined, state, ctx).state
-  working = fireHook('on-action-observed', livingIds(working), actor.id, working, ctx, {
+  working = fireHook('on-action-observed', livingIdsOf(working), actor.id, working, ctx, {
     observed: { actionKind: 'provoke', instanceIndex: 0 },
   }).state
   return updateCreature(working, actor.id, { provoking: true })
@@ -771,15 +792,4 @@ export function executeAction(
       throw new Error(`Unhandled action kind: ${String(exhaustive)}`)
     }
   }
-}
-
-/** All living creatures' ids in tie-break order (player slots, then enemy slots) -- the order
- * global phase-point hooks (fight-start, round-end) iterate; also on-action-observed's own
- * "every living creature" scope. Duplicated from combat.ts's own copy (kept private there too --
- * neither module imports the other's private helpers) rather than shared, since it's a one-line
- * derivation with no state of its own. */
-function livingIds(state: CombatState): CreatureId[] {
-  return [...state.playerParty, ...state.enemyParty]
-    .filter((c) => c.alive)
-    .map((c) => c.id)
 }

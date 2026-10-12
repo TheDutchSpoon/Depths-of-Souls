@@ -1,9 +1,9 @@
 // Golden: Rotcap Hollow's floor-30 boss, the Rot Sovereign (`content/rotcap-hollow.md#rot-sovereign`)
 // -- the real, shipped `ROT_SOVEREIGN_TRAIT` proving all three
-// signature pieces end to end: an add's death growing her Attack (`on-ally-death`), a PLAYER
-// creature's death ALSO growing her Attack at the SAME flat rate (`on-enemy-death`; both hooks
-// apply a flat +10% per event, no `magnitudeSource`), the two compounding multiplicatively
-// across both death sources, and her own turn-start Spore blanket.
+// signature pieces end to end: an add's death growing her Attack (`on-death-observed`), a PLAYER
+// creature's death ALSO growing her Attack at the SAME flat rate (one `any` trigger: a flat +10%
+// per event, no `magnitudeSource`), the two compounding multiplicatively across both death
+// sources, and her own turn-start Spore blanket.
 //
 // Hand-derived (independent `node -e` calculator, verified via Bash). TARGET (speed 40) acts
 // before SOVEREIGN (speed 30; her Attack 22, Intelligence 20 and Defence 26 are the real Rot
@@ -16,11 +16,11 @@
 //
 //   TARGET->ADD (off 20, def 0): core = 20. chip = 0.01*20 = 0.2. raw = 20.2 -> final =
 //     floor(20.2) = 20. ADD (wounded to 5 post-createCombat) 5 - 20 -> 0, dies.
-//   fireDeathObservers(ADD): on-ally-death fires on SOVEREIGN (ADD's only living ally) ->
+//   fireDeathObservers(ADD): on-death-observed runs over every living creature but ADD, in
+//     tie-break order: TARGET carries no matching trait, nothing; it fires on SOVEREIGN ->
 //     Attrition's flat +10% Attack: effectiveBefore = 22 (base, unmodified), factor 1.1 ->
 //     effectiveAfter = 22 * 1.1 = 24.200000000000003 (JS float, not hand-rounded -- verified via
-//     node). on-enemy-death fires on TARGET (ADD's opposing side) -- TARGET carries no matching
-//     trait, nothing.
+//     node).
 //   SOVEREIGN's own on-turn-start: Attrition's Spore-blanket effect -> apply-status(all-enemies,
 //     spore) -> TARGET then WEAK (her living enemies, player-party slot order).
 //   SOVEREIGN->WEAK (off 24.200000000000003 [carrying the growth from ADD's death], def 0):
@@ -32,8 +32,8 @@
 //     Spore's OWN on-death spread trigger too -- fizzling (TriggerFired, no StatusApplied) since
 //     TARGET (WEAK's only living ally) was ALSO blanketed with Spore in that same firing and is
 //     filtered out by random-ally-without-status.
-//   fireDeathObservers(WEAK): on-ally-death fires on TARGET (WEAK's living ally) -- no matching
-//     trait, nothing. on-enemy-death fires on SOVEREIGN (WEAK's opposing side, living) ->
+//   fireDeathObservers(WEAK): on-death-observed runs over every living creature but WEAK: TARGET
+//     has no matching trait, nothing; it fires on SOVEREIGN ->
 //     Attrition's SAME flat +10% Attack, fired a second time: effectiveBefore =
 //     24.200000000000003, factor 1.1 -> effectiveAfter = 24.200000000000003 * 1.1 =
 //     26.620000000000005 -- the two death sources compounding multiplicatively
@@ -129,7 +129,7 @@ export const expectedEvents: CombatEvent[] = [
   {
     type: 'TriggerFired',
     sourceId: SOVEREIGN,
-    hook: 'on-ally-death',
+    hook: 'on-death-observed',
     effectId: ROT_SOVEREIGN_TRAIT.id,
   },
   {
@@ -185,7 +185,7 @@ export const expectedEvents: CombatEvent[] = [
   {
     type: 'TriggerFired',
     sourceId: SOVEREIGN,
-    hook: 'on-enemy-death',
+    hook: 'on-death-observed',
     effectId: ROT_SOVEREIGN_TRAIT.id,
   },
   {

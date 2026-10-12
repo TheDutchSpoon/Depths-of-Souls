@@ -11,7 +11,7 @@ import {
   FIXTURE_TRAITS,
   FIXTURE_TRAITS_BY_ID,
 } from './traits'
-import { validateTrait } from '../../data/traits'
+import { validateTrait } from '../effect-types'
 import { getEffectiveStat, getOffensiveStat } from '../effective-stats'
 import { resolveBaselineEffects, instantiateEffectDefs } from '../effects'
 import { makeCreature } from './creatures'
@@ -74,11 +74,12 @@ describe('the nine mechanism-test fixture traits', () => {
     ])
   })
 
-  it('GRUDGE is a triggered on-ally-death apply-stat-modifier (+50% Attack)', () => {
+  it('GRUDGE is a triggered on-death-observed (ally) apply-stat-modifier (+50% Attack)', () => {
     expect(GRUDGE.effects).toEqual([
       {
         category: 'triggered',
-        hook: 'on-ally-death',
+        hook: 'on-death-observed',
+        observationFilter: { relationship: 'ally' },
         response: {
           kind: 'apply-stat-modifier',
           target: { kind: 'self' },

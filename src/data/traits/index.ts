@@ -1,11 +1,5 @@
 import type { Trait } from '../../engine/effect-types'
-import {
-  validateNoBreakChanceOutsideStatus,
-  validateNoSnapshotPotencyOutsideStatus,
-  validateNoRandomSelectorInResponseTargets,
-  validateObservationFilters,
-  validateStatModifierConditions,
-} from '../../engine/effect-types'
+import { validateTrait } from '../../engine/effect-types'
 import { STARTER_TRAITS } from './starters'
 import {
   SPIDER_WEAVER_TRAIT,
@@ -149,21 +143,7 @@ export const TRAIT_REGISTRY: ReadonlyMap<string, Trait> = new Map(
   STOCK_TRAITS.map((t) => [t.id, t]),
 )
 
-// load-time validator -- throws at import time (mirrors
-// validateSpecialization's own precedent) if any trait's stat-modifier reads the stat it gates.
-// Also rejects the intent-only 'random' selector in any trigger's
-// response target.
-// Also rejects `turn-order.breakChancePercent` (status-only). Exported so a data
-// test can feed it a deliberately broken trait.
-export function validateTrait(trait: Trait): void {
-  validateStatModifierConditions(trait.effects)
-  validateNoBreakChanceOutsideStatus(trait.effects)
-  validateNoSnapshotPotencyOutsideStatus(trait.effects)
-  validateNoRandomSelectorInResponseTargets(trait.effects)
-  // observation-filter fields belong to one observation hook each.
-  validateObservationFilters(trait.effects, `trait "${trait.id}"`)
-}
-
+// Throws at import if a stock trait breaks a trait rule.
 for (const trait of STOCK_TRAITS) {
   validateTrait(trait)
 }

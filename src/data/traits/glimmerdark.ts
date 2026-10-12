@@ -78,7 +78,7 @@ export const FLICKERLING_FLARE_TRAIT: Trait = {
 }
 
 /** Flickerlings' Last Gleam (amplifier, Violence): whenever an ally dies, every living ally
- * permanently gains 20% Attack. `on-ally-death` already excludes the dying creature, so a Last
+ * permanently gains 20% Attack. `on-death-observed` leaves the dying creature out, so a Last
  * Gleam never reacts to its own death; two Gleams both fire and multiply. */
 export const FLICKERLING_LAST_GLEAM_TRAIT: Trait = {
   id: 'flickerling-last-gleam-last-light',
@@ -86,7 +86,8 @@ export const FLICKERLING_LAST_GLEAM_TRAIT: Trait = {
   effects: [
     {
       category: 'triggered',
-      hook: 'on-ally-death',
+      hook: 'on-death-observed',
+      observationFilter: { relationship: 'ally' },
       response: {
         kind: 'apply-stat-modifier',
         target: { kind: 'all-allies' },

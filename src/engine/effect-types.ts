@@ -17,10 +17,11 @@ export function createEffectInstanceId(value: string): EffectInstanceId {
   return value as EffectInstanceId
 }
 
-// The v1 hook vocabulary (17 in all, `spec/effects.md#hooks`).
+// The v1 hook vocabulary (16 in all, `spec/effects.md#hooks`).
 // on-wait is deliberately omitted. A single general on-action-observed (see the
 // actor-vs-observer routing rule, `spec/effects.md#action-reactions-actor-self-hooks-or-observation`)
-// covers what an on-ally-action/on-enemy-action pair would.
+// covers what an on-ally-action/on-enemy-action pair would, and a single on-death-observed what
+// a per-side pair of death observers would.
 export type Hook =
   | 'on-fight-start'
   | 'on-turn-start'
@@ -32,8 +33,7 @@ export type Hook =
   | 'on-death'
   | 'on-action-observed'
   | 'on-damage-observed'
-  | 'on-ally-death'
-  | 'on-enemy-death'
+  | 'on-death-observed'
   | 'on-status-applied'
   | 'on-attack'
   | 'on-cast'
@@ -354,8 +354,9 @@ export function validateStatModifierConditions(defs: readonly EffectDef[]): void
 
 /** The load-time validator for observation filters (`spec/effects.md#damage-observation`) --
  * throws if `actionKind`/`excludeActor` sit on a trigger that is not `on-action-observed`,
- * `selfInflicted` on one that is not `on-damage-observed`, or an `observationFilter` of any kind
- * on a hook that is neither. Absent fields stay permissive. Called over EVERY trigger carrier at
+ * `selfInflicted` on one that is not `on-damage-observed`, `relationship: 'self'` on
+ * `on-death-observed` (its own death is `on-death`), or an `observationFilter` of any kind on a
+ * hook that is none of the three. Absent fields stay permissive. Called over EVERY trigger carrier at
  * import: every trait's effects (`data/traits/index.ts`), every perk's effects
  * (`data/specializations.ts`) and every status in the registry (`validateStatusDef`, called from
  * `data/statuses.ts`). */
@@ -367,7 +368,11 @@ export function validateObservationFilters(
     if (def.category !== 'triggered' || def.observationFilter === undefined) continue
     const filter = def.observationFilter
     const where = `${context} on "${def.hook}"`
-    if (def.hook !== 'on-action-observed' && def.hook !== 'on-damage-observed') {
+    if (
+      def.hook !== 'on-action-observed' &&
+      def.hook !== 'on-damage-observed' &&
+      def.hook !== 'on-death-observed'
+    ) {
       throw new Error(
         `effect invariant violated: ${where} carries an observationFilter, which only an observation hook may carry`,
       )
@@ -383,6 +388,11 @@ export function validateObservationFilters(
     if (def.hook !== 'on-damage-observed' && filter.selfInflicted !== undefined) {
       throw new Error(
         `effect invariant violated: ${where} carries selfInflicted, which belongs to on-damage-observed`,
+      )
+    }
+    if (def.hook === 'on-death-observed' && filter.relationship === 'self') {
+      throw new Error(
+        `effect invariant violated: ${where} carries relationship 'self', and a creature never observes its own death (its own death is on-death)`,
       )
     }
   }
@@ -494,6 +504,19 @@ export function validateStatusDef(def: StatusDef): void {
   validateStatusNoRandomSelectorInResponseTargets(def)
   validateObservationFilters(def.effects, `status "${def.statusId}"'s trigger`)
   validateStatusPotency(def)
+}
+
+/** The load-time validator for a trait's effects: a stat-modifier may not read the stat it gates,
+ * a response target may not be the intent-only 'random' selector, `turn-order.breakChancePercent`
+ * and `snapshot-potency` are status-only, and each observation-filter field sits on its own
+ * hook. Called over every stock trait at import (`data/traits/index.ts`) and over every trait in
+ * the registry `createCombat` is given, as `validateStatusDef` is over the statuses. */
+export function validateTrait(trait: Trait): void {
+  validateStatModifierConditions(trait.effects)
+  validateNoBreakChanceOutsideStatus(trait.effects)
+  validateNoSnapshotPotencyOutsideStatus(trait.effects)
+  validateNoRandomSelectorInResponseTargets(trait.effects)
+  validateObservationFilters(trait.effects, `trait "${trait.id}"`)
 }
 
 /** True iff `response` is a tick: a `deal-damage` / `heal` whose `flatAmount` is the
@@ -650,18 +673,20 @@ export type ActionInstanceDef = {
 // serializable scripting `Condition` union, evaluated against live state at fire time (omission =
 // unconditional). A condition can reference the triggering source through the `'target'` subject,
 // which `fireHook` resolves to that source (e.g. "retaliate only if the attacker is Vitality").
-/** The filter (`on-action-observed`, `on-damage-observed`)
+/** The filter (`on-action-observed`, `on-damage-observed`, `on-death-observed`)
  * of an observation hook's candidate. Reacting effects filter on THEMSELVES, not on the hook name
  * -- absent fields match everything (permissive default, matching this project's "unspecified
  * magnitude means 100%" convention). Which field belongs to which hook (enforced at load time by
  * `validateObservationFilters`):
  *  - `actionKind`, `excludeActor`: `on-action-observed` only.
+ *  - `relationship` alone: `on-death-observed` (no other field; `'self'` is rejected there).
  *  - `selfInflicted`: `on-damage-observed` only. true = only a COST (a creature's own response
  *    damaging itself, `applyCostDamage`); false = only damage that is not a cost. The flag is
  *    carried from the branch that chose the cost path, never derived from `source === target`.
  *  - `relationship`: shared. On `on-action-observed` it compares the OBSERVER (self) to the ACTOR
  *    (the hook's `source`); on `on-damage-observed` it compares the observer to the DAMAGED
- *    creature (the hook's `source` there). 'ally' includes self (matches livingAlliesOf's own
+ *    creature (the hook's `source` there); on `on-death-observed` it compares the observer to the
+ *    DEAD creature (the hook's `source`), which is never an observer itself. 'ally' includes self (matches livingAlliesOf's own
  *    convention). `excludeActor` drops the case where the observer IS the actor.
  * Resonants are the `on-action-observed` consumer: `{ relationship: 'ally', actionKind:
  * 'cast' }`; the Flickerling Flare is the `on-damage-observed` one: `{ relationship: 'ally',
@@ -687,8 +712,8 @@ export type TriggeredDef = {
   readonly category: 'triggered'
   readonly hook: Hook
   readonly condition?: TriggerCondition
-  /** Meaningful only when `hook` is an observation hook
-   * (`'on-action-observed'` / `'on-damage-observed'`). See ObservationFilter's own doc comment. */
+  /** Meaningful only when `hook` is an observation hook (`'on-action-observed'` /
+   * `'on-damage-observed'` / `'on-death-observed'`). See ObservationFilter's own doc comment. */
   readonly observationFilter?: ObservationFilter
   /** An optional probabilistic gate, a sibling of
    * `condition` -- one is deterministic, the other a roll. Plain number, baked at instantiation
@@ -979,7 +1004,7 @@ export type ResolvedHookEffect = {
   readonly condition?: TriggerCondition
   readonly chancePercent?: number
   /** Meaningful only when this resolved trigger's hook is an observation hook
-   * ('on-action-observed' / 'on-damage-observed'). A status carries ordinary effects
+   * ('on-action-observed' / 'on-damage-observed' / 'on-death-observed'). A status carries ordinary effects
    * and `flatEffects` spreads a status trigger's fields through, so a status trigger can carry
    * one too; it is undefined only when none was authored. */
   readonly observationFilter?: ObservationFilter

@@ -1,7 +1,7 @@
 // Golden: a LETHAL cost, in the damage-path hook order (`spec/effects.md#hook-execution`):
 // DamageDealt -> (on-damage-taken, survivors only) -> on-damage-observed -> CreatureDied ->
-// on-death -> on-kill -> on-ally-death. The Wick's burn can
-// kill it; the Flare's reaction then sits BEFORE CreatureDied and the Last Gleam's `on-ally-death`
+// on-death -> on-kill -> on-death-observed. The Wick's burn can
+// kill it; the Flare's reaction then sits BEFORE CreatureDied and the Last Gleam's `on-death-observed`
 // AFTER it, and the lethal burn skips the heal (fireHook re-checks `alive` per effect).
 // Hand-derived; the Wick, the Flare and the Last Gleam are the REAL species with their real traits.
 //
@@ -19,8 +19,8 @@
 //     LIVING ally, in party order: FLARE 22, GLEAM 18, A 5 (the dead Wick gets nothing).
 //  3. CreatureDied wick.
 //  4. on-death (none); on-kill (the killer is the dead Wick itself: skipped); then the death
-//     observers over the Wick's living allies in party order: FLARE (no on-ally-death trait), GLEAM
-//     fires its Last Light: Attack x1.2 to every living ally -- FLARE 14, GLEAM 24, A 20.
+//     observers over every living creature but the Wick, in tie-break order: FLARE (no death
+//     observer), then GLEAM, which fires its Last Light: Attack x1.2 to every living ally -- FLARE 14, GLEAM 24, A 20.
 //  5. The heal (the Wick's second effect) is SKIPPED: the Wick is no longer alive, so no
 //     TriggerFired for it. There is no action (dead), no turn-end hook; only TurnEnded.
 
@@ -138,7 +138,7 @@ export const expectedEvents: CombatEvent[] = [
   {
     type: 'TriggerFired',
     sourceId: GLEAM,
-    hook: 'on-ally-death',
+    hook: 'on-death-observed',
     effectId: FLICKERLING_LAST_GLEAM_TRAIT.id,
   },
   {
