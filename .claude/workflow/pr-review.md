@@ -8,6 +8,15 @@ The GitHub web UI is blocked. Review by pulling, building, running and reading t
 own sandbox** (never in Duncan's working tree, where the coding agent works). `<branch>` is the
 PR's source branch; Duncan gives it with the command, or it's the branch his working tree is on.
 
+**Keep the waits short.** The sandbox has two CPUs, and the test runs are most of a review's time.
+
+- Start each long run in the background as soon as its input is ready: the gates on both trees
+  once the installs finish, the corpus dumps, the mutation runs. Read the code (step 3) and the
+  docs while they run.
+- Don't run what another run already answers. The JSON-reporter run in step 2 is the
+  `npm run test` gate; the branch's green gate run is the baseline for step 5. No separate timing
+  or baseline runs.
+
 ## Inputs
 
 `kickoff.md`, `plan.md`, `plan-review.md`, the approving round's `plan-handout-r<N>.md`
@@ -97,7 +106,10 @@ Green gates only prove the code agrees with its own fixtures. Proceed to reading
 ## 5. Mutation check: do the tests pin what they claim?
 
 For each mechanism the PR adds or changes, remove it (an env-flag guard in a scratch copy is
-enough), run the full suite, and record what fails.
+enough), run the test files the PR names for it plus `src/engine/corpus-digest.test.ts`, and record
+what fails. The question is whether the named test catches it, so the full suite isn't needed. If
+the named test passes, that is the finding; then run the full suite once to say whether anything
+else catches it.
 
 - Every mechanism must be caught by the test the PR names for it.
 - A mechanism built at more than one site needs a failing test at each site (CONVENTIONS). PR #73's
