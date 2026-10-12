@@ -2,7 +2,7 @@
 
 **Status: planned.** Decided with the design owner on 2026-10-12. Two parts: the fixes listed under
 "Decided, not built" (4.5-A to 4.5-F), then the throwaway run-loop demo (4.5-G1, 4.5-G2), which
-replaces the 3.5 demo on the live site and covers Phases 4 and 4.1. The docs are the spec; this
+replaces the stub on the live site and covers Phases 4 and 4.1. The docs are the spec; this
 brief places each decision in a slice, with its golden policy. If this brief and the docs disagree,
 the docs win: flag the conflict, don't guess.
 
@@ -23,7 +23,7 @@ the docs win: flag the conflict, don't guess.
 | Slice | Contents | Golden policy |
 | --- | --- | --- |
 | **4.5-A** | [Placeholder traits move to test fixtures](#placeholder-traits-move-to-test-fixtures), [one copy of Splashing's adjacency lookup](#one-copy-of-splashings-adjacency-lookup), retire the 3.5 demo | Byte-identical |
-| **4.5-B** | [`on-death-observed`](#on-death-observed) | Deliberate, listed |
+| **4.5-B** | [`on-death-observed`](#on-death-observed), [`createCombat` validates its trait registry](#createcombat-validates-its-trait-registry) | Deliberate, listed |
 | **4.5-C** | [A dead creature's turn is skipped entirely](#a-dead-creatures-turn-is-skipped-entirely) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-D** | [HP% qualifiers](#hp-qualifiers-pick-by-hp), [Thorns](#thorns-answers-only-attacks-and-spells), [Last Stand](#last-stand-rolls-only-above-1-damage) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-E** | [Spell clean-up and Thorn Volley](#spell-clean-up-and-thorn-volley) | Deliberate content change; CI balance verdicts re-checked |
@@ -82,6 +82,10 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   byte-identical: the goldens that use them read them from the fixtures.
 - Placeholder content does not live in production registries
   (`CONVENTIONS.md#mechanism-goldens-vs-content-goldens`).
+- `data/traits/core.ts` is left empty and is deleted. A carrier library has no `core.ts`: it is one
+  file per biome, plus `starters.ts` for the trait library. The PR review rewrites
+  `CONVENTIONS.md#effect-carriers-live-in-libraries` to match for traits; 4.5-E's does it for
+  spells.
 
 ### One copy of Splashing's adjacency lookup
 
@@ -104,6 +108,19 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   death (today the dead creature's allies all fire before its enemies).
 - The PR review rewrites `spec/effects.md#hooks`, `spec/effects.md#damage-path-hook-order` and
   `spec/effects.md#action-reactions-actor-self-hooks-or-observation` to match (17 hooks become 16).
+
+### createCombat validates its trait registry
+
+- `validateTrait` moves to `engine/effect-types.ts`, beside `validateStatusDef`, and `createCombat`
+  runs it over the trait registry it is given, as it already does for statuses
+  (`spec/effects.md#validators`): a test fixture's trait is held to the same rules as a shipped
+  one. `data/traits/index.ts` keeps its load-time loop over `STOCK_TRAITS`, calling the engine
+  export; the test that validates the fixture traits stays, since some of them never reach
+  `createCombat`.
+- Byte-identical for every valid fight. A test that hands `createCombat` an invalid inline trait
+  starts throwing: a stop-and-ask, never a quiet fix.
+- It rides in 4.5-B because that slice already changes the trait validator for the new hook.
+- The PR review adds the trait rule to `spec/effects.md#validators`.
 
 ### A dead creature's turn is skipped entirely
 
@@ -154,7 +171,9 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   spell: Violence · every enemy · **45%** of the caster's Intelligence to each, the area sibling of
   Thorn Lash. 45% is "about 50%" under `content/overgrowth.md#spell-power-convention`, so the
   convention stands. It moves to `data/spells/overgrowth.ts` and the Overgrowth spell list;
-  `data/spells/core.ts` and the content doc's "Core spells" section are deleted.
+  `data/spells/core.ts` and the content doc's "Core spells" section are deleted, so the spell
+  library has no `core.ts` either
+  (`phases/4.5/brief.md#placeholder-traits-move-to-test-fixtures`).
 - All three spells are in the biome-1 roll pool (`unlockedAtBiome: 1`), so this changes every
   generated loadout: a deliberate content change (content goldens, the corpus digest, the balance
   bands). After it, Instinct has exactly 3 biome-1 spells (Howling Instinct, Pounce, Stinger
@@ -266,7 +285,7 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 
 Choices this brief made that the grill didn't pin. Each slice's plan confirms or corrects its own.
 
-- [ ] **ASSUMPTION (A):** the stub that replaces the 3.5 demo is one line of text with the game's
+- [x] **ASSUMPTION (A):** the stub that replaces the 3.5 demo is one line of text with the game's
       title; no controls.
 - [ ] **ASSUMPTION (G1, G2):** player-facing strings carry no phase ids, because
       `npm run docs:check -- comments` fails a string literal holding one

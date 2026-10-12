@@ -6,17 +6,6 @@ import {
   validateObservationFilters,
   validateStatModifierConditions,
 } from '../../engine/effect-types'
-import {
-  BRUTISH,
-  BLOODLUST,
-  SWIFT_STRIKER,
-  RETALIATE,
-  GRUDGE,
-  RECKLESS,
-  VENGEFUL,
-  REELING,
-  CATASTROPHIC_COLLAPSE,
-} from './core'
 import { STARTER_TRAITS } from './starters'
 import {
   SPIDER_WEAVER_TRAIT,
@@ -85,25 +74,13 @@ import {
 // The library barrel (`CONVENTIONS.md#effect-carriers-live-in-libraries`): re-exports every
 // individual trait const from its grouping file, and assembles the stable STOCK_TRAITS/
 // TRAIT_REGISTRY names every consumer imports.
-export * from './core'
 export * from './starters'
 export * from './overgrowth'
 export * from './glimmerdark'
 export * from './rotcap-hollow'
 
 export const STOCK_TRAITS: readonly Trait[] = [
-  BRUTISH,
-  BLOODLUST,
-  SWIFT_STRIKER,
-  RETALIATE,
-  GRUDGE,
-  RECKLESS,
-  VENGEFUL,
-  REELING,
-  CATASTROPHIC_COLLAPSE,
-  // The three starter creatures' + the Unicorn's signature traits (real starter content gets its
-  // own registry entries alongside the representative-and-temporary set above, never replacing
-  // it).
+  // The three starter creatures' + the Unicorn's signature traits.
   ...STARTER_TRAITS,
   // The Overgrowth's 18 species-creature traits + the Broodmother boss trait.
   SPIDER_WEAVER_TRAIT,

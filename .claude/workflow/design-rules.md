@@ -44,7 +44,8 @@ How to write them (the reader's side is `CLAUDE.md#how-the-spec-is-written`):
   rule, and nothing "supersedes".
 - **Not built yet:** a slice-sized decision goes to its phase brief's "Decided, not built" (a later
   phase's, to its `ROADMAP.md` entry); the PR review of the slice that builds it moves it into the
-  spec. A subsystem designed for a later phase goes in its spec file's `## Not built` half, each
+  spec. A phase brief keeps the built entry: the brief is the phase's plan, and later slices cite
+  it. A subsystem designed for a later phase goes in its spec file's `## Not built` half, each
   rule naming its phase; that phase's PR review moves it into `## Design` or `## Engine rules`.
 - **Drop:** superseded text; duplicates (keep the one home, link to it); provenance (phase, slice,
   PR and ASSUMPTION tags; "decided", "locked", "review amendment"); worked arithmetic a

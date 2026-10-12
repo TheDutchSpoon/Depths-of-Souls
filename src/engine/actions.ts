@@ -25,6 +25,7 @@ import {
 } from './effects'
 import { dealDamage, executeResponse, fireHook } from './resolution'
 import {
+  adjacentLivingTargets,
   livingAlliesOf,
   livingEnemiesOf,
   resolveOffensiveTarget,
@@ -446,26 +447,6 @@ function splashTargetIds(
   const mainTarget = findCreature(state, mainTargetId)
   if (!mainTarget) return []
   return adjacentLivingTargets(mainTarget, opposingParty).map((c) => c.id)
-}
-
-/**
- * The living neighbors of `target` within `party`, taken from
- * the alive-filtered, slot-ordered list (living-adjacency, not raw slot-index adjacency: a dead
- * slot-neighbor would make Splashing whiff for no player-visible reason, and living-adjacency
- * degrades gracefully as a side thins out).
- * Returns up to two neighbors (one at each edge of the living list); empty when `target`
- * isn't alive-and-present in `party` or has no living neighbor.
- */
-function adjacentLivingTargets(target: Creature, party: readonly Creature[]): Creature[] {
-  const living = party.filter((c) => c.alive)
-  const index = living.findIndex((c) => c.id === target.id)
-  if (index === -1) return []
-  const neighbors: Creature[] = []
-  const before = living[index - 1]
-  const after = living[index + 1]
-  if (before) neighbors.push(before)
-  if (after) neighbors.push(after)
-  return neighbors
 }
 
 /**

@@ -880,7 +880,7 @@ export function executeResponse(
         const damageSource = response.damageSource ?? 'dot'
         if (tickSnapshot !== undefined) {
           // A status tick: recognised by its marker, never by the 'dot' label or
-          // by statusId + self (CATASTROPHIC_COLLAPSE carries that label and is a cost).
+          // by statusId + self (a trait cost carries that label and a self target).
           working = applyTickDamage(
             targetId,
             tickSnapshot,

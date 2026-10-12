@@ -66,7 +66,11 @@ Green gates only prove the code agrees with its own fixtures. Proceed to reading
   draws independently (mulberry32 from the seed) and spot-check the arithmetic.
 - Integration goldens must be labeled generated-then-checkpoint-verified.
 - The engine stays pure: no UI, data or state import in `src/engine`.
-- Search for leftovers of anything the PR says it deleted, in `src/` and in the living docs.
+- **Leftover sweep**, over `src/` and the living docs (all of `.claude/` but `phases/` and
+  `archive/`): grep for every name the slice deletes, moves or renames, in each form it takes
+  (display name, id, const, file path), and for every claim the slice corrects in a `src` comment
+  or string, because the docs often repeat it. Each hit is a doc edit this review makes or a
+  hand-out item.
 - A citation the diff adds or changes must point at the rule it means. `citations` proves only
   that the anchor resolves: read the target and check it states what the comment says, and that a
   quotation beside it is the target's own words.
@@ -119,6 +123,8 @@ Round `N` (`N` ≥ 2) reviews `report-r<N>.md`, after `/slice-fix <slice-id> <N-
   anything, and these are cheap.
 - **Step 5 for what the fix touched:** each mechanism the fix diff
   (`git diff <previous commit> <branch>`) adds or changes, and each pin the hand-out asked for.
+- **The approving round reruns the leftover sweep** on the final commit, whatever earlier rounds
+  found: it is cheap, and a fix can add a name or a corrected claim.
 - **Don't reopen** what the previous round approved unless the fix diff touches it. A problem found
   in untouched code is still a finding.
 

@@ -13,6 +13,7 @@ import { updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
 import { createCreatureId } from './ids'
 import { FIXTURE_SCRIPTS_BY_ID } from './__fixtures__/scripts'
+import { FIXTURE_TRAITS_BY_ID } from './__fixtures__/traits'
 import { TRAIT_REGISTRY } from '../data/traits'
 import { MAX_TRIGGER_CASCADE_DEPTH } from './config'
 import { countDraws } from './test-utils/rng-draw-count'
@@ -222,7 +223,7 @@ describe('loop safety', () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: FIXTURE_TRAITS_BY_ID },
       }),
     )
 
@@ -243,7 +244,7 @@ describe('loop safety', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: FIXTURE_TRAITS_BY_ID },
     })
 
     const events: CombatEvent[] = []
@@ -374,7 +375,7 @@ describe('apply-stat-modifier re-stacking (unique instance ids)', () => {
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
+      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: FIXTURE_TRAITS_BY_ID },
     })
     const events: CombatEvent[] = []
     const bearerId = createCreatureId('bearer')

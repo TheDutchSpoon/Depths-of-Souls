@@ -90,8 +90,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 - `flatAmount` is a literal number, a **`StatPercent`** or a status tick's `snapshot-potency` marker
   (`spec/statuses.md#the-applier-snapshot`).
 - A `StatPercent` (`{ ofStat, percent }`, `percent` a **positive integer**) is a percentage of the
-  **firing creature's** (`context.self`) own effective stat: the Wick's burn and heal,
-  `CATASTROPHIC_COLLAPSE`.
+  **firing creature's** (`context.self`) own effective stat: the Wick's burn and heal.
 - Composition: `floor(stat) × percent × count / 100`, `count` being the live `magnitudeSource`
   count, else 1, and the result is not floored here. The stat is read floored and `percent` and
   `count` are multiplied in before dividing by 100, so the numerator is exact integer arithmetic: a

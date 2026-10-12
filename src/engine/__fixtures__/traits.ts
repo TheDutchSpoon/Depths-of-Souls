@@ -1,9 +1,9 @@
-import type { Trait } from '../../engine/effect-types'
+import type { Trait } from '../effect-types'
 
-// Representative & temporary trait content — real data (with tests), exercising each
-// passive shape, until the actual creature roster replaces it
-// (`CONVENTIONS.md#mechanism-goldens-vs-content-goldens` names these placeholder traits).
-// Triggered traits (retaliate etc.) and status-applying traits are among them.
+// The nine mechanism-test traits: one per effect shape a mechanism golden or unit test needs,
+// test-only and never registered in game data
+// (`CONVENTIONS.md#mechanism-goldens-vs-content-goldens`). A test resolves them through
+// `FIXTURE_TRAITS_BY_ID`, merged with the shipped registry where it needs both.
 
 /** Flat passive stat-modifier: always-on +30% Attack. */
 export const BRUTISH: Trait = {
@@ -185,3 +185,20 @@ export const CATASTROPHIC_COLLAPSE: Trait = {
     },
   ],
 }
+
+export const FIXTURE_TRAITS: readonly Trait[] = [
+  BRUTISH,
+  BLOODLUST,
+  SWIFT_STRIKER,
+  RETALIATE,
+  GRUDGE,
+  RECKLESS,
+  VENGEFUL,
+  REELING,
+  CATASTROPHIC_COLLAPSE,
+]
+
+/** Holds exactly the nine fixture traits; ready to pass as createCombat's `traits`. */
+export const FIXTURE_TRAITS_BY_ID: ReadonlyMap<string, Trait> = new Map(
+  FIXTURE_TRAITS.map((trait) => [trait.id, trait]),
+)

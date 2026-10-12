@@ -9,6 +9,10 @@ Phase brief: `.claude/phases/4.5/brief.md`. Golden policy: **deliberate, listed*
 `on-death-observed` with an `ObservationFilter`, and the 8 triggers move over (7 in game data,
 Grudge in the test fixtures). `on-death` and `on-kill` are untouched.
 
+`phases/4.5/brief.md#createcombat-validates-its-trait-registry`: `validateTrait` moves into the
+engine and `createCombat` runs it over its trait registry. Byte-identical: it adds nothing to the
+golden attribution.
+
 ## Known
 
 - The Rot Sovereign's two triggers (`data/traits/rotcap-hollow.ts`) become one `any` trigger: its
@@ -19,4 +23,5 @@ Grudge in the test fixtures). `on-death` and `on-kill` are untouched.
 ## Done when
 
 No trait or engine path names the two old hooks, each relationship (`self`, `ally`, `enemy`, `any`)
-has a hand-derived golden, and every changed old golden is attributed to the hook name or the order.
+has a hand-derived golden, every changed old golden is attributed to the hook name or the order,
+and `createCombat` given an invalid trait throws.

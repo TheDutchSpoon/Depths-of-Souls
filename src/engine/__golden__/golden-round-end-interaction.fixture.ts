@@ -20,7 +20,7 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
-import { TRAIT_REGISTRY } from '../../data/traits'
+import { FIXTURE_TRAITS_BY_ID } from '../__fixtures__/traits'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import type { CombatEvent, FightResult } from '../types'
 
@@ -46,7 +46,7 @@ export const enemyParty = makeParty('enemy', [
 ])
 
 export const scripts = FIXTURE_SCRIPTS_BY_ID
-export const traits = TRAIT_REGISTRY
+export const traits = FIXTURE_TRAITS_BY_ID
 export const statuses = STATUS_REGISTRY
 
 function p2Hit(finalDamage: number, rawDamage: number, remainingHp: number): CombatEvent {

@@ -22,11 +22,7 @@ import type { CombatEvent, Spell } from './types'
 
 /** Statuses no shipped content can apply yet, each with its reason. */
 const STATUS_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
-  [
-    'stun',
-    "applied only by the placeholder trait 'reeling' (data/traits/core.ts), which is in the " +
-      'trait registry but carried by no shipped creature; no spell, perk or species trait applies it',
-  ],
+  ['stun', 'applied by no shipped spell, perk or trait; only test fixtures apply it'],
 ])
 
 /** Perks whose effect cannot show in any fight yet, each with its reason. Empty: Clear Mind and
