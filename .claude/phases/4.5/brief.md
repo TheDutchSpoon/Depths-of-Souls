@@ -97,17 +97,23 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 ### on-death-observed
 
 - Death observation joins the other two observation hooks: `on-ally-death` and `on-enemy-death`
-  become one `on-death-observed`, fired on every living creature when a creature dies, with the
-  same `ObservationFilter` `relationship` (`self`, `ally`, `enemy`, `any`), compared with the dead
-  creature, in the standard tie-break order (side → slot → id), like `on-action-observed` and
-  `on-damage-observed`. `on-death` and `on-kill` stay separate (actor-self hooks).
+  become one `on-death-observed`, fired when a creature dies on every living creature except the
+  dead one, with the same `ObservationFilter` `relationship` (`ally`, `enemy`, `any`), compared
+  with the dead creature, in the standard tie-break order (side → slot → id), like
+  `on-action-observed` and `on-damage-observed`. `on-death` and `on-kill` stay separate
+  (actor-self hooks).
+- **A creature never observes its own death**: its own death is `on-death`. The dead creature is
+  left out by id, not by `alive`, so one revived before its death's observers fire still doesn't
+  observe it, and the load-time validator rejects `relationship: 'self'` on `on-death-observed`.
 - The 8 trait triggers on the two old hooks move over: 7 in game data (`data/traits/glimmerdark.ts`,
   `data/traits/rotcap-hollow.ts`) and Grudge's, in the test fixtures after 4.5-A. The Rot
   Sovereign's pair becomes one `any` trigger.
 - Deliberate golden change: the hook name in `TriggerFired`, and the firing order on an enemy's
   death (today the dead creature's allies all fire before its enemies).
-- The PR review rewrites `spec/effects.md#hooks`, `spec/effects.md#damage-path-hook-order` and
-  `spec/effects.md#action-reactions-actor-self-hooks-or-observation` to match (17 hooks become 16).
+- The PR review rewrites `spec/effects.md#hooks`, `spec/effects.md#damage-path-hook-order`,
+  `spec/effects.md#action-reactions-actor-self-hooks-or-observation`,
+  `spec/effects.md#damage-observation` (which filter field belongs to which hook) and
+  `spec/effects.md#count-scaling` (its `on-ally-death` example) to match (17 hooks become 16).
 
 ### createCombat validates its trait registry
 

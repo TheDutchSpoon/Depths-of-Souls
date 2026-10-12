@@ -22,6 +22,7 @@ golden attribution.
 
 ## Done when
 
-No trait or engine path names the two old hooks, each relationship (`self`, `ally`, `enemy`, `any`)
-has a hand-derived golden, every changed old golden is attributed to the hook name or the order,
-and `createCombat` given an invalid trait throws.
+No trait or engine path names the two old hooks, each relationship the hook accepts (`ally`,
+`enemy`, `any`) has a hand-derived golden, `relationship: 'self'` on it is rejected at load, every
+changed old golden is attributed to the hook name or the order, and `createCombat` given an
+invalid trait throws.
