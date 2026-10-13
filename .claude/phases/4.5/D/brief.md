@@ -2,8 +2,8 @@
 
 Phase brief: `.claude/phases/4.5/brief.md`. Golden policy: **deliberate, listed**: the corpus
 digest (fights where the HP% pick differs, a retaliator met non-direct damage, or Last Stand met a
-lethal hit at 1 HP), and the two goldens that pin the tick fizzle with real retaliators. CI balance
-verdicts re-checked (`phases/4.5/brief.md#balance-verdicts`).
+lethal hit at 1 HP), and the two goldens that pinned the tick fizzle with real retaliators,
+deleted. CI balance verdicts re-checked (`phases/4.5/brief.md#balance-verdicts`).
 
 ## Scope
 

@@ -62,16 +62,14 @@ Deliberate, listed:
 - **The corpus digest is regenerated once** (`npm run corpus:update`). Expect 49 of 527 fights, no
   result changes: HP% 6, retaliation 44 (30 log-only, 14 diverging), Last Stand 2, with fights 230,
   520 and 521 moved by two changes each (`phases/4.5/D/evidence/kickoff-probe.md#corpus-digest`).
-- **Two goldens pin the tick fizzle with real retaliators**, which now skip a tick before reaching
-  it: `golden-hollowkin-wretch-self-dot` (Madness Touch on its bearer's own Poison tick) and
-  `golden-status-snapshot-tick-no-retaliation` (Snapback and Madness Touch on a living applier's
-  tick). They are mechanism goldens, and the fizzle rule still holds for a trigger without the
-  field, so they move to fixture retaliators without the field
-  (`CONVENTIONS.md#mechanism-goldens-vs-content-goldens`): `RETALIATE` for Snapback, and a new
-  fixture for Madness Touch's shape (`on-damage-taken` → `apply-status` Confusion at
-  `triggering-source`). Each one's log differs only in the `TriggerFired` `effectId`s; its
-  arithmetic, RNG position and every other line stay. Rewrite their headers to match. That the
-  real retaliators skip a tick is pinned by new test 3.
+- **Two goldens pinned the tick fizzle with real retaliators**, which now skip a tick before
+  reaching it: `golden-hollowkin-wretch-self-dot` (Madness Touch on its bearer's own Poison tick)
+  and `golden-status-snapshot-tick-no-retaliation` (Snapback and Madness Touch on a living
+  applier's tick). Both are deleted. The fizzle rule still holds for a trigger without the field,
+  and new test 2's tick and cost rows pin it with `RETALIATE`, asserting the exact event slice from
+  the damage on: the tick row kills "a tick offers its applier as the source", the cost row
+  "`triggering-source` resolves to the firing creature" (unreachable through a tick, which offers
+  no source). That the real retaliators skip a tick is pinned by new test 3.
 - Every other golden and unit test stays byte-identical. The `warden`/`support` goldens stay
   identical because their two picks agree, not because the change is inert.
 
@@ -130,7 +128,8 @@ Deliberate, listed:
 - **Stale text outside the type checker:** the Last Stand comment in `data/specializations.ts`
   ("When taking damage that would kill …"), the Shellback Bulwark and
   Hollowkin Wretch doc comments ("whenever it takes damage", "whenever it's struck"),
-  `applyDamageAndEmit`'s cheat-death comment, and the two moved goldens' headers.
+  `applyDamageAndEmit`'s cheat-death comment, and `golden-status-snapshot-tick-kill-on-death`'s
+  header, which cites the deleted no-retaliation golden as the first tick site.
 
 ## Must stay green
 
@@ -146,7 +145,7 @@ All gates in `coding-rules.md`. Every golden and unit test not listed above stay
   `TriggerFired`s removed, counted per retaliator) and diverging (first differing event and the
   retaliator there). Then the final build: its changed set is the union, and each of 230, 520 and
   521 is shown to need both of its changes.
-- **Each moved golden:** its diff is the `effectId`s (and its import and header) only.
+- **Each deleted golden:** each mutant it killed, named against the test that kills it now.
 - **Each mechanism fails with it removed:** the current-HP pick fails test 1; ignoring
   `damageChannel` fails tests 2 and 3; treating every `hit` as direct fails test 2's
   indirect-response case; leaving the field out of `effectsForHook` fails test 2; removing the
