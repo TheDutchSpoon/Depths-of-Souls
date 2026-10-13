@@ -131,9 +131,9 @@ export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
 export const statuses = STATUS_REGISTRY
 
-export const TURN_STEPS = 4 // Round 1's 3 turns (Broodmother/Striker/Add2-wait; the call for Add2 steps past
-// Add1's dead slot) + the resolveTurn call that runs Round 1's round-end pass and then Round 2's
-// Broodmother turn.
+export const TURN_STEPS = 4 // Round 1's 3 turns (Broodmother/Striker/Add2-wait; the call for Add2
+// steps past Add1's dead slot) + the resolveTurn call that runs Round 1's round-end pass and then
+// Round 2's Broodmother turn.
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },

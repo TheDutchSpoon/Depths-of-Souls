@@ -20,6 +20,7 @@ each row.
 | M10 | `analyzeFights` drops the roster (a production caller omits it) | `balance-sim` "every fight in a played floor run lists its enemy templates" |
 | M11 | `runProbe` drops the roster | `balance-sim` "restores the state exactly …", "every fight in a played floor run …", "the ids the analysis keys on …", "the analysis names the boss of the biome …" |
 | M12 | `enemyTemplateIds` read from the round-1 `TurnStarted` brackets again | `balance-sim-report` "analyzeFight lists the DISTINCT enemy templates of the whole enemy party" |
+| M13 | the dead slot bumps the turn clock (added to the dead-slot branch of the dequeue loop) | `golden-dead-slot-skip` (`turnClock` 3, not 2) |
 
 The plan's test 3 row named the mutant "skip decided from the round-start state"; a creature that
 is revived is alive at round start, so that mutant would pass test 3. The mutant that test 3 kills

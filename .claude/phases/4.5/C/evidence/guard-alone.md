@@ -1,6 +1,6 @@
 # The guard alone, 4.5-C
 
-`main` (`e8d0ffd`) in a scratch clone outside the repo, with only this added as the first statement
+`main` (`dd703a4`) in a scratch clone outside the repo, with only this added as the first statement
 of `resolveTurn`:
 
 ```ts

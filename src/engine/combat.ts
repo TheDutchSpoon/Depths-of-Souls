@@ -185,13 +185,12 @@ function countDownStatuses(
 /**
  * Turn-end cleanup, part 2 -- Web break-free: rolled once per turn (every living creature's turn;
  * a dead creature's slot has no turn), AFTER the actor's own countdown, against every LIVING
- * bearer of an active
- * status-borne `turn-order` effect carrying breakChancePercent (read through the effect iterator:
- * an immune bearer's Web has no effects, so it draws nothing), skipping a Web born this turn. A
- * board with no such Web draws nothing (only-when-present discipline). Bearers are iterated in
- * turn order, taken once when the cleanup starts (a bearer that breaks free doesn't reorder the
- * rolls after it), so the draw sequence is deterministic. On success the
- * status instance is removed and StatusExpired emitted; the frozen current-round turnQueue is
+ * bearer of an active status-borne `turn-order` effect carrying breakChancePercent (read through
+ * the effect iterator: an immune bearer's Web has no effects, so it draws nothing), skipping a
+ * Web born this turn. A board with no such Web draws nothing (only-when-present discipline).
+ * Bearers are iterated in turn order, taken once when the cleanup starts (a bearer that breaks
+ * free doesn't reorder the rolls after it), so the draw sequence is deterministic. On success
+ * the status instance is removed and StatusExpired emitted; the frozen current-round turnQueue is
  * untouched (breaking free only changes NEXT round's buildTurnQueue).
  */
 function rollWebBreakFree(state: CombatState, events: CombatEvent[]): CombatState {
@@ -386,11 +385,11 @@ export function resolveTurn(state: CombatState): {
     return finalize(working, events, result)
   }
 
-  // Turn-start hooks fire on the acting creature, after the
-  // TurnStarted boundary. The skip (`spec/statuses.md#action-locks`): a turn is skipped if an
-  // 'all' action-lock is active right after the turn-start hook pass (read 1, below -- the
-  // turn-start grants need it) or at the action slot (read 2). `skipped` is the first read's
-  // carrier id, if any; the combined value (`skipEffectId`) is fixed at the action slot.
+  // Turn-start hooks fire on the acting creature, after the TurnStarted boundary. The skip
+  // (`spec/statuses.md#action-locks`): a turn is skipped if an 'all' action-lock is active right
+  // after the turn-start hook pass (read 1, below -- the turn-start grants need it) or at the
+  // action slot (read 2). `skipped` is the first read's carrier id, if any; the combined value
+  // (`skipEffectId`) is fixed at the action slot.
   const turnStartCtx = createResolutionContext(events, newCascade())
   const startResult = fireHook(
     'on-turn-start',

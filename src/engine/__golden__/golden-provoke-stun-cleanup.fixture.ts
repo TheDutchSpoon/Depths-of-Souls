@@ -32,8 +32,7 @@
 //
 // Captured as exactly 5 explicit resolveTurn steps (provoker/hero/weakling in round 1, provoker/hero
 // in round 2), mirroring golden-on-action-hooks' TURN_STEPS style -- this golden is about the
-// turn-start sequencing, not
-// the fight's eventual outcome.
+// turn-start sequencing, not the fight's eventual outcome.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
@@ -135,8 +134,8 @@ export const statuses: ReadonlyMap<string, StatusDef> = new Map([
   [STUN_FIXTURE.statusId, STUN_FIXTURE],
 ])
 
-export const TURN_STEPS = 5 // provoker/hero/weakling in round 1, provoker/hero in round 2 (the call after
-// that would step past WEAKLING's dead slot and the round end)
+export const TURN_STEPS = 5 // provoker/hero/weakling in round 1, provoker/hero in round 2 (the call
+// after that would step past WEAKLING's dead slot and the round end)
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },

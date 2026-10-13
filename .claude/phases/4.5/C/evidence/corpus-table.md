@@ -3,7 +3,7 @@
 Method: the whole event log of every one of the 527 corpus fights on four trees, by a scratch script
 outside the repo (`buildCorpus` + `createCorpusCombat` + `resolveFight`, JSON-compared):
 
-- **main**: the tree at the kickoff (`e8d0ffd`).
+- **main**: the tree at the kickoff (`dd703a4`).
 - **stage 1**: the final build, except a dead slot still bumps the turn clock and still rolls the
   Web (inside the same call), and emits no bracket.
 - **stage 2**: the final build, except a dead slot still bumps the turn clock (no Web roll).
@@ -26,15 +26,18 @@ change nothing.
 exactly the kickoff probe's number. Splitting them by comparing final with main minus the dead
 brackets and everything inside them:
 
+Under stage 1's reading (`main`'s log with the empty brackets removed and any Web `StatusExpired`
+inside them kept in place):
+
 | Class | Fights |
 | --- | --- |
-| brackets only | 319 |
-| diverging (a removed Web draw shifts the rest of the fight) | 74 |
+| brackets only | 318 |
+| at a removed Web draw | 75 |
 
-Under the stricter reading that keeps a Web `StatusExpired` inside the removed bracket (stage 1's
-reading above) the split is 318 / 75: fight 126 is the one fight where the only difference from
-main minus brackets is the `StatusExpired` a dead-slot roll produced. The 393 are the same either
-way; the probe's 319 / 74 is the first reading.
+The 75 are the 74 that diverge in later events (a removed Web draw shifts the rest of the fight)
+and fight 126. In fight 126 `main`'s dead-slot rolls broke `treant-sapling-enemy-0`'s Web; on the
+branch the Web holds, the fight ends a turn later, and the missing `StatusExpired` is the only
+visible change. The kickoff's expected 319 / 74 counted fight 126 as brackets-only.
 
 First differing event of the 74 (main minus dead brackets, then final):
 

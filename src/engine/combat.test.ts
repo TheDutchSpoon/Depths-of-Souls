@@ -1027,7 +1027,7 @@ describe('Web break-free', () => {
     expect(state.rng.position).toBe(created.rng.position)
   })
 
-  it('a Web-bearer draws exactly one roll per dequeued turn (count == number of TurnStarted events)', () => {
+  it('a Web-bearer draws exactly one roll per turn (count == number of TurnStarted events)', () => {
     // breakChancePercent 0 -- rng.next() (always in [0,1)) can never be < 0, so the roll NEVER
     // succeeds and the status is never removed. This isolates "one roll per turn" from
     // removal (covered separately by the golden below) -- otherwise a successful break partway

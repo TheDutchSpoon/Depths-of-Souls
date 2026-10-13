@@ -5,7 +5,7 @@ last:
 
 | Run | Engine | Roster and bracket readers |
 | --- | --- | --- |
-| **before** | `main` (`e8d0ffd`) | `main`'s (`firstRoundEnemyIds`, round-1 brackets) |
+| **before** | `main` (`dd703a4`) | `main`'s (`firstRoundEnemyIds`, round-1 brackets) |
 | **roster only** | `main` | the build's `balance-sim.ts` and `store.ts` (`fightEnemyIds`), plus a counter that records `main`'s round-1 roster beside each fight's party |
 | **brackets** | the build, except a dead slot still rolls the Web (so every fight is `main`'s with its dead brackets removed) | the build's |
 | **after** | the build | the build's |

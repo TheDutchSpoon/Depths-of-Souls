@@ -106,7 +106,7 @@ export const traits = TRAIT_REGISTRY
 export const statuses = STATUS_REGISTRY
 
 export const TURN_STEPS = 2 // TARGET's turn (kills ADD), then SOVEREIGN's turn (kills WEAK) --
-// WEAK's and ADD's own (now-empty, skipped-since-dead) queue slots are never reached.
+// WEAK's and ADD's own queue slots (both dead) are never reached.
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },

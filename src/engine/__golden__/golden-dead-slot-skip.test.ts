@@ -7,6 +7,7 @@ import {
   expectedDraws,
   expectedEvents,
   expectedQueue,
+  expectedTurnClock,
 } from './golden-dead-slot-skip.fixture'
 
 describe('golden replay: a dead creature’s slot emits nothing and rolls nothing', () => {
@@ -17,5 +18,6 @@ describe('golden replay: a dead creature’s slot emits nothing and rolls nothin
     expect(countDraws(initial.rng, state.rng)).toBe(expectedDraws)
     expect(state.turnQueue).toEqual(expectedQueue)
     expect(state.turnCursor).toBe(expectedCursor)
+    expect(state.turnClock).toBe(expectedTurnClock)
   })
 })

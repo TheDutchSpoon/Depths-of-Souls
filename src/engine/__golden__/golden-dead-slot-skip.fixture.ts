@@ -140,6 +140,10 @@ export const expectedEvents: CombatEvent[] = [
 /** The Web rolls in the window: HERO's cleanup and E's cleanup. */
 export const expectedDraws = 2
 
+/** HERO's turn and E's turn each bump the clock once at the action slot; D's dead slot doesn't
+ * (a bump there would make it 3). */
+export const expectedTurnClock = 2
+
 /** The frozen queue keeps the dead entry; the cursor has passed all three. */
 export const expectedQueue = [HERO, D, E]
 export const expectedCursor = 3

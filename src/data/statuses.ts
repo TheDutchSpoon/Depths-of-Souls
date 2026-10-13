@@ -123,8 +123,8 @@ export const VULNERABILITY: StatusDef = {
  * `position: 'last'`. GRANT_ACT_FIRST is the same primitive at the opposite pole
  * (`content/glimmerdark.md#grant-act-first`). Deliberately light: a 10% break-free roll
  * (`breakChancePercent`, rolled at every living creature's turn-end cleanup against every
- * Web-bearer, ~72% free within one round of twelve living creatures) with a 3-turn duration as a bad-luck backstop. The reward lives in
- * the Spiders' Ambusher exploit (+% damage to Webbed), not in the status lasting long. Re-applying
+ * Web-bearer, ~72% free within one round of twelve living creatures) with a 3-turn duration as a
+ * bad-luck backstop. The reward lives in the Spiders' Ambusher exploit (+% damage to Webbed), not in the status lasting long. Re-applying
  * Web refreshes it. */
 export const WEB: StatusDef = {
   statusId: 'web',
