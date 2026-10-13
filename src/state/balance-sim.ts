@@ -519,22 +519,6 @@ export function bossLockStats(
 const PLAYER_ID = /-player-\d+$/
 const ENEMY_ID = /-enemy-\d+$/
 
-/** The enemy-side creature ids that start round 1 (every living creature gets a TurnStarted). */
-export function firstRoundEnemyIds(events: readonly CombatEvent[]): readonly string[] {
-  const ids: string[] = []
-  let round = 0
-  for (const event of events) {
-    if (event.type === 'RoundStarted') round = event.round
-    else if (
-      round === 1 &&
-      event.type === 'TurnStarted' &&
-      ENEMY_ID.test(event.creatureId)
-    )
-      ids.push(event.creatureId)
-  }
-  return ids
-}
-
 export interface FightMetrics {
   readonly result: 'win' | 'loss' | 'draw'
   readonly maxRound: number
@@ -545,7 +529,7 @@ export interface FightMetrics {
   readonly largestStacks: StackMaxima<StackCount>
   /** The largest stack per (bucket, trait) in this fight. */
   readonly traitStacks: TraitStackMaxima<StackCount>
-  /** The distinct enemy-side creature template ids that started the fight. */
+  /** The distinct template ids of every enemy in the fight's party. */
   readonly enemyTemplateIds: readonly string[]
   readonly unattributed: number
   readonly applications: number
@@ -661,9 +645,12 @@ export function foldFightStacks(
   return next
 }
 
+/** `enemyIds` is the fight's whole enemy party (`FloorOutcome.fightEnemyIds`): the events name an
+ * enemy only once it acts or is hit, so they cannot supply the roster. */
 export function analyzeFight(
   events: readonly CombatEvent[],
   ctx: FightContext,
+  enemyIds: readonly string[] = [],
 ): FightMetrics {
   let result: 'win' | 'loss' | 'draw' = 'draw'
   let maxRound = 0
@@ -723,7 +710,7 @@ export function analyzeFight(
     deaths,
     largestStacks,
     traitStacks: traitStackMaxima(attribution.stacks),
-    enemyTemplateIds: [...new Set(firstRoundEnemyIds(events).map(templateIdOf))],
+    enemyTemplateIds: [...new Set(enemyIds.map(templateIdOf))],
     unattributed: attribution.unattributed,
     applications: attribution.applications,
     unicornRevives,
@@ -903,7 +890,11 @@ export function noteBossVisit(seen: Set<number>, floor: number): boolean {
 export function runProbe(
   store: Store,
   floor: number,
-): { readonly cleared: boolean; readonly events: readonly CombatEvent[] } | null {
+): {
+  readonly cleared: boolean
+  readonly events: readonly CombatEvent[]
+  readonly fightEnemyIds: readonly (readonly string[])[]
+} | null {
   const snapshot = store.getState()
   const choice = pickProbeCreature(snapshot)
   if (choice === null) return null
@@ -918,7 +909,11 @@ export function runProbe(
   const result = store.getState().descend(floor)
   store.setState(snapshot, true)
   if (!result.ok) throw new Error(`balance-sim: probe descend(${floor}) refused`)
-  return { cleared: result.outcome.cleared, events: result.outcome.events }
+  return {
+    cleared: result.outcome.cleared,
+    events: result.outcome.events,
+    fightEnemyIds: result.outcome.fightEnemyIds,
+  }
 }
 
 /** The analysis context for `floor`: the boss and its traits on a boss floor (the biome the store
@@ -952,6 +947,21 @@ function noBossContext(unicornId: string | null): FightContext {
     bossTraitIds: [],
     lockScopes: new Map(),
   }
+}
+
+/** Each fight's metrics: `splitFights` pairs one-to-one with the rosters `descend` reports. */
+function analyzeFights(
+  events: readonly CombatEvent[],
+  fightEnemyIds: readonly (readonly string[])[],
+  ctx: FightContext,
+): FightMetrics[] {
+  const fights = splitFights(events)
+  if (fights.length !== fightEnemyIds.length) {
+    throw new Error(
+      `balance-sim: ${fights.length} fights in the log, ${fightEnemyIds.length} rosters`,
+    )
+  }
+  return fights.map((fight, i) => analyzeFight(fight, ctx, fightEnemyIds[i]!))
 }
 
 export interface FloorRunResult {
@@ -988,14 +998,15 @@ export function playFloorRun(
     throw new Error(`balance-sim: descend(${floor}) refused: ${result.reason}`)
   const outcome = result.outcome
   const context = bossCtx ?? noBossContext(unicornId)
-  const fights = splitFights(outcome.events).map((e) => analyzeFight(e, context))
+  const fights = analyzeFights(outcome.events, outcome.fightEnemyIds, context)
 
   let bossVisit: BossVisit | null = null
   if (bossCtx !== null && bossCtx.bossTemplateId !== null) {
     const probeMetrics =
       probeRun === null
         ? null
-        : analyzeFight(splitFights(probeRun.events)[0] ?? [], bossCtx).boss
+        : (analyzeFights(probeRun.events, probeRun.fightEnemyIds, bossCtx)[0]?.boss ??
+          null)
     bossVisit = {
       floor,
       firstVisit: noteBossVisit(seenBossFloors, floor),

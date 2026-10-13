@@ -36,11 +36,11 @@ floor and no Additional.
 
 ### Web
 
-A Webbed creature acts last in the round. At the end of **every creature's turn** (not only the
-Webbed one's), starting with the turn after the one that applied it, the Web has a **10% chance**
-to break, so in a full 6v6 fight a Web usually breaks within one round (about 72% of the time). It
-never lasts more than **3** of its bearer's turns. Web is deliberately light: the Spiders' reward
-is the exploit, not the status.
+A Webbed creature acts last in the round. At the end of **every living creature's turn** (not
+only the Webbed one's), starting with the turn after the one that applied it, the Web has a **10%
+chance** to break, so in a full 6v6 fight a Web usually breaks within one round (about 72% of the
+time), and it holds longer as creatures fall. It never lasts more than **3** of its bearer's
+turns. Web is deliberately light: the Spiders' reward is the exploit, not the status.
 
 ### Silenced
 

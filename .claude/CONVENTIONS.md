@@ -92,8 +92,8 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
   floor. The simulator records the first wall and keeps going.
 - **No band for round-cap draws**: the draw rate is reported, not targeted.
 - The report also has a **floor 1–5 matchup table** (per enemy creature: fights, wins, losses and
-  round-cap draws, per spec) and the **first-try clear rate per floor** (each seed's first run on
-  that floor).
+  round-cap draws, per spec; a fight counts for every enemy in its party, one that never got a turn
+  included) and the **first-try clear rate per floor** (each seed's first run on that floor).
 - **CI checks only loose "badly broken" thresholds**: first-try floor 1 ≥ 80%; the median floor
   runs to the first soul ≤ 30; some seed fights on floor 5 or deeper within its first 20 floor
   runs. A test in the normal suite asserts the three verdicts, never a value, over the full 40

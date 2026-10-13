@@ -31,9 +31,8 @@
 //   STRIKER's turn -> attacks lowest-HP enemy = ADD1 (health 10, lowest of {100,10,20}). offStat
 //     = 50*1.0 = 50. ADD1 def 0 -> core 50, chip 0.5, raw 50.5, final floor(50.5)=50. ADD1
 //     10-50 -> 0, dies.
-//   ADD1's turn -> already dead (died on STRIKER's turn, above): an EMPTY TurnStarted/TurnEnded
-//     bracket -- the documented skip signal for a dead-before-turn creature (combat.ts), no
-//     action, no hooks.
+//   ADD1's slot -> already dead (died on STRIKER's turn, above): no turn, no bracket, no hooks; the
+//     same resolveTurn call that resolves ADD2's turn steps past it.
 //   ADD2's turn -> alive, scripted always-wait -> Waited. No damage, no RNG (no random selector
 //     used by 'wait').
 //
@@ -132,8 +131,9 @@ export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
 export const statuses = STATUS_REGISTRY
 
-export const TURN_STEPS = 5 // Round 1's 4 turns (Broodmother/Striker/Add1-empty/Add2-wait) + the
-// resolveTurn call that runs Round 1's round-end pass and then Round 2's Broodmother turn.
+export const TURN_STEPS = 4 // Round 1's 3 turns (Broodmother/Striker/Add2-wait; the call for Add2
+// steps past Add1's dead slot) + the resolveTurn call that runs Round 1's round-end pass and then
+// Round 2's Broodmother turn.
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },
@@ -186,10 +186,6 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'CreatureDied', creatureId: ADD1 },
   { type: 'TurnEnded', creatureId: STRIKER },
-
-  // ADD1 is already dead -- an empty bracket, the documented skip signal.
-  { type: 'TurnStarted', creatureId: ADD1 },
-  { type: 'TurnEnded', creatureId: ADD1 },
 
   { type: 'TurnStarted', creatureId: ADD2 },
   { type: 'Waited', creatureId: ADD2 },

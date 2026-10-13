@@ -21,11 +21,11 @@
 //   Round 1, queue U 40, K 30, D 20: U attacks K (core 10, chip 0.1 -> raw 10.1 -> final 10;
 //   K 1000 -> 990); its revive trigger fires with no dead ally: no target, no draw. K attacks the
 //   lowest-HP enemy, D (20 < U's 50): core 40, chip 0.4 -> raw 40.4 -> final 40, D dies. D's queued
-//   turn is an empty bracket. Round-end pass: U, K (D is dead).
+//   slot comes up dead: no turn, no bracket. Round-end pass: U, K (D is dead).
 //   Round 2, queue U, K (D is dead): U attacks K (990 -> 980) and its revive trigger revives D:
 //   one dead ally, so the pick draws once (value inert, index 0), D at round(20 x 0.2) = 4 HP. K
 //   waits. Round-end pass: the live order U 40, K 30, D 20 -> U, K, D. The frozen queue would omit
-//   D, and the old order (party arrays U, D, K) would fire D before K. TURN_STEPS = 6 adds round
+//   D, and the old order (party arrays U, D, K) would fire D before K. TURN_STEPS = 5 adds round
 //   3's first turn: U attacks (K 980 -> 970); D is alive, so its revive trigger finds no target.
 
 import { createCreatureId } from '../ids'
@@ -206,7 +206,7 @@ export const speedUpExpected: CombatEvent[] = [
 
 export const revived = {
   SEED: 9510, // One inert draw: the revive pick among a pool of one.
-  TURN_STEPS: 6,
+  TURN_STEPS: 5,
   playerParty: makeParty('player', [
     {
       id: 'u',
@@ -287,9 +287,6 @@ export const revivedExpected: CombatEvent[] = [
   },
   { type: 'CreatureDied', creatureId: D },
   { type: 'TurnEnded', creatureId: K },
-  // D's queued turn: an empty bracket.
-  { type: 'TurnStarted', creatureId: D },
-  { type: 'TurnEnded', creatureId: D },
   // Round-1 end: D is dead, so U then K.
   ...roundEndFires(U, ROUND_END_U, 2, 20, 40),
   ...roundEndFires(K, ROUND_END_K, 3, 20, 60),

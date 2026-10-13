@@ -10,7 +10,7 @@
 //
 // Round 1 (queue by speed: hero 20, B 2, A 1):
 //   HERO -> B (lowest HP, 15 < 25): core 40 - 0 = 40, chip 0.01*40 = 0.4 -> raw 40.4 -> final 40;
-//     B 15 - 40 -> 0, dies. B's own queued turn is an empty bracket (dead before its turn).
+//     B 15 - 40 -> 0, dies. B's queued slot comes up dead, so it gets no turn (no bracket).
 //   A waits (always-wait).
 // Round 2: HERO -> A (the only living enemy): raw 40.4 -> 40; A 25 - 40 -> 0, dies. Win.
 //
@@ -57,8 +57,6 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'CreatureDied', creatureId: B },
   { type: 'TurnEnded', creatureId: HERO },
-  { type: 'TurnStarted', creatureId: B },
-  { type: 'TurnEnded', creatureId: B },
   { type: 'TurnStarted', creatureId: A },
   { type: 'Waited', creatureId: A },
   { type: 'TurnEnded', creatureId: A },

@@ -165,6 +165,9 @@ export interface FloorOutcome {
   readonly xpBanked: number
   readonly currencyGained: Currencies
   readonly events: readonly CombatEvent[]
+  /** One array of enemy creature ids per fight resolved, in fight order: the whole enemy party,
+   * including an enemy that never got a turn (the events alone cannot name it). */
+  readonly fightEnemyIds: readonly (readonly string[])[]
   /** The bossId, iff this floor's (single) fight
    * was a boss encounter AND it was won -- else null. Idempotent at the bossesCleared level (a
    * re-fought, already-cleared boss still reports bossDefeated here, but grants no further perk
@@ -752,6 +755,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       let currencyGained = ZERO_CURRENCIES
       const fightResults: FightResult[] = []
       const allEvents: CombatEvent[] = []
+      const fightEnemyIds: string[][] = []
       let cleared = true
       // Set iff this floor's (single) fight is a
       // boss encounter AND it's won -- `spec/run.md#rewards-are-a-run-layer-consumer-of-the-event-log`: winning a boss fight adds its
@@ -773,6 +777,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         })
         const { state: finalState, events } = resolveFight(combat)
         allEvents.push(...events)
+        fightEnemyIds.push(fight.enemyParty.map((c) => c.id))
         fightResults.push(finalState.result as FightResult)
 
         // Rewards bank per kill-event, immediately, regardless of how this fight (or the floor)
@@ -863,6 +868,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
           xpBanked,
           currencyGained,
           events: allEvents,
+          fightEnemyIds,
         },
       }
     },

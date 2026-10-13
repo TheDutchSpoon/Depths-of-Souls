@@ -340,10 +340,10 @@ describe('the Web roll', () => {
     expect(types(perTurn[0]!).slice(-3)).toEqual(['Waited', 'StatusExpired', 'TurnEnded'])
   })
 
-  it("a dead actor's empty bracket still bumps the clock and rolls: a Web placed in the previous turn action is rolled there", () => {
+  it("a dead slot has no cleanup: a Web placed in the previous turn is first rolled at the next living turn's cleanup", () => {
     // Queue [A, D, E]. A kills D (1 HP) with its attack, then Webs E in its turn-end hooks (born
-    // in A's turn: not rolled at A's cleanup). D's slot is a dead actor's empty bracket: its
-    // cleanup is the next roll, so the Web breaks inside D's bracket.
+    // in A's turn: not rolled at A's cleanup). D's slot is skipped outright, so the next roll is
+    // E's own cleanup, in the second call.
     const state = fight(
       [
         {
@@ -368,9 +368,12 @@ describe('the Web roll', () => {
         { id: 'e', speed: 10 },
       ],
     )
-    const { perTurn } = run(state, 2) // A, then D's empty bracket
+    const { perTurn } = run(state, 2) // A, then E (the call skips D)
     expect(has(perTurn[0]!, 'StatusExpired')).toBe(false)
-    expect(types(perTurn[1]!)).toEqual(['TurnStarted', 'StatusExpired', 'TurnEnded'])
+    expect(perTurn[1]!.filter((e) => e.type === 'TurnStarted')).toEqual([
+      { type: 'TurnStarted', creatureId: 'e' },
+    ])
+    expect(types(perTurn[1]!).slice(-3)).toEqual(['Waited', 'StatusExpired', 'TurnEnded'])
   })
 
   it('a Web with one turn left expires by the countdown and draws no roll at its own turn end (countdown runs first)', () => {

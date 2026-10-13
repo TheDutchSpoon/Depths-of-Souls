@@ -91,8 +91,8 @@ export const expectedRound1TurnOrder: readonly CreatureId[] = [
 export const expectedEventTypeCounts: Partial<Record<CombatEvent['type'], number>> = {
   FightStarted: 1,
   RoundStarted: 28,
-  TurnStarted: 176,
-  TurnEnded: 176,
+  TurnStarted: 173,
+  TurnEnded: 173,
   AttackDeclared: 64,
   SpellCast: 14,
   Defended: 41,
@@ -102,9 +102,10 @@ export const expectedEventTypeCounts: Partial<Record<CombatEvent['type'], number
   // whenever a Defend/Provoke flag actually expires -- one per Defended/Provoked action whose
   // bearer survives to reach its own next turn (fewer than the 45 total Defended+Provoked here,
   // since a creature that dies before its own next turn never gets another turn-start cleanup to
-  // close its flag out). Regenerated and re-checkpointed at the same seed/scripts -- every OTHER
-  // checkpoint below (result, round count, turn order, the other counts, spot-check damage,
-  // provoke redirects) is unchanged, confirmed by re-running this fixture.
+  // close its flag out).
+  // TurnStarted/TurnEnded: 173 = the 176 queue slots over the 28 rounds minus the 3 that come up
+  // dead (a dead slot gets no bracket). No other count depends on a dead slot, so the other counts,
+  // the result, the round count, the round-1 turn order, the spot checks and the redirects hold.
   ActionStateEnded: 41,
   DamageDealt: 102,
   CreatureDied: 11,

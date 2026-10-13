@@ -126,7 +126,7 @@ describe('the matchup table', () => {
     expect(templateIdOf('enemy-scout-enemy-1')).toBe('enemy-scout')
   })
 
-  it('analyzeFight lists the DISTINCT enemy templates that start the fight', () => {
+  it('analyzeFight lists the DISTINCT enemy templates of the whole enemy party', () => {
     const noCtx = {
       unicornId: null,
       bossId: null,
@@ -134,21 +134,25 @@ describe('the matchup table', () => {
       bossTraitIds: [],
       lockScopes: new Map(),
     }
+    // Only the hero and one weaver ever get a turn: the treant and the second weaver die before
+    // their slots, so no TurnStarted names them. The roster is the party, not the brackets.
     const events: CombatEvent[] = [
       { type: 'FightStarted' },
       { type: 'RoundStarted', round: 1 },
       { type: 'TurnStarted', creatureId: 'hero-player-0' as never },
       { type: 'TurnStarted', creatureId: 'spider-weaver-enemy-0' as never },
-      { type: 'TurnStarted', creatureId: 'spider-weaver-enemy-1' as never },
-      { type: 'TurnStarted', creatureId: 'treant-elder-enemy-2' as never },
-      { type: 'RoundStarted', round: 2 },
-      { type: 'TurnStarted', creatureId: 'late-comer-enemy-3' as never },
       { type: 'FightEnded', result: 'win' },
     ]
-    expect(analyzeFight(events, noCtx).enemyTemplateIds).toEqual([
+    const party = [
+      'spider-weaver-enemy-0',
+      'spider-weaver-enemy-1',
+      'treant-elder-enemy-2',
+    ]
+    expect(analyzeFight(events, noCtx, party).enemyTemplateIds).toEqual([
       'spider-weaver',
       'treant-elder',
     ])
+    expect(analyzeFight(events, noCtx).enemyTemplateIds).toEqual([])
   })
 
   it("counts a fight once per distinct template, with the fight's own result, keyed by floor", () => {

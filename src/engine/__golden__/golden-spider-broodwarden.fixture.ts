@@ -13,12 +13,11 @@
 // goldens use.
 //
 // Because Web is genuinely applied (not preset), it carries its real breakChancePercent (10)
-// -- rollWebBreakFree (in turn-end cleanup) rolls once per LIVING
-// Web-bearer at EVERY creature's turn end, including Broodwarden's own. Both Webs were applied at
-// fight start (not born in any turn), so Broodwarden's cleanup rolls them -- but TARGET dies to
-// the attack, so only OTHERFOE rolls: draw #1 = 0.7343 (SEED 2's mulberry32 sequence: 0.7343,
-// 0.3250, ...), >= 0.10, so it doesn't break, verified via an independent `node -e` trace of the
-// exact rng.ts algorithm.
+// -- rollWebBreakFree (in turn-end cleanup) rolls once per living Web-bearer at every living
+// creature's turn end, including Broodwarden's own. Both Webs were applied at fight start (not
+// born in any turn), so Broodwarden's cleanup rolls them -- but TARGET dies to the attack, so only
+// OTHERFOE rolls: draw #1 = 0.7343 (SEED 2's mulberry32 sequence: 0.7343, 0.3250, ...), >= 0.10, so
+// it doesn't break, verified via an independent `node -e` trace of the exact rng.ts algorithm.
 //
 // Hand-derived (independent `node -e` calculator). All vitality -> neutral affinity x1.0.
 // BROODWARDEN attacks TARGET (lowest-HP enemy, health 30, defence 0); OTHERFOE (health 1000,
