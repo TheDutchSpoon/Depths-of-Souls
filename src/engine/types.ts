@@ -208,8 +208,8 @@ export interface CombatState {
    * -- the ONLY production issuer. Ids are opaque (`eff-<n>`; never appear in events, so goldens
    * stay byte-identical regardless of the exact format). Starts at 0 in `createCombat`. */
   readonly effectInstanceCounter: number
-  /** The born-this-turn clock. Bumped once per dequeued turn, at the
-   * action slot (alive, dead or skipped actor); a status instance is "born this turn" iff its
+  /** The born-this-turn clock. Bumped once per turn (a dead creature's slot has none), at the
+   * action slot (a skipped turn included); a status instance is "born this turn" iff its
    * `appliedAt` equals it. Plain data, never in an event. Starts at 0 in `createCombat`. */
   readonly turnClock: number
 }
@@ -419,7 +419,8 @@ export type ConsequenceEvent =
   | ActionStateEndedEvent
 
 // Lifecycle events. TurnStarted/TurnEnded are real events (not just internal hook
-// checkpoints) so playback has an explicit boundary even for no-op/skipped turns.
+// checkpoints) so playback has an explicit boundary for every living creature's turn, a
+// skipped one included. A dead creature's slot has no turn, so no bracket.
 export interface FightStartedEvent {
   readonly type: 'FightStarted'
 }

@@ -183,8 +183,8 @@ function countDownStatuses(
 }
 
 /**
- * Turn-end cleanup, part 2 -- Web break-free: rolled once per dequeued turn (every creature's, a
- * dead actor's empty bracket included), AFTER the actor's own countdown, against every LIVING
+ * Turn-end cleanup, part 2 -- Web break-free: rolled once per turn (every living creature's turn;
+ * a dead creature's slot has no turn), AFTER the actor's own countdown, against every LIVING
  * bearer of an active
  * status-borne `turn-order` effect carrying breakChancePercent (read through the effect iterator:
  * an immune bearer's Web has no effects, so it draws nothing), skipping a Web born this turn. A
@@ -281,6 +281,12 @@ export function resolveTurn(state: CombatState): {
   state: CombatState
   events: CombatEvent[]
 } {
+  // A finished fight has no next turn; reading only `result` keeps the check ahead of every
+  // other step, so a finished state never reaches the dequeue loop.
+  if (state.result !== null) {
+    throw new Error('resolveTurn: the fight already has a result')
+  }
+
   const events: CombatEvent[] = []
   // "the per-turn working copy resolveTurn makes when it starts" --
   // clones `rng` into a FRESH object so every draw this turn (directly here, or by any pure
@@ -313,51 +319,58 @@ export function resolveTurn(state: CombatState): {
     if (fightStartResult) return finalize(working, events, fightStartResult)
   }
 
-  // Round boundary: the queue is exhausted (or this is the very first call).
-  if (working.turnCursor >= working.turnQueue.length) {
-    if (working.round > 0) {
-      working = resolveRoundEnd(working, events)
-      // Win/loss is checked right after the round-end pass: an on-round-end trigger can wipe a
-      // side, and this must not wait for a subsequent (now-moot) creature turn.
-      const roundEndResult = checkWinLoss(working)
-      if (roundEndResult) return finalize(working, events, roundEndResult)
+  // Dequeue: one call is one turn. A dead creature's slot is skipped outright (no bracket, no
+  // turn-clock bump, no Web roll) and the loop moves on to the next entry, crossing the round
+  // boundary in this same call when the dead entries end the round. The frozen queue keeps its
+  // dead entries (`acted-before-target` reads queue positions): only the cursor advances.
+  let actor: Creature
+  for (;;) {
+    const creatureId = working.turnQueue[working.turnCursor]
+
+    if (creatureId === undefined) {
+      // Round boundary: the queue is exhausted (or this is the very first call).
+      if (working.round > 0) {
+        working = resolveRoundEnd(working, events)
+        // Win/loss is checked right after the round-end pass: an on-round-end trigger can wipe a
+        // side, and this must not wait for a subsequent (now-moot) creature turn.
+        const roundEndResult = checkWinLoss(working)
+        if (roundEndResult) return finalize(working, events, roundEndResult)
+      }
+
+      const nextRound = working.round + 1
+
+      // Round-cap gate, checked here (before starting a new round) rather than generically
+      // after an action: this guarantees exactly ROUND_CAP full rounds complete, then a
+      // clean draw -- not a round cut off after just one creature's turn.
+      if (nextRound > ROUND_CAP) {
+        return finalize(working, events, 'draw')
+      }
+
+      const queue = buildTurnQueue(working.playerParty, working.enemyParty)
+      working = { ...working, turnQueue: queue, turnCursor: 0, round: nextRound }
+      // No on-round-start hook in the v1 vocabulary; just emit RoundStarted.
+      events.push({ type: 'RoundStarted', round: nextRound })
+
+      if (queue.length === 0) {
+        // Logically unreachable -- the win/loss check above guarantees a living creature on
+        // each side, so a freshly-built queue is never empty. Defensive finalize: without it an
+        // empty queue would cross the boundary again and again.
+        return finalize(working, events, checkWinLoss(working) ?? 'draw')
+      }
+      continue
     }
 
-    const nextRound = working.round + 1
-
-    // Round-cap gate, checked here (before starting a new round) rather than generically
-    // after an action: this guarantees exactly ROUND_CAP full rounds complete, then a
-    // clean draw -- not a round cut off after just one creature's turn.
-    if (nextRound > ROUND_CAP) {
-      return finalize(working, events, 'draw')
+    working = { ...working, turnCursor: working.turnCursor + 1 }
+    const dequeued = getCreature(working, creatureId)
+    if (dequeued.alive) {
+      actor = dequeued
+      break
     }
-
-    const queue = buildTurnQueue(working.playerParty, working.enemyParty)
-    working = { ...working, turnQueue: queue, turnCursor: 0, round: nextRound }
-    // No on-round-start hook in the v1 vocabulary; just emit RoundStarted.
-    events.push({ type: 'RoundStarted', round: nextRound })
   }
 
-  const creatureId = working.turnQueue[working.turnCursor]
-  working = { ...working, turnCursor: working.turnCursor + 1 }
-
-  if (creatureId === undefined) {
-    // Type-required by noUncheckedIndexedAccess; logically unreachable -- a freshly-built
-    // queue always has >=1 alive creature, since the round-cap gate above and the
-    // win/loss check below together guarantee the fight already ended before a queue
-    // with zero living creatures could ever be built here. Defensive finalize, not a
-    // silent fallthrough.
-    const result = checkWinLoss(working) ?? 'draw'
-    return finalize(working, events, result)
-  }
-
-  const actor = getCreature(working, creatureId)
-
-  // Turn body -- the TurnStarted/TurnEnded bracket is ALWAYS emitted for a dequeued slot;
-  // only the action and the turn-start/turn-end hooks are gated on the actor being alive.
-  // A dead-before-turn creature still gets an (empty) bracket -- that IS the skip signal,
-  // per `spec/combat.md#turn-structure`. A dead creature must not
-  // trigger start-of-turn effects, hence the hooks (not the events) are alive-gated.
+  // Turn body -- the actor was alive when dequeued. It can still die mid-turn, so the alive
+  // re-checks below read fresh state; the Web roll at cleanup runs regardless, because the
+  // turn happened.
   events.push({ type: 'TurnStarted', creatureId: actor.id })
 
   // A wipe ends the turn at once. After every top-level step (the
@@ -373,60 +386,61 @@ export function resolveTurn(state: CombatState): {
     return finalize(working, events, result)
   }
 
-  // Turn-start hooks fire on the acting creature (if it entered the turn alive), after the
+  // Turn-start hooks fire on the acting creature, after the
   // TurnStarted boundary. The skip (`spec/statuses.md#action-locks`): a turn is skipped if an
   // 'all' action-lock is active right after the turn-start hook pass (read 1, below -- the
   // turn-start grants need it) or at the action slot (read 2). `skipped` is the first read's
   // carrier id, if any; the combined value (`skipEffectId`) is fixed at the action slot.
-  let skipped: string | undefined
-  if (actor.alive) {
-    const turnStartCtx = createResolutionContext(events, newCascade())
-    const startResult = fireHook(
-      'on-turn-start',
-      [actor.id],
-      undefined,
-      working,
-      turnStartCtx,
-      { stopWhen: fightOver },
-    )
-    working = startResult.state
-    const wiped = closeIfWiped()
-    if (wiped) return wiped
-    // Read 1: live state after the hooks (a lock gained during them skips this very turn).
-    const afterHooks = getCreature(working, actor.id)
-    skipped = afterHooks.alive ? firstAllLock(afterHooks)?.effectId : undefined
-
-    // Turn-start cleanup: "until its next turn" expires HERE, right after
-    // turn-start hooks, UNCONDITIONALLY on a skip -- runs on a Stunned/skipped turn too.
-    // Gated only on the actor being alive AT THIS POINT (re-checked fresh -- a
-    // turn-start hook may have killed it). Cleanup is bookkeeping only (`spec/combat.md#turn-structure`: it ends
-    // things, never deals damage/heals/fires triggers).
-    const afterStartHooks = getCreature(working, actor.id)
-    if (afterStartHooks.alive) {
-      working = clearOwnTransientStatus(working, actor.id)
-      if (afterStartHooks.defending || afterStartHooks.provoking) {
-        events.push({
-          type: 'ActionStateEnded',
-          creatureId: actor.id,
-          defending: afterStartHooks.defending,
-          provoking: afterStartHooks.provoking,
-        })
-      }
-    }
-
-    // Turn-start grants run AFTER the turn-start cleanup -- a Defend/Provoke granted
-    // here must not be ended by this same turn's cleanup -- and before decide + action. A skipped
-    // turn refuses them (`spec/combat.md#every-action-source-obeys-the-same-rules`: `skippedTurnOf`).
-    working = drainGrantedActions(turnStartCtx, working, {
-      skippedTurnOf: skipped !== undefined ? actor.id : undefined,
+  const turnStartCtx = createResolutionContext(events, newCascade())
+  const startResult = fireHook(
+    'on-turn-start',
+    [actor.id],
+    undefined,
+    working,
+    turnStartCtx,
+    {
       stopWhen: fightOver,
-    })
-    const wipedAfterGrants = closeIfWiped()
-    if (wipedAfterGrants) return wipedAfterGrants
+    },
+  )
+  working = startResult.state
+  const wiped = closeIfWiped()
+  if (wiped) return wiped
+  // Read 1: live state after the hooks (a lock gained during them skips this very turn).
+  const afterHooks = getCreature(working, actor.id)
+  const skipped: string | undefined = afterHooks.alive
+    ? firstAllLock(afterHooks)?.effectId
+    : undefined
+
+  // Turn-start cleanup: "until its next turn" expires HERE, right after
+  // turn-start hooks, UNCONDITIONALLY on a skip -- runs on a Stunned/skipped turn too.
+  // Gated only on the actor being alive AT THIS POINT (re-checked fresh -- a
+  // turn-start hook may have killed it). Cleanup is bookkeeping only (`spec/combat.md#turn-structure`: it ends
+  // things, never deals damage/heals/fires triggers).
+  const afterStartHooks = getCreature(working, actor.id)
+  if (afterStartHooks.alive) {
+    working = clearOwnTransientStatus(working, actor.id)
+    if (afterStartHooks.defending || afterStartHooks.provoking) {
+      events.push({
+        type: 'ActionStateEnded',
+        creatureId: actor.id,
+        defending: afterStartHooks.defending,
+        provoking: afterStartHooks.provoking,
+      })
+    }
   }
 
+  // Turn-start grants run AFTER the turn-start cleanup -- a Defend/Provoke granted
+  // here must not be ended by this same turn's cleanup -- and before decide + action. A skipped
+  // turn refuses them (`spec/combat.md#every-action-source-obeys-the-same-rules`: `skippedTurnOf`).
+  working = drainGrantedActions(turnStartCtx, working, {
+    skippedTurnOf: skipped !== undefined ? actor.id : undefined,
+    stopWhen: fightOver,
+  })
+  const wipedAfterGrants = closeIfWiped()
+  if (wipedAfterGrants) return wipedAfterGrants
+
   // THE ACTION SLOT: the born-this-turn clock bumps once per
-  // dequeued turn, here, whether the actor is alive, dead or skipped. A status applied or
+  // living actor's turn, here, whether or not it is skipped. A status applied or
   // refreshed from now on is born this turn (no tick, no countdown, no Web roll); one applied
   // earlier in the turn (turn-start hooks / grants) is not.
   working = { ...working, turnClock: working.turnClock + 1 }
@@ -492,7 +506,7 @@ export function resolveTurn(state: CombatState): {
 
   // TURN-END CLEANUP (`spec/combat.md#turn-structure`): bookkeeping only. The bearer's own
   // statuses count down (a LIVING actor only -- a corpse's statuses are inert),
-  // then the Web roll runs for every dequeued turn (a dead actor's bracket included).
+  // then the Web roll runs for every turn (the actor entered it alive, even if it died in it).
   if (getCreature(working, actor.id).alive) {
     working = countDownStatuses(working, actor.id, events)
   }

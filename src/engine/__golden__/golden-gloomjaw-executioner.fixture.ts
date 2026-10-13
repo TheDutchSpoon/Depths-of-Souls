@@ -63,9 +63,9 @@ export const enemyParty = makeParty('enemy', [
 export const scripts = FIXTURE_SCRIPTS_BY_ID
 export const traits = TRAIT_REGISTRY
 
-// EXECUTIONER (r1, kills FOE1), FOE1 (dead, empty bracket), FOE2 (r1, waits),
+// EXECUTIONER (r1, kills FOE1), FOE2 (r1, waits; the call steps past FOE1's dead slot),
 // EXECUTIONER (r2, kills FOE2 -- fight ends).
-export const TURN_STEPS = 4
+export const TURN_STEPS = 3
 
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },
@@ -101,8 +101,6 @@ export const expectedEvents: CombatEvent[] = [
     effectiveAfter: 23,
   },
   { type: 'TurnEnded', creatureId: EXECUTIONER },
-  { type: 'TurnStarted', creatureId: FOE1 },
-  { type: 'TurnEnded', creatureId: FOE1 },
   { type: 'TurnStarted', creatureId: FOE2 },
   { type: 'Waited', creatureId: FOE2 },
   { type: 'TurnEnded', creatureId: FOE2 },

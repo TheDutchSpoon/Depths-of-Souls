@@ -35,7 +35,6 @@ import {
   buildSimScripts,
   buildSpecReport,
   computeThresholds,
-  firstRoundEnemyIds,
   formatReport,
   innateSpellCount,
   foldFightStacks,
@@ -507,9 +506,9 @@ describe.skipIf(isSim)('balance simulator', () => {
       const policy = store.getState().descend(10)
       expect(policy.ok).toBe(true)
       if (!policy.ok || probe === null) return
-      const probeEnemies = firstRoundEnemyIds(probe.events)
-      expect(probeEnemies.length).toBeGreaterThan(0)
-      expect(firstRoundEnemyIds(policy.outcome.events)).toEqual(probeEnemies)
+      expect(probe.fightEnemyIds.length).toBeGreaterThan(0)
+      expect(probe.fightEnemyIds.every((ids) => ids.length > 0)).toBe(true)
+      expect(policy.outcome.fightEnemyIds).toEqual(probe.fightEnemyIds)
     })
 
     it('the probe run really uses the probe script on the probe creature, gems untouched', () => {
@@ -1352,6 +1351,19 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(played.run.fightsWon).toBe(wins)
       expect(played.run.fightsRun).toBe(played.fights.length)
       expect(played.run.floor).toBe(10)
+    })
+
+    it('every fight in a played floor run lists its enemy templates', () => {
+      // A production caller that drops the roster argument yields an empty list here.
+      const played = playFloorRun(
+        atBossFloor(),
+        { ...INITIAL_PROGRESS, deepestFloor: 9 },
+        new Set<number>(),
+      )
+      expect(played.fights.length).toBeGreaterThan(0)
+      for (const fight of played.fights) {
+        expect(fight.enemyTemplateIds.length).toBeGreaterThan(0)
+      }
     })
 
     it('the analysis names the boss of the biome the store fights, pins included', () => {

@@ -87,8 +87,8 @@ export const enemyParty = makeParty('enemy', [
  *
  * Roller (Speed 100) always acts first. Every hit: core=max(10-0,0)=10, chip=0.1,
  * raw=10.1 (neutral affinity), final=10 -- lethal against 1 HP. Each round's newly-dead
- * target still gets its own already-queued empty TurnStarted/TurnEnded bracket that
- * round (dead-before-turn skip) unless the fight already ended by then.
+ * target is still in that round's queue but is dead at its slot, so it gets no turn and no bracket
+ * (dead slots: E1 in round 1, E0 in round 2).
  */
 export const expectedEvents: CombatEvent[] = [
   { type: 'FightStarted' },
@@ -111,8 +111,6 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnStarted', creatureId: E0 },
   { type: 'Waited', creatureId: E0 },
   { type: 'TurnEnded', creatureId: E0 },
-  { type: 'TurnStarted', creatureId: E1 },
-  { type: 'TurnEnded', creatureId: E1 },
   { type: 'TurnStarted', creatureId: E2 },
   { type: 'Waited', creatureId: E2 },
   { type: 'TurnEnded', creatureId: E2 },
@@ -132,8 +130,6 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'CreatureDied', creatureId: E0 },
   { type: 'TurnEnded', creatureId: ROLLER },
-  { type: 'TurnStarted', creatureId: E0 },
-  { type: 'TurnEnded', creatureId: E0 },
   { type: 'TurnStarted', creatureId: E2 },
   { type: 'Waited', creatureId: E2 },
   { type: 'TurnEnded', creatureId: E2 },

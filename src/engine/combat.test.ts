@@ -268,7 +268,7 @@ describe('determinism', () => {
 })
 
 describe('death-mid-round skip', () => {
-  it('emits an empty TurnStarted/TurnEnded bracket for a creature that died earlier in the same round', () => {
+  it('emits no TurnStarted/TurnEnded for a creature that died earlier in the same round', () => {
     const player = makeParty('player', [
       { id: 'hero', speed: 30, attack: 20, defence: 10, health: 50 },
     ])
@@ -286,14 +286,13 @@ describe('death-mid-round skip', () => {
     )
     expect(diedIndex).toBeGreaterThan(-1)
 
-    const skippedTurnStartIndex = events.findIndex(
-      (e, i) => i > diedIndex && e.type === 'TurnStarted' && e.creatureId === 'goblinA',
+    // goblinA (speed 20) dies in hero's turn, before its own slot: it never acts.
+    const brackets = events.filter(
+      (e) =>
+        (e.type === 'TurnStarted' || e.type === 'TurnEnded') &&
+        e.creatureId === 'goblinA',
     )
-    expect(skippedTurnStartIndex).toBeGreaterThan(-1)
-    expect(events[skippedTurnStartIndex + 1]).toEqual({
-      type: 'TurnEnded',
-      creatureId: 'goblinA',
-    })
+    expect(brackets).toEqual([])
   })
 })
 
