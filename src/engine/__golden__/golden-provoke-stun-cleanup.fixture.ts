@@ -25,14 +25,14 @@
 //     ActionStateEnded{defending:false, provoking:true}. Then TurnSkipped{provoker,
 //     'provoke-stun-stun-fixture'} fills the action slot, after the cleanup; no action follows.
 //     HERO's rule now resolves NORMALLY (no provoker left) -> the lowest-HP enemy is WEAKLING (10
-//     HP) vs PROVOKER (20 HP) -- HERO hits WEAKLING, not PROVOKER, proving
-//     the redirect did not stick: off=10, def=0: raw=10.1, final=10. WEAKLING 10 -> 0, dies.
-//     PROVOKER is still alive, so the fight doesn't end here. WEAKLING's round-2 slot comes up dead,
-//     so it gets no turn (no bracket).
+//     HP) vs PROVOKER (20 HP) -- HERO hits WEAKLING, not PROVOKER, proving the redirect did not
+//     stick: off=10, def=0: raw=10.1, final=10. WEAKLING 10 -> 0, dies. PROVOKER is still alive,
+//     so the fight doesn't end here. WEAKLING's round-2 slot comes up dead, so it gets no turn (no
+//     bracket).
 //
-// Captured as exactly 5 explicit resolveTurn steps (provoker/hero/weakling in round 1, provoker/hero
-// in round 2), mirroring golden-on-action-hooks' TURN_STEPS style -- this golden is about the
-// turn-start sequencing, not the fight's eventual outcome.
+// Captured as exactly 5 explicit resolveTurn steps (provoker/hero/weakling in round 1,
+// provoker/hero in round 2), mirroring golden-on-action-hooks' TURN_STEPS style -- this golden is
+// about the turn-start sequencing, not the fight's eventual outcome.
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'

@@ -23,11 +23,8 @@ change nothing.
 ## The changed fights
 
 `npm run corpus:update` regenerated the digest once: **393 of 527** rows changed (134 unchanged),
-exactly the kickoff probe's number. Splitting them by comparing final with main minus the dead
-brackets and everything inside them:
-
-Under stage 1's reading (`main`'s log with the empty brackets removed and any Web `StatusExpired`
-inside them kept in place):
+exactly the kickoff probe's number. Splitting them by comparing final with stage 1's reading of
+`main` (the dead brackets removed, any Web `StatusExpired` inside them kept in place):
 
 | Class | Fights |
 | --- | --- |
@@ -39,7 +36,7 @@ and fight 126. In fight 126 `main`'s dead-slot rolls broke `treant-sapling-enemy
 branch the Web holds, the fight ends a turn later, and the missing `StatusExpired` is the only
 visible change. The kickoff's expected 319 / 74 counted fight 126 as brackets-only.
 
-First differing event of the 74 (main minus dead brackets, then final):
+First differing event of the 74 (main minus the dead brackets and everything inside them, then final):
 
 | main | final | Fights |
 | --- | --- | --- |

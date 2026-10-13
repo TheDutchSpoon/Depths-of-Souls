@@ -32,8 +32,9 @@ regenerated once (393 of 527 rows). 1907 tests passed, 1 skipped (net +10 agains
   dead brackets); `TURN_STEPS` lowered in `-broodmother`, `-gloomjaw-executioner`,
   `-provoke-stun-cleanup`, `-pass-order-live` `revived`. Pinned unit tests rewritten in
   `combat.test.ts` and `status-timing.test.ts`.
-- Corpus: 393 rows changed (318 brackets only, 75 at a removed Web draw: 74 diverge in later events, and in fight 126 only the dead slot's `StatusExpired` goes); four result
-  changes (35, 135, 185, 457). Attribution in `evidence/corpus-table.md`.
+- Corpus: 393 rows changed (318 brackets only, 75 at a removed Web draw: 74 diverge in later
+  events, and in fight 126 only the dead slot's `StatusExpired` goes); four result changes (35,
+  135, 185, 457). Attribution in `evidence/corpus-table.md`.
 - Balance: no CI verdict flipped; matchup and boss lock moves attributed in
   `evidence/balance-and-roster.md`.
 
