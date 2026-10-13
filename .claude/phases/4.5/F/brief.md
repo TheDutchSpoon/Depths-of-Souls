@@ -1,7 +1,7 @@
 # 4.5-F — Level-ups after each fight, and the per-fight record
 
 Phase brief: `.claude/phases/4.5/brief.md`. Golden policy: engine goldens and the corpus digest
-**byte-identical**; store tests and the balance simulator's results change, listed. CI balance
+**byte-identical**; store tests change, listed. CI balance
 verdicts re-checked (`phases/4.5/brief.md#balance-verdicts`).
 
 ## Scope

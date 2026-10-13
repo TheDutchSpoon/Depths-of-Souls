@@ -48,7 +48,7 @@ applies).
 
 **Known bug:** `main` answers any damage that has a source, trait and perk hits and other
 retaliations included (never a damage-over-time tick). The fix is listed in
-`phases/4.5/brief.md#thorns-answers-only-attacks-and-spells`.
+`phases/4.5/brief.md#retaliation-answers-only-attacks-and-spells`.
 
 ### Shield Bash
 
@@ -62,11 +62,11 @@ Confused for any "target is Confused" payoff, but the creature ignores the chaos
 
 ### Last Stand
 
-1 level × 100 points. When taking more than 1 damage that would kill the creature, 50% chance to
-be left at 1 HP.
+1 level × 100 points. When taking damage that would kill the creature, 50% chance to be left at 1
+HP. It doesn't roll while the creature is at 1 HP; healed above 1 HP, it rolls again.
 
-**Known bug:** `main` rolls on any lethal damage, so a creature left at 1 HP rolls again on a
-1-damage hit. The fix is listed in `phases/4.5/brief.md#last-stand-rolls-only-above-1-damage`.
+**Known bug:** `main` rolls at 1 HP too, so a creature it left at 1 HP gets a fresh roll on every
+lethal hit. The fix is listed in `phases/4.5/brief.md#last-stand-never-rolls-at-1-hp`.
 
 ### Phalanx
 

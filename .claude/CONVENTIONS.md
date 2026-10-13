@@ -99,6 +99,11 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
   runs. A test in the normal suite asserts the three verdicts, never a value, over the full 40
   seeds per spec, capped at 30 floor runs with the boss probe off; the cap changes no verdict. The
   bands are reported and guide tuning passes.
+- **The full report (`npm run sim`) runs only in a tuning slice.** It takes tens of minutes, and
+  only tuning acts on the bands and the draw rate. Every other slice's balance check is the CI test
+  in the normal suite: a change that turns it red stops and asks Duncan. A tuning slice compares
+  against the last committed report, since the simulator is deterministic; a "before" run is never
+  repeated.
 - Balance needn't be perfect yet: Phase 6 player scripts and Phase 8 equipment will strengthen the
   starting team.
 

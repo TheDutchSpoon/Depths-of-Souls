@@ -1,7 +1,7 @@
 # 4.5-E — Spell clean-up and Thorn Volley
 
 Phase brief: `.claude/phases/4.5/brief.md`. Golden policy: **deliberate content change**: content
-goldens, the corpus digest (regenerated once) and the balance bands; mechanism goldens untouched.
+goldens and the corpus digest (regenerated once); mechanism goldens untouched.
 CI balance verdicts re-checked (`phases/4.5/brief.md#balance-verdicts`).
 
 ## Scope

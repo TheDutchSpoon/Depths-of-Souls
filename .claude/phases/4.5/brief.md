@@ -26,7 +26,8 @@ the docs win: flag the conflict, don't guess.
 | **4.5-B** | [`on-death-observed`](#on-death-observed), [`createCombat` validates its trait registry](#createcombat-validates-its-trait-registry) | Deliberate, listed |
 | **4.5-B2** | [Every pass over the living creatures goes in turn order](#every-pass-over-the-living-creatures-goes-in-turn-order) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-C** | [A dead creature's turn is skipped entirely](#a-dead-creatures-turn-is-skipped-entirely), [`resolveTurn` refuses a finished fight](#resolveturn-refuses-a-finished-fight) | Deliberate, listed; CI balance verdicts re-checked |
-| **4.5-D** | [HP% qualifiers](#hp-qualifiers-pick-by-hp), [Thorns](#thorns-answers-only-attacks-and-spells), [Last Stand](#last-stand-rolls-only-above-1-damage) | Deliberate, listed; CI balance verdicts re-checked |
+| **4.5-D** | [HP% qualifiers](#hp-qualifiers-pick-by-hp), [retaliation](#retaliation-answers-only-attacks-and-spells), [Last Stand](#last-stand-never-rolls-at-1-hp) | Deliberate, listed; CI balance verdicts re-checked |
+| **4.5-S** | [The simulator runs in Actions after each merge](#the-simulator-runs-in-actions-after-each-merge) | Byte-identical (no `src/` change) |
 | **4.5-E** | [Spell clean-up and Thorn Volley](#spell-clean-up-and-thorn-volley) | Deliberate content change; CI balance verdicts re-checked |
 | **4.5-F** | [Level-ups after each fight](#level-ups-after-each-fight), [the per-fight record](#the-per-fight-record) | Engine goldens and the corpus digest byte-identical; store tests change; CI balance verdicts re-checked |
 | (4.5-F2) | Tuning, only if a CI balance verdict flipped ([Balance verdicts](#balance-verdicts)) | Content numbers, deliberate |
@@ -39,6 +40,7 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   death, B2 wherever two creatures react to one hook. In one PR, a single golden's diff would
   interleave two kinds of change, and "only the listed kind" could no longer be checked line by
   line.
+- **S is its own slice**: CI config only, so D's PR stays about its three fixes.
 - **D is one slice**: the HP% fix touches `warden` and `support` role-script fights, the two perks
   only Shieldbarer-perk fights. They barely overlap and both are small.
 - **E carries the whole spell change**: deleting two spells changes every generated loadout, so it
@@ -57,12 +59,12 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 ### Balance verdicts
 
-- B2, C, D, E and F each re-run the balance simulator and report the CI verdicts (floor 1, first soul,
-  floor 5) and the round-cap draw rate before and after.
+- The CI verdicts (floor 1, first soul, floor 5) are checked by the normal suite in every slice;
+  only a tuning slice runs the full simulator (`CONVENTIONS.md#balance-simulator`).
 - **No tuning inside a fix slice.** A fix that flips a CI verdict stops and asks Duncan. At most one
   tuning slice (4.5-F2) runs after F, against all the fixes together: tuning after each fix would
   be undone by the next one.
-- Watch point for the reports: on `main` before this phase, a naive policy (plain role scripts,
+- Watch point for a tuning slice: on `main` before this phase, a naive policy (plain role scripts,
   every soul summoned at 100%) ended a good share of floor 7–8 descents in a round-cap draw, with
   fights of 1,500–2,000 beats. A hint, not a measurement (it isn't the simulator's policy); it
   fits `OPEN_QUESTIONS.md#status-only-aoe-recasts` and `OPEN_QUESTIONS.md#fight-length`.
@@ -211,19 +213,67 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 - An `hp-percent` condition's `lowest` or `highest` qualifier tests the creature with the lowest or
   highest HP%, compared by integer cross-multiplication with the shared tie-break
   (`spec/scripting.md#conditions-in-the-engine`). Today `evaluateCondition` picks it by current HP.
-- Users: the `warden` and `support` role scripts' first rules, so it is a deliberate golden change
-  for fights with either role.
+- Users: the `warden` and `support` role scripts' first rules, so it is a deliberate change for
+  fights with either role where the two picks differ.
 
-### Thorns answers only attacks and spells
+### Retaliation answers only attacks and spells
 
-- Thorns (`specializations/shieldbarer.md#thorns`) answers only damage from an attack or a spell.
-  Today it answers any damage with a source, trait and perk hits and other retaliations included.
+- A retaliation answers only damage from an attack or a spell, the direct channel
+  (`spec/combat.md#damage-channels-and-the-additional`): never a trait, status or perk response, a
+  cost or a tick. Four retaliators change: Thorns (`specializations/shieldbarer.md#thorns`), which
+  today answers any damage with a source, and Snapjaw Jaws (`content/overgrowth.md#snapjaw-jaws`),
+  Shellback Bulwark (`content/glimmerdark.md#shellback-bulwark`) and Hollowkin Wretch
+  (`content/rotcap-hollow.md#hollowkin-wretch`), which answer any damage by design. Design intent:
+  every retaliation reads the same, and two retaliators can't answer each other.
+- It is data: an optional `damageChannel: 'direct' | 'indirect'` on a triggered effect, valid on
+  `on-damage-taken` only; the trigger validator rejects it on any other hook, for every trigger
+  carrier. The four retaliators set `'direct'`. A data test holds every `on-damage-taken` trigger
+  in game data whose response targets `triggering-source` to `damageChannel: 'direct'`. Sleep's
+  wake-up has no field and still wakes on any damage.
+- The incoming damage's channel is carried into `applyDamageAndEmit` by the branch that chose it,
+  never derived from `damageSource` (a response's damage is labelled `'attack'` or `'cast'` too). A
+  tick and a cost are indirect.
+- A candidate whose `damageChannel` doesn't match is skipped silently, before its condition and
+  chance roll, like a non-matching observation filter: no `TriggerFired`, no RNG.
+- "Retaliation never answers a tick" stays an engine rule
+  (`spec/responses.md#triggering-source-is-never-the-firing-creature`): a trigger without the field
+  still fires on a tick and fizzles.
+- The PR review writes the field into `spec/effects.md` (beside the observation filters,
+  `spec/effects.md#damage-observation`, and in `spec/effects.md#validators`), notes it in
+  `spec/responses.md#triggering-source-is-never-the-firing-creature`, and rewrites the four entries.
 
-### Last Stand rolls only above 1 damage
+### Last Stand never rolls at 1 HP
 
-- Last Stand (`specializations/shieldbarer.md#last-stand`) rolls only when the lethal damage is
-  more than 1. Today it rolls on any lethal damage, so a creature left at 1 HP rolls again on a
-  1-damage hit.
+- `cheat-death` (`spec/effects.md#cheat-death`) doesn't roll when the creature it would save is
+  already at 1 HP: a save there saves nothing new. Healed above 1 HP, it rolls again. Today it
+  rolls on every lethal hit, so a creature Last Stand
+  (`specializations/shieldbarer.md#last-stand`) left at 1 HP gets a fresh 50% on every hit after.
+- The intent is one save per brush with death, renewed by a heal. The rule reads `currentHp` alone,
+  with no new state, so a creature brought to exactly 1 HP by an ordinary hit gets no roll either:
+  an edge accepted for the stateless rule.
+- It is a rule of the primitive, for every carrier; Last Stand is its only carrier in game data.
+  No RNG is drawn at 1 HP.
+- The PR review rewrites `spec/effects.md#cheat-death`.
+
+### The simulator runs in Actions after each merge
+
+- A new workflow, `.github/workflows/sim.yml`, runs `npm run sim` on every push to `main`, and on
+  `workflow_dispatch` for any branch (a tuning slice's). It is separate from `deploy.yml`: nothing
+  waits on it, and the deploy and the PR checks run exactly as before.
+- Report only: it never fails on a number, since every PR already asserts the CI verdicts through
+  the `balance-ci-*` tests. The job summary shows, per spec, the three CI verdicts and the
+  round-cap draw rate, plus the runtime; the full report is uploaded as a run artifact.
+- Its own concurrency group, queued and never cancelled, so a merge during a run gets its own
+  report after it. GitHub keeps one pending run per group: a third merge inside one run replaces
+  the second's pending run, which is accepted.
+- `workflow_dispatch` only works once the file is on `main`, so the workflow also runs on a pull
+  request that changes `sim.yml` itself (a `paths` filter): the slice's own PR shows a real run.
+- Read-only permissions, checkout without persisted credentials, and the same Node and `npm ci` as
+  `deploy.yml`.
+- No `src/` change. If the summary needs a line the report doesn't print in a shape a step can
+  extract, that's a stop-and-ask, not a report change.
+- The PR review rewrites `CONVENTIONS.md#balance-simulator`: the full report runs in Actions, never
+  locally or in a PR, and a tuning slice compares its branch's run with `main`'s latest.
 
 ### Spell clean-up and Thorn Volley
 
@@ -359,6 +409,7 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
 - [ ] **ASSUMPTION (F):** the per-fight record's type and field names are the plan's; its contents
       are fixed above.
 - [ ] **ASSUMPTION (F2):** the tuning slice is named 4.5-F2 if it runs.
+- [x] **ASSUMPTION (S):** the simulator workflow is slice 4.5-S, run after D and before E.
 - [x] **ASSUMPTION (B2):** turn order covers every hook fired over all living creatures (the three
       observation hooks, `on-fight-start` and `on-round-end`), not the observation hooks only. (The
       Web break-free roll is in by Duncan's call.)
