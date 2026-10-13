@@ -187,3 +187,104 @@ byte-identical, `traits.test.ts` included.
   their mutants), the stale-text trap (the kill-on-death golden's header instead of the moved
   goldens' headers) and "The PR must prove" (each deleted golden's mutants named) — decision 1.
 - `phases/4.5/D/brief.md`: the golden-policy line — decision 1.
+
+## Round 2
+
+**Verdict:** approved, with this round's hand-out (`plan-handout-r2.md`). The fold-in of
+`plan-handout-r1.md` is complete and faithful: items 1 to 13 each land in the section they name,
+and nothing outside them moved. The four fixes below are local: none changes a mechanism, a test's
+subject or the golden policy, so no third round.
+
+Checked against `kickoff.md` (as edited in round 1), `brief.md`, the three brief sections, the
+living docs and the code on the branch (`9164a98`). Re-verified on the code: `effects.ts` already
+imports `effective-stats.ts` and `effective-stats.ts` imports only types, so moving
+`effectiveMaxHp` makes no cycle; `pickExtremumBy`'s `'desc'` negation gives the same order as
+`compareByKey`'s `keyB - keyA` (IEEE subtraction is sign-symmetric), so the selector goldens hold;
+the one `{ kind: 'hit' }` literal is `dealDamageCore`'s; a two-effect trait's effects share one
+`sourceTraitId`, so the `stacks: false` case claims one slot as fix 8 of round 1 needs; the
+self-re-entry guard is keyed by `instanceId` and skips silently, so the indirect-hit row ends
+after one answer.
+
+### Plan fixes
+
+1. **The two deleted goldens fail before they go** (Golden policy, "To delete"; decision pending,
+   decide-point 1). The plan lists them under **To delete** for the end, yet its gates run
+   `npm run test`, which they fail from the retaliation change on: green gates and the two files
+   still present can't both hold. End state: once the retaliation change is in, the agent runs the
+   suite, records in `evidence/` that exactly these two fail and that each one's diff is only the
+   fizzled retaliator `TriggerFired`s (Madness Touch in the self-dot golden; Snapback and Madness
+   Touch in the no-retaliation golden, the Sleep wake unchanged), matching
+   `phases/4.5/D/evidence/kickoff-probe.md#full-suite-under-all`; then stops and asks Duncan to
+   delete the four files, and continues. The report says they were deleted at the step; **To
+   delete** keeps only the scratch clones.
+2. **The deleted goldens' evidence covers everything they pinned, not two mutants** (Golden policy).
+   The no-retaliation golden also pinned that `on-damage-taken` still fires on a tick (its
+   `TriggerFired`s and Sleep's wake). Evidence names, for each, the test that fails with it removed
+   now: "a tick offers its applier as the source" → test 2's tick row; "`triggering-source`
+   resolves to the firing creature" → test 2's cost row; "`on-damage-taken` skipped on a tick" →
+   test 2's tick row (the no-field and `'indirect'` variants' `TriggerFired`) and the Sleep tick
+   case. The self-dot golden's self-applied tick and its minimum-1 floor are named against the
+   existing golden that fails with each removed, found by applying the mutant, not by reading.
+3. **Test 2's cost row runs through a real trigger** (Test 2, the own-cost row; A6). Not a direct
+   `executeResponse` call: `executeResponse` reaches `applyCostDamage` only when its `HookContext`
+   says `channel: 'indirect'`; a hand-built context with `'direct'` makes the self-hit a `hit`
+   origin and the row tests the wrong path. A local trait on `B`, `on-turn-start` → `deal-damage`
+   at `self` with a `flatAmount`, fired by `resolveTurn` on `B`'s turn, is the route a real cost
+   takes; the header derives the cost's exact magnitude (no Defence), which a `hit` would not give.
+4. **Test 5 reads Sleep from the collector, not from `SLEEP`** (Test 5, A8). The containment check
+   proves the collector reached traits (the three) and perks (Thorns); Sleep is what proves it read
+   statuses. Assert that the collector's unfiltered `on-damage-taken` set holds Sleep's wake-up
+   trigger (by `statusId`) and that it carries no field. Asserting on `SLEEP` directly passes with
+   a collector that skips `STATUS_REGISTRY`.
+
+### Assumptions
+
+- **A1 — confirm.** Fail closed matches the three observation hooks; the one `on-damage-taken`
+  call site always passes `incomingChannel`.
+- **A2 — confirm.** `CONVENTIONS.md#tuning-never-changes-a-mechanism-golden`; the real
+  `warden`/`support` picks are held by their byte-identical goldens and the six corpus fights.
+- **A3 — confirm,** checked on the data: none of the four retaliators carries `chancePercent`;
+  Confusion's `friendly-fire` roll is drawn only on its bearer's own harmful action
+  (`targeting.ts`), and `A`'s next action falls after the window; each side has one target and no
+  provoker, so targeting draws nothing; the Poison tick draws nothing; the only turn-end draw is
+  Web's break-free, absent here. The header still lists the draws (none) as the plan says.
+- **A4 — confirm.** Outside the repo, listed under **To delete** (fix 1 leaves them as its only
+  entries).
+- **A5 — confirm.** The validator checks the hook rule only; the field meets `condition` and
+  `chancePercent` through the skip's placement, which test 2 pins.
+- **A6 — confirm, with fix 3.** Real routes throughout; the cost row now has one too.
+- **A7 — confirm.** An optional starting HP on the existing `hit` helper; existing callers
+  unchanged.
+- **A8 — confirm, with fix 4.** Level 1 matches `validateSpecialization`'s own reading of a
+  leveled perk (its shape is level-invariant); containment, not equality.
+
+### Mechanism coverage and golden policy
+
+Unchanged from round 1 and complete in the plan: every mutant the kickoff lists fails a named test,
+the channel's skip site and its three carrying routes (`dealDamageCore`'s action and spell
+callers, the tick, the cost) each have a row, and the golden policy matches the kickoff: one
+corpus regeneration against the probe's 49 fights, the two listed goldens deleted, everything else
+byte-identical with `golden-hollowkin-wretch` an explicit stop-and-report if it moves.
+
+### Decide-points
+
+1. **When the two goldens go** (fix 1). Recommendation: at the step, as in
+   `phases/4.1/H2b1/report-r1.md` (the agent stops once the retaliation change is in, shows the two
+   failing with only the expected `TriggerFired`s gone, you delete them, it continues). The
+   alternative, the agent finishing with two red tests and you deleting before CI, means the
+   report claims gates it never saw green, and the failures it should have shown are never
+   recorded.
+2. **Approve with the hand-out, or a third round?** Recommendation: approve. The four fixes are
+   tightening inside sections that already exist, the kind round 1 called local; a third round is
+   the workflow's signal to pull a slice back into design, and nothing here is a design question.
+
+### Decisions
+
+1. The two goldens are deleted at the step: once the retaliation change is in, the agent records
+   that exactly these two fail with only the fizzled retaliator `TriggerFired`s gone, stops, Duncan
+   deletes the four files, and the build continues (fix 1).
+2. Approved with `plan-handout-r2.md`; no third round.
+
+### Docs edited
+
+None. Both decisions change only how the plan is built; no kickoff, brief or living-doc line moves.
