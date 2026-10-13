@@ -157,9 +157,15 @@ damage     = MAX(1, floor(raw))
 ### Resolver shape
 
 - `createCombat(input) → CombatState` sets up a fight (`spec/combat.md#fight-setup`). `resolveTurn(state) →
-  { state, events }` is the pure **stepper**: it resolves one dequeued turn and crosses round
-  boundaries itself (round end, the next round's queue). `resolveFight(state)` runs it until a
+  { state, events }` is the pure **stepper**, and **one call is one turn**: it dequeues past dead
+  entries to the next living creature and resolves its turn, crossing the round boundary itself
+  when the queue runs out (round end, the round-cap gate, the next round's queue), or it ends the
+  fight. A dead creature's slot never gets a call of its own, so a stepping caller (manual mode, a
+  golden's `TURN_STEPS`) counts only turns that happen. `resolveFight(state)` runs it until a
   result is set. Manual mode and playback step with `resolveTurn`.
+- **A finished fight is refused**: `resolveTurn` throws on a state that already has a result,
+  before it does anything else, so a stepping caller that misses the end fails loudly instead of
+  logging events after the fight.
 - Every step emits typed events (`spec/combat.md#event-log`); the UI renders from events, never from resolver
   internals.
 - **The RNG state lives in `CombatState`**, threaded state in, state out, so a step stays a pure
@@ -190,8 +196,10 @@ damage     = MAX(1, floor(raw))
 - That ordering is **turn order**, the one ordering in the engine: the queue freezes it at round
   start, and every pass over the living creatures reads it live (`turnOrderIdsOf`,
   `spec/effects.md#pass-order`).
-- A creature that dies before its turn keeps its slot as a `TurnStarted`/`TurnEnded` bracket with
-  no hooks, no action and no countdown; the Web roll still runs in it (`spec/statuses.md#turn-order`).
+- A creature that is dead when its slot comes up gets nothing: no `TurnStarted`/`TurnEnded`
+  bracket, no turn-clock bump and no Web roll (`spec/statuses.md#turn-order`). The frozen queue
+  keeps its entry, because `acted-before-target` reads queue positions; the stepper only moves the
+  cursor past it (`spec/combat.md#resolver-shape`).
 - Whether a creature acts is read when its slot comes up: one revived before its slot acts in it.
   One dead at round start isn't in the queue, so a revive later in the round gives it no turn until
   the next round's rebuild.
@@ -213,7 +221,8 @@ damage     = MAX(1, floor(raw))
 
 ### Turn structure
 
-Every creature's turn runs exactly this sequence:
+Every turn runs exactly this sequence. A turn is a living creature's: one dead at its slot has
+none (`spec/combat.md#turn-queue`).
 
 ```
 TurnStarted
@@ -235,7 +244,9 @@ TurnStarted
 - **A mid-turn wipe ends the turn there**: the rest (later hook firings, grants, cleanup, the Web
   roll) is skipped, `TurnEnded` is still emitted so the brackets balance, and `FightEnded` follows
   (`spec/combat.md#resolution--timing`).
-- The hooks, the grants and the countdown run for a living actor only. Both cleanups are
+- The actor enters its turn alive, but a turn-start hook or its own action can kill it: the
+  hooks, the grants and the countdown run only while it is alive, and the Web roll still runs at
+  the cleanup of a turn whose actor died in it (the turn happened). Both cleanups are
   bookkeeping only (`spec/statuses.md#turn-end-cleanup`). The turn-start cleanup runs on a
   skipped turn too, so a Stunned or Sleeping creature stops defending and provoking on schedule;
   **`ActionStateEnded { creatureId, defending, provoking }`** (which flags just ended) shows it.

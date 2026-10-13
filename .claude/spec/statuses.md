@@ -63,9 +63,10 @@ Confusion). They are defined in `src/data/statuses.ts`.
 
 - **Sleep** ends the instant its bearer takes any damage. The waking hit still lands in full, its
   bonus against Sleeping targets included.
-- **Web** breaks on a **10% roll at every creature's turn**, not only its bearer's: in a 6v6 fight
-  a Web breaks within a round about 72% of the time. That fragility is design, not a bug: tuning
-  happens at the 6v6 rate, and the lever is the 10%.
+- **Web** breaks on a **10% roll at every living creature's turn**, not only its bearer's: with all
+  twelve creatures of a 6v6 fight alive a Web breaks within a round about 72% of the time, and it
+  holds longer as the board empties, still capped by its duration. That fragility is design, not a
+  bug: tuning happens at the 6v6 rate, and the lever is the 10%.
 
 ### Health is a modifiable stat
 
@@ -151,10 +152,12 @@ Confusion). They are defined in `src/data/statuses.ts`.
   round's turn order, so the Spider Weaver applies it `on-turn-end`, and its own cleanup doesn't
   roll a Web it has just placed. Cast Webs (Vine Snare, Disorient), granted ones included, start
   next turn the same way.
-- **Mechanism.** `CombatState.turnClock` is plain data that bumps once per dequeued turn, at the
-  action slot, unconditionally (alive, dead or skipped actor). An instance's `appliedAt` is the
-  clock when it was applied or refreshed (a refresh keeps the instance and its id); born is
-  `appliedAt === turnClock`. Nothing of it appears in events.
+- **Mechanism.** `CombatState.turnClock` is plain data that bumps once per turn, at the action
+  slot, a skipped turn included; a creature dead at its slot has no turn and no bump. Every
+  born-this-turn read (the countdown, the turn-end tick gate, the Web roll) runs after the acting
+  creature's own bump, so no result depends on how many slots were skipped. An instance's
+  `appliedAt` is the clock when it was applied or refreshed (a refresh keeps the instance and its
+  id); born is `appliedAt === turnClock`. Nothing of it appears in events.
 
 ### Round end
 
@@ -240,16 +243,16 @@ Confusion). They are defined in `src/data/statuses.ts`.
   pole, the normal group and an act-last pole, each sorted by Speed, concatenated first → normal →
   last. A bearer carrying both poles acts first.
 - **Web's break-free roll** is `breakChancePercent: 10` on Web's `turn-order` effect: a field, not a
-  triggered response, because it is rolled at every creature's turn, not on its bearer's hook. It
-  is status-only, since breaking free removes the status instance.
+  triggered response, because it is rolled at every living creature's turn, not on its bearer's
+  hook. It is status-only, since breaking free removes the status instance.
 - **The roll happens in turn-end cleanup**, right after that turn's countdown, so a Web that just
   expired draws nothing. It skips Webs born this turn: a Web cast in an action, granted after it, or
-  applied by the Spider Weaver at the end of its turn is first rolled at the next creature's
-  cleanup. A Web placed by a turn-start hook was present for that turn's action slot, so that
-  turn's own cleanup rolls it.
-- It runs on every dequeued turn's cleanup, a dead actor's empty bracket and a turn whose actor
-  died mid-turn included (so the rate stays "at every creature's turn"), never after a mid-turn
-  wipe, over living bearers in turn order (`spec/effects.md#pass-order`), taken once when the
+  applied by the Spider Weaver at the end of its turn is first rolled at the next living
+  creature's cleanup. A Web placed by a turn-start hook was present for that turn's action slot,
+  so that turn's own cleanup rolls it.
+- It runs at every turn's cleanup, a turn whose actor died mid-turn included (the turn happened),
+  never at a dead creature's slot (it has no turn) and never after a mid-turn wipe, over living
+  bearers in turn order (`spec/effects.md#pass-order`), taken once when the
   cleanup starts: a bearer that breaks free doesn't reorder the rolls after it. Each bearer's chance
   is its own, so the order decides only which draw goes to which bearer. It follows the
   `chancePercent` discipline: it
