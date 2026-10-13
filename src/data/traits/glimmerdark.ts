@@ -430,8 +430,8 @@ export const SHELLBACK_BRAWLER_TRAIT: Trait = {
 
 /** Shellback Bulwark (amplifier): a genuinely distinct mechanic from Brawler's OFFENSIVE
  * armor-as-weapon -- this is the DEFENSIVE mirror (Thorns/Shield Bash-shaped, `deal-damage`'s
- * `scalingStat`, per the example in `spec/responses.md#magnitude-modes`): whenever it takes damage, it retaliates
- * for damage scaled off its own Defence, not Attack. */
+ * `scalingStat`, per the example in `spec/responses.md#magnitude-modes`): whenever it takes damage from an
+ * attack or spell, it retaliates for damage scaled off its own Defence, not Attack. */
 export const SHELLBACK_BULWARK_TRAIT: Trait = {
   id: 'shellback-bulwark-retaliating-shell',
   name: 'Retaliating Shell',
@@ -439,6 +439,7 @@ export const SHELLBACK_BULWARK_TRAIT: Trait = {
     {
       category: 'triggered',
       hook: 'on-damage-taken',
+      damageChannel: 'direct',
       response: {
         kind: 'deal-damage',
         target: { kind: 'triggering-source' },

@@ -161,6 +161,40 @@ describe('evaluateCondition -- hp-percent', () => {
   })
 })
 
+describe('evaluateCondition -- hp-percent lowest / highest', () => {
+  // A is 30/100 = 30%, B is 20/25 = 80%: the current-HP order (B lowest) and the HP% order (A
+  // lowest) disagree, so only a pick by HP% satisfies both conditions below.
+  const allies = makeParty('player', [
+    { id: 'a', health: 100, currentHp: 30 },
+    { id: 'b', health: 25, currentHp: 20 },
+  ])
+  const state = makeState({ playerParty: allies })
+  const base = {
+    kind: 'hp-percent' as const,
+    subject: 'ally' as const,
+  }
+
+  it('highest tests the creature with the highest HP%, not the highest current HP', () => {
+    const condition = {
+      ...base,
+      qualifier: 'highest' as const,
+      comparator: '>=' as const,
+      thresholdPercent: 70,
+    }
+    expect(evaluateCondition(condition, allies[0]!, state)).toBe(true)
+  })
+
+  it('lowest tests the creature with the lowest HP%, not the lowest current HP', () => {
+    const condition = {
+      ...base,
+      qualifier: 'lowest' as const,
+      comparator: '<=' as const,
+      thresholdPercent: 30,
+    }
+    expect(evaluateCondition(condition, allies[0]!, state)).toBe(true)
+  })
+})
+
 describe('evaluateCondition -- enemy-count / ally-count', () => {
   it('compares living enemy count at the exact boundary', () => {
     const player = makeParty('player', [{ id: 'me' }])

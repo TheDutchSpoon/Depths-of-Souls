@@ -42,12 +42,20 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
 }
 
 /**
+ * A creature's effective maximum HP: effective Health folded from base + stat-modifiers,
+ * floored to an integer (HP is always an integer). For a creature with no Health modifier
+ * this equals base Health. Defined once, here; effects.ts re-exports it.
+ */
+export function effectiveMaxHp(creature: Creature): number {
+  return Math.floor(getEffectiveStat(creature, 'health'))
+}
+
+/**
  * Integer cross-multiplication, no float: `currentHp/maxHp <cmp> thresholdPercent/100`, i.e.
  * `currentHp * 100 <cmp> thresholdPercent * maxHp`. Shared by conditions.ts's scripting
  * `hp-percent` Condition and this module's own `SelfCondition` -- one implementation.
- * `maxHp` is `floor(getEffectiveStat(creature, 'health'))` -- the SAME integer
- * `currentHp` is initialised and clamped to (effects.ts's `effectiveMaxHp`), computed HERE from
- * `creature` directly (not passed in) so there is exactly one place either caller's "what does
+ * `maxHp` is `effectiveMaxHp(creature)` -- the SAME integer `currentHp` is initialised and
+ * clamped to, read from `creature` directly (not passed in) so there is exactly one place either caller's "what does
  * HP% divide by" reading can come from (an unfloored `getEffectiveStat` reading would make "at full
  * HP" untrue whenever a Health modifier left effective Health fractional -- a creature at its own
  * max is trivially 100% only against the floored value currentHp actually gets clamped to).
@@ -57,8 +65,21 @@ export function hpPercentSatisfied(
   comparator: ComparatorOp,
   thresholdPercent: number,
 ): boolean {
-  const maxHp = Math.floor(getEffectiveStat(creature, 'health'))
-  return compare(creature.currentHp * 100, comparator, thresholdPercent * maxHp)
+  return compare(
+    creature.currentHp * 100,
+    comparator,
+    thresholdPercent * effectiveMaxHp(creature),
+  )
+}
+
+/**
+ * Orders two creatures by HP%, the same integer cross-multiplication `hpPercentSatisfied` uses, no
+ * division: negative when `a` has the lower HP%, positive when `b` does, zero when equal. Sharing
+ * `effectiveMaxHp` makes the creature an `hp-percent` qualifier picks and the threshold it is then
+ * tested against read one denominator (`spec/scripting.md#conditions-in-the-engine`).
+ */
+export function compareHpPercent(a: Creature, b: Creature): number {
+  return a.currentHp * effectiveMaxHp(b) - b.currentHp * effectiveMaxHp(a)
 }
 
 /**

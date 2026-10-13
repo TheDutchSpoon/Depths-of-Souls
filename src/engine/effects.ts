@@ -5,9 +5,13 @@
 // down is `combat.ts`'s.
 //
 // Dependency direction is one-way: effects.ts -> effective-stats.ts (for getEffectiveStat,
-// hasStatus). effective-stats.ts never imports this module, so there is no cycle.
+// effectiveMaxHp, hasStatus). effective-stats.ts never imports this module, so there is no cycle.
 
-import { getEffectiveStat, hasStatus as hasStatusImpl } from './effective-stats'
+import {
+  effectiveMaxHp,
+  getEffectiveStat,
+  hasStatus as hasStatusImpl,
+} from './effective-stats'
 import { createEffectInstanceId } from './effect-types'
 import type {
   ActiveEffect,
@@ -202,6 +206,7 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
       condition: e.condition,
       chancePercent: e.chancePercent,
       observationFilter: e.observationFilter,
+      damageChannel: e.damageChannel,
       response: e.response,
       // The dedup flag (`stacks: false`).
       nonStacking: e.stacks === false ? true : undefined,
@@ -218,14 +223,9 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
   return results
 }
 
-/**
- * A creature's effective maximum HP: effective Health folded from base + stat-modifiers,
- * floored to an integer (HP is always an integer). For a creature with no Health modifier
- * this equals base Health.
- */
-export function effectiveMaxHp(creature: Creature): number {
-  return Math.floor(getEffectiveStat(creature, 'health'))
-}
+// Defined in effective-stats.ts, which the HP% comparison reads too; re-exported so this
+// module's importers keep their import.
+export { effectiveMaxHp }
 
 /**
  * Clamps currentHp down to the effective maximum, returning the (possibly reduced) currentHp.
