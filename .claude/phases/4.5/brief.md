@@ -261,8 +261,9 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   `workflow_dispatch` for any branch (a tuning slice's). It is separate from `deploy.yml`: nothing
   waits on it, and the deploy and the PR checks run exactly as before.
 - Report only: it never fails on a number, since every PR already asserts the CI verdicts through
-  the `balance-ci-*` tests. The job summary shows, per spec, the three CI verdicts and the
-  round-cap draw rate, plus the runtime; the full report is uploaded as a run artifact.
+  the `balance-ci-*` tests; a run that prints no report fails. The job summary shows, per spec, the
+  three CI verdicts and the round-cap draw rate, plus the runtime; the full report is uploaded as a
+  run artifact.
 - Its own concurrency group, queued and never cancelled, so a merge during a run gets its own
   report after it. GitHub keeps one pending run per group: a third merge inside one run replaces
   the second's pending run, which is accepted.
