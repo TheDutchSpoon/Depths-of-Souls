@@ -343,34 +343,47 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 
 ### Start screen (G1)
 
-- A spec pick (Brute, Shieldbarer, Sorcerer) and a seed field (blank: `generateRunSeed`, in
-  `src/app`). Start runs `newGame({ seed })` → `setSpec` → `runScriptedIntro()`, **silently**: the
-  intro's result isn't shown. That grants the Unicorn and keeps a demo run identical to the balance
-  simulator's for the same seed.
+- A spec pick (Brute, Shieldbarer, Sorcerer) and a seed field with a **Random** button that fills
+  it (`generateRunSeed`, in `src/app`; a blank field draws one too), the baseline demo's
+  randomize-seed control (`CONVENTIONS.md#every-feature-phase-ships-a-demo`). Start runs
+  `newGame({ seed })` → `setSpec` → `runScriptedIntro()`, **silently**: the intro's result isn't
+  shown. That grants the Unicorn and keeps a demo run identical to the balance simulator's for the
+  same seed.
 
 ### Floor picker (G1)
 
-- A floor number field pre-filled with `lastFloor`, a **Deepest + 1** button that fills in the next
-  floor down, and **Descend**. The field takes any number, so `floor-out-of-reach` and
-  `beyond-content-frontier` are seen as greyed-out reasons.
-- One line on the chosen floor: biome, fight count, and "boss floor" when it is one, read from the
-  engine's pure functions. No enemy level range. No auto-descend.
+- A floor number field pre-filled with `lastFloor`, or 1 while nothing has been fought, a
+  **Deepest + 1** button that fills in the next floor down, and **Descend**. The field takes any
+  input, so `floor-out-of-reach` and `beyond-content-frontier` are seen as greyed-out reasons, and
+  no input throws.
+- One line on the chosen floor, for a whole number ≥ 1: biome, fight count, and "boss floor" when
+  it is one, read from the engine's pure functions. A boss floor is a tenth floor whose biome has
+  a boss, with one fight. No enemy level range. No auto-descend.
 
 ### Descent result and viewer (G1)
 
 - `descend` resolves at once. The floor's result and its **fight list** (number, result, rounds,
-  kills, XP and level-ups) show for a few seconds, then paced playback starts at fight 1 by itself.
+  kills, XP and level-ups) show for 3 seconds, then paced playback starts at fight 1 by itself and
+  runs on from fight to fight, stopping at the floor's last beat.
 - The viewer keeps 3.5's beats and **skip to end of fight**, and adds **skip to end of floor** and
   **jump to a fight** from the list. Speeds: **1×, 3×, 5×** (500, 167, 100 ms per beat).
 - Its header shows "Fight n / N" with the party's levels going into that fight, and the XP and
   level-ups after it: where the level-up fix is visible.
-- The log reuses 3.5's event text and beat grouping (moved, not rewritten) and shows **names**, not
-  ids. Each fight opens with a line-up of both sides: name, level, HP.
+- The log reuses 3.5's event text and beat grouping (moved, not rewritten) and shows **creature and
+  spell names**, not creature ids or gem slots; trait and status ids stay as 3.5 printed them. A
+  name that appears more than once in a fight carries its side and 1-based slot at every
+  occurrence ("Snapjaw (foe 2)", "Snapjaw (ally 1)"); a unique name prints bare. Each fight opens
+  with a line-up of both sides: name, level, HP.
+- A spell name and a line-up's HP are read from the fight as `createCombat` sets it up from the
+  record's inputs: a `SpellCast`'s gem slot counts the innate spells fight setup prepends, and
+  setup sets HP to effective max Health. The record's own parties are fight-setup input.
 - A boss floor adds one result line: the boss defeated, and whether it was a first clear (+100 perk
   points) or not, by comparing `bossesCleared` before and after.
 - Only the latest descent's log is kept; any of its fights can be replayed from memory.
 - **Debug: Copy fight as JSON** on each fight: its seed, both parties and the player's perk
-  effects (`phases/4.5/brief.md#the-per-fight-record`).
+  effects (`phases/4.5/brief.md#the-per-fight-record`), shaped as `createCombat`'s input without
+  `registries` (`{ seed, player: { party, effects }, enemy: { party } }`), so a test reproduces it
+  with `createCombat({ ...JSON.parse(json), registries })`.
 
 ### Side panel (G1)
 
@@ -425,7 +438,7 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
       (`CONVENTIONS.md#comment-why-not-what`). So the inert-perk label reads "inactive (its system
       isn't built yet)", the currency line "Nothing spends these yet", and the save line "No saving
       yet: reloading the page starts over".
-- [ ] **ASSUMPTION (G1):** "a few seconds" before playback starts is 3 seconds.
+- [x] **ASSUMPTION (G1):** "a few seconds" before playback starts is 3 seconds.
 - [x] **ASSUMPTION (F):** the per-fight record's type and field names are the plan's
       (`FightRecord`, held in `FloorOutcome.fightRecords`); its contents are fixed above.
 - [ ] **ASSUMPTION (F2):** the tuning slice is named 4.5-F2 if it runs.
