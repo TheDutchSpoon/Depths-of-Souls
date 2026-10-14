@@ -22,8 +22,9 @@ every existing golden's expected values unchanged; 1983 tests passed, 1 skipped 
 - **Tests.** The `ALL_SPELLS` order pin, the Mauler's rolled set, the stored gem in
   `store-gems.test.ts`, `data/scripts.test.ts`'s stand-in spell and the Silence/Pacify entry
   indexes follow the content. New golden `golden-thorn-volley` (a content golden, 38 / 30 / 20).
-- **Comments** that cited the three spells as reference points now cite surviving spells or
-  `content/overgrowth.md#spell-power-convention`.
+- **Comments** that named the three spells now name surviving content (Thorn Lash, Blinding Flare,
+  the Myconet Rotcore trait) or `content/overgrowth.md#spell-power-convention`, or drop the
+  reference point (Spore Cyst's and Withering Bolt's).
 
 ## Files changed
 

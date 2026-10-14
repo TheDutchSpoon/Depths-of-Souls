@@ -260,7 +260,8 @@ interface SpellFightSpec {
   readonly speciesId: string
 }
 
-/** One fight per spell Parts A and B never cast. The stock `always-cast` script casts gemSlot 0,
+/** Each listed spell gets a draw-free coverage fight of its own, so it stays covered whatever
+ * Parts A and B roll. The stock `always-cast` script casts gemSlot 0,
  * so the spell sits in slot 0 of an affinity-matched caster (equip-gating) with no innate spell
  * ahead of it (the Sorcerer starter's Arcane Bolt would take slot 0). The caster fights beside
  * the Brute and Shieldbarer starters against `WALL_ENEMY`, which neither attacks nor controls:

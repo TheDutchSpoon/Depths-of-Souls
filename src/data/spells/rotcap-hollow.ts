@@ -108,8 +108,8 @@ export const CHARNEL_FEAST: Spell = {
  * real producers are the Sporch Igniter's on-attack trait and the Sporch Cinderlord's on-kill
  * trait -- statuses are never producer-exclusive). `spellPower` is 0.45, not the ~80-90% band: a DoT-applying spell's
  * upfront damage shouldn't lead its
- * band (the same rule applied to Puppet String and Spore Cyst). Distinct from Thorn Lash (1.0) /
- * Blinding Flare (0.7, applies Vulnerability not Burn) under the dedup guard. */
+ * band (the same rule applied to Puppet String and Spore Cyst). Distinct from Thorn Lash (1.0) and
+ * Blinding Flare (0.7) under the dedup guard. */
 export const WITHERING_BOLT: Spell = {
   id: 'withering-bolt',
   name: 'Withering Bolt',

@@ -8,9 +8,8 @@ import type { Spell } from '../../engine/types'
 
 // Damage-spell power coefficients follow `content/overgrowth.md#spell-power-convention`.
 
-/** Thorn Volley: the biome's plain AOE damage spell. Damage-only AOE sits in the ~50% band
- * (`content/overgrowth.md#spell-power-convention`); 0.45 keeps it under the single-target Thorn
- * Lash, which hits one enemy for the full 1.0. */
+/** Thorn Volley: the biome's plain AOE damage spell, the area sibling of single-target Thorn
+ * Lash. Damage-only AOE sits in the ~50% band (`content/overgrowth.md#spell-power-convention`). */
 export const THORN_VOLLEY: Spell = {
   id: 'thorn-volley',
   name: 'Thorn Volley',
