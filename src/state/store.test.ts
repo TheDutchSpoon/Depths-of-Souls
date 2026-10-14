@@ -27,16 +27,26 @@ import { TEST_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { FIXTURE_SCRIPTS_BY_ID } from '../engine/__fixtures__/scripts'
 import { enemyLevelRange } from '../engine/curves'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
-import { UNICORN, UNICORN_SPECIES_ID } from '../data/species/starters'
+import { createCombat, resolveFight } from '../engine/combat'
+import {
+  SORCERER_STARTER,
+  SORCERER_STARTER_SPECIES_ID,
+  UNICORN,
+  UNICORN_SPECIES_ID,
+} from '../data/species/starters'
+import { STATUS_REGISTRY } from '../data/statuses'
+import { TRAIT_REGISTRY } from '../data/traits'
 import type { Specialization } from '../data/specializations'
 import {
   createGameStore,
   type DescendFailureReason,
+  type FightRecord,
+  type FloorOutcome,
   type GameStoreDeps,
   type PinBiomeFailureReason,
 } from './store'
 import type { StaticCreatureRef, Instance } from './rewards'
-import type { InstanceId } from './ids'
+import { createInstanceId, type InstanceId } from './ids'
 
 // ---- Test helpers ----
 
@@ -1078,5 +1088,269 @@ describe('boss floors', () => {
     const state = store.getState()
     expect(state.bossesCleared.size).toBe(0)
     expect(state.deepestFloor).toBe(9) // unchanged -- the boss floor wasn't cleared
+  })
+})
+
+// ---- Level-ups after each fight, the per-fight record, the intro's XP ----
+// Every fight under CFG: FODDER is level 1 on floor 1 (the stub's level roll 0 picks the range's
+// minimum, `enemyLevelRange(1, CFG).min`), so each floor-1 kill banks 1 XP; `xpForNextLevel(level)`
+// is `100 * level`.
+
+type TestStore = ReturnType<typeof createGameStore>
+
+const SORCERER_INSTANCE_ID = createInstanceId('inst-test-sorcerer')
+const SORCERER_STANDALONE: StaticCreatureRef = {
+  speciesCreature: SORCERER_STARTER,
+  speciesId: SORCERER_STARTER_SPECIES_ID,
+}
+
+const DOUBLE_ATTACK_SPEC: Specialization = {
+  id: 'fixture-spec-double-attack',
+  name: 'Fixture Spec Double Attack',
+  starterCreatureId: HERO.id,
+  perks: [
+    {
+      id: 'double-attack',
+      name: 'Double Attack',
+      maxLevel: 1,
+      costPerLevel: 1,
+      effects: [{ category: 'stat-modifier', stat: 'attack', factor: 2 }],
+    },
+  ],
+}
+
+/** HERO's instance set to level 1 at `heroXp`, and the real Sorcerer starter, whose trait holds an
+ * innate spell, placed in slot 1 on the `always-attack` script with no gems (so no gem roll runs)
+ * at `sorcererXp`. */
+function partyOfHeroAndSorcerer(store: TestStore, heroXp: number, sorcererXp = 0): void {
+  store.setState((s) => {
+    const hero = instanceFor(s.collection, HERO.id)!
+    const collection = new Map(s.collection)
+    collection.set(hero.id, { ...hero, level: 1, xp: heroXp })
+    collection.set(SORCERER_INSTANCE_ID, {
+      id: SORCERER_INSTANCE_ID,
+      source: { kind: 'creature', creatureId: SORCERER_STARTER.id },
+      level: 1,
+      xp: sorcererXp,
+      scriptId: 'always-attack',
+      gems: [],
+    })
+    const activeParty = [...s.activeParty]
+    activeParty[1] = SORCERER_INSTANCE_ID
+    return { collection, activeParty }
+  })
+}
+
+function setHeroProgress(store: TestStore, level: number, xp: number): void {
+  store.setState((s) => {
+    const hero = instanceFor(s.collection, HERO.id)!
+    const collection = new Map(s.collection)
+    collection.set(hero.id, { ...hero, level, xp })
+    return { collection }
+  })
+}
+
+function storeFor(
+  sequence: readonly number[],
+  overrides: Partial<GameStoreDeps> = {},
+): TestStore {
+  return createGameStore(makeDeps({ createRng: stubRngFactory(sequence), ...overrides }))
+}
+
+/** Descent A: a perk bought, a party with an innate spell, HERO one XP short of level 2 so the
+ * level-up lands between fights 1 and 2. */
+function descentA(): { store: TestStore; outcome: FloorOutcome } {
+  const store = storeFor(ALL_WIN_SEQUENCE, {
+    specializations: new Map([[DOUBLE_ATTACK_SPEC.id, DOUBLE_ATTACK_SPEC]]),
+    standaloneCreatures: [HERO_STANDALONE, SORCERER_STANDALONE],
+  })
+  store.getState().setSpec(DOUBLE_ATTACK_SPEC.id)
+  partyOfHeroAndSorcerer(store, 99)
+  store.setState({ perkSpend: new Map([['double-attack', 1]]) })
+  return { store, outcome: expectOk(store.getState().descend(1)).outcome }
+}
+
+/** Descent B: the same party and perk; fight 2 is a loss that ends the descent. */
+function descentB(): { store: TestStore; outcome: FloorOutcome } {
+  const store = storeFor(WIN_THEN_LOSS_SEQUENCE, {
+    specializations: new Map([[DOUBLE_ATTACK_SPEC.id, DOUBLE_ATTACK_SPEC]]),
+    standaloneCreatures: [HERO_STANDALONE, SORCERER_STANDALONE],
+  })
+  store.getState().setSpec(DOUBLE_ATTACK_SPEC.id)
+  partyOfHeroAndSorcerer(store, 99)
+  store.setState({ perkSpend: new Map([['double-attack', 1]]) })
+  return { store, outcome: expectOk(store.getState().descend(1)).outcome }
+}
+
+/** Descent C: floor 2's first fight is a loss with one enemy dead. */
+function descentC(): { store: TestStore; outcome: FloorOutcome } {
+  const store = storeFor(MIXED_FIGHT_SEQUENCE, { biomes: [FIXTURE_BIOME_MIXED] })
+  store.getState().setSpec(FIXTURE_SPEC.id)
+  store.setState({ deepestFloor: 1 })
+  setHeroProgress(store, 1, 98)
+  return { store, outcome: expectOk(store.getState().descend(2)).outcome }
+}
+
+describe('level-ups after each fight', () => {
+  test('levels change between two fights of one floor', () => {
+    const store = storeFor(ALL_WIN_SEQUENCE)
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    // Level 1 needs xpForNextLevel(1) = 100 * 1 = 100; HERO starts one XP short.
+    setHeroProgress(store, 1, 99)
+
+    const { outcome } = expectOk(store.getState().descend(1))
+    const [first, second, third] = outcome.fightRecords
+
+    // Fight 1 is played at level 1 and kills FODDER (level 1): +1 XP -> 100 >= 100 -> level 2,
+    // xp 0. Fight 2 is played at level 2: +1 XP -> level 2, xp 1.
+    expect(first!.playerParty.map((c) => c.origin.level)).toEqual([1])
+    expect(first!.xpBanked).toBe(1)
+    expect(first!.partyLevelsAfter).toEqual([2])
+    expect(second!.playerParty.map((c) => c.origin.level)).toEqual([2])
+    expect(second!.playerParty[0]!.baseStats.attack).toBeGreaterThan(
+      first!.playerParty[0]!.baseStats.attack,
+    )
+    expect(second!.partyLevelsAfter).toEqual([2])
+    expect(third!.playerParty.map((c) => c.origin.level)).toEqual([2])
+    // Each fight materializes its own party: no array is shared between fights.
+    expect(second!.playerParty).not.toBe(first!.playerParty)
+  })
+
+  test('the floor’s XP is applied exactly once', () => {
+    const store = storeFor(ALL_WIN_SEQUENCE, {
+      standaloneCreatures: [HERO_STANDALONE, SORCERER_STANDALONE],
+    })
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    partyOfHeroAndSorcerer(store, 98, 0)
+
+    const { outcome } = expectOk(store.getState().descend(1))
+
+    // 3 fights x 1 XP = 3 XP for the floor. HERO: 98 -> 99 -> 100 (level 2, xp 0) -> xp 1.
+    // Sorcerer: 0 -> 1 -> 2 -> 3 at level 1. A second application of the floor's 3 would leave
+    // HERO at xp 4 and the Sorcerer at xp 6.
+    expect(outcome.xpBanked).toBe(3)
+    const { collection } = store.getState()
+    const hero = instanceFor(collection, HERO.id)!
+    const sorcerer = collection.get(SORCERER_INSTANCE_ID)!
+    expect([hero.level, hero.xp]).toEqual([2, 1])
+    expect([sorcerer.level, sorcerer.xp]).toEqual([1, 3])
+  })
+
+  test('the last fight of a descent that ends on a loss applies its kills’ XP', () => {
+    const { store, outcome } = descentC()
+
+    // Floor 2: FODDER is level 2, HERO kills it and SLOW_JUGGERNAUT then one-shots HERO. The
+    // kill banks 2 XP: 98 + 2 = 100 >= 100 -> level 2, xp 0.
+    expect(outcome.fightRecords).toHaveLength(1)
+    const [record] = outcome.fightRecords
+    expect(record!.result).toBe('loss')
+    expect(record!.xpBanked).toBe(2)
+    expect(record!.partyLevelsAfter).toEqual([2])
+    const hero = instanceFor(store.getState().collection, HERO.id)!
+    expect([hero.level, hero.xp]).toEqual([2, 0])
+  })
+})
+
+describe('the per-fight record', () => {
+  const registries = {
+    scripts: FIXTURE_SCRIPTS_BY_ID,
+    traits: TRAIT_REGISTRY,
+    statuses: STATUS_REGISTRY,
+  }
+
+  function replay(record: FightRecord) {
+    const combat = createCombat({
+      seed: record.seed,
+      player: { party: record.playerParty, effects: record.playerEffects },
+      enemy: { party: record.enemyParty },
+      registries,
+    })
+    return resolveFight(combat).events
+  }
+
+  test('every record of a descent with a perk, an innate spell and a mid-floor level-up replays to its events', () => {
+    const { outcome } = descentA()
+
+    expect(outcome.fightRecords).toHaveLength(3)
+    // The party holds a creature with an innate spell, and the perk is in the records.
+    const innateSpellHolders = outcome.fightRecords[0]!.playerParty.filter((c) =>
+      c.innateTraitIds.some((id) =>
+        TRAIT_REGISTRY.get(id)?.effects.some((e) => e.category === 'innate-spell'),
+      ),
+    )
+    expect(innateSpellHolders).toHaveLength(1)
+    for (const record of outcome.fightRecords) {
+      expect(record.playerEffects).toEqual(DOUBLE_ATTACK_SPEC.perks[0]!.effects)
+    }
+    // HERO is one XP short of level 2: fight 1 is played at level 1, fight 2 at level 2.
+    expect(outcome.fightRecords[0]!.playerParty[0]!.origin.level).toBe(1)
+    expect(outcome.fightRecords[1]!.playerParty[0]!.origin.level).toBe(2)
+    for (const record of outcome.fightRecords) {
+      expect(replay(record)).toEqual(record.events)
+    }
+  })
+
+  test('every record of a descent that ends on a loss replays to its events', () => {
+    const { outcome } = descentB()
+
+    expect(outcome.fightResults).toEqual(['win', 'loss'])
+    for (const record of outcome.fightRecords) {
+      expect(replay(record)).toEqual(record.events)
+    }
+  })
+
+  test('one record per fight, summing to the floor, over three descents', () => {
+    for (const { outcome } of [descentA(), descentB(), descentC()]) {
+      expect(outcome.fightRecords).toHaveLength(outcome.fightResults.length)
+      expect(outcome.fightRecords.flatMap((r) => r.events)).toEqual(outcome.events)
+      expect(outcome.fightRecords.reduce((sum, r) => sum + r.xpBanked, 0)).toBe(
+        outcome.xpBanked,
+      )
+      expect(outcome.fightRecords.map((r) => r.result)).toEqual(outcome.fightResults)
+    }
+  })
+})
+
+describe('the scripted intro grants XP', () => {
+  function introWith(introXpGrant: number, unicorn: SpeciesCreature = UNICORN) {
+    const store = createGameStore(
+      makeDeps({
+        balanceConfig: { ...CFG, introXpGrant },
+        standaloneCreatures: [
+          HERO_STANDALONE,
+          { speciesCreature: unicorn, speciesId: UNICORN_SPECIES_ID },
+        ],
+      }),
+    )
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    const outcome = store.getState().runScriptedIntro()
+    const { collection } = store.getState()
+    return {
+      outcome,
+      hero: instanceFor(collection, HERO.id)!,
+      unicorn: instanceFor(collection, UNICORN.id)!,
+    }
+  }
+
+  test('every active-party creature gets the grant, whatever the intro fight’s result', () => {
+    // 150 XP: level 1 needs 100 -> level 2 with 50 left; level 2 needs 200, so it stops there.
+    const crossing = introWith(150)
+    expect([crossing.hero.level, crossing.hero.xp]).toEqual([2, 50])
+    expect([crossing.unicorn.level, crossing.unicorn.xp]).toEqual([2, 50])
+
+    // 40 XP stays under the threshold and is banked as XP.
+    const below = introWith(40)
+    expect([below.hero.level, below.hero.xp]).toEqual([1, 40])
+    expect([below.unicorn.level, below.unicorn.xp]).toEqual([1, 40])
+
+    // An overwhelming Unicorn wins the intro fight; the grant is the same.
+    const overwhelmingUnicorn: SpeciesCreature = {
+      ...UNICORN,
+      baseStats: { health: 200, attack: 200, intelligence: 10, defence: 200, speed: 200 },
+    }
+    const lost = introWith(150, overwhelmingUnicorn)
+    expect(lost.outcome.result).toBe('loss')
+    expect([lost.hero.level, lost.hero.xp]).toEqual([2, 50])
+    expect([lost.unicorn.level, lost.unicorn.xp]).toEqual([2, 50])
   })
 })

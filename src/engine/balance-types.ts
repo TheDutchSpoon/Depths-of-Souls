@@ -54,6 +54,10 @@ export interface BalanceConfig {
    * level (Creature.origin.level). Default 1. */
   readonly xpPerKillMultiplier: number
 
+  /** Flat XP every active-party creature gets once the scripted intro's Unicorn has joined,
+   * whatever the intro fight's result (the intro's kills bank nothing). Default 10. */
+  readonly introXpGrant: number
+
   /** currencyDropForKill(floor): essence/ore/lifeforce = floor * currencyPerFloor; bricks =
    * max(bricksMinimum, floor(floor/10) * bricksPerTenFloors). Defaults 1, 1, 1 (giving
    * {essence:floor, ore:floor, bricks:max(1,floor(floor/10)), lifeforce:floor}). */

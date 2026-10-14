@@ -16,7 +16,7 @@
 
 import { create } from 'zustand'
 import { createCombat, resolveFight } from '../engine/combat'
-import type { Trait, StatusDef } from '../engine/effect-types'
+import type { EffectDef, Trait, StatusDef } from '../engine/effect-types'
 import {
   biomeForFloor,
   biomeHasContent,
@@ -150,6 +150,26 @@ export interface GameState {
   readonly nextInstanceOrdinal: number
 }
 
+/** One fight of a descent, with everything needed to replay it: `createCombat` over the seed, the
+ * two parties and the player's effects gives back `events`. */
+export interface FightRecord {
+  readonly events: readonly CombatEvent[]
+  readonly result: FightResult
+  /** The XP this fight's kills banked, applied to the active party right after the fight. */
+  readonly xpBanked: number
+  /** The active party's levels after this fight's XP, in `playerParty` order. */
+  readonly partyLevelsAfter: readonly number[]
+  readonly seed: number
+  /** The party `createCombat` was given: materialized for this fight from the collection as the
+   * floor's earlier fights left it, not `combat.creatures`, which carries fight-setup output. */
+  readonly playerParty: readonly Creature[]
+  /** The party `createCombat` was given, including an enemy that never got a turn (the events
+   * alone cannot name it). */
+  readonly enemyParty: readonly Creature[]
+  /** The player side's perk effects `createCombat` was given. */
+  readonly playerEffects: readonly EffectDef[]
+}
+
 export interface FloorOutcome {
   readonly floor: number
   /** One result per fight actually resolved -- stops at the first non-win (`spec/combat.md#resolution--timing`: "the
@@ -165,9 +185,9 @@ export interface FloorOutcome {
   readonly xpBanked: number
   readonly currencyGained: Currencies
   readonly events: readonly CombatEvent[]
-  /** One array of enemy creature ids per fight resolved, in fight order: the whole enemy party,
-   * including an enemy that never got a turn (the events alone cannot name it). */
-  readonly fightEnemyIds: readonly (readonly string[])[]
+  /** One record per fight resolved, in fight order. The records' events concatenate to `events`,
+   * their XP sums to `xpBanked` and their results are `fightResults`. */
+  readonly fightRecords: readonly FightRecord[]
   /** The bossId, iff this floor's (single) fight
    * was a boss encounter AND it was won -- else null. Idempotent at the bossesCleared level (a
    * re-fought, already-cleared boss still reports bossDefeated here, but grants no further perk
@@ -265,7 +285,8 @@ export interface GameActions {
    * skip ahead or go past the last authored biome). Generates the floor via the engine's pure
    * generation module, runs each fight through the real resolver in sequence, banks soul%/XP/
    * currency rewards as each fight resolves (never held pending the floor's overall outcome),
-   * applies XP-driven level-ups post-fight, and advances deepestFloor only on a full clear.
+   * applies each fight's XP to the active party right after it, win or not, so the next fight
+   * materializes the party at its new levels, and advances deepestFloor only on a full clear.
    * Player-reachable failure (`spec/store.md#how-store-actions-fail`): returns
    * `{ ok: false, reason }` (state unchanged) instead of throwing. */
   descend(floor: number): DescendResult
@@ -275,7 +296,9 @@ export interface GameActions {
   /** NOT a new engine mechanism -- a fixed, hardcoded 1-enemy fight (the Unicorn)
    * resolved through the ordinary resolver, with a special outcome handler HERE (the run layer):
    * regardless of win/loss/draw, the Unicorn joins the collection (and the first open party
-   * slot) if not already owned. The engine has zero awareness this fight is special. */
+   * slot) if not already owned, and every creature in the active party then gets the intro's flat
+   * XP grant (`BalanceConfig.introXpGrant`), whatever the result; the intro's kills bank nothing.
+   * The engine has zero awareness this fight is special. */
   runScriptedIntro(): {
     readonly events: readonly CombatEvent[]
     readonly result: FightResult
@@ -286,13 +309,21 @@ export interface GameActions {
 
 /** Builds the resolver-ready player Creature[] from activeParty, in slot order, skipping empty
  * slots and re-assigning CONTIGUOUS slot indices (0..k-1) to the resolved creatures -- the
- * engine's tie-break rule (player -> slot -> id) expects a dense slot space, not one with gaps. */
-function resolvePlayerParty(state: GameState, deps: GameStoreDeps): Creature[] {
+ * engine's tie-break rule (player -> slot -> id) expects a dense slot space, not one with gaps.
+ * Reads the collection it is given, so a caller mid-floor passes the collection as the floor's
+ * earlier fights left it. `instanceIds` names each materialized creature's instance, in the same
+ * order. */
+function resolvePlayerParty(
+  collection: ReadonlyMap<InstanceId, Instance>,
+  activeParty: readonly (InstanceId | null)[],
+  deps: GameStoreDeps,
+): { readonly creatures: Creature[]; readonly instanceIds: InstanceId[] } {
   const creatures: Creature[] = []
+  const instanceIds: InstanceId[] = []
   let slot = 0
-  for (const instanceId of state.activeParty) {
+  for (const instanceId of activeParty) {
     if (instanceId === null) continue
-    const instance = state.collection.get(instanceId)
+    const instance = collection.get(instanceId)
     if (!instance) continue // defensive; activeParty should only ever reference owned instances
     const staticId = staticCreatureIdFor(instance)
     const staticRef = findStaticCreature(staticId, deps.standaloneCreatures, deps.biomes)
@@ -319,9 +350,10 @@ function resolvePlayerParty(state: GameState, deps: GameStoreDeps): Creature[] {
         ref: instance.id,
       }),
     )
+    instanceIds.push(instanceId)
     slot += 1
   }
-  return creatures
+  return { creatures, instanceIds }
 }
 
 /** Immutably applies a flat XP gain to every Instance currently in the active party. */
@@ -748,14 +780,16 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         genRng,
         deps.balanceConfig,
       )
-      const playerCreatures = resolvePlayerParty(state, deps)
 
       const soulGainedThisCall = new Map<string, number>()
       let xpBanked = 0
       let currencyGained = ZERO_CURRENCIES
       const fightResults: FightResult[] = []
       const allEvents: CombatEvent[] = []
-      const fightEnemyIds: string[][] = []
+      const fightRecords: FightRecord[] = []
+      // The collection as the floor's fights leave it: each fight's XP lands before the next
+      // fight's party is materialized.
+      let collection = state.collection
       let cleared = true
       // Set iff this floor's (single) fight is a
       // boss encounter AND it's won -- `spec/run.md#rewards-are-a-run-layer-consumer-of-the-event-log`: winning a boss fight adds its
@@ -765,6 +799,11 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       for (let i = 0; i < fights.length; i++) {
         const fight = fights[i]!
         const combatSeed = hashRunDraw(state.runSeed, state.runCounter + i + 1)
+        const { creatures: playerCreatures, instanceIds } = resolvePlayerParty(
+          collection,
+          state.activeParty,
+          deps,
+        )
         const combat = createCombat({
           seed: combatSeed,
           player: { party: playerCreatures, effects: partyWideEffects },
@@ -777,8 +816,9 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         })
         const { state: finalState, events } = resolveFight(combat)
         allEvents.push(...events)
-        fightEnemyIds.push(fight.enemyParty.map((c) => c.id))
-        fightResults.push(finalState.result as FightResult)
+        const result = finalState.result as FightResult
+        fightResults.push(result)
+        let fightXp = 0
 
         // Rewards bank per kill-event, immediately, regardless of how this fight (or the floor)
         // ultimately ends (`spec/run.md#rewards`).
@@ -793,7 +833,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
           // find (an add's death still falls through to the ordinary path below and DOES get
           // soul%, per the same clause).
           if (fight.boss && deadEnemy.id === fight.boss.creatureId) {
-            xpBanked += xpAwardForKill(deadEnemy.origin.level, deps.balanceConfig)
+            fightXp += xpAwardForKill(deadEnemy.origin.level, deps.balanceConfig)
             currencyGained = addCurrencies(
               currencyGained,
               currencyDropForKill(floor, deps.balanceConfig),
@@ -814,14 +854,33 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
             reward.staticId,
             (soulGainedThisCall.get(reward.staticId) ?? 0) + reward.soulGainPercent,
           )
-          xpBanked += reward.xpAwarded
+          fightXp += reward.xpAwarded
           currencyGained = addCurrencies(
             currencyGained,
             currencyDropForKill(floor, deps.balanceConfig),
           )
         }
 
-        if (finalState.result !== 'win') {
+        // Whatever the fight's result: a lost or drawn fight's kills still level the party.
+        xpBanked += fightXp
+        collection = applyXpToParty(
+          collection,
+          state.activeParty,
+          fightXp,
+          deps.balanceConfig,
+        )
+        fightRecords.push({
+          events,
+          result,
+          xpBanked: fightXp,
+          partyLevelsAfter: instanceIds.map((id) => collection.get(id)!.level),
+          seed: combatSeed,
+          playerParty: playerCreatures,
+          enemyParty: fight.enemyParty,
+          playerEffects: partyWideEffects,
+        })
+
+        if (result !== 'win') {
           cleared = false
           break
         }
@@ -838,12 +897,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         discoveredBiomes.add(biomeId)
         return {
           soulProgress,
-          collection: applyXpToParty(
-            s.collection,
-            s.activeParty,
-            xpBanked,
-            deps.balanceConfig,
-          ),
+          collection,
           discoveredBiomes,
           lastFloor: floor,
           deepestFloor: cleared ? Math.max(s.deepestFloor, floor) : s.deepestFloor,
@@ -868,14 +922,18 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
           xpBanked,
           currencyGained,
           events: allEvents,
-          fightEnemyIds,
+          fightRecords,
         },
       }
     },
 
     runScriptedIntro() {
       const state = get()
-      const playerCreatures = resolvePlayerParty(state, deps)
+      const { creatures: playerCreatures } = resolvePlayerParty(
+        state.collection,
+        state.activeParty,
+        deps,
+      )
       if (playerCreatures.length === 0) {
         throw new Error('runScriptedIntro: no active party -- call setSpec first')
       }
@@ -905,10 +963,19 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       })
       const { state: finalState, events } = resolveFight(combat)
 
-      set((s) => ({
-        ...grantCreatureIfUnowned(s, deps, UNICORN.id),
-        runCounter: s.runCounter + 1,
-      }))
+      set((s) => {
+        const granted = grantCreatureIfUnowned(s, deps, UNICORN.id)
+        return {
+          ...granted,
+          collection: applyXpToParty(
+            granted.collection,
+            granted.activeParty,
+            deps.balanceConfig.introXpGrant,
+            deps.balanceConfig,
+          ),
+          runCounter: s.runCounter + 1,
+        }
+      })
 
       return { events, result: finalState.result as FightResult }
     },

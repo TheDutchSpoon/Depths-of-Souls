@@ -381,6 +381,39 @@ describe('real defaults: real store, real content, the default BalanceConfig', (
       expect(allowedGains.some((per) => gain % per === 0)).toBe(true)
     }
   })
+
+  test('the party leaves floor 1 one level up and fights floor 2 at that level, fight by fight', () => {
+    const store = createGameStore()
+    store.getState().setSpec('brute')
+    store.getState().runScriptedIntro()
+
+    const floor1 = expectOk(store.getState().descend(1)).outcome
+    const floor2 = expectOk(store.getState().descend(2)).outcome
+
+    // Generated-then-checkpoint-verified at the file's seed. Checkpoint: the intro grants 10 XP
+    // and floor 1's ten level-1 kills bank 10 more, 20 = xpForNextLevel(1) at the default curve
+    // (20 * 1^2), so the level-up lands after floor 1's last fight and not before: every floor-1
+    // fight is played at [1, 1]. The whole active party gains the same XP, so both levels move
+    // together.
+    expect(floor1.fightRecords).toHaveLength(10)
+    for (const record of floor1.fightRecords) {
+      expect(record.playerParty.map((c) => c.origin.level)).toEqual([1, 1])
+    }
+    expect(floor1.fightRecords.map((r) => r.partyLevelsAfter).slice(0, 9)).toEqual(
+      Array.from({ length: 9 }, () => [1, 1]),
+    )
+    expect(floor1.fightRecords.at(-1)!.partyLevelsAfter).toEqual([2, 2])
+
+    // Level 3 needs xpForNextLevel(2) = 20 * 2^2 = 80, above floor 2's XP total, so every floor-2
+    // fight is played at [2, 2] and ends there.
+    const floor2Xp = floor2.fightRecords.reduce((sum, r) => sum + r.xpBanked, 0)
+    expect(floor2Xp).toBeLessThan(80)
+    expect(floor2.fightRecords.length).toBeGreaterThan(0)
+    for (const record of floor2.fightRecords) {
+      expect(record.playerParty.map((c) => c.origin.level)).toEqual([2, 2])
+      expect(record.partyLevelsAfter).toEqual([2, 2])
+    }
+  })
 })
 
 // Player creatures hold a stored, rolled gem set, which a striker uses only on a turn it cannot
