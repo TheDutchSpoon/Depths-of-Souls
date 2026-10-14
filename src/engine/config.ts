@@ -37,3 +37,8 @@ export const MAX_TRIGGER_CASCADE_DEPTH = 500
 // revivesUsed counts. Dead allies at the cap are excluded from revive targeting; an empty
 // eligible pool fizzles (TriggerFired only) and draws no random number.
 export const MAX_REVIVES_PER_CREATURE = 10
+
+// The HP a successful cheat-death save leaves, and the HP at or below which the roll is not
+// made: a creature already at the survival HP gains nothing from a save
+// (`spec/effects.md#cheat-death`). One name for both, so they cannot drift.
+export const CHEAT_DEATH_SURVIVAL_HP = 1

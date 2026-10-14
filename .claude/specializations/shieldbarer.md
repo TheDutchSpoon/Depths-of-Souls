@@ -46,10 +46,6 @@ needs Phase 8's equipment system.
 equal to 15% of the creature's Defence, as indirect damage (a fifth of the enemy's Defence
 applies).
 
-**Known bug:** `main` answers any damage that has a source, trait and perk hits and other
-retaliations included (never a damage-over-time tick). The fix is listed in
-`phases/4.5/brief.md#thorns-answers-only-attacks-and-spells`.
-
 ### Shield Bash
 
 10 levels × 10 points. Attacks and spells deal additional damage equal to 3% of the creature's
@@ -62,11 +58,8 @@ Confused for any "target is Confused" payoff, but the creature ignores the chaos
 
 ### Last Stand
 
-1 level × 100 points. When taking more than 1 damage that would kill the creature, 50% chance to
-be left at 1 HP.
-
-**Known bug:** `main` rolls on any lethal damage, so a creature left at 1 HP rolls again on a
-1-damage hit. The fix is listed in `phases/4.5/brief.md#last-stand-rolls-only-above-1-damage`.
+1 level × 100 points. When taking damage that would kill the creature, 50% chance to be left at 1
+HP. It doesn't roll while the creature is at 1 HP; healed above 1 HP, it rolls again.
 
 ### Phalanx
 

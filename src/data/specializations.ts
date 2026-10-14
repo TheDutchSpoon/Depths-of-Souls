@@ -36,6 +36,7 @@ import {
   validateNoSnapshotPotencyOutsideStatus,
   validateNoRandomSelectorInResponseTargets,
   validateObservationFilters,
+  validateDamageChannels,
   validateStatModifierConditions,
 } from '../engine/effect-types'
 import { BRUTE_STARTER, SHIELDBARER_STARTER, SORCERER_STARTER } from './species/starters'
@@ -79,6 +80,7 @@ export function validateSpecialization(spec: Specialization): void {
     validateNoRandomSelectorInResponseTargets(effects)
     // A perk is a trigger carrier too.
     validateObservationFilters(effects, `perk "${perk.id}"`)
+    validateDamageChannels(effects, `perk "${perk.id}"`)
   }
 }
 
@@ -426,6 +428,7 @@ export const SHIELDBARER: Specialization = {
         {
           category: 'triggered',
           hook: 'on-damage-taken',
+          damageChannel: 'direct',
           response: {
             kind: 'deal-damage',
             target: { kind: 'triggering-source' },
@@ -461,8 +464,9 @@ export const SHIELDBARER: Specialization = {
       effects: [{ category: 'status-immunity', statusId: 'confusion' }],
     },
     {
-      // "When taking damage that would kill the creature, 50% chance to be left at 1 HP."
-      // cheat-death.
+      // "When taking damage that would kill the creature, 50% chance to be left at 1 HP",
+      // except at 1 HP, where there is nothing to be saved to and no roll is made
+      // (`spec/effects.md#cheat-death`). cheat-death.
       id: 'last-stand',
       name: 'Last Stand',
       maxLevel: 1,

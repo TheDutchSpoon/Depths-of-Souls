@@ -161,6 +161,90 @@ describe('evaluateCondition -- hp-percent', () => {
   })
 })
 
+describe('evaluateCondition -- hp-percent lowest / highest', () => {
+  // A is 30/100 = 30%, B is 20/25 = 80%: the current-HP order (B lowest) and the HP% order (A
+  // lowest) disagree, so only a pick by HP% satisfies both conditions below.
+  const allies = makeParty('player', [
+    { id: 'a', health: 100, currentHp: 30 },
+    { id: 'b', health: 25, currentHp: 20 },
+  ])
+  const state = makeState({ playerParty: allies })
+  const base = {
+    kind: 'hp-percent' as const,
+    subject: 'ally' as const,
+  }
+
+  it('highest tests the creature with the highest HP%, not the highest current HP', () => {
+    const condition = {
+      ...base,
+      qualifier: 'highest' as const,
+      comparator: '>=' as const,
+      thresholdPercent: 70,
+    }
+    expect(evaluateCondition(condition, allies[0]!, state)).toBe(true)
+  })
+
+  it('lowest tests the creature with the lowest HP%, not the lowest current HP', () => {
+    const condition = {
+      ...base,
+      qualifier: 'lowest' as const,
+      comparator: '<=' as const,
+      thresholdPercent: 30,
+    }
+    expect(evaluateCondition(condition, allies[0]!, state)).toBe(true)
+  })
+
+  function healthMod(factor: number): ActiveEffect {
+    return {
+      category: 'stat-modifier',
+      stat: 'health',
+      factor,
+      instanceId: createEffectInstanceId(`sm-health-${factor}`),
+      sourceTraitId: 'test-trait',
+    }
+  }
+
+  it('orders by effective max HP, not base Health', () => {
+    // A: base Health 100 x0.5 -> effective max 50, at 30 HP = 60%. B: 40/100 = 40%.
+    // Order by effective max: A vs B is 30*100 - 40*50 = 1000 > 0, so B is lowest, tested
+    // (40 < 50) -> true. Read from base Health: 30*100 - 40*100 = -1000 < 0, so A looks lowest,
+    // is tested (60 < 50) -> false.
+    const pair = makeParty('player', [
+      { id: 'a', health: 100, currentHp: 30, activeEffects: [healthMod(0.5)] },
+      { id: 'b', health: 100, currentHp: 40 },
+    ])
+    const condition = {
+      ...base,
+      qualifier: 'lowest' as const,
+      comparator: '<' as const,
+      thresholdPercent: 50,
+    }
+    expect(evaluateCondition(condition, pair[0]!, makeState({ playerParty: pair }))).toBe(
+      true,
+    )
+  })
+
+  it('orders by floored effective max HP, not fractional Health', () => {
+    // A: base Health 30 x1.15 -> effective 34.5, max 34, at 34 HP = 100%. B: 99/100 = 99%.
+    // Order by floored max: A vs B is 34*100 - 99*34 = 34 > 0, so A is highest, tested
+    // (3400 >= 100*34) -> true. Read unfloored: 34*100 - 99*34.5 = -15.5 < 0, so B looks
+    // highest, is tested (99 >= 100) -> false.
+    const pair = makeParty('player', [
+      { id: 'a', health: 30, currentHp: 34, activeEffects: [healthMod(1.15)] },
+      { id: 'b', health: 100, currentHp: 99 },
+    ])
+    const condition = {
+      ...base,
+      qualifier: 'highest' as const,
+      comparator: '>=' as const,
+      thresholdPercent: 100,
+    }
+    expect(evaluateCondition(condition, pair[0]!, makeState({ playerParty: pair }))).toBe(
+      true,
+    )
+  })
+})
+
 describe('evaluateCondition -- enemy-count / ally-count', () => {
   it('compares living enemy count at the exact boundary', () => {
     const player = makeParty('player', [{ id: 'me' }])

@@ -33,14 +33,29 @@ export function compareByKey(
 }
 
 /**
- * Picks the tie-broken extremum of `pool` by `keyOf`/`direction`. Undefined only for an
- * empty pool -- callers must existence-check first (e.g. via a TargetSelector's
- * has-candidate check) if `undefined` isn't an acceptable outcome.
+ * Picks the tie-broken extremum of `pool` under `order` (negative when `a` sorts first ascending),
+ * for a key that is not one number per creature (HP% is a ratio, compared by cross-multiplication).
+ * `'desc'` reverses `order`; equal creatures fall back to the shared side/slot/id tie-break. The one
+ * sort-and-tie-break site: `pickExtremum` is a wrapper over it. Undefined only for an empty pool --
+ * callers must existence-check first (e.g. via a TargetSelector's has-candidate check) if
+ * `undefined` isn't an acceptable outcome.
  */
+export function pickExtremumBy(
+  pool: readonly Creature[],
+  order: (a: Creature, b: Creature) => number,
+  direction: SortDirection,
+): Creature | undefined {
+  return [...pool].sort((a, b) => {
+    const diff = direction === 'desc' ? order(b, a) : order(a, b)
+    return diff !== 0 ? diff : compareBySideSlotId(a, b)
+  })[0]
+}
+
+/** Picks the tie-broken extremum of `pool` by the numeric `keyOf`/`direction`. */
 export function pickExtremum(
   pool: readonly Creature[],
   keyOf: (c: Creature) => number,
   direction: SortDirection,
 ): Creature | undefined {
-  return [...pool].sort((a, b) => compareByKey(a, b, keyOf, direction))[0]
+  return pickExtremumBy(pool, (a, b) => keyOf(a) - keyOf(b), direction)
 }

@@ -21,9 +21,9 @@ unless they're given a script of their own.
 |---|---|
 | **Striker** | 1. If any enemy is below 80% HP, attack the weakest enemy. 2. Otherwise attack a random enemy. 3. If it can't attack, cast a random gem. |
 | **Guardian** | 1. If its own HP is below 50%, Defend. 2. Otherwise attack the weakest enemy. 3. If it can't attack, cast a random gem. |
-| **Warden** | 1. If its weakest ally (itself included) is below 50% HP, Provoke, drawing hits onto itself. 2. Otherwise attack the weakest enemy. 3. If it can't attack, cast a random gem. |
+| **Warden** | 1. If its most wounded ally by HP% (itself included) is below 50% HP, Provoke, drawing hits onto itself. 2. Otherwise attack the weakest enemy. 3. If it can't attack, cast a random gem. |
 | **Caster** | 1. Cast a random gem. 2. If it can't cast (Silenced, or nothing castable), attack the weakest enemy. |
-| **Support** | 1. If its weakest ally is below 50% HP, cast a random gem **that targets allies** (a heal or a buff). 2. Otherwise attack the weakest enemy. 3. If it can't attack, cast a random gem. |
+| **Support** | 1. If its most wounded ally by HP% is below 50% HP, cast a random gem **that targets allies** (a heal or a buff). 2. Otherwise attack the weakest enemy. 3. If it can't attack, cast a random gem. |
 | **Opener** | 1. On round 1, cast a random gem. 2. Afterwards attack the weakest enemy. 3. If it can't attack, cast a random gem. |
 | **Taunter** | 1. Provoke, every turn. 2. and 3. as the others (never reached: Provoke is always possible). For a creature whose trait fires on Provoke (the Snapjaw Lure). |
 

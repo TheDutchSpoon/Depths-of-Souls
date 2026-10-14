@@ -287,8 +287,8 @@ export const NECROMOSS_HOLLOWROOT_TRAIT: Trait = {
 
 // ---- Hollowkin (Endurance/Instinct) -- closed mechanic: Puppet (Confusion) ----
 
-/** Hollowkin Wretch (enabler, common): whenever it's struck, it lashes back by confusing its
- * attacker (`triggering-source` under `on-damage-taken` = whoever just hit it). */
+/** Hollowkin Wretch (enabler, common): whenever an attack or spell strikes it, it lashes back by
+ * confusing its attacker (`triggering-source` under `on-damage-taken` = whoever just hit it). */
 export const HOLLOWKIN_WRETCH_TRAIT: Trait = {
   id: 'hollowkin-wretch-madness-touch',
   name: 'Madness Touch',
@@ -296,6 +296,7 @@ export const HOLLOWKIN_WRETCH_TRAIT: Trait = {
     {
       category: 'triggered',
       hook: 'on-damage-taken',
+      damageChannel: 'direct',
       response: {
         kind: 'apply-status',
         target: { kind: 'triggering-source' },

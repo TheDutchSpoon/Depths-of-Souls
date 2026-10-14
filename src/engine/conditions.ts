@@ -1,6 +1,6 @@
-import { pickExtremum } from './tie-break'
+import { pickExtremumBy } from './tie-break'
 import { injuredOtherAlliesOf, livingAlliesOf, livingEnemiesOf } from './targeting'
-import { hasStatus, hpPercentSatisfied } from './effective-stats'
+import { compareHpPercent, hasStatus, hpPercentSatisfied } from './effective-stats'
 import { getAffinityMultiplier } from './affinity'
 import { peekTargetSelector } from './target-selectors'
 import { findCreature } from './creature-lookup'
@@ -97,9 +97,11 @@ export function evaluateCondition(
           hpPercentSatisfied(c, condition.comparator, condition.thresholdPercent),
         )
       }
-      const target = pickExtremum(
+      // The lowest/highest HP%, not the lowest/highest current HP: a 30/100 creature is more
+      // wounded than a 20/25 one (`spec/scripting.md#conditions-in-the-engine`).
+      const target = pickExtremumBy(
         pool,
-        (c) => c.currentHp,
+        compareHpPercent,
         condition.qualifier === 'lowest' ? 'asc' : 'desc',
       )
       return target

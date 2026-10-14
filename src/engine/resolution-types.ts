@@ -10,17 +10,7 @@
 import type { CreatureId } from './ids'
 import type { Intent } from './scripting-types'
 import type { CombatEvent, CombatState } from './types'
-import type { EffectInstanceId } from './effect-types'
-
-/**
- * Which damage channel a `deal-damage` response runs in.
- * `'direct'` = an Attack or Cast action (a spell's own effect list; a granted action runs through
- * the same executors) -- the chip-floor formula plus the Additional. `'indirect'` = any other
- * damage (a trait, status or perk response) -- the magnitude formula against a fifth of Defence.
- * Stated explicitly by every caller; it is never inferred from `damageSource` (a display tag) or
- * from `castTarget`.
- */
-export type DamageChannel = 'direct' | 'indirect'
+import type { DamageChannel, EffectInstanceId } from './effect-types'
 
 /**
  * Where one
@@ -28,16 +18,18 @@ export type DamageChannel = 'direct' | 'indirect'
  * finds every caller. Stated by the branch that chose the path, never inferred from ids.
  *  - `'hit'`: an Attack/Cast action's damage, or an indirect response hitting a target. Its
  *    source is the dealer; its `on-damage-taken` / `on-death` offer that source as
- *    `triggering-source`.
+ *    `triggering-source`. It carries the channel its damage ran in, which an `on-damage-taken`
+ *    trigger's `damageChannel` is matched against.
  *  - `'cost'`: a creature's own response damaging itself (`applyCostDamage`). The ONLY origin the
- *    damage observer reports as `selfInflicted`.
- *  - `'tick'`: a status tick (`applyTickDamage`). Never self-inflicted. It offers NO
- *    `triggering-source` (so no retaliator answers it) while `on-damage-taken` / `on-death` still
- *    fire on the bearer. `dealerId` is the living applier (its `on-damage-dealt` / `on-kill` fire),
- *    or `null` when the applier is dead and the bearer is only the logged source.
+ *    damage observer reports as `selfInflicted`. Indirect by definition, so it carries no channel.
+ *  - `'tick'`: a status tick (`applyTickDamage`). Never self-inflicted, indirect by definition. It
+ *    offers NO `triggering-source` (so a trigger without a `damageChannel` fizzles on it) while
+ *    `on-damage-taken` / `on-death` still fire on the bearer. `dealerId` is the living applier
+ *    (its `on-damage-dealt` / `on-kill` fire), or `null` when the applier is dead and the bearer
+ *    is only the logged source.
  */
 export type DamageOrigin =
-  | { readonly kind: 'hit' }
+  | { readonly kind: 'hit'; readonly channel: DamageChannel }
   | { readonly kind: 'cost' }
   | { readonly kind: 'tick'; readonly dealerId: CreatureId | null }
 

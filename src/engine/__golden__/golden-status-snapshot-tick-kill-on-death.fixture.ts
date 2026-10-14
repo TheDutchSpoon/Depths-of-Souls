@@ -1,6 +1,6 @@
 // Golden: a tick that KILLS its bearer offers no `triggering-source` to the bearer's `on-death`
 // either. `on-death` is the second bearer-side site of the tick
-// origin (the first is `on-damage-taken`, golden-status-snapshot-tick-no-retaliation). A fixture trait on the
+// origin (the first is `on-damage-taken`, the tick row of damage-channel.test.ts). A fixture trait on the
 // bearer answers its own death by striking `triggering-source`: after a tick-kill from a living
 // applier it fires (TriggerFired) and resolves to nothing -- the applier takes no damage.
 //

@@ -267,7 +267,8 @@ export const SNAPJAW_LURE_TRAIT: Trait = {
   ],
 }
 
-/** Snapjaws' Jaws (payoff): a retaliate at 60% of its Attack (`content/overgrowth.md#snapjaw-jaws`). */
+/** Snapjaws' Jaws (payoff): when it takes damage from an attack or spell, a retaliate at 60% of its
+ * Attack (`content/overgrowth.md#snapjaw-jaws`). */
 export const SNAPJAW_JAWS_TRAIT: Trait = {
   id: 'snapjaw-jaws-snapback',
   name: 'Snapback',
@@ -275,6 +276,7 @@ export const SNAPJAW_JAWS_TRAIT: Trait = {
     {
       category: 'triggered',
       hook: 'on-damage-taken',
+      damageChannel: 'direct',
       response: {
         kind: 'deal-damage',
         target: { kind: 'triggering-source' },

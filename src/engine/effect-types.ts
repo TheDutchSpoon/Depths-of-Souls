@@ -17,6 +17,17 @@ export function createEffectInstanceId(value: string): EffectInstanceId {
   return value as EffectInstanceId
 }
 
+/**
+ * Which damage channel a `deal-damage` response runs in, and which channel an `on-damage-taken`
+ * trigger answers (`TriggeredDef.damageChannel`).
+ * `'direct'` = an Attack or Cast action (a spell's own effect list; a granted action runs through
+ * the same executors) -- the chip-floor formula plus the Additional. `'indirect'` = any other
+ * damage (a trait, status or perk response) -- the magnitude formula against a fifth of Defence.
+ * Stated explicitly by every caller; it is never inferred from `damageSource` (a display tag) or
+ * from `castTarget`.
+ */
+export type DamageChannel = 'direct' | 'indirect'
+
 // The v1 hook vocabulary (16 in all, `spec/effects.md#hooks`).
 // on-wait is deliberately omitted. A single general on-action-observed (see the
 // actor-vs-observer routing rule, `spec/effects.md#action-reactions-actor-self-hooks-or-observation`)
@@ -398,6 +409,25 @@ export function validateObservationFilters(
   }
 }
 
+/** The load-time validator for `damageChannel` (`spec/effects.md#validators`) -- throws if the
+ * field sits on a trigger whose hook is not `on-damage-taken`: no other hook has an incoming
+ * damage channel to match. Called over EVERY trigger carrier, as `validateObservationFilters` is:
+ * every trait (`validateTrait`), every perk (`data/specializations.ts`) and every status
+ * (`validateStatusDef`). */
+export function validateDamageChannels(
+  defs: readonly EffectDef[],
+  context = 'a trigger',
+): void {
+  for (const def of defs) {
+    if (def.category !== 'triggered' || def.damageChannel === undefined) continue
+    if (def.hook !== 'on-damage-taken') {
+      throw new Error(
+        `effect invariant violated: ${context} on "${def.hook}" carries a damageChannel, which only an "on-damage-taken" trigger may carry`,
+      )
+    }
+  }
+}
+
 /**
  * `'random'` is an INTENT-only `TargetSelector` variant (`spec/combat.md#one-action-pipeline`) --
  * it needs the action's intended side, which only an intent (a rule, the fallback, a grant)
@@ -503,13 +533,14 @@ export function validateStatusDef(def: StatusDef): void {
   }
   validateStatusNoRandomSelectorInResponseTargets(def)
   validateObservationFilters(def.effects, `status "${def.statusId}"'s trigger`)
+  validateDamageChannels(def.effects, `status "${def.statusId}"'s trigger`)
   validateStatusPotency(def)
 }
 
 /** The load-time validator for a trait's effects: a stat-modifier may not read the stat it gates,
  * a response target may not be the intent-only 'random' selector, `turn-order.breakChancePercent`
- * and `snapshot-potency` are status-only, and each observation-filter field sits on its own
- * hook. Called over every stock trait at import (`data/traits/index.ts`) and over every trait in
+ * and `snapshot-potency` are status-only, each observation-filter field sits on its own
+ * hook and `damageChannel` sits on `on-damage-taken`. Called over every stock trait at import (`data/traits/index.ts`) and over every trait in
  * the registry `createCombat` is given, as `validateStatusDef` is over the statuses. */
 export function validateTrait(trait: Trait): void {
   validateStatModifierConditions(trait.effects)
@@ -517,6 +548,7 @@ export function validateTrait(trait: Trait): void {
   validateNoSnapshotPotencyOutsideStatus(trait.effects)
   validateNoRandomSelectorInResponseTargets(trait.effects)
   validateObservationFilters(trait.effects, `trait "${trait.id}"`)
+  validateDamageChannels(trait.effects, `trait "${trait.id}"`)
 }
 
 /** True iff `response` is a tick: a `deal-damage` / `heal` whose `flatAmount` is the
@@ -716,6 +748,12 @@ export type TriggeredDef = {
   /** Meaningful only when `hook` is an observation hook (`'on-action-observed'` /
    * `'on-damage-observed'` / `'on-death-observed'`). See ObservationFilter's own doc comment. */
   readonly observationFilter?: ObservationFilter
+  /** Valid on `'on-damage-taken'` only (`validateDamageChannels`). The trigger answers only
+   * damage that ran in this channel; absent = answers any damage. A mismatch skips silently,
+   * before `condition`, the chance roll and the `stacks: false` claim. Every retaliator sets
+   * `'direct'`, so it answers an attack or a spell and never a response, tick or cost
+   * (`spec/effects.md#damagechannel`). */
+  readonly damageChannel?: DamageChannel
   /** An optional probabilistic gate, a sibling of
    * `condition` -- one is deterministic, the other a roll. Plain number, baked at instantiation
    * (the perk/trait model does any rank arithmetic and stores the result; the engine carries no
@@ -1011,6 +1049,9 @@ export type ResolvedHookEffect = {
    * effects and `flatEffects` spreads a status trigger's fields through, so a status trigger can
    * carry one too; it is undefined only when none was authored. */
   readonly observationFilter?: ObservationFilter
+  /** Meaningful only for an `'on-damage-taken'` trigger: the channel of the damage it answers.
+   * See `TriggeredDef.damageChannel`. */
+  readonly damageChannel?: DamageChannel
   readonly response: EffectResponse
   readonly statusId?: string
   /** Derived from a `TriggeredDef`'s own `stacks: false`

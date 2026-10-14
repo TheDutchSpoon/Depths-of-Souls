@@ -49,21 +49,18 @@ import { createEffectInstanceId } from './effect-types'
 import {
   MAX_TRIGGER_CASCADE_DEPTH,
   MAX_REVIVES_PER_CREATURE,
+  CHEAT_DEATH_SURVIVAL_HP,
   DEFEND_DEFENCE_MULTIPLIER,
   DEFEND_TAKEN_FACTOR,
 } from './config'
 import { nextRandom } from './rng'
 import type { DamageResult } from './damage'
 import type { CreatureId } from './ids'
-import type {
-  CascadeState,
-  DamageChannel,
-  DamageOrigin,
-  ResolutionContext,
-} from './resolution-types'
+import type { CascadeState, DamageOrigin, ResolutionContext } from './resolution-types'
 import type { CombatState, Creature, Stat } from './types'
 import type {
   ActiveEffect,
+  DamageChannel,
   EffectInstanceId,
   EffectResponse,
   Hook,
@@ -76,12 +73,8 @@ import type {
   StatusSpec,
 } from './effect-types'
 
-export type {
-  CascadeState,
-  DamageChannel,
-  DamageOrigin,
-  ResolutionContext,
-} from './resolution-types'
+export type { CascadeState, DamageOrigin, ResolutionContext } from './resolution-types'
+export type { DamageChannel } from './effect-types'
 
 export function newCascade(): CascadeState {
   return { depth: 0, activeInstances: new Set() }
@@ -283,7 +276,7 @@ function dealDamageCore(
     target,
     damage,
     damageSource,
-    { kind: 'hit' },
+    { kind: 'hit', channel },
     state,
     ctx,
     statusId,
@@ -304,9 +297,14 @@ function dealDamageCore(
  * a direct action landing on its own actor have equal ids and are not costs):
  *  - `cost` (only `applyCostDamage`) is the one origin the damage observer reports as self-inflicted.
  *  - `tick` (only `applyTickDamage`) offers NO source to the bearer's `on-damage-taken` /
- *    `on-death` -- so `triggering-source` resolves to nothing and no retaliator answers a tick,
- *    while the hooks themselves still fire (Sleep wakes) -- and fires the dealer-side hooks
- *    (`on-damage-dealt`, `on-kill`) only for `origin.dealerId`, the living applier.
+ *    `on-death` -- so `triggering-source` resolves to nothing and a retaliator without a
+ *    `damageChannel` fizzles on a tick, while the hooks themselves still fire (Sleep wakes) --
+ *    and fires the dealer-side hooks (`on-damage-dealt`, `on-kill`) only for `origin.dealerId`,
+ *    the living applier.
+ *
+ * The bearer's `on-damage-taken` is told the incoming channel: a `hit`'s own, `'indirect'` for a
+ * `cost` and a `tick`. A trigger with a `damageChannel` answers only that channel, so a
+ * `'direct'` retaliator is skipped, silently, on a response's hit, a tick and a cost.
  */
 export function applyDamageAndEmit(
   sourceId: CreatureId,
@@ -323,17 +321,20 @@ export function applyDamageAndEmit(
 
   // Checked at the instant a lethal hit would land, BEFORE any
   // death event/hook fires -- one seeded RNG roll, drawn only when the bearer actually carries
-  // a nonzero cheat-death chance (an ordinary creature never touches state.rng here, mirroring
-  // targeting.ts's Confusion "draws nothing when inactive" discipline). On
-  // success currentHp becomes EXACTLY 1 (not finalDamage-1) and `died` flips to false --
-  // resolution below proceeds through the ordinary non-lethal path (DamageDealt's remainingHp
-  // reflects 1, on-damage-taken fires since the target survived, no CreatureDied/on-death).
+  // a nonzero cheat-death chance AND stands above the survival HP before the hit (a bearer
+  // already at it has nothing to be saved to, so it neither rolls nor draws;
+  // `spec/effects.md#cheat-death`). An ordinary creature never touches state.rng here, mirroring
+  // targeting.ts's Confusion "draws nothing when inactive" discipline. On
+  // success currentHp becomes EXACTLY the survival HP (not finalDamage-1) and `died` flips to
+  // false -- resolution below proceeds through the ordinary non-lethal path (DamageDealt's
+  // remainingHp reflects it, on-damage-taken fires since the target survived, no
+  // CreatureDied/on-death).
   let newHp = rawNewHp
   let died = wouldDie
-  if (wouldDie) {
+  if (wouldDie && target.currentHp > CHEAT_DEATH_SURVIVAL_HP) {
     const chancePercent = gatherCheatDeathChance(target)
     if (chancePercent > 0 && nextRandom(state.rng) < chancePercent / 100) {
-      newHp = 1
+      newHp = CHEAT_DEATH_SURVIVAL_HP
       died = false
     }
   }
@@ -360,17 +361,18 @@ export function applyDamageAndEmit(
   const dealerIds: readonly CreatureId[] =
     origin.kind === 'tick' ? (origin.dealerId ? [origin.dealerId] : []) : [sourceId]
   const bearerSideSource = origin.kind === 'tick' ? undefined : sourceId
+  // The channel of THIS damage, which an `on-damage-taken` trigger's `damageChannel` is matched
+  // against: a hit's own, indirect for a cost or a tick. Not `HookContext.channel`, which is the
+  // channel the trigger's own response will run in.
+  const incomingChannel: DamageChannel =
+    origin.kind === 'hit' ? origin.channel : 'indirect'
 
   working = fireHook('on-damage-dealt', dealerIds, target.id, working, ctx).state
 
   if (!died) {
-    working = fireHook(
-      'on-damage-taken',
-      [target.id],
-      bearerSideSource,
-      working,
-      ctx,
-    ).state
+    working = fireHook('on-damage-taken', [target.id], bearerSideSource, working, ctx, {
+      incomingChannel,
+    }).state
   }
 
   // The damage observation sits between the hit-reactions and the death chain. The
@@ -454,6 +456,12 @@ export interface FireHookOptions {
    * `observed` is, and one on `on-death-observed` when its `source` (the dead creature) is absent
    * or not in the state. */
   readonly observedDamage?: { readonly selfInflicted: boolean }
+  /** Supplied ONLY by `applyDamageAndEmit`'s `on-damage-taken` call: the channel of the damage
+   * that FIRED this hook, matched against a candidate's `damageChannel`. Not
+   * `HookContext.channel`, which is the channel the candidate's own response runs in (always
+   * `'indirect'` from here). Fails closed: a candidate with a `damageChannel` is skipped when
+   * this is absent. */
+  readonly incomingChannel?: DamageChannel
   /** The born-this-turn tick gate, supplied ONLY by `resolveTurn`'s
    * `on-turn-end` call. Consulted for every STATUS-sourced candidate (trait-sourced triggers are
    * never gated): true means the bearer's status instance (`statusInstanceId`) was applied or
@@ -491,7 +499,8 @@ export function fireHook(
   ctx: ResolutionContext,
   options?: FireHookOptions,
 ): { state: CombatState } {
-  const { observed, observedDamage, skipStatusTrigger, stopWhen } = options ?? {}
+  const { observed, observedDamage, incomingChannel, skipStatusTrigger, stopWhen } =
+    options ?? {}
   const { events, cascade } = ctx
   let working = state
   const isDeathHook = hook === 'on-death'
@@ -588,6 +597,17 @@ export function fireHook(
         if (effect.observationFilter) {
           const { relationship = 'any' } = effect.observationFilter
           if (!relationshipMatches(relationship, self, dead)) continue
+        }
+      } else if (hook === 'on-damage-taken') {
+        // A retaliator answers only the channel it names; absent answers any. Fails closed like
+        // the observation hooks, and skips before the condition, the chance roll and the
+        // `stacks: false` claim: a skipped candidate emits nothing, draws nothing and claims no
+        // slot (`spec/effects.md#damagechannel`).
+        if (
+          effect.damageChannel !== undefined &&
+          effect.damageChannel !== incomingChannel
+        ) {
+          continue
         }
       }
 
@@ -708,7 +728,9 @@ function resolveResponseTargets(
       // A status TICK offers no source at all (applyDamageAndEmit, origin 'tick'), so a
       // living applier's tick reaches no retaliator either; on-damage-taken itself still fires
       // for a tick (Sleep's wake-on-damage depends on it) -- this only narrows targeting, never
-      // hook firing.
+      // hook firing. That fizzle is the rule for a trigger without a `damageChannel`: a
+      // `'direct'` retaliator never reaches this point for a cost or a tick
+      // (`spec/responses.md#triggering-source-is-never-the-firing-creature`).
       return context.source && context.source !== context.self ? [context.source] : []
     case 'all-enemies':
       return livingEnemiesOf(getCreature(state, context.self), state).map((c) => c.id)

@@ -163,8 +163,10 @@ armor is its weapon.
 
 ### Shellback Bulwark
 
-Endurance · amplifier · warden (provoking draws more hits to strike back at). Whenever it takes
-damage, it strikes back for **50% of its own Defence**, as indirect damage.
+Endurance · amplifier · warden (provoking draws more hits to strike back at). Whenever an attack
+or spell hits it, it strikes back for **50% of its own Defence**, as indirect damage. It doesn't
+answer a tick, a cost or another creature's trait, status or perk damage
+(`spec/effects.md#damagechannel`).
 
 ## Boss
 

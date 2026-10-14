@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveTurn, resolveFight } from './combat'
 import {
+  applyHeal,
   applyStatus,
   dealDamage,
   executeResponse,
@@ -1922,8 +1923,17 @@ describe('cheat-death (Last Stand)', () => {
   const SUCCEEDS_POSITION = 7
   const FAILS_POSITION = 1
 
-  function hit(state: ReturnType<typeof stateWithBearer>, position: number) {
-    const rigged: CombatState = { ...state, rng: { position } }
+  function hit(
+    state: ReturnType<typeof stateWithBearer>,
+    position: number,
+    bearerHp?: number,
+  ) {
+    const rigged: CombatState = {
+      ...(bearerHp === undefined
+        ? state
+        : updateCreature(state, createCreatureId('bearer'), { currentHp: bearerHp })),
+      rng: { position },
+    }
     const events: CombatEvent[] = []
     const result = dealDamage(
       createCreatureId('atk'),
@@ -1938,8 +1948,67 @@ describe('cheat-death (Last Stand)', () => {
     const bearer = [...result.playerParty, ...result.enemyParty].find(
       (c) => c.id === createCreatureId('bearer'),
     )!
-    return { bearer, events, finalPosition: result.rng.position }
+    return { bearer, events, finalPosition: result.rng.position, state: result }
   }
+
+  describe('never rolls at 1 HP', () => {
+    // A 100% save, so a draw is the only thing that can differ: the RNG position shows whether
+    // the roll was made, and the bearer's fate shows what it decided. Every hit below is lethal
+    // (20 damage against at most 20 HP), so the 1-HP gate is the only thing between it and death.
+    const SURE_LAST_STAND: Trait = {
+      id: 'last-stand-sure-fixture',
+      name: 'Last Stand 100% (fixture)',
+      effects: [{ category: 'cheat-death', chancePercent: 100 }],
+    }
+    const START_POSITION = 5
+
+    it('a bearer at 1 HP takes a lethal hit with no roll and dies', () => {
+      const state = stateWithBearer(registry(SURE_LAST_STAND))
+      const { bearer, events, finalPosition } = hit(state, START_POSITION, 1)
+
+      expect(finalPosition).toBe(START_POSITION) // no draw
+      expect(bearer.alive).toBe(false)
+      expect(events.some((e) => e.type === 'CreatureDied')).toBe(true)
+    })
+
+    it('a bearer at 2 HP rolls and is saved to exactly 1', () => {
+      const state = stateWithBearer(registry(SURE_LAST_STAND))
+      const { bearer, events, finalPosition } = hit(state, START_POSITION, 2)
+
+      expect(countDraws({ position: START_POSITION }, { position: finalPosition })).toBe(
+        1,
+      )
+      expect(bearer.alive).toBe(true)
+      expect(bearer.currentHp).toBe(1)
+      expect(events.some((e) => e.type === 'CreatureDied')).toBe(false)
+    })
+
+    it('rolls again once healed back above 1 HP, and not while it stays at 1', () => {
+      const state = stateWithBearer(registry(SURE_LAST_STAND))
+      const first = hit(state, START_POSITION, 2)
+      expect(first.bearer.currentHp).toBe(1)
+
+      // Still at 1 HP: the next lethal hit does not roll.
+      const stillOne = hit(first.state, first.finalPosition)
+      expect(stillOne.finalPosition).toBe(first.finalPosition)
+      expect(stillOne.bearer.alive).toBe(false)
+
+      // Healed to 2 HP: it rolls and is saved to 1 again.
+      const healed = applyHeal(
+        createCreatureId('bearer'),
+        createCreatureId('bearer'),
+        1,
+        first.state,
+        createResolutionContext([], newCascade()),
+      )
+      const second = hit(healed, first.finalPosition)
+      expect(
+        countDraws({ position: first.finalPosition }, { position: second.finalPosition }),
+      ).toBe(1)
+      expect(second.bearer.currentHp).toBe(1)
+      expect(second.bearer.alive).toBe(true)
+    })
+  })
 
   it('a successful roll survives at exactly 1 HP -- no CreatureDied/on-death, DamageDealt.remainingHp reflects 1', () => {
     // off 20, def 0: core 20, chip 0.2 -> raw 20.2 -> final 20 -- exactly lethal for health 20.

@@ -81,8 +81,10 @@ status lifecycle in `spec/statuses.md`.
   damage. Every other damage a trait, status or perk deals (a retaliation, an on-death burst, a
   DoT tick) is **indirect**, meeting only a fifth of Defence, and a creature's own response
   damaging itself is an exact **cost** (`spec/combat.md#damage-channels-and-the-additional`).
-- **Retaliation never answers a tick**: DoT is the counter to Defence tanks, and most retaliators
-  are those tanks (`spec/responses.md#triggering-source-is-never-the-firing-creature`).
+- **Retaliation answers only an attack or a spell**: never another response (a retaliation
+  included), a cost or a tick (`spec/effects.md#damagechannel`). Every retaliation reads the same,
+  two retaliators can't answer each other, and DoT stays the counter to Defence tanks, which most
+  retaliators are.
 
 ## Engine rules
 
@@ -155,6 +157,9 @@ status lifecycle in `spec/statuses.md`.
   a trait or perk carrying it is rejected at load.
 - An `ObservationFilter` field on the wrong hook, and `relationship: 'self'` on
   `on-death-observed`, are rejected for every trigger carrier ("Damage observation").
+- A `damageChannel` on any hook but `on-damage-taken` is rejected for every trigger carrier
+  (`validateDamageChannels`, run by `validateTrait`, `validateStatusDef` and the perk check;
+  `spec/effects.md#damagechannel`).
 
 ### Effect order
 
@@ -320,8 +325,8 @@ status lifecycle in `spec/statuses.md`.
   that same creature. **A DoT tick is never self-inflicted**, whoever applied it and whether or not
   the applier lives: ticks neither draw retaliation nor count as self-damage.
 - **Self-inflicted is carried, never inferred**: `applyDamageAndEmit` takes a required `origin`
-  (`DamageOrigin`: `{ kind: 'hit' } | { kind: 'cost' } | { kind: 'tick'; dealerId }`, `dealerId`
-  the living applier or `null`). It is self-inflicted iff `cost`, which only the cost path
+  (`DamageOrigin`: `{ kind: 'hit'; channel } | { kind: 'cost' } | { kind: 'tick'; dealerId }`,
+  `dealerId` the living applier or `null`). It is self-inflicted iff `cost`, which only the cost path
   (`applyCostDamage`) passes; the direct path passes `hit`, the tick path `tick`. Never `source ===
   target`: a DoT tick and a direct action landing on its own actor have equal ids and are not
   self-inflicted. A zero cost emits nothing, so there is nothing to observe.
@@ -384,6 +389,24 @@ status lifecycle in `spec/statuses.md`.
   aggregate chance. That keeps several Resonant Overtones from compounding the echo chance: the
   branching factor stays 1, so an echo chain is linear and ends on its own, and the depth cap is
   only the backstop for a pathological seed.
+
+### damageChannel
+
+- `TriggeredDef.damageChannel?: 'direct' | 'indirect'`, valid on `on-damage-taken` only
+  (`spec/effects.md#validators`): the trigger answers only damage that ran in that channel
+  (`spec/combat.md#damage-channels-and-the-additional`). Absent, it answers any damage.
+- **The incoming channel is carried, never inferred**: a `hit` carries the channel
+  `dealDamageCore` ran in; a cost and a tick are indirect. Never `damageSource`: a response's own
+  hit is labelled `'attack'` or `'cast'` too. Nor `HookContext.channel`, which is the channel the
+  trigger's own response will run in.
+- A mismatch is skipped silently in `fireHook`, before the condition, the chance roll and the
+  `stacks: false` claim: no `TriggerFired`, no RNG, no slot. It fails closed: a candidate with the
+  field is skipped when no incoming channel is given.
+- **Every retaliator sets `'direct'`**: a data test holds every game-data `on-damage-taken`
+  trigger whose response targets `triggering-source` to it. Sleep's wake-up carries none and wakes
+  on any damage. A trigger without the field still fires on a tick or a cost and fizzles
+  (`spec/responses.md#triggering-source-is-never-the-firing-creature`).
+- Goldens: `golden-retaliation-direct-only` (the four real retaliators).
 
 ### Loop safety
 
@@ -491,6 +514,11 @@ status lifecycle in `spec/statuses.md`.
   its target to 0 HP, **before** `CreatureDied` and `on-death`: one seeded roll, drawn only when the
   summed chance is above 0 (an ordinary creature never touches the RNG here). On success
   `currentHp` is exactly 1.
+- **No roll at 1 HP**: a target already at 1 HP before the hit has nothing to be saved to, so it
+  neither rolls nor draws, and dies. Healed above 1 HP, it rolls again. One save per brush with
+  death, renewed by a heal: the rule reads `currentHp` alone, with no state, so a creature an
+  ordinary hit left at exactly 1 HP gets no roll either. The 1 that gates the roll and the 1 a save
+  leaves are one constant, `CHEAT_DEATH_SURVIVAL_HP`.
 - `DamageDealt.finalDamage` is unchanged; only `remainingHp` shows the save. As with overkill,
   `finalDamage` need not equal the HP removed.
 
