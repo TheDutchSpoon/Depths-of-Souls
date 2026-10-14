@@ -1,8 +1,8 @@
 # 4.5-F — Level-ups after each fight, the per-fight record, and the intro's XP
 
 Phase brief: `.claude/phases/4.5/brief.md`. Golden policy: engine goldens and the corpus digest
-**byte-identical**; store tests change, listed (the kickoff probe found only the
-`fightEnemyIds` assertions in `balance-sim.test.ts`). CI balance verdicts re-checked
+**byte-identical**; store tests change, listed (the `fightEnemyIds` assertions in
+`balance-sim.test.ts`, and `splitFights`'s test, deleted with it). CI balance verdicts re-checked
 (`phases/4.5/brief.md#balance-verdicts`).
 
 ## Scope

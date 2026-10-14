@@ -300,8 +300,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 ### The per-fight record
 
-- `FloorOutcome` gains one record per fight resolved: that fight's events, the XP it banked, the
-  party's levels after it, **the fight's combat seed**, **both parties as they entered the
+- `FloorOutcome` gains one record per fight resolved: that fight's events, its result, the XP it
+  banked, the party's levels after it, **the fight's combat seed**, **both parties as they entered the
   fight** (the `Creature` snapshots: name, level, gems, role script), and **the player side's perk
   effects** as `createCombat` was given them (`player.effects`).
 - The record replaces `FloorOutcome.fightEnemyIds`: the balance simulator reads each fight's enemy
@@ -426,8 +426,8 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
       isn't built yet)", the currency line "Nothing spends these yet", and the save line "No saving
       yet: reloading the page starts over".
 - [ ] **ASSUMPTION (G1):** "a few seconds" before playback starts is 3 seconds.
-- [ ] **ASSUMPTION (F):** the per-fight record's type and field names are the plan's; its contents
-      are fixed above.
+- [x] **ASSUMPTION (F):** the per-fight record's type and field names are the plan's
+      (`FightRecord`, held in `FloorOutcome.fightRecords`); its contents are fixed above.
 - [ ] **ASSUMPTION (F2):** the tuning slice is named 4.5-F2 if it runs.
 - [x] **ASSUMPTION (S):** the simulator workflow is slice 4.5-S, run after D and before E.
 - [x] **ASSUMPTION (B2):** turn order covers every hook fired over all living creatures (the three

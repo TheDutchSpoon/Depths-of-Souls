@@ -45,10 +45,12 @@ Three changes, all in the run layer:
   `descend` stores is that per-fight collection: the floor's XP is applied once, never again at
   the end.
 - **The per-fight record.** `FloorOutcome` gains one record per fight resolved, in fight order:
-  that fight's events, the XP it banked, the active party's levels after it, its combat seed,
+  that fight's events, its result, the XP it banked, the active party's levels after it, its
+  combat seed,
   both parties exactly as `createCombat` was given them, and the player side's perk effects as
   `createCombat` was given them. The record replaces `FloorOutcome.fightEnemyIds`; the balance
-  simulator reads each fight's enemy roster, and its events, from the record. `events`,
+  simulator reads each fight's enemy roster, and its events, from the record, and `splitFights`
+  goes with its last caller. `events`,
   `fightResults`, `xpBanked`, `soulGained`, `currencyGained` and the other floor-level fields
   stay as they are. The record's type and field names are yours (an ASSUMPTION the brief already
   lists).
@@ -71,6 +73,7 @@ seeds, generation and `createCombat` are unchanged, and the store is not under `
 
 - `state/balance-sim.test.ts`, "the probe run…" case: its three `fightEnemyIds` assertions read
   the rosters from the records instead. The rosters themselves are identical.
+- `state/balance-sim.test.ts`, "splits fights at FightStarted": deleted with `splitFights`.
 
 The probe found no other existing test that moves (`phases/4.5/F/evidence/kickoff-probe.md#tests`).
 A further test that changes is a stop-and-ask, not a re-pin.
