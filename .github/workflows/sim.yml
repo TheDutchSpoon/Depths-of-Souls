@@ -1,0 +1,106 @@
+name: Simulator report
+
+on:
+  push:
+    branches: [main]
+  # workflow_dispatch is invisible until this file is on main, so a PR that changes this file
+  # runs it too; the filter keeps a 25+ minute job off every other PR.
+  pull_request:
+    paths: ['.github/workflows/sim.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Its own group, queued and never cancelled: a merge during a run gets its own report after it.
+concurrency:
+  group: sim-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sim:
+    runs-on: ubuntu-latest
+    # Local runtime is ~25 minutes; this leaves room for a much slower hosted runner.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Run the simulator
+        # An explicit shell runs with pipefail, so a failing npm run sim is not hidden by tee.
+        shell: bash
+        run: npm run sim 2>&1 | tee sim-report.txt
+      - name: Summarise
+        if: success()
+        shell: bash
+        # POSIX awk only (the runner's awk may be mawk). Anchored on the report's own text
+        # (formatSpec and formatReport in src/state/balance-sim.ts), never on line numbers.
+        # Report-only: any verdict, FAIL included, exits 0; a report with no
+        # "CI thresholds summary" line exits 1.
+        run: |
+          awk '
+          /^[[:space:]]*=== .* \([0-9][0-9]* seeds\) ===/ {
+            name = $0
+            sub(/^[[:space:]]*=== /, "", name)
+            sub(/ \([0-9][0-9]* seeds\) ===.*$/, "", name)
+            specs[++count] = name
+            current = name
+            next
+          }
+          /^[[:space:]]*Draws:/ {
+            if (current != "" && !(current in draws) && match($0, /round-cap draws .*$/)) {
+              draws[current] = substr($0, RSTART + 16, RLENGTH - 16)
+            }
+            next
+          }
+          /^[[:space:]]*CI thresholds summary \(reported, not asserted\):/ {
+            inSummary = 1
+            next
+          }
+          inSummary && /^[[:space:]]*[^ :][^:]*: floor-1 (PASS|FAIL), first soul (PASS|FAIL), floor 5 (PASS|FAIL)/ {
+            line = $0
+            sub(/^[[:space:]]*/, "", line)
+            at = index(line, ": floor-1 ")
+            name = substr(line, 1, at - 1)
+            if (!(name in floor1)) {
+              split(substr(line, at + 2), word, /[ ,]+/)
+              floor1[name] = word[2]
+              soul[name] = word[5]
+              floor5[name] = word[8]
+            }
+            next
+          }
+          /^[[:space:]]*Runtime: [0-9.][0-9.]* s/ {
+            runtime = $0
+            sub(/^[[:space:]]*Runtime: /, "", runtime)
+            next
+          }
+          function orNA(table, key) { return (key in table) ? table[key] : "n/a" }
+          END {
+            if (!inSummary) {
+              print "**The simulator printed no report** (no \"CI thresholds summary\" line). The raw output is in the `sim-report` artifact."
+              exit 1
+            }
+            print "| spec | floor-1 | first soul | floor 5 | round-cap draws |"
+            print "| --- | --- | --- | --- | --- |"
+            for (i = 1; i <= count; i++) {
+              s = specs[i]
+              print "| " s " | " orNA(floor1, s) " | " orNA(soul, s) " | " orNA(floor5, s) " | " orNA(draws, s) " |"
+            }
+            print ""
+            print "Runtime: " (runtime == "" ? "n/a" : runtime)
+            print ""
+            print "The full report is the `sim-report` artifact of this run."
+          }
+          ' sim-report.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sim-report
+          path: sim-report.txt
+          if-no-files-found: warn
