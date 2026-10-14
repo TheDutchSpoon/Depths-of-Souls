@@ -82,15 +82,30 @@ exit=0
 Runtime: 1500.3 s
 
 The full report is the `sim-report` artifact of this run.
-##### no leading-whitespace tolerance, indented.txt
+##### no leading-whitespace tolerance, evidence/sim-report.txt (the real report: spec headers at column 0, summary lines indented two spaces)
+Mutant: `sed 's/\^\[\[:space:\]\]\*/^/g'` over the extracted `run:` block, so every `^[[:space:]]*` becomes `^` (the five anchors and the three trimming `sub`s); run as `awk -f mut.awk sim-report.txt`.
 exit=0
 | spec | floor-1 | first soul | floor 5 | round-cap draws |
 | --- | --- | --- | --- | --- |
-|   sorcerer | n/a | n/a | n/a | 12 = 0.4% |
-|   brute | n/a | n/a | n/a | 30 = 1.0% |
-|   shieldbarer | n/a | n/a | n/a | 7 = 0.2% |
+| sorcerer | n/a | n/a | n/a | 4740 = 5.5% |
+| brute | n/a | n/a | n/a | 3770 = 2.7% |
+| shieldbarer | n/a | n/a | n/a | 7730 = 11.9% |
 
-Runtime:   1500.3 s
+Runtime: 2056.5 s
+
+The full report is the `sim-report` artifact of this run.
+##### no leading-whitespace tolerance, same mutant, evidence/sim-report.txt with every line indented four spaces
+exit=1
+**The simulator printed no report** (no "CI thresholds summary" line). The raw output is in the `sim-report` artifact.
+##### unmutated step, evidence/sim-report.txt (what the PR run's summary step computes from its own capture)
+exit=0
+| spec | floor-1 | first soul | floor 5 | round-cap draws |
+| --- | --- | --- | --- | --- |
+| sorcerer | PASS | PASS | PASS | 4740 = 5.5% |
+| brute | PASS | PASS | PASS | 3770 = 2.7% |
+| shieldbarer | PASS | PASS | PASS | 7730 = 11.9% |
+
+Runtime: 2056.5 s
 
 The full report is the `sim-report` artifact of this run.
 ##### missing-report exit removed, missing.txt

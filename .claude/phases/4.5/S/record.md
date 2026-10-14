@@ -1,7 +1,11 @@
 # Record — Phase 4.5 — Slice S: The simulator runs in Actions after each merge
 
-**Status: built, PR run pending.** Golden policy byte-identical: one added file outside the mailbox,
-no `src/` change. 1982 tests (1981 passed, 1 skipped), the same as `main`.
+**Status: built; the PR run on `bd64909` succeeded.** Run
+https://github.com/TheDutchSpoon/Depths-of-Souls/actions/runs/38539664712: job `sim` 34m32s, runtime
+2056.5 s, `Contents: read` and `Metadata: read` only, `sim-report` artifact uploaded. All three
+specs PASS floor-1, first soul and floor 5; round-cap draws: sorcerer 4740 = 5.5%, brute 3770 =
+2.7%, shieldbarer 7730 = 11.9%. Golden policy byte-identical: one added file outside the mailbox,
+no `src/` change. 1983 tests in 228 files (1982 passed, 1 skipped), the same as `main`.
 
 ## What was built
 
