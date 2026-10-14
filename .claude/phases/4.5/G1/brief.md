@@ -1,13 +1,16 @@
 # 4.5-G1 — The demo: descent loop and viewer
 
-Phase brief: `.claude/phases/4.5/brief.md`. Golden policy: **byte-identical**
+Phase brief: `.claude/phases/4.5/brief.md`. Golden policy: goldens, the corpus digest and
+existing tests byte-identical, with additive engine, store and data exports
 (`phases/4.5/brief.md#demo-golden-rule`). Needs 4.5-F's per-fight record.
 
 ## Scope
 
 From `phases/4.5/brief.md#the-demo`: store use, the start screen, the floor picker, the descent
 result and viewer, the side panel, Debug "Copy fight as JSON", and the tests and verification that
-cover them. Replaces the stub on the live site. Not the hub (4.5-G2).
+cover them, and the game-layer homes the demo reads
+(`phases/4.5/brief.md#the-demos-game-layer-homes`). Replaces the stub on the live site. Not the
+hub (4.5-G2).
 
 ## Known
 

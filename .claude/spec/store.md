@@ -23,8 +23,8 @@ Read this when changing the store or the state the UI reads.
 
 ### newGame
 
-- A new game starts from **`newGame({ seed })`**. The seed is generated in `src/app`, never in the
-  store or the engine.
+- A new game starts from **`newGame({ seed })`**, the seed a whole number in `0..2^32-1` (any other
+  throws). The seed is generated in `src/app`, never in the store or the engine.
 
 ### How store actions fail
 
