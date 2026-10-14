@@ -37,8 +37,8 @@ each.
 
 **New, `src/ui`:** `DescentResult`, `RunScreen`, `SidePanel`, `StartScreen`.
 
-**Obsolete, to delete:** `src/app/descendFlow.ts`, `descendFlow.test.ts`, `perkPoints.ts`,
-`perkPoints.test.ts`, `registries.ts`.
+**Deleted:** `src/app/descendFlow.ts` and its test, `perkPoints.ts` and its test, and
+`registries.ts`: their rules moved to the store and the data.
 
 ## Shape
 
@@ -52,10 +52,10 @@ each.
   the descent's id so a new descent remounts it.
 - The viewer builds each fight's set-up with `createCombat` once per descent and reads spell
   names and line-up HP from it. The line-up prints under an **Allies** and a **Foes** heading.
-- Tests: 158 more than `main` (1993 → 2151).
+- Tests: 158 more than `main` (1993 → 2152).
 
 ## Not verified
 
-The browser click-through was run by the PR review, in
-`.claude/phases/4.5/G1/evidence/click-through-r1.md`. The side-heading line-up (B1) is the next
-review's browser check.
+The side-heading line-up was checked in the browser by the PR review, in
+`.claude/phases/4.5/G1/evidence/click-through-r2.md`. The rest of the click-through is in
+`.claude/phases/4.5/G1/evidence/click-through-r1.md`.

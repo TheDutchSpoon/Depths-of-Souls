@@ -100,7 +100,7 @@ describe('startRun', () => {
     expect(viaHelper.getState().runCounter).toBe(byHand.getState().runCounter)
   })
 
-  test('the restated seed bound meets the store: the helper accepts the largest seed newGame does', () => {
+  test('the field accepts the largest seed newGame does, and refuses the next', () => {
     const store = createGameStore()
     expect(startRun(store.getState(), 'brute', '4294967295')).toEqual({
       ok: true,

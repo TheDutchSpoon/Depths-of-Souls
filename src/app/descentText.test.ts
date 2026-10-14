@@ -51,6 +51,16 @@ describe('bossResultLine', () => {
     ).toBe(`Defeated ${name}: first clear, +100 perk points`)
   })
 
+  test('a first clear prints the points the outcome carries, not a fixed figure', () => {
+    expect(
+      bossResultLine({
+        bossDefeated: 'broodmother',
+        bossFirstCleared: true,
+        perkPointsGained: 250,
+      }),
+    ).toBe(`Defeated ${name}: first clear, +250 perk points`)
+  })
+
   test('a repeat clear has no points', () => {
     expect(
       bossResultLine({
