@@ -51,6 +51,9 @@ Nova's fight casts Thorn Volley, the `sorcerer` perk fight's `dozerCaster(VENOM_
 `dozerCaster(STINGER_SWARM)`, and **every surviving coverage fight keeps its current combat seed**
 (`CONVENTIONS.md#corpus-digest`).
 
+`OVERGROWTH_SPELLS` also lists Silence and Pacify, which it lacks: a documentation list, so no
+behaviour moves.
+
 **Not in this slice:** any other spell or number; the generation rule (`rollLoadout`, uniform
 weights, the safety net); any new mechanism; renaming any fixture beyond the three spells; any
 living-doc edit (they go under **Spec questions** and **Content changes**).
