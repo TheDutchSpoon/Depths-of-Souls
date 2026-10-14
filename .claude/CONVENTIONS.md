@@ -140,6 +140,9 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - **The corpus**: generated floors across every shipped biome, boss floors included, plus the
   shipped starters and the Unicorn, and appended coverage fights (appending never changes an
   existing digest entry). Bonus-cast, echo, Provoke and Confusion must all fire in it.
+- **Deleting content removes its coverage fight**, and every other coverage fight keeps its combat
+  seed, so the removal only moves later entries up an index: a seed that followed the index would
+  change fights the deletion never touched.
 - **It covers all real content.** A test enforces these against the registries, so new content is
   covered or fails loudly:
   - every spell in `ALL_SPELLS` is cast with its effects landing: each effect's consequence event,

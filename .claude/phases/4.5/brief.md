@@ -287,8 +287,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   library has no `core.ts` either
   (`phases/4.5/brief.md#placeholder-traits-move-to-test-fixtures`).
 - All three spells are in the biome-1 roll pool (`unlockedAtBiome: 1`), so this changes every
-  generated loadout: a deliberate content change (content goldens, the corpus digest, the balance
-  bands). After it, Instinct has exactly 3 biome-1 spells (Howling Instinct, Pounce, Stinger
+  generated loadout: a deliberate content change (the corpus digest, the tests that pin a rolled
+  set, the balance bands). After it, Instinct has exactly 3 biome-1 spells (Howling Instinct, Pounce, Stinger
   Swarm): the ≥3 data test (`spec/run.md#enemy-script-and-gem-set`) passes with no slack.
 
 ### Level-ups after each fight
