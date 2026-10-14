@@ -29,7 +29,7 @@ the docs win: flag the conflict, don't guess.
 | **4.5-D** | [HP% qualifiers](#hp-qualifiers-pick-by-hp), [retaliation](#retaliation-answers-only-attacks-and-spells), [Last Stand](#last-stand-never-rolls-at-1-hp) | Deliberate, listed; CI balance verdicts re-checked |
 | **4.5-S** | [The simulator runs in Actions after each merge](#the-simulator-runs-in-actions-after-each-merge) | Byte-identical (no `src/` change) |
 | **4.5-E** | [Spell clean-up and Thorn Volley](#spell-clean-up-and-thorn-volley) | Deliberate content change; CI balance verdicts re-checked |
-| **4.5-F** | [Level-ups after each fight](#level-ups-after-each-fight), [the per-fight record](#the-per-fight-record) | Engine goldens and the corpus digest byte-identical; store tests change; CI balance verdicts re-checked |
+| **4.5-F** | [Level-ups after each fight](#level-ups-after-each-fight), [the per-fight record](#the-per-fight-record), [the scripted intro grants XP](#the-scripted-intro-grants-xp) | Engine goldens and the corpus digest byte-identical; store tests change; CI balance verdicts re-checked |
 | (4.5-F2) | Tuning, only if a CI balance verdict flipped ([Balance verdicts](#balance-verdicts)) | Content numbers, deliberate |
 | **4.5-G1** | The demo's descent loop and viewer ([The demo](#the-demo)) | Byte-identical ([Demo golden rule](#demo-golden-rule)) |
 | **4.5-G2** | The demo's hub ([The demo](#the-demo)) | Byte-identical ([Demo golden rule](#demo-golden-rule)) |
@@ -301,14 +301,31 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 ### The per-fight record
 
 - `FloorOutcome` gains one record per fight resolved: that fight's events, the XP it banked, the
-  party's levels after it, **the fight's combat seed**, and **both parties as they entered the
-  fight** (the `Creature` snapshots: name, level, gems, role script).
+  party's levels after it, **the fight's combat seed**, **both parties as they entered the
+  fight** (the `Creature` snapshots: name, level, gems, role script), and **the player side's perk
+  effects** as `createCombat` was given them (`player.effects`).
 - The record replaces `FloorOutcome.fightEnemyIds`: the balance simulator reads each fight's enemy
   roster from the record's enemy party, and the field goes.
-- Seed and parties reproduce the fight outside the store (`createCombat` + `resolveFight`), so a
-  fight seen in the demo becomes a test. The demo reads names, gems and per-fight levels from the
+- Seed, parties and perk effects reproduce the fight outside the store (`createCombat` with the
+  same static registries, then `resolveFight`), so a fight seen in the demo becomes a test. Without
+  the effects, a fight with any perk bought would not reproduce. The demo reads names, gems and per-fight levels from the
   record; it never parses creature ids (`spec/run.md#rewards-are-a-run-layer-consumer-of-the-event-log`).
 - The PR review writes the record into `spec/store.md`.
+
+### The scripted intro grants XP
+
+- `runScriptedIntro` grants a flat **10 XP** to every creature in the active party once the Unicorn
+  has joined (the starter and the Unicorn at a new game), whatever the fight's result, like the
+  Unicorn grant itself. It goes through the ordinary level-up path, so a grant that crosses a
+  threshold levels the creature.
+- Design intent: a new game's party reaches level 2 at the end of floor 1. Floor 1 yields 10 XP
+  (10 fights, one level-1 enemy each) and level 2 needs 20, so with the grant the level-up lands
+  after floor 1's last fight and the party fights floor 2 at level 2.
+- The amount is a `BalanceConfig` number (`CONVENTIONS.md#where-each-number-lives`), not a literal.
+  The intro's own kills still bank nothing.
+- It rides in 4.5-F: store-only like the level-up fix, and F already re-checks the CI verdicts.
+- The PR review writes it into `spec/run.md#scripted-intro` and adds it to the `BalanceConfig`
+  list in `CONVENTIONS.md#where-each-number-lives`.
 
 ## The demo
 
@@ -352,7 +369,8 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 - A boss floor adds one result line: the boss defeated, and whether it was a first clear (+100 perk
   points) or not, by comparing `bossesCleared` before and after.
 - Only the latest descent's log is kept; any of its fights can be replayed from memory.
-- **Debug: Copy fight as JSON** on each fight: its seed and both parties.
+- **Debug: Copy fight as JSON** on each fight: its seed, both parties and the player's perk
+  effects (`phases/4.5/brief.md#the-per-fight-record`).
 
 ### Side panel (G1)
 
@@ -387,8 +405,9 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
   Components stay thin. No new dev dependency.
 - One presence smoke test at a pinned seed, driving the store as the UI does: new game → spec →
   silent intro → descend floor 1. It checks the starter and the Unicorn are owned, 10 fight records
-  each with a seed and both parties, at least one level-up between two fights, and the refusal
-  reasons for floor 31 and an empty party.
+  each with a seed, both parties and the perk effects, the party's levels after the last fight
+  above its levels going into fight 1 (`phases/4.5/brief.md#the-scripted-intro-grants-xp`), and the
+  refusal reasons for floor 31 and an empty party.
 - The report's browser click-through covers every control once, every refusal reason on screen,
   the three speeds, skip fight, skip floor, jump, a spec switch refunding perks bought through
   Debug, no stacked timers when clicking around mid-playback, and **a copied fight's JSON pasted
