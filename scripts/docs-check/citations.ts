@@ -16,7 +16,7 @@ import { UsageError } from './usage.ts'
 //       heading name, or a backticked path followed by a parenthesised list of them.
 
 const SKIPPED_DIRS = ['phases', 'archive']
-const TOP_LEVEL_DOCS = 'CLAUDE|VISION|OPEN_QUESTIONS|ROADMAP|WORKFLOWS|CONVENTIONS'
+const TOP_LEVEL_DOCS = 'CLAUDE|VISION|OPEN_QUESTIONS|ROADMAP|WORKFLOWS|CONVENTIONS|CI_CD'
 
 interface Site {
   /** Whitespace, optionally a line break with a comment leader, between a name and its label. */

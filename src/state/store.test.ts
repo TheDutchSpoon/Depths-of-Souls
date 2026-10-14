@@ -1335,15 +1335,18 @@ describe('the scripted intro grants XP', () => {
   test('every active-party creature gets the grant, whatever the intro fight’s result', () => {
     // 150 XP: level 1 needs 100 -> level 2 with 50 left; level 2 needs 200, so it stops there.
     const crossing = introWith(150)
+    // The stock intro is a win and the overwhelming-Unicorn case below a loss: both results are covered.
+    expect(crossing.outcome.result).toBe('win')
     expect([crossing.hero.level, crossing.hero.xp]).toEqual([2, 50])
     expect([crossing.unicorn.level, crossing.unicorn.xp]).toEqual([2, 50])
 
     // 40 XP stays under the threshold and is banked as XP.
     const below = introWith(40)
+    expect(below.outcome.result).toBe('win')
     expect([below.hero.level, below.hero.xp]).toEqual([1, 40])
     expect([below.unicorn.level, below.unicorn.xp]).toEqual([1, 40])
 
-    // An overwhelming Unicorn wins the intro fight; the grant is the same.
+    // An overwhelming Unicorn loses the intro fight; the grant is the same.
     const overwhelmingUnicorn: SpeciesCreature = {
       ...UNICORN,
       baseStats: { health: 200, attack: 200, intelligence: 10, defence: 200, speed: 200 },

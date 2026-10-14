@@ -124,6 +124,7 @@ describe.each(sites)('citations in $name', ({ place, file, wrap }) => {
       ['`spec/combat.md` "Damage formula"'],
       ['`spec/combat.md`, "Damage formula"'],
       ['`CONVENTIONS.md` "Testing"'],
+      ['`CI_CD.md` "Deploy"'],
       ['`spec/combat.md` ("Damage formula", "Provoke")'],
       ['WORKFLOWS "Golden policy"'],
       ['ROADMAP.md "Phase 5"'],
