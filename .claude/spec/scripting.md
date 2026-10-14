@@ -124,14 +124,15 @@ How the chosen action then resolves is `spec/combat.md`.
   (`effectiveMaxHp`), never the unfloored effective Health. So full HP is exactly 100% and every
   term is an integer; thresholds are integers, no float. One helper (`hpPercentSatisfied`) serves
   scripting conditions and `SelfCondition` alike.
+- **`lowest` and `highest` order by HP% the same way**: `compareHpPercent` compares `a.currentHp ×
+  maxHp(b)` with `b.currentHp × maxHp(a)`, on the same `effectiveMaxHp`, so the creature picked and
+  the threshold it is then tested against read one denominator. Equal HP% falls back to the shared
+  tie-break (`spec/scripting.md#target-selectors-in-the-engine`), which no outcome shows: two
+  creatures at one HP% give the same answer to the same threshold.
 - **Subjects**: `self`, `ally`, `enemy` and `target`. `hp-percent`'s qualifier is `any` (some
   creature in the pool passes), or `lowest` or `highest`: the creature with the lowest or highest
   HP% is the one tested. `has-status` is existential over the pool and matches a literal status id
   among statuses, never stat-modifiers.
-- **Known bug:** `main` picks the `lowest` or `highest` creature by **current HP**, not HP%
-  (`conditions.ts` `evaluateCondition`), so a `warden` or `support` whose ally at 30/100 HP sits
-  beside one at 20/25 tests the 80% one and doesn't act. The fix is listed in
-  `phases/4.5/brief.md#hp-qualifiers-pick-by-hp`.
 - **`'target'`** is the creature an effect is being resolved against (`spec/effects.md#trigger-conditions`). A script rule has none, so in lookahead a `'target'` condition is **false**. The
   qualifier is ignored for it, since it is a single creature.
 

@@ -156,8 +156,9 @@ Endurance · enabler · taunter (its trait fires on Provoke). Whenever it Provok
 
 ### Snapjaw Jaws
 
-Violence · payoff · striker. Whenever it takes damage, it hits back for **60% of its Attack**, as
-indirect damage.
+Violence · payoff · striker. Whenever an attack or spell hits it, it hits back for **60% of its
+Attack**, as indirect damage. It doesn't answer a tick, a cost or another creature's trait, status
+or perk damage (`spec/effects.md#damagechannel`).
 
 ### Snapjaw Ironjaw
 

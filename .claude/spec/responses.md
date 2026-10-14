@@ -59,11 +59,15 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 ### triggering-source is never the firing creature
 
 - `triggering-source` resolves to **no target** when the hook's source is the firing creature
-  itself (a creature's own cost reaching its `on-damage-taken`). The hook still fires, and the
-  fizzle emits `TriggerFired` only.
+  itself (a creature's own cost, or its own attack turned on itself by Confusion, reaching its
+  `on-damage-taken`). The hook still fires, and the fizzle emits `TriggerFired` only.
 - A status tick offers no source at all (`spec/statuses.md#the-applier-snapshot`), so on a tick
-  `triggering-source` also resolves to no target, even while the applier lives: **retaliation
-  never answers a tick**. The hook itself still fires (a DoT still wakes a sleeper).
+  `triggering-source` also resolves to no target, even while the applier lives. The hook itself
+  still fires (a DoT still wakes a sleeper).
+- These fizzles are what a trigger without a `damageChannel` does. A retaliator carries
+  `damageChannel: 'direct'` and is skipped silently on a tick or a cost before it fires
+  (`spec/effects.md#damagechannel`); only its own Confusion-redirected attack, which is direct,
+  reaches it and fizzles.
 - The rule is about response targets: `perform-action`'s `actor: 'triggering-source'` is not a
   target, and resolves to the source even when that is the bearer.
 

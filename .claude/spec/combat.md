@@ -274,6 +274,10 @@ TurnStarted
 - **The caller decides the channel**: the actions (`executeAttack`, `executeSpellEffects`) pass
   `direct`, `fireHook` passes `indirect`. `HookContext.channel` is required, so no caller can leave
   it out. `damageSource` is a display label, never the channel.
+- **The channel travels with the damage**: `DamageOrigin`'s `hit` carries the channel
+  `dealDamageCore` ran in, which an `on-damage-taken` trigger's `damageChannel` is matched against
+  (`spec/effects.md#damagechannel`); a cost and a tick are indirect. `DamageChannel` is declared in
+  `effect-types.ts`.
 - The channel follows the **action, not the target**: a direct action that lands on its own actor
   (a Confusion redirect, a spell effect on its caster) stays direct, with the Additional read from
   the actor's own level and max Health. It is never a cost: a cost is an indirect-channel rule.
