@@ -130,7 +130,7 @@ describe('getEffectiveStat — stat-modifier folding', () => {
       thresholdPercent: 100,
     }
     // base Health 30, x1.15 -> effective Health 34.5 (fractional). floor(34.5) = 34 is the max
-    // HP a creature's currentHp actually gets clamped to (effects.ts's effectiveMaxHp) -- a
+    // HP a creature's currentHp actually gets clamped to (effectiveMaxHp, defined in effective-stats.ts and re-exported by effects.ts) -- a
     // creature AT that floored max must read as exactly 100%, even though currentHp*100 (3400)
     // is LESS than the unfloored 34.5*100 (3450): an unfloored reading would have judged
     // this creature as permanently below 100%, so ">= 100%" could never fire no matter its HP.

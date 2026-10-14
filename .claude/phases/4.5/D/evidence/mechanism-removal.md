@@ -16,7 +16,7 @@ the repo, not from the clone) and are left out too.
 | skip after the chance roll | `damage-channel.test.ts` chance case and `stacks` case |
 | skip after the `stacks: false` claim | `damage-channel.test.ts` `stacks` case |
 | validator not run on traits | every trait case in the validator sweep, and the `createCombat` registry case |
-| validator not run on statuses | every status case in the sweep |
+| validator not run on statuses | all 14 status cases in the sweep (15 hooks less `on-round-end`, which has none) |
 | validator not run on perks | every perk case in the sweep |
 | validator rule removed | every carrier case in the sweep, and the `createCombat` case |
 | Snapback, Retaliating Shell, Madness Touch, Thorns each lose the field | `retaliation.data.test.ts` (names it) and `golden-retaliation-direct-only`, in each of the four |
@@ -37,3 +37,15 @@ The self-applied-tick mutant doubles the magnitude, a stand-in for "the arithmet
 goldens named fail on a changed number. The self-dot golden's own subject, Madness Touch not
 confusing its bearer on its own tick, is held by the first three rows (a `direct` retaliator skips
 the tick; one without the field fizzles on it and is shown fizzling).
+
+## Round 2: `compareHpPercent`'s denominator
+
+Each mutant applied alone to a scratch clone of the finished tree (outside the repo), full suite.
+
+| Mutant | Tests that fail |
+| --- | --- |
+| `compareHpPercent` divides by `baseStats.health` | `conditions.test.ts` "orders by effective max HP, not base Health"; the corpus digest |
+| `compareHpPercent` reads `getEffectiveStat(_, 'health')`, unfloored | `conditions.test.ts` "orders by floored effective max HP, not fractional Health" |
+
+Nothing else fails under either. The unfloored mutant leaves the corpus digest green (no corpus
+fight orders creatures with a fractional Health modifier).

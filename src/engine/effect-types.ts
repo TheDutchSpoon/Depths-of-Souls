@@ -752,7 +752,7 @@ export type TriggeredDef = {
    * damage that ran in this channel; absent = answers any damage. A mismatch skips silently,
    * before `condition`, the chance roll and the `stacks: false` claim. Every retaliator sets
    * `'direct'`, so it answers an attack or a spell and never a response, tick or cost
-   * (`spec/effects.md#hooks`). */
+   * (`spec/effects.md#damagechannel`). */
   readonly damageChannel?: DamageChannel
   /** An optional probabilistic gate, a sibling of
    * `condition` -- one is deterministic, the other a roll. Plain number, baked at instantiation

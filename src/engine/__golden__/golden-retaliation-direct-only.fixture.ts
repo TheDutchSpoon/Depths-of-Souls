@@ -1,7 +1,8 @@
-// Golden (a content golden: re-derived by hand when a retaliator or Poison is retuned): the four
+// Golden (a content golden: re-derived by hand when one of the four retaliators is retuned; Poison
+// is held at 20% of Attack, so retuning it moves nothing): the four
 // real retaliators -- Snapback (Snapjaw Jaws), Retaliating Shell (Shellback Bulwark), Madness
 // Touch (Hollowkin Wretch) and the Shieldbearer's Thorns perk -- answer an attack and skip an
-// indirect hit and a status tick, silently (`spec/effects.md#hooks`). Hand-derived.
+// indirect hit and a status tick, silently (`spec/effects.md#damagechannel`). Hand-derived.
 //
 // P (player, Health 1000, Attack 40, Defence 10, speed 10, always-attack) carries Snapback,
 // Retaliating Shell and Madness Touch as innate traits and Thorns as the perk (its sourceTraitId

@@ -1,4 +1,4 @@
-// Every retaliator answers only direct damage (`spec/effects.md#hooks`). A retaliator is an
+// Every retaliator answers only direct damage (`spec/effects.md#damagechannel`). A retaliator is an
 // `on-damage-taken` trigger whose response targets `triggering-source`; one without
 // `damageChannel: 'direct'` would answer a retaliator's own hit, and two of them would answer each
 // other. This reads the registries, never a hand list, so a retaliator authored later is held to it.

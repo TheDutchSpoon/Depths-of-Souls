@@ -1,8 +1,8 @@
 # Record — Phase 4.5 — Slice D: HP% qualifiers, retaliation answers only direct damage, Last Stand never rolls at 1 HP
 
 **Status: built.** Golden policy deliberate, listed: two goldens deleted, the corpus digest
-regenerated once (49 of 527 rows), every other golden and unit test unchanged. 1981 tests passed, 1
-skipped (net +74 against the branch base).
+regenerated once (49 of 527 rows), every other golden and unit test unchanged. 1982 tests passed, 1
+skipped (net +75 against the branch base).
 
 ## What was built
 
@@ -27,8 +27,8 @@ skipped (net +74 against the branch base).
 
 - New: `engine/damage-channel.test.ts` (retaliation by channel through real routes; the validator on
   every hook and carrier), `data/retaliation.data.test.ts`, goldens
-  `golden-hp-percent-lowest-picks-by-percent` and `golden-retaliation-direct-only`, two cases in
-  `conditions.test.ts`, three in `resolution.test.ts`.
+  `golden-hp-percent-lowest-picks-by-percent` and `golden-retaliation-direct-only`, four cases in
+  `conditions.test.ts` (two by HP%, two pinning the denominator), three in `resolution.test.ts`.
 - Deleted: `golden-hollowkin-wretch-self-dot` and `golden-status-snapshot-tick-no-retaliation`; their
   rules are pinned by the tick and cost rows of `damage-channel.test.ts`
   (`evidence/mechanism-removal.md`).
@@ -39,6 +39,6 @@ skipped (net +74 against the branch base).
 
 Edited: `engine/{conditions,config,effect-types,effective-stats,effects,resolution,resolution-types,tie-break}.ts`,
 `data/specializations.ts`, `data/traits/{glimmerdark,overgrowth,rotcap-hollow}.ts`, the corpus digest
-fixture, `conditions.test.ts`, `resolution.test.ts` and the `golden-status-snapshot-tick-kill-on-death`
+fixture, `conditions.test.ts`, `effective-stats.test.ts` (a comment), `resolution.test.ts` and the `golden-status-snapshot-tick-kill-on-death`
 fixture header. New: the tests and goldens above and the evidence files. Deleted by Duncan: the four
 golden files. No living or content doc edited.

@@ -602,7 +602,7 @@ export function fireHook(
         // A retaliator answers only the channel it names; absent answers any. Fails closed like
         // the observation hooks, and skips before the condition, the chance roll and the
         // `stacks: false` claim: a skipped candidate emits nothing, draws nothing and claims no
-        // slot (`spec/effects.md#hooks`).
+        // slot (`spec/effects.md#damagechannel`).
         if (
           effect.damageChannel !== undefined &&
           effect.damageChannel !== incomingChannel

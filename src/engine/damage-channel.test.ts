@@ -1,4 +1,4 @@
-// Retaliation by channel (`spec/effects.md#hooks`): an `on-damage-taken` trigger with a
+// Retaliation by channel (`spec/effects.md#damagechannel`): an `on-damage-taken` trigger with a
 // `damageChannel` answers only damage that ran in that channel. Mechanism tests over fixture
 // retaliators, each damage arriving through its real route (an action, a spell, a response's own
 // hit, a status tick, a trait's own cost); the real retaliators are pinned by
@@ -497,16 +497,18 @@ describe('damageChannel validator', () => {
       )
     })
 
-    it('a status rejects the field', () => {
-      // `on-round-end` is rejected on a status for its own reason, so the message differs there.
-      if (hook === 'on-round-end') return
-      expect(() => validateStatusDef(status(triggered(hook, 'direct')))).toThrow(
+    it('a perk rejects the field', () => {
+      expect(() => validateSpecialization(spec(triggered(hook, 'indirect')))).toThrow(
         /only an "on-damage-taken" trigger/,
       )
     })
+  })
 
-    it('a perk rejects the field', () => {
-      expect(() => validateSpecialization(spec(triggered(hook, 'indirect')))).toThrow(
+  // A status trigger on `on-round-end` is rejected by `validateStatusDef` for its own reason, so
+  // the field's message never shows there: that hook has no status case.
+  describe.each(hooks.filter((hook) => hook !== 'on-round-end'))('on %s', (hook) => {
+    it('a status rejects the field', () => {
+      expect(() => validateStatusDef(status(triggered(hook, 'direct')))).toThrow(
         /only an "on-damage-taken" trigger/,
       )
     })
