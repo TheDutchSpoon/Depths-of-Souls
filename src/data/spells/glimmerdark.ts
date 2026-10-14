@@ -35,18 +35,17 @@ export const BEACON_CHARGE: Spell = {
 
 /**
  * Disorient: applies act-last to an enemy, reusing the turn-order primitive. That primitive's
- * act-last pole is already the `web` StatusDef (a `turn-order` effect,
- * `position: 'last'`, data/statuses.ts) -- per `spec/statuses.md#a-status-is-a-timed-effect` and
+ * act-last pole is already the `web` StatusDef (a `turn-order` effect, `position: 'last'`,
+ * data/statuses.ts) -- per `spec/statuses.md#a-status-is-a-timed-effect` and
  * `spec/run.md#the-onboarding-ramp` (a spell may apply any status, another species' signature
  * status included; already precedented: Overgrowth's own Vine Snare applies `web` too), Disorient
- * reuses that SAME statusId rather than authoring a new near-identical StatusDef, which would
- * just be Web-with-a-new-name. Authored as
- * a `deal-damage` effect + an `apply-status` effect, same shape as Vine Snare, but on
- * Instinct (Vine Snare is Wit) -- it is Instinct's only status-applying spell before the Rotcap
- * Hollow's Puppet String, so it fills a real gap rather than re-skinning Vine Snare; distinct
- * from Vine Snare under the dedup guard by affinity (instinct vs wit). spellPower 0.85 + duration 3 both mirror Vine Snare's own numbers exactly
- * (single-target + upside band, Web's own `defaultDuration`) -- deliberate consistency, not an
- * oversight. */
+ * reuses that SAME statusId rather than authoring a new near-identical StatusDef, which would just
+ * be Web-with-a-new-name. Authored as a `deal-damage` effect + an `apply-status` effect, same shape
+ * as Vine Snare, but on Instinct (Vine Snare is Wit) -- it is Instinct's only status-applying spell
+ * before the Rotcap Hollow's Puppet String, so it fills a real gap rather than re-skinning Vine
+ * Snare; distinct from Vine Snare under the dedup guard by affinity (instinct vs wit). spellPower
+ * 0.85 + duration 3 both mirror Vine Snare's own numbers exactly (single-target + upside band,
+ * Web's own `defaultDuration`) -- deliberate consistency, not an oversight. */
 export const DISORIENT: Spell = {
   id: 'disorient',
   name: 'Disorient',

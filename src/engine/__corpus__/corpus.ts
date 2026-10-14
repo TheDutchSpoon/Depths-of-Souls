@@ -260,13 +260,13 @@ interface SpellFightSpec {
   readonly speciesId: string
 }
 
-/** Each listed spell gets a draw-free coverage fight of its own, so it stays covered whatever
- * Parts A and B roll. The stock `always-cast` script casts gemSlot 0,
- * so the spell sits in slot 0 of an affinity-matched caster (equip-gating) with no innate spell
- * ahead of it (the Sorcerer starter's Arcane Bolt would take slot 0). The caster fights beside
- * the Brute and Shieldbarer starters against `WALL_ENEMY`, which neither attacks nor controls:
- * the caster always gets its turn, and every round it casts again until the fight ends. Coverage
- * therefore rides on no random draw at all, so a later change to draw order cannot drop it. */
+/** Each listed spell gets a coverage fight of its own, so it stays covered whatever Parts A and B
+ * roll. The stock `always-cast` script casts gemSlot 0, so the spell sits in slot 0 of an
+ * affinity-matched caster (equip-gating) with no innate spell ahead of it (the Sorcerer starter's
+ * Arcane Bolt would take slot 0). The caster fights beside the Brute and Shieldbarer starters
+ * against `WALL_ENEMY`, which neither attacks nor controls: the caster always gets its turn, and
+ * every round it casts again until the fight ends. Coverage therefore rides on no random draw at
+ * all, so a later change to draw order cannot drop it. */
 const SPELL_FIGHTS: readonly SpellFightSpec[] = [
   {
     spell: THORN_VOLLEY,
