@@ -1,8 +1,7 @@
 import type { BiomeData } from '../engine/generation'
 import type { Specialization } from '../data/specializations'
-import type { GameState } from '../state/store'
+import type { GameActions, GameState } from '../state/store'
 import { bossName } from './names'
-import { perkPointSummary } from './perkPoints'
 
 export interface SidePanelRow {
   readonly label: string
@@ -30,13 +29,13 @@ export function sidePanelRows(
     | 'lastFloor'
     | 'discoveredBiomes'
     | 'bossesCleared'
-    | 'perkSpend'
     | 'currencies'
-  >,
+  > &
+    Pick<GameActions, 'perkPointSummary'>,
   ctx: SidePanelContext,
 ): SidePanelRow[] {
   const spec = state.chosenSpec === null ? undefined : ctx.specs.get(state.chosenSpec)
-  const points = perkPointSummary(state, ctx.specs)
+  const points = state.perkPointSummary()
   const biomeNames = ctx.biomes
     .filter((biome) => state.discoveredBiomes.has(biome.id))
     .map((biome) => biome.name)
@@ -48,7 +47,7 @@ export function sidePanelRows(
     { label: 'Discovered biomes', value: listOrNone(biomeNames) },
     {
       label: 'Bosses cleared',
-      value: listOrNone([...state.bossesCleared].map((id) => bossName(ctx.biomes, id))),
+      value: listOrNone([...state.bossesCleared].map((id) => bossName(id))),
     },
     {
       label: 'Perk points',

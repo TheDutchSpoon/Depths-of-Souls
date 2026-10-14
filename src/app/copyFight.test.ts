@@ -1,10 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import { createCombat, resolveFight } from '../engine/combat'
+import { DEFAULT_REGISTRIES } from '../data/registries'
 import { resolvePerkEffects, SPECIALIZATIONS_BY_ID } from '../data/specializations'
 import { createGameStore } from '../state/store'
 import { fightToJson } from './copyFight'
-import { DEMO_REGISTRIES } from './registries'
-import { runDescent } from './descendFlow'
 import { startRun } from './startRun'
 
 describe('fightToJson', () => {
@@ -26,7 +25,7 @@ describe('fightToJson', () => {
       expect(resolvePerkEffects(perk, perk.maxLevel).length).toBeGreaterThan(0)
       expect(store.getState().setPerkLevel(perk.id, perk.maxLevel)).toEqual({ ok: true })
 
-      const run = runDescent(store, 1)
+      const run = store.getState().descend(1)
       expect(run.ok).toBe(true)
       if (!run.ok) return
       let differsWithoutEffects = 0
@@ -35,7 +34,7 @@ describe('fightToJson', () => {
         const parsed = JSON.parse(fightToJson(record))
         expect(Object.keys(parsed).sort()).toEqual(['enemy', 'player', 'seed'])
         const replay = resolveFight(
-          createCombat({ ...parsed, registries: DEMO_REGISTRIES }),
+          createCombat({ ...parsed, registries: DEFAULT_REGISTRIES }),
         )
         expect(replay.events).toEqual(record.events)
 
@@ -43,7 +42,7 @@ describe('fightToJson', () => {
           createCombat({
             ...parsed,
             player: { party: parsed.player.party },
-            registries: DEMO_REGISTRIES,
+            registries: DEFAULT_REGISTRIES,
           }),
         )
         if (JSON.stringify(withoutEffects.events) !== JSON.stringify(record.events)) {
@@ -58,7 +57,7 @@ describe('fightToJson', () => {
   test('the JSON carries exactly the seed, both parties and the player effects', () => {
     const store = createGameStore()
     startRun(store.getState(), 'sorcerer', '5')
-    const run = runDescent(store, 1)
+    const run = store.getState().descend(1)
     if (!run.ok) throw new Error('descent refused')
     const record = run.outcome.fightRecords[0]!
     const parsed = JSON.parse(fightToJson(record))

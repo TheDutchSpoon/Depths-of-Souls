@@ -1,10 +1,6 @@
 import { useState } from 'react'
-import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
-import { BIOMES } from '../data/biomes'
-import { runDescent } from '../app/descendFlow'
 import {
   deepestPlusOne,
-  floorInfo,
   floorInfoText,
   parseFloorField,
   prefillFloor,
@@ -25,25 +21,22 @@ export function RunScreen() {
 
   const floor = parseFloorField(floorText)
   const check = game.canDescend(floor)
-  const info = floorInfo(floor, {
-    atlasPins: game.atlasPins,
-    runSeed: game.runSeed,
-    biomes: BIOMES,
-    config: DEFAULT_BALANCE_CONFIG,
-  })
+  const preview = game.floorPreview(floor)
 
   function descend() {
-    const run = runDescent(useGameStore, floor)
-    if (!run.ok) return
-    if (info === null) throw new Error('descend: a descended floor always has info')
+    // Read before the descent: the preview names the floor's whole fight count, which the
+    // outcome (it stops at the first non-win) does not.
+    const fights = useGameStore.getState().floorPreview(floor)?.fights
+    const result = useGameStore.getState().descend(floor)
+    if (!result.ok) return
+    if (fights === undefined)
+      throw new Error('descend: a descended floor always has a preview')
     const id = descentCount + 1
     setDescentCount(id)
     setDescent({
       id,
-      outcome: run.outcome,
-      bossesBefore: run.bossesBefore,
-      bossesAfter: run.bossesAfter,
-      fights: info.fights,
+      outcome: result.outcome,
+      fights,
     })
   }
 
@@ -68,7 +61,7 @@ export function RunScreen() {
         Descend
       </button>
       {!check.ok && <p role="status">{descendRefusalText(check.reason)}</p>}
-      {info !== null && <p>{floorInfoText(info)}</p>}
+      {preview !== null && <p>{floorInfoText(preview)}</p>}
       {descent !== null && <DescentViewer key={descent.id} descent={descent} />}
     </section>
   )

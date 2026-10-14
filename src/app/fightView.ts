@@ -40,9 +40,9 @@ export interface LineUpEntry {
 }
 
 /** What the viewer reads about one fight, from the fight as `createCombat` sets it up. The
- * record's parties are fight-setup input: setup prepends innate spells to `equippedSpells` (so
- * a `SpellCast`'s gem slot counts them) and sets HP to effective max Health
- * (`spec/combat.md#fight-setup`). */
+ * record's parties are fight-setup input: setup prepends innate spells to `equippedSpells`
+ * (`spec/creatures.md#innate-spells`, so a `SpellCast`'s gem slot counts them) and sets HP to
+ * effective max Health (`spec/statuses.md#health-is-a-modifiable-stat`). */
 export interface FightView {
   /** Throws on an id in neither party: every event id belongs to one of them. */
   label(id: CreatureId): string
@@ -85,6 +85,17 @@ export function buildFightView(
         throw new Error(`spellName: ${casterId} has no spell in slot ${gemSlot}`)
       return spell.name
     },
+  }
+}
+
+/** The line-up split by side, each in line-up order. */
+export function splitLineUp(lineUp: readonly LineUpEntry[]): {
+  readonly allies: readonly LineUpEntry[]
+  readonly foes: readonly LineUpEntry[]
+} {
+  return {
+    allies: lineUp.filter((entry) => entry.side === 'player'),
+    foes: lineUp.filter((entry) => entry.side === 'enemy'),
   }
 }
 

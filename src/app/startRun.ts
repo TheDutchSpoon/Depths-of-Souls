@@ -1,11 +1,8 @@
 import { SPECIALIZATIONS } from '../data/specializations'
+import { MAX_RUN_SEED } from '../state/store'
 import type { GameActions } from '../state/store'
 import { generateRunSeed } from './newGame'
 import type { RandomSource } from './newGame'
-
-/** `newGame` throws on a seed outside this range (`spec/store.md#newgame`), and the store doesn't
- * export its own bound, so the helper restates it and a test holds the two together. */
-const MAX_SEED = 0xffffffff
 
 export type SeedRefusal = 'not-a-whole-number' | 'seed-out-of-range'
 
@@ -20,7 +17,7 @@ export function parseSeedField(text: string): SeedField {
   if (!/^-?\d+$/.test(trimmed)) return { ok: false, reason: 'not-a-whole-number' }
   // `+ 0` turns a "-0" into 0, so the store never holds a negative zero.
   const seed = Number(trimmed) + 0
-  if (seed < 0 || seed > MAX_SEED) return { ok: false, reason: 'seed-out-of-range' }
+  if (seed < 0 || seed > MAX_RUN_SEED) return { ok: false, reason: 'seed-out-of-range' }
   return { ok: true, seed }
 }
 

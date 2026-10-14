@@ -1,27 +1,15 @@
-import type { BiomeData, SpeciesCreature } from '../engine/generation'
-import { BIOMES } from '../data/biomes'
-import { STARTERS } from '../data/species/starters'
+import type { SpeciesCreature } from '../engine/generation'
+import { ALL_CREATURE_TEMPLATES, BOSS_CREATURES_BY_ID } from '../data/creatures'
 
 /** Template id to display name. A creature's name comes from its `origin.templateId`, never from
- * parsing a `CreatureId`. A boss is in no species
- * pool, only in its biome's `boss`, so the table reads that too. Boss adds are pool members
- * (`generateFloor` enforces it), so they need no row of their own. */
+ * parsing a `CreatureId`. */
 export function buildNameTable(
-  standalone: readonly SpeciesCreature[],
-  biomes: readonly BiomeData[],
+  creatures: readonly SpeciesCreature[],
 ): ReadonlyMap<string, string> {
-  const table = new Map<string, string>()
-  for (const creature of standalone) table.set(creature.id, creature.name)
-  for (const biome of biomes) {
-    for (const species of biome.speciesPool) {
-      for (const creature of species.creatures) table.set(creature.id, creature.name)
-    }
-    if (biome.boss) table.set(biome.boss.creature.id, biome.boss.creature.name)
-  }
-  return table
+  return new Map(creatures.map((creature) => [creature.id, creature.name]))
 }
 
-export const DEMO_NAMES = buildNameTable(STARTERS, BIOMES)
+export const DEMO_NAMES = buildNameTable(ALL_CREATURE_TEMPLATES)
 
 /** Throws on a miss: a creature the table can't name is a data drift to surface, and the id is
  * never a fallback label. */
@@ -35,10 +23,9 @@ export function creatureName(
   return name
 }
 
-/** The display name of the boss a `bossDefeated` id names, over the biomes' `boss` entries. */
-export function bossName(biomes: readonly BiomeData[], bossId: string): string {
-  for (const biome of biomes) {
-    if (biome.boss?.bossId === bossId) return biome.boss.creature.name
-  }
-  throw new Error(`bossName: no biome has boss ${bossId}`)
+/** The display name of the boss a `bossDefeated` id names. */
+export function bossName(bossId: string): string {
+  const boss = BOSS_CREATURES_BY_ID.get(bossId)
+  if (boss === undefined) throw new Error(`bossName: no boss ${bossId}`)
+  return boss.name
 }

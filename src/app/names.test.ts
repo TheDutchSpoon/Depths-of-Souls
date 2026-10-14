@@ -5,6 +5,7 @@ import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { BIOMES } from '../data/biomes'
 import { ALL_SPELLS } from '../data/spells'
 import { STARTERS } from '../data/species/starters'
+import { ALL_CREATURE_TEMPLATES } from '../data/creatures'
 import { bossName, buildNameTable, creatureName, DEMO_NAMES } from './names'
 
 describe('the name table', () => {
@@ -34,15 +35,10 @@ describe('the name table', () => {
   // template is unnamed and the lookup throws rather than falling back to the id.
   test('a boss is named by the boss row alone, and an unnamed template throws', () => {
     const boss = BIOMES[0]!.boss!
-    const withBoss = buildNameTable(STARTERS, BIOMES)
+    const withBoss = buildNameTable(ALL_CREATURE_TEMPLATES)
     expect(creatureName(withBoss, boss.creature.id)).toBe(boss.creature.name)
     const withoutBoss = buildNameTable(
-      STARTERS,
-      BIOMES.map((biome) => ({
-        id: biome.id,
-        name: biome.name,
-        speciesPool: biome.speciesPool,
-      })),
+      ALL_CREATURE_TEMPLATES.filter((creature) => creature.id !== boss.creature.id),
     )
     expect(() => creatureName(withoutBoss, boss.creature.id)).toThrow(boss.creature.id)
   })
@@ -66,8 +62,8 @@ describe('the name table', () => {
 })
 
 describe('bossName', () => {
-  test('finds the boss by its id over the biomes, and throws on an unknown one', () => {
-    expect(bossName(BIOMES, 'broodmother')).toBe(BIOMES[0]!.boss!.creature.name)
-    expect(() => bossName(BIOMES, 'nobody')).toThrow('nobody')
+  test('finds the boss by its id, and throws on an unknown one', () => {
+    expect(bossName('broodmother')).toBe(BIOMES[0]!.boss!.creature.name)
+    expect(() => bossName('nobody')).toThrow('nobody')
   })
 })

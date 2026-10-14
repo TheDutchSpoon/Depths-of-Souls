@@ -1,5 +1,3 @@
-import type { BiomeData } from '../engine/generation'
-import { perkPointsFor } from '../state/rewards'
 import type { FloorOutcome } from '../state/store'
 import { bossName } from './names'
 
@@ -17,19 +15,14 @@ export function floorResultLine(
   return `Floor ${outcome.floor}: ${last} at fight ${outcome.fightResults.length} of ${fights}`
 }
 
-/** A first clear is a `bossDefeated` the pre-descent snapshot lacks: by the time `descend`
- * returns, the store has already added the boss, and a repeat clear still reports it. */
+/** The line for a defeated boss; `null` when the descent defeated none. A repeat clear still
+ * reports the boss, with no points. */
 export function bossResultLine(
-  bossDefeated: string | null,
-  bossesBefore: ReadonlySet<string>,
-  bossesAfter: ReadonlySet<string>,
-  biomes: readonly BiomeData[],
+  outcome: Pick<FloorOutcome, 'bossDefeated' | 'bossFirstCleared' | 'perkPointsGained'>,
 ): string | null {
-  if (bossDefeated === null) return null
-  const name = bossName(biomes, bossDefeated)
-  if (bossesBefore.has(bossDefeated)) {
-    return `Defeated ${name}: already cleared, no perk points`
-  }
-  const points = perkPointsFor(bossesAfter) - perkPointsFor(bossesBefore)
-  return `Defeated ${name}: first clear, +${points} perk points`
+  if (outcome.bossDefeated === null) return null
+  const name = bossName(outcome.bossDefeated)
+  return outcome.bossFirstCleared
+    ? `Defeated ${name}: first clear, +${outcome.perkPointsGained} perk points`
+    : `Defeated ${name}: already cleared, no perk points`
 }

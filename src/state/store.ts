@@ -22,6 +22,7 @@ import {
   biomeHasContent,
   contentFrontier,
   FLOORS_PER_BIOME,
+  floorShape,
   generateFloor,
   materializeCreature,
   rollLoadout,
@@ -36,7 +37,7 @@ import type { CombatEvent, Creature, FightResult, Spell } from '../engine/types'
 import { BIOMES } from '../data/biomes'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { ALL_SPELLS } from '../data/spells'
-import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
+import { DEFAULT_REGISTRIES } from '../data/registries'
 import {
   resolveSpecializationEffects,
   SPECIALIZATIONS_BY_ID,
@@ -52,8 +53,6 @@ import {
   UNICORN,
   UNICORN_SPECIES_ID,
 } from '../data/species/starters'
-import { STATUS_REGISTRY } from '../data/statuses'
-import { TRAIT_REGISTRY } from '../data/traits'
 import { createInstanceId, type InstanceId } from './ids'
 import {
   addCurrencies,
@@ -103,9 +102,9 @@ const DEFAULT_RUN_SEED = 20260914
 const DEFAULT_DEPS: GameStoreDeps = {
   biomes: BIOMES,
   allSpells: ALL_SPELLS,
-  scripts: STOCK_SCRIPTS_BY_ID,
-  traits: TRAIT_REGISTRY,
-  statuses: STATUS_REGISTRY,
+  scripts: DEFAULT_REGISTRIES.scripts,
+  traits: DEFAULT_REGISTRIES.traits,
+  statuses: DEFAULT_REGISTRIES.statuses,
   specializations: SPECIALIZATIONS_BY_ID,
   standaloneCreatures: [
     { speciesCreature: SORCERER_STARTER, speciesId: SORCERER_STARTER_SPECIES_ID },
@@ -194,6 +193,25 @@ export interface FloorOutcome {
    * re-fought, already-cleared boss still reports bossDefeated here, but grants no further perk
    * points -- see `withBossCleared`). */
   readonly bossDefeated: string | null
+  /** A boss was defeated and wasn't in `bossesCleared` before this descent. */
+  readonly bossFirstCleared: boolean
+  /** `perkPointsFor` after the descent minus before: 0 unless a boss was first cleared. */
+  readonly perkPointsGained: number
+}
+
+/** What a floor holds, before it is fought: the biome it resolves to (through the state's pins and
+ * run seed, as `descend` resolves it), its fight count and whether it is the boss fight. */
+export interface FloorPreview {
+  readonly biomeId: BiomeId
+  readonly biomeName: string
+  readonly fights: number
+  readonly boss: boolean
+}
+
+export interface PerkPointSummary {
+  readonly earned: number
+  readonly spent: number
+  readonly free: number
 }
 
 /** Reasons `descend` can refuse -- see `spec/store.md#how-store-actions-fail`.
@@ -294,6 +312,12 @@ export interface GameActions {
   /** Pure query sharing `descend`'s own check -- lets the UI grey out an unreachable floor
    * without resolving anything. */
   canDescend(floor: number): CanDescendResult
+  /** What `floor` holds (`null` unless it is a whole number >= 1; never throws). Beyond the
+   * content frontier it still previews: only `descend` refuses there. */
+  floorPreview(floor: number): FloorPreview | null
+  /** Perk points earned (`perkPointsFor` the bosses cleared), spent on the chosen spec's perks
+   * (0 with none) and free. */
+  perkPointSummary(): PerkPointSummary
   /** NOT a new engine mechanism -- a fixed, hardcoded 1-enemy fight (the Unicorn)
    * resolved through the ordinary resolver, with a special outcome handler HERE (the run layer):
    * regardless of win/loss/draw, the Unicorn joins the collection (and the first open party
@@ -514,6 +538,27 @@ function hashGemDraw(runSeed: number, ordinal: number): number {
   )
 }
 
+/** Resolves a floor to its biome through the state's pins and run seed, and the biome's 1-based
+ * number in `deps.biomes` (`spec/run.md#biomeforfloor`). The one resolution behind `descend` and
+ * `floorPreview`; the floor must be a whole number >= 1. */
+function resolveFloorBiome(
+  state: GameState,
+  deps: GameStoreDeps,
+  floor: number,
+): { readonly biome: BiomeData; readonly biomeIndex: number } {
+  const biomeId = biomeForFloor(floor, deps.biomes, state.atlasPins, state.runSeed)
+  const biome = deps.biomes.find((b) => b.id === biomeId)
+  if (!biome) {
+    throw new Error(
+      `resolveFloorBiome: no biome data for resolved biome id ${String(biomeId)}`,
+    )
+  }
+  // The biome's 1-based number (`spec/run.md#spells-unlock-cumulatively`) is its position in the
+  // caller's own ordered `deps.biomes` list (the 1-100 sequence is positional) -- generation.ts
+  // stays ignorant of array position itself, it just receives the number.
+  return { biome, biomeIndex: deps.biomes.indexOf(biome) + 1 }
+}
+
 /** The shared check behind both `descend` and `canDescend` -- a
  * player-reachable failure returns `{ ok: false, reason }`, never throws. Order: prerequisites
  * that don't depend on which floor was asked for (no-spec, empty-party) first, then
@@ -599,6 +644,17 @@ function checkSetPartySlot(
   return { ok: true }
 }
 
+/** Σ `level × costPerLevel` over the spec's perks. */
+export function perkPointsSpent(
+  spec: Specialization,
+  perkSpend: ReadonlyMap<string, number>,
+): number {
+  return spec.perks.reduce(
+    (sum, perk) => sum + (perkSpend.get(perk.id) ?? 0) * perk.costPerLevel,
+    0,
+  )
+}
+
 /** Shared by `setPerkLevel` and `canSetPerkLevel`. The budget is
  * `Σ level × costPerLevel` over the current spec's perks with this change applied, against
  * `bossesCleared × 100`; lowering a level can't go over (spend only ever falls). */
@@ -616,17 +672,14 @@ function checkSetPerkLevel(
   if (!Number.isInteger(level) || level < 0 || level > perk.maxLevel) {
     return { ok: false, reason: 'invalid-level' }
   }
-  const spent = spec.perks.reduce(
-    (sum, p) =>
-      sum + (p.id === perkId ? level : (state.perkSpend.get(p.id) ?? 0)) * p.costPerLevel,
-    0,
-  )
+  const spent = perkPointsSpent(spec, new Map(state.perkSpend).set(perkId, level))
   if (spent > perkPointsFor(state.bossesCleared))
     return { ok: false, reason: 'over-budget' }
   return { ok: true }
 }
 
-const MAX_RUN_SEED = 0xffffffff
+/** The largest run seed `newGame` accepts. */
+export const MAX_RUN_SEED = 0xffffffff
 
 /** The state of a fresh game with run seed `seed` -- the store's initial state and what
  * `newGame` resets to, so the two can't drift. */
@@ -751,6 +804,22 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       return checkDescend(get(), deps, floor)
     },
 
+    floorPreview(floor) {
+      if (!Number.isInteger(floor) || floor < 1) return null
+      const { biome } = resolveFloorBiome(get(), deps, floor)
+      const { boss, fights } = floorShape(floor, biome, deps.balanceConfig)
+      return { biomeId: biome.id, biomeName: biome.name, fights, boss }
+    },
+
+    perkPointSummary() {
+      const state = get()
+      const earned = perkPointsFor(state.bossesCleared)
+      const spec =
+        state.chosenSpec === null ? undefined : deps.specializations.get(state.chosenSpec)
+      const spent = spec ? perkPointsSpent(spec, state.perkSpend) : 0
+      return { earned, spent, free: earned - spent }
+    },
+
     descend(floor) {
       const state = get()
       const check = checkDescend(state, deps, floor)
@@ -761,16 +830,8 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       if (!spec) throw new Error(`descend: unknown specialization ${state.chosenSpec}`)
       const partyWideEffects = resolveSpecializationEffects(spec, state.perkSpend)
 
-      const biomeId = biomeForFloor(floor, deps.biomes, state.atlasPins, state.runSeed)
-      const biome = deps.biomes.find((b) => b.id === biomeId)
-      if (!biome) {
-        throw new Error(`descend: no biome data for resolved biome id ${String(biomeId)}`)
-      }
-      // The biome's 1-based number (`spec/run.md#spells-unlock-cumulatively`) is its
-      // position in the caller's own ordered `deps.biomes` list (`spec/run.md#biomeforfloor`:
-      // the 1-100 sequence is positional) -- generation.ts stays ignorant of
-      // array position itself, it just receives the number).
-      const biomeIndex = deps.biomes.findIndex((b) => b.id === biomeId) + 1
+      const { biome, biomeIndex } = resolveFloorBiome(state, deps, floor)
+      const biomeId = biome.id
 
       const genRng = deps.createRng(hashRunDraw(state.runSeed, state.runCounter))
       const fights = generateFloor(
@@ -911,6 +972,12 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         }
       })
 
+      const bossesAfter =
+        bossDefeated !== null
+          ? withBossCleared(state.bossesCleared, bossDefeated)
+          : state.bossesCleared
+      const bossFirstCleared = bossesAfter !== state.bossesCleared
+
       return {
         ok: true,
         outcome: {
@@ -918,6 +985,9 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
           fightResults,
           cleared,
           bossDefeated,
+          bossFirstCleared,
+          perkPointsGained:
+            perkPointsFor(bossesAfter) - perkPointsFor(state.bossesCleared),
           deepestFloorAdvanced: cleared && floor > state.deepestFloor,
           soulGained: soulGainedThisCall,
           xpBanked,

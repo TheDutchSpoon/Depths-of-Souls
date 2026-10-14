@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import { BIOMES } from '../data/biomes'
 import { SPECIALIZATIONS_BY_ID } from '../data/specializations'
 import { createGameStore } from '../state/store'
-import { runDescent } from './descendFlow'
 import { CURRENCY_NOTE, SAVE_NOTE, sidePanelRows } from './sidePanel'
 import { startRun } from './startRun'
 
@@ -23,7 +22,7 @@ describe('sidePanelRows', () => {
     startRun(store.getState(), 'brute', '1234')
     store.getState().recordBossKill('broodmother')
     store.getState().setPerkLevel('might', 5)
-    expect(runDescent(store, 1).ok).toBe(true)
+    expect(store.getState().descend(1).ok).toBe(true)
     const state = store.getState()
     const rows = sidePanelRows(state, ctx)
 

@@ -91,6 +91,20 @@ describe('fightRows', () => {
   })
 })
 
+describe('labels span both parties', () => {
+  const player = [make('rat', 'player', 0)]
+  const enemy = [make('rat', 'enemy', 0)]
+  const shared = record({ playerParty: player, enemyParty: enemy, partyLevelsAfter: [2] })
+
+  test('a level-up names a creature whose template the other party shares', () => {
+    expect(fightRows([shared], names)[0]!.levelUps).toEqual(['Rat (ally 1) 1 → 2'])
+  })
+
+  test('the levels going in name it the same way', () => {
+    expect(fightHeader(shared, 0, 1, names).levelsIn).toEqual(['Rat (ally 1): level 1'])
+  })
+})
+
 describe('fightHeader', () => {
   test('reads Fight n / N with N the floor’s fight count, not the records fought', () => {
     expect(fightHeader(second, 1, 5, names).title).toBe('Fight 2 / 5')

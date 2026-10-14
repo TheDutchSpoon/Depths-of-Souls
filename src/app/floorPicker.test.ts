@@ -1,28 +1,13 @@
 import { describe, expect, test } from 'vitest'
-import { fightCount } from '../engine/curves'
-import { contentFrontier, generateFloor } from '../engine/generation'
-import type { BiomeData } from '../engine/generation'
-import { createSeededRng } from '../engine/rng'
-import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { BIOMES } from '../data/biomes'
-import { ALL_SPELLS } from '../data/spells'
 import { createGameStore } from '../state/store'
 import {
   deepestPlusOne,
-  floorInfo,
   floorInfoText,
   parseFloorField,
   prefillFloor,
 } from './floorPicker'
-import type { FloorInfoContext } from './floorPicker'
 import { startRun } from './startRun'
-
-const ctx: FloorInfoContext = {
-  atlasPins: new Map(),
-  runSeed: 5,
-  biomes: BIOMES,
-  config: DEFAULT_BALANCE_CONFIG,
-}
 
 describe('parseFloorField', () => {
   test('blank text is not a floor (Number() would read it as 0)', () => {
@@ -81,79 +66,15 @@ describe('any text in the field reaches a refusal, never a throw', () => {
   test.each(cases)('%j is refused as %s', (text, reason) => {
     const floor = parseFloorField(text)
     expect(store.getState().canDescend(floor)).toEqual({ ok: false, reason })
-    expect(() => floorInfo(floor, ctx)).not.toThrow()
-  })
-
-  test('the info line is null for anything that is not a whole number >= 1', () => {
-    for (const floor of [0, -3, 2.5, Number.NaN, Infinity]) {
-      expect(floorInfo(floor, ctx)).toBeNull()
-    }
-  })
-
-  test('a huge whole number still gets an info line (past floor 100 the biome is a hashed draw)', () => {
-    expect(floorInfo(1e20, ctx)).not.toBeNull()
-  })
-})
-
-describe('floorInfo against generateFloor', () => {
-  test('every floor up to the content frontier agrees on the boss flag and the fight count', () => {
-    const frontier = contentFrontier(BIOMES)
-    expect(frontier).toBe(30)
-    for (let floor = 1; floor <= frontier; floor++) {
-      const biomeIndex = Math.floor((floor - 1) / 10)
-      const fights = generateFloor(
-        floor,
-        BIOMES[biomeIndex]!,
-        biomeIndex + 1,
-        ALL_SPELLS,
-        createSeededRng(floor),
-        DEFAULT_BALANCE_CONFIG,
-      )
-      const info = floorInfo(floor, ctx)!
-      expect(info.boss).toBe(fights[0]!.boss !== undefined)
-      expect(info.fights).toBe(fights.length)
-      expect(info.biomeName).toBe(BIOMES[biomeIndex]!.name)
-    }
-  })
-
-  test('floors 10, 20 and 30 are one-fight boss floors', () => {
-    for (const floor of [10, 20, 30]) {
-      expect(floorInfo(floor, ctx)).toMatchObject({ boss: true, fights: 1 })
-    }
-  })
-
-  test('a boss-less biome has an ordinary tenth floor', () => {
-    const bossless: BiomeData = {
-      id: BIOMES[0]!.id,
-      name: BIOMES[0]!.name,
-      speciesPool: BIOMES[0]!.speciesPool,
-    }
-    const biomes = [bossless]
-    const info = floorInfo(10, { ...ctx, biomes })
-    expect(info).toEqual({
-      biomeName: bossless.name,
-      fights: fightCount(10, DEFAULT_BALANCE_CONFIG),
-      boss: false,
-    })
-    const fights = generateFloor(
-      10,
-      bossless,
-      1,
-      ALL_SPELLS,
-      createSeededRng(1),
-      DEFAULT_BALANCE_CONFIG,
-    )
-    expect(fights).toHaveLength(info!.fights)
-    expect(fights[0]!.boss).toBeUndefined()
+    expect(() => store.getState().floorPreview(floor)).not.toThrow()
   })
 })
 
 describe('floorInfoText', () => {
+  const base = { biomeId: BIOMES[0]!.id, biomeName: 'Deeps' }
   test('names the biome and the fight count, and a boss floor', () => {
-    expect(floorInfoText({ biomeName: 'Deeps', fights: 12, boss: false })).toBe(
-      'Deeps: 12 fights',
-    )
-    expect(floorInfoText({ biomeName: 'Deeps', fights: 1, boss: true })).toBe(
+    expect(floorInfoText({ ...base, fights: 12, boss: false })).toBe('Deeps: 12 fights')
+    expect(floorInfoText({ ...base, fights: 1, boss: true })).toBe(
       'Deeps: boss floor, 1 fight',
     )
   })

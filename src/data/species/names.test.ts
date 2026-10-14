@@ -4,19 +4,7 @@
 // exempt -- this scans only the real content registries.
 
 import { describe, expect, it } from 'vitest'
-import type { SpeciesCreature } from '../../engine/generation'
-import { STARTERS } from './starters'
-import { OVERGROWTH_BIOME } from './overgrowth'
-import { GLIMMERDARK_BIOME } from './glimmerdark'
-import { ROTCAP_HOLLOW_BIOME } from './rotcap-hollow'
-
-const BIOMES = [OVERGROWTH_BIOME, GLIMMERDARK_BIOME, ROTCAP_HOLLOW_BIOME]
-
-const ALL_REAL_CREATURES: readonly SpeciesCreature[] = [
-  ...STARTERS,
-  ...BIOMES.flatMap((biome) => biome.speciesPool.flatMap((species) => species.creatures)),
-  ...BIOMES.flatMap((biome) => (biome.boss ? [biome.boss.creature] : [])),
-]
+import { ALL_CREATURE_TEMPLATES as ALL_REAL_CREATURES } from '../creatures'
 
 describe('every real SpeciesCreature has a name', () => {
   it('ships the expected count: 4 starters/Unicorn + 54 biome creatures + 3 bosses = 61', () => {

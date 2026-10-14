@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { staticCreatureIdFor } from '../state/rewards'
 import { createGameStore } from '../state/store'
-import { runDescent } from './descendFlow'
 import { descendRefusalText } from './refusals'
 import { SPEC_CHOICES, startRun } from './startRun'
 
@@ -21,7 +20,7 @@ describe('the descent loop as the screen drives it', () => {
     const owned = [...store.getState().collection.values()].map(staticCreatureIdFor)
     expect(owned).toEqual(['sorcerer-starter', 'unicorn'])
 
-    const run = runDescent(store, 1)
+    const run = store.getState().descend(1)
     if (!run.ok) throw new Error(`floor 1 refused: ${run.reason}`)
     expect(run.outcome.cleared).toBe(true)
 
@@ -45,7 +44,7 @@ describe('the descent loop as the screen drives it', () => {
     // Floor 31 is past the content frontier, with the text the screen shows.
     const beyond = store.getState().canDescend(31)
     expect(beyond).toEqual({ ok: false, reason: 'beyond-content-frontier' })
-    expect(runDescent(store, 31)).toEqual({
+    expect(store.getState().descend(31)).toEqual({
       ok: false,
       reason: 'beyond-content-frontier',
     })
@@ -57,7 +56,7 @@ describe('the descent loop as the screen drives it', () => {
     for (let slot = 0; slot < 6; slot++) {
       expect(store.getState().setPartySlot(slot, null)).toEqual({ ok: true })
     }
-    expect(runDescent(store, 1)).toEqual({ ok: false, reason: 'empty-party' })
+    expect(store.getState().descend(1)).toEqual({ ok: false, reason: 'empty-party' })
     expect(descendRefusalText('empty-party')).toBe(
       'The party is empty: put a creature in it first.',
     )

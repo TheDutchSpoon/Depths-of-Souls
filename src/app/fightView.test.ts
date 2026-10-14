@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { DEFAULT_REGISTRIES } from '../data/registries'
 import { materializeCreature } from '../engine/generation'
 import type { SpeciesCreature } from '../engine/generation'
 import { createCreatureId } from '../engine/ids'
@@ -7,10 +8,8 @@ import type { Creature, Side } from '../engine/types'
 import { createGameStore } from '../state/store'
 import type { FightRecord } from '../state/store'
 import { describeEvent } from './eventText'
-import { runDescent } from './descendFlow'
-import { buildFightView, labelCreatures, lineUpText } from './fightView'
+import { buildFightView, labelCreatures, lineUpText, splitLineUp } from './fightView'
 import { DEMO_NAMES } from './names'
-import { DEMO_REGISTRIES } from './registries'
 import { SPEC_CHOICES, startRun } from './startRun'
 
 const BASE = { health: 20, attack: 10, intelligence: 10, defence: 10, speed: 10 }
@@ -125,7 +124,7 @@ describe('buildFightView', () => {
     name: 'Tough',
     effects: [{ category: 'stat-modifier', stat: 'health', factor: 1.5 }],
   }
-  const registries = { ...DEMO_REGISTRIES, traits: new Map([[tough.id, tough]]) }
+  const registries = { ...DEFAULT_REGISTRIES, traits: new Map([[tough.id, tough]]) }
 
   test('the line-up shows the set-up HP and level, not the record party’s', () => {
     const record = inlineRecord(
@@ -144,6 +143,15 @@ describe('buildFightView', () => {
     ])
   })
 
+  test('the record’s player effects shape the set-up: a Health factor reaches the line-up', () => {
+    const record: FightRecord = {
+      ...inlineRecord([make('hero', 'player', 0)], [make('snapjaw', 'enemy', 0)]),
+      playerEffects: [{ category: 'stat-modifier', stat: 'health', factor: 1.5 }],
+    }
+    const view = buildFightView(record, registries, names)
+    expect(view.lineUp.map((entry) => entry.hp)).toEqual([30, 20])
+  })
+
   test('an id in neither party, or a slot with no spell, throws', () => {
     const record = inlineRecord(
       [make('hero', 'player', 0)],
@@ -156,11 +164,26 @@ describe('buildFightView', () => {
   })
 })
 
+describe('splitLineUp', () => {
+  test('the allies are the player entries and the foes the enemy entries, in line-up order', () => {
+    const record = inlineRecord(
+      [make('hero', 'player', 0), make('mage', 'player', 1)],
+      [make('snapjaw', 'enemy', 0)],
+    )
+    const { lineUp } = buildFightView(record, DEFAULT_REGISTRIES, names)
+    const { allies, foes } = splitLineUp(lineUp)
+    expect(allies).toEqual([lineUp[0], lineUp[1]])
+    expect(allies.map((entry) => entry.label)).toEqual(['Hero', 'Mage'])
+    expect(foes).toEqual([lineUp[2]])
+    expect(foes.map((entry) => entry.label)).toEqual(['Snapjaw'])
+  })
+})
+
 describe('on a real descent', () => {
   test('the Sorcerer starter’s gem slot 0 is the innate Arcane Bolt that setup prepends', () => {
     const store = createGameStore()
     startRun(store.getState(), 'sorcerer', '12')
-    const run = runDescent(store, 1)
+    const run = store.getState().descend(1)
     if (!run.ok) throw new Error('descent refused')
     const record = run.outcome.fightRecords[0]!
     const starter = record.playerParty.find(
@@ -169,7 +192,7 @@ describe('on a real descent', () => {
     // The record's party holds the three regular gems only: its slot 0 is the setup's slot 1.
     const firstRegular = starter.equippedSpells[0]
     expect(firstRegular).not.toBeNull()
-    const view = buildFightView(record, DEMO_REGISTRIES, DEMO_NAMES)
+    const view = buildFightView(record, DEFAULT_REGISTRIES, DEMO_NAMES)
     expect(view.spellName(starter.id, 0)).toBe('Arcane Bolt')
     expect(view.spellName(starter.id, 1)).toBe(firstRegular!.name)
     expect(firstRegular!.name).not.toBe('Arcane Bolt')
@@ -194,14 +217,14 @@ describe('on a real descent', () => {
       let sawRaw = false
       let linesChecked = 0
       for (let i = 0; i < floors.length; i++) {
-        const run = runDescent(store, floors[i]!)
+        const run = store.getState().descend(floors[i]!)
         if (!run.ok) throw new Error('descent refused')
         if (run.outcome.cleared && floors.length < 2) floors.push(floors[i]! + 1)
         for (const record of run.outcome.fightRecords) {
           const ids = [...record.playerParty, ...record.enemyParty].map(
             (c) => c.id as string,
           )
-          const view = buildFightView(record, DEMO_REGISTRIES, DEMO_NAMES)
+          const view = buildFightView(record, DEFAULT_REGISTRIES, DEMO_NAMES)
           const output = [
             ...record.events.map((event) => describeEvent(event, view)),
             ...view.lineUp.map(lineUpText),

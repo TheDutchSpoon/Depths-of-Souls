@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest'
 import { BIOMES } from '../data/biomes'
-import { perkPointsFor } from '../state/rewards'
 import { bossResultLine, floorResultLine } from './descentText'
 
 describe('floorResultLine', () => {
@@ -33,39 +32,42 @@ describe('bossResultLine', () => {
   const name = BIOMES[0]!.boss!.creature.name
 
   test('no boss defeated: no line', () => {
-    expect(bossResultLine(null, new Set(), new Set(), BIOMES)).toBeNull()
+    expect(
+      bossResultLine({
+        bossDefeated: null,
+        bossFirstCleared: false,
+        perkPointsGained: 0,
+      }),
+    ).toBeNull()
   })
 
-  test('a boss the snapshot lacks is a first clear, with the points the clear added', () => {
-    const line = bossResultLine(
-      'broodmother',
-      new Set(),
-      new Set(['broodmother']),
-      BIOMES,
-    )
-    expect(line).toBe(`Defeated ${name}: first clear, +100 perk points`)
+  test('a first clear names the points the clear added', () => {
+    expect(
+      bossResultLine({
+        bossDefeated: 'broodmother',
+        bossFirstCleared: true,
+        perkPointsGained: 100,
+      }),
+    ).toBe(`Defeated ${name}: first clear, +100 perk points`)
   })
 
-  // The figure is the difference of `perkPointsFor`, not a literal: a snapshot gap of two
-  // bosses reads +200.
-  test('the points are the difference between the two sets', () => {
-    const after = new Set(['other-boss', 'broodmother'])
-    expect(perkPointsFor(after) - perkPointsFor(new Set())).toBe(200)
-    expect(bossResultLine('broodmother', new Set(), after, BIOMES)).toBe(
-      `Defeated ${name}: first clear, +200 perk points`,
-    )
-  })
-
-  test('a boss already in the snapshot is a repeat clear with no points', () => {
-    const both = new Set(['broodmother'])
-    expect(bossResultLine('broodmother', both, both, BIOMES)).toBe(
-      `Defeated ${name}: already cleared, no perk points`,
-    )
+  test('a repeat clear has no points', () => {
+    expect(
+      bossResultLine({
+        bossDefeated: 'broodmother',
+        bossFirstCleared: false,
+        perkPointsGained: 0,
+      }),
+    ).toBe(`Defeated ${name}: already cleared, no perk points`)
   })
 
   test('an unknown boss id throws', () => {
     expect(() =>
-      bossResultLine('nobody', new Set(), new Set(['nobody']), BIOMES),
+      bossResultLine({
+        bossDefeated: 'nobody',
+        bossFirstCleared: true,
+        perkPointsGained: 100,
+      }),
     ).toThrow('nobody')
   })
 })

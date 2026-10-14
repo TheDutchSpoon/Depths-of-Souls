@@ -4,8 +4,8 @@ import { fightToJson } from '../app/copyFight'
 import { bossResultLine, floorResultLine } from '../app/descentText'
 import { describeEvent, groupIntoBeats } from '../app/eventText'
 import { fightHeader, fightRows } from '../app/fightList'
-import { buildFightView, lineUpText } from '../app/fightView'
-import { BIOMES } from '../data/biomes'
+import { buildFightView, lineUpText, splitLineUp } from '../app/fightView'
+import { DEFAULT_REGISTRIES } from '../data/registries'
 import { DEMO_NAMES } from '../app/names'
 import {
   initialPlayback,
@@ -15,7 +15,6 @@ import {
   timerKey,
 } from '../app/playback'
 import type { PlaybackAction, PlaybackState, Speed } from '../app/playback'
-import { DEMO_REGISTRIES } from '../app/registries'
 import { DescentResult } from './DescentResult'
 
 // A viewer, not an editor, and not the place for sprites, bars or animation. Playback is a
@@ -26,8 +25,6 @@ import { DescentResult } from './DescentResult'
 export interface Descent {
   readonly id: number
   readonly outcome: FloorOutcome
-  readonly bossesBefore: ReadonlySet<string>
-  readonly bossesAfter: ReadonlySet<string>
   /** The descended floor's fight count: the outcome stops at the first non-win. */
   readonly fights: number
 }
@@ -38,7 +35,7 @@ export function DescentViewer({ descent }: { descent: Descent }) {
   const records = descent.outcome.fightRecords
   // Fight setup is rebuilt once per descent, not per render: each view runs `createCombat`.
   const views = useMemo(
-    () => records.map((record) => buildFightView(record, DEMO_REGISTRIES, DEMO_NAMES)),
+    () => records.map((record) => buildFightView(record, DEFAULT_REGISTRIES, DEMO_NAMES)),
     [records],
   )
   const beats = useMemo(() => records.map((r) => groupIntoBeats(r.events)), [records])
@@ -75,6 +72,7 @@ export function DescentViewer({ descent }: { descent: Descent }) {
   }
 
   const view = views[state.fight]!
+  const { allies, foes } = splitLineUp(view.lineUp)
   const header = fightHeader(
     records[state.fight]!,
     state.fight,
@@ -90,12 +88,7 @@ export function DescentViewer({ descent }: { descent: Descent }) {
     <section>
       <DescentResult
         floorLine={floorResultLine(descent.outcome, descent.fights)}
-        bossLine={bossResultLine(
-          descent.outcome.bossDefeated,
-          descent.bossesBefore,
-          descent.bossesAfter,
-          BIOMES,
-        )}
+        bossLine={bossResultLine(descent.outcome)}
         rows={rows}
         onJump={(fight) => dispatch({ type: 'jump', fight })}
         onCopy={(fight) => void copyFight(fight)}
@@ -139,7 +132,10 @@ export function DescentViewer({ descent }: { descent: Descent }) {
               ? `; level-ups: ${header.row.levelUps.join('; ')}`
               : '; no level-ups'}
           </p>
-          <pre>{view.lineUp.map(lineUpText).join('\n')}</pre>
+          <h4>Allies</h4>
+          <pre>{allies.map(lineUpText).join('\n')}</pre>
+          <h4>Foes</h4>
+          <pre>{foes.map(lineUpText).join('\n')}</pre>
           <pre>{log}</pre>
           <button type="button" onClick={() => void copyFight(state.fight)}>
             Debug: Copy fight as JSON
