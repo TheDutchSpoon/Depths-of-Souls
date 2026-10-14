@@ -53,9 +53,9 @@ export function staticCreatureIdFor(instance: Instance): string {
 }
 
 /**
- * Applies a flat XP gain (banked once per descend() call) and resolves any resulting level-ups
- * purely via xpForNextLevel -- level-ups NEVER happen mid-fight (`spec/run.md#rewards`); this is
- * the POST-fight application the run layer owns.
+ * Applies a flat XP gain (one fight's kill XP, or the scripted intro's grant) and resolves any
+ * resulting level-ups purely via xpForNextLevel -- level-ups NEVER happen mid-fight
+ * (`spec/run.md#rewards`); this is the POST-fight application the run layer owns.
  */
 export function applyXpGain(
   instance: Instance,
