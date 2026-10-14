@@ -316,7 +316,9 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - The summary is read from the report's own lines, in POSIX awk (the runner's `awk` may be mawk):
   `formatSpec`'s `=== <spec> (<n> seeds) ===` header and `Draws:` line, `formatReport`'s
   `CI thresholds summary` block, and the test's `Runtime:` line. A change to those lines changes
-  the extraction in `sim.yml` in the same PR.
+  the extraction in `sim.yml` in the same PR. In Actions, the line after vitest's `stdout |` header
+  starts with colour codes, so none of those lines may open a `console.log` (the report opens with
+  `Balance report:`, and `Runtime:` follows a newline).
 - Its own concurrency group per ref, queued and never cancelled: a merge during a run gets its own
   report after it. GitHub keeps one pending run per group, so a third merge inside one run replaces
   the second's pending run.
