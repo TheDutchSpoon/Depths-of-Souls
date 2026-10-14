@@ -396,9 +396,8 @@ src/
   **library** directory per carrier type: `data/traits/`, `data/spells/`.
 - Each is split by grouping, **one file per biome** (`overgrowth.ts`, …), plus `starters.ts` in
   `data/traits/` for the starters' and the Unicorn's signature traits (no spell is starter-only, so
-  `data/spells/` has none) and `core.ts` in `data/spells/` for its affinity-generic spells. Each is
-  aggregated to its registry by an `index.ts` that keeps the **stable exported names**
-  (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the spell equivalents).
+  `data/spells/` has none). Each is aggregated to its registry by an `index.ts` that keeps the
+  **stable exported names** (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the spell equivalents).
 - Affinity is a **field** on a spell, never the file axis; spawn pools are biome-scoped.
 - `data/statuses.ts` stays **flat**: global vocabulary, not organised by biome.
 
