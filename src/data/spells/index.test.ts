@@ -123,10 +123,8 @@ describe('dedupKey for status-only spells', () => {
 describe('Silence and Pacify', () => {
   // Append-only: the registry order maps RNG rolls to spells (`CONVENTIONS.md#combat-is-reproducible-from-its-inputs`),
   // so the first ids are pinned in order and the later spells come last.
-  const FIRST_24 = [
-    'ember-lance',
-    'cinder-nova',
-    'venom-bolt',
+  const FIRST_22 = [
+    'thorn-volley',
     'thorn-lash',
     'weakening-bite',
     'vine-snare',
@@ -150,14 +148,14 @@ describe('Silence and Pacify', () => {
     'withering-bolt',
   ]
 
-  it('ALL_SPELLS is append-only: the first 24 ids in order, then Silence, then Pacify, then the last three', () => {
-    // The pin is the first 26 ids, then exactly Pounce, Stifling Weight, Life Siphon.
-    expect(ALL_SPELLS.slice(0, 26).map((s) => s.id)).toEqual([
-      ...FIRST_24,
+  it('ALL_SPELLS is append-only: the first 22 ids in order, then Silence, then Pacify, then the last three', () => {
+    // The pin is the first 24 ids, then exactly Pounce, Stifling Weight, Life Siphon.
+    expect(ALL_SPELLS.slice(0, 24).map((s) => s.id)).toEqual([
+      ...FIRST_22,
       'silence',
       'pacify',
     ])
-    expect(ALL_SPELLS.slice(26).map((s) => s.id)).toEqual([
+    expect(ALL_SPELLS.slice(24).map((s) => s.id)).toEqual([
       'pounce',
       'stifling-weight',
       'life-siphon',

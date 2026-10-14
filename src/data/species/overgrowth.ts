@@ -36,13 +36,16 @@ import {
   BRAMBLE_WARD,
   HOWLING_INSTINCT,
   LIFE_SIPHON,
+  PACIFY,
   POLLEN_CLOUD,
   POUNCE,
   REGROWTH,
   ROOT_GRASP,
+  SILENCE,
   STIFLING_WEIGHT,
   STINGER_SWARM,
   THORN_LASH,
+  THORN_VOLLEY,
   VINE_SNARE,
   WEAKENING_BITE,
   WILD_VIGOR,
@@ -74,10 +77,10 @@ import {
 // documentation and test grouping only ("the spells this biome introduces"; every entry here is
 // tagged `unlockedAtBiome: 1`): `generateFloor` rolls a cast-role loadout from the GLOBAL
 // `ALL_SPELLS` registry, filtered by `unlockedAtBiome` (`spec/run.md#spells-unlock-cumulatively`,
-// engine/generation.ts's `spellsUnlockedAt`). Includes ARCANE_BOLT, giving Wit a third entry
-// here while every other affinity keeps two.
+// engine/generation.ts's `spellsUnlockedAt`).
 
 export const OVERGROWTH_SPELLS = [
+  THORN_VOLLEY,
   THORN_LASH,
   WEAKENING_BITE,
   VINE_SNARE,
@@ -93,6 +96,8 @@ export const OVERGROWTH_SPELLS = [
   POUNCE,
   STIFLING_WEIGHT,
   LIFE_SIPHON,
+  SILENCE,
+  PACIFY,
 ]
 
 // ---- Spiders (Wit lean) -- closed mechanic: Trap -> exploit (Web) ----

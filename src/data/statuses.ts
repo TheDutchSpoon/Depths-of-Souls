@@ -35,8 +35,8 @@ export const POISON: StatusDef = {
     },
   ],
   polarity: 'debuff',
-  // VENOM_BOLT applies Poison with an explicit duration:3; `MYCONET_ROTCORE_TRAIT` applies it with
-  // none, so this default is the one it gets -- picked to match the spell's usage.
+  // `MYCONET_ROTCORE_TRAIT`, Poison's only producer, applies it with no duration, so this default
+  // is the one it gets.
   defaultDuration: 3,
 }
 

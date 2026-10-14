@@ -1,6 +1,5 @@
 import { validateSpellEffects } from '../../engine/effect-types'
 import type { Spell } from '../../engine/types'
-import { CINDER_NOVA, EMBER_LANCE, VENOM_BOLT } from './core'
 import {
   ARCANE_BOLT,
   BRAMBLE_WARD,
@@ -15,6 +14,7 @@ import {
   STIFLING_WEIGHT,
   STINGER_SWARM,
   THORN_LASH,
+  THORN_VOLLEY,
   VINE_SNARE,
   WEAKENING_BITE,
   WILD_VIGOR,
@@ -36,7 +36,6 @@ import {
 
 // The library barrel (`CONVENTIONS.md#effect-carriers-live-in-libraries`): re-exports every
 // individual spell const from its grouping file.
-export * from './core'
 export * from './overgrowth'
 export * from './glimmerdark'
 export * from './rotcap-hollow'
@@ -48,12 +47,11 @@ export * from './rotcap-hollow'
  * determinism-relevant: `weightedPick` (generation.ts) walks the affinity-filtered slice of this
  * list in order, subtracting weights, so registry order maps each RNG roll to a spell -- the
  * generation tests rely on exactly that. Keep this list APPEND-ONLY; reordering it would silently
- * change which spell a given seed rolls in real playthroughs (determinism is sacred).
+ * change which spell a given seed rolls in real playthroughs (determinism is sacred). Deleting a
+ * spell is a deliberate content change: it shifts the rolls of the affinity it leaves.
  */
 export const ALL_SPELLS: readonly Spell[] = [
-  EMBER_LANCE,
-  CINDER_NOVA,
-  VENOM_BOLT,
+  THORN_VOLLEY,
   THORN_LASH,
   WEAKENING_BITE,
   VINE_SNARE,

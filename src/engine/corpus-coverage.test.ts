@@ -27,7 +27,7 @@ const STATUS_EXEMPTIONS: ReadonlyMap<string, string> = new Map([
 
 /** Perks whose effect cannot show in any fight yet, each with its reason. Empty: Clear Mind and
  * Aggressive matter against Silenced and Pacified, in the two appended perk fights (corpus
- * entries 522-523). */
+ * entries 520-521). */
 const PERK_EXEMPTIONS: ReadonlyMap<string, string> = new Map()
 
 interface ResolvedFight {
@@ -159,25 +159,25 @@ describe('corpus coverage', () => {
     expect(missing, 'spells never cast with all their effects landing').toEqual([])
   })
 
-  it('the Silence and Pacify spell fights (entries 524-525) cast their spell with the status landing, riding on no draw', () => {
+  it('the Silence and Pacify spell fights (entries 522-523) cast their spell with the status landing, riding on no draw', () => {
     // An always-cast caster against a wall, so the status
     // lands whatever the seed. Pinned by index because the perk fights also happen to cast them.
     const expected = [
       ['silence', 'silenced'],
       ['pacify', 'pacified'],
     ] as const
-    expect(resolved.length).toBeGreaterThanOrEqual(526)
+    expect(resolved.length).toBeGreaterThanOrEqual(524)
     expected.forEach(([spellId, statusId], k) => {
-      const { events, spellsByCaster } = resolved[524 + k]!
+      const { events, spellsByCaster } = resolved[522 + k]!
       const casts = events.filter(
         (e) =>
           e.type === 'SpellCast' &&
           spellsByCaster.get(e.casterId)?.[e.gemSlot]?.id === spellId,
       )
-      expect(casts.length, `entry ${524 + k} casts ${spellId}`).toBeGreaterThan(0)
+      expect(casts.length, `entry ${522 + k} casts ${spellId}`).toBeGreaterThan(0)
       expect(
         events.some((e) => e.type === 'StatusApplied' && e.statusId === statusId),
-        `entry ${524 + k} lands ${statusId}`,
+        `entry ${522 + k} lands ${statusId}`,
       ).toBe(true)
     })
   })

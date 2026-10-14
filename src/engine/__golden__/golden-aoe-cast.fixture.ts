@@ -1,31 +1,14 @@
 import type { CombatEvent, FightResult } from '../types'
 import { createCreatureId } from '../ids'
 import { makeParty } from '../__fixtures__/creatures'
+import { AOE_VIOLENCE_SPELL } from '../__fixtures__/spells'
 import type { Script } from '../scripting-types'
-import type { Spell } from '../types'
 
 export const SEED = 3003
 
 const CASTER = createCreatureId('caster')
 const E1 = createCreatureId('e1')
 const E2 = createCreatureId('e2')
-
-export const CINDER_NOVA: Spell = {
-  id: 'cinder-nova',
-  name: 'Cinder Nova',
-  targetShape: 'aoe',
-  affinity: 'violence',
-  targetSide: 'enemy',
-  unlockedAtBiome: 1,
-  effects: [
-    {
-      kind: 'deal-damage',
-      target: { kind: 'cast-target' },
-      offStat: 'cast',
-      spellPower: 0.3,
-    },
-  ],
-}
 
 export const CAST_AOE_SCRIPT: Script = {
   id: 'cast-aoe',
@@ -42,7 +25,7 @@ export const playerParty = makeParty('player', [
     health: 30,
     affinity: 'vitality',
     scriptId: 'cast-aoe',
-    equippedSpells: [CINDER_NOVA],
+    equippedSpells: [AOE_VIOLENCE_SPELL],
   },
 ])
 

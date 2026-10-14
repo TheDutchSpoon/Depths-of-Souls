@@ -42,11 +42,11 @@ export const BEACON_CHARGE: Spell = {
  * reuses that SAME statusId rather than authoring a new near-identical StatusDef, which would
  * just be Web-with-a-new-name. Authored as
  * a `deal-damage` effect + an `apply-status` effect, same shape as Vine Snare, but on
- * Instinct (Vine Snare is Wit) -- Instinct had no status-application spell besides core.ts's
- * Venom Bolt (poison), so this fills a real gap rather than re-skinning Vine Snare; distinct
- * under the dedup guard by affinity (instinct vs wit) AND by spellPower and its status vs Venom
- * Bolt. spellPower 0.85 + duration 3 both mirror Vine Snare's own numbers exactly (single-target
- * + upside band, Web's own `defaultDuration`) -- deliberate consistency, not an oversight. */
+ * Instinct (Vine Snare is Wit) -- Instinct has no other status-applying spell, so this fills a
+ * real gap rather than re-skinning Vine Snare; distinct under the dedup guard by affinity
+ * (instinct vs wit). spellPower 0.85 + duration 3 both mirror Vine Snare's own numbers exactly
+ * (single-target + upside band, Web's own `defaultDuration`) -- deliberate consistency, not an
+ * oversight. */
 export const DISORIENT: Spell = {
   id: 'disorient',
   name: 'Disorient',
@@ -72,7 +72,7 @@ export const DISORIENT: Spell = {
 /**
  * Blinding Flare -- first spell to apply Vulnerability (statuses.ts: x1.5 damage TAKEN, once); an
  * offensive setup debuff no biome-1 spell provides. Violence's first Glimmerdark-own spell. Unique
- * under the dedup guard by spellPower (0.7 vs Ember Lance 0.5 / Thorn Lash 1.0). Numbers are
+ * under the dedup guard by spellPower (0.7 vs Thorn Lash 1.0). Numbers are
  * parked balance. */
 export const BLINDING_FLARE: Spell = {
   id: 'blinding-flare',

@@ -417,7 +417,7 @@ describe('Stored player gems in the real floor-10 fight', () => {
     const { store } = floor10()
     const mauler = store.getState().collection.get(createInstanceId('inst-0'))!
     const unicorn = store.getState().collection.get(createInstanceId('inst-1'))!
-    expect(mauler.gems).toEqual(['weakening-bite', 'cinder-nova', 'silence'])
+    expect(mauler.gems).toEqual(['weakening-bite', 'thorn-lash', 'silence'])
     expect(unicorn.gems).toEqual(['life-siphon', 'wild-vigor', 'regrowth'])
     // Checkpoint: the Unicorn's set is exactly the biome-1 Vitality spells.
     const vitality = ALL_SPELLS.filter(
