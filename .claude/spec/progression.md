@@ -77,7 +77,8 @@ Read this when changing progression: specializations, perks and perk points, the
 - A spec is valid iff its perks' `Σ(maxLevel × costPerLevel) === 1000`, checked at load.
 - Perk points are **derived**: `bossesCleared × 100`, first clears only. The spend is
   `Map<perkId, level>`; refunding is free and unlimited (one perk, all of them, or a spec swap are
-  the same clear), and the budget recomputes. The store actions are `spec/store.md#store-actions`.
+  the same clear), and the budget recomputes. The store actions and the earned, spent and free
+  summary are `spec/store.md#store-actions`.
 - Each starter spec defines a **starter creature**.
 
 ### Inert perks

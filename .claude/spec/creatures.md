@@ -146,6 +146,10 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   `innateTraitIds` and `rarity`. Its species is the one whose list holds it.
 - Identity (species and name) and affinity are separate fields, so a fusion can take them from
   different parents (`spec/creatures.md#fusion`).
+- Every template the game ships is one list, `ALL_CREATURE_TEMPLATES` (`src/data/creatures.ts`):
+  the starters and the Unicorn, every biome's pool creatures, then every biome's boss (a boss is in
+  no species pool, only in its biome's `boss`). `BOSS_CREATURES_BY_ID` maps a boss id to its
+  creature.
 
 ### Instance
 

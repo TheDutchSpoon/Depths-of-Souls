@@ -23,8 +23,9 @@ Read this when changing the store or the state the UI reads.
 
 ### newGame
 
-- A new game starts from **`newGame({ seed })`**, the seed a whole number in `0..2^32-1` (any other
-  throws). The seed is generated in `src/app`, never in the store or the engine.
+- A new game starts from **`newGame({ seed })`**, the seed a whole number in `0..MAX_RUN_SEED`
+  (`2^32-1`, exported; any other throws). The seed is generated in `src/app`, never in the store
+  or the engine.
 
 ### How store actions fail
 
@@ -44,7 +45,13 @@ Read this when changing the store or the state the UI reads.
 
 - `newGame({ seed })`, `setSpec`, `descend`, `runScriptedIntro`, `recordBossKill`, `pinBiome`,
   `setPerkLevel`, `refundAllPerks`, `summon(creatureId)` and `setPartySlot(slot, instanceId |
-  null)`, plus the `can…` queries.
+  null)`, plus the `can…` queries and two read-only answers for the UI:
+  - `floorPreview(floor)`: the floor's biome, resolved as `descend` resolves it (pins and run seed
+    included), its fight count and whether it is a boss floor
+    (`spec/run.md#boss-floor-generation`). `null` for anything but a whole number ≥ 1, never a
+    throw; past the content frontier it still previews, and only `descend` refuses.
+  - `perkPointSummary()`: `{ earned, spent, free }` for the chosen spec (spent 0 with none). The
+    spend is one sum, `perkPointsSpent(spec, perkSpend)`, which the `over-budget` check uses too.
 - `setPerkLevel(perkId, level)` sets an absolute level, so buying and refunding are one call;
   `refundAllPerks()` clears the whole spend (`spec/progression.md#specializations-are-data`).
 - `setPartySlot` swaps: placing an instance on an occupied slot sends the occupant to the placed
@@ -56,14 +63,16 @@ Read this when changing the store or the state the UI reads.
 ### A descent's outcome
 
 - `descend`'s outcome (`FloorOutcome`) holds the floor's results and totals (`fightResults`,
-  `cleared`, `deepestFloorAdvanced`, `bossDefeated`, `xpBanked`, `soulGained`, `currencyGained`,
-  the concatenated `events`) and **`fightRecords`**: one `FightRecord` per fight resolved, in
-  fight order. The records' events concatenate to `events`, their XP sums to `xpBanked` and their
-  results are `fightResults`.
+  `cleared`, `deepestFloorAdvanced`, `bossDefeated`, `bossFirstCleared` (that boss wasn't in
+  `bossesCleared` before the descent), `perkPointsGained`, `xpBanked`, `soulGained`,
+  `currencyGained`, the concatenated `events`) and **`fightRecords`**: one `FightRecord` per fight
+  resolved, in fight order. The records' events concatenate to `events`, their XP sums to
+  `xpBanked` and their results are `fightResults`.
 - A `FightRecord` holds the fight's `events`, `result`, `xpBanked` and `partyLevelsAfter` (the
   active party's levels after its XP, in `playerParty` order), and what `createCombat` was given:
   `seed`, `playerParty`, `enemyParty` and `playerEffects` (the perk effects). `playerParty` is the
   party materialized for that fight, not the `CombatState`'s, which carries fight-setup output.
 - A record reproduces its fight outside the store: `createCombat` over its seed, parties and perk
-  effects, with the registries the store was given, then `resolveFight`, gives its `events`
+  effects, with the registries the store was given (the default store's are `DEFAULT_REGISTRIES`,
+  `src/data/registries.ts`), then `resolveFight`, gives its `events`
   (`CONVENTIONS.md#every-failing-fight-is-reproducible-from-its-seed`).
