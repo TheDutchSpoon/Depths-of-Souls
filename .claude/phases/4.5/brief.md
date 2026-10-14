@@ -60,7 +60,7 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 ### Balance verdicts
 
 - The CI verdicts (floor 1, first soul, floor 5) are checked by the normal suite in every slice;
-  only a tuning slice runs the full simulator (`CONVENTIONS.md#balance-simulator`).
+  only a tuning slice acts on the full report (`CONVENTIONS.md#balance-simulator`).
 - **No tuning inside a fix slice.** A fix that flips a CI verdict stops and asks Duncan. At most one
   tuning slice (4.5-F2) runs after F, against all the fixes together: tuning after each fix would
   be undone by the next one.

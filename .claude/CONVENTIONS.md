@@ -99,11 +99,12 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
   runs. A test in the normal suite asserts the three verdicts, never a value, over the full 40
   seeds per spec, capped at 30 floor runs with the boss probe off; the cap changes no verdict. The
   bands are reported and guide tuning passes.
-- **The full report (`npm run sim`) runs only in a tuning slice.** It takes tens of minutes, and
-  only tuning acts on the bands and the draw rate. Every other slice's balance check is the CI test
-  in the normal suite: a change that turns it red stops and asks Duncan. A tuning slice compares
-  against the last committed report, since the simulator is deterministic; a "before" run is never
-  repeated.
+- **The full report (`npm run sim`) runs in Actions after each merge**
+  (`CONVENTIONS.md#the-simulator-report-runs-after-each-merge`), never as a slice's gate. It takes
+  tens of minutes, and only tuning acts on the bands and the draw rate. Every other slice's balance
+  check is the CI test in the normal suite: a change that turns it red stops and asks Duncan. A
+  tuning slice compares against the last committed report, since the simulator is deterministic; a
+  "before" run is never repeated.
 - Balance needn't be perfect yet: Phase 6 player scripts and Phase 8 equipment will strengthen the
   starting team.
 
@@ -299,6 +300,28 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - Three jobs in order: `test` (the gates), `build`, `deploy`. `build` runs on every change, so a
   pull request also proves the site builds; only `deploy` is guarded to a push to `main`. Tests and
   build on every change, deploy on `main`.
+
+### The simulator report runs after each merge
+
+- `.github/workflows/sim.yml` runs `npm run sim` on every push to `main`, on a manual run for any
+  branch (a tuning slice's), and on a pull request that changes `sim.yml` itself: a manual run
+  exists only once the file is on `main`, so that `paths` filter is how a change to the workflow
+  proves itself. It is a workflow of its own: nothing waits on it, and the gates and the deploy run
+  as before.
+- Report only: it never fails on a balance number, since every pull request asserts the CI
+  verdicts (`CONVENTIONS.md#balance-simulator`). It fails when the run fails (vitest exits non-zero
+  or the job times out) and when the run prints no report. The job summary shows, per spec, the
+  three CI verdicts and the round-cap draws, plus the runtime; the whole captured output is the
+  `sim-report` artifact.
+- The summary is read from the report's own lines, in POSIX awk (the runner's `awk` may be mawk):
+  `formatSpec`'s `=== <spec> (<n> seeds) ===` header and `Draws:` line, `formatReport`'s
+  `CI thresholds summary` block, and the test's `Runtime:` line. A change to those lines changes
+  the extraction in `sim.yml` in the same PR.
+- Its own concurrency group per ref, queued and never cancelled: a merge during a run gets its own
+  report after it. GitHub keeps one pending run per group, so a third merge inside one run replaces
+  the second's pending run.
+- Read-only `contents` permission, checkout without persisted credentials, and the same Node and
+  `npm ci` as the deploy workflow.
 
 ### Local runs match CI's toolchain
 
