@@ -10,7 +10,7 @@ import {
   TAUNTER_SCRIPT,
   WARDEN_SCRIPT,
 } from './scripts'
-import { EMBER_LANCE, REGROWTH } from './spells'
+import { THORN_LASH, REGROWTH } from './spells'
 import { decideAction } from '../engine/interpreter'
 import { createCombat, resolveFight } from '../engine/combat'
 import { materializeCreature } from '../engine/generation'
@@ -132,7 +132,7 @@ describe('striker', () => {
     expect(
       decide(
         STRIKER_SCRIPT,
-        { equippedSpells: [EMBER_LANCE], activeEffects: [lock('attack')] },
+        { equippedSpells: [THORN_LASH], activeEffects: [lock('attack')] },
         [{ id: 'a' }],
       ),
     ).toEqual(CAST_RANDOM)
@@ -156,7 +156,7 @@ describe('guardian', () => {
     expect(
       decide(
         GUARDIAN_SCRIPT,
-        { equippedSpells: [EMBER_LANCE], activeEffects: [lock('attack')] },
+        { equippedSpells: [THORN_LASH], activeEffects: [lock('attack')] },
         [{ id: 'a' }],
       ),
     ).toEqual(CAST_RANDOM)
@@ -185,7 +185,7 @@ describe('warden', () => {
     expect(
       decide(
         WARDEN_SCRIPT,
-        { equippedSpells: [EMBER_LANCE], activeEffects: [lock('attack')] },
+        { equippedSpells: [THORN_LASH], activeEffects: [lock('attack')] },
         [{ id: 'a' }],
       ),
     ).toEqual(CAST_RANDOM)
@@ -195,7 +195,7 @@ describe('warden', () => {
 describe('caster', () => {
   it('rule 1: casts a random gem every turn it can', () => {
     expect(
-      decide(CASTER_SCRIPT, { equippedSpells: [EMBER_LANCE] }, [{ id: 'a' }]),
+      decide(CASTER_SCRIPT, { equippedSpells: [THORN_LASH] }, [{ id: 'a' }]),
     ).toEqual(CAST_RANDOM)
   })
 
@@ -203,7 +203,7 @@ describe('caster', () => {
     expect(
       decide(
         CASTER_SCRIPT,
-        { equippedSpells: [EMBER_LANCE], activeEffects: [lock('cast')] },
+        { equippedSpells: [THORN_LASH], activeEffects: [lock('cast')] },
         [{ id: 'a' }],
       ),
     ).toEqual(ATTACK_LOWEST)
@@ -218,7 +218,7 @@ describe('support', () => {
     expect(
       decide(
         SUPPORT_SCRIPT,
-        { equippedSpells: [EMBER_LANCE, REGROWTH] },
+        { equippedSpells: [THORN_LASH, REGROWTH] },
         [{ id: 'a' }],
         wounded,
       ),
@@ -227,7 +227,7 @@ describe('support', () => {
 
   it('rule 1 is illegal with no ally-side gem, and falls through to Attack', () => {
     expect(
-      decide(SUPPORT_SCRIPT, { equippedSpells: [EMBER_LANCE] }, [{ id: 'a' }], wounded),
+      decide(SUPPORT_SCRIPT, { equippedSpells: [THORN_LASH] }, [{ id: 'a' }], wounded),
     ).toEqual(ATTACK_LOWEST)
   })
 
@@ -241,7 +241,7 @@ describe('support', () => {
     expect(
       decide(
         SUPPORT_SCRIPT,
-        { equippedSpells: [EMBER_LANCE], activeEffects: [lock('attack')] },
+        { equippedSpells: [THORN_LASH], activeEffects: [lock('attack')] },
         [{ id: 'a' }],
       ),
     ).toEqual(CAST_RANDOM)
@@ -251,13 +251,13 @@ describe('support', () => {
 describe('opener', () => {
   it('rule 1: round 1 -> cast a random gem', () => {
     expect(
-      decide(OPENER_SCRIPT, { equippedSpells: [EMBER_LANCE] }, [{ id: 'a' }], [], 1),
+      decide(OPENER_SCRIPT, { equippedSpells: [THORN_LASH] }, [{ id: 'a' }], [], 1),
     ).toEqual(CAST_RANDOM)
   })
 
   it('rule 2: after round 1 -> Attack the lowest-HP enemy', () => {
     expect(
-      decide(OPENER_SCRIPT, { equippedSpells: [EMBER_LANCE] }, [{ id: 'a' }], [], 2),
+      decide(OPENER_SCRIPT, { equippedSpells: [THORN_LASH] }, [{ id: 'a' }], [], 2),
     ).toEqual(ATTACK_LOWEST)
   })
 
@@ -265,7 +265,7 @@ describe('opener', () => {
     expect(
       decide(
         OPENER_SCRIPT,
-        { equippedSpells: [EMBER_LANCE], activeEffects: [lock('attack')] },
+        { equippedSpells: [THORN_LASH], activeEffects: [lock('attack')] },
         [{ id: 'a' }],
         [],
         2,

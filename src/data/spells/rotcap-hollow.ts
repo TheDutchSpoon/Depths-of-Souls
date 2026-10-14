@@ -12,8 +12,7 @@ import type { Spell } from '../../engine/types'
  * shared primitives, precedented by Vine Snare/Web and Disorient/Web). `spellPower`
  * is 0.45, not the ~80-90% band's 0.9: a DoT-applying
  * spell's upfront damage shouldn't lead its band (the same rule applied to Puppet
- * String); the reference point is Venom Bolt's own DoT spell, 0.4. Distinct from every other
- * wit|single|damage entry under the dedup guard. */
+ * String). Distinct from every other wit|single|damage entry under the dedup guard. */
 export const SPORE_CYST: Spell = {
   id: 'spore-cyst',
   name: 'Spore Cyst',
@@ -109,9 +108,8 @@ export const CHARNEL_FEAST: Spell = {
  * real producers are the Sporch Igniter's on-attack trait and the Sporch Cinderlord's on-kill
  * trait -- statuses are never producer-exclusive). `spellPower` is 0.45, not the ~80-90% band: a DoT-applying spell's
  * upfront damage shouldn't lead its
- * band (the same rule applied to Puppet String and Spore Cyst); the reference point is
- * Venom Bolt's own DoT spell, 0.4. Distinct from Ember Lance (0.5) / Thorn Lash (1.0) /
- * Blinding Flare (0.7, applies Vulnerability not Burn) under the dedup guard. */
+ * band (the same rule applied to Puppet String and Spore Cyst). Distinct from Thorn Lash (1.0) and
+ * Blinding Flare (0.7) under the dedup guard. */
 export const WITHERING_BOLT: Spell = {
   id: 'withering-bolt',
   name: 'Withering Bolt',

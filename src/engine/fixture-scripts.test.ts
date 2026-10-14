@@ -7,7 +7,7 @@ import {
   ALWAYS_WAIT_SCRIPT,
   FIXTURE_SCRIPTS_BY_ID,
 } from './__fixtures__/scripts'
-import { EMBER_LANCE } from '../data/spells'
+import { SINGLE_VIOLENCE_SPELL } from './__fixtures__/spells'
 import { decideAction } from './interpreter'
 import { resolveIntent } from './actions'
 import { makeParty } from './__fixtures__/creatures'
@@ -56,7 +56,9 @@ describe('always-* fixture scripts', () => {
   })
 
   it('always-cast casts slot 0 at the lowest-HP enemy when equipped', () => {
-    const player = makeParty('player', [{ id: 'me', equippedSpells: [EMBER_LANCE] }])
+    const player = makeParty('player', [
+      { id: 'me', equippedSpells: [SINGLE_VIOLENCE_SPELL] },
+    ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
     expect(decide(player[0]!, ALWAYS_CAST_SCRIPT, state)).toEqual({

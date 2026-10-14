@@ -3,6 +3,7 @@ import { decideAction } from './interpreter'
 import { checkLegality, resolveIntent } from './actions'
 import { evaluateCondition } from './conditions'
 import { makeParty } from './__fixtures__/creatures'
+import { AOE_VIOLENCE_SPELL, SINGLE_VIOLENCE_SPELL } from './__fixtures__/spells'
 import { createRngState, nextRandom } from './rng'
 import { createEffectInstanceId } from './effect-types'
 import type { CombatState, Creature, Spell } from './types'
@@ -31,39 +32,6 @@ function makeState(overrides: Partial<CombatState> = {}): CombatState {
 function decide(creature: Creature, script: Script | null, state: CombatState) {
   const intent = decideAction(creature, script, state)
   return resolveIntent(creature, intent, state)
-}
-
-const EMBER_LANCE: Spell = {
-  id: 'ember-lance',
-  name: 'Ember Lance',
-  targetShape: 'single',
-  affinity: 'violence',
-  targetSide: 'enemy',
-  unlockedAtBiome: 1,
-  effects: [
-    {
-      kind: 'deal-damage',
-      target: { kind: 'cast-target' },
-      offStat: 'cast',
-      spellPower: 0.5,
-    },
-  ],
-}
-const CINDER_NOVA: Spell = {
-  id: 'cinder-nova',
-  name: 'Cinder Nova',
-  targetShape: 'aoe',
-  affinity: 'violence',
-  targetSide: 'enemy',
-  unlockedAtBiome: 1,
-  effects: [
-    {
-      kind: 'deal-damage',
-      target: { kind: 'cast-target' },
-      offStat: 'cast',
-      spellPower: 0.3,
-    },
-  ],
 }
 
 describe('decideAction -- rule precedence', () => {
@@ -212,7 +180,9 @@ describe('decideAction -- acted-before-target on a targeting-less rule (peek)', 
         { condition: { kind: 'always' }, action: { kind: 'wait' } },
       ],
     }
-    const caster = makeParty('player', [{ id: 'me', equippedSpells: [EMBER_LANCE] }])
+    const caster = makeParty('player', [
+      { id: 'me', equippedSpells: [SINGLE_VIOLENCE_SPELL] },
+    ])
     const s = makeState({ ...state, playerParty: caster })
     expect(decideAction(caster[0]!, randomGem, s).action.kind).toBe('wait')
   })
@@ -270,7 +240,9 @@ describe('decideAction -- implicit fallback', () => {
 
 describe('decideAction -- AOE cast', () => {
   it('ignores a stray targeting field on an AOE-slotted rule', () => {
-    const player = makeParty('player', [{ id: 'me', equippedSpells: [CINDER_NOVA] }])
+    const player = makeParty('player', [
+      { id: 'me', equippedSpells: [AOE_VIOLENCE_SPELL] },
+    ])
     const enemy = makeParty('enemy', [{ id: 'a' }, { id: 'b' }])
     const script: Script = {
       id: 'test',
@@ -293,7 +265,9 @@ describe('decideAction -- AOE cast', () => {
 
 describe('decideAction -- single cast', () => {
   it('honors the rule targeting for a single-target spell', () => {
-    const player = makeParty('player', [{ id: 'me', equippedSpells: [EMBER_LANCE] }])
+    const player = makeParty('player', [
+      { id: 'me', equippedSpells: [SINGLE_VIOLENCE_SPELL] },
+    ])
     const enemy = makeParty('enemy', [
       { id: 'high', currentHp: 20 },
       { id: 'low', currentHp: 5 },
@@ -431,7 +405,7 @@ describe('decideAction -- scoped action-lock (passive lock)', () => {
     const player = makeParty('player', [
       {
         id: 'me',
-        equippedSpells: [EMBER_LANCE],
+        equippedSpells: [SINGLE_VIOLENCE_SPELL],
         activeEffects: [suppressEffect('cast')],
       },
     ])
@@ -462,7 +436,7 @@ describe('decideAction -- scoped action-lock (passive lock)', () => {
     const player = makeParty('player', [
       {
         id: 'me',
-        equippedSpells: [EMBER_LANCE],
+        equippedSpells: [SINGLE_VIOLENCE_SPELL],
         activeEffects: [suppressEffect('attack')],
       },
     ])
@@ -524,7 +498,7 @@ describe('decideAction -- status-immunity vs scoped action-lock', () => {
     const player = makeParty('player', [
       {
         id: 'me',
-        equippedSpells: [EMBER_LANCE],
+        equippedSpells: [SINGLE_VIOLENCE_SPELL],
         activeEffects: [SILENCED_CAST_SUPPRESSION, CLEAR_MIND],
       },
     ])
@@ -565,7 +539,7 @@ describe('decideAction -- status-immunity vs scoped action-lock', () => {
     const player = makeParty('player', [
       {
         id: 'me',
-        equippedSpells: [EMBER_LANCE],
+        equippedSpells: [SINGLE_VIOLENCE_SPELL],
         activeEffects: [SILENCED_CAST_SUPPRESSION],
       },
     ])
@@ -637,7 +611,9 @@ describe('checkLegality -- pure, draws nothing', () => {
   })
 
   it('an AOE Cast is legal regardless of targeting or living-enemy count', () => {
-    const player = makeParty('player', [{ id: 'me', equippedSpells: [CINDER_NOVA] }])
+    const player = makeParty('player', [
+      { id: 'me', equippedSpells: [AOE_VIOLENCE_SPELL] },
+    ])
     const state = makeState({ playerParty: player, enemyParty: [] })
     expect(
       checkLegality(player[0]!, { action: { kind: 'cast', gemSlot: 0 } }, state),
@@ -645,7 +621,9 @@ describe('checkLegality -- pure, draws nothing', () => {
   })
 
   it("gemSlot: 'random' is legal iff at least one equipped spell is castable", () => {
-    const player = makeParty('player', [{ id: 'me', equippedSpells: [EMBER_LANCE] }])
+    const player = makeParty('player', [
+      { id: 'me', equippedSpells: [SINGLE_VIOLENCE_SPELL] },
+    ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const state = makeState({ playerParty: player, enemyParty: enemy })
     expect(

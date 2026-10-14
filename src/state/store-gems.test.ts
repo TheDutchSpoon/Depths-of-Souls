@@ -331,7 +331,7 @@ describe('stored gems reach the fight', () => {
   }
 
   test('a stored gem is equipped and cast; with empty slots the same script never casts', () => {
-    expect(playerCasts(storeWithGems(['ember-lance', null, null]))).toBeGreaterThan(0)
+    expect(playerCasts(storeWithGems(['thorn-lash', null, null]))).toBeGreaterThan(0)
     expect(playerCasts(storeWithGems([null, null, null]))).toBe(0)
   })
 

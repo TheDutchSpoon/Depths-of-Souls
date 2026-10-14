@@ -4,6 +4,7 @@ import { hasStatus } from './effects'
 import { getEffectiveStat } from './effective-stats'
 import { getCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
+import { AOE_VIOLENCE_SPELL, SINGLE_VIOLENCE_SPELL } from './__fixtures__/spells'
 import { createRngState } from './rng'
 import { countDraws } from './test-utils/rng-draw-count'
 import { deepFreeze } from './test-utils/deep-freeze'
@@ -18,39 +19,6 @@ import {
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
 import type { EffectDef, StatusDef, Trait } from './effect-types'
-
-const EMBER_LANCE: Spell = {
-  id: 'ember-lance',
-  name: 'Ember Lance',
-  targetShape: 'single',
-  affinity: 'violence',
-  targetSide: 'enemy',
-  unlockedAtBiome: 1,
-  effects: [
-    {
-      kind: 'deal-damage',
-      target: { kind: 'cast-target' },
-      offStat: 'cast',
-      spellPower: 0.5,
-    },
-  ],
-}
-const CINDER_NOVA: Spell = {
-  id: 'cinder-nova',
-  name: 'Cinder Nova',
-  targetShape: 'aoe',
-  affinity: 'violence',
-  targetSide: 'enemy',
-  unlockedAtBiome: 1,
-  effects: [
-    {
-      kind: 'deal-damage',
-      target: { kind: 'cast-target' },
-      offStat: 'cast',
-      spellPower: 0.3,
-    },
-  ],
-}
 
 function isAttackDeclared(event: { type: string }): event is AttackDeclaredEvent {
   return event.type === 'AttackDeclared'
@@ -525,7 +493,7 @@ describe('Cast', () => {
         intelligence: 40,
         health: 30,
         scriptId: 'cast-lowest',
-        equippedSpells: [EMBER_LANCE],
+        equippedSpells: [SINGLE_VIOLENCE_SPELL],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'target', defence: 10, health: 30 }])
@@ -610,7 +578,7 @@ describe('Cast', () => {
         intelligence: 20,
         health: 30,
         scriptId: 'cast-aoe',
-        equippedSpells: [CINDER_NOVA],
+        equippedSpells: [AOE_VIOLENCE_SPELL],
       },
     ])
     const enemy = makeParty('enemy', [
@@ -1144,7 +1112,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action', () => 
         id: 'caster',
         scriptId: 'always-wait',
         innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
-        equippedSpells: [EMBER_LANCE],
+        equippedSpells: [SINGLE_VIOLENCE_SPELL],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', health: 100, speed: 1 }])
@@ -1180,7 +1148,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action', () => 
         id: 'caster',
         scriptId: 'always-wait',
         innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
-        equippedSpells: [EMBER_LANCE],
+        equippedSpells: [SINGLE_VIOLENCE_SPELL],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
@@ -1224,7 +1192,7 @@ describe('Arcane Surge-shaped granted cast = on-turn-end perform-action', () => 
         id: 'caster',
         scriptId: 'always-wait',
         innateTraitIds: [GRANTED_CASTER_FIXTURE.id],
-        equippedSpells: [CINDER_NOVA],
+        equippedSpells: [AOE_VIOLENCE_SPELL],
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe1' }, { id: 'foe2' }])

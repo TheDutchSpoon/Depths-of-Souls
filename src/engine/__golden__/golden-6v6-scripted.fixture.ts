@@ -1,6 +1,6 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
-import { EMBER_LANCE, CINDER_NOVA } from '../../data/spells'
+import { AOE_VIOLENCE_SPELL, SINGLE_VIOLENCE_SPELL } from '../__fixtures__/spells'
 import { createCreatureId } from '../ids'
 import type { CreatureId } from '../ids'
 import type { CombatEvent, FightResult } from '../types'
@@ -40,7 +40,7 @@ export const playerParty = makeParty('player', [
     id: 'p1',
     speed: 55,
     scriptId: 'always-cast',
-    equippedSpells: [EMBER_LANCE],
+    equippedSpells: [SINGLE_VIOLENCE_SPELL],
     ...PLAYER_BASE,
   },
   { id: 'p2', speed: 50, scriptId: 'always-defend', ...PLAYER_BASE },
@@ -55,7 +55,7 @@ export const enemyParty = makeParty('enemy', [
     id: 'e1',
     speed: 53,
     scriptId: 'always-cast',
-    equippedSpells: [CINDER_NOVA],
+    equippedSpells: [AOE_VIOLENCE_SPELL],
     ...ENEMY_BASE,
   },
   { id: 'e2', speed: 48, scriptId: 'always-defend', ...ENEMY_BASE },
@@ -114,9 +114,9 @@ export const expectedEventTypeCounts: Partial<Record<CombatEvent['type'], number
 
 /**
  * Spot-checked DamageDealt values, in order of first appearance. p0 vs e0 (Attack):
- * core=max(15-8,0)=7, chip=0.15, raw=7.15, final=7. p1's single Cast on e0 (EMBER_LANCE,
+ * core=max(15-8,0)=7, chip=0.15, raw=7.15, final=7. p1's single Cast on e0 (SINGLE_VIOLENCE_SPELL,
  * spellPower 0.5): offStat=25*0.5=12.5, core=max(12.5-8,0)=4.5, chip=0.125, raw=4.625,
- * final=4. e1's AOE Cast (CINDER_NOVA, spellPower 0.3) hits every living player: each hit
+ * final=4. e1's AOE Cast (AOE_VIOLENCE_SPELL, spellPower 0.3) hits every living player: each hit
  * offStat=25*0.3=7.5, core=max(7.5-8,0)=0 (chip-only), chip=0.075, raw=0.075, final=1.
  */
 export const expectedSpotCheckDamage: readonly CombatEvent[] = [

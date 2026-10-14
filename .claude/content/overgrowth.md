@@ -1,11 +1,11 @@
 # The Overgrowth (biome 1, floors 1–10)
 
-Read this when a slice touches The Overgrowth's creatures, statuses, spells or boss, the shared
-core spells, or the Unicorn.
+Read this when a slice touches The Overgrowth's creatures, statuses, spells or boss, or the
+Unicorn.
 
 Source: species and creatures in `src/data/species/overgrowth.ts`; traits in
-`src/data/traits/overgrowth.ts`; spells in `src/data/spells/overgrowth.ts`, the shared core spells
-in `src/data/spells/core.ts`; statuses in `src/data/statuses.ts`; the Unicorn in
+`src/data/traits/overgrowth.ts`; spells in `src/data/spells/overgrowth.ts`;
+statuses in `src/data/statuses.ts`; the Unicorn in
 `src/data/species/starters.ts` and `src/data/traits/starters.ts`. Each description is literal,
 exact numbers included, in the style of a future in-game tooltip, and stands on its own. Where it
 disagrees with the source, the source is right; a change to a number updates this doc in the same
@@ -213,11 +213,15 @@ once; a revive deals no damage, so it can't cascade.
 
 A single-target damage spell with no other effect deals about **100%** of the caster's
 Intelligence; one that also applies a status, about **80–90%**. An area spell with no other effect
-would deal about **50%**; one that also applies a status, about **30–40%**. A spell's percentage is
+deals about **50%**; one that also applies a status, about **30–40%**. A spell's percentage is
 its power coefficient through the normal damage formula (the target's Defence, affinity and every
 usual modifier), not a flat amount. An ally spell can target any living ally, the caster included.
-Every spell below, the core spells included, unlocks at biome 1 and stays rollable in every deeper
+Every spell below unlocks at biome 1 and stays rollable in every deeper
 biome (`spec/run.md#spells-unlock-cumulatively`).
+
+### Thorn Volley
+
+Violence · every enemy. Deals **45%** of the caster's Intelligence to each.
 
 ### Thorn Lash
 
@@ -286,21 +290,3 @@ Endurance · single enemy. Weakens it (**−20% damage dealt**) for **3** turns.
 
 Vitality · single enemy. Deals **70%** of the caster's Intelligence and heals the caster for **35%
 of its Intelligence**.
-
-## Core spells
-
-Three affinity-generic spells in `src/data/spells/core.ts`, unlocked at biome 1 like the rest.
-
-### Ember Lance
-
-Violence · single enemy. Deals **50%** of the caster's Intelligence.
-
-### Cinder Nova
-
-Violence · every enemy. Deals **30%** of the caster's Intelligence to each.
-
-### Venom Bolt
-
-Instinct · single enemy. Deals **40%** of the caster's Intelligence and Poisons it for **3** turns:
-at the end of each of its turns, a tick of **40% of the caster's Attack** (measured when cast), as
-indirect damage. Re-poisoning refreshes the timer and keeps the stronger Poison.

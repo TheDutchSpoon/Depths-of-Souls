@@ -1,15 +1,31 @@
 import type { Spell } from '../../engine/types'
 
-// ---- The Overgrowth (floors 1-10) -- 16 real spells, at least three per affinity, so any
+// ---- The Overgrowth (floors 1-10) -- at least three spells per affinity, so any
 // affinity-matched caster (this biome's own Pollenlord, or a player's own creature once equipping
 // exists, `spec/creatures.md#gems-as-items`) has something to draw on. Support spells (an ally
 // targetSide, `heal` and `apply-stat-modifier` effects) sit alongside plain damage spells. Listed by
 // data/species/overgrowth.ts's OVERGROWTH_SPELLS (imports these by name).
 
-// Damage-spell power-coefficient convention for this biome: single-target
-// damage-only spells land around 100% Intelligence; single-target spells that ALSO apply a status
-// pull back to ~80-90%; AOE damage-only spells would land around 50% (none in this biome -- both
-// AOE entries here carry a status too); AOE spells that also apply a status pull back to ~30-40%.
+// Damage-spell power coefficients follow `content/overgrowth.md#spell-power-convention`.
+
+/** Thorn Volley: the biome's plain AOE damage spell, the area sibling of single-target Thorn
+ * Lash. Damage-only AOE sits in the ~50% band (`content/overgrowth.md#spell-power-convention`). */
+export const THORN_VOLLEY: Spell = {
+  id: 'thorn-volley',
+  name: 'Thorn Volley',
+  targetShape: 'aoe',
+  affinity: 'violence',
+  unlockedAtBiome: 1,
+  targetSide: 'enemy',
+  effects: [
+    {
+      kind: 'deal-damage',
+      target: { kind: 'cast-target' },
+      offStat: 'cast',
+      spellPower: 0.45,
+    },
+  ],
+}
 
 export const THORN_LASH: Spell = {
   id: 'thorn-lash',

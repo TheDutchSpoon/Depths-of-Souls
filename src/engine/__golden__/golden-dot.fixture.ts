@@ -1,4 +1,4 @@
-// Golden: the DoT lifecycle end-to-end -- a spell-applied status (VENOM_BOLT -> Poison),
+// Golden: the DoT lifecycle end-to-end -- a spell-applied status (POISON_INSTINCT_SPELL -> Poison),
 // StatusApplied, three on-turn-end ticks in the BEARER's own turn (indirect damage from the
 // applier's snapshot, credited to the living applier CASTER, no TriggerFired, each carrying
 // `statusId: 'poison'` -- the causing status), and the win check right after the killing tick's
@@ -6,7 +6,7 @@
 // mid-turn wipe ends the turn at once). The cast's own DamageDealt carries no statusId (it isn't
 // status-caused).
 //
-// Hand-derived (independent `node -e` calculator). CASTER casts venom-bolt on round 1 only (a
+// Hand-derived (independent `node -e` calculator). CASTER casts the Poison spell on round 1 only (a
 // custom script), then waits forever so poison is never refreshed. TARGET always-waits.
 //
 // TARGET's max HP is 100 but the golden needs TARGET to start the fight already wounded to 20, to keep the exact same 3-tick
@@ -34,7 +34,7 @@
 
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
-import { VENOM_BOLT } from '../../data/spells'
+import { POISON_INSTINCT_SPELL } from '../__fixtures__/spells'
 import { STATUS_REGISTRY } from '../../data/statuses'
 import { holdPotency } from '../__fixtures__/held-statuses'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
@@ -69,7 +69,7 @@ export const playerParty = makeParty('player', [
     intelligence: 40,
     speed: 20,
     scriptId: 'cast-once-then-wait',
-    equippedSpells: [VENOM_BOLT],
+    equippedSpells: [POISON_INSTINCT_SPELL],
   },
 ])
 

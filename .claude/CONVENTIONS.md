@@ -140,6 +140,9 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - **The corpus**: generated floors across every shipped biome, boss floors included, plus the
   shipped starters and the Unicorn, and appended coverage fights (appending never changes an
   existing digest entry). Bonus-cast, echo, Provoke and Confusion must all fire in it.
+- **Deleting content removes its coverage fight**, and every other coverage fight keeps its combat
+  seed, so the removal only moves later entries up an index: a seed that followed the index would
+  change fights the deletion never touched.
 - **It covers all real content.** A test enforces these against the registries, so new content is
   covered or fails loudly:
   - every spell in `ALL_SPELLS` is cast with its effects landing: each effect's consequence event,
@@ -393,9 +396,8 @@ src/
   **library** directory per carrier type: `data/traits/`, `data/spells/`.
 - Each is split by grouping, **one file per biome** (`overgrowth.ts`, …), plus `starters.ts` in
   `data/traits/` for the starters' and the Unicorn's signature traits (no spell is starter-only, so
-  `data/spells/` has none) and `core.ts` in `data/spells/` for its affinity-generic spells. Each is
-  aggregated to its registry by an `index.ts` that keeps the **stable exported names**
-  (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the spell equivalents).
+  `data/spells/` has none). Each is aggregated to its registry by an `index.ts` that keeps the
+  **stable exported names** (`STOCK_TRAITS` / `TRAIT_REGISTRY`, and the spell equivalents).
 - Affinity is a **field** on a spell, never the file axis; spawn pools are biome-scoped.
 - `data/statuses.ts` stays **flat**: global vocabulary, not organised by biome.
 

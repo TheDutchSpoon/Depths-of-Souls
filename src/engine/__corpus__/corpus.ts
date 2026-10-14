@@ -18,9 +18,7 @@ import {
   ALL_SPELLS,
   BLINDING_FLARE,
   BRAMBLE_WARD,
-  CINDER_NOVA,
   DISORIENT,
-  EMBER_LANCE,
   HOWLING_INSTINCT,
   LIFE_SIPHON,
   PACIFY,
@@ -31,7 +29,7 @@ import {
   SPORE_CYST,
   STINGER_SWARM,
   THORN_LASH,
-  VENOM_BOLT,
+  THORN_VOLLEY,
   VINE_SNARE,
   WEAKENING_BITE,
   WITHERING_BOLT,
@@ -254,69 +252,97 @@ function buildPartB(i: number): CorpusFight {
 
 interface SpellFightSpec {
   readonly spell: Spell
+  /** The fight's combat seed, written out per entry: a seed derived from the entry's position
+   * would move every later fight's seed when an entry is deleted, changing fights the deletion
+   * never touched (`CONVENTIONS.md#corpus-digest`). */
+  readonly seed: number
   readonly caster: SpeciesCreature
   readonly speciesId: string
 }
 
-/** One fight per spell Parts A and B never cast. The stock `always-cast` script casts gemSlot 0,
- * so the spell sits in slot 0 of an affinity-matched caster (equip-gating) with no innate spell
- * ahead of it (the Sorcerer starter's Arcane Bolt would take slot 0). The caster fights beside
- * the Brute and Shieldbarer starters against `WALL_ENEMY`, which neither attacks nor controls:
- * the caster always gets its turn, and every round it casts again until the fight ends. Coverage
- * therefore rides on no random draw at all, so a later change to draw order cannot drop it. */
+/** Each listed spell gets a coverage fight of its own, so it stays covered whatever Parts A and B
+ * roll. The stock `always-cast` script casts gemSlot 0, so the spell sits in slot 0 of an
+ * affinity-matched caster (equip-gating) with no innate spell ahead of it (the Sorcerer starter's
+ * Arcane Bolt would take slot 0). The caster fights beside the Brute and Shieldbarer starters
+ * against `WALL_ENEMY`, which neither attacks nor controls: the caster always gets its turn, and
+ * every round it casts again until the fight ends. Coverage therefore rides on no random draw at
+ * all, so a later change to draw order cannot drop it. */
 const SPELL_FIGHTS: readonly SpellFightSpec[] = [
-  { spell: EMBER_LANCE, caster: BRUTE_STARTER, speciesId: BRUTE_STARTER_SPECIES_ID },
-  { spell: CINDER_NOVA, caster: BRUTE_STARTER, speciesId: BRUTE_STARTER_SPECIES_ID },
-  { spell: THORN_LASH, caster: BRUTE_STARTER, speciesId: BRUTE_STARTER_SPECIES_ID },
+  {
+    spell: THORN_VOLLEY,
+    seed: 2001,
+    caster: BRUTE_STARTER,
+    speciesId: BRUTE_STARTER_SPECIES_ID,
+  },
+  {
+    spell: THORN_LASH,
+    seed: 2002,
+    caster: BRUTE_STARTER,
+    speciesId: BRUTE_STARTER_SPECIES_ID,
+  },
   {
     spell: WEAKENING_BITE,
+    seed: 2003,
     caster: BRUTE_STARTER,
     speciesId: BRUTE_STARTER_SPECIES_ID,
   },
   {
     spell: BLINDING_FLARE,
+    seed: 2004,
     caster: BRUTE_STARTER,
     speciesId: BRUTE_STARTER_SPECIES_ID,
   },
   {
     spell: WITHERING_BOLT,
+    seed: 2005,
     caster: BRUTE_STARTER,
     speciesId: BRUTE_STARTER_SPECIES_ID,
   },
   {
     spell: ROOT_GRASP,
+    seed: 2006,
     caster: SHIELDBARER_STARTER,
     speciesId: SHIELDBARER_STARTER_SPECIES_ID,
   },
   {
     spell: BRAMBLE_WARD,
+    seed: 2007,
     caster: SHIELDBARER_STARTER,
     speciesId: SHIELDBARER_STARTER_SPECIES_ID,
   },
   {
     spell: RASPING_CHANT,
+    seed: 2008,
     caster: SHIELDBARER_STARTER,
     speciesId: SHIELDBARER_STARTER_SPECIES_ID,
   },
-  { spell: VENOM_BOLT, caster: LULLPOLLEN_DOZER, speciesId: LULLPOLLEN_SPECIES_ID },
   {
     spell: STINGER_SWARM,
+    seed: 2010,
     caster: LULLPOLLEN_DOZER,
     speciesId: LULLPOLLEN_SPECIES_ID,
   },
   {
     spell: HOWLING_INSTINCT,
+    seed: 2011,
     caster: LULLPOLLEN_DOZER,
     speciesId: LULLPOLLEN_SPECIES_ID,
   },
-  { spell: DISORIENT, caster: LULLPOLLEN_DOZER, speciesId: LULLPOLLEN_SPECIES_ID },
+  {
+    spell: DISORIENT,
+    seed: 2012,
+    caster: LULLPOLLEN_DOZER,
+    speciesId: LULLPOLLEN_SPECIES_ID,
+  },
   {
     spell: PUPPET_STRING,
+    seed: 2013,
     caster: LULLPOLLEN_DOZER,
     speciesId: LULLPOLLEN_SPECIES_ID,
   },
   {
     spell: SPORE_CYST,
+    seed: 2014,
     caster: POLLINATOR_BENEFICIARY,
     speciesId: POLLINATORS_SPECIES_ID,
   },
@@ -325,15 +351,21 @@ const SPELL_FIGHTS: readonly SpellFightSpec[] = [
 /** Silence (a Brute caster, Violence) and Pacify (a Pollinator Beneficiary, Wit, no
  * innate spell). */
 const LOCK_SPELL_FIGHTS: readonly SpellFightSpec[] = [
-  { spell: SILENCE, caster: BRUTE_STARTER, speciesId: BRUTE_STARTER_SPECIES_ID },
+  {
+    spell: SILENCE,
+    seed: 2015,
+    caster: BRUTE_STARTER,
+    speciesId: BRUTE_STARTER_SPECIES_ID,
+  },
   {
     spell: PACIFY,
+    seed: 2016,
     caster: POLLINATOR_BENEFICIARY,
     speciesId: POLLINATORS_SPECIES_ID,
   },
 ]
 
-function buildSpellFight(index: number, spec: SpellFightSpec): CorpusFight {
+function buildSpellFight(spec: SpellFightSpec): CorpusFight {
   const level = SPELL_FIGHT_LEVEL
   const player: Creature[] = [
     materializeCreature(spec.caster, {
@@ -360,7 +392,7 @@ function buildSpellFight(index: number, spec: SpellFightSpec): CorpusFight {
     }),
   ]
   return {
-    seed: 2000 + index,
+    seed: spec.seed,
     player,
     enemy: buildParty(WALL_ENEMY, 'enemy', level),
   }
@@ -505,7 +537,7 @@ export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
   perkVariant('sorcerer', SORCERER, 0, { player: 20, enemy: 20 }, [
     sorcerer(),
     beneficiaryCaster(VINE_SNARE),
-    dozerCaster(VENOM_BOLT),
+    dozerCaster(STINGER_SWARM),
     shieldbarer(),
   ]),
   // Concussive Blows is a 25% roll per attack: five attackers against a wall three times their
@@ -585,7 +617,7 @@ export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
     brute(),
     sorcerer(),
   ]),
-  // Appended last (corpus entries 522-523, seeds 2107-2108): Clear
+  // Appended last (corpus entries 520-521, seeds 2107-2108): Clear
   // Mind and Aggressive only matter against a Silenced / Pacified bearer that would otherwise
   // use the locked action. Rides on no chance: the enemy caster is `always-cast` and four times
   // the player's level (it outlives the early swings), its target is the player's lowest-HP
@@ -612,7 +644,7 @@ export const PERK_FIGHT_VARIANTS: readonly PerkFightVariant[] = [
   ),
 ]
 
-/** Corpus entry 526, seed 2017, appended after the spell fights: Life Siphon.
+/** Corpus entry 524, seed 2017, appended after the spell fights: Life Siphon.
  * Its `heal(self)` only lands (an amount above zero) on a WOUNDED caster, and the spell fights'
  * WALL_ENEMY never attacks, so this one differs: a level-20 Unicorn (Vitality, no innate spell)
  * casts Life Siphon every turn on the stock `always-cast` script, alone against two level-5 Brutes.
@@ -646,14 +678,14 @@ export function buildCorpus(): readonly CorpusFight[] {
   const partA = Array.from({ length: 300 }, (_, i) => buildPartA(i))
   const partB = Array.from({ length: 200 }, (_, i) => buildPartB(i))
   const partC = [
-    ...SPELL_FIGHTS.map((spec, i) => buildSpellFight(i, spec)),
+    ...SPELL_FIGHTS.map(buildSpellFight),
     ...PERK_FIGHT_VARIANTS.map((v) => v.build()),
     // The Silence and Pacify spell fights, after the perk fights
-    // (entries 524-525, seeds 2015-2016): appended, never interleaved. Same shape as
+    // (entries 522-523, seeds 2015-2016): appended, never interleaved. Same shape as
     // SPELL_FIGHTS (an `always-cast` caster against WALL_ENEMY), so the status landing rides on
     // no random draw.
-    ...LOCK_SPELL_FIGHTS.map((spec, i) => buildSpellFight(SPELL_FIGHTS.length + i, spec)),
-    // Life Siphon's coverage fight, appended after entry 525 (entry 526).
+    ...LOCK_SPELL_FIGHTS.map(buildSpellFight),
+    // Life Siphon's coverage fight, appended after entry 523 (entry 524).
     buildLifeSiphonFight(),
   ]
   return [...partA, ...partB, ...partC]
