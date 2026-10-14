@@ -39,6 +39,6 @@ skipped (net +75 against the branch base).
 
 Edited: `engine/{conditions,config,effect-types,effective-stats,effects,resolution,resolution-types,tie-break}.ts`,
 `data/specializations.ts`, `data/traits/{glimmerdark,overgrowth,rotcap-hollow}.ts`, the corpus digest
-fixture, `conditions.test.ts`, `effective-stats.test.ts` (a comment), `resolution.test.ts` and the `golden-status-snapshot-tick-kill-on-death`
-fixture header. New: the tests and goldens above and the evidence files. Deleted by Duncan: the four
+fixture, `conditions.test.ts`, `effective-stats.test.ts` (a comment), `resolution.test.ts` and the
+`golden-status-snapshot-tick-kill-on-death` fixture header. New: the tests and goldens above and the evidence files. Deleted by Duncan: the four
 golden files. No living or content doc edited.

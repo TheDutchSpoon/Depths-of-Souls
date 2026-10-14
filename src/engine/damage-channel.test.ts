@@ -506,13 +506,16 @@ describe('damageChannel validator', () => {
 
   // A status trigger on `on-round-end` is rejected by `validateStatusDef` for its own reason, so
   // the field's message never shows there: that hook has no status case.
-  describe.each(hooks.filter((hook) => hook !== 'on-round-end'))('on %s', (hook) => {
-    it('a status rejects the field', () => {
-      expect(() => validateStatusDef(status(triggered(hook, 'direct')))).toThrow(
-        /only an "on-damage-taken" trigger/,
-      )
-    })
-  })
+  describe.each(hooks.filter((hook) => hook !== 'on-round-end'))(
+    'on %s, as a status',
+    (hook) => {
+      it('a status rejects the field', () => {
+        expect(() => validateStatusDef(status(triggered(hook, 'direct')))).toThrow(
+          /only an "on-damage-taken" trigger/,
+        )
+      })
+    },
+  )
 
   it('createCombat rejects a trait in its registry that carries the field off on-damage-taken', () => {
     const bad = trait(triggered('on-turn-start', 'direct'))
