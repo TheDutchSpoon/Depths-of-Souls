@@ -367,8 +367,9 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
   runs on from fight to fight, stopping at the floor's last beat.
 - The viewer keeps 3.5's beats and **skip to end of fight**, and adds **skip to end of floor** and
   **jump to a fight** from the list. Speeds: **1×, 3×, 5×** (500, 167, 100 ms per beat).
-- Its header shows "Fight n / N" with the party's levels going into that fight, and the XP and
-  level-ups after it: where the level-up fix is visible.
+- Its header shows "Fight n / N", N being the floor's fight count (a floor lost early still counts
+  all its fights), with the party's levels going into that fight, and the XP and level-ups after
+  it: where the level-up fix is visible.
 - The log reuses 3.5's event text and beat grouping (moved, not rewritten) and shows **creature and
   spell names**, not creature ids or gem slots; trait and status ids stay as 3.5 printed them. A
   name that appears more than once in a fight carries its side and 1-based slot at every

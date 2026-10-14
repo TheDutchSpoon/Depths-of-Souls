@@ -135,3 +135,110 @@ both caught by the info-line test.
   is replaced, not moved (DP1).
 - `.claude/phases/4.5/G1/kickoff.md`, Golden policy and the "One start path" trap: `newGame.test.ts`
   changes as `startNewGame` is retired, and the start helper is the only start path (DP2).
+
+## Round 2
+
+Checked `plan.md` (revision 1) against `plan-handout-r1.md`, the kickoff, `phases/4.5/G1/brief.md`,
+`phases/4.5/brief.md#the-demo` and the code on the slice branch (`state/store.ts`,
+`state/rewards.ts`, `state/balance-sim.ts`'s `runSeed`, `engine/combat.ts`'s `createCombat`,
+`engine/generation.ts`, `data/specializations.ts`, `data/species/starters.ts`, `src/main.tsx`,
+`eslint.config.js`).
+
+**Fold-in:** every round-1 item is in the plan as its end state: `timerKey` and same-object no-ops,
+`startNewGame` retired, the trimmed seed field, `floorInfo`'s guard as the no-throw mechanism,
+`runDescent` over the store API with a fresh `getState()`, both result lines, `fightHeader`'s row,
+`slot + 1`, the name table without `boss.adds`, the presence test's spec, the perk sweep's
+`maxLevel` bound. Nothing dropped, nothing added beyond the hand-out.
+
+**Verdict:** approved, with this round's fixes carried in the hand-out (the build reads `plan.md`
+and `plan-handout-r2.md`, and the hand-out wins). None of them changes the approach; each is a
+stated end state. A third plan round is the workflow's signal to pull the slice into a design pass,
+and these don't warrant one.
+
+### Plan fixes
+
+- **F12 — One timer action (Approach; `playback.ts`).** The effect as written dispatches
+  `'tick' | 'wait-elapsed'`, which means reading the phase inside the effect while its dependencies
+  are only `timerKey` and `pendingDelayMs`. That draws `react-hooks/exhaustive-deps`' missing-dependency
+  warning (a warning, so lint stays green), and the obvious way to silence it, adding `state` to the
+  dependencies, is exactly the bug F1 removed. End state: the reducer has one `timer-elapsed`
+  action that it reads by phase (waiting → playing at fight 0, beat 0; playing → the tick rule; done →
+  the same object). The effect reads only `pendingDelayMs` and `dispatch`; its dependencies stay
+  `timerKey` and `pendingDelayMs`. An effect may list a dependency it doesn't read, so this is
+  lint-clean with no disable comment. `playback.test`'s wait→play and tick rows dispatch
+  `timer-elapsed`, plus `timer-elapsed` while done returns the identical object.
+- **F13 — Who owns the reducer (`DescentResult.tsx`, `DescentViewer.tsx`, `RunScreen.tsx`).** The
+  fight list's jump buttons dispatch `jump`, but the reducer lives in `DescentViewer` and
+  `DescentResult` reads as its sibling, so the plan doesn't say how the dispatch reaches it. The
+  likely fix in the build, lifting `useReducer` into `RunScreen`, loses the descent-id key: a new
+  descent would keep the old playback state, its `fight` index can exceed the new descent's
+  records, and the reset that the key gives for free has to be hand-written. End state: one
+  component, keyed by the descent id, owns the `useReducer` and the timer effect and renders both
+  the result (floor line, boss line, fight list with its jump buttons) and the viewer, so a new
+  descent remounts both. `RunScreen` holds only the latest descent and its counter.
+- **F14 — The perk sweep can't fail (`perkPoints.test`).** Every perk in all three specs costs at
+  most 100 per level (`data/specializations.ts`), so at a budget of 100 with nothing bought, every
+  `level + 1` is allowed and `free` is 100 whatever `spent` says: a helper returning `spent: 0`
+  passes. End state: per spec, after `setSpec`, buy something first so `spent > 0`, then sweep every
+  perk with `level + 1 ≤ maxLevel`: `canSetPerkLevel(perk, level + 1).ok` equals
+  `costPerLevel ≤ summary.free`, and the test asserts the sweep saw at least one allowed and one
+  `over-budget` answer. Fails with `spent` dropped to 0 or summed without `costPerLevel`.
+- **F15 — The restated seed bound (`startRun.test`).** The plan restates `MAX_RUN_SEED` in
+  `src/app` (the store doesn't export it), as the kickoff lets the perk-spend sum be restated, but
+  without the kickoff's matching check that the restatement agrees with the store. If the two drift,
+  the helper passes a seed `newGame` throws on: the thrown page the seed trap is about. End state:
+  on a real `createGameStore()`, `startRun` with `"4294967295"` starts a game, and the store's
+  `newGame({ seed: 4294967296 })` throws; with the helper's `"4294967296"` refusal already
+  tested, the two boundaries meet. Fails with the constant off by one either way.
+- **F16 — Spec order (labeling, `startRun.ts`).** `SPECIALIZATIONS` is
+  `[SORCERER, BRUTE, SHIELDBARER]`, so `SPEC_CHOICES` is Sorcerer, Brute, Shieldbarer, not the
+  plan's "(Brute, Shieldbarer, Sorcerer)". The pick lists data order, and the presence test's spec
+  (the first of `SPEC_CHOICES`) is the Sorcerer.
+
+### Assumptions
+
+| # | Call | Note |
+| --- | --- | --- |
+| 1 | **Confirm** | Decided in round 1 (DP1). |
+| 2 | **Confirm** | F12 changes the action, not the rule. |
+| 3 | **Confirm** | |
+| 4 | **Confirm**, with F15 | |
+| 5 | **Confirm** | |
+| 6 | **Confirm** | |
+| 7 | **Confirm** | The header's N is DP3. |
+| 8 | **Confirm** | |
+| 9 | **Confirm** | |
+| 10 | **Confirm** | |
+| 11 | **Confirm** | |
+| 12 | **Confirm**, with F16 | The spec is the Sorcerer. |
+| 13 | **Confirm** | F13 keeps the descent key as the timer's reset, so the click-through's "new descent mid-playback" item checks it. |
+| 14 | **Confirm** | |
+| 15 | **Confirm** | |
+
+Also checked and fine: the Sorcerer starter gets a rolled regular gem (`addInstance` →
+`rollPlayerGems`), so the spell test's two reads differ as the plan says; creature ids are
+`<template>-<side>-<slot>` and event `effectId`s are definition ids, so "no output string holds an
+id" can't trip on a trait or status id; all three biomes have a boss, so floors 10, 20 and 30 are
+one-fight boss floors; `runSeed`'s three calls are the plan's, in its order (its extra probe scripts
+don't change the start); emptying all six slots is allowed (`checkSetPartySlot`), so the presence
+test reaches `empty-party`.
+
+### Decide-points
+
+- **DP3 — What N is in "Fight n / N" (`fightHeader`).** The brief says "Fight n / N" without saying
+  whether N is the floor's fight count or the number of fights fought, and the plan passes a bare
+  `total`. They differ only on a floor lost or drawn before its last fight. **Recommend: the floor's
+  fight count**, the same N as the floor line (from `floorInfo`): a lost floor 5 reads "Fight 3 / 12"
+  in the header and "loss at fight 3 of 12" in the result, never "Fight 3 / 3" beside "of 12". The
+  alternative counts what the fight list shows, but then the two lines on one screen disagree.
+
+### Decisions
+
+- **DP3:** accepted. N in "Fight n / N" is the floor's fight count, the same N as the floor's
+  result line (from `floorInfo`).
+- Plan fixes F12–F16 and the assumption calls stand as written above.
+
+### Docs edited
+
+- `.claude/phases/4.5/brief.md`, `phases/4.5/brief.md#descent-result-and-viewer-g1`: the header's N
+  is the floor's fight count (DP3).
