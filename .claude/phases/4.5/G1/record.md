@@ -52,7 +52,7 @@ each.
   the descent's id so a new descent remounts it.
 - The viewer builds each fight's set-up with `createCombat` once per descent and reads spell
   names and line-up HP from it. The line-up prints under an **Allies** and a **Foes** heading.
-- Tests: 158 more than `main` (1993 → 2152).
+- Tests: 159 more than `main` (1993 → 2152).
 
 ## Not verified
 
