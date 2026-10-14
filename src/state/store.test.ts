@@ -1346,7 +1346,7 @@ describe('the scripted intro grants XP', () => {
     expect([below.hero.level, below.hero.xp]).toEqual([1, 40])
     expect([below.unicorn.level, below.unicorn.xp]).toEqual([1, 40])
 
-    // An overwhelming Unicorn loses the intro fight; the grant is the same.
+    // An overwhelming enemy Unicorn wins the intro fight (a loss for the player); the grant is the same.
     const overwhelmingUnicorn: SpeciesCreature = {
       ...UNICORN,
       baseStats: { health: 200, attack: 200, intelligence: 10, defence: 200, speed: 200 },

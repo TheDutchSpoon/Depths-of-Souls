@@ -152,7 +152,7 @@ export interface GameState {
 
 /** One fight of a descent, with everything needed to replay it: `createCombat` over the seed, the
  * two parties and the player's effects, with the registries the store was given (`deps.scripts`,
- * `deps.traits`, `deps.statuses`), gives back `events` (`spec/store.md#a-descents-outcome`). */
+ * `deps.traits`, `deps.statuses`), then `resolveFight`, gives back `events` (`spec/store.md#a-descents-outcome`). */
 export interface FightRecord {
   readonly events: readonly CombatEvent[]
   readonly result: FightResult
