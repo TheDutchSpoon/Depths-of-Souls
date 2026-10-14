@@ -11,8 +11,10 @@ cover them. Replaces the stub on the live site. Not the hub (4.5-G2).
 
 ## Known
 
-- The 3.5 viewer's event text, beat grouping and timer handling (`src/ui/CombatDemo.tsx`) are moved
-  and reused, not rewritten.
+- The 3.5 viewer's event text and beat grouping (`src/ui/CombatDemo.tsx`) are moved and reused,
+  not rewritten. The playback clock is new: a pure reducer over the playback position and one
+  timeout effect, so a single owner of the timer is structural and the playback rules are
+  unit-tested. It keeps 3.5's beat pace and its rule of no side effect inside a state updater.
 - Player-facing strings carry no phase ids (`phases/4.5/brief.md#assumptions`).
 
 ## Done when

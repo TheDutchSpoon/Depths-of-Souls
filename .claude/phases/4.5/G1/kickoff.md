@@ -24,7 +24,8 @@ Build ONLY this slice. Standing rules: .claude/workflow/coding-rules.md.
   `phases/4.5/brief.md#demo-golden-rule`; the G1 lines of `phases/4.5/brief.md#assumptions`;
   `phases/4.5/G1/brief.md`. The hub sections are G2's.
 - Code, before planning: `src/ui/CombatDemo.tsx` (unused since the 3.5 demo was retired: its
-  timer handling, `groupIntoBeats` and `describeEvent` are what this slice moves); `src/app/App.tsx`
+  `groupIntoBeats` and `describeEvent` are what this slice moves; its timer handling is replaced,
+  `phases/4.5/G1/brief.md#known`); `src/app/App.tsx`
   (the stub), `src/app/newGame.ts` and its test, `src/main.tsx`; in `state/store.ts`,
   `GameActions`, `FightRecord`, `FloorOutcome`, `checkDescend`, `checkSetPerkLevel`, `DEFAULT_DEPS`
   and `useGameStore`; `findStaticCreature` and `perkPointsFor` in `state/rewards.ts`; the start of
@@ -61,8 +62,8 @@ sprites, bars or animation.
 byte-identical. If the demo seems to need an engine, store or data change (an exported helper, a
 new field, a comment fix), stop and ask: it is never the coding agent's call.
 
-Existing tests elsewhere: only `src/app/newGame.test.ts` may change, and only if the plan changes
-`startNewGame`'s contract and lists the change.
+Existing tests elsewhere: only `src/app/newGame.test.ts` changes: `startNewGame` is retired into
+the start helper, so its cases move to the start helper's test, listed in the report's test count.
 
 New tests: all in `src/app` (the jsdom project), on real content; the list is under **The PR must
 prove**.
@@ -123,7 +124,7 @@ prove**.
   validates it first and Start is refused with a reason (`"abc"`, `"-1"`, `"1.5"`,
   `"4294967296"`), never a thrown page.
 - **One start path.** The Start button and the presence test call the same `src/app` helper (the
-  store passed in, as `startNewGame` takes it); a test that re-implements the three calls proves
+  store passed in); it is the only start path in `src/app`; a test that re-implements the three calls proves
   nothing about the button. `runScriptedIntro` throws if `setSpec` hasn't run.
 - **Random** fills the field from `generateRunSeed`; a blank field draws one at Start. The seed on
   screen is the store's `runSeed`.
