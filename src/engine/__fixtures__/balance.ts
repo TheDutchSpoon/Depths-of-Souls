@@ -28,6 +28,8 @@ import type { BalanceConfig } from '../balance-types'
  *    config value gives a floor-based amount. `xpPerKillMultiplier` is simply the default (1):
  *    every store/integration test's `xpBanked` expectation follows the victim's level
  *    (`spec/creatures.md#levels-and-xp`).
+ *  - `introXpGrant` is 0: the scripted intro grants nothing here, so a test that runs it keeps
+ *    its party at level 1 with no XP, and a test of the grant overrides the field by spread.
  */
 export const TEST_BALANCE_CONFIG: BalanceConfig = {
   fightCountBase: 3,
@@ -45,6 +47,7 @@ export const TEST_BALANCE_CONFIG: BalanceConfig = {
   xpCurveCoefficient: 100,
   xpCurveExponent: 1,
   xpPerKillMultiplier: 1,
+  introXpGrant: 0,
   currencyPerFloor: 1,
   bricksMinimum: 1,
   bricksPerTenFloors: 1,

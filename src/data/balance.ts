@@ -20,6 +20,7 @@ export const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
   xpCurveCoefficient: 20,
   xpCurveExponent: 2,
   xpPerKillMultiplier: 1,
+  introXpGrant: 10,
   currencyPerFloor: 1,
   bricksMinimum: 1,
   bricksPerTenFloors: 1,

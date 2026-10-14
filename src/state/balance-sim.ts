@@ -82,7 +82,7 @@ import { TRAIT_REGISTRY } from '../data/traits'
 import type { InstanceId } from './ids'
 import { perkPointsFor, staticCreatureIdFor, type Instance } from './rewards'
 import { createGameStore, PARTY_SIZE } from './store'
-import type { GameActions, GameState } from './store'
+import type { FightRecord, GameActions, GameState } from './store'
 
 // ---- Named constants ----
 
@@ -330,16 +330,6 @@ export function pickProbeCreature(
 }
 
 // ---- Event analysis (pure, over a floor run's event list) ----
-
-/** Splits a floor run's events into its fights (each starts at `FightStarted`). */
-export function splitFights(events: readonly CombatEvent[]): CombatEvent[][] {
-  const fights: CombatEvent[][] = []
-  for (const event of events) {
-    if (event.type === 'FightStarted') fights.push([])
-    fights[fights.length - 1]?.push(event)
-  }
-  return fights
-}
 
 /** A stat-modifier with a factor above 1 is GROWTH (the watch point's stall: Defence or Health
  * multiplied up), below 1 is SHRED (it cuts the target). A factor of exactly 1 changes nothing and
@@ -645,7 +635,7 @@ export function foldFightStacks(
   return next
 }
 
-/** `enemyIds` is the fight's whole enemy party (`FloorOutcome.fightEnemyIds`): the events name an
+/** `enemyIds` is the fight's whole enemy party (its `FightRecord.enemyParty`): the events name an
  * enemy only once it acts or is hit, so they cannot supply the roster. */
 export function analyzeFight(
   events: readonly CombatEvent[],
@@ -893,7 +883,7 @@ export function runProbe(
 ): {
   readonly cleared: boolean
   readonly events: readonly CombatEvent[]
-  readonly fightEnemyIds: readonly (readonly string[])[]
+  readonly fightRecords: readonly FightRecord[]
 } | null {
   const snapshot = store.getState()
   const choice = pickProbeCreature(snapshot)
@@ -912,7 +902,7 @@ export function runProbe(
   return {
     cleared: result.outcome.cleared,
     events: result.outcome.events,
-    fightEnemyIds: result.outcome.fightEnemyIds,
+    fightRecords: result.outcome.fightRecords,
   }
 }
 
@@ -949,19 +939,18 @@ function noBossContext(unicornId: string | null): FightContext {
   }
 }
 
-/** Each fight's metrics: `splitFights` pairs one-to-one with the rosters `descend` reports. */
+/** Each fight's metrics, from its record's own events and enemy roster. */
 function analyzeFights(
-  events: readonly CombatEvent[],
-  fightEnemyIds: readonly (readonly string[])[],
+  records: readonly FightRecord[],
   ctx: FightContext,
 ): FightMetrics[] {
-  const fights = splitFights(events)
-  if (fights.length !== fightEnemyIds.length) {
-    throw new Error(
-      `balance-sim: ${fights.length} fights in the log, ${fightEnemyIds.length} rosters`,
-    )
-  }
-  return fights.map((fight, i) => analyzeFight(fight, ctx, fightEnemyIds[i]!))
+  return records.map((record) =>
+    analyzeFight(
+      record.events,
+      ctx,
+      record.enemyParty.map((c) => c.id),
+    ),
+  )
 }
 
 export interface FloorRunResult {
@@ -998,15 +987,14 @@ export function playFloorRun(
     throw new Error(`balance-sim: descend(${floor}) refused: ${result.reason}`)
   const outcome = result.outcome
   const context = bossCtx ?? noBossContext(unicornId)
-  const fights = analyzeFights(outcome.events, outcome.fightEnemyIds, context)
+  const fights = analyzeFights(outcome.fightRecords, context)
 
   let bossVisit: BossVisit | null = null
   if (bossCtx !== null && bossCtx.bossTemplateId !== null) {
     const probeMetrics =
       probeRun === null
         ? null
-        : (analyzeFights(probeRun.events, probeRun.fightEnemyIds, bossCtx)[0]?.boss ??
-          null)
+        : (analyzeFights(probeRun.fightRecords, bossCtx)[0]?.boss ?? null)
     bossVisit = {
       floor,
       firstVisit: noteBossVisit(seenBossFloors, floor),

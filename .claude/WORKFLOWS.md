@@ -34,7 +34,7 @@ drifts and stale decisions silently outlive their correction.
 ```
 .claude/
   CLAUDE.md  CONVENTIONS.md  VISION.md  OPEN_QUESTIONS.md               living docs
-  ROADMAP.md  WORKFLOWS.md                                              living docs
+  ROADMAP.md  WORKFLOWS.md  CI_CD.md                                    living docs
   spec/            the spec, one file per subsystem (CLAUDE.md has the map)   living docs
   content/  species/  specializations/                                   living docs
   workflow/        the standing rules and step files both agents follow

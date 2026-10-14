@@ -15,7 +15,7 @@ Read this when changing saving or loading. None of it is built: Phase 5 builds i
 - Phase 5 builds it. Assume big rosters, large inventories and many script templates.
 - **IndexedDB is the primary store** (via `idb` or Dexie); `localStorage` holds only tiny things
   (settings, a last-save pointer), never the main save.
-- The database name is namespaced by environment (`CONVENTIONS.md#indexeddb-is-namespaced-by-environment`).
+- The database name is namespaced by environment (`CI_CD.md#indexeddb-is-namespaced-by-environment`).
 
 ### References, not copies
 

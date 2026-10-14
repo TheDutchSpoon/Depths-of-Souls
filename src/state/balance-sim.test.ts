@@ -56,7 +56,6 @@ import {
   SESSION_TARGET_FLOOR,
   SMOKE_SEEDS,
   spreadOf,
-  splitFights,
   stopReason,
   summonPass,
   CI_RUN_CAP,
@@ -506,9 +505,11 @@ describe.skipIf(isSim)('balance simulator', () => {
       const policy = store.getState().descend(10)
       expect(policy.ok).toBe(true)
       if (!policy.ok || probe === null) return
-      expect(probe.fightEnemyIds.length).toBeGreaterThan(0)
-      expect(probe.fightEnemyIds.every((ids) => ids.length > 0)).toBe(true)
-      expect(policy.outcome.fightEnemyIds).toEqual(probe.fightEnemyIds)
+      const rosters = (records: typeof probe.fightRecords) =>
+        records.map((record) => record.enemyParty.map((c) => c.id))
+      expect(probe.fightRecords.length).toBeGreaterThan(0)
+      expect(rosters(probe.fightRecords).every((ids) => ids.length > 0)).toBe(true)
+      expect(rosters(policy.outcome.fightRecords)).toEqual(rosters(probe.fightRecords))
     })
 
     it('the probe run really uses the probe script on the probe creature, gems untouched', () => {
@@ -712,17 +713,6 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(
         bossLockStats([applied(BOSS, 'dazed'), turn(BOSS)], BOSS, scopes).lockedTurns,
       ).toBe(0)
-    })
-
-    it('splits fights at FightStarted', () => {
-      const two: CombatEvent[] = [
-        { type: 'FightStarted' },
-        turn(BOSS),
-        { type: 'FightStarted' },
-        turn(BOSS),
-        turn(ALLY),
-      ]
-      expect(splitFights(two).map((f) => f.length)).toEqual([2, 3])
     })
   })
 

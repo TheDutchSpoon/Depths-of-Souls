@@ -57,8 +57,9 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 
 ### Levels and XP
 
-- Creatures level **only through combat XP**. **Each kill grants XP equal to the victim's level** to
-  every creature in the active party, alive or not.
+- Creatures level **only through combat XP**: kills, and the scripted intro's flat grant
+  (`spec/run.md#scripted-intro`). **Each kill grants XP equal to the victim's level** to every
+  creature in the active party, alive or not.
 - XP to the next level is **`20 × level²`** (config). The XP a floor yields grows with the floor's
   square (more fights, higher-level enemies), so the party's level can track the floor at every
   depth.
