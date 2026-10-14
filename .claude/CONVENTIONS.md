@@ -3,6 +3,7 @@
 Every chat reads this file: the engineering rules for every change.
 
 How the code is written, tested and deployed. What the game does lives in `VISION.md` and `spec/`.
+How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice doesn't need it.
 
 ## TypeScript
 
@@ -67,9 +68,9 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - **Progression and economy numbers** live in an injected **`BalanceConfig`**: the engine defines
   its shape, `data/balance.ts` its values. It holds the level range (the multiplier curve), the
   fight count, the enemy party size, the boss level offset, the rarity spawn weights, the soul gain,
-  the XP curve, XP per kill, currency drops and the summon cost (free: nothing reads it until
-  Phase 8's Soul Altar names the currency it is paid in). What each number does is in its spec rule
-  (`spec/run.md`, `spec/creatures.md`).
+  the XP curve, XP per kill, the intro's XP grant, currency drops and the summon cost (free:
+  nothing reads it until Phase 8's Soul Altar names the currency it is paid in). What each number
+  does is in its spec rule (`spec/run.md`, `spec/creatures.md`).
 - **Curves are parameters, not functions** (`{ fightCountBase: 10, fightCountPerFloor: 1 }`, never
   a closure), so the config is plain data a simulator can sweep and a save can ignore.
 - Generation and the store **receive the config as an argument**; tests pin their own config
@@ -100,7 +101,7 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
   seeds per spec, capped at 30 floor runs with the boss probe off; the cap changes no verdict. The
   bands are reported and guide tuning passes.
 - **The full report (`npm run sim`) runs in Actions after each merge**
-  (`CONVENTIONS.md#the-simulator-report-runs-after-each-merge`), never as a slice's gate. It takes
+  (`CI_CD.md#the-simulator-report-runs-after-each-merge`), never as a slice's gate. It takes
   tens of minutes, and only tuning acts on the bands and the draw rate. Every other slice's balance
   check is the CI test in the normal suite: a change that turns it red stops and asks Duncan. A
   tuning slice compares against the last committed report, since the simulator is deterministic; a
@@ -113,7 +114,7 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 ### Three test tiers
 
 - Test the pure engine heavily and the browser lightly: unit tests, golden replays and the corpus
-  digest, with an end-to-end smoke test planned.
+  digest. An end-to-end smoke test is planned (`ROADMAP.md#phase-7--combat-ui--feedback`).
 
 ### Unit tests
 
@@ -168,19 +169,12 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
   not the roll count at the committed seed.
 - **Why it exists**: it answers "did any behaviour move?", which scenario goldens can't. A change
   that shows up only in combinations no golden pins passes them all.
-- **Byte-identical PRs leave it unchanged. Deliberate-change PRs regenerate it**, only through its
-  update command, and state how many corpus fights changed and which listed change accounts for
-  them.
+- **A PR changes it only as its golden policy allows** (`WORKFLOWS.md#golden-policy-one-per-pr`).
 - **The committed fixture is exactly what `renderFixture` writes** for its own rows: header,
   interface, row layout and formatting. The default run checks it, so a hand edit, or a template
   change nobody regenerated from, fails.
 - **Proof it covers a mechanism**: the PR that adds a mechanism to the corpus shows the digest
   failing with that mechanism disabled, the same bar as a discriminating golden.
-
-### E2E smoke test
-
-- None exists yet. When added (Playwright): does the app render and the loop run in a real browser.
-  It is slower, so it runs on `main` / pre-deploy, not in the inner loop.
 
 ### Test environments
 
@@ -234,7 +228,7 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
   not). The PR lists each such file, and `npm run docs:check -- comment-proof <base>` passes: both
   sides parse without a syntax error, with comments stripped the old and new file are identical, and
   every pragma keeps its text and place.
-  Any change beyond comments falls under "Goldens are layered and additive".
+  Any change beyond comments falls under `CONVENTIONS.md#goldens-are-layered-and-additive`.
 
 ### Two-tier golden discipline
 
@@ -291,43 +285,6 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 
 ## CI
 
-### Every pull request runs the gates
-
-- GitHub Actions runs lint, the format check, the docs checks (`citations` and `comments`,
-  blocking; `budgets`, reported only) and every test (unit, golden, corpus digest, the balance thresholds) on every
-  pull request, every push to `main` and every manual run, so a regression is caught *before*
-  merge and `main` stays green and deployable.
-
-### Deploy only from main, only if tests pass
-
-- Three jobs in order: `test` (the gates), `build`, `deploy`. `build` runs on every change, so a
-  pull request also proves the site builds; only `deploy` is guarded to a push to `main`. Tests and
-  build on every change, deploy on `main`.
-
-### The simulator report runs after each merge
-
-- `.github/workflows/sim.yml` runs `npm run sim` on every push to `main`, on a manual run for any
-  branch (a tuning slice's), and on a pull request that changes `sim.yml` itself: a manual run
-  exists only once the file is on `main`, so that `paths` filter is how a change to the workflow
-  proves itself. It is a workflow of its own: nothing waits on it, and the gates and the deploy run
-  as before.
-- Report only: it never fails on a balance number, since every pull request asserts the CI
-  verdicts (`CONVENTIONS.md#balance-simulator`). It fails when the run fails (vitest exits non-zero
-  or the job times out) and when the run prints no report. The job summary shows, per spec, the
-  three CI verdicts and the round-cap draws, plus the runtime; the whole captured output is the
-  `sim-report` artifact.
-- The summary is read from the report's own lines, in POSIX awk (the runner's `awk` may be mawk):
-  `formatSpec`'s `=== <spec> (<n> seeds) ===` header and `Draws:` line, `formatReport`'s
-  `CI thresholds summary` block, and the test's `Runtime:` line. A change to those lines changes
-  the extraction in `sim.yml` in the same PR. In Actions, the line after vitest's `stdout |` header
-  starts with colour codes, so none of those lines may open a `console.log` (the report opens with
-  `Balance report:`, and `Runtime:` follows a newline).
-- Its own concurrency group per ref, queued and never cancelled: a merge during a run gets its own
-  report after it. GitHub keeps one pending run per group, so a third merge inside one run replaces
-  the second's pending run.
-- Read-only `contents` permission, checkout without persisted credentials, and the same Node and
-  `npm ci` as the deploy workflow.
-
 ### Local runs match CI's toolchain
 
 - CI installs with `npm ci` on Node 24. Locally: Node 24.15 or later (jsdom 30's minimum), and
@@ -335,45 +292,6 @@ How the code is written, tested and deployed. What the game does lives in `VISIO
 - When a tool behaves unexpectedly, check `npx <tool> --version` against the lockfile before
   designing around it: a stale `node_modules` can show behaviour the lockfile's version doesn't
   have.
-
-## Deployment & environments
-
-### GitHub Pages, from a subpath
-
-- The static host is **GitHub Pages**: no backend; the built `dist/` is all that's served. A
-  project site serves from the repo subpath, so **`base: '/Depths-of-Souls/'` in `vite.config.ts`**
-  is mandatory: without it the bundle 404s and the page is blank.
-
-### One Vite mode per environment
-
-- Environments are driven by **Vite mode**, never by separate code paths. One mode switch
-  (`--mode production` / `--mode development` or a custom mode) flips, together, the `base` path,
-  the **IndexedDB database name** and any debug or feature flags. Every per-environment difference
-  sits behind this one mechanism.
-
-### IndexedDB is namespaced by environment
-
-- A **hard requirement**: the database name comes from a Vite-mode env module (`depths-of-souls` in
-  production, `depths-of-souls-dev` otherwise). Prod and dev share an origin (same domain,
-  different path), so they share one IndexedDB unless the *name* differs, and a dev build with a
-  broken or half-migrated schema could corrupt a real save. Isolation lives in the app, never in the
-  hosting topology. Phase 5 builds it (`spec/saves.md`).
-
-### PR previews are not built
-
-- `main` deploys to the production Pages URL; nothing else is deployed. The plan is for each pull
-  request to deploy an **ephemeral preview** on its own temporary subpath, torn down when the PR
-  closes, so there is no standing dev environment to maintain.
-
-### No router rewrites on Pages
-
-- Pages has no SPA-router rewrite, so a deep-link refresh 404s. There is no router today; if one is
-  added, use **hash routing** (`/#/...`) or a `404.html` fallback.
-
-### Saves are per-browser, per-origin
-
-- Export to file (`spec/saves.md#slot-and-file-operations`) is the cross-device and eviction
-  backstop, not a sync layer.
 
 ## Project layout
 
@@ -423,8 +341,8 @@ src/
   chosen default, a reading of an ambiguous spec, a value picked for lack of a stated one, a
   deferred edge case. If the plan had to choose, it is an assumption.
 - The checklist is the review: each item is confirmed or corrected before (or with) the plan's
-  approval. It catches at plan time what the code-level `// ASSUMPTION:` note ("Open questions get
-  an interface") catches in the code.
+  approval. It catches at plan time what the code-level `// ASSUMPTION:` note
+  (`CONVENTIONS.md#open-questions-get-an-interface`) catches in the code.
 
 ### Every feature phase ships a demo
 
@@ -459,8 +377,8 @@ src/
   it only goes stale.
 - **Don't restate a spec rule.** Cite it by anchor (`spec/<file>.md#<anchor>`) and say only what
   this code adds to it. A restated rule rots silently when the spec changes. A quotation beside
-  an anchor is the target's own words, or it goes; `npm run docs:check -- comments --quotations`
-  lists one within four words of an anchor, on either side, that the target's section doesn't hold.
+  an anchor is the target's own words, or it goes (`npm run docs:check -- comments --quotations`,
+  `CI_CD.md#what-the-comments-check-reads`).
 - **A forward pointer cites the rule, not the phase.** "Inert until Phase 8" becomes a citation of
   the rule that names the phase (a spec file's `## Not built` rule, a `ROADMAP.md` entry), so the
   phase lives in one home and the comment never needs to know which phase is current.
@@ -469,15 +387,7 @@ src/
 - **So do names.** A `src/` file name, identifier or fixture data id (a test trait, script or
   status id) says what the thing pins or is for, never the phase, slice or plan item it came from,
   and a string literal (an error message, a report label) carries no provenance word.
-  `npm run docs:check -- comments` fails CI on a phase or slice id in a `src/` file name of any
-  extension, in an identifier (`B5_FIXTURE`, `PHASE_4_…`, `placeholderPhase4Config`) and in a
-  string literal (`'h2b2-reapply-p1'`). A string, template or regex literal that is not a module
-  specifier or a test title, and the text between JSX tags, also fails on `ASSUMPTION:` and on the
-  markers `comments` reads in a comment (ASSUMPTION, phase and slice ids, PR numbers, review words, plan-item ids), so
-  `'…before Phase 8'` fails; the workflow words ("brief", "the plan", "grill") are not read there,
-  because a player-facing string can hold them. Plan-item letters are `A`-`I`, so a derivation handle such as `S1_SCRIPT`
-  or `T98` passes, and a test title may open with one (`'E1 ticks first'`). A rename is proved with
-  `comment-proof <base> --renames <map>` (`workflow/pr-review.md#4-verify-claimed-invariants-mechanically`).
+  `npm run docs:check -- comments` fails CI on them (`CI_CD.md#what-the-comments-check-reads`).
 - `// ASSUMPTION:` is kept for a live open question only (`CONVENTIONS.md#open-questions-get-an-interface`), not
   as a record of a decision a plan once made.
 - A golden fixture's setup, arithmetic and random draws are not commentary: they are required

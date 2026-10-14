@@ -52,3 +52,18 @@ Read this when changing the store or the state the UI reads.
   be freely adjusted and reordered.
 - Nothing removes an instance from the collection: the Unicorn is **permanently owned**, though not
   locked into the party.
+
+### A descent's outcome
+
+- `descend`'s outcome (`FloorOutcome`) holds the floor's results and totals (`fightResults`,
+  `cleared`, `deepestFloorAdvanced`, `bossDefeated`, `xpBanked`, `soulGained`, `currencyGained`,
+  the concatenated `events`) and **`fightRecords`**: one `FightRecord` per fight resolved, in
+  fight order. The records' events concatenate to `events`, their XP sums to `xpBanked` and their
+  results are `fightResults`.
+- A `FightRecord` holds the fight's `events`, `result`, `xpBanked` and `partyLevelsAfter` (the
+  active party's levels after its XP, in `playerParty` order), and what `createCombat` was given:
+  `seed`, `playerParty`, `enemyParty` and `playerEffects` (the perk effects). `playerParty` is the
+  party materialized for that fight, not the `CombatState`'s, which carries fight-setup output.
+- A record reproduces its fight outside the store: `createCombat` over its seed, parties and perk
+  effects, with the registries the store was given, then `resolveFight`, gives its `events`
+  (`CONVENTIONS.md#every-failing-fight-is-reproducible-from-its-seed`).

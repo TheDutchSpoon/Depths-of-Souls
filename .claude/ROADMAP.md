@@ -62,7 +62,7 @@ Same guardrails as every demo; own brief and phase record.
 
 ## Phase 5 — Persistence (large saves)
 - Builds `spec/saves.md` (all of it is its `## Not built` half) and the IndexedDB namespacing
-  (`CONVENTIONS.md#indexeddb-is-namespaced-by-environment`).
+  (`CI_CD.md#indexeddb-is-namespaced-by-environment`).
 
 ## Phase 6 — Scripting UI
 - Builds `spec/scripting.md#the-script-editor`: the block and dropdown rule editor, authoring
@@ -83,6 +83,8 @@ Same guardrails as every demo; own brief and phase record.
 - **Perk text:** perks need player-facing descriptions; `PerkDef` carries only a name.
 
 **Decided, not built:**
+- **E2E smoke test** (Playwright): the app renders and the loop runs in a real browser. It is
+  slower, so it runs on `main` / pre-deploy, not in the inner loop.
 - **The scripted intro's story beat:** the intro's outcome is presented as a story beat, the
   starter revived and the Unicorn gained. It is presentation only (HP resets every fight, so a
   revive changes nothing); `spec/run.md#scripted-intro` describes the fight `main` runs.

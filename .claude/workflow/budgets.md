@@ -11,6 +11,7 @@ bytes). Only the design agent edits this table. Raising a budget is Duncan's dec
 | --- | --- |
 | `CLAUDE.md` | 7 |
 | `CONVENTIONS.md` | 29 |
+| `CI_CD.md` | 7 |
 | `spec/combat.md` | 43 |
 | `spec/creatures.md` | 22 |
 | `spec/effects.md` | 39 |

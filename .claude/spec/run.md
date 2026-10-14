@@ -155,11 +155,9 @@ Read this when changing descent, generation or the hub.
 
 - Rewards **bank per kill** (`spec/combat.md#encounters-rewards--wipes`): XP to the whole active
   party (`spec/creatures.md#levels-and-xp`), soul% to the creature's bar (`spec/creatures.md#souls`) and currency. A wipe keeps them.
-- **Level-ups apply after each fight**: the engine never sees a level change mid-fight, and the
-  party fights the floor's next fight at its new levels.
-  **Known bug:** `main` materializes the party once per descent and applies the floor's XP after the
-  whole floor, so levels never change between the fights of one floor. The fix is listed in
-  `phases/4.5/brief.md#level-ups-after-each-fight`.
+- **Level-ups apply after each fight**, won or not: the engine never sees a level change
+  mid-fight, and the party fights the floor's next fight at its new levels. `descend` materializes
+  the party afresh for every fight from the collection as the floor's earlier fights left it.
 - **A boss kill** banks XP and currency through the same per-kill path, but **no soul%**.
 - **Winning** a boss fight records the boss as cleared; perk points come from the **first clear
   only**. A cleared boss floor can be fought again for ordinary rewards. A loss banks the adds'
@@ -188,7 +186,12 @@ Read this when changing descent, generation or the hub.
 - `runScriptedIntro` is a fixed fight against a level-1 **Unicorn**, through the ordinary resolver
   and outside any floor run. It never ends in wipe → hub: the Unicorn joins (if not owned) whether
   the fight is won, lost or drawn.
-- Callers run it right after `setSpec` at a new game; the store doesn't enforce that order.
+- Once the Unicorn has joined, every creature in the active party (the starter and the Unicorn at
+  a new game) gets a flat **10 XP** (config, `introXpGrant`), whatever the result, through the
+  ordinary level-up path. The intro's own kills bank nothing. Design intent: a new game's party
+  reaches level 2 at the end of floor 1 and fights floor 2 at level 2.
+- Callers run it right after `setSpec` at a new game; the store doesn't enforce that order, and a
+  second call grants the XP again.
 
 ## Engine rules
 

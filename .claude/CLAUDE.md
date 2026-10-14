@@ -49,6 +49,7 @@ opens with a "Read this when …" line.
 | `content/`, `specializations/` | a slice adds or changes content: what `main` ships, entry by entry |
 | `ROADMAP.md` | where a slice sits; what is decided but not built |
 | `WORKFLOWS.md` | before starting or reviewing any slice: the loop, the mailboxes, where every file lives |
+| `CI_CD.md` | changing a GitHub workflow, the build or deploy setup, the environments, or a docs check |
 
 ### How the spec is written
 
@@ -85,6 +86,6 @@ opens with a "Read this when …" line.
   build.
 - **State**: one typed **Zustand** store (`spec/store.md#one-store`).
 - **Persistence**: IndexedDB, from Phase 5 (`spec/saves.md`).
-- **Deploy**: GitHub Pages, from `vite build` (`CONVENTIONS.md#github-pages-from-a-subpath`).
+- **Deploy**: GitHub Pages, from `vite build` (`CI_CD.md#github-pages-from-a-subpath`).
 - **No backend, no accounts, no network calls in gameplay.** Don't introduce a backend, a new
   framework or a second state library without saying so.
