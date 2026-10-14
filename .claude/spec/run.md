@@ -240,6 +240,9 @@ Read this when changing descent, generation or the hub.
   boss (`BiomeData.boss?: { bossId, creature, speciesId, adds[] }`). The rule holds at every depth,
   floor 101+ included; a biome with no boss (the unauthored biomes, test fixtures) generates
   ordinary floors.
+- **`floorShape(floor, biome, config)`** is the one home of that test and of a floor's fight count:
+  `{ boss, fights }`, one fight on a boss floor, else `fightCount`. `generateFloor` takes its
+  branch and its fight count from it, and the store's `floorPreview` reads it.
 - A boss floor is exactly **one** fight, and `fightCount` is not consulted. The boss is at slot 0 at
   **`bossLevel(floor)`** (the range's maximum plus `bossLevelOffset`), then its authored adds, each
   at a level within `enemyLevelRange(floor)`, then the fill up to `enemyPartySize(floor)` through

@@ -31,7 +31,7 @@ the docs win: flag the conflict, don't guess.
 | **4.5-E** | [Spell clean-up and Thorn Volley](#spell-clean-up-and-thorn-volley) | Deliberate content change; CI balance verdicts re-checked |
 | **4.5-F** | [Level-ups after each fight](#level-ups-after-each-fight), [the per-fight record](#the-per-fight-record), [the scripted intro grants XP](#the-scripted-intro-grants-xp) | Engine goldens and the corpus digest byte-identical; store tests change; CI balance verdicts re-checked |
 | (4.5-F2) | Tuning, only if a CI balance verdict flipped ([Balance verdicts](#balance-verdicts)) | Content numbers, deliberate |
-| **4.5-G1** | The demo's descent loop and viewer ([The demo](#the-demo)) | Byte-identical ([Demo golden rule](#demo-golden-rule)) |
+| **4.5-G1** | The demo's descent loop and viewer ([The demo](#the-demo)), [the demo's game-layer homes](#the-demos-game-layer-homes) | Goldens, the corpus digest and existing tests byte-identical; additive exports ([Demo golden rule](#demo-golden-rule)) |
 | **4.5-G2** | The demo's hub ([The demo](#the-demo)) | Byte-identical ([Demo golden rule](#demo-golden-rule)) |
 
 Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
@@ -71,10 +71,11 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 ### Demo golden rule
 
-- G1 and G2 change no engine or store code, and every golden, store test and the corpus digest stay
-  byte-identical. A deliberate change is allowed only for a good reason, and only with the approval
-  of both the design agent and Duncan at build time: it is a stop-and-ask, never the coding agent's
-  call.
+- G2 changes no engine, store or data code. G1 changes them only to add
+  [the demo's game-layer homes](#the-demos-game-layer-homes). Every golden, existing engine and store
+  test and the corpus digest stay byte-identical. Any other deliberate change is allowed only for a
+  good reason, and only with the approval of both the design agent and Duncan at build time: it is
+  a stop-and-ask, never the coding agent's call.
 
 ## Decided, not built
 
@@ -327,6 +328,31 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 - The PR review writes it into `spec/run.md#scripted-intro` and adds it to the `BalanceConfig`
   list in `CONVENTIONS.md#where-each-number-lives`.
 
+### The demo's game-layer homes
+
+- A screen asks the engine, the store or the data for an answer; it never restates one of their
+  rules. G2's hub and Phase 7's UI need the same answers the G1 demo shows, so each has one home
+  outside `src/app`:
+  - **Floor preview.** The engine exports the rule for a floor's shape: a boss floor (a tenth floor
+    whose biome has a boss) has one fight, any other floor `fightCount(floor, config)`;
+    `generateFloor` reads it. The store answers `floorPreview(floor)`: the floor's biome, through
+    the same biome resolution `descend` uses (pins and run seed included), its fight count and
+    whether it is a boss floor; `null` for anything but a whole number ≥ 1, never a throw.
+  - **Perk points.** The store answers `perkPointSummary()`: earned, spent and free. One function
+    sums the spend (`level × costPerLevel` over the current spec's perks), and the `over-budget`
+    check uses it.
+  - **A boss clear.** `FloorOutcome` carries `bossFirstCleared` (the defeated boss wasn't in
+    `bossesCleared` before the descent) and `perkPointsGained`.
+  - **The fight registries.** `src/data` exports the scripts, traits and statuses the default store
+    is built with, as one registries object; the store's defaults and the demo's fight rebuild both
+    read it.
+  - **Creature templates.** `src/data` exports every creature template (the starters and the
+    Unicorn, every biome's pool, every biome's boss) and the boss creatures by boss id.
+  - **The run-seed bound.** The store exports its run-seed maximum.
+- Additive: no golden, corpus digest or existing engine or store test changes. They ride in
+  4.5-G1, and its PR review writes them into `spec/store.md`, `spec/run.md` and
+  `spec/progression.md`.
+
 ## The demo
 
 The throwaway run-loop demo (`CONVENTIONS.md#every-feature-phase-ships-a-demo`), in `src/app` and
@@ -340,37 +366,52 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 - Every public store action has a control except `pinBiome` (it belongs to the Biome Atlas,
   `spec/run.md#facilities`). `recordBossKill` sits under a **Debug** heading, so perks and spec
   switching can be checked in a browser: perk points otherwise need a first boss clear.
+- The demo restates no game rule ([the demo's game-layer homes](#the-demos-game-layer-homes)).
 
 ### Start screen (G1)
 
-- A spec pick (Brute, Shieldbarer, Sorcerer) and a seed field (blank: `generateRunSeed`, in
-  `src/app`). Start runs `newGame({ seed })` → `setSpec` → `runScriptedIntro()`, **silently**: the
-  intro's result isn't shown. That grants the Unicorn and keeps a demo run identical to the balance
-  simulator's for the same seed.
+- A spec pick (Sorcerer, Brute, Shieldbarer: the data's order) and a seed field with a **Random**
+  button that fills it (`generateRunSeed`, in `src/app`; a blank field draws one too), the baseline
+  demo's randomize-seed control (`CONVENTIONS.md#every-feature-phase-ships-a-demo`). Start runs
+  `newGame({ seed })` → `setSpec` → `runScriptedIntro()`, **silently**: the intro's result isn't
+  shown. That grants the Unicorn and keeps a demo run identical to the balance simulator's for the
+  same seed.
 
 ### Floor picker (G1)
 
-- A floor number field pre-filled with `lastFloor`, a **Deepest + 1** button that fills in the next
-  floor down, and **Descend**. The field takes any number, so `floor-out-of-reach` and
-  `beyond-content-frontier` are seen as greyed-out reasons.
-- One line on the chosen floor: biome, fight count, and "boss floor" when it is one, read from the
-  engine's pure functions. No enemy level range. No auto-descend.
+- A floor number field pre-filled with `lastFloor`, or 1 while nothing has been fought, a
+  **Deepest + 1** button that fills in the next floor down, and **Descend**. The field takes any
+  input, so `floor-out-of-reach` and `beyond-content-frontier` are seen as greyed-out reasons, and
+  no input throws.
+- One line on the chosen floor, for a whole number ≥ 1: biome, fight count, and "boss floor" when
+  it is one, read from the store's `floorPreview`. A boss floor is a tenth floor whose biome has
+  a boss, with one fight. No enemy level range. No auto-descend.
 
 ### Descent result and viewer (G1)
 
 - `descend` resolves at once. The floor's result and its **fight list** (number, result, rounds,
-  kills, XP and level-ups) show for a few seconds, then paced playback starts at fight 1 by itself.
+  kills, XP and level-ups) show for 3 seconds, then paced playback starts at fight 1 by itself and
+  runs on from fight to fight, stopping at the floor's last beat.
 - The viewer keeps 3.5's beats and **skip to end of fight**, and adds **skip to end of floor** and
   **jump to a fight** from the list. Speeds: **1×, 3×, 5×** (500, 167, 100 ms per beat).
-- Its header shows "Fight n / N" with the party's levels going into that fight, and the XP and
-  level-ups after it: where the level-up fix is visible.
-- The log reuses 3.5's event text and beat grouping (moved, not rewritten) and shows **names**, not
-  ids. Each fight opens with a line-up of both sides: name, level, HP.
+- Its header shows "Fight n / N", N being the floor's fight count (a floor lost early still counts
+  all its fights), with the party's levels going into that fight, and the XP and level-ups after
+  it: where the level-up fix is visible.
+- The log reuses 3.5's event text and beat grouping (moved, not rewritten) and shows **creature and
+  spell names**, not creature ids or gem slots; trait and status ids stay as 3.5 printed them. A
+  name that appears more than once in a fight carries its side and 1-based slot at every
+  occurrence ("Snapjaw (foe 2)", "Snapjaw (ally 1)"); a unique name prints bare. Each fight opens
+  with a line-up, the allies and the foes each under its own heading: name, level, HP.
+- A spell name and a line-up's HP are read from the fight as `createCombat` sets it up from the
+  record's inputs: a `SpellCast`'s gem slot counts the innate spells fight setup prepends, and
+  setup sets HP to effective max Health. The record's own parties are fight-setup input.
 - A boss floor adds one result line: the boss defeated, and whether it was a first clear (+100 perk
-  points) or not, by comparing `bossesCleared` before and after.
+  points) or not, read from the descent's outcome.
 - Only the latest descent's log is kept; any of its fights can be replayed from memory.
 - **Debug: Copy fight as JSON** on each fight: its seed, both parties and the player's perk
-  effects (`phases/4.5/brief.md#the-per-fight-record`).
+  effects (`phases/4.5/brief.md#the-per-fight-record`), shaped as `createCombat`'s input without
+  `registries` (`{ seed, player: { party, effects }, enemy: { party } }`), so a test reproduces it
+  with `createCombat({ ...JSON.parse(json), registries })`.
 
 ### Side panel (G1)
 
@@ -425,7 +466,7 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
       (`CONVENTIONS.md#comment-why-not-what`). So the inert-perk label reads "inactive (its system
       isn't built yet)", the currency line "Nothing spends these yet", and the save line "No saving
       yet: reloading the page starts over".
-- [ ] **ASSUMPTION (G1):** "a few seconds" before playback starts is 3 seconds.
+- [x] **ASSUMPTION (G1):** "a few seconds" before playback starts is 3 seconds.
 - [x] **ASSUMPTION (F):** the per-fight record's type and field names are the plan's
       (`FightRecord`, held in `FloorOutcome.fightRecords`); its contents are fixed above.
 - [ ] **ASSUMPTION (F2):** the tuning slice is named 4.5-F2 if it runs.

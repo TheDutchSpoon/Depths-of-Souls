@@ -23,7 +23,7 @@ import type { Affinity, Creature, CreatureStats, Side, Spell } from './types'
 
 // ---- Static content shapes ----
 // The SHAPE of biome data + spawn pools: real src/data/species/*.ts content has this exact shape,
-// and src/data/biomes.ts's per-biome entries reference it. Never imported by src/ui/src/app.
+// and src/data/biomes.ts's per-biome entries reference it.
 
 export interface SpeciesCreature {
   readonly id: string
@@ -102,6 +102,21 @@ export const FLOORS_PER_BIOME = 10
  */
 export function isBossFloor(floor: number): boolean {
   return floor % FLOORS_PER_BIOME === 0
+}
+
+/**
+ * The shape of a floor in `biome`: whether it generates as the single boss fight, and how many
+ * fights it holds. `generateFloor` takes its branch and its fight count from here, so a preview
+ * of a floor can't drift from what generates. `boss` is `isBossFloor(floor)` with a biome that
+ * carries a `boss`; a boss floor is one fight, any other floor is `fightCount`.
+ */
+export function floorShape(
+  floor: number,
+  biome: BiomeData,
+  balanceConfig: BalanceConfig,
+): { readonly boss: boolean; readonly fights: number } {
+  const boss = isBossFloor(floor) && biome.boss !== undefined
+  return { boss, fights: boss ? 1 : fightCount(floor, balanceConfig) }
 }
 
 /**
@@ -421,7 +436,8 @@ export function generateFloor(
   runRng: SeededRng,
   balanceConfig: BalanceConfig,
 ): readonly Fight[] {
-  if (isBossFloor(floor) && biome.boss) {
+  const shape = floorShape(floor, biome, balanceConfig)
+  if (shape.boss && biome.boss) {
     const boss = biome.boss
     const bossLoadout = rollLoadout(boss.creature, biomeIndex, allSpells, runRng)
     const bossCreature = materializeCreature(boss.creature, {
@@ -479,7 +495,7 @@ export function generateFloor(
   const { min, max } = enemyLevelRange(floor, balanceConfig)
   const partySize = enemyPartySize(floor, balanceConfig)
 
-  for (let fightIndex = 0; fightIndex < fightCount(floor, balanceConfig); fightIndex++) {
+  for (let fightIndex = 0; fightIndex < shape.fights; fightIndex++) {
     const enemyParty: Creature[] = []
     for (let slot = 0; slot < partySize; slot++) {
       enemyParty.push(

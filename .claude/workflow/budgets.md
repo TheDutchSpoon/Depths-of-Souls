@@ -21,7 +21,7 @@ bytes). Only the design agent edits this table. Raising a budget is Duncan's dec
 | `spec/saves.md` | 5 |
 | `spec/scripting.md` | 14 |
 | `spec/statuses.md` | 21 |
-| `spec/store.md` | 4 |
+| `spec/store.md` | 6 |
 
 ## Over budget
 

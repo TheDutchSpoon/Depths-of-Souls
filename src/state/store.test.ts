@@ -1007,6 +1007,44 @@ describe('boss floors', () => {
     expect(store.getState().bossesCleared.size).toBe(1) // ...but grants no further perk points
   })
 
+  test('the outcome reports a first boss clear and its perk points, and nothing on a repeat', () => {
+    const store = createGameStore(makeBossWinDeps())
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    store.setState({ deepestFloor: 9 })
+
+    const first = expectOk(store.getState().descend(10)).outcome
+    expect(first.bossFirstCleared).toBe(true)
+    expect(first.perkPointsGained).toBe(100)
+
+    const again = expectOk(store.getState().descend(10)).outcome
+    expect(again.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId)
+    expect(again.bossFirstCleared).toBe(false)
+    expect(again.perkPointsGained).toBe(0)
+  })
+
+  test('a boss recorded by recordBossKill is not a first clear when the floor is won', () => {
+    const store = createGameStore(makeBossWinDeps())
+    store.getState().setSpec(FIXTURE_SPEC.id)
+    store.setState({ deepestFloor: 9 })
+    store.getState().recordBossKill(BOSS_ENCOUNTER_WIN.bossId)
+
+    const { outcome } = expectOk(store.getState().descend(10))
+    expect(outcome.bossDefeated).toBe(BOSS_ENCOUNTER_WIN.bossId)
+    expect(outcome.bossFirstCleared).toBe(false)
+    expect(outcome.perkPointsGained).toBe(0)
+  })
+
+  test('a floor with no boss defeated reports no first clear and no points', () => {
+    const store = createGameStore(makeBossWinDeps())
+    store.getState().setSpec(FIXTURE_SPEC.id)
+
+    const { outcome } = expectOk(store.getState().descend(1))
+    expect(outcome.cleared).toBe(true)
+    expect(outcome.bossDefeated).toBeNull()
+    expect(outcome.bossFirstCleared).toBe(false)
+    expect(outcome.perkPointsGained).toBe(0)
+  })
+
   const BOSS_ADD_LOSS: SpeciesCreature = {
     id: 'fixture-boss-loss-add',
     name: 'Fixture Boss Loss Add',
