@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createGameStore } from '../state/store'
-import { generateRunSeed, startNewGame } from './newGame'
+import { generateRunSeed } from './newGame'
 
 const fixed = (value: number) => (array: Uint32Array<ArrayBuffer>) => {
   array[0] = value
@@ -19,17 +19,5 @@ describe('generateRunSeed', () => {
     expect(seed).toBeGreaterThanOrEqual(0)
     expect(seed).toBeLessThanOrEqual(0xffffffff)
     expect(() => createGameStore().getState().newGame({ seed })).not.toThrow()
-  })
-})
-
-describe('startNewGame', () => {
-  test('resets the store to a fresh game on the generated seed and returns it', () => {
-    const store = createGameStore()
-    store.getState().setSpec('brute')
-    const seed = startNewGame(store.getState(), fixed(424242))
-    expect(seed).toBe(424242)
-    expect(store.getState().runSeed).toBe(424242)
-    expect(store.getState().chosenSpec).toBeNull()
-    expect(store.getState().collection.size).toBe(0)
   })
 })

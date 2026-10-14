@@ -9,8 +9,27 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+.layout {
+  padding: 1rem;
+}
+
+.columns {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.columns > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+pre {
+  overflow-x: auto;
+}
+
+button[aria-pressed='true'] {
+  font-weight: bold;
 }
