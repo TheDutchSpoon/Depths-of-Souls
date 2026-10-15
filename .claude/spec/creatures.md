@@ -276,6 +276,9 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   affinity, averaged stats, both traits. That is sound because a parent is never itself a fusion
   and fusion reads only static per-creature data. Accepted consequence: rebalancing a creature
   changes every existing fusion made from it. Never store a computed fusion result.
+- **One derivation** gives an instance's identity, affinity, rarity, base stats and traits, for a
+  plain creature and a fusion alike. Combat materialization and every screen that shows an
+  instance read it, so no screen derives them from the template a second way.
 
 ### Equipment
 

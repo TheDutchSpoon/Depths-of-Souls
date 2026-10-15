@@ -21,7 +21,8 @@ body {
   align-items: flex-start;
 }
 
-.columns > :first-child {
+.columns > :first-child,
+.columns > .hub {
   flex: 1;
   min-width: 0;
 }

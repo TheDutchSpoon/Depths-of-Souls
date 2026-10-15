@@ -190,8 +190,8 @@ Read this when changing descent, generation or the hub.
   a new game) gets a flat **10 XP** (config, `introXpGrant`), whatever the result, through the
   ordinary level-up path. The intro's own kills bank nothing. Design intent: a new game's party
   reaches level 2 at the end of floor 1 and fights floor 2 at level 2.
-- Callers run it right after `setSpec` at a new game; the store doesn't enforce that order, and a
-  second call grants the XP again.
+- `startGame` runs it right after `setSpec` (`spec/store.md#newgame`). Called on its own, the
+  store doesn't enforce that order, and a second call grants the XP again.
 
 ## Engine rules
 

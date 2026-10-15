@@ -93,6 +93,12 @@ export function resolvePerkEffects(perk: PerkDef, level: number): readonly Effec
   return typeof perk.effects === 'function' ? perk.effects(level) : perk.effects
 }
 
+/** A perk is functional when its max-level effects are non-empty (the rule the
+ * data test pins for the inert perks, `spec/progression.md#inert-perks`). */
+export function isFunctionalPerk(perk: PerkDef): boolean {
+  return resolvePerkEffects(perk, perk.maxLevel).length > 0
+}
+
 /** The flattened, already-resolved effect list a `{chosenSpec, perkSpend}` pair produces --
  * ready to pass directly as `createCombat`'s `partyWidePlayerEffects` argument (exposed here so
  * tests and goldens can exercise the same integration path). */

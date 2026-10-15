@@ -5,6 +5,7 @@ import {
   SORCERER,
   SPECIALIZATIONS,
   SPECIALIZATIONS_BY_ID,
+  isFunctionalPerk,
   resolvePerkEffects,
   resolveSpecializationEffects,
   validateSpecialization,
@@ -81,6 +82,14 @@ describe('Known-inert perks', () => {
     for (const perk of allPerks) {
       if (KNOWN_INERT_PERK_IDS.includes(perk.id)) continue
       expect(resolvePerkEffects(perk, perk.maxLevel).length, perk.id).toBeGreaterThan(0)
+    }
+  })
+
+  it('isFunctionalPerk is false on exactly the known-inert perks', () => {
+    for (const perk of allPerks) {
+      expect(isFunctionalPerk(perk), perk.id).toBe(
+        !KNOWN_INERT_PERK_IDS.includes(perk.id),
+      )
     }
   })
 })

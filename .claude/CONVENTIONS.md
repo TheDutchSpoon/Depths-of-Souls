@@ -114,7 +114,15 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 ### Three test tiers
 
 - Test the pure engine heavily and the browser lightly: unit tests, golden replays and the corpus
-  digest. An end-to-end smoke test is planned (`ROADMAP.md#phase-7--combat-ui--feedback`).
+  digest, plus one end-to-end smoke test.
+- The smoke test (`e2e/smoke.spec.ts`, `npm run e2e`) runs in Playwright's Chromium, outside
+  Vitest, against the production build served by `vite preview` at the Pages subpath: it starts a
+  game, descends floor 1 and sees the result, the side panel and the hub's party, through labels
+  and roles. It fails on any page request to the preview outside the subpath: `vite preview`
+  answers every path with `index.html`, so only the requests prove the build's `base`. It asserts
+  no fight outcome, so a balance change never breaks it. It stays a smoke test while the demo
+  stands: Phase 7 replaces the demo's screens. CI runs it
+  (`CI_CD.md#every-pull-request-runs-the-gates`).
 
 ### Unit tests
 
@@ -288,7 +296,8 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 ### Local runs match CI's toolchain
 
 - CI installs with `npm ci` on Node 24. Locally: Node 24.15 or later (jsdom 30's minimum), and
-  `npm ci` after every pull that changes `package-lock.json`.
+  `npm ci` after every pull that changes `package-lock.json`. `npm run e2e` needs Playwright's
+  Chromium, installed once outside the repo: `npx playwright install chromium`.
 - When a tool behaves unexpectedly, check `npx <tool> --version` against the lockfile before
   designing around it: a stale `node_modules` can show behaviour the lockfile's version doesn't
   have.

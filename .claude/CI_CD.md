@@ -11,12 +11,16 @@ check. The rules every change follows are in `CONVENTIONS.md`.
   blocking; `budgets`, reported only) and every test (unit, golden, corpus digest, the balance thresholds) on every
   pull request, every push to `main` and every manual run, so a regression is caught *before*
   merge and `main` stays green and deployable.
+- On the same triggers, the `e2e` job installs Playwright's Chromium and runs the end-to-end smoke
+  test (`npm run e2e`, `CONVENTIONS.md#three-test-tiers`) against the production build served by
+  `vite preview` at the Pages subpath.
 
 ### Deploy only from main, only if tests pass
 
-- Three jobs in order: `test` (the gates), `build`, `deploy`. `build` runs on every change, so a
-  pull request also proves the site builds; only `deploy` is guarded to a push to `main`. Tests and
-  build on every change, deploy on `main`.
+- Four jobs: `test` (the gates), then `build`; `e2e` beside them; `deploy` needs both `build` and
+  `e2e`. `build` and `e2e` run on every change, so a pull request also proves the site builds and
+  starts a game; only `deploy` is guarded to a push to `main`. Tests, build and smoke test on every
+  change, deploy on `main`.
 
 ### The simulator report runs after each merge
 

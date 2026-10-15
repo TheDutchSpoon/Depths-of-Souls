@@ -56,9 +56,23 @@ jobs:
         with:
           path: dist
 
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: build
+    needs: [build, e2e]
     runs-on: ubuntu-latest
     # Overrides the workflow-level concurrency group above: a Pages deployment must never
     # be cancelled mid-flight (it can leave the environment stuck queued for the next

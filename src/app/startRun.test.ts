@@ -9,17 +9,12 @@ const fixed = (value: number) => (array: Uint32Array<ArrayBuffer>) => {
   array[0] = value
 }
 
-type StartActions = Pick<GameActions, 'newGame' | 'setSpec' | 'runScriptedIntro'>
+type StartActions = Pick<GameActions, 'startGame'>
 
 function spyStore(): { store: StartActions; calls: string[] } {
   const calls: string[] = []
   const store: StartActions = {
-    newGame: ({ seed }) => void calls.push(`newGame(${seed})`),
-    setSpec: (specId) => void calls.push(`setSpec(${specId})`),
-    runScriptedIntro: () => {
-      calls.push('runScriptedIntro()')
-      return { events: [], result: 'win' }
-    },
+    startGame: ({ seed, specId }) => void calls.push(`startGame(${seed}, ${specId})`),
   }
   return { store, calls }
 }
@@ -57,10 +52,10 @@ describe('parseSeedField', () => {
 })
 
 describe('startRun', () => {
-  test('makes exactly the simulator-run-start calls, in order', () => {
+  test('makes the one startGame call', () => {
     const { store, calls } = spyStore()
     expect(startRun(store, 'brute', '77')).toEqual({ ok: true, seed: 77 })
-    expect(calls).toEqual(['newGame(77)', 'setSpec(brute)', 'runScriptedIntro()'])
+    expect(calls).toEqual(['startGame(77, brute)'])
   })
 
   test('a refused seed touches nothing', () => {
@@ -71,15 +66,14 @@ describe('startRun', () => {
     expect(calls).toEqual([])
   })
 
-  test('a blank field draws the seed from the injected source and newGame receives it', () => {
+  test('a blank field draws the seed from the injected source and startGame receives it', () => {
     const { store, calls } = spyStore()
     expect(startRun(store, 'sorcerer', '', fixed(424242))).toEqual({
       ok: true,
       seed: 424242,
     })
     expect(startRun(store, 'sorcerer', '  ', fixed(7))).toEqual({ ok: true, seed: 7 })
-    expect(calls[0]).toBe('newGame(424242)')
-    expect(calls[3]).toBe('newGame(7)')
+    expect(calls).toEqual(['startGame(424242, sorcerer)', 'startGame(7, sorcerer)'])
   })
 
   test('on a real store the result equals the three calls made by hand', () => {
