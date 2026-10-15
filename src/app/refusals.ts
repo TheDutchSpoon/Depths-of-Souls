@@ -1,4 +1,9 @@
-import type { DescendFailureReason } from '../state/store'
+import type {
+  DescendFailureReason,
+  SetPartySlotFailureReason,
+  SetPerkLevelFailureReason,
+  SummonFailureReason,
+} from '../state/store'
 import type { SeedRefusal } from './startRun'
 
 export function descendRefusalText(reason: DescendFailureReason): string {
@@ -14,6 +19,49 @@ export function descendRefusalText(reason: DescendFailureReason): string {
     default: {
       const exhaustive: never = reason
       throw new Error(`Unhandled descend refusal: ${String(exhaustive)}`)
+    }
+  }
+}
+
+export function summonRefusalText(reason: SummonFailureReason): string {
+  switch (reason) {
+    case 'unknown-creature':
+      return "That creature can't be summoned."
+    case 'soul-incomplete':
+      return 'Not enough soul: summoning needs 100%.'
+    default: {
+      const exhaustive: never = reason
+      throw new Error(`Unhandled summon refusal: ${String(exhaustive)}`)
+    }
+  }
+}
+
+export function partySlotRefusalText(reason: SetPartySlotFailureReason): string {
+  switch (reason) {
+    case 'slot-out-of-range':
+      return "That party slot doesn't exist."
+    case 'unknown-instance':
+      return "You don't own that creature."
+    default: {
+      const exhaustive: never = reason
+      throw new Error(`Unhandled party slot refusal: ${String(exhaustive)}`)
+    }
+  }
+}
+
+export function perkRefusalText(reason: SetPerkLevelFailureReason): string {
+  switch (reason) {
+    case 'no-spec':
+      return 'Pick a specialization first.'
+    case 'perk-not-in-spec':
+      return "That perk isn't in this specialization."
+    case 'invalid-level':
+      return "The level must be a whole number from 0 to the perk's maximum."
+    case 'over-budget':
+      return 'Not enough free perk points for that level.'
+    default: {
+      const exhaustive: never = reason
+      throw new Error(`Unhandled perk refusal: ${String(exhaustive)}`)
     }
   }
 }

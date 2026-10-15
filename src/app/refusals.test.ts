@@ -1,7 +1,20 @@
 import { describe, expect, test } from 'vitest'
-import type { DescendFailureReason } from '../state/store'
+import { createInstanceId } from '../state/ids'
+import type {
+  DescendFailureReason,
+  SetPartySlotFailureReason,
+  SetPerkLevelFailureReason,
+  SetPerkLevelResult,
+  SummonFailureReason,
+} from '../state/store'
 import { createGameStore } from '../state/store'
-import { descendRefusalText, seedRefusalText } from './refusals'
+import {
+  descendRefusalText,
+  partySlotRefusalText,
+  perkRefusalText,
+  seedRefusalText,
+  summonRefusalText,
+} from './refusals'
 import { parseSeedField } from './startRun'
 import type { SeedRefusal } from './startRun'
 
@@ -11,6 +24,20 @@ const descendReasons: Record<DescendFailureReason, true> = {
   'empty-party': true,
   'floor-out-of-reach': true,
   'beyond-content-frontier': true,
+}
+const summonReasons: Record<SummonFailureReason, true> = {
+  'unknown-creature': true,
+  'soul-incomplete': true,
+}
+const partySlotReasons: Record<SetPartySlotFailureReason, true> = {
+  'slot-out-of-range': true,
+  'unknown-instance': true,
+}
+const perkReasons: Record<SetPerkLevelFailureReason, true> = {
+  'no-spec': true,
+  'perk-not-in-spec': true,
+  'invalid-level': true,
+  'over-budget': true,
 }
 const seedReasons: Record<SeedRefusal, true> = {
   'not-a-whole-number': true,
@@ -35,6 +62,55 @@ describe('refusal text', () => {
   test('every seed refusal reason has its own plain text', () => {
     const reasons = Object.keys(seedReasons) as SeedRefusal[]
     expectDistinctPlainTexts(reasons.map(seedRefusalText))
+  })
+
+  test('every summon refusal reason has its own plain text', () => {
+    const reasons = Object.keys(summonReasons) as SummonFailureReason[]
+    expectDistinctPlainTexts(reasons.map(summonRefusalText))
+  })
+
+  test('every party slot refusal reason has its own plain text', () => {
+    const reasons = Object.keys(partySlotReasons) as SetPartySlotFailureReason[]
+    expectDistinctPlainTexts(reasons.map(partySlotRefusalText))
+  })
+
+  test('every perk level refusal reason has its own plain text', () => {
+    const reasons = Object.keys(perkReasons) as SetPerkLevelFailureReason[]
+    expectDistinctPlainTexts(reasons.map(perkRefusalText))
+  })
+
+  test('the hub reasons the real store produces all have text', () => {
+    const store = createGameStore()
+    const summons = new Set<SummonFailureReason>()
+    for (const id of ['brute-starter', 'no-such-creature']) {
+      const check = store.getState().canSummon(id)
+      if (!check.ok) summons.add(check.reason)
+    }
+    expect([...summons].sort()).toEqual(Object.keys(summonReasons).sort())
+    for (const reason of summons) expect(summonRefusalText(reason)).not.toBe('')
+
+    const slots = new Set<SetPartySlotFailureReason>()
+    for (const [slot, id] of [
+      [99, null],
+      [0, createInstanceId('inst-404')],
+    ] as const) {
+      const check = store.getState().canSetPartySlot(slot, id)
+      if (!check.ok) slots.add(check.reason)
+    }
+    expect([...slots].sort()).toEqual(Object.keys(partySlotReasons).sort())
+    for (const reason of slots) expect(partySlotRefusalText(reason)).not.toBe('')
+
+    const perks = new Set<SetPerkLevelFailureReason>()
+    const note = (check: SetPerkLevelResult) => {
+      if (!check.ok) perks.add(check.reason)
+    }
+    note(store.getState().canSetPerkLevel('might', 1))
+    store.getState().setSpec('brute')
+    note(store.getState().canSetPerkLevel('no-such-perk', 1))
+    note(store.getState().canSetPerkLevel('might', Number.NaN))
+    note(store.getState().canSetPerkLevel('might', 1))
+    expect([...perks].sort()).toEqual(Object.keys(perkReasons).sort())
+    for (const reason of perks) expect(perkRefusalText(reason)).not.toBe('')
   })
 
   test('the reasons the real store and the seed field produce all have text', () => {

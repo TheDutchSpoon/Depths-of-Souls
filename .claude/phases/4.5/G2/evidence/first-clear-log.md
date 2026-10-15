@@ -1,0 +1,98 @@
+# Replay log for the pick (brute, seed 10): the calls the store received, in order
+
+Party targets are applied as setPartySlot(slot, ids[slot]) for slot 0.., skipping a slot that already holds the id. Each descent lists the activeParty before it and the deepest floor after.
+
+- party target ["inst-0","inst-1"]
+- descent 1: floor 1, party before ["inst-0","inst-1",null,null,null,null], deepest after 1 (cleared)
+- party target ["inst-0","inst-1"]
+- descent 2: floor 2, party before ["inst-0","inst-1",null,null,null,null], deepest after 1 (failed)
+- summon snapjaw-lure
+- party target ["inst-0","inst-1","inst-2"]
+- descent 3: floor 1, party before ["inst-0","inst-1","inst-2",null,null,null], deepest after 1 (cleared)
+- party target ["inst-0","inst-1","inst-2"]
+- descent 4: floor 2, party before ["inst-0","inst-1","inst-2",null,null,null], deepest after 2 (cleared)
+- summon spider-weaver
+- summon swarmhive-striker
+- summon swarmhive-drone
+- summon spider-ambusher
+- summon lullpollen-sleeper
+- summon pollinator-duster
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 5: floor 3, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 3 (cleared)
+- summon pollinator-beneficiary
+- summon treant-sapling
+- summon snapjaw-jaws
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 6: floor 4, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 4 (cleared)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 7: floor 5, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 4 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 8: floor 4, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 4 (cleared)
+- summon treant-elder
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 9: floor 5, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 4 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 10: floor 4, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 4 (cleared)
+- summon lullpollen-reaper
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 11: floor 5, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 4 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 12: floor 4, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 4 (cleared)
+- summon spider-broodwarden
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 13: floor 5, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 5 (cleared)
+- summon lullpollen-dozer
+- summon swarmhive-queen
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 14: floor 6, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 6 (cleared)
+- summon pollinator-pollenlord
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 15: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 6 (failed)
+- summon snapjaw-ironjaw
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 16: floor 6, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 6 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 17: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 6 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 18: floor 6, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 6 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 19: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (cleared)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 20: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 21: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- summon treant-grovekeep
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 22: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 23: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 24: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 25: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 26: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 27: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (cleared)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 28: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 29: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 30: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 31: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 32: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 33: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 34: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (failed)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 35: floor 7, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 7 (cleared)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 36: floor 8, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 8 (cleared)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 37: floor 9, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 9 (cleared)
+- party target ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"]
+- descent 38: floor 10, party before ["inst-0","inst-1","inst-2","inst-3","inst-4","inst-5"], deepest after 10 (cleared)
