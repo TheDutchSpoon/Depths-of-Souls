@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import {
   checkPerkField,
+  chosenSpecialization,
   INACTIVE_LABEL,
   perkRows,
   setPerkFromField,
 } from '../app/perkRows'
 import type { PerkRow as PerkRowData } from '../app/perkRows'
 import { perkRefusalText } from '../app/refusals'
-import { SPECIALIZATIONS_BY_ID } from '../data/specializations'
 import { useGameStore } from '../state/store'
 
 function PerkRow({ perk }: { perk: PerkRowData }) {
@@ -41,13 +41,12 @@ function PerkRow({ perk }: { perk: PerkRowData }) {
 
 export function PerksSection() {
   const game = useGameStore()
-  const spec =
-    game.chosenSpec === null ? undefined : SPECIALIZATIONS_BY_ID.get(game.chosenSpec)
+  const spec = chosenSpecialization(game.chosenSpec)
   return (
     <section>
       <h2>Perks</h2>
-      {spec === undefined ? (
-        <p>Pick a specialization first.</p>
+      {spec === null ? (
+        <p>{perkRefusalText('no-spec')}</p>
       ) : (
         <>
           <button type="button" onClick={() => game.refundAllPerks()}>

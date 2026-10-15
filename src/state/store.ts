@@ -262,6 +262,9 @@ export interface GameActions {
    * (an integer in `0 .. 2^32 - 1`; anything else throws -- the seed comes from `src/app`, so a bad
    * one is an impossible state). The scripted intro is run separately. */
   newGame(options: { readonly seed: number }): void
+  /** The one run start: `newGame`, then `setSpec`, then `runScriptedIntro`, in that order. Throws
+   * where those throw. */
+  startGame(options: { readonly seed: number; readonly specId: string }): void
   /** Needs 100% soul in `creatureId`; free and unlimited.
    * Creates a level-1 instance with rolled gems and puts it in the lowest-index empty party slot,
    * if any. `soulProgress` is left alone. */
@@ -715,6 +718,12 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
         throw new Error(`newGame: seed must be an integer in 0..2^32-1, got ${seed}`)
       }
       set(freshState(seed))
+    },
+
+    startGame({ seed, specId }) {
+      get().newGame({ seed })
+      get().setSpec(specId)
+      get().runScriptedIntro()
     },
 
     canSummon(creatureId) {

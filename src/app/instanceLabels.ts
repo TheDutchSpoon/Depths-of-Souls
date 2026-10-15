@@ -6,8 +6,8 @@ import { creatureName } from './names'
 /** The one label every owned instance shows under: "<name>, Lv <level>", with a 1-based "#<k>"
  * after the name when more than one owned instance shares it. The ordinal counts over the whole
  * collection, party and bench together, in collection order (the `Map`'s insertion order, which is
- * creation order: nothing removes an instance), so one name never has two "#1"s
- * (`spec/store.md#collection-shape`). */
+ * creation order: nothing removes an instance, `spec/store.md#store-actions`), so one name never
+ * has two "#1"s. */
 export function labelInstances(
   collection: ReadonlyMap<InstanceId, Instance>,
   names: ReadonlyMap<string, string>,

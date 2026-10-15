@@ -43,19 +43,30 @@ describe('labelInstances', () => {
   })
 
   test('the ordinal counts over the party and the bench together', () => {
-    // inst-0 is in a party slot and inst-2 is benched in a real store; the labels never ask.
+    // The brute and the Unicorn fill two slots and four summons fill the rest, so the fifth
+    // summon (inst-6) lands on the bench; the labels never ask where a copy is.
     const store = createGameStore()
     startRun(store.getState(), 'brute', '1')
     store.setState({
       soulProgress: new Map([['brute-starter', 100]]),
     })
-    expect(store.getState().summon('brute-starter').ok).toBe(true)
-    const labels = labelInstances(store.getState().collection, DEMO_NAMES)
-    const collection = [...store.getState().collection.values()]
-    const mauler = collection.filter((entry) => entry.source.kind === 'creature')
-    expect(mauler.map((entry) => labelOf(labels, entry.id))).toEqual(
-      expect.arrayContaining(['Cragfang Mauler #1, Lv 1', 'Cragfang Mauler #2, Lv 1']),
+    for (let i = 0; i < 5; i++)
+      expect(store.getState().summon('brute-starter').ok).toBe(true)
+    const state = store.getState()
+    expect(state.activeParty).not.toContain(createInstanceId('inst-6'))
+    const labels = labelInstances(state.collection, DEMO_NAMES)
+    const brutes = [...state.collection.values()].filter(
+      (entry) =>
+        entry.source.kind === 'creature' && entry.source.creatureId === 'brute-starter',
     )
+    expect(brutes.map((entry) => labelOf(labels, entry.id))).toEqual([
+      'Cragfang Mauler #1, Lv 1',
+      'Cragfang Mauler #2, Lv 1',
+      'Cragfang Mauler #3, Lv 1',
+      'Cragfang Mauler #4, Lv 1',
+      'Cragfang Mauler #5, Lv 1',
+      'Cragfang Mauler #6, Lv 1',
+    ])
   })
 
   test('a first copy gains "#1" once a second is summoned', () => {

@@ -93,6 +93,28 @@ describe('partyRows', () => {
   })
 })
 
+describe('a party line counts its label over the whole collection', () => {
+  test('a benched copy ahead of a party copy in collection order still numbers it', () => {
+    const store = startedStore()
+    for (let i = 0; i < 5; i++) summonBrute(store)
+    // The last copy (inst-6) is benched; picking it into slot 0 benches the first (inst-0).
+    expect(pickParty(store.getState(), 0, 'inst-6').ok).toBe(true)
+    const state = store.getState()
+    expect(state.activeParty).not.toContain(createInstanceId('inst-0'))
+
+    const rows = partyRows(state, HUB_CONTEXT)
+    for (const row of rows) {
+      if (row.selected === null) continue
+      const option = row.options.find((candidate) => candidate.value === row.selected)!
+      expect(row.line!.label).toBe(option.label)
+    }
+    expect(rows[0]!.line!.label).toBe('Cragfang Mauler #6, Lv 1')
+    expect(benchRows(state, HUB_CONTEXT).map((line) => line.label)).toEqual([
+      'Cragfang Mauler #1, Lv 1',
+    ])
+  })
+})
+
 describe('benchRows', () => {
   test('lists exactly the instances outside the party, in collection order', () => {
     const store = startedStore()

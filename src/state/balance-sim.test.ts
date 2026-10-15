@@ -12,6 +12,7 @@ import { BIOMES } from '../data/biomes'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import {
+  isFunctionalPerk,
   resolvePerkEffects,
   SORCERER,
   SPECIALIZATIONS,
@@ -38,7 +39,6 @@ import {
   formatReport,
   innateSpellCount,
   foldFightStacks,
-  isFunctionalPerk,
   lockScopesByStatus,
   medianOfSeeds,
   NO_STACKS,

@@ -1,5 +1,5 @@
-// The deterministic balance simulator. It drives the REAL store (`newGame`,
-// `setSpec`, `runScriptedIntro`, `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with the
+// The deterministic balance simulator. It drives the REAL store (`startGame`,
+// `descend`, `summon`, `setPartySlot`, `setPerkLevel`) with the
 // documented player policy below, over a fixed list of seeds, and builds a plain-data report of the
 // design targets T1-T5 (`CONVENTIONS.md#balance-simulator`), the watch points (the failed pushes from
 // floor 20 and the largest stacked stat-modifier growth) and the loose thresholds. It REPORTS; it
@@ -10,7 +10,7 @@
 // Run the full report with `npm run sim` (vitest in `--mode sim`, the corpus pattern).
 //
 // ---- The player policy ----
-// One run = one spec x one seed: `newGame({ seed })`, `setSpec`, `runScriptedIntro`, then a loop of
+// One run = one spec x one seed: `startGame({ seed, specId })`, then a loop of
 // FLOOR RUNS (one `descend` each) until the seed clears the content frontier (`frontier`) or
 // reaches RUN_CAP floor runs (`cap`).
 //  - Which floor: after a clear, push to `deepestFloor + 1`. After a FAILED PUSH the
@@ -65,10 +65,9 @@ import { BIOMES } from '../data/biomes'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import {
-  resolvePerkEffects,
+  isFunctionalPerk,
   SPECIALIZATIONS,
   SPECIALIZATIONS_BY_ID,
-  type PerkDef,
   type Specialization,
 } from '../data/specializations'
 import {
@@ -203,12 +202,6 @@ export function orderedParty(
 
 function ordinalOf(id: InstanceId): number {
   return Number(String(id).slice('inst-'.length))
-}
-
-/** A perk is functional when its max-level effects are non-empty (the rule the
- * data test pins for the inert perks, `spec/progression.md#inert-perks`). */
-export function isFunctionalPerk(perk: PerkDef): boolean {
-  return resolvePerkEffects(perk, perk.maxLevel).length > 0
 }
 
 /** The greedy purchase from scratch -- each functional perk in data order takes
@@ -1031,9 +1024,7 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
     scripts: options.scripts ?? buildSimScripts(),
     balanceConfig: config,
   })
-  store.getState().newGame({ seed })
-  store.getState().setSpec(specId)
-  store.getState().runScriptedIntro()
+  store.getState().startGame({ seed, specId })
   const frontier = contentFrontier(BIOMES)
 
   const summoned = new Set<string>()

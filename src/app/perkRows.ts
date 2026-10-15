@@ -1,14 +1,19 @@
-import { resolvePerkEffects } from '../data/specializations'
-import type { PerkDef, Specialization } from '../data/specializations'
+import { isFunctionalPerk, SPECIALIZATIONS_BY_ID } from '../data/specializations'
+import type { Specialization } from '../data/specializations'
 import type { GameActions, SetPerkLevelResult } from '../state/store'
 import { parseFloorField } from './floorPicker'
 
 export const INACTIVE_LABEL = "inactive (its system isn't built yet)"
 
-/** A perk whose max-level effects are empty has no engine system behind it yet
- * (`spec/progression.md#inert-perks`). */
-export function isInactivePerk(perk: PerkDef): boolean {
-  return resolvePerkEffects(perk, perk.maxLevel).length === 0
+/** The chosen specialization, `null` while none is chosen. An id the data doesn't hold throws:
+ * the store only holds ids `setSpec` accepted, so an unknown one is a drift to surface. */
+export function chosenSpecialization(chosenSpec: string | null): Specialization | null {
+  if (chosenSpec === null) return null
+  const spec = SPECIALIZATIONS_BY_ID.get(chosenSpec)
+  if (spec === undefined) {
+    throw new Error(`chosenSpecialization: unknown specialization ${chosenSpec}`)
+  }
+  return spec
 }
 
 export interface PerkRow {
@@ -32,7 +37,7 @@ export function perkRows(
     level: perkSpend.get(perk.id) ?? 0,
     maxLevel: perk.maxLevel,
     costPerLevel: perk.costPerLevel,
-    inactive: isInactivePerk(perk),
+    inactive: !isFunctionalPerk(perk),
   }))
 }
 

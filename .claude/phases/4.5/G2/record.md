@@ -1,7 +1,8 @@
 # Record — 4.5-G2: The demo, the hub
 
-The second half of the run-loop demo: the hub beside G1's run screen and side panel. It changes no
-engine, store or data code, and restates no game rule.
+The second half of the run-loop demo: the hub beside G1's run screen and side panel, the one run
+start, the one perk predicate and the end-to-end smoke test. It changes no engine code and
+restates no game rule; the store and data changes are two additive exports (below).
 
 ## Files changed
 
@@ -20,6 +21,32 @@ collection), `creatureLine` (`HUB_CONTEXT`, `creatureLine`, `creatureLineText`),
 `SpecSection`. Controls carry accessible names: `Party slot <n>` (1-based), `Summon <creature>`,
 `Level of <perk>`, `Set <perk>`, `Boss`.
 
+**The run start** (`src/state/store.ts`, `src/app/startRun.ts`, `src/state/balance-sim.ts`):
+`GameActions.startGame({ seed, specId })` calls `newGame`, `setSpec`, `runScriptedIntro` in that
+order; the three stay public. `startRun` parses and draws the seed and makes the one `startGame`
+call (its `Pick` is `'startGame'`); `runSeed` in the simulator calls it too.
+
+**The perk predicate:** `isFunctionalPerk` moved unchanged from `src/state/balance-sim.ts` to
+`src/data/specializations.ts`, beside `resolvePerkEffects`. `src/app/perkRows.ts` drops
+`isInactivePerk` (a row's `inactive` is `!isFunctionalPerk(perk)`) and gains
+`chosenSpecialization` (`null` for no spec, throws on an unknown id), which `PerksSection` calls;
+the section renders `perkRefusalText('no-spec')` instead of its own copy of the string.
+
+**Review fixes:** `partyRows.test` pins a party line's label over the whole collection;
+`instanceLabels.test`'s party-and-bench case now benches a copy; two doc-comment citations
+(`instanceLabels.ts`, `specSwitcher.ts`) cite only what the rule states.
+
+**The smoke test:** `@playwright/test` (dev dependency), `playwright.config.ts` (`testDir: 'e2e'`,
+one Chromium project, a `webServer` that builds then runs `vite preview` on port 4173 with
+`--strictPort`, `baseURL` `http://127.0.0.1:4173/Depths-of-Souls/`), `e2e/smoke.spec.ts` (Brute,
+seed 10, descend floor 1, a "Floor 1:" line, the side panel's last floor, party slots 1 and 2
+filled, slot 3 empty, no page error), `npm run e2e`. `tsconfig.node.json` includes
+`playwright.config.ts` and `e2e`; `.gitignore` gains `test-results/` and `playwright-report/`;
+`.github/workflows/deploy.yml` gains an `e2e` job and `deploy` needs `build` and `e2e`. Vitest's
+globs are unchanged, so it collects nothing from `e2e/`.
+
+**New test file:** `src/state/store-startgame.test.ts`.
+
 **Deleted:** none.
 
 ## Tests
@@ -27,9 +54,15 @@ collection), `creatureLine` (`HUB_CONTEXT`, `creatureLine`, `creatureLineText`),
 2152 → 2200 (+48), all in `src/app`: instanceLabels 6, creatureLine 7, partyRows 8, soulRows 6,
 perkRows 9, specSwitcher 5, debugBoss 3, refusals 3 → 7.
 
+Round 2: 2200 → 2210 (+10; 2209 passed, 1 skipped): `store-startgame` 0 → 6, `specializations`
++1, `perkRows` 9 → 11 (−1 "agrees with the simulator", +3 `chosenSpecialization`), `partyRows` 8 → 9.
+The smoke test is the one `npm run e2e` test, outside this count.
+
 ## Golden policy
 
-Byte-identical. `git diff --stat origin/main -- src/engine src/state src/data` is empty.
+Byte-identical: no golden, corpus digest or engine test changes. `git diff --stat origin/main --
+src/engine` is empty. `src/state` and `src/data` change only by `startGame` and `isFunctionalPerk`
+(and the simulator importing and calling them); the three `balance-ci-*` tests pass unchanged.
 
 ## Verification
 

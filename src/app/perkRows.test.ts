@@ -1,11 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import { SPECIALIZATIONS, SPECIALIZATIONS_BY_ID } from '../data/specializations'
-import { isFunctionalPerk } from '../state/balance-sim'
 import { createGameStore } from '../state/store'
 import {
   checkPerkField,
+  chosenSpecialization,
   INACTIVE_LABEL,
-  isInactivePerk,
   parsePerkLevelField,
   perkRows,
   setPerkFromField,
@@ -38,17 +37,25 @@ describe('the inactive label', () => {
 
   test('lands on exactly the nine known-inert perks, across every spec', () => {
     const labelled = SPECIALIZATIONS.flatMap((spec) =>
-      spec.perks.filter(isInactivePerk).map((perk) => perk.id),
+      perkRows(spec, new Map())
+        .filter((row) => row.inactive)
+        .map((row) => row.id),
     )
     expect([...labelled].sort()).toEqual([...KNOWN_INERT_PERK_IDS].sort())
   })
+})
 
-  test('agrees with the simulator on every perk', () => {
-    for (const spec of SPECIALIZATIONS) {
-      for (const perk of spec.perks) {
-        expect(isInactivePerk(perk), perk.id).toBe(!isFunctionalPerk(perk))
-      }
-    }
+describe('chosenSpecialization', () => {
+  test('no chosen spec is null', () => {
+    expect(chosenSpecialization(null)).toBeNull()
+  })
+
+  test('a known id is its spec', () => {
+    expect(chosenSpecialization('brute')).toBe(SPECIALIZATIONS_BY_ID.get('brute'))
+  })
+
+  test('an unknown id throws', () => {
+    expect(() => chosenSpecialization('nope')).toThrow(/unknown specialization nope/)
   })
 })
 

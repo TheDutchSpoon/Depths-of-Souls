@@ -25,11 +25,11 @@ export type StartRunResult =
   | { readonly ok: true; readonly seed: number }
   | { readonly ok: false; readonly reason: SeedRefusal }
 
-/** The one start path: the Start button and the presence test both call it. The calls and their
- * order are the balance simulator's run start, so a demo run matches a simulated one for the
- * same seed. The seed is validated first, so `newGame` never throws. */
+/** The one start path: the Start button and the presence test both call it. It makes the one
+ * `startGame` call the balance simulator makes too, so a demo run matches a simulated one for the
+ * same seed. The seed is validated first, so `startGame` never throws on it. */
 export function startRun(
-  store: Pick<GameActions, 'newGame' | 'setSpec' | 'runScriptedIntro'>,
+  store: Pick<GameActions, 'startGame'>,
   specId: string,
   seedText: string,
   source?: RandomSource,
@@ -37,9 +37,7 @@ export function startRun(
   const parsed = parseSeedField(seedText)
   if (!parsed.ok) return parsed
   const seed = parsed.seed ?? generateRunSeed(source)
-  store.newGame({ seed })
-  store.setSpec(specId)
-  store.runScriptedIntro()
+  store.startGame({ seed, specId })
   return { ok: true, seed }
 }
 
