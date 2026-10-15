@@ -26,6 +26,10 @@ Read this when changing the store or the state the UI reads.
 - A new game starts from **`newGame({ seed })`**, the seed a whole number in `0..MAX_RUN_SEED`
   (`2^32-1`, exported; any other throws). The seed is generated in `src/app`, never in the store
   or the engine.
+- **`startGame({ seed, specId })`** is the one run start: `newGame({ seed })`, then
+  `setSpec(specId)`, then `runScriptedIntro()` (the starter must be owned before the intro fight),
+  throwing where those throw. The demo's Start and the balance simulator both call it, so a demo
+  run and a simulated one match for the same seed and spec.
 
 ### How store actions fail
 
@@ -43,7 +47,7 @@ Read this when changing the store or the state the UI reads.
 
 ### Store actions
 
-- `newGame({ seed })`, `setSpec`, `descend`, `runScriptedIntro`, `recordBossKill`, `pinBiome`,
+- `newGame({ seed })`, `startGame({ seed, specId })`, `setSpec`, `descend`, `runScriptedIntro`, `recordBossKill`, `pinBiome`,
   `setPerkLevel`, `refundAllPerks`, `summon(creatureId)` and `setPartySlot(slot, instanceId |
   null)`, plus the `can…` queries and two read-only answers for the UI:
   - `floorPreview(floor)`: the floor's biome, resolved as `descend` resolves it (pins and run seed

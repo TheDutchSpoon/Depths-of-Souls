@@ -392,7 +392,8 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 - One real `createGameStore`. The demo keeps UI state only (which screen, playback position), never
   game state. Every `can…` query greys out its control, with the refusal reason shown as text.
 - Every public store action has a control except `pinBiome` (it belongs to the Biome Atlas,
-  `spec/run.md#facilities`). `recordBossKill` sits under a **Debug** heading, so perks and spec
+  `spec/run.md#facilities`), and `newGame` and `runScriptedIntro`, which Start reaches through
+  `startGame`. `recordBossKill` sits under a **Debug** heading, so perks and spec
   switching can be checked in a browser: perk points otherwise need a first boss clear.
 - The demo restates no game rule ([the demo's game-layer homes](#the-demos-game-layer-homes)).
 
@@ -401,9 +402,9 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 - A spec pick (Sorcerer, Brute, Shieldbarer: the data's order) and a seed field with a **Random**
   button that fills it (`generateRunSeed`, in `src/app`; a blank field draws one too), the baseline
   demo's randomize-seed control (`CONVENTIONS.md#every-feature-phase-ships-a-demo`). Start runs
-  `newGame({ seed })` → `setSpec` → `runScriptedIntro()`, **silently**: the intro's result isn't
-  shown. That grants the Unicorn and keeps a demo run identical to the balance simulator's for the
-  same seed.
+  `startGame` (`spec/store.md#newgame`), **silently**: the intro's result isn't shown. That grants
+  the Unicorn and, the simulator making the same call, keeps a demo run identical to the balance
+  simulator's for the same seed.
 
 ### Floor picker (G1)
 
@@ -464,9 +465,8 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 - **Souls:** every creature with soul progress above 0, its %, and **Summon** (`canSummon`'s reason
   shown; duplicates allowed, `spec/creatures.md#souls`).
 - **Perks** of the current spec: name, level / max, cost per level, a level field (`setPerkLevel`
-  takes the absolute level), `canSetPerkLevel`'s reason shown, and **Refund all**. A perk whose
-  `resolvePerkEffects(perk, maxLevel)` is empty is labelled inactive (exact: the data test in
-  `specializations.test.ts` holds both directions). Names only: `PerkDef` has no player-facing
+  takes the absolute level), `canSetPerkLevel`'s reason shown, and **Refund all**. A perk
+  `isFunctionalPerk` rejects is labelled inactive (`spec/progression.md#inert-perks`). Names only: `PerkDef` has no player-facing
   text.
 - A **spec switcher**, always available, offering the other specs (re-picking the current one
   isn't a swap, and **Refund all** already clears the spend), noting that a switch refunds every
