@@ -15,7 +15,7 @@ start screen and never calls the store), `src/index.css` (the hub column shares 
 **New, `src/app`** (pure, each with a test): `instanceLabels` (one label map for the whole
 collection), `creatureLine` (`HUB_CONTEXT`, `creatureLine`, `creatureLineText`), `partyRows`
 (`partyRows`, `benchRows`, `pickParty`), `soulRows`, `perkRows` (`INACTIVE_LABEL`,
-`isInactivePerk`, the level field through `parseFloorField`), `specSwitcher`, `debugBoss`.
+`chosenSpecialization`, `perkRows`, the level field through `parseFloorField`), `specSwitcher`, `debugBoss`.
 
 **New, `src/ui`:** `Hub`, `PartySection`, `CollectionSection`, `SoulsSection`, `PerksSection`,
 `SpecSection`. Controls carry accessible names: `Party slot <n>` (1-based), `Summon <creature>`,
@@ -40,7 +40,9 @@ the section renders `perkRefusalText('no-spec')` instead of its own copy of the 
 one Chromium project, a `webServer` that builds then runs `vite preview` on port 4173 with
 `--strictPort`, `baseURL` `http://127.0.0.1:4173/Depths-of-Souls/`), `e2e/smoke.spec.ts` (Brute,
 seed 10, descend floor 1, a "Floor 1:" line, the side panel's last floor, party slots 1 and 2
-filled, slot 3 empty, no page error), `npm run e2e`. `tsconfig.node.json` includes
+filled, slot 3 empty, no page error, and no request to the preview's origin outside the
+`baseURL`'s path, which is what proves the build's `base`: the preview answers any path with
+`index.html`), `npm run e2e`. `tsconfig.node.json` includes
 `playwright.config.ts` and `e2e`; `.gitignore` gains `test-results/` and `playwright-report/`;
 `.github/workflows/deploy.yml` gains an `e2e` job and `deploy` needs `build` and `e2e`. Vitest's
 globs are unchanged, so it collects nothing from `e2e/`.
@@ -51,11 +53,9 @@ globs are unchanged, so it collects nothing from `e2e/`.
 
 ## Tests
 
-2152 → 2200 (+48), all in `src/app`: instanceLabels 6, creatureLine 7, partyRows 8, soulRows 6,
-perkRows 9, specSwitcher 5, debugBoss 3, refusals 3 → 7.
-
-Round 2: 2200 → 2210 (+10; 2209 passed, 1 skipped): `store-startgame` 0 → 6, `specializations`
-+1, `perkRows` 9 → 11 (−1 "agrees with the simulator", +3 `chosenSpecialization`), `partyRows` 8 → 9.
+`main` → final: 2152 → 2210 (+58; 2209 passed, 1 skipped), by file: creatureLine 0 → 7,
+debugBoss 0 → 3, instanceLabels 0 → 6, partyRows 0 → 9, perkRows 0 → 11, refusals 3 → 7,
+soulRows 0 → 6, specSwitcher 0 → 5, specializations 12 → 13, store-startgame 0 → 6.
 The smoke test is the one `npm run e2e` test, outside this count.
 
 ## Golden policy

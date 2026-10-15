@@ -3,9 +3,20 @@ import { expect, test } from '@playwright/test'
 // Asserts no fight outcome, so a balance change never breaks it.
 test('start as Brute, descend floor 1, see the result, the side panel and the party', async ({
   page,
+  baseURL,
 }) => {
   const pageErrors: Error[] = []
   page.on('pageerror', (error) => pageErrors.push(error))
+
+  // The preview serves index.html for any path, so only the requests show the build's `base`.
+  const base = new URL(baseURL!)
+  const offBaseRequests: string[] = []
+  page.on('request', (request) => {
+    const url = new URL(request.url())
+    if (url.origin === base.origin && !url.pathname.startsWith(base.pathname)) {
+      offBaseRequests.push(url.pathname)
+    }
+  })
 
   await page.goto('./')
 
@@ -25,4 +36,5 @@ test('start as Brute, descend floor 1, see the result, the side panel and the pa
   await expect(page.getByLabel('Party slot 3')).toHaveValue('')
 
   expect(pageErrors).toEqual([])
+  expect(offBaseRequests).toEqual([])
 })
