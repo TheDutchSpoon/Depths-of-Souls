@@ -430,8 +430,9 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
   Lv 3"); a unique name prints bare. The party dropdowns and the creature lines use the same
   label.
 - **Collection:** every owned instance outside the party, one line each: name, level, XP to the
-  next level, affinity, rarity, role script, traits, and its three gems by spell name. Party rows
-  use the same line.
+  next level, affinity, rarity, role script, traits, and its gems by spell name, one per regular
+  gem slot, an empty slot shown empty (`spec/creatures.md#trait-and-gem-slots`). Party rows use the
+  same line.
 - **Souls:** every creature with soul progress above 0, its %, and **Summon** (`canSummon`'s reason
   shown; duplicates allowed, `spec/creatures.md#souls`).
 - **Perks** of the current spec: name, level / max, cost per level, a level field (`setPerkLevel`
@@ -472,7 +473,7 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
 
 - [x] **ASSUMPTION (A):** the stub that replaces the 3.5 demo is one line of text with the game's
       title; no controls.
-- [ ] **ASSUMPTION (G1, G2):** player-facing strings carry no phase ids, because
+- [x] **ASSUMPTION (G1, G2):** player-facing strings carry no phase ids, because
       `npm run docs:check -- comments` fails a string literal holding one
       (`CONVENTIONS.md#comment-why-not-what`). So the inert-perk label reads "inactive (its system
       isn't built yet)", the currency line "Nothing spends these yet", and the save line "No saving
