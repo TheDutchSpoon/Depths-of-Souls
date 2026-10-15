@@ -425,6 +425,10 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 - **Party:** six rows, each a dropdown of the owned instances plus "empty", calling `setPartySlot`;
   the store's swap semantics do the rest (`spec/store.md#store-actions`). Slot order matters: it
   breaks Speed ties and decides Splashing's adjacency.
+- **Instance labels:** an owned instance shows as its name and level ("Snapjaw, Lv 3"). A name
+  more than one owned instance shares carries a 1-based ordinal by collection order ("Snapjaw #2,
+  Lv 3"); a unique name prints bare. The party dropdowns and the creature lines use the same
+  label.
 - **Collection:** every owned instance outside the party, one line each: name, level, XP to the
   next level, affinity, rarity, role script, traits, and its three gems by spell name. Party rows
   use the same line.
@@ -435,9 +439,12 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
   `resolvePerkEffects(perk, maxLevel)` is empty is labelled inactive (exact: the data test in
   `specializations.test.ts` holds both directions). Names only: `PerkDef` has no player-facing
   text.
-- A **spec switcher**, always available, noting that a switch refunds every perk
-  (`spec/progression.md#swapping-specialization`), and **New game**, back to the start screen.
-- **Debug: Record boss kill**, calling `recordBossKill`.
+- A **spec switcher**, always available, offering the other specs (re-picking the current one
+  isn't a swap, and **Refund all** already clears the spend), noting that a switch refunds every
+  perk (`spec/progression.md#swapping-specialization`), and **New game**, back to the start
+  screen.
+- **Debug: Record boss kill**, calling `recordBossKill` with a boss picked from the data's bosses
+  (the earned total counts every id it is given).
 
 ### Tests and verification
 
@@ -452,8 +459,12 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 - The report's browser click-through covers every control once, every refusal reason on screen,
   the three speeds, skip fight, skip floor, jump, a spec switch refunding perks bought through
   Debug, no stacked timers when clicking around mid-playback, and **a copied fight's JSON pasted
-  into a scratch test reproducing that fight's log byte-identically**. The live URL is checked
-  after merge.
+  into a scratch test reproducing that fight's log byte-identically**. It shows a **first boss
+  clear** too: a scripted browser session plays one run through the UI to a floor-10 clear,
+  following the balance simulator's player policy (summons and party order, `src/state/balance-sim.ts`)
+  on the spec and seed a scan of that policy finds quickest to clear floor 10, and shows the
+  boss result line and the 100 perk points it earns being spent. The live URL is checked after
+  merge.
 
 ## Assumptions
 

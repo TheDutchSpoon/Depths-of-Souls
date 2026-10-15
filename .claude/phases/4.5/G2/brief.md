@@ -17,4 +17,4 @@ verification.
 ## Done when
 
 Every hub control is reachable, every refusal reason shows, and the click-through covers summoning,
-reordering, perks and a spec switch that refunds them.
+reordering, perks, a spec switch that refunds them, and a first boss clear reached through the UI.
