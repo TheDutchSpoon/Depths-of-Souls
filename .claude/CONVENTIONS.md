@@ -114,7 +114,7 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 ### Three test tiers
 
 - Test the pure engine heavily and the browser lightly: unit tests, golden replays and the corpus
-  digest. An end-to-end smoke test is planned (`ROADMAP.md#phase-7--combat-ui--feedback`).
+  digest. An end-to-end smoke test is planned (`phases/4.5/brief.md#an-end-to-end-smoke-test`).
 
 ### Unit tests
 

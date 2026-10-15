@@ -32,7 +32,7 @@ the docs win: flag the conflict, don't guess.
 | **4.5-F** | [Level-ups after each fight](#level-ups-after-each-fight), [the per-fight record](#the-per-fight-record), [the scripted intro grants XP](#the-scripted-intro-grants-xp) | Engine goldens and the corpus digest byte-identical; store tests change; CI balance verdicts re-checked |
 | (4.5-F2) | Tuning, only if a CI balance verdict flipped ([Balance verdicts](#balance-verdicts)) | Content numbers, deliberate |
 | **4.5-G1** | The demo's descent loop and viewer ([The demo](#the-demo)), [the demo's game-layer homes](#the-demos-game-layer-homes) | Goldens, the corpus digest and existing tests byte-identical; additive exports ([Demo golden rule](#demo-golden-rule)) |
-| **4.5-G2** | The demo's hub ([The demo](#the-demo)) | Byte-identical ([Demo golden rule](#demo-golden-rule)) |
+| **4.5-G2** | The demo's hub ([The demo](#the-demo)), [one run start and one perk predicate](#one-run-start-and-one-perk-predicate), [an end-to-end smoke test](#an-end-to-end-smoke-test) | Byte-identical; additive store and data exports ([Demo golden rule](#demo-golden-rule)) |
 
 Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
@@ -47,8 +47,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   can't ride in a byte-identical slice, and mixing it with a mechanism fix would swamp that fix's
   golden attribution.
 - **F is last of the fixes**: it moves balance the most, and the demo shows it directly.
-- **G is split for review size**: G1 holds the timer and playback risk; G2 only adds controls to
-  G1's screens.
+- **G is split for review size**: G1 holds the timer and playback risk; G2 adds the hub to G1's
+  screens, two more game-layer homes and the end-to-end smoke test.
 
 ## Sequencing rules
 
@@ -71,8 +71,9 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 ### Demo golden rule
 
-- G2 changes no engine, store or data code. G1 changes them only to add
-  [the demo's game-layer homes](#the-demos-game-layer-homes). Every golden, existing engine and store
+- G1 and G2 change engine, store or data code only to add game-layer homes: G1
+  [the demo's game-layer homes](#the-demos-game-layer-homes), G2
+  [one run start and one perk predicate](#one-run-start-and-one-perk-predicate). Every golden, existing engine and store
   test and the corpus digest stay byte-identical. Any other deliberate change is allowed only for a
   good reason, and only with the approval of both the design agent and Duncan at build time: it is
   a stop-and-ask, never the coding agent's call.
@@ -353,6 +354,33 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   4.5-G1, and its PR review writes them into `spec/store.md`, `spec/run.md` and
   `spec/progression.md`.
 
+### One run start and one perk predicate
+
+- A rule the app and the simulator both follow has one home outside `src/app`:
+  - **Starting a game.** The store's `startGame({ seed, specId })` calls `newGame({ seed })`,
+    `setSpec(specId)` and `runScriptedIntro()` in that order (the starter must be owned before the
+    intro fight). The demo's start path and the simulator's `runSeed` both call it; the three
+    actions stay public.
+  - **A functional perk.** `src/data/specializations.ts` exports `isFunctionalPerk` (its
+    `resolvePerkEffects` at max level is non-empty), beside `resolvePerkEffects`. The hub's
+    inactive label and the simulator's perk buying both read it, and the data test checks it
+    against the known-inert list (`spec/progression.md#inert-perks`).
+- Additive: the simulator makes the same calls in the same order, so the `balance-ci-*` tests
+  pass unchanged. They ride in 4.5-G2, and its PR review writes them into `spec/store.md` and
+  `spec/progression.md`.
+
+### An end-to-end smoke test
+
+- `@playwright/test` runs one smoke test in Chromium against the production build served by
+  `vite preview`, at the Pages subpath: start a game, descend floor 1, see the result, the side
+  panel and the hub's party. It asserts no fight outcome, so balance changes never break it.
+- It runs as `npm run e2e`, outside Vitest, and as its own CI job on every pull request and push
+  to `main`; the deploy waits on it.
+- It stays a smoke test while the demo stands: Phase 7 replaces the demo's screens, so a finer
+  test now would be rewritten then.
+- It rides in 4.5-G2, and its PR review writes it into `CI_CD.md` and
+  `CONVENTIONS.md#three-test-tiers`.
+
 ## The demo
 
 The throwaway run-loop demo (`CONVENTIONS.md#every-feature-phase-ships-a-demo`), in `src/app` and
@@ -451,7 +479,8 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
 
 - The demo's logic lives in pure helpers in `src/app` with plain unit tests (the log split, the
   fight-list rows, the inactive-perk label, the line-up and creature lines, the refusal text).
-  Components stay thin. No new dev dependency.
+  Components stay thin. The only new dev dependency is Playwright, for
+  [the smoke test](#an-end-to-end-smoke-test).
 - One presence smoke test at a pinned seed, driving the store as the UI does: new game → spec →
   silent intro → descend floor 1. It checks the starter and the Unicorn are owned, 10 fight records
   each with a seed, both parties and the perk effects, the party's levels after the last fight

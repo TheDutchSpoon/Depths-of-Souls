@@ -83,8 +83,6 @@ Same guardrails as every demo; own brief and phase record.
 - **Perk text:** perks need player-facing descriptions; `PerkDef` carries only a name.
 
 **Decided, not built:**
-- **E2E smoke test** (Playwright): the app renders and the loop runs in a real browser. It is
-  slower, so it runs on `main` / pre-deploy, not in the inner loop.
 - **The scripted intro's story beat:** the intro's outcome is presented as a story beat, the
   starter revived and the Unicorn gained. It is presentation only (HP resets every fight, so a
   revive changes nothing); `spec/run.md#scripted-intro` describes the fight `main` runs.

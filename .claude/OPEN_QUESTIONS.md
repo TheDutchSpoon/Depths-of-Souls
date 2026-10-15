@@ -84,6 +84,15 @@ Decided to defer, not undecided.
 
 Each needs a decision before the content that depends on it.
 
+### A self-describing fight log
+
+- Settle at Phase 7's kickoff (`ROADMAP.md#phase-7--combat-ui--feedback`). A `SpellCast` names
+  its gem slot, not its spell, and the slot counts the innate spells fight setup puts first
+  (`spec/creatures.md#innate-spells`), so a reader of the log reruns `createCombat` to name a
+  cast. Rebuilding a fight from its inputs is sound by design; the question is whether the
+  "why did this happen" screen should read a log that names its spells. Adding the spell id
+  changes every golden with a cast in it.
+
 ### The biome roster
 
 - The names and themes of biomes 4–10, and which creature types populate each, to the content target
