@@ -187,7 +187,8 @@ export const BLINDCLAWS_VANGUARD_TRAIT: DescribedTrait = {
 export const RESONANT_CHORUS_TRAIT: DescribedTrait = {
   id: 'resonant-chorus-harmonize',
   name: 'Harmonize',
-  description: 'Whenever an ally casts a spell, its Attack permanently rises by 5%.',
+  description:
+    'Whenever an ally, itself included, casts a spell, its Attack permanently rises by 5%.',
   effects: [
     {
       category: 'triggered',
@@ -209,7 +210,7 @@ export const RESONANT_ADEPT_TRAIT: DescribedTrait = {
   id: 'resonant-adept-resonate',
   name: 'Resonate',
   description:
-    'Whenever an ally casts a spell, its Intelligence permanently rises by 8%.',
+    'Whenever an ally, itself included, casts a spell, its Intelligence permanently rises by 8%.',
   effects: [
     {
       category: 'triggered',
@@ -238,7 +239,7 @@ export const RESONANT_OVERTONE_TRAIT: DescribedTrait = {
   id: 'resonant-overtone-crescendo',
   name: 'Crescendo',
   description:
-    "Whenever an ally casts a spell, there's a 10% chance the caster casts again: a random one of its own equipped spells (possibly the same one), at a random valid target. The echo comes after the original cast has fully resolved, and it obeys every action rule: a Silenced caster can't echo, and a caster killed during its own cast (by a retaliation, say) loses the echo. An echo is observed like any cast (by a Chorus, an Adept, even an Overtone again), so it can chain into another echo. Only one Overtone echo can follow a cast, however many Overtones are on the field.",
+    "Whenever an ally, itself included, casts a spell, there's a 10% chance the caster casts again: a random one of its own equipped spells (possibly the same one), at a random valid target. The echo comes after the original cast has fully resolved, and it obeys every action rule: a Silenced caster can't echo, and a caster killed during its own cast (by a retaliation, say) loses the echo. An echo is observed like any cast (by a Chorus, an Adept, even an Overtone again), so it can chain into another echo. Only one Overtone echo can follow a cast, however many Overtones are on the field.",
   effects: [
     {
       category: 'triggered',

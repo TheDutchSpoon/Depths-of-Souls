@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { BRUTISH } from '../engine/__fixtures__/traits'
 import { perkDescription, SPECIALIZATIONS } from './specializations'
 import { STOCK_TRAITS, traitDescription } from './traits'
 
@@ -19,9 +20,7 @@ describe('traitDescription', () => {
     expect(() => traitDescription('no-such-trait')).toThrow(
       'no stock trait no-such-trait',
     )
-    expect(() => traitDescription('fixture-trait')).toThrow(
-      'no stock trait fixture-trait',
-    )
+    expect(() => traitDescription(BRUTISH.id)).toThrow(`no stock trait ${BRUTISH.id}`)
   })
 })
 
