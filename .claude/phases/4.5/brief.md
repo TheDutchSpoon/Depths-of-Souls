@@ -507,8 +507,8 @@ sections above, this section is what the demo does after G3.
 
 - **Results under the log.** The descent result (floor line, boss line, the fight list with its
   Jump and Copy buttons) and the header's "After the fight" line move below the log box, so the
-  fight being watched comes first. They stay visible the whole time: nothing is hidden, and Jump
-  still reaches any fight.
+  fight being watched comes first. They stay on the page below the box, one page-scroll down when
+  the box fills the screen: nothing is collapsed or hidden, and Jump still reaches any fight.
 - **Playback starts at once.** After `descend`, fight 1's line-up shows and playback runs straight
   away; the first beat follows one beat interval later. The 3-second wait was there for an
   auto-descend the demo doesn't have, so the reducer loses its `waiting` phase (and
