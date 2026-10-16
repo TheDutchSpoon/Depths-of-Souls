@@ -80,7 +80,8 @@ Same guardrails as every demo; own brief and phase record.
 ## Phase 7 — Combat UI & feedback
 - Render combat from the event log: turn-by-turn playback, fast-forward, speed control.
 - Clear "why did this happen" surfacing (which rule fired): core to the legibility pillar.
-- **Perk text:** perks need player-facing descriptions; `PerkDef` carries only a name.
+- **Trait and perk text:** traits and perks need player-facing descriptions in exact, consistent
+  wording; `PerkDef` carries only a name.
 
 **Decided, not built:**
 - **The scripted intro's story beat:** the intro's outcome is presented as a story beat, the
