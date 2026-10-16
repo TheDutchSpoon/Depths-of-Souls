@@ -1,0 +1,208 @@
+diff --git a/src/data/specializations.ts b/src/data/specializations.ts
+index 42c002c..2731cd9 100644
+--- a/src/data/specializations.ts
++++ b/src/data/specializations.ts
++/** A perk with its player-facing text. The text lives here, in data, and not on `PerkDef`: the
++ * engine and the store never read it, and a plain `PerkDef` can't go into a stock spec, so a stock
++ * perk can't ship without one. */
++export interface DescribedPerkDef extends PerkDef {
++  readonly description: string
++}
++
++/** A `Specialization` whose perks are all described. */
++export interface DescribedSpecialization extends Omit<Specialization, 'perks'> {
++  readonly perks: readonly DescribedPerkDef[]
++}
++
+-export const SORCERER: Specialization = {
++export const SORCERER: DescribedSpecialization = {
+-export const BRUTE: Specialization = {
++export const BRUTE: DescribedSpecialization = {
+-export const SHIELDBARER: Specialization = {
++export const SHIELDBARER: DescribedSpecialization = {
+-export const SPECIALIZATIONS: readonly Specialization[] = [SORCERER, BRUTE, SHIELDBARER]
++export const SPECIALIZATIONS: readonly DescribedSpecialization[] = [
++  SORCERER,
++  BRUTE,
++  SHIELDBARER,
++]
++
++const PERKS_BY_ID: ReadonlyMap<string, DescribedPerkDef> = new Map(
++  SPECIALIZATIONS.flatMap((spec) => spec.perks.map((perk) => [perk.id, perk] as const)),
++)
++
++/** The player-facing description of a perk, found by perk id alone: perk ids are unique across the
++ * specializations. Throws on an id that is not a stock perk. */
++export function perkDescription(perkId: string): string {
++  const perk = PERKS_BY_ID.get(perkId)
++  if (perk === undefined) throw new Error(`no stock perk ${perkId}`)
++  return perk.description
++}
+diff --git a/src/data/traits/glimmerdark.ts b/src/data/traits/glimmerdark.ts
+index 59c52a7..6424099 100644
+--- a/src/data/traits/glimmerdark.ts
++++ b/src/data/traits/glimmerdark.ts
+-import type { Trait } from '../../engine/effect-types'
++import type { DescribedTrait } from './described'
+-export const FLICKERLING_WICK_TRAIT: Trait = {
++export const FLICKERLING_WICK_TRAIT: DescribedTrait = {
+-export const FLICKERLING_FLARE_TRAIT: Trait = {
++export const FLICKERLING_FLARE_TRAIT: DescribedTrait = {
+-export const FLICKERLING_LAST_GLEAM_TRAIT: Trait = {
++export const FLICKERLING_LAST_GLEAM_TRAIT: DescribedTrait = {
+-export const BLINDCLAWS_SETTER_TRAIT: Trait = {
++export const BLINDCLAWS_SETTER_TRAIT: DescribedTrait = {
+-export const BLINDCLAWS_STRIKER_TRAIT: Trait = {
++export const BLINDCLAWS_STRIKER_TRAIT: DescribedTrait = {
+-export const BLINDCLAWS_VANGUARD_TRAIT: Trait = {
++export const BLINDCLAWS_VANGUARD_TRAIT: DescribedTrait = {
+-export const RESONANT_CHORUS_TRAIT: Trait = {
++export const RESONANT_CHORUS_TRAIT: DescribedTrait = {
+-export const RESONANT_ADEPT_TRAIT: Trait = {
++export const RESONANT_ADEPT_TRAIT: DescribedTrait = {
+-export const RESONANT_OVERTONE_TRAIT: Trait = {
++export const RESONANT_OVERTONE_TRAIT: DescribedTrait = {
+-export const SPARKEATER_LEECH_TRAIT: Trait = {
++export const SPARKEATER_LEECH_TRAIT: DescribedTrait = {
+-export const SPARKEATER_GORGER_TRAIT: Trait = {
++export const SPARKEATER_GORGER_TRAIT: DescribedTrait = {
+-export const SPARKEATER_VOIDMAW_TRAIT: Trait = {
++export const SPARKEATER_VOIDMAW_TRAIT: DescribedTrait = {
+-export const GLOOMJAW_STALKER_TRAIT: Trait = {
++export const GLOOMJAW_STALKER_TRAIT: DescribedTrait = {
+-export const GLOOMJAW_EXECUTIONER_TRAIT: Trait = {
++export const GLOOMJAW_EXECUTIONER_TRAIT: DescribedTrait = {
+-export const GLOOMJAW_RAVAGER_TRAIT: Trait = {
++export const GLOOMJAW_RAVAGER_TRAIT: DescribedTrait = {
+-export const SHELLBACK_WARDEN_TRAIT: Trait = {
++export const SHELLBACK_WARDEN_TRAIT: DescribedTrait = {
+-export const SHELLBACK_BRAWLER_TRAIT: Trait = {
++export const SHELLBACK_BRAWLER_TRAIT: DescribedTrait = {
+-export const SHELLBACK_BULWARK_TRAIT: Trait = {
++export const SHELLBACK_BULWARK_TRAIT: DescribedTrait = {
+-export const LEECH_SOVEREIGN_TRAIT: Trait = {
++export const LEECH_SOVEREIGN_TRAIT: DescribedTrait = {
+diff --git a/src/data/traits/index.ts b/src/data/traits/index.ts
+index 78c407e..046b5a6 100644
+--- a/src/data/traits/index.ts
++++ b/src/data/traits/index.ts
++import type { DescribedTrait } from './described'
++export type { DescribedTrait } from './described'
+-export const STOCK_TRAITS: readonly Trait[] = [
++export const STOCK_TRAITS: readonly DescribedTrait[] = [
++const STOCK_TRAITS_BY_ID: ReadonlyMap<string, DescribedTrait> = new Map(
++  STOCK_TRAITS.map((t) => [t.id, t]),
++)
++
++/** The player-facing description of a stock trait. Throws on an id that is not a stock trait
++ * (a test fixture's included): a screen asking for one is a bug, not a blank line. */
++export function traitDescription(traitId: string): string {
++  const trait = STOCK_TRAITS_BY_ID.get(traitId)
++  if (trait === undefined) throw new Error(`no stock trait ${traitId}`)
++  return trait.description
++}
++
+diff --git a/src/data/traits/overgrowth.ts b/src/data/traits/overgrowth.ts
+index 9fdc37e..1316a63 100644
+--- a/src/data/traits/overgrowth.ts
++++ b/src/data/traits/overgrowth.ts
+-import type { Trait } from '../../engine/effect-types'
++import type { DescribedTrait } from './described'
+-export const SPIDER_WEAVER_TRAIT: Trait = {
++export const SPIDER_WEAVER_TRAIT: DescribedTrait = {
+-export const SPIDER_AMBUSHER_TRAIT: Trait = {
++export const SPIDER_AMBUSHER_TRAIT: DescribedTrait = {
+-export const SPIDER_BROODWARDEN_TRAIT: Trait = {
++export const SPIDER_BROODWARDEN_TRAIT: DescribedTrait = {
+-export const SWARMHIVE_DRONE_TRAIT: Trait = {
++export const SWARMHIVE_DRONE_TRAIT: DescribedTrait = {
+-export const SWARMHIVE_STRIKER_TRAIT: Trait = {
++export const SWARMHIVE_STRIKER_TRAIT: DescribedTrait = {
+-export const SWARMHIVE_QUEEN_TRAIT: Trait = {
++export const SWARMHIVE_QUEEN_TRAIT: DescribedTrait = {
+-export const TREANT_SAPLING_TRAIT: Trait = {
++export const TREANT_SAPLING_TRAIT: DescribedTrait = {
+-export const TREANT_ELDER_TRAIT: Trait = {
++export const TREANT_ELDER_TRAIT: DescribedTrait = {
+-export const TREANT_GROVEKEEP_TRAIT: Trait = {
++export const TREANT_GROVEKEEP_TRAIT: DescribedTrait = {
+-export const POLLINATOR_DUSTER_TRAIT: Trait = {
++export const POLLINATOR_DUSTER_TRAIT: DescribedTrait = {
+-export const POLLINATOR_BENEFICIARY_TRAIT: Trait = {
++export const POLLINATOR_BENEFICIARY_TRAIT: DescribedTrait = {
+-export const POLLINATOR_POLLENLORD_TRAIT: Trait = {
++export const POLLINATOR_POLLENLORD_TRAIT: DescribedTrait = {
+-export const SNAPJAW_LURE_TRAIT: Trait = {
++export const SNAPJAW_LURE_TRAIT: DescribedTrait = {
+-export const SNAPJAW_JAWS_TRAIT: Trait = {
++export const SNAPJAW_JAWS_TRAIT: DescribedTrait = {
+-export const SNAPJAW_IRONJAW_TRAIT: Trait = {
++export const SNAPJAW_IRONJAW_TRAIT: DescribedTrait = {
+-export const LULLPOLLEN_SLEEPER_TRAIT: Trait = {
++export const LULLPOLLEN_SLEEPER_TRAIT: DescribedTrait = {
+-export const LULLPOLLEN_REAPER_TRAIT: Trait = {
++export const LULLPOLLEN_REAPER_TRAIT: DescribedTrait = {
+-export const LULLPOLLEN_DOZER_TRAIT: Trait = {
++export const LULLPOLLEN_DOZER_TRAIT: DescribedTrait = {
+-export const BROODMOTHER_TRAIT: Trait = {
++export const BROODMOTHER_TRAIT: DescribedTrait = {
+diff --git a/src/data/traits/rotcap-hollow.ts b/src/data/traits/rotcap-hollow.ts
+index fc17414..edd96c8 100644
+--- a/src/data/traits/rotcap-hollow.ts
++++ b/src/data/traits/rotcap-hollow.ts
+-import type { Trait } from '../../engine/effect-types'
++import type { DescribedTrait } from './described'
+-export const SPORECLOUD_SEEDER_TRAIT: Trait = {
++export const SPORECLOUD_SEEDER_TRAIT: DescribedTrait = {
+-export const SPORECLOUD_REAPER_TRAIT: Trait = {
++export const SPORECLOUD_REAPER_TRAIT: DescribedTrait = {
+-export const SPORECLOUD_BLOOMER_TRAIT: Trait = {
++export const SPORECLOUD_BLOOMER_TRAIT: DescribedTrait = {
+-export const ROTFEEDER_SCAVENGER_TRAIT: Trait = {
++export const ROTFEEDER_SCAVENGER_TRAIT: DescribedTrait = {
+-export const ROTFEEDER_RIPPER_TRAIT: Trait = {
++export const ROTFEEDER_RIPPER_TRAIT: DescribedTrait = {
+-export const ROTFEEDER_GORGEMAW_TRAIT: Trait = {
++export const ROTFEEDER_GORGEMAW_TRAIT: DescribedTrait = {
+-export const MYCONET_WARDER_TRAIT: Trait = {
++export const MYCONET_WARDER_TRAIT: DescribedTrait = {
+-export const MYCONET_ROTCORE_TRAIT: Trait = {
++export const MYCONET_ROTCORE_TRAIT: DescribedTrait = {
+-export const MYCONET_GRAVEDIGGER_TRAIT: Trait = {
++export const MYCONET_GRAVEDIGGER_TRAIT: DescribedTrait = {
+-export const NECROMOSS_WISP_TRAIT: Trait = {
++export const NECROMOSS_WISP_TRAIT: DescribedTrait = {
+-export const NECROMOSS_THICKET_TRAIT: Trait = {
++export const NECROMOSS_THICKET_TRAIT: DescribedTrait = {
+-export const NECROMOSS_HOLLOWROOT_TRAIT: Trait = {
++export const NECROMOSS_HOLLOWROOT_TRAIT: DescribedTrait = {
+-export const HOLLOWKIN_WRETCH_TRAIT: Trait = {
++export const HOLLOWKIN_WRETCH_TRAIT: DescribedTrait = {
+-export const HOLLOWKIN_MARIONETTE_TRAIT: Trait = {
++export const HOLLOWKIN_MARIONETTE_TRAIT: DescribedTrait = {
+-export const HOLLOWKIN_PUPPETEER_TRAIT: Trait = {
++export const HOLLOWKIN_PUPPETEER_TRAIT: DescribedTrait = {
+-export const SPORCH_IGNITER_TRAIT: Trait = {
++export const SPORCH_IGNITER_TRAIT: DescribedTrait = {
+-export const SPORCH_ASHBORN_TRAIT: Trait = {
++export const SPORCH_ASHBORN_TRAIT: DescribedTrait = {
+-export const SPORCH_CINDERLORD_TRAIT: Trait = {
++export const SPORCH_CINDERLORD_TRAIT: DescribedTrait = {
+-export const ROT_SOVEREIGN_TRAIT: Trait = {
++export const ROT_SOVEREIGN_TRAIT: DescribedTrait = {
+diff --git a/src/data/traits/starters.ts b/src/data/traits/starters.ts
+index 5b37aae..bd617e9 100644
+--- a/src/data/traits/starters.ts
++++ b/src/data/traits/starters.ts
+-import type { Trait } from '../../engine/effect-types'
++import type { DescribedTrait } from './described'
+-export const SORCERER_STARTER_TRAIT: Trait = {
++export const SORCERER_STARTER_TRAIT: DescribedTrait = {
+-export const BRUTE_STARTER_TRAIT: Trait = {
++export const BRUTE_STARTER_TRAIT: DescribedTrait = {
+-export const SHIELDBARER_STARTER_TRAIT: Trait = {
++export const SHIELDBARER_STARTER_TRAIT: DescribedTrait = {
+-export const UNICORN_TRAIT: Trait = {
++export const UNICORN_TRAIT: DescribedTrait = {
+-export const STARTER_TRAITS: readonly Trait[] = [
++export const STARTER_TRAITS: readonly DescribedTrait[] = [

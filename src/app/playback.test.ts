@@ -4,7 +4,6 @@ import {
   pendingDelayMs,
   playbackReducer,
   SPEEDS,
-  START_WAIT_MS,
   timerKey,
 } from './playback'
 import type { PlaybackAction, PlaybackState } from './playback'
@@ -26,18 +25,13 @@ const playing = (
   speed,
 })
 
-describe('the wait and the first beat', () => {
-  test('starts waiting, and the timer ends the wait at fight 1, beat 0', () => {
-    expect(initialPlayback()).toEqual({
-      phase: 'waiting',
-      fight: 0,
-      revealed: 0,
-      speed: 1,
-    })
-    expect(step(initialPlayback(), elapsed)).toEqual(playing(0, 0))
+describe('the first beat', () => {
+  test('starts playing at fight 1, beat 0, one beat interval from its first beat', () => {
+    expect(initialPlayback()).toEqual(playing(0, 0))
+    expect(pendingDelayMs(initialPlayback())).toBe(SPEEDS[1])
   })
 
-  test('a jump during the wait starts playback at that fight now', () => {
+  test('a jump from the start plays that fight from its first beat', () => {
     expect(step(initialPlayback(), { type: 'jump', fight: 2 })).toEqual(playing(2, 0))
   })
 })
@@ -109,9 +103,7 @@ describe('speed', () => {
     expect(step(playing(1, 2), { type: 'set-speed', speed: 5 })).toEqual(playing(1, 2, 5))
   })
 
-  test('the delays: 3 seconds waiting, 500 / 167 / 100 ms a beat, none once done', () => {
-    expect(pendingDelayMs(initialPlayback())).toBe(3000)
-    expect(START_WAIT_MS).toBe(3000)
+  test('the delays: 500 / 167 / 100 ms a beat, none once done', () => {
     expect(pendingDelayMs(playing(0, 0, 1))).toBe(500)
     expect(pendingDelayMs(playing(0, 0, 3))).toBe(167)
     expect(pendingDelayMs(playing(0, 0, 5))).toBe(100)
@@ -122,12 +114,6 @@ describe('speed', () => {
 describe('an action that changes nothing returns the identical object', () => {
   const cases: [string, PlaybackState, PlaybackAction][] = [
     ['the current speed again', playing(1, 1), { type: 'set-speed', speed: 1 }],
-    [
-      'the current speed again while waiting',
-      initialPlayback(),
-      { type: 'set-speed', speed: 1 },
-    ],
-    ['skip-fight while waiting', initialPlayback(), { type: 'skip-fight' }],
     [
       'skip-fight when done',
       step(playing(0, 0), { type: 'skip-floor' }),
@@ -147,13 +133,6 @@ describe('an action that changes nothing returns the identical object', () => {
 })
 
 describe('timerKey', () => {
-  test('a speed change during the wait leaves the key, and so the wait, alone', () => {
-    const waiting = initialPlayback()
-    expect(timerKey(step(waiting, { type: 'set-speed', speed: 5 }))).toBe(
-      timerKey(waiting),
-    )
-  })
-
   test('a speed change while playing changes the key, so the beat is rescheduled', () => {
     const state = playing(0, 1)
     expect(timerKey(step(state, { type: 'set-speed', speed: 3 }))).not.toBe(
@@ -163,7 +142,6 @@ describe('timerKey', () => {
 
   test('every move of the position changes the key', () => {
     const keys = [
-      timerKey(initialPlayback()),
       timerKey(playing(0, 0)),
       timerKey(playing(0, 1)),
       timerKey(playing(1, 0)),

@@ -21,7 +21,10 @@ export function SoulsSection() {
       <ul>
         {rows.map((row) => (
           <li key={row.creatureId}>
-            {row.name}: {percentText(row.percent)}{' '}
+            {row.name}: {percentText(row.percent)}
+            {row.traitLines.map((line, index) => (
+              <p key={index}>{line}</p>
+            ))}
             <button
               type="button"
               aria-label={`Summon ${row.name}`}

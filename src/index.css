@@ -34,3 +34,26 @@ pre {
 button[aria-pressed='true'] {
   font-weight: bold;
 }
+
+.lineups {
+  display: flex;
+  gap: 2rem;
+}
+
+.lineups > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-box {
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 0 0.5rem;
+  --log-line-height: 1.4;
+  line-height: var(--log-line-height);
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  overflow-anchor: none;
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+}

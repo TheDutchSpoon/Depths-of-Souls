@@ -16,6 +16,7 @@ import {
 } from '../app/playback'
 import type { PlaybackAction, PlaybackState, Speed } from '../app/playback'
 import { DescentResult } from './DescentResult'
+import { LogBox } from './LogBox'
 
 // A viewer, not an editor, and not the place for sprites, bars or animation. Playback is a
 // cosmetic reveal of a log the store already computed: this component owns the reducer and the one
@@ -86,14 +87,6 @@ export function DescentViewer({ descent }: { descent: Descent }) {
 
   return (
     <section>
-      <DescentResult
-        floorLine={floorResultLine(descent.outcome, descent.fights)}
-        bossLine={bossResultLine(descent.outcome)}
-        rows={rows}
-        onJump={(fight) => dispatch({ type: 'jump', fight })}
-        onCopy={(fight) => void copyFight(fight)}
-      />
-      {copyStatus !== null && <p role="status">{copyStatus}</p>}
       <div>
         {SPEED_BUTTONS.map((speed) => (
           <button
@@ -120,28 +113,36 @@ export function DescentViewer({ descent }: { descent: Descent }) {
           Skip to end of floor
         </button>
       </div>
-      {state.phase === 'waiting' ? (
-        <p>Playback starts shortly. Jump to any fight in the list to start there.</p>
-      ) : (
-        <>
-          <h3>{header.title}</h3>
-          <p>Party going in: {header.levelsIn.join('; ')}</p>
-          <p>
-            After the fight: {header.row.xp} XP
-            {header.row.levelUps.length > 0
-              ? `; level-ups: ${header.row.levelUps.join('; ')}`
-              : '; no level-ups'}
-          </p>
+      <h3>{header.title}</h3>
+      <p>Party going in: {header.levelsIn.join('; ')}</p>
+      <div className="lineups">
+        <div>
           <h4>Allies</h4>
           <pre>{allies.map(lineUpText).join('\n')}</pre>
+        </div>
+        <div>
           <h4>Foes</h4>
           <pre>{foes.map(lineUpText).join('\n')}</pre>
-          <pre>{log}</pre>
-          <button type="button" onClick={() => void copyFight(state.fight)}>
-            Debug: Copy fight as JSON
-          </button>
-        </>
-      )}
+        </div>
+      </div>
+      <LogBox text={log} fight={state.fight} revealed={state.revealed} />
+      <p>
+        After the fight: {header.row.xp} XP
+        {header.row.levelUps.length > 0
+          ? `; level-ups: ${header.row.levelUps.join('; ')}`
+          : '; no level-ups'}
+      </p>
+      <button type="button" onClick={() => void copyFight(state.fight)}>
+        Debug: Copy fight as JSON
+      </button>
+      {copyStatus !== null && <p role="status">{copyStatus}</p>}
+      <DescentResult
+        floorLine={floorResultLine(descent.outcome, descent.fights)}
+        bossLine={bossResultLine(descent.outcome)}
+        rows={rows}
+        onJump={(fight) => dispatch({ type: 'jump', fight })}
+        onCopy={(fight) => void copyFight(fight)}
+      />
     </section>
   )
 }

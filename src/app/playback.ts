@@ -6,10 +6,7 @@
 export const SPEEDS = { 1: 500, 3: 167, 5: 100 } as const
 export type Speed = keyof typeof SPEEDS
 
-/** The result and fight list show this long before playback starts by itself. */
-export const START_WAIT_MS = 3000
-
-export type PlaybackPhase = 'waiting' | 'playing' | 'done'
+export type PlaybackPhase = 'playing' | 'done'
 
 export interface PlaybackState {
   readonly phase: PlaybackPhase
@@ -28,7 +25,7 @@ export type PlaybackAction =
   | { readonly type: 'set-speed'; readonly speed: Speed }
 
 export function initialPlayback(): PlaybackState {
-  return { phase: 'waiting', fight: 0, revealed: 0, speed: 1 }
+  return { phase: 'playing', fight: 0, revealed: 0, speed: 1 }
 }
 
 /** An action that changes nothing returns the identical object, so React skips the render and
@@ -42,9 +39,6 @@ export function playbackReducer(
   const last = beatCounts.length - 1
   switch (action.type) {
     case 'timer-elapsed': {
-      if (state.phase === 'waiting') {
-        return { ...state, phase: 'playing', fight: 0, revealed: 0 }
-      }
       if (state.phase === 'done') return state
       const count = beatCounts[state.fight]!
       if (state.revealed < count) {
@@ -97,8 +91,6 @@ export function playbackReducer(
 /** How long the current state waits before the timer fires; null once nothing is pending. */
 export function pendingDelayMs(state: PlaybackState): number | null {
   switch (state.phase) {
-    case 'waiting':
-      return START_WAIT_MS
     case 'playing':
       return SPEEDS[state.speed]
     case 'done':
@@ -107,9 +99,7 @@ export function pendingDelayMs(state: PlaybackState): number | null {
 }
 
 /** The timer effect's dependency: it changes exactly when the pending timeout must be replaced.
- * Speed is left out while waiting, so changing it never restarts the wait. Keying the effect on
- * the whole state object would restart a beat on any new object. */
+ * Keying the effect on the whole state object would restart a beat on any new object. */
 export function timerKey(state: PlaybackState): string {
-  const position = `${state.phase}:${state.fight}:${state.revealed}`
-  return state.phase === 'waiting' ? position : `${position}:${state.speed}`
+  return `${state.phase}:${state.fight}:${state.revealed}:${state.speed}`
 }

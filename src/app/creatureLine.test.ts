@@ -5,7 +5,7 @@ import { createInstanceId } from '../state/ids'
 import type { Instance } from '../state/rewards'
 import { staticCreatureIdFor } from '../state/rewards'
 import { createGameStore } from '../state/store'
-import { creatureLine, creatureLineText, HUB_CONTEXT } from './creatureLine'
+import { creatureLine, creatureLineText, HUB_CONTEXT, templateOf } from './creatureLine'
 import { labelInstances, labelOf } from './instanceLabels'
 import { startRun } from './startRun'
 
@@ -148,6 +148,21 @@ describe('creatureLineText', () => {
     }
     expect(creatureLineText(line)).toBe(
       'Snapjaw, Lv 2 | XP 3 / 80 | Wit | Common | script striker | traits none | gems Arcane Bolt, empty',
+    )
+  })
+})
+
+describe('templateOf', () => {
+  test('returns the template by exact id', () => {
+    expect(templateOf(HUB_CONTEXT, 'brute-starter').id).toBe('brute-starter')
+  })
+
+  test('throws on an id with no template', () => {
+    expect(() => templateOf(HUB_CONTEXT, 'no-such-creature')).toThrow(
+      'creatureLine: no template no-such-creature',
+    )
+    expect(() => templateOf({ templates: new Map() }, 'brute-starter')).toThrow(
+      'no template brute-starter',
     )
   })
 })

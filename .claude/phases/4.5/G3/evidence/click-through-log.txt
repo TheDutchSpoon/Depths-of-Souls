@@ -1,0 +1,28 @@
+## 1920x1080, Descend on floor 10 (6v6 boss fight)
+line-up shown 66 ms after the click; first beat 570 ms after the click (504 ms after the line-up); "starts shortly" ever shown: false
+layout at scroll top: {"top":545,"bottom":1072,"docBottom":1072,"height":527,"lh":22.4,"lines":23.54,"speedTop":242,"scrollY":0,"docH":2963,"innerH":1080,"st":0,"ch":527,"sh":527,"text":11}
+speed buttons top 242 >= 0; log box bottom 1072 <= 1080: true; box height 527px = 23.54 lines (line height 22.4px)
+line-ups: 6v6
+results (floor line) top 1162 >= box bottom 1072: true
+copy status: ["Copied fight 1 as JSON"] ; box top/height before 545 527 after 545 527 (unchanged: true )
+Jump from the results: log lines before 21, right after 0 (restarts the fight)
+invalid floor typed during playback: box top 545 -> 545, height 527 -> 527, bottom 1072 -> 1072 (viewport 1080); bottom stays within 8px of the viewport bottom: true
+refusal text: ["That floor is out of reach: enter a whole number from 1 to one past the deepest floor cleared.","Copied fight 1 as JSON"]
+floor restored: bottom 1072 (viewport 1080); within 8px: true
+souls text: "Souls\nSpider Weaver: 100%\n\nAt the end of its own turn, applies Web to a random living enemy.\n\nSummon\nSnapjaw Jaws: 40%\n\nWhenever an attack or spell hits it, it hits back for 60% of its Attack, as indirect damage. It doesn't answer a tick, a cost or another creature's trait, status or perk damage.\n\nSummon Not enough soul: summoning needs 100%.\nTreant Elder: 20%\n\nAt the end of every round, heals its lowest-HP ally for 15% of its own effective Health.\n\nSummon Not enough soul: summoning needs 100%.\nGlyphmoth Seer: 60%\n\nAn innate spell, Arcane Bolt, dealing 100% of its Intelligence (not a gem: un-upgradeable, no affinity gate, an extra slot before the gem slots, kept through fusion), plus a 50% chance at the end of its turn to cast a random equipped spell.\n\nSummon Not enough soul: summoning needs 100%.\nCragfang Mauler: 10%\n\nIts Attack resolves one additional instance: it attacks twice at 100%, each a real attack firing on-attack, at the first one's target (the default target if that one died).\n\nSummon Not enough soul: summoning needs 100%."
+perks sample: "Perks\nRefund all\nEcho: 0 / 1, 100 per level\n\nYour creatures Cast spells an additional time.\n\n Set\nWit Mastery: 0 / 1, 60 per level (inactive (its system isn't built yet))\n\nYour creatures can equip Wit spell gems regardless of affinity.\n\n Set\nViolence Mastery: 0 / 1, 60 per level (inactive (its system isn't built yet))\n\nEquip Violence gems regardless of affinity.\n\n Set\nEndurance Mastery: 0 / 1, 60 per level (inactive (its system isn't built yet))\n\nEquip Endurance gems regardless of affinity.\n\n Set\nVitality Mastery: 0 / 1, 60 per level (inactive (its system isn't built yet))\n\nEquip Vitality gems regardless of affinity.\n\n Set\nInstinct Mastery: 0 / 1, 60 per level (inactive (its system isn't bui"
+errors: []
+
+## 1280x720 (boss fight, floor 10)
+box height 224px = 10 lines (>= 10: true); document 4025px in a 720px viewport (page scrolls: true)
+following: scrollTop 515, at bottom true (box 224px over 739px of log)
+held: scrollTop 265 -> 265 (unchanged: true); log lines 23 -> 40; 5 beat renders in 2.4 s
+scrolled back to the bottom, a beat later: at bottom true (scrollTop 1209, lines 42)
+following again two beats on: at bottom true (lines 46)
+floor 5 viewer: Fight 1 / 14 ; fights in list: 14
+skip to end of fight while held: scrollTop 69 -> 69 (stays: true), lines 15 -> 69
+jump while held (to fight 2; "Fight 1 / 14" -> "Fight 2 / 14"): log lines right after 0 (empty: true)
+new fight follows again: at bottom true (lines 24, box 224px over 739px)
+skip to end of fight while following: at bottom true (scrollTop 1881, 1881 max, lines 68)
+after clicking around (speeds, jumps, copy, scroll), 1x for 5 s: 9 beat renders (about 1.8 per second; two a second is correct)
+errors: []

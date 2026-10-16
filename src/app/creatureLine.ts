@@ -54,13 +54,22 @@ function lookup<T>(table: ReadonlyMap<string, T>, id: string, what: string): T {
   return found
 }
 
+/** The template of a creature by exact id; a miss throws. Shared by every row that reads a
+ * creature's template, so none keeps a lookup of its own. */
+export function templateOf(
+  ctx: Pick<HubContext, 'templates'>,
+  creatureId: string,
+): SpeciesCreature {
+  return lookup(ctx.templates, creatureId, 'template')
+}
+
 /** A miss anywhere throws: the id is never a fallback label. */
 export function creatureLine(
   instance: Instance,
   label: string,
   ctx: HubContext,
 ): CreatureLine {
-  const template = lookup(ctx.templates, staticCreatureIdFor(instance), 'template')
+  const template = templateOf(ctx, staticCreatureIdFor(instance))
   return {
     label,
     xp: `${instance.xp} / ${xpForNextLevel(instance.level, ctx.config)}`,
