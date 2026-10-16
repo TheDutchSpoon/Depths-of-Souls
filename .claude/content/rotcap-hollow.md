@@ -6,7 +6,9 @@ Source: species and creatures in `src/data/species/rotcap-hollow.ts`; traits in
 `src/data/traits/rotcap-hollow.ts`; spells in `src/data/spells/rotcap-hollow.ts`; Spore, Burn,
 Poison and Confusion in `src/data/statuses.ts`. Each description is literal, exact numbers
 included, in the style of a future in-game tooltip, and stands on its own. Where it disagrees with
-the source, the source is right; a change to a number updates this doc in the same change.
+the source, the source is right; a change to a number updates this doc and the trait's
+`description` in `src/data` in the same change: each description is transcribed from its entry
+here.
 
 ## Reading this biome
 

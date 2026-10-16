@@ -80,6 +80,11 @@ Read this when changing progression: specializations, perks and perk points, the
   the same clear), and the budget recomputes. The store actions and the earned, spent and free
   summary are `spec/store.md#store-actions`.
 - Each starter spec defines a **starter creature**.
+- A stock perk is a **`DescribedPerkDef`** (a `PerkDef` plus its player-facing `description`,
+  transcribed from its entry in `specializations/`), held by a `DescribedSpecialization`, so the
+  compiler refuses a stock perk without one; `Specialization` and `PerkDef` carry no text. The UI
+  reads it through `perkDescription`, by perk id alone: perk ids are unique across the
+  specializations, and a data test holds that.
 
 ### Inert perks
 

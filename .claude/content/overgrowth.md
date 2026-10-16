@@ -8,8 +8,9 @@ Source: species and creatures in `src/data/species/overgrowth.ts`; traits in
 statuses in `src/data/statuses.ts`; the Unicorn in
 `src/data/species/starters.ts` and `src/data/traits/starters.ts`. Each description is literal,
 exact numbers included, in the style of a future in-game tooltip, and stands on its own. Where it
-disagrees with the source, the source is right; a change to a number updates this doc in the same
-change.
+disagrees with the source, the source is right; a change to a number updates this doc and the
+trait's `description` in `src/data` in the same change: each description is transcribed from its
+entry here.
 
 ## Reading this biome
 
