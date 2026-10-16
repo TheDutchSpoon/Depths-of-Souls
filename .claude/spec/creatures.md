@@ -50,7 +50,8 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 
 ### Trait and gem slots
 
-- A creature has **one innate trait**.
+- A creature has **one innate trait**, its own: no two creature templates share a trait. So a
+  creature's innate traits never repeat, fusion included (`spec/creatures.md#fusion`).
 - It has **3 regular gem slots** (`DEFAULT_GEM_SLOT_COUNT`). Its innate spells, if any, sit in extra
   slots before them (`spec/creatures.md#innate-spells`). Spells aren't gated by role: every creature has gem slots,
   and its script chooses which gem to cast.
