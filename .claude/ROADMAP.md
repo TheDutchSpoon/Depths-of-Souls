@@ -53,9 +53,9 @@ deterministic engine) came first. Each phase ships in **slices**, built and revi
   behaviour change. Brief: `.claude/phases/4.2/brief.md`; record: `.claude/phases/4.2/record.md`.
 
 ## Phase 4.5 — Run-loop demo (interlude)
-*Brief: `.claude/phases/4.5/brief.md`; slices 4.5-A to 4.5-G2.* First the fixes in
+*Brief: `.claude/phases/4.5/brief.md`; slices 4.5-A to 4.5-G3.* First the fixes in
 `phases/4.5/brief.md#decided-not-built` (4.5-A to 4.5-F), then the throwaway visual demo for Phase
-4 **and** 4.1 (`phases/4.5/brief.md#the-demo`, 4.5-G1 and 4.5-G2), replacing the stub on the live
+4 **and** 4.1 (`phases/4.5/brief.md#the-demo`, 4.5-G1 to 4.5-G3), replacing the stub on the live
 site. It comes **after the fixes and before Phase 5** deliberately: if the run loop were first
 exercised in a browser after persistence lands, run-loop bugs and save bugs couldn't be told apart.
 Same guardrails as every demo; own brief and phase record.
