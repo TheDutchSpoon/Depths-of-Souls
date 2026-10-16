@@ -1,6 +1,6 @@
 # Phase 4.1 — Fix & Consolidation Pass: Implementation Plan
 
-Status: planned
+**Status: shipped** (record: `.claude/phases/4.1/record.md`).
 
 ## Context
 

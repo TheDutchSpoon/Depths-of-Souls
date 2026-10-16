@@ -42,8 +42,11 @@ Read this when changing the store or the state the UI reads.
   true } | { ok: false, reason }`, with reasons `floor-out-of-range`, `unknown-biome` and
   `biome-has-no-content` (`spec/run.md#content-frontier-and-pins`). `setPerkLevel` returns `{ ok:
   false, reason }` with `no-spec`, `perk-not-in-spec`, `invalid-level` (not a whole number in
-  `0..maxLevel`) or `over-budget` (total spend over `bossesCleared × 100`). `summon` and
-  `setPartySlot` follow the same rule.
+  `0..maxLevel`) or `over-budget` (total spend over `bossesCleared × 100`). `summon` refuses with
+  `unknown-creature` or `soul-incomplete`, `setPartySlot` with `slot-out-of-range` or
+  `unknown-instance`. `recordBossKill` has no failure. **Known bug:** it records any id, and an unknown
+  one earns perk points (`spec/progression.md#perk-points`) (fix:
+  `phases/4.6/brief.md#recordbosskill-refuses-an-unknown-boss`).
 
 ### Store actions
 
@@ -53,7 +56,9 @@ Read this when changing the store or the state the UI reads.
   - `floorPreview(floor)`: the floor's biome, resolved as `descend` resolves it (pins and run seed
     included), its fight count and whether it is a boss floor
     (`spec/run.md#boss-floor-generation`). `null` for anything but a whole number ≥ 1, never a
-    throw; past the content frontier it still previews, and only `descend` refuses.
+    throw; past the content frontier it still previews, and only `descend` refuses. **Known bug:**
+    with a biome list shorter than ten it throws (fix:
+    `phases/4.6/brief.md#small-game-layer-fixes`).
   - `perkPointSummary()`: `{ earned, spent, free }` for the chosen spec (spent 0 with none). The
     spend is one sum, `perkPointsSpent(spec, perkSpend)`, which the `over-budget` check uses too.
 - `setPerkLevel(perkId, level)` sets an absolute level, so buying and refunding are one call;
@@ -66,7 +71,7 @@ Read this when changing the store or the state the UI reads.
 
 ### A descent's outcome
 
-- `descend`'s outcome (`FloorOutcome`) holds the floor's results and totals (`fightResults`,
+- `descend`'s outcome (`FloorOutcome`) holds the floor it was, its results and totals (`floor`, `fightResults`,
   `cleared`, `deepestFloorAdvanced`, `bossDefeated`, `bossFirstCleared` (that boss wasn't in
   `bossesCleared` before the descent), `perkPointsGained`, `xpBanked`, `soulGained`,
   `currencyGained`, the concatenated `events`) and **`fightRecords`**: one `FightRecord` per fight

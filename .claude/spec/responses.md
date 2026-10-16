@@ -40,7 +40,9 @@ Read this with `spec/effects.md`, for any triggered behaviour.
   `magnitudeSource` count of 0. Docs must never describe a fizzle as "no event".
 - **A zero count is a full no-op**: a `deal-damage` or `heal` whose `magnitudeSource` resolves to 0
   deals or heals nothing: no `DamageDealt`, no min-1 floor, no downstream hooks (`on-damage-taken`,
-  Sleep's wake).
+  Sleep's wake). **Known bug:** an `apply-stat-modifier` with a count of 0 still emits
+  `StatModifierApplied { factor: 1 }` (fix:
+  `phases/4.6/brief.md#a-zero-count-is-a-no-op-for-every-response`).
 
 ### Response targets
 
@@ -70,6 +72,9 @@ Read this with `spec/effects.md`, for any triggered behaviour.
   reaches it and fizzles.
 - The rule is about response targets: `perform-action`'s `actor: 'triggering-source'` is not a
   target, and resolves to the source even when that is the bearer.
+- `damageChannel` exists on `on-damage-taken` only, so a response that answers its source from
+  another hook (`on-death`, `on-kill`) answers whatever fired that hook; no load-time check can
+  hold it to attacks and spells.
 
 ### Magnitude modes
 

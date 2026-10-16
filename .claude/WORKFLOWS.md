@@ -43,6 +43,7 @@ drifts and stale decisions silently outlive their correction.
     <phase>/
       brief.md     phase-wide: scope, architecture, vocabulary delta, assumptions, slice list
       record.md    short outcome summary + links, written when the phase closes
+      review.md  proposal.md   a review and the proposal a fix phase's brief was written from
       <slice>/     the slice's mailbox:
         brief.md        this slice's plan section (written with the phase brief)
         kickoff.md      design agent → coding agent

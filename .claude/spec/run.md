@@ -148,8 +148,9 @@ Read this when changing descent, generation or the hub.
   status" condition.
 - Role scripts aim spells at the lowest-HP enemy, which is almost never the boss, so the case this
   rule accepts is a player script aiming the lock at the boss. The balance simulator runs that case
-  on every boss floor and reports how often the boss spends its turn locked, and the clear rate
-  with and without the lock.
+  on every boss floor where a party creature already holds Pacify (elsewhere it reports `n/a`), and
+  reports how often the boss spends its turn locked, and the clear rate with and without the
+  lock.
 
 ### Rewards
 
@@ -165,8 +166,9 @@ Read this when changing descent, generation or the hub.
 
 ### Currencies
 
-- Floors drop **Essence** (gems), **Ore** (equipment), **Bricks** (facilities; rarer) and
-  **Lifeforce** (levelling and fusion), per kill, scaled by depth (config). **Perk points** are a
+- Floors drop **Essence** (gems), **Ore** (equipment), **Bricks** (facilities) and **Lifeforce**
+  (levelling and fusion), per kill, scaled by depth (config; their rates are
+  `OPEN_QUESTIONS.md#drops-and-costs`). **Perk points** are a
   separate, non-dropped currency (`spec/progression.md#perk-points`).
 - Every currency is **unbounded**: no storage cap.
 
@@ -203,7 +205,7 @@ Read this when changing descent, generation or the hub.
   contents itself (`spec/store.md#the-store-owns-navigation-and-ownership`).
 - Every curve (`fightCount`, `enemyPartySize`, `enemyLevelRange`, `bossLevel`) is a pure function
   of `(floor, BalanceConfig)`, never a literal; the values live in `src/data/balance.ts`.
-- `FLOORS_PER_BIOME` and `BIOME_COUNT` are config constants (10 and 10).
+- `FLOORS_PER_BIOME` and `BIOME_COUNT` are engine constants in `engine/generation.ts` (10 and 10).
 
 ### Floor runs
 
@@ -261,6 +263,8 @@ Read this when changing descent, generation or the hub.
   the spells of its affinity with `unlockedAtBiome` ≤ the current biome. Duplicates appear only as
   a safety net when that pool is smaller than the slot count; a data test requires **≥3 spells per
   affinity at biome 1**, so real content never reaches the net.
+- **Known bug:** the scripted intro's enemy Unicorn has no gems, so a Pacified intro Unicorn waits
+  (fix: `phases/4.6/brief.md#the-intros-unicorn-rolls-its-spells`).
 - A **cast-role** creature (`caster`, `support`, `opener`; `CAST_ROLE_SCRIPT_IDS`) with no usable
   spell is an invariant violation and **throws**, backed by a data test that every cast-role
   creature has a matching spell at its biome.
