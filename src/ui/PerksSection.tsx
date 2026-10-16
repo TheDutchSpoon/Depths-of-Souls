@@ -19,7 +19,8 @@ function PerkRow({ perk }: { perk: PerkRowData }) {
   return (
     <li>
       {perk.name}: {perk.level} / {perk.maxLevel}, {perk.costPerLevel} per level
-      {perk.inactive && ` (${INACTIVE_LABEL})`}{' '}
+      {perk.inactive && ` (${INACTIVE_LABEL})`}
+      <p>{perk.description}</p>
       <input
         type="text"
         aria-label={`Level of ${perk.name}`}

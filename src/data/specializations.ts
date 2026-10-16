@@ -56,6 +56,18 @@ export interface Specialization {
   readonly perks: readonly PerkDef[]
 }
 
+/** A perk with its player-facing text. The text lives here, in data, and not on `PerkDef`: the
+ * engine and the store never read it, and a plain `PerkDef` can't go into a stock spec, so a stock
+ * perk can't ship without one. */
+export interface DescribedPerkDef extends PerkDef {
+  readonly description: string
+}
+
+/** A `Specialization` whose perks are all described. */
+export interface DescribedSpecialization extends Omit<Specialization, 'perks'> {
+  readonly perks: readonly DescribedPerkDef[]
+}
+
 /** `spec/progression.md#specializations-are-data` stated invariant: a spec is valid iff `Σ(maxLevel × costPerLevel) === 1000`.
  * Throws at import time (called at the bottom of this module for all three specs) -- a
  * data-authoring mistake fails fast in tests, never reachable at runtime. */
@@ -113,7 +125,7 @@ export function resolveSpecializationEffects(
 
 // ---- Sorcerer ----
 
-export const SORCERER: Specialization = {
+export const SORCERER: DescribedSpecialization = {
   id: 'sorcerer',
   name: 'Sorcerer',
   starterCreatureId: SORCERER_STARTER.id,
@@ -123,6 +135,7 @@ export const SORCERER: Specialization = {
       // the same primitive the Echo/Flurry perk family runs on unchanged.
       id: 'echo',
       name: 'Echo',
+      description: 'Your creatures Cast spells an additional time.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'action-instance', actionKind: 'cast', powerPercent: 100 }],
@@ -131,6 +144,7 @@ export const SORCERER: Specialization = {
       // Inert (gem system): `specializations/sorcerer.md#wit-mastery`
       id: 'wit-mastery',
       name: 'Wit Mastery',
+      description: 'Your creatures can equip Wit spell gems regardless of affinity.',
       maxLevel: 1,
       costPerLevel: 60,
       effects: [],
@@ -139,6 +153,7 @@ export const SORCERER: Specialization = {
       // Inert (gem system): `specializations/sorcerer.md#violence-mastery`
       id: 'violence-mastery',
       name: 'Violence Mastery',
+      description: 'Equip Violence gems regardless of affinity.',
       maxLevel: 1,
       costPerLevel: 60,
       effects: [],
@@ -147,6 +162,7 @@ export const SORCERER: Specialization = {
       // Inert (gem system): `specializations/sorcerer.md#endurance-mastery`
       id: 'endurance-mastery',
       name: 'Endurance Mastery',
+      description: 'Equip Endurance gems regardless of affinity.',
       maxLevel: 1,
       costPerLevel: 60,
       effects: [],
@@ -155,6 +171,7 @@ export const SORCERER: Specialization = {
       // Inert (gem system): `specializations/sorcerer.md#vitality-mastery`
       id: 'vitality-mastery',
       name: 'Vitality Mastery',
+      description: 'Equip Vitality gems regardless of affinity.',
       maxLevel: 1,
       costPerLevel: 60,
       effects: [],
@@ -163,6 +180,7 @@ export const SORCERER: Specialization = {
       // Inert (gem system): `specializations/sorcerer.md#instinct-mastery`
       id: 'instinct-mastery',
       name: 'Instinct Mastery',
+      description: 'Equip Instinct gems regardless of affinity.',
       maxLevel: 1,
       costPerLevel: 60,
       effects: [],
@@ -173,6 +191,8 @@ export const SORCERER: Specialization = {
       // status still applies/counts for has-status.
       id: 'clear-mind',
       name: 'Clear Mind',
+      description:
+        'Your creatures are immune to the effect of Silenced: it still lands and still counts for any "target is Silenced" payoff (a creature can take "+damage to Silenced"), but they cast freely.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'status-immunity', statusId: 'silenced' }],
@@ -181,6 +201,7 @@ export const SORCERER: Specialization = {
       // "+1% Intelligence per level." Plain leveled stat-modifier.
       id: 'arcane-might',
       name: 'Arcane Might',
+      description: '+1% Intelligence per level.',
       maxLevel: 50,
       costPerLevel: 2,
       effects: (level) => [
@@ -191,6 +212,8 @@ export const SORCERER: Specialization = {
       // Inert (gem system): `specializations/sorcerer.md#arcane-shields`
       id: 'arcane-shields',
       name: 'Arcane Shields',
+      description:
+        "-1% damage taken per level (cap 80%) for each equipped gem not of the creature's affinity.",
       maxLevel: 10,
       costPerLevel: 10,
       effects: [],
@@ -199,6 +222,8 @@ export const SORCERER: Specialization = {
       // Inert (gem system): `specializations/sorcerer.md#arcane-versatility`
       id: 'arcane-versatility',
       name: 'Arcane Versatility',
+      description:
+        "+1% damage per level for each equipped gem not of the creature's affinity.",
       maxLevel: 10,
       costPerLevel: 10,
       effects: [],
@@ -207,6 +232,7 @@ export const SORCERER: Specialization = {
       // Inert (gem system): `specializations/sorcerer.md#true-wit`
       id: 'true-wit',
       name: 'True Wit',
+      description: '+1 spell gem slot per level.',
       maxLevel: 5,
       costPerLevel: 20,
       effects: [],
@@ -216,6 +242,7 @@ export const SORCERER: Specialization = {
       // for an unconditional dealt-% bonus, scoped to Cast only via actionKind.
       id: 'spell-focus',
       name: 'Spell Focus',
+      description: '+1% spell damage per level.',
       maxLevel: 100,
       costPerLevel: 1,
       effects: (level) => [
@@ -232,7 +259,7 @@ export const SORCERER: Specialization = {
 
 // ---- Brute ----
 
-export const BRUTE: Specialization = {
+export const BRUTE: DescribedSpecialization = {
   id: 'brute',
   name: 'Brute',
   starterCreatureId: BRUTE_STARTER.id,
@@ -241,6 +268,7 @@ export const BRUTE: Specialization = {
       // "Your creatures Attack an additional time." The instance-list model, attack side.
       id: 'flurry',
       name: 'Flurry',
+      description: 'Your creatures Attack an additional time.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'action-instance', actionKind: 'attack', powerPercent: 100 }],
@@ -248,6 +276,7 @@ export const BRUTE: Specialization = {
     {
       id: 'might',
       name: 'Might',
+      description: '+1% Attack per level.',
       maxLevel: 50,
       costPerLevel: 2,
       effects: (level) => [
@@ -259,6 +288,7 @@ export const BRUTE: Specialization = {
       // to Attack only via actionKind.
       id: 'brute-force',
       name: 'Brute Force',
+      description: '+1% damage with attacks per level.',
       maxLevel: 100,
       costPerLevel: 1,
       effects: (level) => [
@@ -274,6 +304,8 @@ export const BRUTE: Specialization = {
       // "Immune to the effect of Pacified." Mirror of Clear Mind, Brute's own control-immunity.
       id: 'aggressive',
       name: 'Aggressive',
+      description:
+        'Your creatures are immune to the effect of Pacified: it still lands and still counts as Pacified, but they attack anyway.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'status-immunity', statusId: 'pacified' }],
@@ -285,6 +317,8 @@ export const BRUTE: Specialization = {
       // the note on inert perks at the top of this file.
       id: 'proficient-warrior',
       name: 'Proficient Warrior',
+      description:
+        'Your creatures always have Splashing (their attacks deal 100% of their damage to the enemies adjacent to the target) and Proficient (+30% benefit from equipment Stat Slots).',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'splashing' }],
@@ -294,6 +328,7 @@ export const BRUTE: Specialization = {
       // but every Brute purchasing this alongside Proficient Warrior gets the real upgrade.
       id: 'annihilate',
       name: 'Annihilate',
+      description: "Your creatures' Splashing hits all enemies, not just adjacent ones.",
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'annihilate' }],
@@ -304,6 +339,8 @@ export const BRUTE: Specialization = {
       // (`spec/combat.md#cross-stat-contribution`).
       id: 'aggressive-caster',
       name: 'Aggressive Caster',
+      description:
+        "On a cast, +1% of the caster's Attack per level is added to the spell's damage.",
       maxLevel: 25,
       costPerLevel: 4,
       effects: (level) => [
@@ -321,6 +358,7 @@ export const BRUTE: Specialization = {
       // its `defaultDuration` (3) -- no explicit duration to repeat here.
       id: 'concussive-blows',
       name: 'Concussive Blows',
+      description: 'On attack, 1% chance per level to Weaken the target.',
       maxLevel: 25,
       costPerLevel: 4,
       effects: (level) => [
@@ -341,6 +379,7 @@ export const BRUTE: Specialization = {
       // textbook conditional-damage-bonus consumer (`spec/effects.md#conditional-damage-bonus`).
       id: 'cull-the-weak',
       name: 'Cull the Weak',
+      description: '+1% damage to Weakened targets per level.',
       maxLevel: 50,
       costPerLevel: 2,
       effects: (level) => [
@@ -355,6 +394,7 @@ export const BRUTE: Specialization = {
       // "Your creatures ignore enemy Provoke." provoke-immunity.
       id: 'tunnel-vision',
       name: 'Tunnel Vision',
+      description: 'Your creatures ignore enemy Provoke and choose their target freely.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'provoke-immunity' }],
@@ -364,7 +404,7 @@ export const BRUTE: Specialization = {
 
 // ---- Shieldbarer ----
 
-export const SHIELDBARER: Specialization = {
+export const SHIELDBARER: DescribedSpecialization = {
   id: 'shieldbarer',
   name: 'Shieldbarer',
   starterCreatureId: SHIELDBARER_STARTER.id,
@@ -376,6 +416,8 @@ export const SHIELDBARER: Specialization = {
       // moment needed.
       id: 'bulwark',
       name: 'Bulwark',
+      description:
+        '-5% damage taken (cap 80%) for each time the creature has Defended this battle.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [
@@ -392,6 +434,7 @@ export const SHIELDBARER: Specialization = {
       // "On provoke, the creature also defends." grant-action-state, reused verbatim.
       id: 'shield-up',
       name: 'Shield up',
+      description: 'On provoke, the creature also defends.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [
@@ -410,6 +453,7 @@ export const SHIELDBARER: Specialization = {
       // "Attacks and spells ignore 1% of the enemy's Defence per level." armor-penetration
       id: 'armor-piercer',
       name: 'Armor piercer',
+      description: "Attacks and spells ignore 1% of the enemy's Defence per level.",
       maxLevel: 25,
       costPerLevel: 4,
       effects: (level) => [{ category: 'armor-penetration', percent: 0.01 * level }],
@@ -418,6 +462,8 @@ export const SHIELDBARER: Specialization = {
       // Inert (equipment system): `specializations/shieldbarer.md#shield-specialist`
       id: 'shield-specialist',
       name: 'Shield Specialist',
+      description:
+        '+1% benefit per level from equipment Stat Slots that increase Defence.',
       maxLevel: 100,
       costPerLevel: 1,
       effects: [],
@@ -428,6 +474,8 @@ export const SHIELDBARER: Specialization = {
       // hit, its own instance, distinct from Shield Bash below.
       id: 'thorns',
       name: 'Thorns',
+      description:
+        "After taking damage from an attack or spell, deals damage to that enemy equal to 15% of the creature's Defence, as indirect damage (a fifth of the enemy's Defence applies).",
       maxLevel: 1,
       costPerLevel: 100,
       effects: [
@@ -450,6 +498,8 @@ export const SHIELDBARER: Specialization = {
       // action kinds (`spec/combat.md#cross-stat-contribution`).
       id: 'shield-bash',
       name: 'Shield Bash',
+      description:
+        "Attacks and spells deal additional damage equal to 3% of the creature's Defence per level.",
       maxLevel: 10,
       costPerLevel: 10,
       effects: (level) => [
@@ -465,6 +515,8 @@ export const SHIELDBARER: Specialization = {
       // "Immune to the effect of Confused." Shieldbarer's own control-immunity.
       id: 'lucidity',
       name: 'Lucidity',
+      description:
+        'Immune to the effect of Confused: it still lands and still counts as Confused for any "target is Confused" payoff, but the creature ignores the chaos.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'status-immunity', statusId: 'confusion' }],
@@ -475,6 +527,8 @@ export const SHIELDBARER: Specialization = {
       // (`spec/effects.md#cheat-death`). cheat-death.
       id: 'last-stand',
       name: 'Last Stand',
+      description:
+        "When taking damage that would kill the creature, 50% chance to be left at 1 HP. It doesn't roll while the creature is at 1 HP; healed above 1 HP, it rolls again.",
       maxLevel: 1,
       costPerLevel: 100,
       effects: [{ category: 'cheat-death', chancePercent: 50 }],
@@ -483,6 +537,7 @@ export const SHIELDBARER: Specialization = {
       // "Your creatures start each battle defending." grant-action-state, fired on-fight-start.
       id: 'phalanx',
       name: 'Phalanx',
+      description: 'Your creatures start each battle defending.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [
@@ -503,6 +558,7 @@ export const SHIELDBARER: Specialization = {
       // response is permanent for the fight, so each Defend adds one).
       id: 'defensive-stance',
       name: 'Defensive Stance',
+      description: 'On defend, +1% Defence per level.',
       maxLevel: 10,
       costPerLevel: 10,
       effects: (level) => [
@@ -521,7 +577,11 @@ export const SHIELDBARER: Specialization = {
   ],
 }
 
-export const SPECIALIZATIONS: readonly Specialization[] = [SORCERER, BRUTE, SHIELDBARER]
+export const SPECIALIZATIONS: readonly DescribedSpecialization[] = [
+  SORCERER,
+  BRUTE,
+  SHIELDBARER,
+]
 
 export const SPECIALIZATIONS_BY_ID: ReadonlyMap<string, Specialization> = new Map(
   SPECIALIZATIONS.map((s) => [s.id, s]),
@@ -529,4 +589,16 @@ export const SPECIALIZATIONS_BY_ID: ReadonlyMap<string, Specialization> = new Ma
 
 for (const spec of SPECIALIZATIONS) {
   validateSpecialization(spec)
+}
+
+const PERKS_BY_ID: ReadonlyMap<string, DescribedPerkDef> = new Map(
+  SPECIALIZATIONS.flatMap((spec) => spec.perks.map((perk) => [perk.id, perk] as const)),
+)
+
+/** The player-facing description of a perk, found by perk id alone: perk ids are unique across the
+ * specializations. Throws on an id that is not a stock perk. */
+export function perkDescription(perkId: string): string {
+  const perk = PERKS_BY_ID.get(perkId)
+  if (perk === undefined) throw new Error(`no stock perk ${perkId}`)
+  return perk.description
 }

@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest'
-import { SPECIALIZATIONS, SPECIALIZATIONS_BY_ID } from '../data/specializations'
+import {
+  perkDescription,
+  SPECIALIZATIONS,
+  SPECIALIZATIONS_BY_ID,
+} from '../data/specializations'
 import { createGameStore } from '../state/store'
 import {
   checkPerkField,
@@ -141,5 +145,25 @@ describe('the level field', () => {
       ok: false,
       reason: 'no-spec',
     })
+  })
+})
+
+describe('the description', () => {
+  test('every row of every spec carries its perk’s description', () => {
+    for (const spec of SPECIALIZATIONS) {
+      for (const row of perkRows(spec, new Map())) {
+        expect(row.description).toBe(perkDescription(row.id))
+        expect(row.description.trim()).not.toBe('')
+      }
+    }
+  })
+
+  test('an inactive perk carries one too', () => {
+    const rows = perkRows(SPECIALIZATIONS_BY_ID.get('sorcerer')!, new Map())
+    const mastery = rows.find((row) => row.id === 'wit-mastery')!
+    expect(mastery.inactive).toBe(true)
+    expect(mastery.description).toBe(
+      'Your creatures can equip Wit spell gems regardless of affinity.',
+    )
   })
 })

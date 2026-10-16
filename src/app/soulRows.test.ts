@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest'
+import { ALL_CREATURE_TEMPLATES } from '../data/creatures'
+import { STOCK_TRAITS, traitDescription } from '../data/traits'
 import { createGameStore } from '../state/store'
+import { HUB_CONTEXT } from './creatureLine'
 import { DEMO_NAMES } from './names'
 import { labelInstances, labelOf } from './instanceLabels'
 import { percentText, soulRows, summonCreature } from './soulRows'
@@ -39,6 +42,57 @@ describe('soulRows', () => {
 
   test('the percentage prints with its sign and no rounding', () => {
     expect(percentText(25)).toBe('25%')
+  })
+
+  test('a real creature’s trait lines are its template’s trait descriptions, not names', () => {
+    const store = storeWithSouls([
+      ['sorcerer-starter', 40],
+      ['brute-starter', 10],
+    ])
+    const rows = soulRows(store.getState(), store.getState(), DEMO_NAMES)
+    const sorcerer = rows.find((row) => row.creatureId === 'sorcerer-starter')!
+    const brute = rows.find((row) => row.creatureId === 'brute-starter')!
+    expect(sorcerer.traitLines).toEqual([
+      traitDescription('sorcerer-starter-arcane-surge'),
+    ])
+    expect(brute.traitLines).toEqual([traitDescription('brute-starter-double-strike')])
+    const names = STOCK_TRAITS.map((trait) => trait.name)
+    for (const line of [...sorcerer.traitLines, ...brute.traitLines]) {
+      expect(names).not.toContain(line)
+    }
+  })
+
+  test('a creature with two traits lists them in its template’s order', () => {
+    const [first, second] = ['spider-weaver-web-strike', 'lullpollen-reaper-dream-reaper']
+    const base = ALL_CREATURE_TEMPLATES[0]!
+    const twoTraits = { ...base, id: 'two-trait-test', innateTraitIds: [second!, first!] }
+    const store = storeWithSouls([['two-trait-test', 50]])
+    const rows = soulRows(
+      store.getState(),
+      store.getState(),
+      new Map([['two-trait-test', 'Two']]),
+      {
+        templates: new Map([['two-trait-test', twoTraits]]),
+      },
+    )
+    expect(rows[0]!.traitLines).toEqual([
+      traitDescription(second!),
+      traitDescription(first!),
+    ])
+  })
+
+  test('a creature with no template throws', () => {
+    const store = storeWithSouls([['sorcerer-starter', 40]])
+    expect(() =>
+      soulRows(store.getState(), store.getState(), DEMO_NAMES, { templates: new Map() }),
+    ).toThrow('no template sorcerer-starter')
+  })
+
+  test('the default context is the hub’s', () => {
+    const store = storeWithSouls([['sorcerer-starter', 40]])
+    expect(soulRows(store.getState(), store.getState(), DEMO_NAMES)).toEqual(
+      soulRows(store.getState(), store.getState(), DEMO_NAMES, HUB_CONTEXT),
+    )
   })
 })
 

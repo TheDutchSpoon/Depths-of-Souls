@@ -73,8 +73,8 @@ reports. Once merged they're immutable, like records.
 
 The folder itself holds only the step files above, all Markdown. Generated output that a step file
 cites as evidence (a simulator report, a corpus scan, a table a script printed) goes in
-`<slice>/evidence/`, as plain text or Markdown, and the citing file names it by that path. Not
-kept, anywhere in the mailbox:
+`<slice>/evidence/`, as plain text or Markdown (a screenshot the kickoff asks for, as PNG), and the
+citing file names it by that path. Not kept, anywhere in the mailbox:
 
 - marker files, logs and other scratch output of a run;
 - a run whose content another kept file already holds (keep one copy);

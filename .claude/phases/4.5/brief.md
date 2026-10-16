@@ -1,7 +1,7 @@
 # Phase 4.5 — Fixes and the run-loop demo
 
 **Status: planned.** Decided with the design owner on 2026-10-12. Two parts: the fixes listed under
-"Decided, not built" (4.5-A to 4.5-F), then the throwaway run-loop demo (4.5-G1, 4.5-G2), which
+"Decided, not built" (4.5-A to 4.5-F), then the throwaway run-loop demo (4.5-G1 to 4.5-G3), which
 replaces the stub on the live site and covers Phases 4 and 4.1. The docs are the spec; this
 brief places each decision in a slice, with its golden policy. If this brief and the docs disagree,
 the docs win: flag the conflict, don't guess.
@@ -33,6 +33,7 @@ the docs win: flag the conflict, don't guess.
 | (4.5-F2) | Tuning, only if a CI balance verdict flipped ([Balance verdicts](#balance-verdicts)) | Content numbers, deliberate |
 | **4.5-G1** | The demo's descent loop and viewer ([The demo](#the-demo)), [the demo's game-layer homes](#the-demos-game-layer-homes) | Goldens, the corpus digest and existing tests byte-identical; additive exports ([Demo golden rule](#demo-golden-rule)) |
 | **4.5-G2** | The demo's hub ([The demo](#the-demo)), [one run start and one perk predicate](#one-run-start-and-one-perk-predicate), [an end-to-end smoke test](#an-end-to-end-smoke-test) | Byte-identical; additive store and data exports ([Demo golden rule](#demo-golden-rule)) |
+| **4.5-G3** | [Demo adjustments](#demo-adjustments-g3), [trait and perk text](#trait-and-perk-text) | Goldens, the corpus digest, engine and store tests byte-identical; demo tests change where listed; additive data ([Demo golden rule](#demo-golden-rule)) |
 
 Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
@@ -49,6 +50,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 - **F is last of the fixes**: it moves balance the most, and the demo shows it directly.
 - **G is split for review size**: G1 holds the timer and playback risk; G2 adds the hub to G1's
   screens, two more game-layer homes and the end-to-end smoke test.
+- **G3 came from using the demo**: viewer and hub changes found once G2 was live, plus the trait and
+  perk text they needed. It is the only G slice that changes data, and only additively.
 
 ## Sequencing rules
 
@@ -73,7 +76,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 - G1 and G2 change engine, store or data code only to add game-layer homes: G1
   [the demo's game-layer homes](#the-demos-game-layer-homes), G2
-  [one run start and one perk predicate](#one-run-start-and-one-perk-predicate). Every golden, existing engine and store
+  [one run start and one perk predicate](#one-run-start-and-one-perk-predicate), G3
+  [trait and perk text](#trait-and-perk-text). Every golden, existing engine and store
   test and the corpus digest stay byte-identical. Any other deliberate change is allowed only for a
   good reason, and only with the approval of both the design agent and Duncan at build time: it is
   a stop-and-ask, never the coding agent's call.
@@ -496,6 +500,55 @@ as it stands. Presentation stays as plain as the 3.5 demo: a paced text log, no 
   boss result line and the 100 perk points it earns being spent. The live URL is checked after
   merge.
 
+### Demo adjustments (G3)
+
+Changes to the G1 viewer and the G2 hub, found by using the demo. Where they differ from the
+sections above, this section is what the demo does after G3.
+
+- **Results under the log.** The descent result (floor line, boss line, the fight list with its
+  Jump and Copy buttons) and the header's "After the fight" line move below the log box, so the
+  fight being watched comes first. They stay on the page below the box, one page-scroll down when
+  the box fills the screen: nothing is collapsed or hidden, and Jump still reaches any fight.
+- **Playback starts at once.** After `descend`, fight 1's line-up shows and playback runs straight
+  away; the first beat follows one beat interval later. The 3-second wait was there for an
+  auto-descend the demo doesn't have, so the reducer loses its `waiting` phase (and
+  `START_WAIT_MS`, and the "Playback starts shortly" line) rather than keeping a zero-length wait.
+- **The log box.** A fight's log scrolls inside its own box instead of growing the page. It follows
+  new beats while scrolled to the bottom; scrolled up, it stays where the reader is until they
+  scroll back down. A jump or the next fight starts it empty. The allies' and foes' line-ups sit
+  side by side to save height. At 1920×1080, once a floor is descended, everything from the
+  speed buttons to the bottom of the log box is in view without scrolling the page; on smaller
+  screens the box shrinks to a minimum of 10 lines of log and the page scrolls.
+- **Souls:** each row shows, before **Summon**, one line per trait of that creature: the trait's
+  description, not its name.
+- **Perks:** each row shows the perk's description, inactive perks included (next to their
+  inactive label).
+- **Tests:** the follow-the-bottom decision is a pure helper with unit tests, like the rest of the
+  demo's logic; the soul and perk rows carry their description lines and are tested for them. The
+  end-to-end smoke test passes unchanged. The report's click-through has screenshots at 1920×1080
+  of a fight mid-playback and of the Souls and Perks sections, and checks that scrolling the log
+  up holds it while beats keep arriving.
+
+### Trait and perk text
+
+- Every stock trait and perk carries a player-facing `description` on the carrier, next to its
+  name, in `src/data`. The engine's `Trait` and the data's `PerkDef` don't change: engine and store
+  tests build both without text and stay byte-identical. Instead the stock traits and perks are
+  typed with a data-owned type that adds `description`, so the compiler refuses a stock carrier
+  without one. The demo reads a description by id through a data export that throws on an unknown
+  id.
+- **The text is the content docs' entry, transcribed:** `content/*.md` for creature and boss
+  traits (the Unicorn included), `specializations/*.md` for the starters' traits and the perks.
+  Only the sentences describing the effect: not a creature entry's "affinity · rarity role · role
+  script" opener or remarks about the creature rather than its trait. Markdown and citations are
+  stripped. Numbers are the code's: a doc number that disagrees with `src/data` is not copied; the
+  code's number goes in, and the report lists the mismatch for the PR review to fix in the doc.
+- Its PR review extends the content docs' Source paragraphs: a change to a trait's or perk's
+  numbers updates its `description` in the same change. `ROADMAP.md`'s Phase 7 "Trait and perk
+  text" item stays: the transcribed text is a first draft, and Phase 7 gives it a pass for exact,
+  consistent wording. The review only corrects the item's stale half ("`PerkDef` carries only a
+  name"), since the stock traits and perks then carry a description.
+
 ## Assumptions
 
 Choices this brief made that the grill didn't pin. Each slice's plan confirms or corrects its own.
@@ -515,3 +568,6 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
 - [x] **ASSUMPTION (B2):** turn order covers every hook fired over all living creatures (the three
       observation hooks, `on-fight-start` and `on-round-end`), not the observation hooks only. (The
       Web break-free roll is in by Duncan's call.)
+- [x] **ASSUMPTION (G3):** the "After the fight" line moves below the log with the fight list,
+      because it gives the fight's result away.
+- [x] **ASSUMPTION (G3):** the log box's minimum height is 10 lines of log.

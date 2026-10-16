@@ -97,6 +97,11 @@ status lifecycle in `spec/statuses.md`.
     flavour for the UI) over one or more effects. Definitions live in `src/data/`; a creature
     references its traits by `innateTraitIds`, resolved from the trait registry at fight setup,
     where their effects are instantiated (`spec/combat.md#fight-setup`).
+  - A stock trait is a **`DescribedTrait`** (`src/data/traits/described.ts`): a `Trait` plus its
+    player-facing `description`, transcribed from its content-doc entry. `STOCK_TRAITS` holds that
+    type, so the compiler refuses a stock trait without one. The engine and the store never read
+    the text; the UI reads it by id through `traitDescription`, which throws on an id that is not a
+    stock trait.
   - **Perks** are carried the same way, as the player side's side effects (`spec/effects.md#effect-order`).
   - **`StatusDef`**, a timed single-instance container (`spec/statuses.md#statusdef`).
 - Trait and Status stay separate carriers because their lifecycles really differ; sharing the

@@ -1,5 +1,6 @@
 import type { Trait } from '../../engine/effect-types'
 import { validateTrait } from '../../engine/effect-types'
+import type { DescribedTrait } from './described'
 import { STARTER_TRAITS } from './starters'
 import {
   SPIDER_WEAVER_TRAIT,
@@ -72,8 +73,9 @@ export * from './starters'
 export * from './overgrowth'
 export * from './glimmerdark'
 export * from './rotcap-hollow'
+export type { DescribedTrait } from './described'
 
-export const STOCK_TRAITS: readonly Trait[] = [
+export const STOCK_TRAITS: readonly DescribedTrait[] = [
   // The three starter creatures' + the Unicorn's signature traits.
   ...STARTER_TRAITS,
   // The Overgrowth's 18 species-creature traits + the Broodmother boss trait.
@@ -142,6 +144,18 @@ export const STOCK_TRAITS: readonly Trait[] = [
 export const TRAIT_REGISTRY: ReadonlyMap<string, Trait> = new Map(
   STOCK_TRAITS.map((t) => [t.id, t]),
 )
+
+const STOCK_TRAITS_BY_ID: ReadonlyMap<string, DescribedTrait> = new Map(
+  STOCK_TRAITS.map((t) => [t.id, t]),
+)
+
+/** The player-facing description of a stock trait. Throws on an id that is not a stock trait
+ * (a test fixture's included): a screen asking for one is a bug, not a blank line. */
+export function traitDescription(traitId: string): string {
+  const trait = STOCK_TRAITS_BY_ID.get(traitId)
+  if (trait === undefined) throw new Error(`no stock trait ${traitId}`)
+  return trait.description
+}
 
 // Throws at import if a stock trait breaks a trait rule.
 for (const trait of STOCK_TRAITS) {

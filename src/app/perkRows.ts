@@ -1,4 +1,8 @@
-import { isFunctionalPerk, SPECIALIZATIONS_BY_ID } from '../data/specializations'
+import {
+  isFunctionalPerk,
+  perkDescription,
+  SPECIALIZATIONS_BY_ID,
+} from '../data/specializations'
 import type { Specialization } from '../data/specializations'
 import type { GameActions, SetPerkLevelResult } from '../state/store'
 import { parseFloorField } from './floorPicker'
@@ -19,6 +23,8 @@ export function chosenSpecialization(chosenSpec: string | null): Specialization 
 export interface PerkRow {
   readonly id: string
   readonly name: string
+  /** Shown for every perk, an inactive one included. */
+  readonly description: string
   /** Read from `perkSpend`, never from a field draft; a perk absent from it is at 0. */
   readonly level: number
   readonly maxLevel: number
@@ -34,6 +40,7 @@ export function perkRows(
   return spec.perks.map((perk) => ({
     id: perk.id,
     name: perk.name,
+    description: perkDescription(perk.id),
     level: perkSpend.get(perk.id) ?? 0,
     maxLevel: perk.maxLevel,
     costPerLevel: perk.costPerLevel,
