@@ -5,7 +5,8 @@ Read this when a slice touches Rotcap Hollow's creatures, statuses, spells or bo
 Source: species and creatures in `src/data/species/rotcap-hollow.ts`; traits in
 `src/data/traits/rotcap-hollow.ts`; spells in `src/data/spells/rotcap-hollow.ts`; Spore, Burn,
 Poison and Confusion in `src/data/statuses.ts`. Each description is literal, exact numbers
-included, in the style of a future in-game tooltip, and stands on its own. Where it disagrees with
+included, in the style of a future in-game tooltip, and stands on its own together with the trigger
+words (`content/overgrowth.md#trigger-words`). Where it disagrees with
 the source, the source is right; a change to a number updates this doc and the trait's
 `description` in `src/data` in the same change: each description is transcribed from its entry
 here.
@@ -14,8 +15,8 @@ here.
 
 ### Species roles
 
-Most species follow The Overgrowth's enabler, payoff and amplifier roles (`content/overgrowth.md#enabler-payoff-amplifier`). The Necromoss don't: all three share one mechanic, at a bigger scope
-or a bigger number as rarity rises. A hit marked *indirect* follows `content/overgrowth.md#indirect-damage`.
+Most species follow The Overgrowth's enabler, payoff and amplifier roles (`content/overgrowth.md#enabler-payoff-amplifier`), a guideline, not a rule. The Necromoss share one mechanic, at a
+bigger scope or a bigger number as rarity rises, and the Hollowkin have two enablers and a payoff.
 
 ## Statuses
 
@@ -32,13 +33,26 @@ bearer's turns per infection.
 ### Damage over time
 
 Spore, Burn and Poison tick as indirect damage from a snapshot of their applier, at the end of each
-of the bearer's turns (`spec/statuses.md#dot-and-regen-belong-to-their-applier`): Spore **35% of the infector's Speed**,
-Burn **35% of the applier's Intelligence**, Poison **40% of the applier's Attack**.
+of the bearer's turns (`spec/statuses.md#dot-and-regen-belong-to-their-applier`).
+
+### Burn
+
+At the end of each of its bearer's turns, deals damage worth **35% of the Intelligence of the
+creature that applied it**, measured when applied. Lasts **3** of its bearer's turns unless what
+applies it says otherwise; Burning it again refreshes the timer and keeps the stronger Burn. Applied
+by **Withering Bolt** (Violence), the Sporch Igniter and the Sporch Cinderlord.
+
+### Poison
+
+At the end of each of its bearer's turns, deals damage worth **40% of the Attack of the creature
+that applied it**, measured when applied. Lasts **3** of its bearer's turns; poisoning it again
+refreshes the timer and keeps the stronger Poison. Applied by the Myconet Rotcore.
 
 ### Confusion
 
 A puppet's madness. For **3** of its bearer's turns, every time it tries to attack or cast
-something harmful, there's a **50% chance** it strikes its own side instead.
+something harmful, there's a **50% chance** it aims at its own side instead: a random ally, itself
+included, or for an area spell its whole side, one roll per cast.
 
 ## Sporecloud (Wit): contagion
 
@@ -48,9 +62,9 @@ Wit · enabler · striker. Every attack infects its target with Spore.
 
 ### Sporecloud Reaper
 
-Wit · payoff · striker. Every attack also lands a bonus hit of **20% of its Intelligence for each
-enemy currently infected with Spore** (3 Spored enemies make a bonus hit worth 60%), as indirect
-damage. With no infected enemy there is no bonus hit, only its ordinary attack.
+Wit · payoff · striker. When it attacks, it also deals its target damage equal to **20% of its
+Intelligence for each enemy currently infected with Spore** (3 Spored enemies make it 60%). With no
+infected enemy it deals none.
 
 ### Sporecloud Bloomer
 
@@ -117,12 +131,11 @@ side** (2 dead allies heal every ally for 10% of its maximum HP), whatever it ca
 ### Hollowkin Wretch
 
 Endurance · enabler · warden (provoking draws the hits its trait answers). Whenever an attack or
-spell hits it, it Confuses whoever hit it. It doesn't answer a tick, a cost or another creature's
-trait, status or perk damage (`spec/effects.md#damagechannel`).
+spell hits it, it Confuses the creature that hit it.
 
 ### Hollowkin Marionette
 
-Instinct · enabler · striker. Every attack Confuses whoever it hits.
+Instinct · enabler · striker. When it attacks, it Confuses its target.
 
 ### Hollowkin Puppeteer
 
@@ -132,9 +145,7 @@ Instinct · payoff · striker. Deals **30% more damage** to Confused enemies.
 
 ### Sporch Igniter
 
-Violence · enabler · striker. Every attack brands its target with Burn: each tick deals **35% of the
-Igniter's Intelligence**, measured when branded. Re-branding refreshes the Burn and keeps the
-stronger one.
+Violence · enabler · striker. When it attacks, it Burns its target.
 
 ### Sporch Ashborn
 
@@ -142,9 +153,7 @@ Wit · payoff · caster. Deals **30% more damage** to Burning enemies.
 
 ### Sporch Cinderlord
 
-Violence · amplifier · opener. Every kill it lands itself applies **Burn to every remaining
-enemy**, measured from its own Intelligence; an enemy already Burning keeps the stronger Burn and
-has its timer refreshed.
+Violence · amplifier · opener. Every kill it lands applies **Burn to every remaining enemy**.
 
 ## Boss
 
@@ -164,10 +173,10 @@ dies feeds her too.
 
 ## Spells
 
-These unlock at biome 3, one per affinity, each bringing something the earlier pool lacks; Rotcap
-Hollow's casters also roll every biome-1 and biome-2 spell (`content/overgrowth.md#spells`,
-`content/glimmerdark.md#spells`). Spore Cyst and Withering Bolt deal deliberately low upfront
-damage for a single-target spell: a status-applying spell's damage is not its headline number.
+These unlock at biome 3, one per affinity; Rotcap Hollow's casters also roll every biome-1 and
+biome-2 spell (`content/overgrowth.md#spells`, `content/glimmerdark.md#spells`). Rasping Chant does
+what Weakening Bite does, in Endurance. Spore Cyst and Withering Bolt sit outside the spell power
+convention (`content/overgrowth.md#spell-power-convention`).
 
 ### Spore Cyst
 

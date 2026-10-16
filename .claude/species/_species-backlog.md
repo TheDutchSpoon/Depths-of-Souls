@@ -47,7 +47,7 @@ closed / single-condition rules or the "every status has an intrinsic effect" pr
 | **Moldwalls** | Endurance | Rot-fortress — stack permanent +Defence + Regen; `on-damage-taken → Poison the attacker`. |
 | **Deathcaps** | Wit | Stack-the-rot — pile Poison; payoff `+% per DoT stack on target`. *(Twin of Sporecloud's payoff.)* |
 | **Symbiotes (lichen)** | Vitality / Endurance | Pairing — heals/buffs a paired ally, scales while paired. *(Wants adjacency → biome 4+; reframe to "lowest-HP ally" to ship earlier.)* |
-| **Bloomrot** | Vitality | Grow → burst — `on-round-end → +stack`; at max, bursts a team heal. *(Overlaps Glowflies charge-release + Treants growth.)* |
+| **Bloomrot** | Vitality | Grow → burst — `on-round-end → +stack`; at max, bursts a team heal. *(Overlaps the Treants' growth.)* |
 | **Gasbloats (puffballs)** | Endurance / Violence | Detonate — `on-death → AOE Poison burst`; rewards allies dying (trade bodies). *(Twin of Myconet.)* |
 | **Manglers (toothed fungi)** | Violence | Armor-shred — high Attack; `on-attack → permanent −Defence on target` (uncapped grind-down). |
 | **Mireshamblers (bog-fungus)** | Endurance / Instinct | Slow the field — apply **Web** broadly + `+% to enemies acting after you`. *(Reuses Web / turn-order.)* |

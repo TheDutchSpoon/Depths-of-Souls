@@ -64,7 +64,8 @@ status lifecycle in `spec/statuses.md`.
   **Triggered traits** fire on a hook and produce an effect.
 - **No keywords, no implicit targets.** There is no "Retaliate": every trait is an explicit
   event → condition → response → target → magnitude sentence in data, e.g. *"when this creature is
-  dealt damage by another creature, attack that creature for 30% Attack."* The hook supplies the
+  dealt damage by another creature, deal that creature damage equal to 30% of its Attack."* The
+  hook supplies the
   reference creatures (self, the source); the response names its target.
 - Design breadth comes from the **hook × condition × parameter cross-product**, not from more
   response types: every triggered behaviour goes through the one response vocabulary
@@ -165,6 +166,10 @@ status lifecycle in `spec/statuses.md`.
 - A `damageChannel` on any hook but `on-damage-taken` is rejected for every trigger carrier
   (`validateDamageChannels`, run by `validateTrait`, `validateStatusDef` and the perk check;
   `spec/effects.md#damagechannel`).
+- **Known bug:** the side effects `createCombat` is given are not validated, perks only at level 1,
+  and `emitTriggerFired: false` is accepted outside a tick (fix:
+  `phases/4.6/brief.md#fight-setup-checks-its-input`,
+  `phases/4.6/brief.md#the-load-time-checks-close-their-gaps`).
 
 ### Effect order
 
@@ -252,8 +257,9 @@ status lifecycle in `spec/statuses.md`.
   from a per-fight counter** in `CombatState`; refreshing a status keeps its instance and id. Ids
   never appear in events.
 - **An effect reacts only while it exists**: it reacts to an event only if that exact instance
-  existed when the event started and still exists when its turn to react comes. `fireHook` builds
-  its candidates once, so it re-checks each candidate's owning instance before firing: a status
+  existed when the event started and still exists when its turn to react comes. `fireHook` reads
+  a creature's candidates when its place in the pass comes (`spec/effects.md#pass-order`) and
+  re-checks each candidate's owning instance before firing: a status
   cleansed earlier in the same chain doesn't tick, and a revived creature doesn't fire effects from
   before its death.
 
@@ -344,7 +350,8 @@ status lifecycle in `spec/statuses.md`.
 - **All three observation hooks fail closed**: a candidate on `on-action-observed` fired without
   the action details, on `on-damage-observed` without the damage details, or on
   `on-death-observed` without a dead creature it can find, is skipped, filter or not, never fired
-  unfiltered.
+  unfiltered. **Known bug:** `on-action-observed` fires when the actor can't be found (fix:
+  `phases/4.6/brief.md#small-engine-fixes`).
 - No hook-type index: the fan-out scans every living creature per damage event, as
   `on-action-observed` does per action instance (`spec/effects.md#hook-execution`).
 
@@ -537,3 +544,5 @@ status lifecycle in `spec/statuses.md`.
   `baselineEffects` (innate traits and perks) re-instantiated (`spec/combat.md#fight-setup`).
   Death is meaningful; a revive is a second chance, not a buff-preserving undo. It applies to every
   death, and revives are bounded (`spec/responses.md#revive`).
+- **Known bug:** a revive keeps the creature's Defend count, so a Bulwark bearer returns with its
+  reduction (fix: `phases/4.6/brief.md#a-revive-resets-the-defend-count`).

@@ -12,7 +12,8 @@ Confusion). They are defined in `src/data/statuses.ts`.
 ### A status is a timed effect
 
 - A status is applied in a fight, by a spell, a trait or a perk, and lasts a fixed number of its
-  **bearer's own turns**. Every status shows as an icon with its remaining duration.
+  **bearer's own turns**. How a status shows on screen is Phase 7's
+  (`ROADMAP.md#phase-7--combat-ui--feedback`).
 - A status is a container of the same effects a trait carries (`spec/effects.md#effects-and-carriers`): Poison carries a damage trigger, Weaken a damage-dealt reduction, Web "act last",
   Stun "can't act".
 - **New statuses are data**: a status can carry any passive or trigger a trait can, except a
@@ -72,9 +73,12 @@ Confusion). They are defined in `src/data/statuses.ts`.
 
 - A stat-modifier may target Health (an innate "+50% Health" trait); the four combat stats and
   Health all fold the same way. At fight start `currentHp` is the **effective** max Health, so a
-  +Health trait grants the HP. Whenever effective max Health changes, `currentHp` is clamped to it:
-  a Health debuff lowers the cap and current HP with it; a Health buff raises the cap and does not
-  heal into it. HP%, which scripts read, stays within 0–100.
+  +Health trait grants the HP. Whenever an applied stat buff changes effective max Health,
+  `currentHp` is clamped to it: a Health debuff lowers the cap and current HP with it; a Health buff
+  raises the cap and does not heal into it. HP%, which scripts read, stays within 0–100.
+- **Known bug:** a Health raise by a fight-start trigger (the Treant Grovekeep) comes after setup
+  has set HP, so the team opens below its new max (fix:
+  `phases/4.6/brief.md#a-fight-start-health-raise-raises-current-hp`).
 
 ### Immunity suppresses the effect, not the application
 
@@ -258,6 +262,8 @@ Confusion). They are defined in `src/data/statuses.ts`.
   `chancePercent` discipline: it
   rolls only when a Web is present, and a board with no Web never touches the RNG. The 3-turn cap
   is Web's duration.
+- **Known bug:** a bearer's roll reads its effect list once, so with two break-free statuses on one
+  bearer a second break restores the first (fix: `phases/4.6/brief.md#small-engine-fixes`).
 
 ### Health clamp
 

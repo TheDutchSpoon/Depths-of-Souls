@@ -37,6 +37,8 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 - **No** `Math.random()`: take a seeded RNG as input. One PRNG (mulberry32), seeded per floor and
   per fight, threaded through, never a global.
 - **No** `Date.now()` / `performance.now()` in logic: if time matters, pass a tick count.
+- **No** import of `src/data` in `src/engine`'s production code: content reaches the engine as
+  input (registries, parties, config). Engine tests, goldens and the corpus may import it.
 - Functions take state in and return new state (or events) out. No hidden mutation: mutate for
   performance only on a local working copy, never on shared store state.
 
@@ -104,8 +106,8 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
   (`CI_CD.md#the-simulator-report-runs-after-each-merge`), never as a slice's gate. It takes
   tens of minutes, and only tuning acts on the bands and the draw rate. Every other slice's balance
   check is the CI test in the normal suite: a change that turns it red stops and asks Duncan. A
-  tuning slice compares against the last committed report, since the simulator is deterministic; a
-  "before" run is never repeated.
+  tuning slice compares its branch's Actions run with `main`'s latest, since the simulator is
+  deterministic; a "before" run is never repeated.
 - Balance needn't be perfect yet: Phase 6 player scripts and Phase 8 equipment will strengthen the
   starting team.
 
@@ -196,7 +198,10 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 
 - Mechanism goldens stay on **stable test fixtures** (small, hand-derived, independent of content
   tuning); real content is covered by the per-biome goldens and the integration test.
-- Placeholder content does not live in production registries.
+- Placeholder content does not live in production registries. The one exception is the unauthored
+  biome slots in `src/data/biomes.ts`: the 1–100 biome sequence is positional
+  (`spec/run.md#biomeforfloor`), so every slot exists from the start, with no species until it is
+  authored.
 
 ### Tuning never changes a mechanism golden
 
@@ -295,7 +300,8 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 
 ### Local runs match CI's toolchain
 
-- CI installs with `npm ci` on Node 24. Locally: Node 24.15 or later (jsdom 30's minimum), and
+- CI installs with `npm ci` on Node 24. Locally: Node 24, 24.15 or later (jsdom 30 also runs on
+  22.22.2+ and 26+), and
   `npm ci` after every pull that changes `package-lock.json`. `npm run e2e` needs Playwright's
   Chromium, installed once outside the repo: `npx playwright install chromium`.
 - When a tool behaves unexpectedly, check `npx <tool> --version` against the lockfile before
@@ -331,7 +337,7 @@ src/
 ### Composition files only reference carriers
 
 - `data/species/*` (and later `data/gems/`, `data/equipment/`) only **reference** carriers by id or
-  object, and never define one. A biome's `spellPool` is a *selection* of library spells, so it is
+  object, and never define one. A biome's `speciesPool` is a *selection* of species, so it is
   composition and stays with the biome.
 - Why: a trait or spell is **not** owned by a species. It is a shared registry entry the model
   grants through `innateTraitIds` or equipping, and defining it inside a species file bakes in an

@@ -93,6 +93,14 @@ Each needs a decision before the content that depends on it.
   "why did this happen" screen should read a log that names its spells. Adding the spell id
   changes every golden with a cast in it.
 
+### Max Health buffs that switch on and off
+
+- A max Health buff with a condition (a stat-modifier gated on `has-status` or `always`) changes
+  effective max Health as its condition switches, without the clamp an applied stat buff gets
+  (`spec/statuses.md#health-is-a-modifiable-stat`), so current HP can exceed max. No content has
+  one; settle the clamp before authoring one. A status can't carry one at all
+  (`spec/effects.md#no-temporary-stat-modifier`).
+
 ### The biome roster
 
 - The names and themes of biomes 4–10, and which creature types populate each, to the content target

@@ -12,14 +12,14 @@ here; a change to its numbers updates both in the same change.
 
 The affinity **rule-breaker**: a versatile caster who equips spells across affinities and is
 rewarded for gem *diversity*, not raw power. All content stays reachable by every spec; a spec
-changes *how* you play.
+changes *how* you play. Its wording follows the trigger words (`content/overgrowth.md#trigger-words`).
 
 ## Starter: Glyphmoth Seer
 
 Wit, high Intelligence; the name is a placeholder. Trait *Arcane Surge*: an **innate spell**,
 Arcane Bolt, dealing 100% of its Intelligence (not a gem: un-upgradeable, no affinity gate, an
-extra slot before the gem slots, kept through fusion), plus a 50% chance at the end of its turn to
-cast a random equipped spell.
+extra slot before the gem slots, kept through fusion), plus, at the end of each of its turns, a 50%
+chance to cast a random one of its spells, Arcane Bolt included.
 
 ## Perks
 

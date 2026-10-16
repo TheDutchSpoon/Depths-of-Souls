@@ -11,7 +11,8 @@ here; a change to its numbers updates both in the same change.
 ## Identity
 
 Raw physical **aggression**: Attack power, on-attack triggers and melee-splash force. All content
-stays reachable by every spec.
+stays reachable by every spec. Its wording follows the trigger words
+(`content/overgrowth.md#trigger-words`).
 
 ## Starter: Cragfang Mauler
 
@@ -35,6 +36,10 @@ Ten perks; at max levels they cost exactly 1000 points.
 ### Brute Force
 
 100 levels × 1 point. +1% damage with attacks per level.
+
+**Known bug:** it also boosts your creatures' own trait damage (a Snapjaw Jaws answer, a bonus hit
+when attacking, a Swarmhive Drone's death), which `main` gathers as attack damage (fix:
+`phases/4.6/brief.md#a-traits-damage-is-neither-an-attack-nor-a-cast`).
 
 ### Aggressive
 

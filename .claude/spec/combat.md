@@ -183,6 +183,8 @@ damage     = MAX(1, floor(raw))
 - **Fresh creatures only**: an input creature already carrying setup output (non-empty
   `baselineEffects` or `activeEffects`, taken from a previous `CombatState`) throws, because
   re-feeding it would double its innate spell slots (`spec/creatures.md#innate-spells`).
+  **Known bug:** a creature with no effects that a finished fight left dead or defending passes
+  (fix: `phases/4.6/brief.md#fight-setup-checks-its-input`).
 - Each creature stores its resolved starting effect list, **`baselineEffects`**: its innate
   traits' effects, then its side's, in the canonical effect order (`spec/effects.md#effect-order`). `revive` restores exactly that list (`spec/effects.md#death-reset`), so nothing is
   re-derived mid-fight.
@@ -245,7 +247,7 @@ TurnStarted
   roll) is skipped, `TurnEnded` is still emitted so the brackets balance, and `FightEnded` follows
   (`spec/combat.md#resolution--timing`).
 - The actor enters its turn alive, but a turn-start hook or its own action can kill it: the
-  hooks, the grants and the countdown run only while it is alive, and the Web roll still runs at
+  hooks, the turn-start cleanup, the grants and the countdown run only while it is alive, and the Web roll still runs at
   the cleanup of a turn whose actor died in it (the turn happened). Both cleanups are
   bookkeeping only (`spec/statuses.md#turn-end-cleanup`). The turn-start cleanup runs on a
   skipped turn too, so a Stunned or Sleeping creature stops defending and provoking on schedule;
@@ -268,6 +270,8 @@ TurnStarted
   stays at the action boundary, never inside the per-target loop.
 - A creature at 0 HP is **flagged `alive: false`, never removed**, so slots stay stable for
   tie-breaks and event references.
+- **Known bug:** a clamp to an effective max Health of 0, or a revive that rounds to 0 HP, leaves a
+  living creature at 0 HP (fix: `phases/4.6/brief.md#no-living-creature-at-0-hp`).
 
 ### The damage channel in the engine
 
@@ -361,6 +365,9 @@ TurnStarted
   side, unless its Confusion roll turns it on the caster's own (`spec/combat.md#targeting-override`).
 - A frozen target that has died by the time its hit comes is skipped; the set itself doesn't
   change.
+- **Known bug:** "slot order" here, in Splashing's adjacency and in the living-creature lists is
+  read as the party array's order, which `createCombat` doesn't check (fix:
+  `phases/4.6/brief.md#fight-setup-checks-its-input`).
 
 ### Spells carry responses
 
@@ -419,9 +426,10 @@ TurnStarted
   action at all (a lock, an empty slot, no castable gem for `gemSlot: 'random'`, no valid target)?
   The interpreter's lookahead uses it.
 - **`resolveIntent(actor, intent, state)`** is the **single place action-level random draws
-  happen**: the gem first, for a random cast, then the target: the explicit selector, else the
-  side-aware default (`spec/combat.md#default-targeting-is-side-aware`), then, for an enemy-side single target,
-  the targeting override (`spec/combat.md#targeting-override`).
+  happen**: the gem first, for a random cast, then the target. An enemy-side single target goes
+  through the targeting override (`spec/combat.md#targeting-override`), whose Confusion roll comes
+  first and whose Provoke draw replaces the selector; otherwise the explicit selector, else the
+  side-aware default (`spec/combat.md#default-targeting-is-side-aware`).
 - **`executeAction`** runs the executors.
 - **`runAction`** chains them for every source: `checkLegality`, then `resolveIntent`, then
   `executeAction`. A dead actor, an illegal intent or one that resolves to nothing is a silent

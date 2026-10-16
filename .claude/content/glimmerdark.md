@@ -5,7 +5,8 @@ Read this when a slice touches Glimmerdark's creatures, statuses, spells or boss
 Source: species and creatures in `src/data/species/glimmerdark.ts`; traits in
 `src/data/traits/glimmerdark.ts`; spells in `src/data/spells/glimmerdark.ts`; Grant Act First,
 Vulnerability and Regen in `src/data/statuses.ts`. Each description is literal, exact numbers included, in the style of a
-future in-game tooltip, and stands on its own. Where it disagrees with the source, the source is
+future in-game tooltip, and stands on its own together with the trigger words
+(`content/overgrowth.md#trigger-words`). Where it disagrees with the source, the source is
 right; a change to a number updates this doc and the trait's `description` in `src/data` in the same
 change: each description is transcribed from its entry here.
 
@@ -14,8 +15,8 @@ change: each description is transcribed from its entry here.
 ### Species roles
 
 Most species follow The Overgrowth's enabler, payoff and amplifier roles (`content/overgrowth.md#enabler-payoff-amplifier`). Three don't chain a trick: the Resonants and the Sparkeaters each
-share one mechanic, and the Gloomjaws take three distinct verbs toward one theme. A hit marked
-*indirect* follows `content/overgrowth.md#indirect-damage`.
+share one mechanic, and the Gloomjaws take three distinct verbs toward one theme. The roles are a
+guideline, not a rule.
 
 ### Affinity spread
 
@@ -52,17 +53,14 @@ Pale cave-dwellers whose glow is their life (the names are placeholders).
 Vitality · enabler · support. At the start of its turn, **only while another living ally is below
 maximum Health**, it burns **10% of its own maximum HP** to heal its lowest-HP **injured** ally
 **other than itself** for **20% of its own maximum HP**. When every other ally is at full health
-(or none is left), it neither burns nor heals. The burn is a **cost**: exactly 10% of its maximum
-HP, whatever its Defence. It can kill the Wick, and then no heal follows (unless Last Stand saves
-it; the heal then proceeds).
+(or none is left), it neither burns nor heals. The burn is a **cost**
+(`spec/combat.md#damage-channels-and-the-additional`).
 
 ### Flickerling Flare
 
 Wit · payoff · caster. Whenever an ally damages **itself** (a cost, like the Wick's burn; never an
 ordinary hit or a damage-over-time tick), **every living ally** permanently gains **15% Speed**. It
-counts itself as an ally, and two Flares both react, so their bonuses multiply. It watches damage,
-not actions (`spec/effects.md#damage-observation`). On a lethal burn the order is: the burn's
-damage, the Flare's reaction, the Wick's death, the Last Gleam's reaction.
+counts itself as an ally, and two Flares both react, so their bonuses multiply.
 
 ### Flickerling Last Gleam
 
@@ -103,12 +101,9 @@ Wit · caster. Whenever an ally casts a spell, its Intelligence permanently rise
 ### Resonant Overtone
 
 Wit · amplifier · caster. Whenever an ally casts a spell, there's a **10% chance** the caster casts
-again: a random one of its own equipped spells (possibly the same one), at a random valid target.
-The echo comes **after the original cast has fully resolved**, and it obeys every action rule: a
-Silenced caster can't echo, and a caster killed during its own cast (by a retaliation, say) loses
-the echo. An echo is observed like any cast (by a Chorus, an Adept, even an Overtone again), so it
-can chain into another echo. Only one Overtone echo can follow a cast, however many Overtones are on
-the field.
+again: a random one of its own equipped spells (possibly the same one), at a random valid target,
+after the original cast. An echo is a cast like any other, so it can be echoed again. Only one
+Overtone echo can follow a cast, however many Overtones are on the field.
 
 ## Sparkeaters (Violence/Endurance/Vitality): stat parasites
 
@@ -155,7 +150,7 @@ doesn't hit low-HP targets harder, it gets every target into low-HP range faster
 ### Shellback Warden
 
 Endurance · enabler · warden. At the start of each of its turns, permanently raises the whole
-team's Defence by **10%**, again every round it acts, so it compounds.
+team's Defence by **10%**, so it compounds.
 
 ### Shellback Brawler
 
@@ -164,10 +159,8 @@ armor is its weapon.
 
 ### Shellback Bulwark
 
-Endurance · amplifier · warden (provoking draws more hits to strike back at). Whenever an attack
-or spell hits it, it strikes back for **50% of its own Defence**, as indirect damage. It doesn't
-answer a tick, a cost or another creature's trait, status or perk damage
-(`spec/effects.md#damagechannel`).
+Endurance · amplifier · warden (provoking draws more hits to answer). Whenever an attack or spell
+hits it, it deals damage equal to **50% of its own Defence** to the creature that hit it.
 
 ## Boss
 
@@ -192,7 +185,8 @@ Wit · single ally. Heals **30%** of the caster's effective Health and grants Gr
 
 ### Disorient
 
-Instinct · single enemy. Deals **85%** of the caster's Intelligence and applies Web for **3** turns.
+Instinct · single enemy. Deals **85%** of the caster's Intelligence and applies Web for **3** turns:
+Vine Snare's effect, in Instinct.
 
 ### Blinding Flare
 

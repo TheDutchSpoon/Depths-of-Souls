@@ -11,7 +11,8 @@ here; a change to its numbers updates both in the same change.
 ## Identity
 
 The **protector and provoke-tank**: draw fire, survive it, punish attackers, and turn Defence into
-offence. All content stays reachable by every spec.
+offence. All content stays reachable by every spec. Its wording follows the trigger words
+(`content/overgrowth.md#trigger-words`).
 
 ## Starter: Stonehorn Warden
 
@@ -33,9 +34,12 @@ battle.
 
 1 level × 100 points. On provoke, the creature also defends.
 
+**Known bug:** the creature only takes the defending stance; it doesn't Defend, so Bulwark and
+Defensive Stance don't count it (fix: `phases/4.6/brief.md#granted-defends-are-real-defends`).
+
 ### Armor piercer
 
-25 levels × 4 points. Attacks and spells ignore 1% of the enemy's Defence per level.
+25 levels × 4 points. Your creatures' damage ignores 1% of the target's Defence per level.
 
 ### Shield Specialist
 
@@ -44,9 +48,8 @@ needs Phase 8's equipment system.
 
 ### Thorns
 
-1 level × 100 points. After taking damage from an attack or spell, deals damage to that enemy
-equal to 15% of the creature's Defence, as indirect damage (a fifth of the enemy's Defence
-applies).
+1 level × 100 points. Whenever an attack or spell hits the creature, it deals damage equal to 15%
+of its Defence to the creature that hit it.
 
 ### Shield Bash
 
@@ -66,6 +69,9 @@ HP. It doesn't roll while the creature is at 1 HP; healed above 1 HP, it rolls a
 ### Phalanx
 
 1 level × 100 points. Your creatures start each battle defending.
+
+**Known bug:** they only take the defending stance; they don't Defend, so Bulwark and Defensive
+Stance don't count it (fix: `phases/4.6/brief.md#granted-defends-are-real-defends`).
 
 ### Defensive Stance
 

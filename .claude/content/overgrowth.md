@@ -7,16 +7,18 @@ Source: species and creatures in `src/data/species/overgrowth.ts`; traits in
 `src/data/traits/overgrowth.ts`; spells in `src/data/spells/overgrowth.ts`;
 statuses in `src/data/statuses.ts`; the Unicorn in
 `src/data/species/starters.ts` and `src/data/traits/starters.ts`. Each description is literal,
-exact numbers included, in the style of a future in-game tooltip, and stands on its own. Where it
-disagrees with the source, the source is right; a change to a number updates this doc and the
-trait's `description` in `src/data` in the same change: each description is transcribed from its
-entry here.
+exact numbers included, in the style of a future in-game tooltip, and stands on its own together
+with the trigger words (`content/overgrowth.md#trigger-words`), which say once what every entry's
+wording means. Where it disagrees with the source, the source is right; a change to a number
+updates this doc and the trait's `description` in `src/data` in the same change: each description
+is transcribed from its entry here.
 
 ## Reading this biome
 
 ### Enabler, payoff, amplifier
 
-Every species has one closed, self-contained trick, and its three creatures play three roles in it:
+A guideline, not a rule: a species usually has one closed, self-contained trick, and its three
+creatures play three roles in it:
 
 - **Common = enabler.** Sets the trick up (applies a status, opens a condition).
 - **Uncommon = payoff.** Benefits from the trick once it's set up.
@@ -30,8 +32,44 @@ Rarity only changes how often it spawns.
 
 ### Indirect damage
 
-A trait's hit marked *indirect* follows the indirect damage rule (`spec/combat.md#damage-channels-and-the-additional`): only a fifth of the target's Defence applies, and it gets no chip
+Damage a trait or perk deals itself follows the indirect damage rule (`spec/combat.md#damage-channels-and-the-additional`): only a fifth of the target's Defence applies, and it gets no chip
 floor and no Additional.
+
+### Trigger words
+
+Every trait and perk entry, in every content doc and in `specializations/`, uses these words with
+one meaning each, so an entry says only what its trait does.
+
+- **"attacks", "casts"**: the real action (`spec/effects.md#traits`), at the action's power, with
+  every action rule. "Attacks an additional time" or "again" is one more instance of the same
+  action (`spec/combat.md#action-instance-list`).
+- **"hits"**: an attack's or a spell's own damage landing, a splash hit included. Never a trait's
+  or perk's own damage.
+- **"deals damage"**, in a trait or perk entry: the creature's own damage, outside any action. It
+  is indirect damage (`content/overgrowth.md#indirect-damage`): not an attack, so it fires no "when
+  it attacks", can't splash and isn't turned by Confusion. In a spell entry, the damage is the
+  cast's hit.
+- **"when it attacks", "every attack"** (`on-attack`): every attack instance (Flurry gives two),
+  granted attacks included. It resolves **before the hit**, aimed at the attack's target, the
+  attacker's own ally when Confusion turned the attack, and still resolves when the hit then finds
+  its target dead (`spec/combat.md#a-target-killed-by-its-pre-hit-hooks-fizzles`). Not on a splash
+  hit, a spell or a trait's damage.
+- **"whenever an attack or spell hits it"** (`on-damage-taken` with `damageChannel: 'direct'`):
+  every hit separately (each instance of a Flurry or an Echo, each target of an area spell, each
+  splash hit), from any creature, an ally included; never the hit that kills it.
+- **"whenever an ally casts"** (`on-action-observed`): every cast instance (an Echo gives two; an
+  area spell counts once), granted casts and echoes included, the observer's own casts too. It
+  resolves before the spell's effects, so a buff an observer gains from its own cast already powers
+  that cast.
+- **"every kill"** (`on-kill`): every death it deals: by its actions, by its own damage, or by the
+  tick of a damage over time it applied while it lives. An ally it kills counts.
+- **"at the start of each of its turns", "at the end of its turn"** (`on-turn-start`,
+  `on-turn-end`): every turn it has, a turn it loses to Stun or Sleep included.
+- **"deals X% more damage to …"** (`conditional-damage-bonus`): its attacks, its spells and its own
+  damage, checked on each hit.
+- **"its attacks (and spells) deal additional damage"** (`cross-stat`): its attacks' and spells'
+  hits, splash hits included; never its own damage.
+- **"ignores X% of Defence"** (`armor-penetration`): all its damage except damage over time.
 
 ## Statuses
 
@@ -92,16 +130,16 @@ Wit · payoff · striker. Deals **40% more damage** to Webbed enemies.
 
 ### Spider Broodwarden
 
-Instinct · amplifier · striker. When it attacks, it also lands a separate bonus hit of **25% of its
-Attack for every enemy currently Webbed** (50% with two, and so on), as indirect damage. It never
-applies Web itself; it only benefits from what its species-mates have done.
+Instinct · amplifier · striker. When it attacks, it also deals its target damage equal to **25% of
+its Attack for every enemy currently Webbed** (50% with two, and so on). It never applies Web
+itself; it only benefits from what its species-mates have done.
 
 ## Swarmhive (Violence): strength in numbers
 
 ### Swarmhive Drone
 
-Violence · enabler · opener. When it dies, it hits a random living enemy for **30% of its Attack**,
-as indirect damage.
+Violence · enabler · opener. When it dies, it deals damage equal to **30% of its Attack** to a
+random living enemy.
 
 ### Swarmhive Striker
 
@@ -112,8 +150,8 @@ joining or dying later don't change it.
 ### Swarmhive Queen
 
 Endurance · amplifier · warden. At the start of each of its turns, it permanently raises the Attack
-of **every living Swarmhive ally, itself included, by 10%**, again every round it acts, so the
-bonus compounds over the fight.
+of **every living Swarmhive ally, itself included, by 10%**, so the bonus compounds over the
+fight.
 
 ## Treants (Vitality/Endurance): a health engine
 
@@ -147,7 +185,7 @@ Speed**, so a sped-up team makes it hit harder.
 ### Pollinator Pollenlord
 
 Wit · amplifier · caster. At the start of each of its turns, permanently raises its whole team's
-Speed by **10%**, again every round it acts.
+Speed by **10%**.
 
 ## Snapjaws (Violence/Endurance): bait & punish
 
@@ -155,11 +193,13 @@ Speed by **10%**, again every round it acts.
 
 Endurance · enabler · taunter (its trait fires on Provoke). Whenever it Provokes, it also Defends.
 
+**Known bug:** the Lure only takes the defending stance; it doesn't Defend, so the stance counts for
+no Defend count and fires no `on-defend` (fix: `phases/4.6/brief.md#granted-defends-are-real-defends`).
+
 ### Snapjaw Jaws
 
-Violence · payoff · striker. Whenever an attack or spell hits it, it hits back for **60% of its
-Attack**, as indirect damage. It doesn't answer a tick, a cost or another creature's trait, status
-or perk damage (`spec/effects.md#damagechannel`).
+Violence · payoff · striker. Whenever an attack or spell hits it, it deals damage equal to **60% of
+its Attack** to the creature that hit it.
 
 ### Snapjaw Ironjaw
 
@@ -172,15 +212,19 @@ Violence · amplifier · striker. At the start of each of its turns, its Defence
 
 Wit · enabler · striker. When it attacks, it has a **40% chance** to put its target to Sleep.
 
+**Known bug:** the Sleep lands before the attack's hit, and that hit wakes the target, so a Sleeper's
+Sleep never outlasts the attack that applies it (fix:
+`phases/4.6/brief.md#action-hooks-fire-after-the-action`).
+
 ### Lullpollen Reaper
 
 Instinct · payoff · striker. Deals **50% more damage** to Sleeping enemies.
 
 ### Lullpollen Dozer
 
-Instinct · amplifier · striker. When it attacks, it also lands a separate bonus hit of **25% of its
-Attack for every enemy currently Sleeping** (50% with two, and so on), as indirect damage. It never
-puts anything to Sleep itself; it only benefits from what its species-mates have done.
+Instinct · amplifier · striker. When it attacks, it also deals its target damage equal to **25% of
+its Attack for every enemy currently Sleeping** (50% with two, and so on). It never puts anything
+to Sleep itself; it only benefits from what its species-mates have done.
 
 ## Boss
 
@@ -188,9 +232,9 @@ puts anything to Sleep itself; it only benefits from what its species-mates have
 
 Wit · striker; floor 10. Unique and non-collectable, never in the spawn pool.
 
-- Whenever she attacks, she also deals bonus damage of **25% of her Attack for every living
-  spiderling fighting beside her, herself included**, as indirect damage. It is read fresh on every
-  attack, so killing her adds visibly shrinks it.
+- Whenever she attacks, she also deals her target damage equal to **25% of her Attack for every
+  living spiderling fighting beside her, herself included**. It is read fresh on every attack, so
+  killing her adds visibly shrinks it.
 - At the end of every round, she has a **40% chance** to Web the entire enemy party at once.
 
 Her authored adds are a Spider Weaver and a Spider Ambusher; three random Overgrowth creatures,
@@ -205,16 +249,19 @@ scripted intro (`spec/run.md#scripted-intro`); its own species is stubbed and re
 a later biome.
 
 Whenever it attacks, it revives a random dead ally at **20% of that ally's baseline maximum HP**.
-It fires once per attack hit, so a creature that attacks more than once (Flurry) revives more than
-once; a revive deals no damage, so it can't cascade.
+With Flurry it attacks twice, so it revives twice.
 
 ## Spells
 
 ### Spell power convention
 
 A single-target damage spell with no other effect deals about **100%** of the caster's
-Intelligence; one that also applies a status, about **80–90%**. An area spell with no other effect
-deals about **50%**; one that also applies a status, about **30–40%**. A spell's percentage is
+Intelligence; one that also applies a status that only hinders (Web, Weaken, Confusion), about
+**80–90%**. An area spell with no other effect deals about **50%**; one that also applies a
+hindering status, about **30–40%**. A spell whose other effect is itself damage, healing or a damage
+multiplier (a damage over time, a heal, Vulnerability) is outside the convention and priced by
+tuning: Life Siphon, Blinding Flare, Spore Cyst and Withering Bolt. A spell copying another's effect
+in a different affinity is allowed, but avoided where another effect would do. A spell's percentage is
 its power coefficient through the normal damage formula (the target's Defence, affinity and every
 usual modifier), not a flat amount. An ally spell can target any living ally, the caster included.
 Every spell below unlocks at biome 1 and stays rollable in every deeper

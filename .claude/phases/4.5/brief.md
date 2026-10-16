@@ -1,6 +1,7 @@
 # Phase 4.5 — Fixes and the run-loop demo
 
-**Status: planned.** Decided with the design owner on 2026-10-12. Two parts: the fixes listed under
+**Status: shipped.** Every slice merged; 4.5-F2 did not run, and the phase record is still to be
+written. Decided with the design owner on 2026-10-12. Two parts: the fixes listed under
 "Decided, not built" (4.5-A to 4.5-F), then the throwaway run-loop demo (4.5-G1 to 4.5-G3), which
 replaces the stub on the live site and covers Phases 4 and 4.1. The docs are the spec; this
 brief places each decision in a slice, with its golden policy. If this brief and the docs disagree,

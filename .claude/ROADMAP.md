@@ -60,6 +60,12 @@ site. It comes **after the fixes and before Phase 5** deliberately: if the run l
 exercised in a browser after persistence lands, run-loop bugs and save bugs couldn't be told apart.
 Same guardrails as every demo; own brief and phase record.
 
+## Phase 4.6 — Review fixes (interlude)
+*Brief: `.claude/phases/4.6/brief.md`; slices 4.6-A to 4.6-F.* The fixes from the review of the
+Phase 4–4.5 build, after the 4.5 demo and before Phase 5, so persistence starts on a settled
+engine and branded ids. A fix phase, so no demo of its own: the live 4.5 demo shows each fix as it
+merges.
+
 ## Phase 5 — Persistence (large saves)
 - Builds `spec/saves.md` (all of it is its `## Not built` half) and the IndexedDB namespacing
   (`CI_CD.md#indexeddb-is-namespaced-by-environment`).
@@ -72,6 +78,9 @@ Same guardrails as every demo; own brief and phase record.
   - candidate conditions: "target lacks status X" (casters currently refresh statuses they already
     applied) and a `last-action` condition (script memory);
   - whether a script-level default target overrides the engine's side-aware default;
+  - deleting a script template unassigns it from every creature that uses it; before a descent the
+    player is **warned**, never refused, when a party creature has no script (it fights with the
+    fallback), and the store answers which creatures those are;
   - triggers can use **trigger-only conditions** (`TriggerCondition`, `spec/effects.md#trigger-conditions`) that scripts can't. The editor builds its condition list from the scripting
     `Condition` and must not offer them. If players should get "another ally is hurt", add it
     together with a matching "lowest-HP hurt ally other than me" selector, never the condition
@@ -83,8 +92,13 @@ Same guardrails as every demo; own brief and phase record.
 - **Trait and perk text:** every stock trait and perk carries a first-draft `description`,
   transcribed from its content-doc entry (`spec/effects.md#carriers-and-effects`); it needs exact,
   consistent wording.
+- **The trigger words** (`content/overgrowth.md#trigger-words`) are what makes a description read
+  right ("deals damage" means indirect damage): the player needs them on screen. A glossary,
+  tooltips or both is settled at Phase 7's kickoff.
 
 **Decided, not built:**
+- **Status icons:** every status shows as an icon with its remaining duration
+  (`spec/statuses.md#a-status-is-a-timed-effect`).
 - **The scripted intro's story beat:** the intro's outcome is presented as a story beat, the
   starter revived and the Unicorn gained. It is presentation only (HP resets every fight, so a
   revive changes nothing); `spec/run.md#scripted-intro` describes the fight `main` runs.
