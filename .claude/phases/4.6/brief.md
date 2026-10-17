@@ -116,6 +116,10 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   change. Three goldens do this: `golden-defend-count-additive-cap` (`defendCount: 15`),
   `golden-heal-scaling-count` and `golden-necromoss-reclaim` (dead allies). Their inputs change
   and their expected values stay byte-identical.
+- A test whose creature names a script the fight isn't given gets the registry its creatures
+  name, assertions unchanged: five `combat.test.ts` instance-list tests, two
+  `data/species/starters.test.ts` tests, and three `state/store.test.ts` intro tests, whose
+  `makeDeps` holds the role scripts alongside the fixture scripts.
 - The PR review writes it into `spec/combat.md#fight-setup` and `spec/effects.md#validators`, and
   removes their Known bug lines and `spec/combat.md#aoe-cast`'s.
 
@@ -133,6 +137,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   whose registry holds it would throw. The flag goes; `golden-round-end-interaction`'s expected log
   gains exactly one `TriggerFired` (P1, `on-round-end`) before P1's 999 `DamageDealt`. It is A's
   one golden exception: every other golden and the corpus digest stay byte-identical.
+- Two test-inline statuses also carry the flag off a tick and drop it, assertions unchanged:
+  `test-regen` (`resolution.test.ts`) and `single` (`status-containers.test.ts`).
 - The PR review writes both into `spec/effects.md#validators`.
 
 ### No living creature at 0 HP
@@ -165,9 +171,12 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   second break in one cleanup can't restore the first.
 - **`on-action-observed` fails closed** when it can't find the actor, as the other two
   observation hooks do (`resolution.ts:566-574`).
-- **`stacks: false` claims per effect**, not per carrier id (`resolution.ts:645-648`): two such
-  triggers in one trait are separate claims, and a trait id equal to a status id no longer shares
-  one.
+- **`stacks: false` claims per definition**, not per carrier id (`resolution.ts:645-648`). The
+  claim key is the trigger's carrier kind (trait, side effect or status), the carrier's id and the
+  trigger's position in the carrier's own effect list, stamped when the effect is instantiated. So
+  two such triggers in one trait are separate claims, a trait id equal to a status id no longer
+  shares one, and a creature carrying one trait twice still makes one claim. `TriggeredDef.stacks`
+  and the content stay as they are.
 - **`triggering-ally` is deleted**: it has no rule and no content, and the engine resolves it as
   `triggering-source`.
 - Byte-identical: no content reaches any of them.

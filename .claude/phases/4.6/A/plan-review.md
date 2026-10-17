@@ -30,9 +30,24 @@ throws; no `Map`/`Set` write after freezing anywhere in the suite; every shipped
 3. **The golden `initial` proof compares the whole `CombatState`**, not only the two parties: also
    `rng`, `effectInstanceCounter`, `turnClock`, `round` and the registries. A `setup` that moved
    state correctly but disturbed the counter would pass a party-only check.
-4. **A `stacks: false` test at the side-effect site.** One perk-borne `stacks: false` trigger
-   carried by two party members makes one claim. The `perk-<n>` key is what makes a party-wide perk
-   a single carrier, and none of the planned tests cover it.
+4. **The `stacks: false` claim key is stamped at instantiation, not counted at lookup.** The key is
+   `<kind>:<carrierId>#<index>`, where kind is `trait`, `side` or `status`, and index is the
+   trigger's position in its carrier's own effect list.
+   - `resolveBaselineEffects` stamps an optional `claimKey` on the `BaselineEffectEntry` of a
+     `stacks: false` trigger only (`trait:<id>#<i>`, `side:perk-<n>#0`, `side:enemy-effect-<n>#0`).
+     `withInstance` carries it onto the `TriggeredEffect`, so revive's re-instantiation keeps it.
+   - `flatEffects` builds `status:<statusId>#<index>` for a status trigger, from the index it
+     already has. Nothing is stored.
+   - `effectsForHook` passes the key through, and `fireHook` keys `claimedNonStacking` on it. The
+     claim point is unchanged.
+   - `TriggeredDef.stacks` and Overtone are unchanged.
+   - A non-stacking effect without a key is a resolver-invariant throw. The one hand-built test
+     effect that reaches the claim, `actions.test.ts`'s `ECHO` fixture, gains its key.
+
+   Tests, on top of the plan's set:
+   - one trait instantiated twice on one creature (a test registry) makes one claim;
+   - a side-effect trigger carried by two party members makes one claim;
+   - a revived carrier keeps its key.
 5. **The comment-only set is only `golden-revive-cap-exclusion` and `golden-revive-cap-fizzle`.**
    `golden-round-end-interaction` changes its expected log, and the three `setup` goldens change
    their inputs. All four fall under the golden policy, not
@@ -50,9 +65,9 @@ throws; no `Map`/`Set` write after freezing anywhere in the suite; every shipped
 | 5 | Import sweeps every perk level `1..maxLevel` | **Confirm.** The forecast swept every shipped perk at every level: none throws. |
 | 6 | Additive cap must be a number `< 1`; negatives allowed; not for multiplicative or dealt | **Confirm.** That is the brief's rule. A lower bound would be a new rule, and no content comes near one. |
 | 7 | `Spell.effects` not covered by the `emitTriggerFired` check | **Confirm.** A spell's effects emit no `TriggerFired`, and `validateSpellEffects` already rejects `flatAmount`. |
-| 8 | `stacks: false` key = `status:<id>#<pos>` / `effect:<sourceTraitId>#<pos>`, derived at lookup, no stored field | **Decide-point 2** (recommended: confirm). |
-| 9 | The same trait twice on one creature gets two claims | **Confirm: unreachable by rule.** No two creature templates share a trait, and fusion refuses two of the same creature (`spec/creatures.md#trait-and-gem-slots`), so innate traits never repeat. Phase 8's infused traits can repeat one, and a derived key would count it twice: decide-point 3. |
-| 10 | Trait vs side-effect slot told apart by the `perk-<n>` / `enemy-effect-<n>` label | **Confirm.** |
+| 8 | `stacks: false` key = `status:<id>#<pos>` / `effect:<sourceTraitId>#<pos>`, derived at lookup, no stored field | **Correct:** stamped at instantiation (plan fix 4). |
+| 9 | The same trait twice on one creature gets two claims | **Correct:** one claim, since both copies stamp the same key (plan fix 4). Phase 8 infused traits instantiate under their own trait id (`spec/creatures.md#equipment`). |
+| 10 | Trait vs side-effect slot told apart by the `perk-<n>` / `enemy-effect-<n>` label | **Correct:** the kind is stamped (`side:`) where the effect is instantiated, not read off the label. |
 | 11 | `deepFreeze` throws on a Map/Set frozen before it | **Confirm.** The forecast saw no write after freezing in the whole suite. |
 | 12 | Comment-only golden header edits, checked with `comment-proof` | **Correct** to the two files in plan fix 5. |
 | 13 | One slice, no A1/A2 split | **Confirm.** The mechanisms are small and independent. With decide-point 1 settled, step 2 has no predictable stop left. |
@@ -100,17 +115,36 @@ it reaches.
 
 ### Decisions
 
-- **Decide-point 2:** derived position, as planned. No fusion rule is needed: no creature shares
-  a trait. The docs didn't say so, so `spec/creatures.md#trait-and-gem-slots` now states it.
-- **Decide-point 1:** open.
-- **Decide-point 3** (raised after decide-point 2): open. Phase 8's infused traits are a third trait
-  source (`spec/creatures.md#equipment`). An infused trait the creature already carries, innate or
-  infused, is a second carrier of one source. The derived key would give it a second claim, and the
-  rule allows one. Recommended: keep the derived key in 4.6-A, since nothing repeats a trait before
-  Phase 8, and give Phase 8 the job of storing each effect's position within its source. The claim
-  then stays one per definition wherever the trait is carried, with no infusion rule.
+- **Decide-point 1:** yes. Both classes are listed changes, with the fixes given above.
+- **Decide-points 2 and 3:** the claim key is the trigger's definition, stamped at instantiation
+  (plan fix 4).
+  - **Not counted at lookup:** counting gives a second claim once Phase 8 lets one creature carry
+    a trait twice.
+  - **Not an explicit `stackKey` in content:** that adds cross-trait groups no content needs, and
+    two rules to police: mixed chances in one group, and one key on two hooks.
+  - The options are compared in `evidence/stacks-false-second-look.md`. An explicit key can still
+    be layered on later, as an override of the stamped one.
+  - **Verified** in a scratch clone at `73cc126`:
+    - with A built and today's suite run, every golden and 2,233 tests pass unchanged;
+    - the only failures were two tests whose hand-built `ECHO` effect has no key, which led to the
+      invariant throw above;
+    - new tests pass on A: two triggers in one trait both fire; a trait and a status sharing an id
+      both fire; one trait on two creatures is one claim; one creature with the same trait twice
+      is one claim;
+    - on today's `sourceTraitId` key, the first two fail.
+  - Phase 8's infused traits instantiate under their own trait id (`spec/creatures.md#equipment`).
+  - No fusion rule: `spec/creatures.md#trait-and-gem-slots` states that no two creature templates
+    share a trait.
 
 ### Docs edited
 
+- `phases/4.6/brief.md#fight-setup-checks-its-input`: the unknown-`scriptId` tests and their fix
+  are listed.
+- `phases/4.6/brief.md#the-load-time-checks-close-their-gaps`: the two test-inline statuses are
+  listed.
+- `phases/4.6/brief.md#small-engine-fixes`: `stacks: false` claims per definition, with a key
+  stamped at instantiation.
+- `spec/creatures.md#equipment`: an infused trait instantiates under its own trait id, so one
+  trait carried twice is one claim.
 - `spec/creatures.md#trait-and-gem-slots`: a creature's innate trait is its own; no two creature
   templates share one, so a creature's innate traits never repeat.
