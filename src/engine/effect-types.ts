@@ -475,34 +475,6 @@ function validateResponseTargetNoRandomSelector(
   }
 }
 
-/** Runs the `'random'`-selector check over every `triggered` effect's response in `defs`. Shares
- * `validateStatModifierConditions`'s own iteration/call-site convention (traits, perks). */
-export function validateNoRandomSelectorInResponseTargets(
-  defs: readonly EffectDef[],
-): void {
-  for (const def of defs) {
-    if (def.category === 'triggered') {
-      validateResponseTargetNoRandomSelector(
-        def.response,
-        `a "${def.hook}" trigger's response`,
-      )
-    }
-  }
-}
-
-/** The status-registry counterpart: a status carries ordinary effects, so its triggers'
- * responses are checked exactly like a trait's, with the status named in the message. */
-export function validateStatusNoRandomSelectorInResponseTargets(def: StatusDef): void {
-  for (const effect of def.effects) {
-    if (effect.category === 'triggered') {
-      validateResponseTargetNoRandomSelector(
-        effect.response,
-        `status "${def.statusId}"'s "${effect.hook}" trigger's response`,
-      )
-    }
-  }
-}
-
 /** The load-time validator for a status's effects. Throws if a status carries `stat-modifier` /
  * `stat-remap` (`spec/effects.md#no-temporary-stat-modifier`), `status-immunity` (immunity is read
  * only from non-status carriers, so it can't depend on itself) or `innate-spell` (innate spells
@@ -1143,8 +1115,9 @@ export type ResolvedHookEffect = {
   /** Derived from a `TriggeredDef`'s own `stacks: false`
    * (the dedup flag; not a status stack count) --
    * `true` iff this effect must claim a fireHook-call-scoped dedup slot
-   * before it's even allowed to roll `chancePercent`. Always undefined for a status-sourced
-   * entry (no v1 status declares it). */
+   * before it's even allowed to roll `chancePercent`. Set iff the trigger's definition declares
+   * `stacks: false`, on any carrier (a status's trigger included); `claimKey` is then always
+   * present. */
   readonly nonStacking?: boolean
   /** The key a `stacks: false` effect claims its one slot under: `<kind>:<carrierId>#<index>`,
    * the carrier kind (`trait`, `side` for a side effect, `status`), its id, and the trigger's

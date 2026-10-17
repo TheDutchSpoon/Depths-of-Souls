@@ -200,7 +200,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: SOVEREIGN },
 ]
 
-/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+/** Post-`createCombat` step (createCombat takes fresh creatures and sets HP at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
   // createCombat resets currentHp to effective max at fight-start, so ADD's and WEAK's wounded

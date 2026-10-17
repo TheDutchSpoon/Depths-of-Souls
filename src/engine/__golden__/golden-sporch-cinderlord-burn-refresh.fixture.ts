@@ -135,7 +135,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: CINDERLORD },
 ]
 
-/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+/** Post-`createCombat` step (createCombat takes fresh creatures and sets HP at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
   // Pre-apply a Burn to ENEMY_B at duration:1 (not Burn's own default of 3) and wound VICTIM,

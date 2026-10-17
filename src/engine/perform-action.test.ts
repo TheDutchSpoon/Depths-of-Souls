@@ -14,8 +14,8 @@ import {
   findUnguardedPerformActions,
   findUnguardedStatusPerformActions,
   hasRealGuard,
-  validateNoRandomSelectorInResponseTargets,
   validateSpellEffects,
+  validateTrait,
 } from './effect-types'
 import { createCreatureId } from './ids'
 import { makeParty } from './__fixtures__/creatures'
@@ -336,7 +336,9 @@ describe('load-time rejections', () => {
         },
       },
     }
-    expect(() => validateNoRandomSelectorInResponseTargets([echo])).not.toThrow()
+    expect(() =>
+      validateTrait({ id: 'echo-fixture', name: 'Echo', effects: [echo] }),
+    ).not.toThrow()
   })
 })
 

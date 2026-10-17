@@ -67,14 +67,24 @@ describe('createCombat: scriptId', () => {
 })
 
 describe('createCombat: freshness', () => {
-  const cases: [string, CreatureOverrides][] = [
-    ['alive: false', { alive: false }],
-    ['defending', { defending: true }],
-    ['provoking', { provoking: true }],
-    ['a non-zero defendCount', { defendCount: 1 }],
-    ['a non-zero revivesUsed', { revivesUsed: 1 }],
+  function thrownMessage(run: () => unknown): string {
+    try {
+      run()
+    } catch (e) {
+      return (e as Error).message
+    }
+    return ''
+  }
+
+  const cases: [string, string, CreatureOverrides][] = [
+    ['alive: false', 'alive: false', { alive: false }],
+    ['defending', 'defending', { defending: true }],
+    ['provoking', 'provoking', { provoking: true }],
+    ['a non-zero defendCount', 'defendCount', { defendCount: 1 }],
+    ['a non-zero revivesUsed', 'revivesUsed', { revivesUsed: 1 }],
     [
       'non-empty baselineEffects',
+      'baselineEffects',
       {
         baselineEffects: [
           { def: { category: 'cheat-death', chancePercent: 1 }, sourceTraitId: 't' },
@@ -83,6 +93,7 @@ describe('createCombat: freshness', () => {
     ],
     [
       'non-empty activeEffects',
+      'activeEffects',
       {
         activeEffects: [
           {
@@ -96,18 +107,21 @@ describe('createCombat: freshness', () => {
     ],
   ]
 
-  for (const [name, overrides] of cases) {
+  for (const [name, field, overrides] of cases) {
     it(`throws on a creature with ${name}`, () => {
       const player = makeParty('player', [{ id: 'a', ...overrides }])
       expect(() => fight(player)).toThrow(
-        /creature "a" already carries fight-setup output/,
+        new RegExp(`creature "a" already carries fight-setup output \\(${field}\\)`),
       )
+      // The innate-spell reason belongs to the two effect lists alone.
+      const innate = /innate spells would double/.test(thrownMessage(() => fight(player)))
+      expect(innate).toBe(field.endsWith('Effects'))
     })
 
     it(`throws on an enemy with ${name}`, () => {
       const enemy = makeParty('enemy', [{ id: 'e', ...overrides }])
       expect(() => fight(makeParty('player', [{ id: 'a' }]), enemy)).toThrow(
-        /creature "e" already carries fight-setup output/,
+        new RegExp(`creature "e" already carries fight-setup output \\(${field}\\)`),
       )
     })
   }

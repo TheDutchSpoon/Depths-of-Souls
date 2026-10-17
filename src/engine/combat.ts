@@ -110,17 +110,21 @@ export function createCombat(input: CreateCombatInput): CombatState {
         `createCombat: creature "${creature.id}" has side "${creature.side}" but was passed in ${side}.party`,
       )
     }
-    if (
-      creature.baselineEffects.length > 0 ||
-      creature.activeEffects.length > 0 ||
-      !creature.alive ||
-      creature.defending ||
-      creature.provoking ||
-      creature.defendCount !== 0 ||
-      creature.revivesUsed !== 0
-    ) {
+    const stale: string[] = []
+    if (creature.baselineEffects.length > 0) stale.push('baselineEffects')
+    if (creature.activeEffects.length > 0) stale.push('activeEffects')
+    if (!creature.alive) stale.push('alive: false')
+    if (creature.defending) stale.push('defending')
+    if (creature.provoking) stale.push('provoking')
+    if (creature.defendCount !== 0) stale.push('defendCount')
+    if (creature.revivesUsed !== 0) stale.push('revivesUsed')
+    if (stale.length > 0) {
+      const innateReason =
+        stale.includes('baselineEffects') || stale.includes('activeEffects')
+          ? ', or innate spells would double'
+          : ''
       throw new Error(
-        `createCombat: creature "${creature.id}" already carries fight-setup output (baselineEffects/activeEffects, alive: false, defending, provoking, defendCount or revivesUsed) -- fight setup takes fresh creatures only, or innate spells would double`,
+        `createCombat: creature "${creature.id}" already carries fight-setup output (${stale.join(', ')}) -- fight setup takes fresh creatures only${innateReason}`,
       )
     }
     const baselineEffects = resolveBaselineEffects(

@@ -162,7 +162,7 @@ export const expectedEvents: CombatEvent[] = [
 
 export const expectedResult: FightResult = 'win'
 
-/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+/** Post-`createCombat` step (createCombat takes fresh creatures and sets HP at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
   // createCombat resets currentHp to effective max at fight-start (`spec/statuses.md#health-is-a-modifiable-stat`), so TARGET's

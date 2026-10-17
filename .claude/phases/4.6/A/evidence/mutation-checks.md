@@ -50,3 +50,14 @@ no mutation survived. The mutation specs were a throwaway script, not kept.
 | deep-freeze: no lock installed on Map/Set | 7 | test-utils/deep-freeze.test.ts | deepFreeze: Map makes set, delete and clear throw |
 | deep-freeze: a pre-frozen Map/Set is skipped silently | 1 | test-utils/deep-freeze.test.ts | deepFreeze: a collection frozen without the lock throws instead of skipping it, since its writes can no longer be locked |
 | freshness: revivesUsed unchecked | 2 | create-combat-input.test.ts | createCombat: freshness throws on a creature with a non-zero revivesUsed |
+| random-selector: loop removed from validateEffectList (round 2) | 5 | resolution.test.ts, spell-effects.test.ts, perform-action.test.ts, load-time-checks.test.ts, status-containers.test.ts | 'random' response-target validator throws when a trait/perk triggered response targets the intent-only 'random' selector |
+| freshness: message names no field (round 2) | 14 | create-combat-input.test.ts | createCombat: freshness throws on a creature with alive: false |
+| freshness: innate-spell reason given for every field (round 2) | 5 | create-combat-input.test.ts | createCombat: freshness throws on a creature with alive: false |
+
+The round-2 random-selector row's five reds are: `load-time-checks.test.ts` "keeps the
+random-selector message of each carrier kind", `status-containers.test.ts` "rejects a trigger inside
+a status that targets the intent-only 'random' selector", and, from the repointed assertions,
+`resolution.test.ts` (two `toThrow` tests) and `spell-effects.test.ts` (one test holding two
+`toThrow` assertions). The three repointed `not.toThrow` assertions (`resolution.test.ts` ×2,
+`perform-action.test.ts` ×1) pass with the check removed, as any `not.toThrow` does; they pin that a
+legal input is still accepted.

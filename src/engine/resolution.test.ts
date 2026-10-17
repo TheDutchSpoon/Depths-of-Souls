@@ -21,9 +21,9 @@ import { countDraws } from './test-utils/rng-draw-count'
 import type { CombatEvent, CombatState, Spell } from './types'
 import {
   createEffectInstanceId,
-  validateNoRandomSelectorInResponseTargets,
   validateStatModifierCondition,
-  validateStatusNoRandomSelectorInResponseTargets,
+  validateStatusDef,
+  validateTrait,
 } from './effect-types'
 import type {
   EffectDef,
@@ -3062,9 +3062,9 @@ describe("'random' response-target validator", () => {
         },
       },
     ]
-    expect(() => validateNoRandomSelectorInResponseTargets(effects)).toThrow(
-      /intent-only 'random' selector/,
-    )
+    expect(() =>
+      validateTrait({ id: 'fixture-trait', name: 'Fixture', effects }),
+    ).toThrow(/intent-only 'random' selector/)
   })
 
   it("throws when a status's own trigger response targets it", () => {
@@ -3083,9 +3083,7 @@ describe("'random' response-target validator", () => {
         },
       ],
     }
-    expect(() => validateStatusNoRandomSelectorInResponseTargets(status)).toThrow(
-      /intent-only 'random' selector/,
-    )
+    expect(() => validateStatusDef(status)).toThrow(/intent-only 'random' selector/)
   })
 
   it('accepts an ordinary (non-random) selector target, for both the trait/perk and status validators', () => {
@@ -3099,7 +3097,9 @@ describe("'random' response-target validator", () => {
         },
       },
     ]
-    expect(() => validateNoRandomSelectorInResponseTargets(effects)).not.toThrow()
+    expect(() =>
+      validateTrait({ id: 'fixture-trait', name: 'Fixture', effects }),
+    ).not.toThrow()
 
     const status: StatusDef = {
       statusId: 'fixture-status',
@@ -3113,7 +3113,7 @@ describe("'random' response-target validator", () => {
         },
       ],
     }
-    expect(() => validateStatusNoRandomSelectorInResponseTargets(status)).not.toThrow()
+    expect(() => validateStatusDef(status)).not.toThrow()
   })
 })
 
