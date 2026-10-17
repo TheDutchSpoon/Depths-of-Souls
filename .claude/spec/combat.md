@@ -180,11 +180,20 @@ damage     = MAX(1, floor(raw))
   doesn't match the list it was passed in throws.
 - `registries` bundles scripts, traits and statuses; any may be omitted (empty). A trait id missing
   from the trait registry **throws**: setup never silently skips a trait. An empty party throws.
-- **Fresh creatures only**: an input creature already carrying setup output (non-empty
-  `baselineEffects` or `activeEffects`, taken from a previous `CombatState`) throws, because
-  re-feeding it would double its innate spell slots (`spec/creatures.md#innate-spells`).
-  **Known bug:** a creature with no effects that a finished fight left dead or defending passes
-  (fix: `phases/4.6/brief.md#fight-setup-checks-its-input`).
+- **Fresh creatures only**: an input creature carrying setup or fight output throws: non-empty
+  `baselineEffects` or `activeEffects` (re-feeding them would double its innate spell slots,
+  `spec/creatures.md#innate-spells`), `alive: false`, `defending`, `provoking`, or a non-zero
+  `defendCount` or `revivesUsed`. `currentHp` is not checked: setup sets it to the effective max
+  Health. A test or golden that needs a wounded, dead or pre-Defended creature sets that on the
+  returned state (`updateCreature`; a golden in its fixture's `setup` step).
+- **A `scriptId` names a script the fight is given**: one that is neither `null` (the fallback) nor
+  in the script registry throws. An omitted registry is empty.
+- **Slots and ids**: on each side, the slots are integers within `0..PARTY_SIZE − 1`
+  (`engine/config.ts`), each above the one before it in array order, so **array order is slot
+  order** for every reader (targeting, the AOE target set, Splashing's adjacency, the
+  living-creature lists). A gap is legal. One id twice, on a side or across both, throws.
+- **The side effects are validated** like a trait (`validateEffectList`,
+  `spec/effects.md#validators`), whether or not a creature carries them.
 - Each creature stores its resolved starting effect list, **`baselineEffects`**: its innate
   traits' effects, then its side's, in the canonical effect order (`spec/effects.md#effect-order`). `revive` restores exactly that list (`spec/effects.md#death-reset`), so nothing is
   re-derived mid-fight.
@@ -270,8 +279,9 @@ TurnStarted
   stays at the action boundary, never inside the per-target loop.
 - A creature at 0 HP is **flagged `alive: false`, never removed**, so slots stay stable for
   tie-breaks and event references.
-- **Known bug:** a clamp to an effective max Health of 0, or a revive that rounds to 0 HP, leaves a
-  living creature at 0 HP (fix: `phases/4.6/brief.md#no-living-creature-at-0-hp`).
+- **No living creature sits at 0 HP**: effective max Health is at least 1
+  (`spec/statuses.md#health-is-a-modifiable-stat`), and a revive restores at least 1 HP
+  (`spec/responses.md#revive`).
 
 ### The damage channel in the engine
 
@@ -365,9 +375,6 @@ TurnStarted
   side, unless its Confusion roll turns it on the caster's own (`spec/combat.md#targeting-override`).
 - A frozen target that has died by the time its hit comes is skipped; the set itself doesn't
   change.
-- **Known bug:** "slot order" here, in Splashing's adjacency and in the living-creature lists is
-  read as the party array's order, which `createCombat` doesn't check (fix:
-  `phases/4.6/brief.md#fight-setup-checks-its-input`).
 
 ### Spells carry responses
 

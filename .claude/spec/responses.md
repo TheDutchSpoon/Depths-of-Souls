@@ -38,15 +38,14 @@ Read this with `spec/effects.md`, for any triggered behaviour.
   downstream hooks. That covers an empty target pool (Spore's spread with every ally already
   Spored, a `revive` with no eligible dead ally), `triggering-source` resolving to no one, and a
   `magnitudeSource` count of 0. Docs must never describe a fizzle as "no event".
-- **A zero count is a full no-op**: a `deal-damage` or `heal` whose `magnitudeSource` resolves to 0
-  deals or heals nothing: no `DamageDealt`, no min-1 floor, no downstream hooks (`on-damage-taken`,
-  Sleep's wake). **Known bug:** an `apply-stat-modifier` with a count of 0 still emits
-  `StatModifierApplied { factor: 1 }` (fix:
-  `phases/4.6/brief.md#a-zero-count-is-a-no-op-for-every-response`).
+- **A zero count is a full no-op**: a `deal-damage`, `heal` or `apply-stat-modifier` whose
+  `magnitudeSource` resolves to 0 deals, heals or applies nothing: no `DamageDealt`, no min-1
+  floor, no `StatModifierApplied` or `HpClamped`, no downstream hooks (`on-damage-taken`, Sleep's
+  wake).
 
 ### Response targets
 
-- A response names its target: `self`, `triggering-source`, `triggering-ally`, `all-enemies`,
+- A response names its target: `self`, `triggering-source`, `all-enemies`,
   `all-allies`, `all-allies-of-species`, a full `TargetSelector`, `random-dead-ally` (`spec/responses.md#revive`),
   `random-ally-without-status`, `lowest-hp-injured-other-ally` (`spec/effects.md#trigger-conditions`) and, inside a spell, `cast-target`.
 - **`all-allies`** is the ally-side mirror of `all-enemies`, resolved through
@@ -144,7 +143,7 @@ Read this with `spec/effects.md`, for any triggered behaviour.
 
 ### revive
 
-- `revive` returns a **dead** creature to its slot at its battle-start baseline (`spec/effects.md#death-reset`) with `currentHp = round(baseline max HP × pct)`.
+- `revive` returns a **dead** creature to its slot at its battle-start baseline (`spec/effects.md#death-reset`) with `currentHp = max(1, round(baseline max HP × pct))`: a revive never brings a creature back at 0 HP.
 - **Bounded**: a creature can be revived at most **`MAX_REVIVES_PER_CREATURE = 10`** times per
   fight (`engine/config.ts`; `Creature.revivesUsed` counts). Dead allies at the cap are excluded
   from revive targeting; if none qualify, the revive fizzles and draws **no** random number. Revive

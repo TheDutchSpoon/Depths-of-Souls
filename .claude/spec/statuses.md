@@ -76,6 +76,10 @@ Confusion). They are defined in `src/data/statuses.ts`.
   +Health trait grants the HP. Whenever an applied stat buff changes effective max Health,
   `currentHp` is clamped to it: a Health debuff lowers the cap and current HP with it; a Health buff
   raises the cap and does not heal into it. HP%, which scripts read, stays within 0–100.
+- **Effective max Health is never below 1**: `effectiveMaxHp` is `max(1, floor(effective
+  Health))`, so a Health debuff can't clamp a living creature to 0 HP. The clamp, the HP% read,
+  fight-start HP and the Additional (`spec/combat.md#damage-channels-and-the-additional`) all read
+  it; `getEffectiveStat(creature, 'health')` stays the raw fold.
 - **Known bug:** a Health raise by a fight-start trigger (the Treant Grovekeep) comes after setup
   has set HP, so the team opens below its new max (fix:
   `phases/4.6/brief.md#a-fight-start-health-raise-raises-current-hp`).
@@ -262,8 +266,9 @@ Confusion). They are defined in `src/data/statuses.ts`.
   `chancePercent` discipline: it
   rolls only when a Web is present, and a board with no Web never touches the RNG. The 3-turn cap
   is Web's duration.
-- **Known bug:** a bearer's roll reads its effect list once, so with two break-free statuses on one
-  bearer a second break restores the first (fix: `phases/4.6/brief.md#small-engine-fixes`).
+- Each bearer's effect list is taken once too, so a break mid-roll changes neither which effects
+  roll nor the draw count. Only the removal reads the bearer as it stands, so with two break-free
+  statuses on one bearer a second break keeps the first's removal.
 
 ### Health clamp
 

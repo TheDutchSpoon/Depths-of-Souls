@@ -469,7 +469,7 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 Choices this brief made that the grill didn't pin. Each slice's plan confirms or corrects its own.
 
-- [ ] **ASSUMPTION (A):** the party-size bound (0–5) is an engine constant in `engine/config.ts`,
+- [x] **ASSUMPTION (A):** the party-size bound (0–5) is an engine constant in `engine/config.ts`,
       which `store.ts`'s `PARTY_SIZE` then reads.
 - [ ] **ASSUMPTION (B):** `canRecordBossKill` returns the same result shape as the other `can…`
       queries.
