@@ -12,6 +12,7 @@ import {
   UNICORN_TRAIT,
 } from '../traits'
 import { ARCANE_BOLT } from '../spells'
+import { STOCK_SCRIPTS_BY_ID } from '../scripts'
 import {
   BRUTE_STARTER,
   SHIELDBARER_STARTER,
@@ -118,7 +119,7 @@ describe('Sorcerer starter loadout', () => {
       seed: 1,
       player: { party: [materialized] },
       enemy: { party: [enemyStand] },
-      registries: { traits: TRAIT_REGISTRY },
+      registries: { scripts: STOCK_SCRIPTS_BY_ID, traits: TRAIT_REGISTRY },
     })
     expect(state.playerParty[0]!.equippedSpells).toEqual([ARCANE_BOLT, null, null, null])
   })
@@ -149,7 +150,13 @@ describe('Sorcerer starter loadout', () => {
       seed: 1,
       player: { party: [materialized] },
       enemy: { party: [enemyStand] },
-      registries: { traits: TRAIT_REGISTRY },
+      registries: {
+        scripts: new Map([
+          ...STOCK_SCRIPTS_BY_ID,
+          [ALWAYS_CAST_SCRIPT.id, ALWAYS_CAST_SCRIPT],
+        ]),
+        traits: TRAIT_REGISTRY,
+      },
     })
     const fused = state.playerParty[0]!
     expect(fused.affinity).toBe('violence')

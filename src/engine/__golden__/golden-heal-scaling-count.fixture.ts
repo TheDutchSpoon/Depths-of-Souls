@@ -6,8 +6,8 @@
 //
 // Hand-derived (independent `node -e` calculator). Both vitality -> neutral affinity x1.0.
 // FOE (speed 20) acts before NECROMOSS (speed 10) in round 1. DEAD-ALLY starts the fight already
-// dead (a pre-wiped party member, per `spec/combat.md#turn-queue` -- never gets a turn,
-// buildTurnQueue filters it out) -- resolveCount's dead-allies reads it directly, no in-fight
+// dead (a pre-wiped party member set dead in the fixture's `setup` step, per
+// `spec/combat.md#turn-queue` -- never gets a turn, buildTurnQueue filters it out) -- resolveCount's dead-allies reads it directly, no in-fight
 // death needed for this fixture.
 //
 //   FOE->NECROMOSS (off 30, def 0): core 30, chip 0.01*30=0.3 -> raw 30.3 -> final 30.
@@ -19,7 +19,8 @@
 import { makeParty } from '../__fixtures__/creatures'
 import { createCreatureId } from '../ids'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
-import type { CombatEvent } from '../types'
+import { updateCreature } from '../creature-lookup'
+import type { CombatEvent, CombatState } from '../types'
 import type { Trait } from '../effect-types'
 
 export const SEED = 3232 // No RNG consumed anywhere in this fixture; seed is inert.
@@ -27,6 +28,7 @@ export const TURN_STEPS = 2
 
 const FOE = createCreatureId('foe')
 const NECROMOSS = createCreatureId('necromoss')
+const DEAD_ALLY = createCreatureId('dead-ally')
 
 export const NECROMOSS_FIXTURE: Trait = {
   id: 'necromoss-fixture',
@@ -57,7 +59,6 @@ export const playerParty = makeParty('player', [
   },
   {
     id: 'dead-ally',
-    alive: false,
     affinity: 'vitality',
   },
 ])
@@ -114,3 +115,9 @@ export const expectedEvents: CombatEvent[] = [
   },
   { type: 'TurnEnded', creatureId: NECROMOSS },
 ]
+
+/** DEAD-ALLY dies after `createCombat` (which takes fresh creatures only) and keeps the
+ * `currentHp` the fight setup gave it; runs before the first frozen turn (see
+ * test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState =>
+  updateCreature(created, DEAD_ALLY, { alive: false })

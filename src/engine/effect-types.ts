@@ -115,7 +115,6 @@ export type MagnitudeSource =
 export type ResponseTarget =
   | { readonly kind: 'self' }
   | { readonly kind: 'triggering-source' }
-  | { readonly kind: 'triggering-ally' }
   | { readonly kind: 'all-enemies' }
   // The ally-side mirror of all-enemies, resolved via livingAlliesOf(self) --
   // "ally" includes the firing creature itself, matching every other ally-side convention.
@@ -507,8 +506,9 @@ export function validateStatusNoRandomSelectorInResponseTargets(def: StatusDef):
 /** The load-time validator for a status's effects. Throws if a status carries `stat-modifier` /
  * `stat-remap` (`spec/effects.md#no-temporary-stat-modifier`), `status-immunity` (immunity is read
  * only from non-status carriers, so it can't depend on itself) or `innate-spell` (innate spells
- * are placed at fight setup, so a status's could never take effect), then runs the response-target
- * checks over its triggers. Called over every stock status at import (`data/statuses.ts`). */
+ * are placed at fight setup, so a status's could never take effect), then runs
+ * `validateEffectList` as a status carrier and the potency check. Called over every stock status at
+ * import (`data/statuses.ts`) and over the status registry `createCombat` is given. */
 export function validateStatusDef(def: StatusDef): void {
   for (const effect of def.effects) {
     switch (effect.category) {
@@ -531,24 +531,105 @@ export function validateStatusDef(def: StatusDef): void {
       )
     }
   }
-  validateStatusNoRandomSelectorInResponseTargets(def)
-  validateObservationFilters(def.effects, `status "${def.statusId}"'s trigger`)
-  validateDamageChannels(def.effects, `status "${def.statusId}"'s trigger`)
+  validateEffectList(def.effects, `status "${def.statusId}"`, 'status')
   validateStatusPotency(def)
 }
 
-/** The load-time validator for a trait's effects: a stat-modifier may not read the stat it gates,
- * a response target may not be the intent-only 'random' selector, `turn-order.breakChancePercent`
- * and `snapshot-potency` are status-only, each observation-filter field sits on its own
- * hook and `damageChannel` sits on `on-damage-taken`. Called over every stock trait at import (`data/traits/index.ts`) and over every trait in
- * the registry `createCombat` is given, as `validateStatusDef` is over the statuses. */
+/** The load-time validator for a trait's effects: `validateEffectList` as a permanent carrier (a
+ * stat-modifier may not read the stat it gates, a response target may not be the intent-only
+ * 'random' selector, `turn-order.breakChancePercent` and `snapshot-potency` are status-only, each
+ * observation-filter field sits on its own hook, `damageChannel` sits on `on-damage-taken`, an
+ * additive taken reduction carries a cap and `emitTriggerFired: false` is a tick's alone). Called
+ * over every stock trait at import (`data/traits/index.ts`) and over every trait in the registry
+ * `createCombat` is given, as `validateStatusDef` is over the statuses. */
 export function validateTrait(trait: Trait): void {
-  validateStatModifierConditions(trait.effects)
-  validateNoBreakChanceOutsideStatus(trait.effects)
-  validateNoSnapshotPotencyOutsideStatus(trait.effects)
-  validateNoRandomSelectorInResponseTargets(trait.effects)
-  validateObservationFilters(trait.effects, `trait "${trait.id}"`)
-  validateDamageChannels(trait.effects, `trait "${trait.id}"`)
+  validateEffectList(trait.effects, `trait "${trait.id}"`, 'permanent')
+}
+
+/** The kinds of effect carrier `validateEffectList` tells apart: a `'status'` (a timed container)
+ * and a `'permanent'` one (a trait, a perk or a side effect). */
+export type EffectCarrier = 'status' | 'permanent'
+
+/**
+ * THE effect-list validator: every carrier's list goes through this one function, so a check added
+ * here reaches traits, perks (at import and as the side effects `createCombat` is given) and
+ * statuses together (`spec/effects.md#validators`). `label` names the carrier in an error (`trait
+ * "x"`, `perk "x"`, `status "x"`).
+ *
+ * Every carrier: the intent-only `'random'` selector in a response target, a misplaced
+ * observation filter or `damageChannel`, an additive taken-pool reduction without a cap below 1 and
+ * `emitTriggerFired: false` off a status tick. A `'permanent'` carrier additionally: a
+ * stat-modifier gating on the stat it changes, the status-only `breakChancePercent` and
+ * `snapshot-potency`. A status carries none of the second group (`validateStatusDef` bans the
+ * stat-modifier and runs the potency check apart).
+ */
+export function validateEffectList(
+  defs: readonly EffectDef[],
+  label: string,
+  carrier: EffectCarrier,
+): void {
+  if (carrier === 'permanent') {
+    validateStatModifierConditions(defs)
+    validateNoBreakChanceOutsideStatus(defs)
+    validateNoSnapshotPotencyOutsideStatus(defs)
+  }
+  for (const def of defs) {
+    if (def.category !== 'triggered') continue
+    validateResponseTargetNoRandomSelector(
+      def.response,
+      carrier === 'status'
+        ? `${label}'s "${def.hook}" trigger's response`
+        : `a "${def.hook}" trigger's response`,
+    )
+  }
+  const context = carrier === 'status' ? `${label}'s trigger` : label
+  validateObservationFilters(defs, context)
+  validateDamageChannels(defs, context)
+  validateAdditiveTakenCaps(defs, label)
+  validateEmitTriggerFired(defs, label)
+}
+
+/** An additive taken-pool reduction (a `taken-reduction`, or a `damage-modifier` with `direction:
+ * 'taken'`) must carry a `reductionCap` below 1: without one a count-scaled reduction reaches
+ * 100% (`spec/effects.md#taken-reduction-accumulation`). A multiplicative source and a `dealt`
+ * modifier are not capped. A negative cap is not rejected. */
+export function validateAdditiveTakenCaps(
+  defs: readonly EffectDef[],
+  label: string,
+): void {
+  for (const def of defs) {
+    const takenPool =
+      def.category === 'taken-reduction' ||
+      (def.category === 'damage-modifier' && def.direction === 'taken')
+    if (!takenPool || def.accumulation !== 'additive') continue
+    if (!(typeof def.reductionCap === 'number' && def.reductionCap < 1)) {
+      throw new Error(
+        `effect invariant violated: ${label} carries an additive '${def.category}' without a reductionCap below 1`,
+      )
+    }
+  }
+}
+
+/** `emitTriggerFired: false` is legal only on a status's tick (`isSnapshotTick`, read off the
+ * response, not the carrier): every other trigger announces itself with a `TriggerFired`
+ * (`spec/effects.md#hook-execution`). */
+export function validateEmitTriggerFired(
+  defs: readonly EffectDef[],
+  label: string,
+): void {
+  for (const def of defs) {
+    if (def.category !== 'triggered') continue
+    const response = def.response
+    if (
+      (response.kind === 'deal-damage' || response.kind === 'heal') &&
+      response.emitTriggerFired === false &&
+      !isSnapshotTick(response)
+    ) {
+      throw new Error(
+        `effect invariant violated: ${label}'s "${def.hook}" trigger sets emitTriggerFired: false, which only a status tick (a snapshot-potency magnitude) may`,
+      )
+    }
+  }
 }
 
 /** True iff `response` is a tick: a `deal-damage` / `heal` whose `flatAmount` is the
@@ -765,9 +846,9 @@ export type TriggeredDef = {
   readonly chancePercent?: number
   /** A general dedup flag -- default absent/`true`
    * (today's behavior, every matching effect fires independently). `false` means: across ALL
-   * living creatures, at most ONE instance of this exact effect (matched by `sourceTraitId`) is
-   * even given a chance to roll `chancePercent` per firing of this hook -- the "claim" happens
-   * BEFORE the roll (fireHook, resolution.ts), not just on success, so the AGGREGATE probability
+   * living creatures, at most ONE instance of this exact effect (matched by its definition's claim
+   * key, `ResolvedHookEffect.claimKey`) is even given a chance to roll `chancePercent` per firing
+   * of this hook -- the "claim" happens BEFORE the roll (fireHook, resolution.ts), not just on success, so the AGGREGATE probability
    * of the effect firing at all stays exactly `chancePercent` regardless of how many creatures
    * carry it (two Overtones must not raise the echo chance above 10% -- branching factor stays
    * 1). Kept general (not echo-cast-specific), though Resonant Overtone is its only v1 consumer. */
@@ -1013,7 +1094,12 @@ interface StatusInstanceState {
 
 export type StatModifierEffect = StatModifierDef & InstanceIdentity
 export type StatRemapEffect = StatRemapDef & InstanceIdentity
-export type TriggeredEffect = TriggeredDef & InstanceIdentity
+/** A trigger instance. `claimKey` is present only on a `stacks: false` trigger: the key of its
+ * definition, stamped where the effect is instantiated (`resolveBaselineEffects` for a trait or
+ * side effect, `flatEffects` for a status's), never an instance id. See
+ * `ResolvedHookEffect.claimKey`. */
+export type TriggeredEffect = TriggeredDef &
+  InstanceIdentity & { readonly claimKey?: string }
 /** A status instance: the `StatusDef` (its `effects` embedded, as a def spread) plus live duration
  * bookkeeping and the snapshot. `sourceTraitId` is the statusId. */
 export type StatusEffect = StatusDef &
@@ -1060,6 +1146,12 @@ export type ResolvedHookEffect = {
    * before it's even allowed to roll `chancePercent`. Always undefined for a status-sourced
    * entry (no v1 status declares it). */
   readonly nonStacking?: boolean
+  /** The key a `stacks: false` effect claims its one slot under: `<kind>:<carrierId>#<index>`,
+   * the carrier kind (`trait`, `side` for a side effect, `status`), its id, and the trigger's
+   * position in that carrier's own effect list. It names the DEFINITION, so every creature
+   * carrying the same trigger shares one claim, while two triggers in one trait, or a trait and a
+   * status with one id, are separate claims. Present on every `nonStacking` entry. */
+  readonly claimKey?: string
   /** The REAL owning instance's id -- for a TriggeredDef-sourced entry this
    * equals `instanceId` above (same value used for the cascade self-re-entry guard); for a
    * status-trigger-sourced entry this is the status's own SHARED instance id (`e.instanceId`),
@@ -1125,6 +1217,9 @@ export interface Trait {
 export type BaselineEffectEntry = {
   readonly def: EffectDef
   readonly sourceTraitId: string
+  /** The claim key of a `stacks: false` trigger (`ResolvedHookEffect.claimKey`); absent on every
+   * other entry. Kept here so a revive's re-instantiation carries it. */
+  readonly claimKey?: string
 }
 
 /**

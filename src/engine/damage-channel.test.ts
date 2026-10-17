@@ -292,12 +292,11 @@ describe('retaliation by damage channel', () => {
       expect(turn(start(chance(undefined))).draws).toBe(1)
     })
 
-    it('the skip comes before the `stacks: false` claim: a skipped effect claims no slot', () => {
-      // One trait, two effects of one sourceTraitId, both non-stacking. The first answers direct
-      // damage only, the second indirect only. Against the indirect hit the first is skipped and
-      // the second must still get the one slot: a skip after the claim would let the first take
-      // it and leave nothing answering. They differ in magnitude (Attack 20 x 0.3 = 6 against
-      // x 0.5 = 10), so which one answered shows in the damage.
+    it('within one trait, each channel-gated trigger answers only its own channel', () => {
+      // One trait, two non-stacking triggers. The first answers direct damage only, the second
+      // indirect only. Against the indirect hit the first stays silent and the second answers.
+      // They differ in magnitude (Attack 20 x 0.3 = 6 against x 0.5 = 10), so which one answered
+      // shows in the damage.
       const effect = (damageChannel: DamageChannel, spellPower: number): EffectDef => ({
         category: 'triggered',
         hook: 'on-damage-taken',

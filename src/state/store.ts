@@ -16,6 +16,7 @@
 
 import { create } from 'zustand'
 import { createCombat, resolveFight } from '../engine/combat'
+import { PARTY_SIZE } from '../engine/config'
 import type { EffectDef, Trait, StatusDef } from '../engine/effect-types'
 import {
   biomeForFloor,
@@ -68,7 +69,7 @@ import {
   type StaticCreatureRef,
 } from './rewards'
 
-export const PARTY_SIZE = 6
+export { PARTY_SIZE }
 
 // ---- Dependencies (test/prod injection seam) ----
 

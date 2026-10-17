@@ -5,10 +5,10 @@
 // cap -- it sails past 80% toward 100% as count grows (`0.95 ** 32 ≈ 0.19`, an 81% reduction) --
 // so `'additive'` sums the per-unit reduction × count and hard-clamps it instead.
 //
-// BEARER starts the fight having ALREADY defended 15 times this battle (Creature.defendCount
-// preset via the fixture, standing in for 15 earlier rounds this golden doesn't need to spend --
-// keeps the fixture small per `CONVENTIONS.md#golden-replay-tests` testing discipline while still reaching the cap for
-// real). Two more real Defends in this fight push defendCount to exactly 16 (the count at which
+// BEARER starts the fight having ALREADY defended 15 times this battle (`defendCount` set in the
+// fixture's `setup` step, since `createCombat` takes fresh creatures only; it stands in for 15
+// earlier rounds this golden doesn't need to spend -- keeps the fixture small per
+// `CONVENTIONS.md#golden-replay-tests` testing discipline while still reaching the cap for real). Two more real Defends in this fight push defendCount to exactly 16 (the count at which
 // `(1 - 0.95) × 16 = 0.8` reaches the cap precisely) and then to 17 (one PAST the cap), proving
 // the clamp actually holds rather than merely being asymptotically close.
 //
@@ -28,9 +28,10 @@
 //     BEARER health 3 - 3 -> 0 -> dies. Fight ends mid-round -- STRIKER's side wins.
 
 import { makeParty } from '../__fixtures__/creatures'
+import { updateCreature } from '../creature-lookup'
 import { createCreatureId } from '../ids'
 import { FIXTURE_SCRIPTS_BY_ID } from '../__fixtures__/scripts'
-import type { CombatEvent, FightResult } from '../types'
+import type { CombatEvent, CombatState, FightResult } from '../types'
 import type { StatusDef, Trait } from '../effect-types'
 
 export const SEED = 1002 // No RNG consumed; seed is inert.
@@ -84,7 +85,6 @@ export const playerParty = makeParty('player', [
     affinity: 'vitality',
     scriptId: 'always-defend',
     innateTraitIds: ['bulwark-additive-fixture'],
-    defendCount: 15, // 15 earlier Defends this battle, preset so the golden stays small
   },
 ])
 
@@ -166,3 +166,8 @@ export const expectedEvents: CombatEvent[] = [
 ]
 
 export const expectedResult: FightResult = 'loss'
+
+/** 15 earlier Defends this battle, set after `createCombat` so the golden stays small (it runs
+ * before the first frozen turn; see test-utils/golden-runner.ts). */
+export const setup = (created: CombatState): CombatState =>
+  updateCreature(created, BEARER, { defendCount: 15 })

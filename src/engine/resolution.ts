@@ -453,8 +453,8 @@ export interface FireHookOptions {
    * (`spec/effects.md#damage-observation`). `selfInflicted` is the cost classification carried
    * from the branch that chose the cost path. All three observation hooks FAIL CLOSED: a candidate
    * on `on-damage-observed` is skipped when this is absent, one on `on-action-observed` when
-   * `observed` is, and one on `on-death-observed` when its `source` (the dead creature) is absent
-   * or not in the state. */
+   * `observed` is or when its `source` (the actor) is absent or not in the state, and one on
+   * `on-death-observed` when its `source` (the dead creature) is absent or not in the state. */
   readonly observedDamage?: { readonly selfInflicted: boolean }
   /** Supplied ONLY by `applyDamageAndEmit`'s `on-damage-taken` call: the channel of the damage
    * that FIRED this hook, matched against a candidate's `damageChannel`. Not
@@ -504,10 +504,11 @@ export function fireHook(
   const { events, cascade } = ctx
   let working = state
   const isDeathHook = hook === 'on-death'
-  // sourceTraitIds that have already claimed their one
-  // `stacks: false` slot THIS fireHook call -- claimed the moment an effect is about to roll
-  // chancePercent (see below), regardless of whether that roll succeeds, so the AGGREGATE chance
-  // of firing stays exactly chancePercent no matter how many creatures carry the same effect.
+  // Claim keys (`ResolvedHookEffect.claimKey`: one per trigger DEFINITION) that have already
+  // claimed their one `stacks: false` slot THIS fireHook call -- claimed the moment an effect is
+  // about to roll chancePercent (see below), regardless of whether that roll succeeds, so the
+  // AGGREGATE chance of firing stays exactly chancePercent no matter how many creatures carry the
+  // same effect.
   const claimedNonStacking = new Set<string>()
 
   for (const selfId of selfIds) {
@@ -555,23 +556,27 @@ export function fireHook(
       // relevant" gate); a non-matching observer draws nothing and consumes no depth budget,
       // same silent-skip discipline as a false condition.
       // ALL THREE observation hooks fail closed. A candidate on `on-action-observed` is
-      // skipped when the caller passed no `observed`, one on `on-damage-observed` when it passed
-      // no `observedDamage`, one on `on-death-observed` when its `source` (the dead creature) is
-      // absent or not in the state -- a call site that forgets its option can never make every
-      // observer fire on every event. (All five action call sites, the one damage call site and
-      // `fireDeathObservers` pass theirs.)
+      // skipped when the caller passed no `observed` or its `source` (the actor) is absent or not
+      // in the state, one on `on-damage-observed` when it passed no `observedDamage`, one on
+      // `on-death-observed` when its `source` (the dead creature) is absent or not in the state --
+      // a call site that forgets its option can never make every observer fire on every event.
+      // (All five action call sites, the one damage call site and `fireDeathObservers` pass
+      // theirs.)
       if (hook === 'on-action-observed') {
         if (!observed) continue
+        // `source` is the ACTOR, looked up before the filter: with or without one, a candidate
+        // whose actor can't be found is skipped.
+        const actor = source ? findCreature(working, source) : undefined
+        if (!actor) continue
         if (effect.observationFilter) {
-          const actor = source ? findCreature(working, source) : undefined
           const {
             relationship = 'any',
             actionKind,
             excludeActor = false,
           } = effect.observationFilter
           if (actionKind && actionKind !== observed.actionKind) continue
-          if (excludeActor && actor && actor.id === self.id) continue
-          if (actor && !relationshipMatches(relationship, self, actor)) continue
+          if (excludeActor && actor.id === self.id) continue
+          if (!relationshipMatches(relationship, self, actor)) continue
         }
       } else if (hook === 'on-damage-observed') {
         if (!observedDamage) continue
@@ -643,8 +648,13 @@ export function fireHook(
       // matching effect (e.g. a second Overtone) never gets to roll at all this firing, keeping
       // the aggregate chance at exactly chancePercent regardless of how many creatures carry it.
       if (effect.nonStacking) {
-        if (claimedNonStacking.has(effect.sourceTraitId)) continue
-        claimedNonStacking.add(effect.sourceTraitId)
+        if (effect.claimKey === undefined) {
+          throw new Error(
+            `resolver invariant violated: stacks: false effect from "${effect.sourceTraitId}" has no claimKey`,
+          )
+        }
+        if (claimedNonStacking.has(effect.claimKey)) continue
+        claimedNonStacking.add(effect.claimKey)
       }
 
       // An optional probabilistic gate, a sibling
@@ -716,7 +726,6 @@ function resolveResponseTargets(
     case 'self':
       return [context.self]
     case 'triggering-source':
-    case 'triggering-ally':
       // Never resolves to the firing creature itself
       // (`spec/responses.md#triggering-source-is-never-the-firing-creature`). A creature's own cost
       // damages itself (applyCostDamage), so on-damage-taken's hook context has context.source ===
@@ -1111,6 +1120,12 @@ export function executeResponse(
       const count = response.magnitudeSource
         ? resolveMagnitudeCount(bearer, state, response.magnitudeSource)
         : undefined
+      // A zero count is a no-op, like deal-damage's and heal's: no StatModifierApplied (a factor
+      // 1 modifier that still clamps and fires downstream hooks). TriggerFired was already emitted
+      // by fireHook and stays (`spec/responses.md#fizzles`).
+      if (response.magnitudeSource && count === 0) {
+        return { state }
+      }
       const finalFactor =
         count === undefined ? response.factor : 1 + (response.factor - 1) * count
 
@@ -1186,14 +1201,15 @@ export function executeResponse(
         // Death-reset: re-instantiate the target's OWN already-resolved `baselineEffects` --
         // fresh instance ids from the shared per-fight counter, no registry lookup needed (no
         // ramp preserved: innate traits + perks come back exactly as they were at fight-start).
-        // Then currentHp = round(baselineMaxHp * pct) computed from THAT fresh baseline.
+        // Then currentHp = round(baselineMaxHp * pct) computed from THAT fresh baseline, at
+        // least 1: a revive never brings a creature back at 0 HP.
         const { effects: activeEffects, nextCounter } = instantiateEffectDefs(
           target.baselineEffects,
           working.effectInstanceCounter,
         )
         const reset: Creature = { ...target, activeEffects }
         const baselineMaxHp = effectiveMaxHp(reset)
-        const currentHp = Math.round(baselineMaxHp * response.pct)
+        const currentHp = Math.max(1, Math.round(baselineMaxHp * response.pct))
         working = { ...working, effectInstanceCounter: nextCounter }
         working = updateCreature(working, targetId, {
           alive: true,

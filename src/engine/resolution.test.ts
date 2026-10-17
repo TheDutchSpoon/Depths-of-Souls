@@ -188,6 +188,81 @@ describe('health stat-modifier clamps currentHp (HpClamped)', () => {
       effectiveMaxHealth: 20,
     })
   })
+
+  it('clamps to 1, not 0, when a Health modifier takes the max to nothing; the creature stays alive', () => {
+    const FRAIL_TO_NOTHING: Trait = {
+      ...FRAIL_ON_HIT,
+      id: 'frail-to-nothing',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-damage-taken',
+          response: {
+            kind: 'apply-stat-modifier',
+            target: { kind: 'self' },
+            stat: 'health',
+            factor: 0,
+          },
+        },
+      ],
+    }
+    const player = makeParty('player', [
+      {
+        id: 'attacker',
+        attack: 10,
+        defence: 0,
+        speed: 20,
+        scriptId: 'always-attack',
+      },
+    ])
+    const enemy = makeParty('enemy', [
+      {
+        id: 'target',
+        health: 40,
+        defence: 5,
+        speed: 1,
+        scriptId: 'always-wait',
+        innateTraitIds: [FRAIL_TO_NOTHING.id],
+      },
+    ])
+    const { state, events } = resolveTurn(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: {
+          scripts: FIXTURE_SCRIPTS_BY_ID,
+          traits: registry(FRAIL_TO_NOTHING),
+        },
+      }),
+    )
+    expect(events.find((e) => e.type === 'HpClamped')).toMatchObject({
+      previousHp: 35,
+      newHp: 1,
+      effectiveMaxHealth: 1,
+    })
+    const target = state.enemyParty[0]!
+    expect(target.currentHp).toBe(1)
+    expect(target.alive).toBe(true)
+  })
+
+  it('starts the fight at 1 HP, not 0, for a creature whose trait takes its Health to nothing', () => {
+    const NO_HEALTH: Trait = {
+      id: 'no-health',
+      name: 'No Health',
+      effects: [{ category: 'stat-modifier', stat: 'health', factor: 0 }],
+    }
+    const state = createCombat({
+      seed: 1,
+      player: {
+        party: makeParty('player', [{ id: 'a', innateTraitIds: [NO_HEALTH.id] }]),
+      },
+      enemy: { party: makeParty('enemy', [{ id: 'b' }]) },
+      registries: { traits: registry(NO_HEALTH) },
+    })
+    expect(state.playerParty[0]!.currentHp).toBe(1)
+    expect(state.playerParty[0]!.alive).toBe(true)
+  })
 })
 
 describe('loop safety', () => {
@@ -596,7 +671,6 @@ describe('heal response (Regen)', () => {
           kind: 'heal',
           target: { kind: 'self' },
           flatAmount: 10,
-          emitTriggerFired: false,
         },
       },
     ],
@@ -703,8 +777,8 @@ describe('heal scaling (Treants Elder / Necromoss-shaped)', () => {
   it('magnitudeSource (count) scales a flat heal by a live count', () => {
     const player = makeParty('player', [
       { id: 'necromoss', health: 100 },
-      { id: 'dead1', alive: false },
-      { id: 'dead2', alive: false },
+      { id: 'dead1' },
+      { id: 'dead2' },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     let state = createCombat({
@@ -713,6 +787,10 @@ describe('heal scaling (Treants Elder / Necromoss-shaped)', () => {
       enemy: { party: enemy },
       registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
     })
+    // The two allies die after setup, which takes fresh creatures only; they keep the
+    // currentHp the setup gave them.
+    state = updateCreature(state, createCreatureId('dead1'), { alive: false })
+    state = updateCreature(state, createCreatureId('dead2'), { alive: false })
     state = updateCreature(state, createCreatureId('necromoss'), { currentHp: 50 })
     const events: CombatEvent[] = []
     executeResponse(
@@ -1496,15 +1574,19 @@ describe('revive response', () => {
   it('revives a dead ally at pct of its death-reset baseline max HP, resetting activeEffects', () => {
     const player = makeParty('player', [
       { id: 'reviver', innateTraitIds: ['revive-fixture'] },
-      { id: 'fallen', health: 40, alive: false },
+      { id: 'fallen', health: 40 },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const state = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
-    })
+    const state = updateCreature(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
+      }),
+      createCreatureId('fallen'),
+      { alive: false },
+    )
     const events: CombatEvent[] = []
     const result = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
@@ -1536,18 +1618,19 @@ describe('revive response', () => {
         id: 'fallen',
         health: 40,
         defence: 10,
-        alive: false,
-        defending: true,
-        provoking: true,
       },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', attack: 40 }])
-    const state = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
-    })
+    const state = updateCreature(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(REVIVE_FIXTURE) },
+      }),
+      createCreatureId('fallen'),
+      { alive: false, defending: true, provoking: true },
+    )
     const events: CombatEvent[] = []
     const revived = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
@@ -1606,20 +1689,24 @@ describe('revive response', () => {
   it("restores a revived PLAYER creature's perks too (perks are battle-start-permanent, like innate traits, not in-fight ramp death-reset should wipe)", () => {
     const player = makeParty('player', [
       { id: 'reviver', innateTraitIds: ['revive-fixture'] },
-      { id: 'fallen', health: 40, alive: false },
+      { id: 'fallen', health: 40 },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     const perks = [{ category: 'stat-modifier', stat: 'attack', factor: 2 } as const]
-    const state = createCombat({
-      seed: 1,
-      player: { party: player, effects: perks },
-      enemy: { party: enemy },
-      registries: {
-        scripts: FIXTURE_SCRIPTS_BY_ID,
-        traits: registry(REVIVE_FIXTURE),
-        statuses: new Map(),
-      },
-    })
+    const state = updateCreature(
+      createCombat({
+        seed: 1,
+        player: { party: player, effects: perks },
+        enemy: { party: enemy },
+        registries: {
+          scripts: FIXTURE_SCRIPTS_BY_ID,
+          traits: registry(REVIVE_FIXTURE),
+          statuses: new Map(),
+        },
+      }),
+      createCreatureId('fallen'),
+      { alive: false },
+    )
     const events: CombatEvent[] = []
     const result = executeResponse(
       { kind: 'revive', target: { kind: 'random-dead-ally' }, pct: 0.2 },
@@ -1636,6 +1723,55 @@ describe('revive response', () => {
     // it was pre-death (fight-assembly instantiates the SAME playerWideEffects via the SAME
     // instantiateCreatureEffects call revive itself now reuses).
     expect(getEffectiveStat(fallen, 'attack')).toBe(fallen.baseStats.attack * 2)
+  })
+
+  describe('restores at least 1 HP', () => {
+    function reviveAt(pct: number) {
+      const player = makeParty('player', [
+        { id: 'reviver' },
+        { id: 'fallen', health: 20 },
+      ])
+      const enemy = makeParty('enemy', [{ id: 'foe' }])
+      const state = updateCreature(
+        createCombat({
+          seed: 1,
+          player: { party: player },
+          enemy: { party: enemy },
+          registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
+        }),
+        createCreatureId('fallen'),
+        { alive: false },
+      )
+      const events: CombatEvent[] = []
+      const result = executeResponse(
+        { kind: 'revive', target: { kind: 'random-dead-ally' }, pct },
+        'revive-fixture',
+        { channel: 'indirect', self: createCreatureId('reviver') },
+        state,
+        createResolutionContext(events, newCascade()),
+      )
+      const fallen = result.state.playerParty.find(
+        (c) => c.id === createCreatureId('fallen'),
+      )!
+      return { fallen, events }
+    }
+
+    it('a pct that rounds to 0 (0.01 of 20) revives at 1 HP', () => {
+      const { fallen, events } = reviveAt(0.01)
+      expect(fallen.alive).toBe(true)
+      expect(fallen.currentHp).toBe(1)
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'Revived', currentHp: 1 }),
+      )
+    })
+
+    it('leaves a normal pct alone (0.2 of 20 is still 4)', () => {
+      const { fallen, events } = reviveAt(0.2)
+      expect(fallen.currentHp).toBe(4)
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'Revived', currentHp: 4 }),
+      )
+    })
   })
 })
 
@@ -1779,15 +1915,19 @@ describe('all-allies ResponseTarget (Shieldbarer starter)', () => {
     const player = makeParty('player', [
       { id: 'provoker', defence: 10 },
       { id: 'ally', defence: 10 },
-      { id: 'dead-ally', defence: 10, alive: false },
+      { id: 'dead-ally', defence: 10 },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
-    const state = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
-    })
+    const state = updateCreature(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
+      }),
+      createCreatureId('dead-ally'),
+      { alive: false },
+    )
     const events: CombatEvent[] = []
     const result = executeResponse(
       {
@@ -1822,15 +1962,19 @@ describe('all-allies-of-species ResponseTarget (Swarmhive Queen)', () => {
       { id: 'queen', defence: 10, speciesId: 'swarmhive' },
       { id: 'hive-mate', defence: 10, speciesId: 'swarmhive' },
       { id: 'other-species', defence: 10, speciesId: 'treants' },
-      { id: 'dead-hive-mate', defence: 10, speciesId: 'swarmhive', alive: false },
+      { id: 'dead-hive-mate', defence: 10, speciesId: 'swarmhive' },
     ])
     const enemy = makeParty('enemy', [{ id: 'foe', speciesId: 'swarmhive' }])
-    const state = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
-    })
+    const state = updateCreature(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID },
+      }),
+      createCreatureId('dead-hive-mate'),
+      { alive: false },
+    )
     const events: CombatEvent[] = []
     const result = executeResponse(
       {
@@ -2143,6 +2287,79 @@ describe('on-action-observed filter (general action-observation system)', () => 
   it("relationship 'self': fires only when the observer IS the actor", () => {
     expect(fires({ relationship: 'self' }, 'observer', 'attack')).toBe(true)
     expect(fires({ relationship: 'self' }, 'ally-actor', 'attack')).toBe(false)
+  })
+
+  describe('fails closed on an actor that cannot be found', () => {
+    const UNFILTERED: Trait = {
+      id: 'unfiltered-observer-fixture',
+      name: 'Unfiltered Observer (fixture)',
+      effects: [
+        {
+          category: 'triggered',
+          hook: 'on-action-observed',
+          response: {
+            kind: 'apply-stat-modifier',
+            target: { kind: 'self' },
+            stat: 'attack',
+            factor: 1.1,
+          },
+        },
+      ],
+    }
+
+    function firesFor(trait: Trait, actorId: string): boolean {
+      const state = createCombat({
+        seed: 1,
+        player: {
+          party: makeParty('player', [{ id: 'observer', innateTraitIds: [trait.id] }]),
+        },
+        enemy: { party: makeParty('enemy', [{ id: 'foe' }]) },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(trait) },
+      })
+      const events: CombatEvent[] = []
+      fireHook(
+        'on-action-observed',
+        [createCreatureId('observer')],
+        createCreatureId(actorId),
+        state,
+        createResolutionContext(events, newCascade()),
+        { observed: { actionKind: 'attack', instanceIndex: 0 } },
+      )
+      return events.some((e) => e.type === 'TriggerFired')
+    }
+
+    it('a filtered observer stays silent', () => {
+      expect(firesFor(observerTrait({ relationship: 'any' }), 'ghost')).toBe(false)
+      expect(firesFor(observerTrait({ relationship: 'any' }), 'foe')).toBe(true)
+    })
+
+    it('an unfiltered observer stays silent', () => {
+      expect(firesFor(UNFILTERED, 'ghost')).toBe(false)
+      expect(firesFor(UNFILTERED, 'foe')).toBe(true)
+    })
+
+    it('an observer with no actor at all (source absent) stays silent', () => {
+      const state = createCombat({
+        seed: 1,
+        player: {
+          party: makeParty('player', [
+            { id: 'observer', innateTraitIds: [UNFILTERED.id] },
+          ]),
+        },
+        enemy: { party: makeParty('enemy', [{ id: 'foe' }]) },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(UNFILTERED) },
+      })
+      const events: CombatEvent[] = []
+      fireHook(
+        'on-action-observed',
+        [createCreatureId('observer')],
+        undefined,
+        state,
+        createResolutionContext(events, newCascade()),
+        { observed: { actionKind: 'attack', instanceIndex: 0 } },
+      )
+      expect(events).toEqual([])
+    })
   })
 })
 
@@ -2479,6 +2696,85 @@ describe('apply-stat-modifier magnitudeSource (Swarmhive Striker-shaped: freeze-
     expect(getEffectiveStat(strikerAfterDeath, 'attack')).toBe(106) // unchanged -- frozen
   })
 
+  describe('a zero count is a no-op: TriggerFired stays, nothing follows', () => {
+    function counting(stat: 'attack' | 'health'): Trait {
+      return {
+        id: 'zero-count-fixture',
+        name: 'Zero Count (fixture)',
+        effects: [
+          {
+            category: 'triggered',
+            hook: 'on-turn-start',
+            response: {
+              kind: 'apply-stat-modifier',
+              target: { kind: 'self' },
+              stat,
+              factor: 0.5,
+              magnitudeSource: { kind: 'count', of: 'dead-allies' },
+            },
+          },
+        ],
+      }
+    }
+
+    function fireWith(stat: 'attack' | 'health', deadAllies: number) {
+      const trait = counting(stat)
+      const player = makeParty('player', [
+        { id: 'bearer', attack: 100, health: 40, innateTraitIds: [trait.id] },
+        { id: 'ally-1' },
+        { id: 'ally-2' },
+      ])
+      let state = createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: makeParty('enemy', [{ id: 'foe' }]) },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: registry(trait) },
+      })
+      for (const id of ['ally-1', 'ally-2'].slice(0, deadAllies)) {
+        state = updateCreature(state, createCreatureId(id), { alive: false })
+      }
+      const events: CombatEvent[] = []
+      const after = fireHook(
+        'on-turn-start',
+        [createCreatureId('bearer')],
+        undefined,
+        state,
+        createResolutionContext(events, newCascade()),
+      ).state
+      return { events, bearer: after.playerParty[0]! }
+    }
+
+    it('no dead ally: TriggerFired, no StatModifierApplied, the stat unchanged', () => {
+      const { events, bearer } = fireWith('attack', 0)
+      expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(1)
+      expect(events.filter((e) => e.type === 'StatModifierApplied')).toHaveLength(0)
+      expect(getEffectiveStat(bearer, 'attack')).toBe(100)
+      expect(bearer.activeEffects.filter((e) => e.category === 'stat-modifier')).toEqual(
+        [],
+      )
+    })
+
+    it('one dead ally still applies it (the guard is not over-wide): factor 1 + (0.5 - 1) x 1', () => {
+      const { events, bearer } = fireWith('attack', 1)
+      expect(events.filter((e) => e.type === 'StatModifierApplied')).toHaveLength(1)
+      expect(getEffectiveStat(bearer, 'attack')).toBe(50)
+    })
+
+    it('a Health-lowering zero count emits no StatModifierApplied and no HpClamped', () => {
+      const { events, bearer } = fireWith('health', 0)
+      expect(events.filter((e) => e.type === 'TriggerFired')).toHaveLength(1)
+      expect(events.filter((e) => e.type === 'StatModifierApplied')).toHaveLength(0)
+      expect(events.filter((e) => e.type === 'HpClamped')).toHaveLength(0)
+      expect(bearer.currentHp).toBe(40)
+    })
+
+    it('with a dead ally the same Health modifier applies and clamps', () => {
+      const { events, bearer } = fireWith('health', 1)
+      expect(events.filter((e) => e.type === 'HpClamped')).toHaveLength(1)
+      expect(bearer.currentHp).toBe(20)
+    })
+  })
+
   it('is byte-identical to the plain factor when magnitudeSource is absent', () => {
     const player = makeParty('player', [{ id: 'a', attack: 100 }])
     const enemy = makeParty('enemy', [{ id: 'b' }])
@@ -2663,16 +2959,14 @@ describe('exact-instance rule', () => {
 
 describe('revive cap', () => {
   it('excludes a dead ally at the cap from revive targeting -- the 11th attempt fizzles and draws no RNG', () => {
-    const player = makeParty('player', [
-      { id: 'reviver' },
-      { id: 'fallen', alive: false, currentHp: 0 },
-    ])
+    const player = makeParty('player', [{ id: 'reviver' }, { id: 'fallen' }])
     const enemy = makeParty('enemy', [{ id: 'foe' }])
     let state = createCombat({
       seed: 1,
       player: { party: player },
       enemy: { party: enemy },
     })
+    state = updateCreature(state, createCreatureId('fallen'), { alive: false })
 
     const REVIVE_RESPONSE = {
       kind: 'revive' as const,

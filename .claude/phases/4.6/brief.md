@@ -24,7 +24,7 @@ guess.
 
 | Slice | Contents | Golden policy |
 | --- | --- | --- |
-| **4.6-A** | Engine hardening: [fight setup checks its input](#fight-setup-checks-its-input), [the load-time checks close their gaps](#the-load-time-checks-close-their-gaps), [no living creature at 0 HP](#no-living-creature-at-0-hp), [a zero count is a no-op for every response](#a-zero-count-is-a-no-op-for-every-response), [small engine fixes](#small-engine-fixes), [the snapshot lock covers Maps and Sets](#the-snapshot-lock-covers-maps-and-sets) | Byte-identical |
+| **4.6-A** | Engine hardening: [fight setup checks its input](#fight-setup-checks-its-input), [the load-time checks close their gaps](#the-load-time-checks-close-their-gaps), [no living creature at 0 HP](#no-living-creature-at-0-hp), [a zero count is a no-op for every response](#a-zero-count-is-a-no-op-for-every-response), [small engine fixes](#small-engine-fixes), [the snapshot lock covers Maps and Sets](#the-snapshot-lock-covers-maps-and-sets) | Byte-identical, two listed exceptions: `golden-round-end-interaction` gains one `TriggerFired` ([the load-time checks](#the-load-time-checks-close-their-gaps)); three goldens move a non-fresh creature's state into their `setup` step, expected values unchanged ([fight setup](#fight-setup-checks-its-input)) |
 | **4.6-B** | Game layer and clean-up: [the cave has no content frontier](#the-cave-has-no-content-frontier), [the intro's Unicorn rolls its spells](#the-intros-unicorn-rolls-its-spells), [`recordBossKill` refuses an unknown boss](#recordbosskill-refuses-an-unknown-boss), [numbers out of the logic](#numbers-out-of-the-logic), [small game-layer fixes](#small-game-layer-fixes), [descriptions follow their entries](#descriptions-follow-their-entries); [the comment sweep](#the-comment-sweep) as the last commit | Goldens and the corpus digest byte-identical; store, demo and simulator tests change only where listed ([B's listed changes](#bs-listed-test-changes)) |
 | **4.6-C** | When things happen: [action hooks fire after the action](#action-hooks-fire-after-the-action), [the fight ends at the wipe](#the-fight-ends-at-the-wipe) | Deliberate, listed, each changed golden and corpus row attributed to one of the two; CI balance verdicts re-checked |
 | **4.6-D** | Rule fixes: [Splashing follows the hit](#splashing-follows-the-hit), [a revive resets the Defend count](#a-revive-resets-the-defend-count), [a trait's damage is neither an attack nor a cast](#a-traits-damage-is-neither-an-attack-nor-a-cast), [granted Defends are real Defends](#granted-defends-are-real-defends), [a fight-start Health raise raises current HP](#a-fight-start-health-raise-raises-current-hp), [Stun and Sleep skip the whole turn](#stun-and-sleep-skip-the-whole-turn) | Deliberate, listed, each change attributed to its fix; CI balance verdicts re-checked |
@@ -109,6 +109,17 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   at level 1.
 - Byte-identical: the store always builds valid input. A test or golden that starts throwing is a
   stop-and-ask.
+- A test or golden that passes a non-fresh creature to `createCombat` builds it fresh and sets
+  that state on the returned `CombatState` (`updateCreature`; a golden in its fixture's `setup`
+  step), reproducing exactly the state `createCombat` gave it before: a dead creature keeps
+  `currentHp` at its effective max, which `createCombat` set. Assertions and expected values don't
+  change. Three goldens do this: `golden-defend-count-additive-cap` (`defendCount: 15`),
+  `golden-heal-scaling-count` and `golden-necromoss-reclaim` (dead allies). Their inputs change
+  and their expected values stay byte-identical.
+- A test whose creature names a script the fight isn't given gets the registry its creatures
+  name, assertions unchanged: five `combat.test.ts` instance-list tests, two
+  `data/species/starters.test.ts` tests, and three `state/store.test.ts` intro tests, whose
+  `makeDeps` holds the role scripts alongside the fixture scripts.
 - The PR review writes it into `spec/combat.md#fight-setup` and `spec/effects.md#validators`, and
   removes their Known bug lines and `spec/combat.md#aoe-cast`'s.
 
@@ -116,11 +127,18 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 *(4.6-A; L11, L13)*
 
-- An additive `taken-reduction` must carry a `reductionCap` below 1; without one, a count-scaled
-  reduction can reach 100% (`effects.ts:294`).
+- An additive taken-pool reduction (a `taken-reduction` or a `'taken'` `damage-modifier`, the two
+  shapes `spec/effects.md#taken-reduction-accumulation` gives the mode) must carry a `reductionCap`
+  below 1; without one, a count-scaled reduction can reach 100% (`effects.ts:294`).
 - `emitTriggerFired: false` is accepted only on a status's tick (a `snapshot-potency` magnitude);
   `spec/effects.md#hook-execution` makes the tick the only exception.
-- Byte-identical: no content breaks either.
+- No content breaks either. One test fixture does: the fixture trait `CATASTROPHIC_COLLAPSE`
+  (`__fixtures__/traits.ts`) sets `emitTriggerFired: false` on a plain trait hit, and every golden
+  whose registry holds it would throw. The flag goes; `golden-round-end-interaction`'s expected log
+  gains exactly one `TriggerFired` (P1, `on-round-end`) before P1's 999 `DamageDealt`. It is A's
+  one golden exception: every other golden and the corpus digest stay byte-identical.
+- Two test-inline statuses also carry the flag off a tick and drop it, assertions unchanged:
+  `test-regen` (`resolution.test.ts`) and `single` (`status-containers.test.ts`).
 - The PR review writes both into `spec/effects.md#validators`.
 
 ### No living creature at 0 HP
@@ -153,9 +171,12 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   second break in one cleanup can't restore the first.
 - **`on-action-observed` fails closed** when it can't find the actor, as the other two
   observation hooks do (`resolution.ts:566-574`).
-- **`stacks: false` claims per effect**, not per carrier id (`resolution.ts:645-648`): two such
-  triggers in one trait are separate claims, and a trait id equal to a status id no longer shares
-  one.
+- **`stacks: false` claims per definition**, not per carrier id (`resolution.ts:645-648`). The
+  claim key is the trigger's carrier kind (trait, side effect or status), the carrier's id and the
+  trigger's position in the carrier's own effect list, stamped when the effect is instantiated. So
+  two such triggers in one trait are separate claims, a trait id equal to a status id no longer
+  shares one, and a creature carrying one trait twice still makes one claim. `TriggeredDef.stacks`
+  and the content stay as they are.
 - **`triggering-ally` is deleted**: it has no rule and no content, and the engine resolves it as
   `triggering-source`.
 - Byte-identical: no content reaches any of them.

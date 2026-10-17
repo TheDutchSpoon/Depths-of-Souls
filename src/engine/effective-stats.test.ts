@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { getEffectiveStat, getOffensiveStat } from './effective-stats'
+import {
+  effectiveMaxHp,
+  getEffectiveStat,
+  getOffensiveStat,
+  hpPercentSatisfied,
+} from './effective-stats'
+import { clampedHp } from './effects'
 import { createCreatureId } from './ids'
 import { createEffectInstanceId } from './effect-types'
 import { makeCreature } from './__fixtures__/creatures'
@@ -55,6 +61,46 @@ describe('getEffectiveStat', () => {
       expect(getEffectiveStat(creature, stat)).toBe(creature.baseStats[stat])
     },
   )
+})
+
+describe('effectiveMaxHp never drops below 1', () => {
+  it('floors a Health modifier of x0 at 1, while the raw stat stays 0', () => {
+    const c = makeCreature({ health: 20, activeEffects: [statMod('health', 0)] })
+    expect(getEffectiveStat(c, 'health')).toBe(0)
+    expect(effectiveMaxHp(c)).toBe(1)
+  })
+
+  it('floors a fractional max under 1 (20 x 0.04 = 0.8) at 1', () => {
+    const c = makeCreature({ health: 20, activeEffects: [statMod('health', 0.04)] })
+    expect(effectiveMaxHp(c)).toBe(1)
+  })
+
+  it('leaves a normal max alone: floored to an integer, no Health modifier is base Health', () => {
+    expect(effectiveMaxHp(makeCreature({ health: 20 }))).toBe(20)
+    expect(
+      effectiveMaxHp(
+        makeCreature({ health: 20, activeEffects: [statMod('health', 1.57)] }),
+      ),
+    ).toBe(31)
+  })
+
+  it('the clamp follows: currentHp clamps to 1, not 0', () => {
+    const c = makeCreature({
+      health: 20,
+      currentHp: 20,
+      activeEffects: [statMod('health', 0)],
+    })
+    expect(clampedHp(c)).toBe(1)
+  })
+
+  it('the HP% read follows: a creature at its max of 1 is at 100%', () => {
+    const c = makeCreature({
+      health: 20,
+      currentHp: 1,
+      activeEffects: [statMod('health', 0)],
+    })
+    expect(hpPercentSatisfied(c, '==', 100)).toBe(true)
+  })
 })
 
 describe('getOffensiveStat', () => {

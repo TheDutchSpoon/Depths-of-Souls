@@ -50,7 +50,8 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 
 ### Trait and gem slots
 
-- A creature has **one innate trait**.
+- A creature has **one innate trait**, its own: no two creature templates share a trait. So a
+  creature's innate traits never repeat, fusion included (`spec/creatures.md#fusion`).
 - It has **3 regular gem slots** (`DEFAULT_GEM_SLOT_COUNT`). Its innate spells, if any, sit in extra
   slots before them (`spec/creatures.md#innate-spells`). Spells aren't gated by role: every creature has gem slots,
   and its script chooses which gem to cast.
@@ -290,6 +291,9 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
   sets its **infusion slots** (a small fixed maximum, 3–5). **Infusions** are the same
   effect-framework objects as augments and grant stats, traits or other effects; an infused trait
   is a creature's third trait source. Equip and unequip are free and instant.
+- An infused trait is instantiated under the trait's own id, exactly as an innate one is, so its
+  effects are the same definitions as any other copy of that trait. A creature carrying one trait
+  twice, innate and infused, still makes one `stacks: false` claim (`spec/effects.md#stacks-false`).
 - Base equipment is a **small fixed set of base types**, stat-flavour variants (a Health charm, a
   Defence plate) competing for the one slot; variety comes from infusions. Infusion **recipes**
   drop from floors.
