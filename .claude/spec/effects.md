@@ -153,23 +153,21 @@ status lifecycle in `spec/statuses.md`.
   `on-round-end` (round end has no status work). It runs over the stock statuses at import **and**
   over the status registry `createCombat` is given, so a test fixture's status is held to the same
   rules.
-- `validateTrait` rejects, inside a trait, what the rules in this file forbid a trait: a
-  stat-modifier gated on the stat it changes, the intent-only `random` selector in a response
-  target, the status-only `turn-order.breakChancePercent` and `snapshot-potency`, and a misplaced
-  observation filter. It runs over the stock traits at import **and** over every trait in the
-  registry `createCombat` is given, carried or not, so a test fixture's trait is held to the same
-  rules.
-- `turn-order.breakChancePercent` is status-only, since breaking free removes the status instance:
-  a trait or perk carrying it is rejected at load.
-- An `ObservationFilter` field on the wrong hook, and `relationship: 'self'` on
-  `on-death-observed`, are rejected for every trigger carrier ("Damage observation").
-- A `damageChannel` on any hook but `on-damage-taken` is rejected for every trigger carrier
-  (`validateDamageChannels`, run by `validateTrait`, `validateStatusDef` and the perk check;
-  `spec/effects.md#damagechannel`).
-- **Known bug:** the side effects `createCombat` is given are not validated, perks only at level 1,
-  and `emitTriggerFired: false` is accepted outside a tick (fix:
-  `phases/4.6/brief.md#fight-setup-checks-its-input`,
-  `phases/4.6/brief.md#the-load-time-checks-close-their-gaps`).
+- **One effect-list validator for every carrier**, `validateEffectList(defs, label, 'status' |
+  'permanent')`, called by `validateTrait`, `validateStatusDef`, the perk check and `createCombat`
+  for each side's `effects`, so a new check reaches every carrier. It rejects:
+  - on every carrier: the intent-only `random` selector in a response target; an
+    `ObservationFilter` field on the wrong hook, or `relationship: 'self'` on `on-death-observed`
+    (`spec/effects.md#damage-observation`); a `damageChannel` off `on-damage-taken`
+    (`spec/effects.md#damagechannel`); an additive taken-pool reduction without a `reductionCap`
+    below 1 (`spec/effects.md#taken-reduction-accumulation`); `emitTriggerFired: false` anywhere
+    but a status's tick (`isSnapshotTick`, read off the response);
+  - on a trait, perk or side effect also: a stat-modifier gated on the stat it changes, and the
+    status-only `snapshot-potency` and `turn-order.breakChancePercent` (breaking free removes the
+    status instance).
+- It runs over the stock traits, statuses and perks at import, a perk at **every** level
+  `1..maxLevel`, and over the registries and side effects `createCombat` is given, carried or not,
+  so a test fixture is held to the same rules and a perk is checked at the level bought.
 
 ### Effect order
 
@@ -225,7 +223,9 @@ status lifecycle in `spec/statuses.md`.
   paths and emits the same consequence events (`DamageDealt`, `CreatureDied`, `StatusApplied`) as a
   chosen action: a hook is a new trigger origin, not new consequence vocabulary.
 - **`TriggerFired`** precedes a trigger's consequences, as `AttackDeclared` precedes `DamageDealt`,
-  so the log explains why they happened. A tick is the exception (`spec/statuses.md#ticks-are-on-turn-end-triggers`).
+  so the log explains why they happened. A tick is the only exception
+  (`spec/statuses.md#ticks-are-on-turn-end-triggers`): `emitTriggerFired: false` anywhere else is
+  rejected at load (`spec/effects.md#validators`).
 
 ### Pass order
 
@@ -348,10 +348,9 @@ status lifecycle in `spec/statuses.md`.
   is rejected on it. Its `source` is the dead creature, and `relationship` compares the observer
   with it. One pass, so a `stacks: false` death observer gets one chance across both sides.
 - **All three observation hooks fail closed**: a candidate on `on-action-observed` fired without
-  the action details, on `on-damage-observed` without the damage details, or on
-  `on-death-observed` without a dead creature it can find, is skipped, filter or not, never fired
-  unfiltered. **Known bug:** `on-action-observed` fires when the actor can't be found (fix:
-  `phases/4.6/brief.md#small-engine-fixes`).
+  the action details or an actor it can find, on `on-damage-observed` without the damage details,
+  or on `on-death-observed` without a dead creature it can find, is skipped, filter or not, never
+  fired unfiltered.
 - No hook-type index: the fan-out scans every living creature per damage event, as
   `on-action-observed` does per action instance (`spec/effects.md#hook-execution`).
 
@@ -394,13 +393,19 @@ status lifecycle in `spec/statuses.md`.
 ### stacks: false
 
 - `TriggeredDef.stacks?: boolean`, default `true` (every matching effect fires on its own). With
-  `false`, across all living creatures **at most one** carrier of that effect's source (its
-  trait, status or side-effect slot, matched by `sourceTraitId`) gets its chance per firing of the
-  hook: the first in the pass's turn order (`spec/effects.md#pass-order`), so the faster carrier,
-  whichever side it is on. The claim comes before the roll, so more carriers don't raise the
-  aggregate chance. That keeps several Resonant Overtones from compounding the echo chance: the
-  branching factor stays 1, so an echo chain is linear and ends on its own, and the depth cap is
-  only the backstop for a pathological seed.
+  `false`, across all living creatures **at most one** carrier of that trigger **definition** gets
+  its chance per firing of the hook: the first in the pass's turn order
+  (`spec/effects.md#pass-order`), so the faster carrier, whichever side it is on. The claim comes
+  before the roll, so more carriers don't raise the aggregate chance. That keeps several Resonant
+  Overtones from compounding the echo chance: the branching factor stays 1, so an echo chain is
+  linear and ends on its own, and the depth cap is only the backstop for a pathological seed.
+- The definition is its claim key (`ResolvedHookEffect.claimKey`): the carrier kind (`trait`,
+  `side`, `status`), the carrier's id and the trigger's position in its effect list, stamped at
+  instantiation and kept through a revive. Two such triggers in one trait are two claims, as are a
+  trait and a status with one id; one trait carried twice or by several creatures, or one side
+  effect, is one claim. A keyless `stacks: false` effect is a resolver-invariant error.
+- A candidate skipped before the claim (its `condition`, observation filter or `damageChannel`)
+  claims nothing.
 
 ### damageChannel
 
@@ -457,7 +462,8 @@ status lifecycle in `spec/statuses.md`.
   per-event trigger uses a flat per-event factor; `magnitudeSource` belongs on fire-once hosts (an
   `on-fight-start` trigger) or on instantaneous responses read fresh each firing (a `heal` or
   `deal-damage`: nothing accumulates).
-- A count of 0 makes a `deal-damage` or `heal` a full no-op (`spec/responses.md#fizzles`).
+- A count of 0 makes a `deal-damage`, `heal` or `apply-stat-modifier` a full no-op
+  (`spec/responses.md#fizzles`).
 
 ### Stat-modifier counts freeze at application
 
@@ -475,8 +481,9 @@ status lifecycle in `spec/statuses.md`.
   modes, `accumulation`:
   - **`'multiplicative'`**, the default: `magnitude ** count`, approaching 0 and never clamped, as
     the taken pool's own rule says. The model for every count-scaled taken source but Bulwark.
-  - **`'additive'`** with **`reductionCap`**: the per-unit reduction summed over the count and
-    hard-clamped, `factor = 1 − min((1 − magnitude) × count, reductionCap)`. Bulwark is −5% per
+  - **`'additive'`** with **`reductionCap`**, required and below 1 (`spec/effects.md#validators`):
+    the per-unit reduction summed over the count and hard-clamped,
+    `factor = 1 − min((1 − magnitude) × count, reductionCap)`. Bulwark is −5% per
     Defend, capped at 80% (`specializations/shieldbarer.md`).
 - Either way a source collapses to **one factor**, which enters the multiplicative taken pool
   `Π(takenFactors)` with every other source: **additive within a source, multiplicative across

@@ -94,7 +94,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: ATTACKER },
 ]
 
-/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+/** Post-`createCombat` step (createCombat takes fresh creatures and sets HP at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
   // Pre-apply Spore to BEARER itself (its own on-death spread trigger only exists while it

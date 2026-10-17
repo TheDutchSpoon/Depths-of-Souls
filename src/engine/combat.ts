@@ -1,5 +1,5 @@
 import { createRngState, nextRandom } from './rng'
-import { ROUND_CAP } from './config'
+import { PARTY_SIZE, ROUND_CAP } from './config'
 import { buildTurnQueue, turnOrderIdsOf } from './turn-order'
 import { getCreature, updateCreature } from './creature-lookup'
 import {
@@ -13,7 +13,7 @@ import { fireHook, newCascade } from './resolution'
 import { createResolutionContext, drainGrantedActions } from './actions'
 import { decideAction } from './interpreter'
 import type { CreatureId } from './ids'
-import { validateStatusDef, validateTrait } from './effect-types'
+import { validateEffectList, validateStatusDef, validateTrait } from './effect-types'
 import type { ActiveEffect, EffectDef, InnateSpellEffect } from './effect-types'
 import type { CombatEvent, CombatState, Creature, FightResult } from './types'
 import type { Intent, Script } from './scripting-types'
@@ -45,16 +45,23 @@ export interface CreateCombatInput {
  * effects }, registries }` can't. `registries` bundles scripts/traits/statuses, each defaulting
  * to an empty Map.
  *
- * `createCombat` ALWAYS RECOMPUTES `baselineEffects` from each input creature's own
- * `innateTraitIds` (+ that creature's own side's effects) and RESETS `revivesUsed` to `0` -- it
- * never trusts those fields on an input `Creature`. Fight setup takes FRESH
- * creatures only: an input creature that already carries setup output
- * (non-empty `baselineEffects` or `activeEffects` -- i.e. pulled from a PREVIOUS `CombatState`
- * rather than fresh `materializeCreature` output) is a thrown error, not silently discarded-and-
- * recomputed -- re-feeding one would double its innate spell slots, since this function
- * itself prepends every `innate-spell` effect's spell onto `equippedSpells`. A creature whose own
- * `side` doesn't match the list it was passed in (`player.party` vs `enemy.party`) is likewise a
- * thrown error -- each side's `effects` apply to exactly that side's creatures.
+ * Fight setup takes FRESH input and throws on anything else (`spec/combat.md#fight-setup`):
+ * - a creature whose `scriptId` is not null and not in the script registry (an omitted registry is
+ *   empty);
+ * - a creature that already carries setup or fight output: non-empty `baselineEffects` or
+ *   `activeEffects` (re-feeding one would double its innate spell slots, since this function
+ *   prepends every `innate-spell` effect's spell onto `equippedSpells`), `alive: false`,
+ *   `defending`, `provoking`, a non-zero `defendCount` or `revivesUsed`. `currentHp` is not
+ *   checked: it is set here, to the effective max Health. A test that needs a wounded or dead
+ *   creature sets that on the returned state;
+ * - a side whose slots are not unique integers within 0..PARTY_SIZE-1 in ascending array order, so
+ *   array order IS slot order for every reader; two creatures with one id across both sides;
+ * - a creature whose own `side` doesn't match the list it was passed in (`player.party` vs
+ *   `enemy.party`): each side's `effects` apply to exactly that side's creatures;
+ * - a side effect, trait or status that breaks a load-time rule (`validateEffectList`).
+ *
+ * It RECOMPUTES `baselineEffects` from each creature's own `innateTraitIds` (+ its own side's
+ * effects).
  */
 export function createCombat(input: CreateCombatInput): CombatState {
   const { seed, player, enemy, registries = {} } = input
@@ -71,16 +78,26 @@ export function createCombat(input: CreateCombatInput): CombatState {
   // one fails at fight setup, whether or not a creature carries it.
   for (const trait of traits.values()) validateTrait(trait)
 
+  // The side effects (a perk resolved at the level bought, a biome effect) are held to the rules a
+  // trait is, whether or not a creature carries them.
+  validateEffectList(playerEffects, 'player effect', 'permanent')
+  validateEffectList(enemyEffects, 'enemy effect', 'permanent')
+
   if (player.party.length === 0 || enemy.party.length === 0) {
     throw new Error('createCombat: both parties must have at least one creature')
   }
 
+  validateScriptIds(player.party, enemy.party, scripts)
+  validateSlots('player', player.party)
+  validateSlots('enemy', enemy.party)
+  validateUniqueIds(player.party, enemy.party)
+
   // Fight-start: resolve + instantiate each creature's innate-trait (+ this side's own effects)
   // effects onto activeEffects (fresh ids from the shared per-fight counter, threaded across
   // BOTH parties, player then enemy, slot order), prepend any innate spells onto equippedSpells,
-  // reset revivesUsed, then set currentHp to effective max Health (so a +Health
-  // trait/perk actually grants the HP). For a trait-less, effect-less creature this is a no-op:
-  // activeEffects is [] and effective max == base Health, so currentHp is unchanged.
+  // then set currentHp to effective max Health (so a +Health trait/perk actually grants the HP).
+  // For a trait-less, effect-less creature this is a no-op: activeEffects is [] and effective max
+  // == base Health, so currentHp is unchanged.
   let counter = 0
   const instantiate = (
     creature: Creature,
@@ -93,9 +110,21 @@ export function createCombat(input: CreateCombatInput): CombatState {
         `createCombat: creature "${creature.id}" has side "${creature.side}" but was passed in ${side}.party`,
       )
     }
-    if (creature.baselineEffects.length > 0 || creature.activeEffects.length > 0) {
+    const stale: string[] = []
+    if (creature.baselineEffects.length > 0) stale.push('baselineEffects')
+    if (creature.activeEffects.length > 0) stale.push('activeEffects')
+    if (!creature.alive) stale.push('alive: false')
+    if (creature.defending) stale.push('defending')
+    if (creature.provoking) stale.push('provoking')
+    if (creature.defendCount !== 0) stale.push('defendCount')
+    if (creature.revivesUsed !== 0) stale.push('revivesUsed')
+    if (stale.length > 0) {
+      const innateReason =
+        stale.includes('baselineEffects') || stale.includes('activeEffects')
+          ? ', or innate spells would double'
+          : ''
       throw new Error(
-        `createCombat: creature "${creature.id}" already carries fight-setup output (baselineEffects/activeEffects) -- fight setup takes fresh creatures only, or innate spells would double`,
+        `createCombat: creature "${creature.id}" already carries fight-setup output (${stale.join(', ')}) -- fight setup takes fresh creatures only${innateReason}`,
       )
     }
     const baselineEffects = resolveBaselineEffects(
@@ -117,7 +146,6 @@ export function createCombat(input: CreateCombatInput): CombatState {
       baselineEffects,
       activeEffects,
       equippedSpells: [...innateSpells, ...creature.equippedSpells],
-      revivesUsed: 0,
     }
     return { ...withEffects, currentHp: effectiveMaxHp(withEffects) }
   }
@@ -136,6 +164,61 @@ export function createCombat(input: CreateCombatInput): CombatState {
     statuses,
     effectInstanceCounter: counter,
     turnClock: 0,
+  }
+}
+
+/** Every creature's `scriptId` is `null` (the fallback) or names a script the fight is given. */
+function validateScriptIds(
+  playerParty: readonly Creature[],
+  enemyParty: readonly Creature[],
+  scripts: ReadonlyMap<string, Script>,
+): void {
+  for (const creature of [...playerParty, ...enemyParty]) {
+    if (creature.scriptId !== null && !scripts.has(creature.scriptId)) {
+      throw new Error(
+        `createCombat: creature "${creature.id}" names script "${creature.scriptId}", which is not in the script registry`,
+      )
+    }
+  }
+}
+
+/** One side's slots: integers within 0..PARTY_SIZE-1, each above the one before it in array order
+ * (so unique too). Not contiguous: a gap is a legal party. Array order is slot order from here on,
+ * for every helper that walks a party. */
+function validateSlots(side: 'player' | 'enemy', party: readonly Creature[]): void {
+  let previous = -1
+  for (const creature of party) {
+    const { slot } = creature
+    if (!Number.isInteger(slot) || slot < 0 || slot >= PARTY_SIZE) {
+      throw new Error(
+        `createCombat: creature "${creature.id}" has slot ${slot}, outside 0..${PARTY_SIZE - 1} (${side}.party)`,
+      )
+    }
+    if (slot === previous) {
+      throw new Error(
+        `createCombat: creature "${creature.id}" shares slot ${slot} with another creature in ${side}.party`,
+      )
+    }
+    if (slot < previous) {
+      throw new Error(
+        `createCombat: creature "${creature.id}" (slot ${slot}) is out of slot order in ${side}.party`,
+      )
+    }
+    previous = slot
+  }
+}
+
+/** No two creatures share an id, within a side or across both. */
+function validateUniqueIds(
+  playerParty: readonly Creature[],
+  enemyParty: readonly Creature[],
+): void {
+  const seen = new Set<string>()
+  for (const creature of [...playerParty, ...enemyParty]) {
+    if (seen.has(creature.id)) {
+      throw new Error(`createCombat: two creatures share the id "${creature.id}"`)
+    }
+    seen.add(creature.id)
   }
 }
 
@@ -189,9 +272,12 @@ function countDownStatuses(
  * the effect iterator: an immune bearer's Web has no effects, so it draws nothing), skipping a
  * Web born this turn. A board with no such Web draws nothing (only-when-present discipline).
  * Bearers are iterated in turn order, taken once when the cleanup starts (a bearer that breaks
- * free doesn't reorder the rolls after it), so the draw sequence is deterministic. On success
- * the status instance is removed and StatusExpired emitted; the frozen current-round turnQueue is
- * untouched (breaking free only changes NEXT round's buildTurnQueue).
+ * free doesn't reorder the rolls after it), and each bearer's effect list is taken once too
+ * (`spec/statuses.md#turn-order`), so the draw sequence is deterministic. Only the removal reads
+ * the bearer fresh, so a second break on one bearer removes its own status and restores nothing
+ * the first removed. On success the status instance is removed and StatusExpired emitted; the
+ * frozen current-round turnQueue is untouched (breaking free only changes NEXT round's
+ * buildTurnQueue).
  */
 function rollWebBreakFree(state: CombatState, events: CombatEvent[]): CombatState {
   const bearerIds = turnOrderIdsOf(state)
@@ -211,7 +297,7 @@ function rollWebBreakFree(state: CombatState, events: CombatEvent[]): CombatStat
       if (instance && isBornThisTurn(working, instance)) continue
       if (nextRandom(working.rng) < effect.breakChancePercent / 100) {
         working = updateCreature(working, bearerId, {
-          activeEffects: current.activeEffects.filter(
+          activeEffects: getCreature(working, bearerId).activeEffects.filter(
             (e) => e.instanceId !== statusInstanceId,
           ),
         })

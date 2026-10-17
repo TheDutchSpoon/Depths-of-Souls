@@ -8,8 +8,9 @@
 // reach the cap (the mechanism itself is already unit-tested end-to-end in resolution.test.ts,
 // including the climb to exactly 10), this fixture starts CAPPED already at the cap -- the same
 // "post-createCombat setup step" pattern golden-dot.fixture.ts's own header comment documents
-// (createCombat always resets currentHp/revivesUsed at fight-setup, so the capped/dead starting
-// state has to be applied AFTER creation, in the .test.ts driver, via updateCreature). ELIGIBLE
+// (createCombat takes fresh creatures only -- revivesUsed 0, alive -- and sets currentHp at
+// fight-setup, so the capped/dead starting state has to be applied AFTER creation, in the
+// fixture's `setup`, via updateCreature). ELIGIBLE
 // starts dead too, but with revivesUsed 0.
 //
 // SEED matters here, not just for determinism -- it has to be a seed that would pick DIFFERENTLY
@@ -98,10 +99,10 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: REVIVER },
 ]
 
-/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+/** Post-`createCombat` step (createCombat takes fresh creatures and sets HP at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
-  // createCombat resets currentHp/revivesUsed at fight-setup, so the pre-capped,
+  // createCombat takes fresh creatures (revivesUsed 0, alive) and sets currentHp, so the pre-capped,
   // pre-dead starting state has to be applied here, after creation -- see this fixture's own
   // header comment (mirrors golden-dot.fixture.ts's identical constraint).
   const withCapped = updateCreature(created, CAPPED, {

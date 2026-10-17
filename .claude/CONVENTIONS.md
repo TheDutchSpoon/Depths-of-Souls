@@ -57,6 +57,9 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
   the working copy's bookmark.
 - No closures, functions, class instances or hidden state inside `CombatState`; a behaviour that
   needs a predicate is written as data.
+- The registries a fight carries (`scripts`, `statuses`) are read-only Maps, held to "never written
+  to" by the deep-freeze helper like the rest of the state
+  (`CONVENTIONS.md#snapshots-are-never-written-to`).
 - Don't make every roll return a new snapshot instead: the outward guarantee is the same, with a
   determinism risk at every future dice roll. Tests prove the rule ("Snapshots are never written
   to").
@@ -287,13 +290,17 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 - A **deep-freeze test helper** freezes an input snapshot recursively and makes any write to it
   crash. Engine tests that resolve the same snapshot more than once, or assert on an input after
   resolving, wrap it in the helper.
+- It locks `Map` and `Set` writes too. A module-level registry that a frozen state carries stays
+  locked for the rest of its test file, so a test that writes to one copies it first; a `Map` or
+  `Set` already frozen by a plain `Object.freeze` is refused, since its writes can't be locked.
 
 ### Every golden replays through one shared runner
 
 - The runner deep-freezes the state before **every** turn, so every golden also proves the engine
   never writes to its input. Each fixture exports what the runner needs to build its starting
   state, plus an optional driver for a golden that isn't simply "run N turns" or "run to the end"
-  (for example a wound applied after `createCombat`). There is no separate frozen-replay sweep and
+  (for example a wound, a dead ally or a preset Defend count, set in the fixture's `setup` step
+  after `createCombat`, which takes fresh creatures only). There is no separate frozen-replay sweep and
   no list of excluded goldens.
 
 ## CI

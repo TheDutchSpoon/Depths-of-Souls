@@ -43,11 +43,13 @@ function compare(lhs: number, cmp: ComparatorOp, rhs: number): boolean {
 
 /**
  * A creature's effective maximum HP: effective Health folded from base + stat-modifiers,
- * floored to an integer (HP is always an integer). For a creature with no Health modifier
- * this equals base Health. Defined once, here; effects.ts re-exports it.
+ * floored to an integer (HP is always an integer), and never below 1: a living creature always has
+ * at least 1 HP to lose (`spec/statuses.md#health-is-a-modifiable-stat`). For a creature with no
+ * Health modifier this equals base Health. Defined once, here, so the clamp, the HP% read and
+ * fight-start HP all follow; effects.ts re-exports it. `getEffectiveStat` stays the raw fold.
  */
 export function effectiveMaxHp(creature: Creature): number {
-  return Math.floor(getEffectiveStat(creature, 'health'))
+  return Math.max(1, Math.floor(getEffectiveStat(creature, 'health')))
 }
 
 /**

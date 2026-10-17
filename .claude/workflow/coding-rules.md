@@ -52,7 +52,8 @@ before designing around it.
 - Leave `main` green and deployable; a demo consumes the engine, it doesn't leak into it.
 - **Never commit, never delete files.** Say what needs deleting; Duncan commits and deletes. A
   rename the kickoff calls for is not a deletion: do it with a plain `mv` (never `git mv`: the
-  index is Duncan's) and list every one in the report's rename map.
+  index is Duncan's) and list every one in the report's rename map. `npm ci` replacing
+  `node_modules` is not a deletion either: run it (Toolchain).
 - **The living docs are the design agent's:** `CLAUDE`, `CONVENTIONS`, `VISION`, `OPEN_QUESTIONS`,
   `spec/`, `ROADMAP`, `WORKFLOWS`, `workflow/`, the briefs, and `content/`, `species/`,
   `specializations/`. Don't edit them, even to fold a decided item or flip an "until <slice>"

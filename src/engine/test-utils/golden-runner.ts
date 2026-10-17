@@ -10,8 +10,9 @@
 //   playerEffects/enemyEffects  optional: a side's effects (specialization perks, ...),
 //                          passed straight to `createCombat`'s per-side `effects` input
 //   TURN_STEPS             optional: run exactly N turns; absent = run until the fight has a result
-//   setup                  optional: a post-`createCombat` step (e.g. `updateCreature` wounds, since
-//                          `createCombat` resets HP); it runs BEFORE the first frozen turn
+//   setup                  optional: a post-`createCombat` step. `createCombat` takes fresh creatures
+//                          and sets HP, so wounds, dead allies and a preset `defendCount` are applied
+//                          here with `updateCreature`; it runs BEFORE the first frozen turn
 // A golden that needs more than "run N turns / run to the end" builds its own flow from
 // `createGoldenState` + `stepFrozen`, so it still advances turns only through the frozen step.
 

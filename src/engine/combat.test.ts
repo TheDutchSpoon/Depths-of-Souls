@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createCombat, resolveFight, resolveTurn } from './combat'
-import { hasStatus } from './effects'
+import { hasStatus, instantiateStatus } from './effects'
 import { getEffectiveStat } from './effective-stats'
-import { getCreature } from './creature-lookup'
+import { getCreature, updateCreature } from './creature-lookup'
 import { makeParty } from './__fixtures__/creatures'
 import { AOE_VIOLENCE_SPELL, SINGLE_VIOLENCE_SPELL } from './__fixtures__/spells'
 import { createRngState } from './rng'
@@ -18,6 +18,7 @@ import {
 } from '../data/traits'
 import type { AttackDeclaredEvent, CombatState, Spell } from './types'
 import type { Script } from './scripting-types'
+import { createEffectInstanceId } from './effect-types'
 import type { EffectDef, StatusDef, Trait } from './effect-types'
 
 function isAttackDeclared(event: { type: string }): event is AttackDeclaredEvent {
@@ -452,20 +453,23 @@ describe('Provoke', () => {
         defence: 0,
         health: 50,
         currentHp: 50,
-        provoking: true,
       },
       // Lower HP -- what lowest-hp-enemy would naturally pick absent Provoke.
       { id: 'weakling', speed: 1, defence: 0, health: 5, currentHp: 5 },
     ])
 
-    const { events } = resolveTurn(
+    // Provoking at the start of the fight, set after setup (which takes fresh creatures only).
+    const start = updateCreature(
       createCombat({
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
         registries: { scripts: scripts },
       }),
+      createCreatureId('provoker'),
+      { provoking: true },
     )
+    const { events } = resolveTurn(start)
 
     const attack = events.find(isAttackDeclared)
     expect(attack?.targetId).toBe('provoker')
@@ -802,7 +806,11 @@ describe('action instance-list composition', () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: new Map(), traits: traits, statuses: new Map() },
+        registries: {
+          scripts: FIXTURE_SCRIPTS_BY_ID,
+          traits: traits,
+          statuses: new Map(),
+        },
       }),
     )
     return events
@@ -867,7 +875,11 @@ describe('action instance-list composition', () => {
         seed: 1,
         player: { party: player },
         enemy: { party: enemy },
-        registries: { scripts: new Map(), traits: traits, statuses: new Map() },
+        registries: {
+          scripts: FIXTURE_SCRIPTS_BY_ID,
+          traits: traits,
+          statuses: new Map(),
+        },
       }),
     )
 
@@ -1033,6 +1045,52 @@ describe('Web break-free', () => {
     }
     expect(turnStartedCount).toBeGreaterThan(0)
     expect(countDraws(created.rng, state.rng)).toBe(turnStartedCount)
+  })
+
+  it('two break-free statuses on one bearer both breaking in one cleanup are both gone, and draw exactly twice', () => {
+    // Seed 7's first two draws (an independent mulberry32 calculator): 0.0117, 0.0620 -- both under
+    // the 50% line, so each status breaks in the cleanup of the bearer's one turn (always-wait
+    // draws nothing; the foe bears no Web and draws nothing). An unfixed roll filters the second
+    // removal from the bearer's effect list as it stood BEFORE the first break, which puts web-a
+    // back.
+    const webA: StatusDef = { ...WEB_TEST_STATUS, statusId: 'web-a' }
+    const webB: StatusDef = { ...WEB_TEST_STATUS, statusId: 'web-b' }
+    const created = createCombat({
+      seed: 7,
+      player: {
+        party: makeParty('player', [
+          { id: 'webbed', speed: 20, scriptId: 'always-wait' },
+        ]),
+      },
+      enemy: {
+        party: makeParty('enemy', [{ id: 'foe', speed: 10, scriptId: 'always-wait' }]),
+      },
+      registries: {
+        scripts: FIXTURE_SCRIPTS_BY_ID,
+        statuses: new Map([
+          [webA.statusId, webA],
+          [webB.statusId, webB],
+        ]),
+      },
+    })
+    const webbedId = createCreatureId('webbed')
+    const bearer = getCreature(created, webbedId)
+    const start = updateCreature(created, webbedId, {
+      activeEffects: [
+        ...bearer.activeEffects,
+        instantiateStatus(webA, createEffectInstanceId('web-a#1'), 99, undefined, 0),
+        instantiateStatus(webB, createEffectInstanceId('web-b#1'), 99, undefined, 0),
+      ],
+    })
+
+    const { state, events } = resolveTurn(start)
+
+    expect(events.filter((e) => e.type === 'StatusExpired')).toEqual([
+      { type: 'StatusExpired', creatureId: webbedId, statusId: 'web-a' },
+      { type: 'StatusExpired', creatureId: webbedId, statusId: 'web-b' },
+    ])
+    expect(getCreature(state, webbedId).activeEffects).toEqual([])
+    expect(countDraws(start.rng, state.rng)).toBe(2)
   })
 
   it('same seed -> same break-free turn (determinism)', () => {
@@ -1279,7 +1337,6 @@ describe('turn-start cleanup', () => {
         id: 'doomed',
         health: 10,
         speed: 20,
-        provoking: true,
         scriptId: 'always-wait',
         innateTraitIds: [LETHAL_ON_TURN_START_FIXTURE.id],
       },
@@ -1288,12 +1345,16 @@ describe('turn-start cleanup', () => {
     const traits = new Map([
       [LETHAL_ON_TURN_START_FIXTURE.id, LETHAL_ON_TURN_START_FIXTURE],
     ])
-    const state = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
-    })
+    const state = updateCreature(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
+      }),
+      doomedId,
+      { provoking: true },
+    )
 
     const { state: after, events } = resolveTurn(state) // DOOMED, round 1
 
@@ -1337,19 +1398,23 @@ describe('taken-reduction passive (real Bulwark shape, as a perk)', () => {
         speed: 20,
         scriptId: 'always-defend',
         innateTraitIds: [TAKEN_REDUCTION_FIXTURE.id],
-        defendCount: 15, // 15 earlier Defends this battle, preset so the cap is reached quickly
       },
     ])
     const enemy = makeParty('enemy', [
       { id: 'striker', attack: 40, defence: 0, speed: 10 },
     ])
     const traits = new Map([[TAKEN_REDUCTION_FIXTURE.id, TAKEN_REDUCTION_FIXTURE]])
-    const initial = createCombat({
-      seed: 1,
-      player: { party: player },
-      enemy: { party: enemy },
-      registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
-    })
+    // 15 earlier Defends this battle, set after setup so the cap is reached quickly
+    const initial = updateCreature(
+      createCombat({
+        seed: 1,
+        player: { party: player },
+        enemy: { party: enemy },
+        registries: { scripts: FIXTURE_SCRIPTS_BY_ID, traits: traits },
+      }),
+      createCreatureId('bearer'),
+      { defendCount: 15 },
+    )
     const { state, events } = resolveFight(initial)
 
     // Round 1: defendCount 15 -> 16 (exactly the count that reaches the 80% cap). Round 2:

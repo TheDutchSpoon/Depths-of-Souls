@@ -150,7 +150,7 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: TANK },
 ]
 
-/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
+/** Post-`createCombat` step (createCombat takes fresh creatures and sets HP at fight setup); runs before the first
  * frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
   // Pre-apply Poison to ROTCORE and wound it to 1 HP, both before any turn resolves -- into a

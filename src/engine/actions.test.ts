@@ -411,6 +411,7 @@ describe('an echo is gated by the CASTER, never the bearer', () => {
     },
     instanceId: createEffectInstanceId('echo#1'),
     sourceTraitId: 'echo-fixture',
+    claimKey: 'trait:echo-fixture#0',
   }
 
   function run(casterEffects: ActiveEffect[], bearerEffects: ActiveEffect[]) {

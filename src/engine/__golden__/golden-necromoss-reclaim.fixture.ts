@@ -3,7 +3,7 @@
 // dead allies, proving `heal`'s `magnitudeSource` mode (named for Necromoss in effect-types.ts's
 // own doc comment) against real content for the first time.
 //
-// WISP's health (50) and dead-ally count (3) are deliberately chosen so BOTH the 5% rate and the
+// WISP's health (50) and dead-ally count (3, set dead in `setup`) are deliberately chosen so BOTH the 5% rate and the
 // count actually change the FLOORED result -- at 18 max HP and 2 dead allies, 18*0.05*2 = 1.8
 // floors to 1, which is also what 18*0.03*2 = 1.08 (the wrong rate) floors to, so that scenario
 // couldn't have caught a regression to the wrong rate. Here: 50*0.05*3 = 7.5 -> floors to 7; the
@@ -63,17 +63,14 @@ export const enemyParty = makeParty('enemy', [
   },
   {
     id: 'fallen-1',
-    alive: false,
     scriptId: 'always-wait',
   },
   {
     id: 'fallen-2',
-    alive: false,
     scriptId: 'always-wait',
   },
   {
     id: 'fallen-3',
-    alive: false,
     scriptId: 'always-wait',
   },
 ])
@@ -105,11 +102,15 @@ export const expectedEvents: CombatEvent[] = [
   { type: 'TurnEnded', creatureId: WISP },
 ]
 
-/** Post-`createCombat` step (createCombat resets HP/statuses at fight setup); runs before the first
- * frozen turn (see test-utils/golden-runner.ts). */
+const FALLEN = ['fallen-1', 'fallen-2', 'fallen-3'].map(createCreatureId)
+
+/** Post-`createCombat` step (createCombat takes fresh creatures and sets HP at fight setup); runs
+ * before the first frozen turn (see test-utils/golden-runner.ts). */
 export const setup = (created: CombatState): CombatState => {
-  // createCombat resets currentHp to effective max at fight-start, so WISP's wounded starting
+  // createCombat sets currentHp to effective max at fight-start, so WISP's wounded starting
   // HP has to be applied here, after creation -- see the fixture's header comment.
-  const state = updateCreature(created, WISP, { currentHp: WISP_STARTING_HP })
+  let state = updateCreature(created, WISP, { currentHp: WISP_STARTING_HP })
+  // The three fallen allies die here, keeping the currentHp the fight setup gave them.
+  for (const id of FALLEN) state = updateCreature(state, id, { alive: false })
   return state
 }

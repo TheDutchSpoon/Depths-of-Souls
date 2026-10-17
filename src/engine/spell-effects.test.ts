@@ -33,9 +33,9 @@ import {
 } from './resolution'
 import {
   createEffectInstanceId,
-  validateNoRandomSelectorInResponseTargets,
   validateSpellEffects,
-  validateStatusNoRandomSelectorInResponseTargets,
+  validateStatusDef,
+  validateTrait,
 } from './effect-types'
 import { makeParty } from './__fixtures__/creatures'
 import { createRngState } from './rng'
@@ -1135,9 +1135,13 @@ describe('validateSpellEffects', () => {
         },
       },
     ]
-    expect(() => validateNoRandomSelectorInResponseTargets(traitEffects)).toThrow(
-      /only valid inside a spell's effect list/,
-    )
+    expect(() =>
+      validateTrait({
+        id: 'cast-target-trait',
+        name: 'Cast target',
+        effects: traitEffects,
+      }),
+    ).toThrow(/only valid inside a spell's effect list/)
     const status: StatusDef = {
       statusId: 'cast-target-test',
       polarity: 'debuff',
@@ -1154,7 +1158,7 @@ describe('validateSpellEffects', () => {
         },
       ],
     }
-    expect(() => validateStatusNoRandomSelectorInResponseTargets(status)).toThrow(
+    expect(() => validateStatusDef(status)).toThrow(
       /only valid inside a spell's effect list/,
     )
   })

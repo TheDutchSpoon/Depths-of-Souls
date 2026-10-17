@@ -758,7 +758,6 @@ describe("a status's effects carry no count of their own (single instance)", () 
       kind: 'deal-damage',
       target: { kind: 'self' },
       flatAmount: { ofStat: 'health', percent: 3 },
-      emitTriggerFired: false,
       damageSource: 'dot',
     })
     expect(creatureOf(fireOnce(cost).state).currentHp).toBe(97) // 100 - floor(100*3/100)
