@@ -148,3 +148,88 @@ it reaches.
   trait carried twice is one claim.
 - `spec/creatures.md#trait-and-gem-slots`: a creature's innate trait is its own; no two creature
   templates share one, so a creature's innate traits never repeat.
+
+## Round 2
+
+**Verdict: approved, with three plan fixes carried by the hand-out** (decide-point 1). The fold-in
+is faithful: all six round-1 items are in the plan as handed out, and nothing outside them moved.
+The plan's new ASSUMPTION K holds (checked below). One real gap remains, and the round-1 claim key
+causes it: the only test that pins "a skipped candidate claims no slot" becomes vacuous.
+
+### Plan fixes
+
+1. **Re-pin "a skipped candidate claims no slot" where the new key can still observe it.**
+   `damage-channel.test.ts:295` pins the order with two `stacks: false` triggers in one trait. On
+   today's `sourceTraitId` key they share a claim, so a skip placed after the claim would starve
+   the second trigger. With the stamped key they are `trait:two-effects#0` and `#1`: two claims.
+   The test stays green whether the skip runs before or after the claim.
+   - The `damageChannel` order is now **unobservable**, not just untested. Two candidates share a
+     key only if they share a definition, and in one `fireHook` call they then share a
+     `damageChannel` and the incoming channel. So they are skipped together or not at all. The
+     depth-cap check is in the same position, since `cascade.depth` is per call.
+   - Two skips stay observable, because they read the carrier: the **observation filter**
+     (relationship to the actor) and the **condition** (live self). No existing test pins either
+     one against the claim. `death-observed.test.ts:147` and `resolution.test.ts:2386` pin one
+     claim across carriers, but neither skips a candidate.
+   - Add to `stacks-false-claims.test.ts`, each with one trait carried by two creatures and the
+     first in pass order skipped:
+     - skipped by its `condition`: the second carrier still fires;
+     - skipped by its `observationFilter` relationship: the second carrier still fires.
+
+     Each fails with the claim moved above that skip.
+   - `damage-channel.test.ts:295`: assertions unchanged. Its title and comment now say what it
+     pins: within one trait, each channel-gated trigger answers only its own channel. That
+     comment goes in "Comments that go stale".
+2. **Gates** add `npm run docs:check -- comment-proof` on `golden-revive-cap-exclusion` and
+   `golden-revive-cap-fizzle`. The plan names this check in "Comments that go stale" but leaves it
+   out of the gate list.
+3. **Report, Spec questions:** the `effectiveMaxHp` floor also reaches the Additional at
+   `resolution.ts:258` (`calculateAdditional(attacker.level, effectiveMaxHp(target))`). That's
+   correct under one home, and no content reaches a max below 1. Name it, so the PR review writes
+   the floor where `spec/combat.md` defines the Additional too.
+
+Wording only, not a fix: step 0 still says it dumps "the `createGoldenState(...)` parties" one
+sentence before it says "whole `CombatState`", and calls the branch "clean at `f496e72`". The
+whole-state sentence governs.
+
+### Assumptions
+
+| # | Plan ASSUMPTION | Call |
+| --- | --- | --- |
+| 1 | (A) `PARTY_SIZE = 6` in `engine/config.ts`, re-exported by `store.ts` | **Confirm** (as round 1). |
+| 2 | Non-integer/NaN slot out of range; ascending only; no contiguity | **Confirm.** |
+| 3 | Slot and id checks on both sides, first | **Confirm.** |
+| 4 | One `validateEffectList`, messages byte-identical | **Confirm.** `createCombat` already validates the status and trait registries (`combat.ts:68`, `:72`), so the status row has its two sites. |
+| 5 | Perk sweep `1..maxLevel` | **Confirm.** |
+| 6 | Additive cap a number `< 1`; negatives allowed; NaN rejected | **Confirm.** |
+| 7 | `Spell.effects` out of the `emitTriggerFired` check | **Confirm.** |
+| K | No `stacks: false` trigger in the three `setup` goldens, so `claimKey` leaves their `initial` alone | **Confirm.** Their traits are `bulwark-additive-fixture` and its status, `necromoss-fixture`, and `NECROMOSS_WISP_TRAIT`; the only content `stacks: false` is Overtone (`glimmerdark.ts:249`). The corpus digest hashes events only (`corpus-digest.test.ts:digestFight`), so a stamped field can't move it. |
+| 8 | `takenFactorFor` throws on an additive source without a cap | **Confirm** (round-1 hand-out item 3). |
+| 9 | `deepFreeze` throws on a Map/Set frozen before it | **Confirm.** |
+| 10 | Comment-only header edits on the two revive-cap goldens, with `comment-proof` | **Confirm**, and plan fix 2 puts the check in the gates. |
+| 11 | One slice | **Confirm.** |
+
+The plan still changes nothing in the brief's Assumptions checklist.
+
+**Golden policy:** matches the kickoff.
+
+**Mechanism → test, at every site:** complete except plan fix 1. The status claim key's site is
+`flatEffects`, which is where a status's effects get their instance ids, so "stamped at
+instantiation" holds there too.
+
+### Decide-points
+
+1. **Approve this round with the three fixes in the hand-out, or send it back for round 3?**
+   **Recommend: approve.** The fixes are two small tests, one retitled test, one gate line and one
+   report line. None of them changes a mechanism, an ASSUMPTION or the golden policy, and the
+   hand-out wins over `plan.md` at build time. A round 3 would only re-check a fold-in this small,
+   and the workflow treats a third round as a sign the slice needs a design pass, which it doesn't.
+
+### Decisions
+
+- **Decide-point 1:** approved. The three plan fixes go to the build in `plan-handout-r2.md`,
+  which wins over `plan.md` where they differ.
+
+### Docs edited
+
+- None. The fixes are tests, a gate line and a report line, so no living-doc rule changes.
