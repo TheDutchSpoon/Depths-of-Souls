@@ -42,3 +42,8 @@ export const MAX_REVIVES_PER_CREATURE = 10
 // made: a creature already at the survival HP gains nothing from a save
 // (`spec/effects.md#cheat-death`). One name for both, so they cannot drift.
 export const CHEAT_DEATH_SURVIVAL_HP = 1
+
+// The party size a side may field: a creature's slot is an integer in 0..PARTY_SIZE-1
+// (`spec/combat.md#automatic-6v6`). `createCombat` checks it at the boundary, and the store's
+// party grid is this many slots wide.
+export const PARTY_SIZE = 6

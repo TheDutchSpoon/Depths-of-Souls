@@ -203,10 +203,10 @@ export interface MaterializeCreatureOptions {
  * by `createCombat`'s fight-setup, never by materializeCreature): the caller's own option wins when
  * supplied (generateFloor's per-visit rolled loadout for a spawned enemy), else all-null slots.
  *
- * `baselineEffects`/`revivesUsed` are placeholders here -- `createCombat`
- * ALWAYS recomputes `baselineEffects` from the creature's `innateTraitIds` (never trusts an input
- * creature's own field) and resets `revivesUsed` to `0`; materializeCreature only needs to
- * satisfy `Creature`'s shape before fight-setup runs.
+ * `baselineEffects`/`revivesUsed` are the fresh values here (`[]` and `0`) -- `createCombat`
+ * takes fresh creatures only and computes `baselineEffects` from the creature's
+ * `innateTraitIds`; materializeCreature only needs to satisfy `Creature`'s shape before
+ * fight-setup runs.
  */
 export function materializeCreature(
   speciesCreature: SpeciesCreature,

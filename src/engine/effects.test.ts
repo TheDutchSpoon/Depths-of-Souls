@@ -302,6 +302,32 @@ describe('gatherDealtMods / gatherTakenFactors', () => {
       expect(gatherTakenFactors(c, makeState({ playerParty: [c] }))[0]).toBeCloseTo(0.2)
     })
 
+    it('throws a resolver-invariant error on an additive source with no reductionCap (a hand-built state past the load-time check)', () => {
+      const uncapped: ActiveEffect = {
+        category: 'taken-reduction',
+        magnitude: 0.95,
+        accumulation: 'additive',
+        instanceId: createEffectInstanceId('uncapped'),
+        sourceTraitId: 'uncapped-fixture',
+      }
+      const c = makeCreature({ activeEffects: [uncapped], defendCount: 5 })
+      expect(() => gatherTakenFactors(c, makeState({ playerParty: [c] }))).toThrow(
+        /additive taken-pool reduction has no reductionCap/,
+      )
+      const modifier: ActiveEffect = {
+        category: 'damage-modifier',
+        direction: 'taken',
+        magnitude: 0.95,
+        accumulation: 'additive',
+        instanceId: createEffectInstanceId('uncapped-modifier'),
+        sourceTraitId: 'uncapped-fixture',
+      }
+      const d = makeCreature({ activeEffects: [modifier] })
+      expect(() => gatherTakenFactors(d, makeState({ playerParty: [d] }))).toThrow(
+        /no reductionCap/,
+      )
+    })
+
     it('is the multiplicative default when accumulation is absent', () => {
       const multiplicative: ActiveEffect = {
         category: 'status',

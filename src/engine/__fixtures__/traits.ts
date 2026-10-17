@@ -146,7 +146,8 @@ export const REELING: Trait = {
 }
 
 /** Triggered edge-case content, for the round-end-interaction golden: three effects on one
- * trait. (1) on-round-end: a lethal self-hit. (2) on-round-end: would damage the lowest-HP ally
+ * trait. (1) on-round-end: a lethal self-hit (it announces itself with a TriggerFired like any trait
+ * trigger; its `dot` damageSource only labels the DamageDealt). (2) on-round-end: would damage the lowest-HP ally
  * -- MUST be skipped when (1) already killed the bearer this same pass (fireHook's fresh
  * per-effect alive-check). (3) on-death: applies Weaken to the lowest-HP ally -- fires
  * regardless, proving on-death still runs for a creature that died mid-pass. */
@@ -161,7 +162,6 @@ export const CATASTROPHIC_COLLAPSE: Trait = {
         kind: 'deal-damage',
         target: { kind: 'self' },
         flatAmount: 999,
-        emitTriggerFired: false,
         damageSource: 'dot',
       },
     },

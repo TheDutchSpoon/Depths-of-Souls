@@ -30,6 +30,12 @@ import type {
 } from './effect-types'
 import type { CombatState, Creature } from './types'
 
+/** The claim key (`ResolvedHookEffect.claimKey`) for `def` if it is a `stacks: false` trigger,
+ * else nothing: only those carry one. */
+function claimKeyFor(def: EffectDef, key: string): { claimKey?: string } {
+  return def.category === 'triggered' && def.stacks === false ? { claimKey: key } : {}
+}
+
 /**
  * Resolves a creature's baseline effect list -- innate traits' effects, in
  * trait-then-declaration order, then this side's own `sideEffects` -- WITHOUT instantiating
@@ -61,15 +67,20 @@ export function resolveBaselineEffects(
         `resolveBaselineEffects: unknown trait id "${traitId}" -- not in the trait registry`,
       )
     }
-    for (const def of trait.effects) {
-      entries.push({ def, sourceTraitId: traitId })
-    }
+    trait.effects.forEach((def, index) => {
+      entries.push({
+        def,
+        sourceTraitId: traitId,
+        ...claimKeyFor(def, `trait:${traitId}#${index}`),
+      })
+    })
   }
   // Side effects (perks today; biome/boss effects later)
   // appended AFTER a creature's own innate-trait effects -- the canonical per-creature effect
   // order: innate-1 -> innate-2 -> side effects -> infusions (none yet, `spec/creatures.md#equipment`) -> statuses.
   sideEffects.forEach((def, ordinal) => {
-    entries.push({ def, sourceTraitId: `${sideLabel}-${ordinal}` })
+    const sourceTraitId = `${sideLabel}-${ordinal}`
+    entries.push({ def, sourceTraitId, ...claimKeyFor(def, `side:${sourceTraitId}#0`) })
   })
   return entries
 }
@@ -88,10 +99,10 @@ export function instantiateEffectDefs(
   counter: number,
 ): { effects: ActiveEffect[]; nextCounter: number } {
   let next = counter
-  const effects = entries.map(({ def, sourceTraitId }) => {
+  const effects = entries.map(({ def, sourceTraitId, claimKey }) => {
     const instanceId = createEffectInstanceId(`eff-${next}`)
     next += 1
-    return withInstance(def, instanceId, sourceTraitId)
+    return withInstance(def, instanceId, sourceTraitId, claimKey)
   })
   return { effects, nextCounter: next }
 }
@@ -100,6 +111,7 @@ function withInstance(
   def: EffectDef,
   instanceId: EffectInstanceId,
   sourceTraitId: string,
+  claimKey: string | undefined,
 ): ActiveEffect {
   switch (def.category) {
     case 'stat-modifier':
@@ -107,7 +119,12 @@ function withInstance(
     case 'stat-remap':
       return { ...def, instanceId, sourceTraitId }
     case 'triggered':
-      return { ...def, instanceId, sourceTraitId }
+      return {
+        ...def,
+        instanceId,
+        sourceTraitId,
+        ...(claimKey !== undefined ? { claimKey } : {}),
+      }
     case 'armor-penetration':
       return { ...def, instanceId, sourceTraitId }
     case 'cross-stat':
@@ -181,6 +198,9 @@ export function flatEffects(creature: Creature): readonly FlatEffect[] {
         sourceTraitId: e.statusId,
         statusId: e.statusId,
         sourceInstanceId: e.instanceId,
+        ...(def.category === 'triggered' && def.stacks === false
+          ? { claimKey: `status:${e.statusId}#${index}` }
+          : {}),
       })
     })
   }
@@ -208,8 +228,9 @@ export function effectsForHook(creature: Creature, hook: Hook): ResolvedHookEffe
       observationFilter: e.observationFilter,
       damageChannel: e.damageChannel,
       response: e.response,
-      // The dedup flag (`stacks: false`).
+      // The dedup flag (`stacks: false`) and the key of the definition it claims under.
       nonStacking: e.stacks === false ? true : undefined,
+      claimKey: e.claimKey,
       // Present only when the trigger came out of a status container.
       statusId: e.statusId,
       // The REAL owning instance's id -- a plain trigger's own id, or the
@@ -277,12 +298,14 @@ export function gatherDealtMods(creature: Creature, state: CombatState): number[
   return mods
 }
 
-/** Collapses one `taken`-direction modifier to its
- * single contributed factor, per its `accumulation` mode (`spec/effects.md#taken-reduction-accumulation`). `'multiplicative'` (default/absent): `magnitude ** count`, asymptoting toward
- * 0, never clamped. `'additive'` (Bulwark): the per-unit reduction `(1 - magnitude)` summed ×
- * count, hard-clamped at `reductionCap` (default 1 -- unclamped -- if somehow omitted). The
- * collapsed factor enters the multiplicative `Π(takenFactors)` pool alongside every other source
- * -- additive WITHIN a source, multiplicative ACROSS sources. */
+/** Collapses one `taken`-direction modifier to its single contributed factor, per its
+ * `accumulation` mode (`spec/effects.md#taken-reduction-accumulation`). `'multiplicative'`
+ * (default/absent): `magnitude ** count`, asymptoting toward 0, never clamped. `'additive'` (Bulwark): the per-unit reduction `(1 - magnitude)` summed ×
+ * count, hard-clamped at `reductionCap`, which the load-time check requires of every additive
+ * source (`validateAdditiveTakenCaps`); one without it reached here by a hand-built state, and
+ * throws rather than reading as unclamped. The collapsed factor enters the multiplicative
+ * `Π(takenFactors)` pool alongside every other source -- additive WITHIN a source, multiplicative
+ * ACROSS sources. */
 function takenFactorFor(
   bearer: Creature,
   state: CombatState,
@@ -290,8 +313,13 @@ function takenFactorFor(
 ): number {
   const count = damageModifierCount(bearer, state, e)
   if (e.accumulation === 'additive') {
+    if (e.reductionCap === undefined) {
+      throw new Error(
+        'resolver invariant violated: an additive taken-pool reduction has no reductionCap',
+      )
+    }
     const perUnitReduction = 1 - e.magnitude
-    const totalReduction = Math.min(perUnitReduction * count, e.reductionCap ?? 1)
+    const totalReduction = Math.min(perUnitReduction * count, e.reductionCap)
     return 1 - totalReduction
   }
   return e.magnitude ** count

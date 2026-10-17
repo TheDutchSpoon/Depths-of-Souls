@@ -31,14 +31,7 @@
 // `TakenReductionDef`'s own doc comment (effect-types.ts).
 
 import type { EffectDef } from '../engine/effect-types'
-import {
-  validateNoBreakChanceOutsideStatus,
-  validateNoSnapshotPotencyOutsideStatus,
-  validateNoRandomSelectorInResponseTargets,
-  validateObservationFilters,
-  validateDamageChannels,
-  validateStatModifierConditions,
-} from '../engine/effect-types'
+import { validateEffectList } from '../engine/effect-types'
 import { BRUTE_STARTER, SHIELDBARER_STARTER, SORCERER_STARTER } from './species/starters'
 
 export interface PerkDef {
@@ -68,7 +61,8 @@ export interface DescribedSpecialization extends Omit<Specialization, 'perks'> {
   readonly perks: readonly DescribedPerkDef[]
 }
 
-/** `spec/progression.md#specializations-are-data` stated invariant: a spec is valid iff `Σ(maxLevel × costPerLevel) === 1000`.
+/** `spec/progression.md#specializations-are-data` stated invariant: a spec is valid iff `Σ(maxLevel × costPerLevel) === 1000`,
+ * and every perk's effects, at every level it can be bought at, pass `validateEffectList`.
  * Throws at import time (called at the bottom of this module for all three specs) -- a
  * data-authoring mistake fails fast in tests, never reachable at runtime. */
 export function validateSpecialization(spec: Specialization): void {
@@ -78,21 +72,17 @@ export function validateSpecialization(spec: Specialization): void {
       `specialization invariant violated: ${spec.id}'s perks sum to ${total} points, expected exactly 1000`,
     )
   }
-  // Perks are stat-modifier carriers too (e.g. Arcane Might's "+1%
-  // Intelligence per level") -- run the same load-time validator over every perk's resolved
-  // effects. A level-function's SHAPE (which stat, which condition) is level-invariant by
-  // construction (only the factor magnitude varies with `level`), so level 1 is representative.
-  // Also rejects the intent-only 'random' selector in any
-  // trigger's response target -- perks are triggered-response carriers too.
+  // A perk carries stat-modifiers, triggers and passives like a trait, so it goes through the same
+  // effect-list validator at EVERY level it can be bought at: a level function's output can differ
+  // per level, and a bad one fails here, at import, not when a fight is set up.
   for (const perk of spec.perks) {
-    const effects = typeof perk.effects === 'function' ? perk.effects(1) : perk.effects
-    validateStatModifierConditions(effects)
-    validateNoBreakChanceOutsideStatus(effects)
-    validateNoSnapshotPotencyOutsideStatus(effects)
-    validateNoRandomSelectorInResponseTargets(effects)
-    // A perk is a trigger carrier too.
-    validateObservationFilters(effects, `perk "${perk.id}"`)
-    validateDamageChannels(effects, `perk "${perk.id}"`)
+    for (let level = 1; level <= perk.maxLevel; level++) {
+      validateEffectList(
+        resolvePerkEffects(perk, level),
+        `perk "${perk.id}"`,
+        'permanent',
+      )
+    }
   }
 }
 

@@ -36,11 +36,12 @@ export interface CreatureOverrides {
    * `origin.level` (which keeps defaulting to 1 so XP-reading tests don't move); production keeps
    * the two equal via `materializeCreature`. */
   level?: number
-  /** Defaults to `[]` -- most fixtures pass creatures through `createCombat`,
-   * which ALWAYS recomputes this from `innateTraitIds` (never trusts the input), so an explicit
-   * override is only useful for a test constructing a post-fight-setup `Creature` directly. */
+  /** Defaults to `[]`: `createCombat` computes this from `innateTraitIds` and throws on a
+   * non-empty input, so an explicit override is only for a test building a post-fight-setup
+   * `Creature` directly (never one passed to `createCombat`). */
   baselineEffects?: readonly BaselineEffectEntry[]
-  /** Defaults to `0`, matching `createCombat`'s own always-reset-to-0 rule. */
+  /** Defaults to `0`, the only value `createCombat` accepts; a non-zero one is for a test building
+   * a post-fight-setup `Creature` directly. */
   revivesUsed?: number
 }
 

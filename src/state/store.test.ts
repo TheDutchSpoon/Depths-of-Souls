@@ -34,6 +34,7 @@ import {
   UNICORN,
   UNICORN_SPECIES_ID,
 } from '../data/species/starters'
+import { STOCK_SCRIPTS_BY_ID } from '../data/scripts'
 import { STATUS_REGISTRY } from '../data/statuses'
 import { TRAIT_REGISTRY } from '../data/traits'
 import type { Specialization } from '../data/specializations'
@@ -197,13 +198,17 @@ const ALL_WIN_SEQUENCE = [
   ...spawn(FODDER_ROLL),
 ]
 
+// The scripted intro's fight names the stock role scripts, so the default registry holds them
+// alongside the fixture scripts (the fixture ones win on a shared id).
+const DEFAULT_TEST_SCRIPTS = new Map([...STOCK_SCRIPTS_BY_ID, ...FIXTURE_SCRIPTS_BY_ID])
+
 function makeDeps(overrides: Partial<GameStoreDeps>): Partial<GameStoreDeps> {
   return {
     biomes: [FIXTURE_BIOME],
     specializations: new Map([[FIXTURE_SPEC.id, FIXTURE_SPEC]]),
     standaloneCreatures: [HERO_STANDALONE],
     runSeed: 99,
-    scripts: FIXTURE_SCRIPTS_BY_ID,
+    scripts: DEFAULT_TEST_SCRIPTS,
     balanceConfig: CFG,
     ...overrides,
   }
