@@ -91,9 +91,9 @@ that breaks beyond the list is a stop-and-ask, never a quiet fix.
   is already idempotent, so a repeat kill adds no perk points and `bossFirstCleared` is false. No
   special case.
 - **Simulator:** the `'frontier'` stop and the report's `frontier` field and label go;
-  `stopReason` takes no frontier. The per-floor rows were bounded by the frontier. **ASSUMPTION:**
-  the rows run to the deepest floor any seed of the spec reached (my recommendation); the plan
-  confirms or picks. Repeat Rot Sovereign visits on floors 40+ now enter the attrition rows. That
+  `stopReason` takes no frontier. The per-floor rows were bounded by the frontier; they now run
+  to the deepest floor any seed of the spec ran (`max(run.floor)`), so the floor of a seed's last
+  failed pushes keeps its row. Repeat Rot Sovereign visits on floors 40+ now enter the attrition rows. That
   is accepted, and only the full report shows it. Every seed now runs to `RUN_CAP`; the CI test's
   30-run cap is unaffected.
 
@@ -183,7 +183,9 @@ that breaks beyond the list is a stop-and-ask, never a quiet fix.
   (`conditions.ts` ~141), "the existing implicit behavior" (`effect-types.ts:108`,
   `effects.ts` ~574), "Every existing importer … keeps working unchanged" (`effects.ts` ~351) and
   "src/state's first file" (`store.ts:1`). Each V12 hit is a positive case in `comments.test.ts`,
-  with a near-miss negative beside it. Whether the new patterns also read string literals, as
+  with a near-miss negative beside it, except `traits/glimmerdark.ts`' "made possible by …
+  completing": it gets no pattern, the sweep fixes it by hand, and the report lists it as the one
+  V12 hit the check doesn't catch. Whether the new patterns also read string literals, as
   patterns 1–9 do, is the plan's call (`ASSUMPTION`); a player-facing string can hold "new".
 - **Run the wider check on the pre-sweep tree and inventory every hit.** A hit outside the
   review's list is fixed in the sweep and listed if it is provenance; a false positive narrows the

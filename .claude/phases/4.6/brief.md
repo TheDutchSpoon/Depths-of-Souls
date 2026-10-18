@@ -215,7 +215,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   the Rot Sovereign today; perk points still come from a first kill only); deep floors change
   content when a biome ships (floors are generated from the seed, never stored:
   `spec/saves.md#references-not-copies`); the balance simulator loses its "cleared the frontier"
-  stop and runs to its cap.
+  stop and runs to its cap, and its per-floor rows run to the deepest floor any seed of the spec
+  ran, so the floor holding a seed's last failed pushes keeps its row.
 - The player gem-roll pool (`unlockBiomeIndex`, `store.ts:405-415`) reads the same resolution.
 - Goldens and the corpus are untouched (no corpus fight is past floor 30). Tests that pin the
   frontier change ([B's listed changes](#bs-listed-test-changes)).
@@ -272,11 +273,13 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   (`generation.ts:146-147`).
 - **The simulator** reads the boss-floor rule from `floorShape` (`balance-sim.ts:1544`, `:1551`),
   reads a fight's sides and template ids from its record instead of parsing creature ids
-  (`:502-503`, `:544-552`, `:858`, `:916`), and filters on `ROT_SOVEREIGN_BOSS_ID` (`:1632`).
+  (`:502-503`, `:544-552`, `:858`, `:916`), and filters the attrition rows on the Rot Sovereign
+  creature's own id, `ROT_SOVEREIGN.id`, never a literal (`:1632`).
 - **The demo** is marked throwaway (`CONVENTIONS.md#every-feature-phase-ships-a-demo`) and reads
   the seed bound and the floor reach from the store (`refusals.ts:16`, `:74`). The store exports
-  the farthest reachable floor once; `checkDescend`, the demo's "Deepest + 1" (`floorPicker.ts:16`)
-  and the out-of-reach text read it, and the text names that floor.
+  the farthest reachable floor once; `checkDescend`, the demo's "Deepest + 1" (`floorPicker.ts:16`),
+  the out-of-reach text and the simulator's push (`nextRun`) read it, and the text names that
+  floor.
 - **A status's duration reads in turns** in the demo's log (`eventText.ts:88`, `(3r)`): durations
   count the bearer's turns (`spec/statuses.md#timing`).
 - Byte-identical; the PR review removes `spec/store.md#store-actions`' Known bug line.
@@ -302,6 +305,9 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   sweep, so the sweep runs against the wider check. Each hit of the wider check outside the
   review's list is fixed in the sweep and listed if it is provenance; a hit that isn't narrows the
   pattern instead.
+- One V12 hit gets no pattern: `traits/glimmerdark.ts`' "made possible by conditions.ts completing
+  that condition's non-scripting path". "Made possible by" is ordinary English for a dependency, so
+  the sweep fixes it by hand and the report lists it as the one V12 hit the check doesn't catch.
 
 ### B's listed test changes
 
@@ -314,6 +320,12 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   unchanged (`store-perks.test.ts`, `store-newgame.test.ts`, `store.test.ts`'s perk-point test).
 - The tests that pin the scripted intro's log.
 - The simulator's id-parsing helper's test (`templateIdOf`), which goes with the helper.
+- The simulator's analysis and report tests change their set-up only, assertions unchanged:
+  `analyzeFight`, `stackBucket` and `traitStackMaxima` take the fight's roster instead of reading
+  an id suffix, so their tests pass one, built from opaque ids no suffix parser could read; the
+  `RunRecord` helpers gain the run's floor shape; `bossContext`'s test follows its signature.
+- `perkPointsFor`'s tests (`rewards.test.ts`) pass `TEST_BALANCE_CONFIG`, expectations unchanged.
+  `perkPointsFor` takes the config with no default argument.
 - The demo's duration label and out-of-reach text tests.
 - New tests for every new mechanism, `recordBossKill`'s refusal and `canRecordBossKill` included.
 - Nothing else in an existing test changes; a new guard that breaks one is a stop-and-ask.
