@@ -1,5 +1,39 @@
 # Plan — 4.6-B: Game layer and the comment sweep
 
+## Revision 1: what changed
+
+Folds `plan-handout-r1.md`. A1–A7 and A9–A16 were confirmed as written and are untouched. I re-read
+the edited lines (`phases/4.6/brief.md#the-cave-has-no-content-frontier`,
+`#small-game-layer-fixes`, `#the-comment-sweep`, `#bs-listed-test-changes`; the kickoff's Traps:
+Simulator and comment-check bullets) and checked each item against the current `src/`.
+
+1. **Intro Unicorn tests** (Tests table; A6). The intro makes exactly **two** `createRng` requests,
+   not one: `hashIntroUnicornDraw(runSeed)` (the enemy roll), then `hashGemDraw(runSeed, <the
+   joining Unicorn's ordinal>)` (the grant's `rollPlayerGems`, as on `main`). Checked in
+   `store.ts`: the enemy roll runs before `createCombat`, the grant runs later inside `set(…)`, and
+   `grantCreatureIfUnowned` rolls nothing when the Unicorn is already owned (one request then). The
+   old "three distinct biome-1 Vitality spells" and "a seed table where the sets differ per seed"
+   are replaced by the exact biome-1 proof (the pool is exactly `regrowth`, `wild-vigor`,
+   `life-siphon`; `DEFAULT_GEM_SLOT_COUNT` is 3, so every roll holds all three and only the order
+   varies). A6 now names the second request.
+2. **Existing-test list** (Tests; A18). C1 and C2 are confirmed. The list is now exact, with the
+   hand-out's file/line sites, the `RunRecord` `shape` helpers, the dropped frontier arguments,
+   `perkPointsFor`'s config with no default, and `store-perks.test.ts:109`. Step 1's inventory must
+   equal that list; anything else is a stop-and-ask.
+3. **Floor rows** (`balance-sim.ts`; A1, A8). Both builders run `1..max(run.floor)` and **omit a
+   floor no seed ran** (`buildFloorRows` used to push a row for every floor; it now skips an empty
+   one). A new test feeds `buildSpecReport` a gap (floors 1 and 3 run, 2 not).
+4. **Reach readers and the guard** (A4, A17). `farthestReachableFloor` has four readers, adding the
+   simulator's `nextRun`; the site table gains its row. The raw-source guard strips comments before
+   matching `/deepestFloor\s*\+\s*1\b/`; the marker test (A13) reads comments, so it reads the raw
+   text. New A19 records how the guard strips them.
+5. **Comment check** (`comments.ts`; The sweep). `traits/glimmerdark.ts` ~134–135 ("made possible by
+   conditions.ts completing …") gets no pattern; the sweep fixes it by hand and the report lists it
+   as the one V12 hit the check doesn't catch (before and after). Every other V12 hit stays a
+   positive case with a near-miss negative.
+
+Assumptions: A1, A4, A6, A8, A17, A18 reworded to match; A19 added. None retired. Total 19.
+
 Branch `4.6-b`, off `main` after 4.6-A. Read for this plan: `coding-rules.md`, `CLAUDE.md`,
 `CONVENTIONS.md`, the kickoff, the slice brief, `phases/4.6/brief.md` (the seven sections,
 `#bs-listed-test-changes`, `#sequencing-rules`), `phases/4.6/review.md` (S1, S5, S11, L1, L14, L15,
@@ -11,10 +45,11 @@ the kickoff's list is reached. I read the current `generation.ts`, `store.ts`, `
 `comments.ts`/`names.ts`, and the tests that pin each site. Line numbers below are from the current
 tree.
 
-## Needs a decision before approval
+## Decisions settled in round 1
 
-These are places where the kickoff's rules and the brief's test list pull apart. I plan the smaller
-reading of each; the plan stops at them otherwise.
+C1, C2 and C3 were the places where the kickoff's rules and the brief's test list pulled apart.
+Round 1 settled all three: C1/C2 are listed fallout (A18), and C3 stands as A1 with the
+no-row-for-an-unrun-floor rule. Kept as the record of the reasoning.
 
 - **C1. Removing the simulator's id parsing changes tests the list doesn't name.** The list names
   `templateIdOf`'s test. But `analyzeFight`'s hand-built-event tests (`balance-sim.test.ts` ~625,
@@ -37,7 +72,7 @@ reading of each; the plan stops at them otherwise.
 
 **Byte-identical.** Every golden's expected values and the corpus digest fixture are unchanged; the
 digest runs in the default suite and I never run `corpus:update`. Existing tests change only where
-`#bs-listed-test-changes` lists (plus C1/C2 if approved). The one behaviour change an existing test
+`#bs-listed-test-changes` lists (C1/C2 are on that list). The one behaviour change an existing test
 may see is the intro fight's own log, and only where the enemy Unicorn's *attack* is locked: its
 script is `striker` (`UNICORN.defaultScriptId`), whose first rule is the attack and whose
 `CAST_RANDOM_GEM` is the fallback, so gems matter only on a turn the attack is illegal (Pacified).
@@ -49,7 +84,10 @@ Every state after the intro is byte-identical. Anything beyond the list is a sto
    `npx tsc -b`, and log the new failures; attribute by the delta between runs. Order: frontier →
    store guard → reach export → intro Unicorn → `recordBossKill` → numbers → small fixes. When all
    are in, the log is the **inventory of existing tests the slice changed**, each matched to a
-   `#bs-listed-test-changes` entry (or C1/C2). A failure that matches none: stop and ask.
+   `#bs-listed-test-changes` entry. The inventory must match the list under Tests exactly (that
+   list plus nothing); a failure that matches no entry is a stop-and-ask. Type errors from `tsc -b`
+   are logged the same way as test failures (the `RunRecord` helpers and the changed signatures
+   surface there first).
 2. Adjust those tests, then write the new tests.
 3. **Descriptions** (own change, so it can be its own commit before the sweep touches the data
    files).
@@ -105,7 +143,8 @@ Every state after the intro is byte-identical. Anything beyond the list is a sto
 ### `src/state/store.ts`
 - **Imports/exports:** drop `contentFrontier`, `FLOORS_PER_BIOME`; add `LAST_FIXED_FLOOR`.
   `export function farthestReachableFloor(deepestFloor: number): number { return deepestFloor + 1 }`
-  — the one home of the reach rule (**A4**: name).
+  — the one home of the reach rule (**A4**: name). Four readers: `checkDescend`, the demo's "Deepest
+  + 1" button and the out-of-reach text (both in `RunScreen.tsx`), and the simulator's `nextRun`.
 - `DescendFailureReason` = `'no-spec' | 'empty-party' | 'floor-out-of-reach'`. `checkDescend`:
   no-spec, empty-party, then `!Number.isInteger(floor) || floor < 1 || floor >
   farthestReachableFloor(state.deepestFloor)` → `floor-out-of-reach` (`1e20`, `Infinity`, `NaN`
@@ -133,8 +172,11 @@ Every state after the intro is byte-identical. Anything beyond the list is a sto
   `hashIntroUnicornDraw(runSeed)` has its own constants, shaped like `hashGemDraw` with a fixed
   salt in place of the ordinal, and shares none with `hashRunDraw`/`hashGemDraw`/`hashFloorDraw`.
   `runCounter` still advances by exactly 1; no other state is touched. **A6:** the stream is that
-  hash of the run seed alone (no ordinal, no counter). The Unicorn that joins keeps its own stored
-  `rollPlayerGems` set, as today. Comment on `runScriptedIntro` and `GameActions.runScriptedIntro`
+  hash of the run seed alone (no ordinal, no counter). The enemy roll is made before `createCombat`.
+  The Unicorn that joins keeps its own stored `rollPlayerGems` set, rolled inside the later `set(…)`
+  from `hashGemDraw(runSeed, <the joining ordinal>)` as on `main`, and not at all when the Unicorn
+  is already owned. So the intro makes exactly two `createRng` requests (one when it is owned), in
+  that order. Comment on `runScriptedIntro` and `GameActions.runScriptedIntro`
   updated (scaffolding until `spec/creatures.md#gems-as-items`).
 - `floorPreview` doc comment loses "beyond the content frontier".
 - Seed text (V4) lives in `refusals.ts`; `MAX_RUN_SEED` is already exported.
@@ -144,15 +186,21 @@ Every state after the intro is byte-identical. Anything beyond the list is a sto
   `contentFrontier`; `BalanceReport.frontier` and its header label go; `formatSpec` loses its
   `frontier` parameter ("Floors 20–<deepest>" takes the spec's last row). `t4.stopReasons` stays as
   `{ cap }`. **A7:** keep the always-`cap` field rather than widen the edit.
-- **Rows:** `buildFloorRows(results, config)` and `buildFirstTryRows(results)` run `1..max(run.floor)`
-  over the spec's seeds (A1). `RunRecord` gains `shape: { boss: boolean; fights: number }`, read in
-  `playFloorRun` from the store's own `floorPreview(floor)` before the descent (so the pins and
-  the seed are the store's, and the rule is `floorShape`'s). A row's `fightsPerFloor` is
-  `shape.boss ? 1 : fightCount`… read straight from the first run on that floor in seed order
-  (`shape.fights`), and its `bossLevel` is `bossLevel(floor, config)` iff that run's `shape.boss`.
-  Past `LAST_FIXED_FLOOR` the biome is per seed, so seeds can disagree only if the authored biomes
-  disagree on having a boss; the row then follows the first seed. **A8.** `isBossFloor` and
-  `biomeForFloor` imports go from this file.
+- **Rows:** `buildFloorRows(results, config)` and `buildFirstTryRows(results)` run over floors
+  `1..max(run.floor)` across the spec's seeds: the deepest floor any seed *ran*, not the deepest
+  any seed cleared (A1). **A floor that no seed ran has no row, in both builders**:
+  `buildFirstTryRows` already skips it (`seeds > 0`); `buildFloorRows` today pushes a row for every
+  floor in range, so it gains the same skip (`runs.length === 0` → no row). `RunRecord` gains
+  `shape: { boss: boolean; fights: number }`, read in `playFloorRun` from the store's own
+  `floorPreview(floor)` before the descent (so the pins and the seed are the store's, and the rule
+  is `floorShape`'s). A row's `fightsPerFloor` and `bossLevel` come from the **first run on that
+  floor in seed order**: `fightsPerFloor` = `shape.fights`, `bossLevel` = `bossLevel(floor, config)`
+  iff that run's `shape.boss`, else null. Past `LAST_FIXED_FLOOR` the biome is per seed, so seeds
+  can disagree only if the authored biomes disagree on having a boss; the row then follows the
+  first seed. **A8.** `isBossFloor` and `biomeForFloor` imports go from this file.
+- **`nextRun`** pushes to `farthestReachableFloor(progress.deepestFloor)` (imported from
+  `store.ts`, which this file already depends on), the fourth reader of the reach rule; the header
+  comment at ~16–18 that names `deepestFloor + 1` is reworded to name the export.
 - **Ids from the record (V1).** `FightContext` keeps its fields but they are filled from the
   fight's record, never built by hand: `unicornId` = the id of the `playerParty` creature whose
   `origin.templateId === UNICORN.id`; `bossId`/`bossTemplateId` = `enemyParty[0]`'s `id` /
@@ -230,6 +278,13 @@ and to the tree as grepped today (the inventory run decides the final regexes):
 | 26 | file position | `/'s first file\b/` | "src/state's first file" (`store.ts:1`) | "the first file in the list" |
 | 27 | the new code span | ``/\b[Tt]he new `/`` | "the new `all-allies`" (`starters.ts:59`, `overgrowth.ts:124`, `golden-shieldbarer-starter.fixture.ts:3`) | "the new maximum", "the new host" |
 
+**No pattern 28.** `traits/glimmerdark.ts` ~134–135 ("made possible by conditions.ts completing
+that condition's non-scripting path") is the one V12 hit with no pattern: "made possible by" is
+ordinary English for a dependency. The widened check does not catch it; the sweep rewrites it by
+hand (comment only), and the report lists it as the one V12 hit the check doesn't catch, with
+before and after. `evidence/comment-check-hits.md` carries it in a separate line ("in the review's
+list, not caught by the check"). Every other V12 hit (rows 21–27 cover them) is a positive case.
+
 Each row gets a positive and a negative in `comments.test.ts`'s table (the test runs both as a
 comment and as a title). One more test pins that a *string literal* holding "the new `x`" is not a
 problem (A15). The unsure one is 21: a bare `legacy` also matches `rng.ts`/`spell-effects.test.ts`
@@ -240,7 +295,8 @@ wording that is an API or oracle name, not history; the inventory run shows whic
 golden fixture are comment-only edits and listed per file for `comment-proof`.
 
 ### The sweep (after PAUSE 1)
-Comments only. Locate each V12 hit and M1–M17 item on the current tree by its quoted text; fix it;
+Comments only. The glimmerdark "made possible by" comment is fixed here by hand (no pattern covers
+it). Locate each V12 hit and M1–M17 item on the current tree by its quoted text; fix it;
 report "fixed" (before → after) or "already gone" (current text). Already known: M9 and M17's
 phrases are rewritten/gone (kickoff); M3 is not in the sweep (above); M4 (`config.ts:27`) and the
 data-file lines (`traits/glimmerdark.ts` ~134–135, `traits/overgrowth.ts` ~124,
@@ -249,21 +305,42 @@ commit Duncan makes at PAUSE 1.
 
 ## Tests (each fails with its mechanism removed, at every site)
 
-Existing-test changes follow the inventory (list in the report). Expected from the code read:
+The **existing-test list** below is the exact set the step-1 inventory must equal (nothing more,
+nothing less; any other failure is a stop-and-ask). Every item changes set-up or a listed
+expectation only; no expected value of a golden or a behaviour assertion changes.
 - frontier tests (`store.test.ts` ~587–651, `generation.test.ts` `contentFrontier` block,
   `generation-floor-shape.test.ts`, `integration.test.ts` ~356, `balance-sim.test.ts` ~146/~305–320/
   ~846, `balance-sim-report.test.ts` ~249, `presence.test.ts` ~44–52, `floorPicker.test.ts` ~62,
   `refusals.test.ts` ~26);
+- **the frontier argument goes** from every `buildSpecReport(…, 30, …)` call
+  (`balance-sim-report.test.ts` ~328, ~376, ~465, ~492; `balance-sim.test.ts` ~823) and from
+  `formatReport({ …, frontier: 30 })` (`balance-sim-report.test.ts` ~377, ~501;
+  `balance-sim.test.ts` ~1008);
 - `FIXTURE_BIOME_SEQUENCE` gains content: each slot's `speciesPool` = `[FIXTURE_SPECIES_BRAWLERS]`;
   its comment is reworded; `generation.test.ts`'s sequence tests keep their assertions;
-- boss-recording tests record a real id: `store-perks.test.ts` helper, `store-newgame.test.ts:57`,
-  `store.test.ts` ~859–861 (two ids → `makeDeps({ biomes: BIOMES })`), assertions unchanged;
-  `'broodmother'` recorded on the default store stays;
+- boss-recording tests record a real id: the `store-perks.test.ts` helper (`bruteStore`, line 12),
+  **`store-perks.test.ts:109`** (the inert-perk test records `'boss-0'` outside `bruteStore`; it
+  records a real boss id, as the helper will), `store-newgame.test.ts:57`, `store.test.ts`
+  ~859–861 (two ids → `makeDeps({ biomes: BIOMES })`), assertions unchanged; `'broodmother'`
+  recorded on the default store stays;
 - intro log tests: `store.test.ts` intro block, `integration.test.ts`, per the inventory;
 - `templateIdOf` test, the `(3r)` expectation in `eventText.test.ts:67`, the `descendRefusalText`
   call sites (`refusals.test.ts:59` **by hand**: `reasons.map((reason) => descendRefusalText(reason,
   5))`, since passing the function to `map` would feed the array index as the floor and still
-  type-check), `deepestPlusOne`'s test, `perkPointsFor` tests (C2), analysis tests (C1).
+  type-check), `deepestPlusOne`'s test;
+- **`perkPointsFor(bossesCleared, config)`** takes its config with no default argument: its three
+  cases (`rewards.test.ts` ~218) pass `TEST_BALANCE_CONFIG`, expectations unchanged (C2);
+- **the roster-taking analysis functions (C1).** `analyzeFight`, `stackBucket` and
+  `traitStackMaxima` take the fight's roster `{ playerParty, enemyParty }` instead of reading an id
+  suffix. Their tests pass a roster built by a small helper (`rosterOf(playerIds, enemyIds)`, in a
+  new `src/state/__fixtures__/roster.ts`, **A18**) from opaque ids (`'a1'`, `'b2'`) that no suffix
+  parser could read:
+  - `balance-sim.test.ts` ~625 and the hand-built-event block ~1064–1260;
+  - `balance-sim-report.test.ts` ~129 (the matchup roster) and `traitStackMaxima`'s tests ~267 and
+    ~290 (through `foldTraitStacks`);
+  - `bossContext`'s test (`balance-sim.test.ts` ~1378) follows the new signature;
+- **`RunRecord` gains `shape`**, so its helpers gain it: `run` (`balance-sim-report.test.ts:37`,
+  `balance-sim.test.ts:813`) and `runWith` (`balance-sim-report.test.ts` ~391).
 
 New tests, mechanism by mechanism:
 
@@ -277,16 +354,18 @@ New tests, mechanism by mechanism:
 | `unlockBiomeIndex` | one-biome list, deepest 25 → pool of biome 1; real store deepest 150 → the same pool as deepest 100 over a seed table (the pool stops growing at `LAST_FIXED_FLOOR`) | cap removed (the pool follows the drawn biome and shrinks) |
 | Store guard | `createGameStore({ biomes: [] })` and `{ biomes: [EMPTY, A] }` throw; `[A, EMPTY]` builds | guard removed |
 | `checkDescend` | `canDescend(31)` ok at deepest 30; 32 refused; `1e20`, `Infinity`, `NaN`, 0, 2.5, −3 → `floor-out-of-reach`; the reasons record in `refusals.test.ts` has exactly three keys | a frontier or a wrong reach |
-| Reach export, **each reader** | `checkDescend` boundary (deepest+1 ok, deepest+2 refused); `descendRefusalText('floor-out-of-reach', 13)` names 13 and differs from the text for 5; `RunScreen` source calls `farthestReachableFloor` — a raw-source guard test (`import.meta.glob('…', { query: '?raw' })`) asserts `deepestFloor + 1` appears in no non-test `src` file except the export (**A17**) | a reader restates the rule |
+| Reach export, **each reader** (four) | `checkDescend`: boundary (deepest+1 ok, deepest+2 refused); out-of-reach text: `descendRefusalText('floor-out-of-reach', 13)` names 13 and differs from the text for 5; the demo's "Deepest + 1" and its text argument: `RunScreen.tsx` read through the guard's comment-stripped source calls `farthestReachableFloor(game.deepestFloor)` in both places; the simulator's `nextRun`: after a clear (`lastRunFailedPush` false) the push floor equals `farthestReachableFloor(deepestFloor)` over a table of deepest floors (0, 1, 12, 99, 150), so changing the export moves `nextRun` too (A4) | a reader restates or miscomputes the rule |
+| Reach export, the guard (`src/state/reach-readers.test.ts`, new) | a raw-source guard (`import.meta.glob('/src/**/*.{ts,tsx}', { query: '?raw', eager: true })`, test files excluded) **strips comments first** (A19) and matches `/deepestFloor\s*\+\s*1\b/`: it allows the one export in `store.ts` and fails on any other non-test `src` file. A negative case feeds it a code line and a comment line and fails only on the code line, so a comment that names the rule passes (A17). The A13 marker test is a separate test over the **raw** text, comments included | a reader restates the rule in code, or the guard reads comments |
 | `floorPreview` never throws | one-biome list: 1, 25, 100, 101, `1e20`; gap list; `null` cases kept | the fallback is removed |
-| Intro Unicorn | three distinct biome-1 Vitality spells; same seed → same set; the set ignores `runCounter` (set to 7 first); a seed table where the sets differ per seed; `createRng` spy sees exactly one request during the intro; a **Pacified** intro Unicorn casts instead of waiting (fixture hero holds Pacify, fast; assert a `SpellCast` by the Unicorn after its `StatusApplied`) | the roll uses `rollPlayerGems`/the counter, or no gems |
+| Intro Unicorn | **RNG requests (A6):** a first intro makes exactly two `createRng` calls, in this order: `hashIntroUnicornDraw(runSeed)` (the enemy roll), then `hashGemDraw(runSeed, <the joining Unicorn's ordinal, `nextInstanceOrdinal` before the intro>)` (the grant's stored set); the test asserts both seeds in that order and that they differ. With the Unicorn already owned: exactly one call, the enemy roll. **Biome 1, proven exactly:** biome 1's Vitality pool is exactly `regrowth`, `wild-vigor`, `life-siphon` and the roll has 3 slots, so over a table of at least 20 run seeds the enemy Unicorn's set is exactly those three (a biome-2 or biome-3 roll would add `afterglow` or `charnel-feast` on most seeds); the ordered slots differ between at least two seeds of the table; the same seed gives the same ordered slots with `runCounter` set to 7 before the intro. A **Pacified** intro Unicorn casts instead of waiting (fixture hero holds Pacify, fast; assert a `SpellCast` by the Unicorn after its `StatusApplied`) | the roll uses `rollPlayerGems`/the counter, a deeper biome's pool, an ordinal-coupled stream, or no gems; or the request count or order changes |
 | `recordBossKill` | unknown id refused, state *reference* and perk points unchanged; known id records; repeat is `ok` and the reference is unchanged; `canRecordBossKill` equals the action's result in all three cases, and for an injected biome list that holds a different boss than `BOSS_CREATURES_BY_ID` | check removed, or it reads the global map |
 | Config reads | store: with `perkPointsPerBoss: 50` the summary's `earned`, `over-budget` and `perkPointsGained` follow it; simulator: `applyPerkPlan` on a 50-config store buys within 50; specialization total: `specializationPointTotal` of 50 → 500 and a 500-point spec validates under it only; defaults pin `perkPointsPerBoss` = 100, `STAT_GROWTH_PER_LEVEL` = 0.25, derived total 1000 | a literal returns |
 | Zero fights | `initialPlayback(0)` is `done`; every action on `[]` returns without throwing and without a `NaN`/`undefined` `revealed` (`skip-floor` included); the viewer renders `<DescentViewer>` with zero records through `react-dom/server`'s `renderToString` (no testing library in the repo) and shows the no-fight text | the reducer or the viewer indexes `[last]`/`[0]` |
 | Simulator ids | analysis tests use opaque ids (`'a1'`, `'b2'`) so any suffix parse fails; rows: a run whose `shape` is `{ boss: false, fights: 17 }` on floor 10 gives `fightsPerFloor` 17 and `bossLevel` null; `bossContext` returns null when the preview says `boss: false` on a ×10 floor | a regex, `templateIdOf` or `isBossFloor` returns |
+| Floor rows (`balance-sim-report.test.ts`) | `buildSpecReport` fed hand-built results with a gap (floors 1 and 3 run, floor 2 not) has rows for 1 and 3 and **no floor-2 row**, in both the floor rows and the first-try rows; the last row is `max(run.floor)`, a floor holding only a seed's failed push keeps its row; `fightsPerFloor`/`bossLevel` follow the first run on the floor in seed order (two seeds with different `shape`s) | the bound is the deepest cleared, a row is pushed for an unrun floor, or the shape is read from another seed |
 | Rot Sovereign filter | a visit with `bossTemplateId: ROT_SOVEREIGN.id` is in the attrition rows, another template is not | the filter is dropped (it cannot tell the two id domains apart today: noted, not a gap I can close) |
 | Seed text, `(3r)`, marker | `seedRefusalText('seed-out-of-range')` equals the literal string `main` has; `(1 turn)`/`(3 turns)`; the raw-glob test requires the marker citation in every demo module | each is reverted |
-| Comment check | the table above, per pattern, as comment and as title | a pattern is removed or loosened |
+| Comment check | the table above, per pattern, as comment and as title, each real V12 hit a positive with a near-miss negative beside it; `traits/glimmerdark.ts`' "made possible by … completing" has **no** pattern (so no test): the sweep fixes it by hand | a pattern is removed or loosened |
 
 Also: the grep checks the kickoff asks for (`contentFrontier`, `beyond-content-frontier`, the
 listed literals, `templateIdOf`, the id regexes, `(3r)`) run in the report with their output.
@@ -332,22 +411,27 @@ deleted by me; renames: none.
 ## Assumptions checklist
 
 - [ ] **A1.** Floor rows and first-try rows run to the deepest floor any seed *ran* (`max run.floor`),
-      not the deepest cleared (C3).
+      not the deepest cleared (C3); a floor no seed ran has no row in either builder (r1).
 - [ ] **A2.** `biomeForFloor` accepts any list; only "nothing authored at or before the decade" (or
       nothing authored past 100) throws.
 - [ ] **A3.** The config field is `perkPointsPerBoss`; `STAT_GROWTH_PER_LEVEL` lives in
       `engine/config.ts`; `specializationPointTotal(config)` and `validateSpecialization(spec,
       config = DEFAULT_BALANCE_CONFIG)` carry the 1000.
-- [ ] **A4.** The reach export is `farthestReachableFloor(deepestFloor)` in `store.ts`;
-      `deepestPlusOne` is deleted, not kept as a delegate.
+- [ ] **A4.** The reach export is `farthestReachableFloor(deepestFloor)` in `store.ts`, read by
+      `checkDescend`, the demo's "Deepest + 1", the out-of-reach text and the simulator's `nextRun`;
+      `deepestPlusOne` is deleted, not kept as a delegate. It has four readers (`checkDescend`, the
+  demo's "Deepest + 1", the out-of-reach text, the simulator's `nextRun`).
 - [ ] **A5.** `recordBossKill` returns `{ ok: true } | { ok: false; reason: 'unknown-boss' }` (the
       `pinBiome` shape) and `canRecordBossKill` returns the same; a repeat of a known boss is `ok`
       with no `set`.
 - [ ] **A6.** The intro Unicorn's stream is a hash of the run seed alone with its own constants and a
-      fixed salt; the biome is the number 1.
+      fixed salt; the biome is the number 1. A first intro makes exactly two `createRng` requests
+      (the enemy roll, then the joining Unicorn's `hashGemDraw(runSeed, ordinal)`), one when the
+      Unicorn is already owned.
 - [ ] **A7.** `StopReason` stays as the one-member `'cap'` and `t4.stopReasons` as `{ cap }`.
-- [ ] **A8.** A report row past `LAST_FIXED_FLOOR` takes `fightsPerFloor`/`bossLevel` from the first
-      seed's run shape, read from the store's `floorPreview`.
+- [ ] **A8.** A report row takes `fightsPerFloor`/`bossLevel` from the first run on that floor in seed
+      order (its `shape`, read from the store's `floorPreview`); past `LAST_FIXED_FLOOR` that is the
+      first seed's.
 - [ ] **A9.** `applyPerkPlan` reads `perkPointSummary().earned` (no new parameter).
 - [ ] **A10.** The Rot Sovereign filter compares `bossTemplateId` with `ROT_SOVEREIGN.id`.
 - [ ] **A11.** Out-of-reach text: "…enter a whole number from 1 to N, one past the deepest floor
@@ -365,6 +449,12 @@ deleted by me; renames: none.
       is a certain win, else a fixture boss store; the floor-35/40 resolution assertions stay on the
       real store either way.
 - [ ] **A17.** A raw-source test (`import.meta.glob` with `?raw`) is acceptable as the "no reader
-      restates the reach rule" proof, and likewise for the marker.
-- [ ] **A18.** C1/C2: the test set-up changes described above count as direct fallout of the listed
-      mechanisms; assertions never change.
+      restates the reach rule" proof: it reads code only (comments stripped) and allows the one
+      export; the marker test reads the raw text, comments included.
+- [ ] **A18.** C1/C2: the test set-up changes in the existing-test list count as direct fallout of
+      the listed mechanisms; assertions never change. The roster helper (`rosterOf(playerIds,
+      enemyIds)`) lives in a new `src/state/__fixtures__/roster.ts`, shared by the two analysis test
+      files.
+- [ ] **A19.** (r1) The reach guard strips comments with `ts.transpileModule(source, { compilerOptions:
+      { removeComments: true, … } })` (the `typescript` dev dependency, no hand-rolled stripper that
+      a `//` in a string could fool) and lives in `src/state/reach-readers.test.ts`.
