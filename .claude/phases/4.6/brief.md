@@ -25,7 +25,7 @@ guess.
 | Slice | Contents | Golden policy |
 | --- | --- | --- |
 | **4.6-A** | Engine hardening: [fight setup checks its input](#fight-setup-checks-its-input), [the load-time checks close their gaps](#the-load-time-checks-close-their-gaps), [no living creature at 0 HP](#no-living-creature-at-0-hp), [a zero count is a no-op for every response](#a-zero-count-is-a-no-op-for-every-response), [small engine fixes](#small-engine-fixes), [the snapshot lock covers Maps and Sets](#the-snapshot-lock-covers-maps-and-sets) | Byte-identical, two listed exceptions: `golden-round-end-interaction` gains one `TriggerFired` ([the load-time checks](#the-load-time-checks-close-their-gaps)); three goldens move a non-fresh creature's state into their `setup` step, expected values unchanged ([fight setup](#fight-setup-checks-its-input)) |
-| **4.6-B** | Game layer and clean-up: [the cave has no content frontier](#the-cave-has-no-content-frontier), [the intro's Unicorn rolls its spells](#the-intros-unicorn-rolls-its-spells), [`recordBossKill` refuses an unknown boss](#recordbosskill-refuses-an-unknown-boss), [numbers out of the logic](#numbers-out-of-the-logic), [small game-layer fixes](#small-game-layer-fixes), [descriptions follow their entries](#descriptions-follow-their-entries); [the comment sweep](#the-comment-sweep) as the last commit | Goldens and the corpus digest byte-identical; store, demo and simulator tests change only where listed ([B's listed changes](#bs-listed-test-changes)) |
+| **4.6-B** | Game layer and clean-up: [the cave has no content frontier](#the-cave-has-no-content-frontier), [the intro's Unicorn rolls its spells](#the-intros-unicorn-rolls-its-spells), [`recordBossKill` refuses an unknown boss](#recordbosskill-refuses-an-unknown-boss), [numbers out of the logic](#numbers-out-of-the-logic), [small game-layer fixes](#small-game-layer-fixes), [descriptions follow their entries](#descriptions-follow-their-entries); [the comment sweep](#the-comment-sweep) as the last commit | Goldens and the corpus digest byte-identical; existing tests change only where listed ([B's listed changes](#bs-listed-test-changes)) |
 | **4.6-C** | When things happen: [action hooks fire after the action](#action-hooks-fire-after-the-action), [the fight ends at the wipe](#the-fight-ends-at-the-wipe) | Deliberate, listed, each changed golden and corpus row attributed to one of the two; CI balance verdicts re-checked |
 | **4.6-D** | Rule fixes: [Splashing follows the hit](#splashing-follows-the-hit), [a revive resets the Defend count](#a-revive-resets-the-defend-count), [a trait's damage is neither an attack nor a cast](#a-traits-damage-is-neither-an-attack-nor-a-cast), [granted Defends are real Defends](#granted-defends-are-real-defends), [a fight-start Health raise raises current HP](#a-fight-start-health-raise-raises-current-hp), [Stun and Sleep skip the whole turn](#stun-and-sleep-skip-the-whole-turn) | Deliberate, listed, each change attributed to its fix; CI balance verdicts re-checked |
 | **4.6-E** | Content: [the Cinderlord needs a Burning victim](#the-cinderlord-needs-a-burning-victim), [two payoffs become strikers](#two-payoffs-become-strikers), [three renames](#three-renames) | Deliberate content change; the id renames in their own commit; CI balance verdicts re-checked |
@@ -202,6 +202,12 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   sequence. Today floors 31 and deeper are Rotcap Hollow; authoring biome 4 moves floors 31–40 to
   it. Past floor 100, the seeded draw picks among authored biomes only. Pins are unchanged: only an
   authored biome can be pinned.
+- **`biomeForFloor` is its one home**, so `descend`, `floorPreview`, the player gem-roll pool and
+  the simulator read one answer. A decade with no entry in the biome list counts as a biome with no
+  content.
+- **Biome 1 always has content:** `createGameStore` throws on a biome list whose first biome has
+  none, so every floor has an authored biome to fall back to, and `floorPreview` never throws on a
+  store that exists.
 - So there is **no content frontier**: `contentFrontier`, the `beyond-content-frontier` refusal
   and its demo text go. The floor picker accepts any floor up to one past the deepest cleared. The
   cave descends endlessly, as `spec/run.md#the-cave` says.
@@ -211,8 +217,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   `spec/saves.md#references-not-copies`); the balance simulator loses its "cleared the frontier"
   stop and runs to its cap.
 - The player gem-roll pool (`unlockBiomeIndex`, `store.ts:405-415`) reads the same resolution.
-- Goldens and the corpus are untouched (no corpus fight is past floor 30). Store, demo and
-  simulator tests that pin the refusal change ([B's listed changes](#bs-listed-test-changes)).
+- Goldens and the corpus are untouched (no corpus fight is past floor 30). Tests that pin the
+  frontier change ([B's listed changes](#bs-listed-test-changes)).
 - The PR review rewrites `spec/run.md#content-frontier`, `#biomes`, `#biomeforfloor`,
   `#content-frontier-and-pins` and `#pins`, `spec/store.md#how-store-actions-fail` and
   `OPEN_QUESTIONS.md` where they mention the frontier.
@@ -222,7 +228,9 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 *(4.6-B; S5, Q16)*
 
 - The scripted intro's enemy Unicorn rolls a full gem set like every enemy
-  (`spec/run.md#enemy-script-and-gem-set`); today it has none (`store.ts:1027-1032`).
+  (`spec/run.md#enemy-script-and-gem-set`); today it has none (`store.ts:1027-1032`). It rolls by
+  the enemy rule from **biome 1's** unlocked spells: the intro is a fixed level-1 fight before any
+  descent, so its set depends on the run seed alone.
 - The roll draws from **its own stream derived from the run seed**, never from `runCounter`, so
   every descent after the intro stays byte-identical; only the intro fight's own log changes. The
   Unicorn that joins the party keeps rolling its own stored set, as today.
@@ -248,8 +256,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 - **Perk points per boss** is a `BalanceConfig` number (`rewards.ts:121`), and the 1000-point
   specialization total is derived from it (`specializations.ts:75-78`).
-- **The 0.25 stat growth per level** (`leveling.ts:13`) goes beside the XP curve in
-  `BalanceConfig`, or into `engine/config.ts` if the config doesn't reach `scaleStatsToLevel`.
+- **The 0.25 stat growth per level** (`leveling.ts:13`) goes into `engine/config.ts`: the config
+  doesn't reach `scaleStatsToLevel` (`materializeCreature` takes none).
 - **`LAST_FIXED_FLOOR`** (`BIOME_COUNT × FLOORS_PER_BIOME`) replaces the literal 100s
   (`generation.ts:143`, `store.ts:411`).
 - Values unchanged, so byte-identical.
@@ -266,7 +274,11 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   reads a fight's sides and template ids from its record instead of parsing creature ids
   (`:502-503`, `:544-552`, `:858`, `:916`), and filters on `ROT_SOVEREIGN_BOSS_ID` (`:1632`).
 - **The demo** is marked throwaway (`CONVENTIONS.md#every-feature-phase-ships-a-demo`) and reads
-  the seed bound and the floor-reach rule from the store (`refusals.ts:16`, `:74`).
+  the seed bound and the floor reach from the store (`refusals.ts:16`, `:74`). The store exports
+  the farthest reachable floor once; `checkDescend`, the demo's "Deepest + 1" (`floorPicker.ts:16`)
+  and the out-of-reach text read it, and the text names that floor.
+- **A status's duration reads in turns** in the demo's log (`eventText.ts:88`, `(3r)`): durations
+  count the bearer's turns (`spec/statuses.md#timing`).
 - Byte-identical; the PR review removes `spec/store.md#store-actions`' Known bug line.
 
 ### Descriptions follow their entries
@@ -283,17 +295,28 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 *(4.6-B; V12, M1–M17)*
 
 - B's last commit fixes the false, stale and provenance comments the review lists, and nothing
-  else: `npm run docs:check -- comment-proof <the commit before it>` passes.
+  else: `npm run docs:check -- comment-proof <the commit before it>` passes. M3 is a string
+  literal, so it is a [small game-layer fix](#small-game-layer-fixes), not part of the sweep.
 - The comment check's patterns widen to catch the provenance the review found by hand ("legacy
   path", "moved here from", "the new `X`", "the first real consumer"), in a commit before the
-  sweep, so the sweep runs against the wider check.
+  sweep, so the sweep runs against the wider check. Each hit of the wider check outside the
+  review's list is fixed in the sweep and listed if it is provenance; a hit that isn't narrows the
+  pattern instead.
 
 ### B's listed test changes
 
-- The `beyond-content-frontier` refusal's store, demo and simulator tests.
+- Every test that pins the frontier, in any tier: `contentFrontier`, the
+  `beyond-content-frontier` refusal and its text, the simulator's `'frontier'` stop and its report
+  rows bounded by the frontier.
+- `FIXTURE_BIOME_SEQUENCE` (`__fixtures__/biomes.ts`) gains content, so `biomeForFloor`'s sequence
+  tests keep their assertions.
+- A test that records a boss its store's biomes don't hold records a real one instead, assertions
+  unchanged (`store-perks.test.ts`, `store-newgame.test.ts`, `store.test.ts`'s perk-point test).
 - The tests that pin the scripted intro's log.
-- New tests for `recordBossKill`'s refusal and `canRecordBossKill`.
-- Nothing else in an existing test changes.
+- The simulator's id-parsing helper's test (`templateIdOf`), which goes with the helper.
+- The demo's duration label and out-of-reach text tests.
+- New tests for every new mechanism, `recordBossKill`'s refusal and `canRecordBossKill` included.
+- Nothing else in an existing test changes; a new guard that breaks one is a stop-and-ask.
 
 ### Action hooks fire after the action
 

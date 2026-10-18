@@ -1,7 +1,7 @@
 # 4.6-B — Game layer and the comment sweep
 
 Phase brief: `.claude/phases/4.6/brief.md`. Golden policy: goldens and the corpus digest
-**byte-identical**; store, demo and simulator tests change only where
+**byte-identical**; existing tests change only where
 `phases/4.6/brief.md#bs-listed-test-changes` lists. The comment sweep is the last commit, proven
 comment-only.
 
