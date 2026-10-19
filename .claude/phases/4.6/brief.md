@@ -28,7 +28,7 @@ guess.
 | **4.6-B** | Game layer and clean-up: [the cave has no content frontier](#the-cave-has-no-content-frontier), [the intro's Unicorn rolls its spells](#the-intros-unicorn-rolls-its-spells), [`recordBossKill` refuses an unknown boss](#recordbosskill-refuses-an-unknown-boss), [numbers out of the logic](#numbers-out-of-the-logic), [small game-layer fixes](#small-game-layer-fixes), [descriptions follow their entries](#descriptions-follow-their-entries); [the comment sweep](#the-comment-sweep) as the last commit | Goldens and the corpus digest byte-identical; existing tests change only where listed ([B's listed changes](#bs-listed-test-changes)) |
 | **4.6-C** | When things happen: [action hooks fire after the action](#action-hooks-fire-after-the-action), [the fight ends at the wipe](#the-fight-ends-at-the-wipe) | Deliberate, listed, each changed golden and corpus row attributed to one of the two; CI balance verdicts re-checked |
 | **4.6-D** | Rule fixes: [Splashing follows the hit](#splashing-follows-the-hit), [a revive resets the Defend count](#a-revive-resets-the-defend-count), [a trait's damage is neither an attack nor a cast](#a-traits-damage-is-neither-an-attack-nor-a-cast), [granted Defends are real Defends](#granted-defends-are-real-defends), [a fight-start Health raise raises current HP](#a-fight-start-health-raise-raises-current-hp), [Stun and Sleep skip the whole turn](#stun-and-sleep-skip-the-whole-turn) | Deliberate, listed, each change attributed to its fix; CI balance verdicts re-checked |
-| **4.6-E** | Content: [the Cinderlord needs a Burning victim](#the-cinderlord-needs-a-burning-victim), [two payoffs become strikers](#two-payoffs-become-strikers), [three renames](#three-renames) | Deliberate content change; the id renames in their own commit; CI balance verdicts re-checked |
+| **4.6-E** | Content: [the Cinderlord needs a Burning victim](#the-cinderlord-needs-a-burning-victim), [two payoffs become strikers](#two-payoffs-become-strikers), [the Ironjaw becomes an Endurance warden](#the-ironjaw-becomes-an-endurance-warden), [three renames](#three-renames) | Deliberate content change; the id renames in their own commit; CI balance verdicts re-checked |
 | (4.6-E2) | Tuning, only if a CI balance verdict flipped ([Balance verdicts](#balance-verdicts)) | Content numbers, deliberate |
 | **4.6-F** | [Every id is branded](#every-id-is-branded) | Expected values byte-identical; fixture inputs change only by id wrapping |
 
@@ -43,8 +43,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   fight's tail, which is easy to tell apart from a reordering in a diff.
 - **D's fixes share a slice**, as 4.5-D's did: each touches a narrow set of fights, and each is
   attributed by switching it off in turn.
-- **E after D**: the role changes reroll every Pollinator Beneficiary and Resonant Chorus fight,
-  which would drown D's attribution.
+- **E after D**: the role changes reroll every Pollinator Beneficiary, Resonant Chorus and Snapjaw
+  Ironjaw fight, which would drown D's attribution.
 - **F last**: it needs E's id renames first, and it changes no behaviour.
 - **Pre-agreed split lines** if a plan comes out too big (`WORKFLOWS.md#when-a-slice-is-too-big`):
 
@@ -80,7 +80,7 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
   | --- | --- |
   | C | Sparkeaters down (a drain pays off from the next hit); the Brute down (Concussive Blows no longer boosts its own hit); the Sporecloud Seeder down (no burst from its own killing hit); the Lullpollen line up (Sleep sticks) |
   | D | the Shieldbarer up (granted Defends); the Brute down again (trait damage, Confused Annihilate); Treant teams up; the Lullpollen line up again (Sleep skips the turn traits) |
-  | E | the Sporch Cinderlord down; the Pollinator Beneficiary and the Resonant Chorus change |
+  | E | the Sporch Cinderlord down; the Pollinator Beneficiary, the Resonant Chorus and the Snapjaw Ironjaw change |
 
 - Watch point: 51 of the 525 corpus fights already end in a round-cap draw
   (`OPEN_QUESTIONS.md#fight-length`), and the Cinderlord's Burn can renew itself
@@ -475,6 +475,34 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 
 - The Pollinator Beneficiary and the Resonant Chorus take the `striker` role: their payoffs read
   attacks, and a caster attacks only when it can't cast. Data only; traits and numbers unchanged.
+
+### The Ironjaw becomes an Endurance warden
+
+*(4.6-E; new since the review)*
+
+- The Snapjaw Ironjaw is **Endurance · amplifier · warden**: `affinity` `'endurance'` and
+  `defaultScriptId` `'warden'` (`src/data/species/overgrowth.ts`). Its role, Iron Maw, base stats,
+  rarity and id are unchanged. The Snapjaws stay Violence/Endurance (the Lure and the Ironjaw
+  Endurance, the Jaws Violence), and the Overgrowth keeps all five affinities.
+- Iron Maw fires at the start of each of its turns whatever it does, so a turn spent provoking
+  costs it no Defence: the wall it builds is what a warden's Provoke puts in front of a wounded
+  ally. The comment on `SNAPJAW_IRONJAW` says this in place of today's case for `striker`.
+- Its matchups follow the affinity: it beats Instinct and loses to Wit
+  (`spec/combat.md#affinity-advantage`).
+- Its gem set, an enemy's and a newly collected one's alike, rolls from the Endurance spells
+  (`spec/run.md#enemy-script-and-gem-set`): Root Grasp, Bramble Ward and Stifling Weight at
+  biomes 1 and 2, all three since the pool is exactly the slot count; Rasping Chant joins at
+  biome 3. The warden casts only when it can't attack. The pool is never empty, so the roll still
+  draws once per slot and no other creature's gems or floor draw move: only fights holding an
+  Ironjaw change.
+- Data only. Iron Maw's `description` names neither affinity nor role and stays.
+  `roles.test.ts`' `'snapjaw-ironjaw'` row becomes `'warden'`, and its role-split test counts one
+  striker fewer and one warden more. `golden-snapjaw-ironjaw` builds its creature by hand and
+  reads only the trait, so it stays byte-identical.
+- Every changed corpus row holding an Ironjaw is attributed to this item. Measured before C and D:
+  15 of the 525 corpus fights hold an Ironjaw, 11 of them change (one result), no other fight
+  moves, and the CI balance verdicts hold.
+- The PR review rewrites `content/overgrowth.md#snapjaw-ironjaw`.
 
 ### Three renames
 

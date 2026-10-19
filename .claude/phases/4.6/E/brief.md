@@ -11,6 +11,7 @@ Reads: `content/overgrowth.md`, `content/glimmerdark.md`, `content/rotcap-hollow
 
 - `phases/4.6/brief.md#the-cinderlord-needs-a-burning-victim`.
 - `phases/4.6/brief.md#two-payoffs-become-strikers`.
+- `phases/4.6/brief.md#the-ironjaw-becomes-an-endurance-warden`.
 - `phases/4.6/brief.md#three-renames`.
 
 ## Known
@@ -23,6 +24,8 @@ Reads: `content/overgrowth.md`, `content/glimmerdark.md`, `content/rotcap-hollow
 ## Done when
 
 The Cinderlord burns every enemy only after killing a Burning creature (a hand-derived golden on
-real data shows both cases), the two payoffs run `striker`, the three names and ids are renamed
-everywhere, the rename commit's fixture diff holds only those strings, and every changed corpus row
-is attributed to one item.
+real data shows both cases), the two payoffs run `striker`, the Snapjaw Ironjaw is Endurance and
+runs `warden` (the comment on `SNAPJAW_IRONJAW` and `roles.test.ts`' row and role-split counts
+follow), the three names and ids are renamed everywhere, the rename commit's fixture diff holds
+only those strings, and every changed corpus row is attributed to one item, the Ironjaw's to its
+own.
