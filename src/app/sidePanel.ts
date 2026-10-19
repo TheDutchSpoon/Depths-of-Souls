@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import type { BiomeData } from '../engine/generation'
 import type { Specialization } from '../data/specializations'
 import type { GameActions, GameState } from '../state/store'

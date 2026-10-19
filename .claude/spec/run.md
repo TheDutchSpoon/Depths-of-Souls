@@ -23,16 +23,20 @@ Read this when changing descent, generation or the hub.
   the descent at that fight and returns the party to the hub with everything banked so far
   (`spec/combat.md#encounters-rewards--wipes`).
 
-### Content frontier
+### Floors past the authored biomes
 
-- A descent past the last floor with authored content is refused: the **content frontier**, the last
-  floor of the unbroken run of authored biomes from biome 1 (floor 30 with three biomes).
+- Every floor can be entered: a floor whose biome has **no content yet** fights the **last authored
+  biome before it** in the 1–100 sequence (floors 31–100 are Rotcap Hollow while three biomes are
+  authored). Authoring a biome moves its floors to it: floors are generated from the seed, never
+  stored (`spec/saves.md#references-not-copies`).
+- A boss floor there fights that biome's boss again (floors 40, 50 … the Rot Sovereign); a repeat
+  kill earns no perk points (`spec/run.md#rewards`).
 
 ### Biomes
 
 - The biome changes **every 10 floors**. v1 ships **10 biomes**: floors 1–10 are biome 1, 11–20
-  biome 2, …, 91–100 biome 10. Past floor 100, each floor's biome is a **seeded draw from all 10**,
-  unless the floor is pinned (`spec/run.md#pins`).
+  biome 2, …, 91–100 biome 10. Past floor 100, each floor's biome is a **seeded draw from the
+  authored biomes**, unless the floor is pinned (`spec/run.md#pins`).
 - A biome is data: a name, a **spawn pool of species**, and a boss.
 - **Content target per biome: 6 or more species, each with 3 or more creatures** (18+ per biome,
   about 180 across the ten): the largest authoring task in the project, and why creatures and
@@ -192,6 +196,11 @@ Read this when changing descent, generation or the hub.
   a new game) gets a flat **10 XP** (config, `introXpGrant`), whatever the result, through the
   ordinary level-up path. The intro's own kills bank nothing. Design intent: a new game's party
   reaches level 2 at the end of floor 1 and fights floor 2 at level 2.
+- The enemy Unicorn rolls a full gem set like every enemy (`spec/run.md#enemy-script-and-gem-set`),
+  from **biome 1's** spells: the intro comes before any descent. It draws from its own stream of
+  the run seed alone (`hashIntroUnicornDraw`), never `runCounter` or an instance ordinal, so no
+  descent after the intro depends on it. Scaffolding until crafted spells
+  (`spec/creatures.md#gems-as-items`).
 - `startGame` runs it right after `setSpec` (`spec/store.md#newgame`). Called on its own, the
   store doesn't enforce that order, and a second call grants the XP again.
 
@@ -205,34 +214,41 @@ Read this when changing descent, generation or the hub.
   contents itself (`spec/store.md#the-store-owns-navigation-and-ownership`).
 - Every curve (`fightCount`, `enemyPartySize`, `enemyLevelRange`, `bossLevel`) is a pure function
   of `(floor, BalanceConfig)`, never a literal; the values live in `src/data/balance.ts`.
-- `FLOORS_PER_BIOME` and `BIOME_COUNT` are engine constants in `engine/generation.ts` (10 and 10).
+- `FLOORS_PER_BIOME` and `BIOME_COUNT` are engine constants in `engine/generation.ts` (10 and 10),
+  and `LAST_FIXED_FLOOR` (`BIOME_COUNT × FLOORS_PER_BIOME`) is the fixed sequence's last floor.
 
 ### Floor runs
 
 - **`descend(floor)`** resolves a whole floor synchronously; there is **no descent state** in the
   store. **`lastFloor`** is the floor last fought. **Fast travel is `descend(floor)`** for any floor
-  up to `deepestFloor + 1`.
+  up to the reach, `farthestReachableFloor(deepestFloor)` (`deepestFloor + 1`): the rule's one
+  home, a store export that `checkDescend`, the demo and the balance simulator's push read.
 - Each descent draws its generation RNG and each fight's combat seed from `runSeed` and
   `runCounter`, and advances `runCounter`. Re-descending a floor re-rolls its creatures; its biome
   stays fixed. Every descent adds its biome to `discoveredBiomes`.
 
 ### biomeForFloor
 
-- **`biomeForFloor(floor, biomes, atlasPins, runSeed)`**, pure: a pin wins; floors 1–100 take the
-  fixed sequence (decade N → `biomes[N]`); floor 101+ takes a draw seeded from the run seed and the
-  floor. The 1–100 order is positional, so an existing biome slot never changes place.
+- **`biomeForFloor(floor, biomes, atlasPins, runSeed)`**, pure: a pin wins and is returned as it
+  is. Floors 1–`LAST_FIXED_FLOOR` take the fixed sequence (decade N → `biomes[N]`), walking back
+  from the decade to the nearest biome with content; a decade past the end of the list counts as
+  one with none. Deeper floors take a draw seeded from the run seed and the floor over the authored
+  biomes in list order (`min(n − 1, floor(roll × n))`), so ten authored biomes draw as a draw over
+  the whole list would. The 1–100 order is positional, so an existing biome slot never changes
+  place.
+- It is the fallback's one home: `descend`, `floorPreview`, the player gem-roll pool and the
+  balance simulator read it. The store passes on the resolved biome's position in the list as its
+  number, never the decade (floor 35 rolls biome 3's spells).
 
-### Content frontier and pins
+### Authored biomes and pins
 
-- **`contentFrontier(biomes)`** walks the biome list in order and stops at the first biome with **no
-  content** (`biomeHasContent`: no species with a positive weight and at least one creature,
-  exactly the case where the generator's weighted pick throws). It is derived from the biome data,
-  so authoring a biome moves it with no constant to bump, and a gap in authoring ends it instead of
-  exposing floors that would crash. `descend` past it returns `{ ok: false, reason:
-  'beyond-content-frontier' }`.
+- **`biomeHasContent`** is the one test of an authored biome: a species with a positive weight and
+  at least one creature, exactly the case where the generator's weighted pick succeeds.
+- **Biome 1 always has content:** `createGameStore` throws on an empty biome list or one whose first
+  biome has none, so every fallback lands and `floorPreview` never throws.
 - **Pins can't route around it**: `pinBiome` refuses a biome with no content (reason
-  `biome-has-no-content`) through the same `biomeHasContent` check, so every floor inside the
-  frontier resolves to an authored biome whatever the pins.
+  `biome-has-no-content`) through the same check, so every floor resolves to an authored biome
+  whatever the pins.
 - The generator's own throw on an empty or zero-weight pool stays: reaching generation with one is
   a real bug.
 
@@ -240,8 +256,7 @@ Read this when changing descent, generation or the hub.
 
 - A floor is a boss floor **iff** `floor % FLOORS_PER_BIOME === 0` **and** its resolved biome has a
   boss (`BiomeData.boss?: { bossId, creature, speciesId, adds[] }`). The rule holds at every depth,
-  floor 101+ included; a biome with no boss (the unauthored biomes, test fixtures) generates
-  ordinary floors.
+  floor 101+ included; a biome with no boss (a test fixture) generates ordinary floors.
 - **`floorShape(floor, biome, config)`** is the one home of that test and of a floor's fight count:
   `{ boss, fights }`, one fight on a boss floor, else `fightCount`. `generateFloor` takes its
   branch and its fight count from it, and the store's `floorPreview` reads it.
@@ -263,8 +278,6 @@ Read this when changing descent, generation or the hub.
   the spells of its affinity with `unlockedAtBiome` ≤ the current biome. Duplicates appear only as
   a safety net when that pool is smaller than the slot count; a data test requires **≥3 spells per
   affinity at biome 1**, so real content never reaches the net.
-- **Known bug:** the scripted intro's enemy Unicorn has no gems, so a Pacified intro Unicorn waits
-  (fix: `phases/4.6/brief.md#the-intros-unicorn-rolls-its-spells`).
 - A **cast-role** creature (`caster`, `support`, `opener`; `CAST_ROLE_SCRIPT_IDS`) with no usable
   spell is an invariant violation and **throws**, backed by a data test that every cast-role
   creature has a matching spell at its biome.

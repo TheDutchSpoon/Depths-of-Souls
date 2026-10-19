@@ -21,7 +21,7 @@ export interface BalanceConfig {
    * atFloor1Hundredths/100 at floor 1 to atFloor100Hundredths/100 at floor 100, then
    * + perFloorAfter100Hundredths/100 per floor after. Expressed in HUNDREDTHS (integers) so
    * enemyLevelRange can do the whole min-level computation in exact integer arithmetic with a
-   * SINGLE Math.round at the end (see curves.ts's scaledMinLevel) -- never rounding the
+   * SINGLE Math.floor at the end (see curves.ts's scaledMinLevel) -- never rounding the
    * multiplier itself first.
    */
   readonly levelMultiplier: {
@@ -69,4 +69,8 @@ export interface BalanceConfig {
    * itself. Default 0 (free), per `spec/creatures.md#souls`. Nothing reads it yet
    * (`spec/creatures.md#summoning-at-the-soul-altar`). */
   readonly summonCost: number
+
+  /** Perk points one first-cleared boss earns (`spec/progression.md#perk-points`). A specialization
+   * totals this times one boss per biome (`BIOME_COUNT`): `specializationPointTotal`. Default 100. */
+  readonly perkPointsPerBoss: number
 }

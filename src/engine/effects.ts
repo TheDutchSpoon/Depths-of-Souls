@@ -346,10 +346,10 @@ export function gatherTakenFactors(creature: Creature, state: CombatState): numb
   return factors
 }
 
-/** re-exported from effective-stats.ts, which owns the canonical
+/** Re-exported from effective-stats.ts, which owns the canonical
  * implementation (so `SelfCondition`'s `has-status` branch can read it without effects.ts ->
- * effective-stats.ts becoming a cycle -- see its own doc comment there). Every existing importer
- * of `hasStatus` from THIS module keeps working unchanged. */
+ * effective-stats.ts becoming a cycle -- see its own doc comment there). Importing `hasStatus`
+ * from THIS module gives the same function. */
 export const hasStatus = hasStatusImpl
 
 /** Attacker's summed armor-penetration passives (additive across sources, clamped [0,1]) --
@@ -571,8 +571,8 @@ export function resolveCount(
 }
 
 /**
- * Resolves a MagnitudeSource to a live number. 'flat' is the existing implicit behavior, made
- * explicit (`spec/effects.md#count-scaling`); 'count' delegates to resolveCount above.
+ * Resolves a MagnitudeSource to a live number. 'flat' is the authored value
+ * (`spec/effects.md#count-scaling`); 'count' delegates to resolveCount above.
  */
 export function resolveMagnitudeCount(
   bearer: Creature,

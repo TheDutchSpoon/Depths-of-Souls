@@ -75,7 +75,7 @@ import {
 // ---- Overgrowth's own authored spells ----
 // The Spell object definitions themselves live in data/spells/ (the library). This grouping is
 // documentation and test grouping only ("the spells this biome introduces"; every entry here is
-// tagged `unlockedAtBiome: 1`): `generateFloor` rolls a cast-role loadout from the GLOBAL
+// tagged `unlockedAtBiome: 1`): `generateFloor` rolls every enemy's gem set from the GLOBAL
 // `ALL_SPELLS` registry, filtered by `unlockedAtBiome` (`spec/run.md#spells-unlock-cumulatively`,
 // engine/generation.ts's `spellsUnlockedAt`).
 
@@ -244,8 +244,8 @@ export const POLLINATOR_BENEFICIARY: SpeciesCreature = {
   rarity: 'uncommon',
 }
 
-/** The biome's one cast-role creature (role `caster`) -- exercises
- * generateFloor's real spell-loadout roll against OVERGROWTH_SPELLS' wit-affinity entries. */
+/** A `caster` Pollinator (wit affinity): its gem set rolls from OVERGROWTH_SPELLS' wit-affinity
+ * entries, as every enemy's does. */
 export const POLLINATOR_POLLENLORD: SpeciesCreature = {
   id: 'pollinator-pollenlord',
   name: 'Pollinator Pollenlord',

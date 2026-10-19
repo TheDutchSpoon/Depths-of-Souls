@@ -1,5 +1,5 @@
 // The run-layer generation module (`spec/run.md#generation-is-a-pure-seeded-module`).
-// Pure, seeded, RNG-free where `spec/run.md#generation-is-a-pure-seeded-module` says it must be RNG-free -- an `src/engine` sibling
+// Pure, seeded, RNG-free where `spec/creatures.md#materializecreature` says it must be RNG-free -- an `src/engine` sibling
 // to the combat resolver, under the same purity discipline. Built and tested against small
 // FIXTURE biome/species/creature data (`__fixtures__/biomes.ts`); real content of this exact
 // shape lives in src/data/species/*.ts + src/data/biomes.ts.
@@ -77,7 +77,7 @@ export interface BiomeData {
 
 // ---- Equip gating (`spec/creatures.md#spell-affinity-gate`) ----
 // A universal data-driven predicate, not a per-creature allow-list. First consumer: this
-// module's cast-role loadout roll; player equipping (`spec/creatures.md#gems-as-items`) reuses the same gate.
+// module's enemy gem roll; player equipping (`spec/creatures.md#gems-as-items`) reuses the same gate.
 
 export function canEquip(spell: Spell, affinity: Affinity): boolean {
   return spell.affinity === affinity
@@ -92,6 +92,10 @@ export const BIOME_COUNT = 10
  * against, and the boss-floor cadence below. Distinct concept from
  * `BIOME_COUNT` above (they share the same v1 value, 10, by coincidence, not by construction). */
 export const FLOORS_PER_BIOME = 10
+
+/** The last floor of the fixed onboarding sequence: one decade per biome (`spec/run.md#biomes`).
+ * Deeper floors draw their biome by seed, and the player gem-roll pool stops growing here. */
+export const LAST_FIXED_FLOOR = BIOME_COUNT * FLOORS_PER_BIOME
 
 /**
  * `spec/run.md#boss-floor-generation` -- a floor is a boss
@@ -120,8 +124,16 @@ export function floorShape(
 }
 
 /**
- * `(floor, biomes, atlasPins, runSeed) -> BiomeId`. Pure. Floors 1-100 use the fixed onboarding
- * sequence (decade N -> biomes[N]); floor 101+ draws by a seeded hash unless pinned.
+ * `(floor, biomes, atlasPins, runSeed) -> BiomeId`. Pure. Floors 1-`LAST_FIXED_FLOOR` use the
+ * fixed onboarding sequence (decade N -> biomes[N]); floor `LAST_FIXED_FLOOR + 1` and deeper
+ * draws by a seeded hash unless pinned (`spec/run.md#biomes`).
+ *
+ * A floor whose biome has no content resolves to the last authored biome before it: the fixed
+ * sequence walks back from the floor's decade to the nearest biome `biomeHasContent` accepts, and
+ * a decade past the end of the list counts as one with no content. Past the fixed sequence the
+ * draw runs over the authored biomes only, in list order. A pin is returned as it is: only the
+ * store's `pinBiome` decides whether a biome may be pinned. This is the one place the fallback
+ * lives, so `descend`, `floorPreview`, the player gem-roll pool and the simulator all read it.
  *
  * The ordered biome list is an explicit parameter rather than an implicit import
  * of `src/data/biomes.ts`. Real per-biome ids are authored names (e.g. an eventual
@@ -140,23 +152,26 @@ export function biomeForFloor(
   const pinned = atlasPins.get(floor)
   if (pinned) return pinned
 
-  if (floor <= 100) {
+  if (floor <= LAST_FIXED_FLOOR) {
     const decade = Math.floor((floor - 1) / FLOORS_PER_BIOME) // 0..9 for floor 1..100
-    const biome = biomes[decade]
-    if (!biome) {
-      throw new Error(`generation invariant violated: no biome data for decade ${decade}`)
+    for (let index = Math.min(decade, biomes.length - 1); index >= 0; index--) {
+      const biome = biomes[index]
+      if (biome && biomeHasContent(biome)) return biome.id
     }
-    return biome.id
+    throw new Error(
+      `generation invariant violated: no authored biome at or before decade ${decade}`,
+    )
   }
 
   // A fresh seeded RNG re-derived from (runSeed, floor) -- NOT the live combat
   // RNG, and NOT advanced from a running stream -- so the draw is stable across repeated
   // visits to the same floor without persisting a table of past draws.
+  const authored = biomes.filter(biomeHasContent)
   const hash = hashFloorDraw(runSeed, floor)
   const roll = createSeededRng(hash).next()
-  const index = Math.min(biomes.length - 1, Math.floor(roll * biomes.length))
-  const biome = biomes[index]
-  if (!biome) throw new Error('generation invariant violated: empty biome list')
+  const index = Math.min(authored.length - 1, Math.floor(roll * authored.length))
+  const biome = authored[index]
+  if (!biome) throw new Error('generation invariant violated: no authored biome')
   return biome.id
 }
 
@@ -521,30 +536,11 @@ export function generateFloor(
  * then creature-within-species) could actually succeed against this biome -- at least one
  * species with a positive weight that itself has at least one creature. This is exactly the
  * condition whose absence makes `weightedPick` throw ("empty or zero-weight pool"), so it's the
- * single shared predicate behind both `contentFrontier` (below) and the store's `pinBiome` guard
- * -- the two must never disagree about what "no content" means.
+ * single shared predicate behind `biomeForFloor`'s fallback, the store's `pinBiome` guard and
+ * the store's first-biome check -- they must never disagree about what "no content" means.
  */
 export function biomeHasContent(biome: BiomeData): boolean {
   return biome.speciesPool.some(
     (species) => species.weight > 0 && species.creatures.length > 0,
   )
-}
-
-/**
- * The last floor of the CONTIGUOUS prefix of
- * authored (has-content) biomes, derived from the biome data itself -- never a constant, so
- * authoring a new biome moves the frontier automatically. Stops at the FIRST biome without
- * content (never "the last non-empty one") -- a gap (an empty biome 2 followed by an authored
- * biome 3) must not make floors 21-30 "reachable": `biomeForFloor` would resolve biome 2 for
- * floors 11-20 and `generateFloor` would throw there regardless of biome 3's own content. `0` if
- * the very first biome has no content. Pure; `biomes` is read in its own authored/positional
- * order, matching `biomeForFloor`'s own fixed-sequence indexing.
- */
-export function contentFrontier(biomes: readonly BiomeData[]): number {
-  let count = 0
-  for (const biome of biomes) {
-    if (!biomeHasContent(biome)) break
-    count += 1
-  }
-  return count * FLOORS_PER_BIOME
 }

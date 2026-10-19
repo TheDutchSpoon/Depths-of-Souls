@@ -43,7 +43,7 @@ export const SPORECLOUD_REAPER_TRAIT: DescribedTrait = {
   id: 'sporecloud-reaper-bloomburst',
   name: 'Bloomburst',
   description:
-    'Every attack also lands a bonus hit of 20% of its Intelligence for each enemy currently infected with Spore (3 Spored enemies make a bonus hit worth 60%), as indirect damage. With no infected enemy there is no bonus hit, only its ordinary attack.',
+    'When it attacks, it also deals its target damage equal to 20% of its Intelligence for each enemy currently infected with Spore (3 Spored enemies make it 60%). With no infected enemy it deals none.',
   effects: [
     {
       category: 'triggered',
@@ -313,7 +313,7 @@ export const HOLLOWKIN_WRETCH_TRAIT: DescribedTrait = {
   id: 'hollowkin-wretch-madness-touch',
   name: 'Madness Touch',
   description:
-    "Whenever an attack or spell hits it, it Confuses whoever hit it. It doesn't answer a tick, a cost or another creature's trait, status or perk damage.",
+    'Whenever an attack or spell hits it, it Confuses the creature that hit it.',
   effects: [
     {
       category: 'triggered',
@@ -334,7 +334,7 @@ export const HOLLOWKIN_WRETCH_TRAIT: DescribedTrait = {
 export const HOLLOWKIN_MARIONETTE_TRAIT: DescribedTrait = {
   id: 'hollowkin-marionette-puppet-strings',
   name: 'Puppet Strings',
-  description: 'Every attack Confuses whoever it hits.',
+  description: 'When it attacks, it Confuses its target.',
   effects: [
     {
       category: 'triggered',
@@ -372,8 +372,7 @@ export const HOLLOWKIN_PUPPETEER_TRAIT: DescribedTrait = {
 export const SPORCH_IGNITER_TRAIT: DescribedTrait = {
   id: 'sporch-igniter-brand',
   name: 'Brand',
-  description:
-    "Every attack brands its target with Burn: each tick deals 35% of the Igniter's Intelligence, measured when branded. Re-branding refreshes the Burn and keeps the stronger one.",
+  description: 'When it attacks, it Burns its target.',
   effects: [
     {
       category: 'triggered',
@@ -411,8 +410,7 @@ export const SPORCH_ASHBORN_TRAIT: DescribedTrait = {
 export const SPORCH_CINDERLORD_TRAIT: DescribedTrait = {
   id: 'sporch-cinderlord-immolate',
   name: 'Immolate',
-  description:
-    'Every kill it lands itself applies Burn to every remaining enemy, measured from its own Intelligence; an enemy already Burning keeps the stronger Burn and has its timer refreshed.',
+  description: 'Every kill it lands applies Burn to every remaining enemy.',
   effects: [
     {
       category: 'triggered',

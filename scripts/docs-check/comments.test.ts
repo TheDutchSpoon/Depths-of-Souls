@@ -45,6 +45,34 @@ const PATTERNS: [number, string, string][] = [
   [15, "the plan's own step", 'a plan to flee, planned'],
   [16, 'after plan review', 'a planned review'],
   [17, 'needs sign-off', 'it signs off the turn'],
+  // The provenance the process-word patterns miss: what the code replaced, where it moved from,
+  // who used it first. Each positive is a real hit on the tree before the sweep.
+  [21, 'as the legacy cast path, so the result', 'no legacy of the old path'],
+  [
+    21,
+    'byte-identical to the legacy payload path',
+    'a legacy API name, kept for callers',
+  ],
+  [22, 'the executors, moved here from combat.ts', 'the creature moved from slot 1'],
+  [23, 'is the first real consumer, via it', 'the first consumer of the stream'],
+  [
+    24,
+    'flat is the existing implicit behavior, made explicit',
+    "an existing creature's behavior",
+  ],
+  [
+    24,
+    'the existing implicit behaviour, made explicit',
+    'the implicit behavior of a creature',
+  ],
+  [25, 'of hasStatus from this module keeps working unchanged', 'the lock keeps working'],
+  [26, "src/state's first file", 'the first file in the list'],
+  [27, 'targeted at the new `all-allies` target', 'the new maximum, and the new host'],
+  [
+    27,
+    'a flat 10% -- the new `all-allies-of-species` target',
+    'a new `all-allies` target',
+  ],
 ]
 
 describe('comments patterns', () => {
@@ -122,6 +150,35 @@ describe('comments patterns', () => {
 
   it('does not see a pattern split by a template substitution', () => {
     expect(check({ 'src/x.test.ts': 'it(`Phase ${n}`, () => {})\n' }).code).toBe(0)
+  })
+
+  it('fails a legacy-path hit that wraps over comment lines, at its first line', () => {
+    expect(
+      check({
+        'src/x.ts': 'export const a = 1\n// keeps the legacy\n// cast path\n',
+      }).lines.join('\n'),
+    ).toContain('src/x.ts:2: pattern 21,')
+    expect(
+      check({
+        'src/x.ts': 'export const a = 1\n// keeps working\n// unchanged\n',
+      }).lines.join('\n'),
+    ).toContain('src/x.ts:2: pattern 25,')
+  })
+
+  it('reads patterns 21 and up in comments and titles, not in a string literal', () => {
+    // A player-facing string can hold "new" and "legacy"; names.ts reads patterns 1-9 there.
+    for (const literal of [
+      'the new `x` appears',
+      'the legacy cast path',
+      'moved here from the hub',
+    ]) {
+      const code = JSON.stringify(literal)
+      expect(check({ 'src/x.ts': `export const a = ${code}\n` }).code, literal).toBe(0)
+      expect(
+        check({ 'src/x.tsx': `export const a = <p>{${code}}</p>\n` }).code,
+        literal,
+      ).toBe(0)
+    }
   })
 })
 

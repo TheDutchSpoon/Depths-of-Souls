@@ -4,12 +4,16 @@
 // `wit-mastery` is 1 x 60 and inert (`specializations/sorcerer.md#wit-mastery`; still buyable: no gating).
 
 import { describe, expect, test } from 'vitest'
+import { BIOMES } from '../data/biomes'
 import { createGameStore } from './store'
+
+// Real boss ids: `recordBossKill` refuses an id no biome holds.
+const BOSS_IDS = BIOMES.flatMap((biome) => (biome.boss ? [biome.boss.bossId] : []))
 
 function bruteStore(bosses = 0) {
   const store = createGameStore()
   store.getState().setSpec('brute')
-  for (let i = 0; i < bosses; i++) store.getState().recordBossKill(`boss-${i}`)
+  for (let i = 0; i < bosses; i++) store.getState().recordBossKill(BOSS_IDS[i]!)
   return store
 }
 
@@ -106,7 +110,7 @@ describe('setPerkLevel()', () => {
   test('an inert perk is buyable (no gating)', () => {
     const store = createGameStore()
     store.getState().setSpec('sorcerer')
-    store.getState().recordBossKill('boss-0')
+    store.getState().recordBossKill(BOSS_IDS[0]!)
     expect(store.getState().setPerkLevel('wit-mastery', 1)).toEqual({ ok: true })
     expect(store.getState().perkSpend.get('wit-mastery')).toBe(1)
   })

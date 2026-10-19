@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 // Playback is a cosmetic reveal of an already-computed log. Its position is a pure reducer so
 // the rules are unit-testable, and the component owns exactly one timeout keyed on `timerKey`,
 // which makes a stacked timer impossible by construction.
@@ -24,8 +25,9 @@ export type PlaybackAction =
   | { readonly type: 'skip-floor' }
   | { readonly type: 'set-speed'; readonly speed: Speed }
 
-export function initialPlayback(): PlaybackState {
-  return { phase: 'playing', fight: 0, revealed: 0, speed: 1 }
+/** A descent with no fights has nothing to reveal, so it starts `done`. */
+export function initialPlayback(fights = 1): PlaybackState {
+  return { phase: fights === 0 ? 'done' : 'playing', fight: 0, revealed: 0, speed: 1 }
 }
 
 /** An action that changes nothing returns the identical object, so React skips the render and
@@ -37,6 +39,9 @@ export function playbackReducer(
   beatCounts: readonly number[],
 ): PlaybackState {
   const last = beatCounts.length - 1
+  // With no fights there is no beat count to read and no fight to jump to: nothing moves, but the
+  // speed still changes.
+  if (last < 0 && action.type !== 'set-speed') return state
   switch (action.type) {
     case 'timer-elapsed': {
       if (state.phase === 'done') return state

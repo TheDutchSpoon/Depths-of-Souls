@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { BIOMES } from '../data/biomes'
 import { SPECIALIZATIONS_BY_ID } from '../data/specializations'
 import { CURRENCY_NOTE, SAVE_NOTE, sidePanelRows } from '../app/sidePanel'

@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 // The log box follows new beats while the reader is at its bottom and holds where the reader has
 // scrolled up. Both questions are pure, so the edges are unit-tested; the box only feeds them.
 

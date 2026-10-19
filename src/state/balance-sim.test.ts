@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest'
 import { createCreatureId } from '../engine/ids'
 import { ROUND_CAP } from '../engine/config'
-import { contentFrontier } from '../engine/generation'
 import type { StatusDef } from '../engine/effect-types'
 import type { CombatEvent } from '../engine/types'
 import { BIOMES } from '../data/biomes'
@@ -21,8 +20,9 @@ import {
 import { SORCERER_STARTER, UNICORN } from '../data/species/starters'
 import { STATUS_REGISTRY } from '../data/statuses'
 import { createInstanceId } from './ids'
+import { rosterOf } from './__fixtures__/roster'
 import type { Instance } from './rewards'
-import { createGameStore } from './store'
+import { createGameStore, farthestReachableFloor } from './store'
 import {
   advanceProgress,
   analyzeFight,
@@ -136,15 +136,19 @@ describe.skipIf(isSim)('balance simulator', () => {
 
     it('same seeds give a deep-equal report, built twice', () => {
       expect(buildReport(options)).toEqual(buildReport(options))
-    })
+    }, 60_000) // ~3s alone, over 5s under parallel load vs. Vitest's 5s default -- explicit headroom, not a tuned budget.
 
-    it('has every spec, a row per content floor and the report items', () => {
+    it('has every spec, a row per floor up to the deepest floor any seed ran and the report items', () => {
       const report = buildReport(options)
       expect(report.specs.map((s) => s.specId)).toEqual(SPECIALIZATIONS.map((s) => s.id))
       for (const spec of report.specs) {
         expect(spec.seeds).toBe(SMOKE_SEEDS.length)
-        expect(spec.floors).toHaveLength(contentFrontier(BIOMES))
-        expect(Object.keys(spec.t4.stopReasons).sort()).toEqual(['cap', 'frontier'])
+        // A row per floor a run reached, from floor 1, in order, with no bound but the runs.
+        expect(spec.floors.length).toBeGreaterThan(0)
+        expect(spec.floors[0]!.floor).toBe(1)
+        const floorNumbers = spec.floors.map((row) => row.floor)
+        expect(floorNumbers).toEqual([...floorNumbers].sort((a, b) => a - b))
+        expect(Object.keys(spec.t4.stopReasons)).toEqual(['cap'])
         expect(spec.t4.stopReasons.cap).toBe(SMOKE_SEEDS.length)
         expect(spec.t4).toHaveProperty('firstWallFloors')
         expect(spec.t4).toHaveProperty('failedPushesByFloor')
@@ -229,6 +233,16 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(nextRun(p)).toEqual({ floor: 6, kind: 'push' })
     })
 
+    it('after a clear the push floor is the store’s farthest reachable floor, at any depth', () => {
+      for (const deepestFloor of [0, 1, 12, 99, 150]) {
+        const p = { ...INITIAL_PROGRESS, deepestFloor, lastRunFailedPush: false }
+        expect(nextRun(p)).toEqual({
+          floor: farthestReachableFloor(deepestFloor),
+          kind: 'push',
+        })
+      }
+    })
+
     it('re-farms deepestFloor after a failed push', () => {
       const p = advanceProgress(
         { ...INITIAL_PROGRESS, deepestFloor: 4 },
@@ -282,13 +296,13 @@ describe.skipIf(isSim)('balance simulator', () => {
       let p = { ...INITIAL_PROGRESS, deepestFloor: 2 }
       for (let i = 0; i < WALL_FAILED_PUSHES; i++)
         p = advanceProgress(p, 3, 'push', false)
-      expect(stopReason(p, 30, 400)).toBeNull()
+      expect(stopReason(p, 400)).toBeNull()
       p = advanceProgress(p, 3, 'push', true)
       for (let i = 0; i < WALL_FAILED_PUSHES; i++)
         p = advanceProgress(p, 4, 'push', false)
       expect(p.firstWallFloor).toBe(3)
       expect(p.failedPushes[4]).toBe(5)
-      expect(stopReason(p, 30, 400)).toBeNull()
+      expect(stopReason(p, 400)).toBeNull()
     })
 
     it('a farm failure is not a failed push', () => {
@@ -302,22 +316,25 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(p.lastRunFailedPush).toBe(false)
     })
 
-    it('stops with `frontier` on clearing the frontier floor and `cap` at the run cap', () => {
+    it('stops with `cap` at the run cap, and a deep floor does not stop a run', () => {
       expect(
-        stopReason({ ...INITIAL_PROGRESS, deepestFloor: 30, runs: 5 }, 30, 400),
-      ).toBe('frontier')
+        stopReason({ ...INITIAL_PROGRESS, deepestFloor: 30, runs: 5 }, 400),
+      ).toBeNull()
+      expect(stopReason({ ...INITIAL_PROGRESS, deepestFloor: 12, runs: 400 }, 400)).toBe(
+        'cap',
+      )
       expect(
-        stopReason({ ...INITIAL_PROGRESS, deepestFloor: 12, runs: 400 }, 30, 400),
-      ).toBe('cap')
-      expect(
-        stopReason({ ...INITIAL_PROGRESS, deepestFloor: 12, runs: 399 }, 30, 400),
+        stopReason({ ...INITIAL_PROGRESS, deepestFloor: 12, runs: 399 }, 400),
       ).toBeNull()
     })
 
-    it('frontier wins when both apply', () => {
+    it('the run cap is the only stop, whatever the depth', () => {
+      expect(stopReason({ ...INITIAL_PROGRESS, deepestFloor: 30, runs: 400 }, 400)).toBe(
+        'cap',
+      )
       expect(
-        stopReason({ ...INITIAL_PROGRESS, deepestFloor: 30, runs: 400 }, 30, 400),
-      ).toBe('frontier')
+        stopReason({ ...INITIAL_PROGRESS, deepestFloor: 140, runs: 1 }, 400),
+      ).toBeNull()
     })
 
     it('a seed run with a small cap reports `cap` and exactly that many runs', () => {
@@ -558,9 +575,10 @@ describe.skipIf(isSim)('balance simulator', () => {
   // ---- event analysis on hand-built lists ----
 
   describe('stat-modifier stack attribution', () => {
-    const A = cid('a-player-0')
-    const B = cid('b-player-1')
-    const C = cid('c-player-2')
+    // Opaque ids: a side is read from the fight's roster, never from an id.
+    const A = cid('a1')
+    const B = cid('b1')
+    const C = cid('c1')
     const mod = (source: typeof A, target: typeof A): CombatEvent => ({
       type: 'StatModifierApplied',
       sourceId: source,
@@ -630,8 +648,8 @@ describe.skipIf(isSim)('balance simulator', () => {
         bossTraitIds: [],
         lockScopes: new Map(),
       }
-      const metrics = analyzeFight(events, ctx)
-      // Every creature here is a player-side id, so the enemy side has no stack.
+      const metrics = analyzeFight(events, ctx, rosterOf(['a1', 'b1', 'c1'], []))
+      // Every creature here is on the player's side, so the enemy side has no stack.
       expect(metrics.largestStacks['growth-player']).toEqual({
         targetId: B,
         attribution: 'rally',
@@ -818,9 +836,10 @@ describe.skipIf(isSim)('balance simulator', () => {
       partyLevels: [1],
       fightsRun: 1,
       fightsWon: cleared ? 1 : 0,
+      shape: { boss: false, fights: 1 },
     })
     const report = (results: SeedResult[]) =>
-      buildSpecReport('sorcerer', results, 30, DEFAULT_BALANCE_CONFIG)
+      buildSpecReport('sorcerer', results, DEFAULT_BALANCE_CONFIG)
     const many = (n: number, o: (i: number) => Partial<SeedResult>) =>
       Array.from({ length: n }, (_, i) => seedResult({ seed: i + 1, ...o(i) }))
 
@@ -843,12 +862,12 @@ describe.skipIf(isSim)('balance simulator', () => {
 
     it('T4: stop reasons, first-wall floors, and a wall AT floor 10 is not before it', () => {
       const r = report([
-        seedResult({ stop: 'frontier', firstWallFloor: 3, failedPushes: { 3: 5 } }),
+        seedResult({ stop: 'cap', firstWallFloor: 3, failedPushes: { 3: 5 } }),
         seedResult({ stop: 'cap', firstWallFloor: 3, failedPushes: { 3: 6, 4: 1 } }),
         seedResult({ stop: 'cap', firstWallFloor: 10, failedPushes: { 10: 5 } }),
         seedResult({ stop: 'cap', firstWallFloor: null }),
       ])
-      expect(r.t4.stopReasons).toEqual({ frontier: 1, cap: 3 })
+      expect(r.t4.stopReasons).toEqual({ cap: 4 })
       expect(r.t4.firstWallFloors).toEqual({ 3: 2, 10: 1 })
       expect(r.t4.seedsWalled).toBe(3)
       // Walls at 3, 3 and 10: only the two at floor 3 are below floor 10.
@@ -1001,11 +1020,24 @@ describe.skipIf(isSim)('balance simulator', () => {
       })
     })
 
+    it('the watch-point line reads floor 20 and deeper with no upper bound, and says none when there are none', () => {
+      const lineOf = (results: SeedResult[]): string =>
+        formatReport({ seeds: [1], runCap: 400, specs: [report(results)] })
+          .split('\n')
+          .find((line) => line.startsWith('Floors 20 and deeper'))!
+      expect(lineOf([seedResult({})])).toBe(
+        'Floors 20 and deeper (watch point), failed pushes by floor: none',
+      )
+      // Floor 19 is above the line; 20 and 140 are on it, and 140 is past any authored floor.
+      expect(lineOf([seedResult({ failedPushes: { 19: 5, 20: 2, 140: 1 } })])).toBe(
+        'Floors 20 and deeper (watch point), failed pushes by floor: f20:2 f140:1',
+      )
+    })
+
     it('the text report prints "never" for an infinite median, and the walls and per-side stacks', () => {
       const text = formatReport({
         seeds: [1],
         runCap: 400,
-        frontier: 30,
         specs: [report([seedResult({})])],
       })
       expect(text).toContain('never')
@@ -1152,9 +1184,10 @@ describe.skipIf(isSim)('balance simulator', () => {
     })
 
     describe('growth and shred stacks are separate, per side', () => {
-      const P = cid('p-player-0')
-      const Q = cid('q-player-1')
-      const E = cid('sparkeater-enemy-0')
+      const P = cid('p1')
+      const Q = cid('q1')
+      const E = cid('e1')
+      const roster = rosterOf(['p1', 'q1'], [{ id: 'e1', templateId: 'sparkeater' }])
       const trig = (source: typeof P, effectId: string): CombatEvent => ({
         type: 'TriggerFired',
         sourceId: source,
@@ -1181,6 +1214,7 @@ describe.skipIf(isSim)('balance simulator', () => {
         const m = analyzeFight(
           [{ type: 'TurnStarted', creatureId: E }, trig(E, 'gorge'), mod(E, P, 0.9)],
           noCtx,
+          roster,
         )
         expect(m.largestStacks['shred-player']).toEqual(stack(P, 'gorge', 'shred', 1))
         expect(m.largestStacks['growth-player']).toBeNull()
@@ -1199,6 +1233,7 @@ describe.skipIf(isSim)('balance simulator', () => {
             mod(P, P, 1.35), // rally|P = 2
           ],
           noCtx,
+          roster,
         )
         expect(m.largestStacks['growth-player']).toEqual(stack(P, 'rally', 'growth', 2))
         expect(m.largestStacks['shred-player']).toBeNull()
@@ -1214,7 +1249,7 @@ describe.skipIf(isSim)('balance simulator', () => {
           mod(E, E, 1.1),
           mod(E, P, 0.9),
         ]
-        const m = analyzeFight(events, noCtx)
+        const m = analyzeFight(events, noCtx, roster)
         expect(m.largestStacks['growth-enemy']).toEqual(stack(E, 'gorge', 'growth', 2))
         expect(m.largestStacks['shred-player']).toEqual(stack(P, 'gorge', 'shred', 2))
         expect(m.largestStacks['growth-player']).toBeNull()
@@ -1244,7 +1279,7 @@ describe.skipIf(isSim)('balance simulator', () => {
         const attribution = attributeStatModifiers(events)
         expect(attribution.stacks).toEqual([])
         expect(attribution.applications).toBe(1)
-        expect(analyzeFight(events, noCtx).largestStacks).toEqual(NO_STACKS)
+        expect(analyzeFight(events, noCtx, roster).largestStacks).toEqual(NO_STACKS)
       })
     })
 
@@ -1374,11 +1409,56 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(turnStarters).toContain(played.context.bossId)
     })
 
+    it('a non-boss floor run makes one descent even when the party holds Pacify; a boss floor makes two', () => {
+      // The probe is a second descent whose result is thrown away, so it runs only where its
+      // result is used: on a boss floor. Counting `descend` calls through a wrapper on the store
+      // sees the extra descent a probe on a non-boss floor would add.
+      const descents = (store: ReturnType<typeof atBossFloor>, deepestFloor: number) => {
+        store.setState({ deepestFloor })
+        expect(pickProbeCreature(store.getState())).not.toBeNull()
+        const realDescend = store.getState().descend
+        const floors: number[] = []
+        store.setState({
+          descend: (floor) => {
+            floors.push(floor)
+            return realDescend(floor)
+          },
+        })
+        const played = playFloorRun(
+          store,
+          { ...INITIAL_PROGRESS, deepestFloor },
+          new Set<number>(),
+        )
+        return { floors, played }
+      }
+
+      const plainStore = atBossFloor()
+      expect(plainStore.getState().floorPreview(4)!.boss).toBe(false)
+      const plain = descents(plainStore, 3)
+      expect(plain.played.run.floor).toBe(4)
+      expect(plain.floors).toEqual([4])
+      expect(plain.played.bossVisit).toBeNull()
+
+      const bossStore = atBossFloor()
+      expect(bossStore.getState().floorPreview(10)!.boss).toBe(true)
+      const boss = descents(bossStore, 9)
+      expect(boss.played.run.floor).toBe(10)
+      expect(boss.floors).toEqual([10, 10])
+      expect(boss.played.bossVisit!.probe).not.toBeNull()
+    })
+
     it('bossContext names the biome boss and its traits, reading the store pins', () => {
-      const ctx = bossContext(10, BIOMES, new Map(), 7, null)!
-      expect(ctx.bossId).toBe(`${BIOMES[0]!.boss!.creature.id}-enemy-0`)
-      expect(ctx.bossTraitIds).toEqual(BIOMES[0]!.boss!.creature.innateTraitIds)
-      expect(bossContext(9, BIOMES, new Map(), 7, null)).toBeNull()
+      // The preview names the biome and says it is a boss floor; the boss is slot 0 of the
+      // record's enemy party, under whatever combat id it has.
+      const boss = BIOMES[0]!.boss!.creature
+      const roster = rosterOf(['a1'], [{ id: 'z1', templateId: boss.id }, 'z2'])
+      const ctx = bossContext({ biomeId: BIOMES[0]!.id, boss: true }, roster, BIOMES)!
+      expect(ctx.bossId).toBe('z1')
+      expect(ctx.bossTemplateId).toBe(boss.id)
+      expect(ctx.bossTraitIds).toEqual(boss.innateTraitIds)
+      expect(
+        bossContext({ biomeId: BIOMES[0]!.id, boss: false }, roster, BIOMES),
+      ).toBeNull()
     })
   })
 

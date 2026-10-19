@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import type { FloorOutcome } from '../state/store'
 import { fightToJson } from '../app/copyFight'
@@ -47,7 +48,7 @@ export function DescentViewer({ descent }: { descent: Descent }) {
   const [state, dispatch] = useReducer(
     (current: PlaybackState, action: PlaybackAction) =>
       playbackReducer(current, action, beatCounts),
-    undefined,
+    records.length,
     initialPlayback,
   )
 
@@ -70,6 +71,16 @@ export function DescentViewer({ descent }: { descent: Descent }) {
     } catch {
       setCopyStatus('Copy failed: the clipboard is not available here')
     }
+  }
+
+  // A descent with no fights has no fight to show; the hooks above ran, so this is a plain return.
+  if (records.length === 0) {
+    return (
+      <section>
+        <p>{floorResultLine(descent.outcome, descent.fights)}</p>
+        <p>No fights were played on this floor.</p>
+      </section>
+    )
   }
 
   const view = views[state.fight]!

@@ -52,4 +52,5 @@ export const TEST_BALANCE_CONFIG: BalanceConfig = {
   bricksMinimum: 1,
   bricksPerTenFloors: 1,
   summonCost: 0,
+  perkPointsPerBoss: 100,
 }

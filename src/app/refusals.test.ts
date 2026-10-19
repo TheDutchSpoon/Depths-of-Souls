@@ -23,7 +23,6 @@ const descendReasons: Record<DescendFailureReason, true> = {
   'no-spec': true,
   'empty-party': true,
   'floor-out-of-reach': true,
-  'beyond-content-frontier': true,
 }
 const summonReasons: Record<SummonFailureReason, true> = {
   'unknown-creature': true,
@@ -56,7 +55,24 @@ function expectDistinctPlainTexts(texts: string[]) {
 describe('refusal text', () => {
   test('every descend refusal reason has its own plain text', () => {
     const reasons = Object.keys(descendReasons) as DescendFailureReason[]
-    expectDistinctPlainTexts(reasons.map(descendRefusalText))
+    expectDistinctPlainTexts(reasons.map((reason) => descendRefusalText(reason, 5)))
+  })
+
+  test('the seed texts name the bound MAX_RUN_SEED (4294967295)', () => {
+    expect(seedRefusalText('seed-out-of-range')).toBe(
+      'The seed must be between 0 and 4294967295.',
+    )
+    expect(seedRefusalText('not-a-whole-number')).toBe(
+      'The seed must be a whole number, or blank for a random one.',
+    )
+  })
+
+  test('the out-of-reach text names the reach it is given', () => {
+    const five = descendRefusalText('floor-out-of-reach', 5)
+    const thirteen = descendRefusalText('floor-out-of-reach', 13)
+    expect(thirteen).toContain('from 1 to 13,')
+    expect(five).toContain('from 1 to 5,')
+    expect(five).not.toBe(thirteen)
   })
 
   test('every seed refusal reason has its own plain text', () => {
@@ -131,7 +147,7 @@ describe('refusal text', () => {
       if (!result.ok) note(result.reason)
     }
     expect([...produced].sort()).toEqual(Object.keys(descendReasons).sort())
-    for (const reason of produced) expect(descendRefusalText(reason)).not.toBe('')
+    for (const reason of produced) expect(descendRefusalText(reason, 5)).not.toBe('')
 
     for (const text of ['abc', '4294967296']) {
       const parsed = parseSeedField(text)

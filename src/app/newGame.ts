@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 // A new game's run seed is generated HERE, in the app layer --
 // never in the store or the engine (the engine has no `crypto`/`Math.random`, and the store takes
 // its seed as an argument so `newGame({ seed })` stays deterministic). `startRun.ts` is the one

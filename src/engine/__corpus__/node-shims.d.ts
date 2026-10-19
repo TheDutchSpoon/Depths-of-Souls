@@ -1,7 +1,7 @@
 // Minimal ambient shims for the three Node built-ins `corpus-digest.test.ts`
 // needs to write its own generated fixture. `tsconfig.app.json`'s `types` array is deliberately
-// `["vite/client"]` only (`CONVENTIONS.md#test-environments`: engine tests run in Node, but `src/`
-// as a whole must not gain Node-only globals that would leak into UI/browser code) -- `@types/node`
+// `["vite/client"]` only: engine tests run in Node (`CONVENTIONS.md#test-environments`), but `src/`
+// as a whole must not gain Node-only globals that would leak into UI/browser code. `@types/node`
 // is a devDependency
 // (used by `tsconfig.node.json` for `vite.config.ts`) but not globally included here on purpose.
 //

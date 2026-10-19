@@ -151,10 +151,9 @@ export const BLINDCLAWS: Species = {
 
 // ---- Resonants (Wit lean) -- closed mechanic: caster synergy (on-action-observed) ----
 
-/** The biome's one cast-role creature (role `caster`) -- exercises
- * generateFloor's real spell-loadout roll against the cumulative-unlocked wit-affinity pool
- * (every biome-1 wit spell plus GLIMMERDARK_SPELLS' own wit entries -- see
- * engine/generation.ts's spellsUnlockedAt). */
+/** A `caster` Resonant (wit affinity): its gem set rolls from the cumulative-unlocked wit-affinity
+ * pool (every biome-1 wit spell plus GLIMMERDARK_SPELLS' own wit entries -- see
+ * engine/generation.ts's spellsUnlockedAt), as every enemy's does. */
 export const RESONANT_CHORUS: SpeciesCreature = {
   id: 'resonant-chorus',
   name: 'Resonant Chorus',

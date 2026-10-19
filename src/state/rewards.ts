@@ -115,10 +115,14 @@ export function currencyDropForKill(floor: number, config: BalanceConfig): Curre
 }
 
 // ---- Perk points ----
-// `spec/progression.md#perk-points`: 100 points per first-cleared boss, derived, never stored.
+// `spec/progression.md#perk-points`: `BalanceConfig.perkPointsPerBoss` points per first-cleared
+// boss, derived, never stored.
 
-export function perkPointsFor(bossesCleared: ReadonlySet<string>): number {
-  return bossesCleared.size * 100
+export function perkPointsFor(
+  bossesCleared: ReadonlySet<string>,
+  config: BalanceConfig,
+): number {
+  return bossesCleared.size * config.perkPointsPerBoss
 }
 
 // ---- Static creature lookup ----

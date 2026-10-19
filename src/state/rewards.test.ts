@@ -217,9 +217,9 @@ describe('addCurrencies', () => {
 
 describe('perkPointsFor', () => {
   test('100 points per boss, derived from the set size', () => {
-    expect(perkPointsFor(new Set())).toBe(0)
-    expect(perkPointsFor(new Set(['broodmother']))).toBe(100)
-    expect(perkPointsFor(new Set(['broodmother', 'leech-sovereign']))).toBe(200)
+    expect(perkPointsFor(new Set(), CFG)).toBe(0)
+    expect(perkPointsFor(new Set(['broodmother']), CFG)).toBe(100)
+    expect(perkPointsFor(new Set(['broodmother', 'leech-sovereign']), CFG)).toBe(200)
   })
 })
 

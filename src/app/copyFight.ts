@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import type { FightRecord } from '../state/store'
 
 /** `createCombat`'s input without `registries`, so a test reproduces the fight with

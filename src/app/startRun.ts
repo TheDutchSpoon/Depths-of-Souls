@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { SPECIALIZATIONS } from '../data/specializations'
 import { MAX_RUN_SEED } from '../state/store'
 import type { GameActions } from '../state/store'

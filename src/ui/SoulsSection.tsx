@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { useState } from 'react'
 import { DEMO_NAMES } from '../app/names'
 import { summonRefusalText } from '../app/refusals'

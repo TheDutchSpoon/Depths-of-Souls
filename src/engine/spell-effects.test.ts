@@ -1,4 +1,4 @@
-// Spells carry responses. The effect-list cast is BYTE-IDENTICAL to the legacy payload path, so
+// Spells carry responses. The effect-list cast is BYTE-IDENTICAL to the reference payload path, so
 // this file has two halves:
 //
 //  1. One old-vs-new EQUIVALENCE test per payload kind (damage, heal, stat-modifier, damage +

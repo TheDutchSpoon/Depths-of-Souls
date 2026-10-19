@@ -1,6 +1,6 @@
 // Golden: the `revive` response, Unicorn-shaped -- a dead ally comes back
 // mid-fight via an on-attack trigger, at the death-reset baseline + a pct of that baseline's
-// max HP (20%, per `spec/responses.md#revive` worked example), with NO special turn-queue handling (revive
+// max HP (20%, the Unicorn's number, `content/overgrowth.md#unicorn-lightbearer`; the rule is `spec/responses.md#revive`), with NO special turn-queue handling (revive
 // happens mid-round; the revived creature just re-enters normal aliveness checks).
 //
 // Hand-derived (independent `node -e` calculator). All vitality -> neutral affinity x1.0. FOE

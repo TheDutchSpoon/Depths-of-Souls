@@ -30,7 +30,7 @@ export const FLICKERLING_WICK_TRAIT: DescribedTrait = {
   id: 'flickerling-wick-burn-bright',
   name: 'Burn Bright',
   description:
-    'At the start of its turn, only while another living ally is below maximum Health, it burns 10% of its own maximum HP to heal its lowest-HP injured ally other than itself for 20% of its own maximum HP. When every other ally is at full health (or none is left), it neither burns nor heals. The burn is a cost: exactly 10% of its maximum HP, whatever its Defence. It can kill the Wick, and then no heal follows (unless Last Stand saves it; the heal then proceeds).',
+    'At the start of its turn, only while another living ally is below maximum Health, it burns 10% of its own maximum HP to heal its lowest-HP injured ally other than itself for 20% of its own maximum HP. When every other ally is at full health (or none is left), it neither burns nor heals. The burn is a cost.',
   effects: [
     {
       category: 'triggered',
@@ -131,8 +131,8 @@ export const BLINDCLAWS_SETTER_TRAIT: DescribedTrait = {
 
 /** Blindclaws' Striker (payoff): a damage bonus while acting before its target
  * (`content/glimmerdark.md#blindclaws-striker`), the spec'd numeric payoff -- a real `conditional-damage-bonus` on the
- * `acted-before-target` condition, made possible by conditions.ts completing that
- * condition's non-scripting path. Action-selection (attack-or-Defend) is the scripting layer's
+ * `acted-before-target` condition, which conditions.ts also resolves outside a script
+ * (against the current damage target). Action-selection (attack-or-Defend) is the scripting layer's
  * job, never a creature-identity trait -- Striker runs the plain `striker` role
  * (species/glimmerdark.ts), and this is its whole identity. Scoped to `actionKind: 'attack'`
  * (`content/glimmerdark.md#blindclaws-striker` is Attack-specific; the gems it casts when Pacified get no
@@ -239,7 +239,7 @@ export const RESONANT_OVERTONE_TRAIT: DescribedTrait = {
   id: 'resonant-overtone-crescendo',
   name: 'Crescendo',
   description:
-    "Whenever an ally, itself included, casts a spell, there's a 10% chance the caster casts again: a random one of its own equipped spells (possibly the same one), at a random valid target. The echo comes after the original cast has fully resolved, and it obeys every action rule: a Silenced caster can't echo, and a caster killed during its own cast (by a retaliation, say) loses the echo. An echo is observed like any cast (by a Chorus, an Adept, even an Overtone again), so it can chain into another echo. Only one Overtone echo can follow a cast, however many Overtones are on the field.",
+    "Whenever an ally, itself included, casts a spell, there's a 10% chance the caster casts again: a random one of its own equipped spells (possibly the same one), at a random valid target, after the original cast. An echo is a cast like any other, so it can be echoed again. Only one Overtone echo can follow a cast, however many Overtones are on the field.",
   effects: [
     {
       category: 'triggered',
@@ -433,7 +433,7 @@ export const SHELLBACK_WARDEN_TRAIT: DescribedTrait = {
   id: 'shellback-warden-fortify',
   name: 'Fortify',
   description:
-    "At the start of each of its turns, permanently raises the whole team's Defence by 10%, again every round it acts, so it compounds.",
+    "At the start of each of its turns, permanently raises the whole team's Defence by 10%, so it compounds.",
   effects: [
     {
       category: 'triggered',
@@ -467,7 +467,7 @@ export const SHELLBACK_BULWARK_TRAIT: DescribedTrait = {
   id: 'shellback-bulwark-retaliating-shell',
   name: 'Retaliating Shell',
   description:
-    "Whenever an attack or spell hits it, it strikes back for 50% of its own Defence, as indirect damage. It doesn't answer a tick, a cost or another creature's trait, status or perk damage.",
+    'Whenever an attack or spell hits it, it deals damage equal to 50% of its own Defence to the creature that hit it.',
   effects: [
     {
       category: 'triggered',

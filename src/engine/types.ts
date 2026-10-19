@@ -36,7 +36,7 @@ export interface Spell {
    * module, which rolls an affinity-matched spell per enemy gem slot. */
   readonly affinity: Affinity
   /** The biome number (1-based, matching `spec/run.md#biomes` "Biome 1"/"Biome 2" numbering) at which
-   * this spell enters the shared pool. `generateFloor` rolls a cast-role enemy's loadout from every
+   * this spell enters the shared pool. `generateFloor` rolls every enemy's gem set from every
    * spell whose `unlockedAtBiome` is `<=` the current biome's number, filtered by affinity -- so a
    * spell unlocked at biome 1 stays available at every deeper biome too (spells unlock
    * cumulatively; distinct from species/creature biome-exclusivity). REQUIRED. */

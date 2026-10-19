@@ -1,7 +1,7 @@
 // The one action pipeline. Every action source -- a script rule, the
 // implicit fallback, a `perform-action` grant -- goes through this module:
 // `checkLegality` (pure, draws nothing), `resolveIntent` (the only place action-level draws
-// happen), `executeAction` (the executors, moved here from combat.ts).
+// happen), `executeAction` (the executors).
 // `createResolutionContext` builds the `ResolutionContext` (resolution-types.ts) the resolver
 // threads; `drainGrantedActions` runs the `perform-action` grants it queued.
 //
@@ -110,7 +110,7 @@ export interface DrainGrantsOptions {
  *
  * Refusals emit nothing of their own (the earlier `TriggerFired` stays): the skipped-turn gate
  * (here), then everything `runAction` checks -- a dead actor, a lock, no castable gem / valid
- * target. RNG draws, in order: gem, target, Confusion/Provoke (chance was rolled at trigger time).
+ * target. RNG draws, in order: gem, Confusion, then Provoke or the target (chance was rolled at trigger time).
  * `ActionGranted` is announced only once the grant is accepted, right before the action's first event.
  */
 export function drainGrantedActions(
@@ -771,7 +771,7 @@ function executeWait(
   return state
 }
 
-/** `executeAction`: the executors, moved here from combat.ts. */
+/** `executeAction`: the executors. */
 export function executeAction(
   actor: Creature,
   action: Action,

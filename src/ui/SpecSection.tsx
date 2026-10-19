@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { otherSpecs, SPEC_SWITCH_NOTE, switchSpec } from '../app/specSwitcher'
 import { useGameStore } from '../state/store'
 

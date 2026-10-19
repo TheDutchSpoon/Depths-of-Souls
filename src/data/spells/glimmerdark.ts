@@ -3,8 +3,9 @@ import type { Spell } from '../../engine/types'
 // This biome authors only its own spells. Spell unlock is cumulative: `generateFloor` rolls from
 // the global spell list filtered to `unlockedAtBiome <= currentBiomeIndex`, so every deeper biome
 // inherits the biome-1 kit and a reskin of one of its spells here would only duplicate it
-// (`spec/run.md#spells-unlock-cumulatively`). Each spell below is on a mechanic no biome-1 spell
-// already uses, and no affinity carries two plain damage spells.
+// (`spec/run.md#spells-unlock-cumulatively`). Each spell below is unique under the dedup guard's
+// key (`data/spells/index.test.ts`); some carry a biome-1 mechanic into another affinity
+// (Disorient is Vine Snare's damage-and-Web in Instinct).
 
 /** Beacon Charge: a small heal that ALSO grants the target Grant Act First (a `heal` effect, then an
  * `apply-status` effect, at the status's own default duration) -- the support spell that lets an

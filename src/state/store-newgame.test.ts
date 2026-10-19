@@ -54,7 +54,7 @@ function playedStore() {
   s.runScriptedIntro()
   const cleared = store.getState().descend(1)
   if (!cleared.ok) throw new Error('descend failed')
-  store.getState().recordBossKill('boss-0')
+  store.getState().recordBossKill(BIOMES[0]!.boss!.bossId)
   store.getState().setPerkLevel('might', 5)
   store.getState().pinBiome(15, BIOMES[1]!.id)
   store.setState({ soulProgress: new Map([[CREATURE.id, 100]]), deepestFloor: 4 })

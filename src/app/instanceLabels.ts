@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import type { InstanceId } from '../state/ids'
 import { staticCreatureIdFor } from '../state/rewards'
 import type { Instance } from '../state/rewards'

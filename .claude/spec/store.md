@@ -38,27 +38,27 @@ Read this when changing the store or the state the UI reads.
 - Each such action has a pure **`can…` query** sharing its check (`canDescend(floor)`), so the UI
   greys out an option for the same reason the action would refuse it.
 - `descend` returns `{ ok: true, outcome } | { ok: false, reason }`, with reasons `no-spec`,
-  `empty-party`, `floor-out-of-reach` and `beyond-content-frontier`. `pinBiome` returns `{ ok:
+  `empty-party` and `floor-out-of-reach` (not a whole number, below 1, or past the reach,
+  `spec/run.md#floor-runs`). `pinBiome` returns `{ ok:
   true } | { ok: false, reason }`, with reasons `floor-out-of-range`, `unknown-biome` and
-  `biome-has-no-content` (`spec/run.md#content-frontier-and-pins`). `setPerkLevel` returns `{ ok:
+  `biome-has-no-content` (`spec/run.md#authored-biomes-and-pins`). `setPerkLevel` returns `{ ok:
   false, reason }` with `no-spec`, `perk-not-in-spec`, `invalid-level` (not a whole number in
-  `0..maxLevel`) or `over-budget` (total spend over `bossesCleared × 100`). `summon` refuses with
+  `0..maxLevel`) or `over-budget` (total spend over the points earned,
+  `spec/progression.md#specializations-are-data`). `summon` refuses with
   `unknown-creature` or `soul-incomplete`, `setPartySlot` with `slot-out-of-range` or
-  `unknown-instance`. `recordBossKill` has no failure. **Known bug:** it records any id, and an unknown
-  one earns perk points (`spec/progression.md#perk-points`) (fix:
-  `phases/4.6/brief.md#recordbosskill-refuses-an-unknown-boss`).
+  `unknown-instance`. `recordBossKill` refuses with `unknown-boss` an id that is no `boss.bossId`
+  in the store's own biome list; a boss already cleared is `{ ok: true }` and changes nothing.
 
 ### Store actions
 
 - `newGame({ seed })`, `startGame({ seed, specId })`, `setSpec`, `descend`, `runScriptedIntro`, `recordBossKill`, `pinBiome`,
   `setPerkLevel`, `refundAllPerks`, `summon(creatureId)` and `setPartySlot(slot, instanceId |
-  null)`, plus the `can…` queries and two read-only answers for the UI:
+  null)`, plus the `can…` queries (`canRecordBossKill` among them) and two read-only answers for
+  the UI:
   - `floorPreview(floor)`: the floor's biome, resolved as `descend` resolves it (pins and run seed
     included), its fight count and whether it is a boss floor
     (`spec/run.md#boss-floor-generation`). `null` for anything but a whole number ≥ 1, never a
-    throw; past the content frontier it still previews, and only `descend` refuses. **Known bug:**
-    with a biome list shorter than ten it throws (fix:
-    `phases/4.6/brief.md#small-game-layer-fixes`).
+    throw, whatever biome list the store was given; it previews a floor past the reach too.
   - `perkPointSummary()`: `{ earned, spent, free }` for the chosen spec (spent 0 with none). The
     spend is one sum, `perkPointsSpent(spec, perkSpend)`, which the `over-budget` check uses too.
 - `setPerkLevel(perkId, level)` sets an absolute level, so buying and refunding are one call;

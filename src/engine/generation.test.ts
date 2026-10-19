@@ -9,9 +9,9 @@ import {
   biomeForFloor,
   biomeHasContent,
   canEquip,
-  contentFrontier,
   generateFloor,
   isBossFloor,
+  LAST_FIXED_FLOOR,
   materializeCreature,
   spellsUnlockedAt,
 } from './generation'
@@ -268,6 +268,175 @@ describe('biomeForFloor', () => {
     const pins = new Map([[150, rareBiome!.id]])
     expect(biomeForFloor(150, FIXTURE_BIOME_SEQUENCE, pins, 42)).toBe(rareBiome!.id)
   })
+
+  it('a pin is returned as it is, even to a biome with no content or no entry in the list', () => {
+    // Only the store's pinBiome decides whether a biome may be pinned: biomeForFloor does not
+    // re-check a pin, so it can't turn a pin into a fallback. It fails if the pin is re-checked.
+    const pins = new Map([
+      [15, EMPTY_BIOME.id],
+      [150, createBiomeId('not-in-the-list')],
+    ])
+    expect(biomeForFloor(15, [A, EMPTY_BIOME, C], pins, 1)).toBe(EMPTY_BIOME.id)
+    expect(biomeForFloor(150, [A, EMPTY_BIOME, C], pins, 1)).toBe(
+      createBiomeId('not-in-the-list'),
+    )
+  })
+})
+
+// ---- A floor whose biome has no content: the fallback and the authored-only draw ----
+
+const EMPTY_BIOME: BiomeData = {
+  id: createBiomeId('empty'),
+  name: 'Empty',
+  speciesPool: [],
+}
+const biomeWithContent = (name: string): BiomeData => ({
+  id: createBiomeId(name),
+  name,
+  speciesPool: [FIXTURE_SPECIES_BRAWLERS],
+})
+const A = biomeWithContent('authored-a')
+const C = biomeWithContent('authored-c')
+const D = biomeWithContent('authored-d')
+
+/** An inline copy of the draw past `LAST_FIXED_FLOOR`: the seeded hash of (runSeed, floor), one
+ * roll, `min(n - 1, floor(roll * n))` over the biomes it may pick. The constants are generation's
+ * own `hashFloorDraw`. Over a list where every biome is authored, it is one draw over the whole
+ * list. */
+function expectedDraw(
+  runSeed: number,
+  floor: number,
+  pool: readonly BiomeData[],
+): BiomeId {
+  const hash =
+    (Math.imul(runSeed | 0, 0x9e3779b1) ^ Math.imul(floor | 0, 0x85ebca77)) >>> 0
+  const roll = createSeededRng(hash).next()
+  return pool[Math.min(pool.length - 1, Math.floor(roll * pool.length))]!.id
+}
+
+describe('biomeForFloor: a floor whose biome has no content uses the last authored biome before it', () => {
+  const noPins = new Map<number, BiomeId>()
+
+  it('a gap list [A, empty, C]: floors 11-20 fall back to A, 21-30 are C', () => {
+    // Hand-derived: floor 11-20 is decade 1 (empty) -> walk back to decade 0 = A; floor 21-30 is
+    // decade 2 = C itself. Fails when the walk-back is removed or reads only biomes[decade].
+    const gap = [A, EMPTY_BIOME, C]
+    for (let floor = 1; floor <= 10; floor++) {
+      expect(biomeForFloor(floor, gap, noPins, 1)).toBe(A.id)
+    }
+    for (let floor = 11; floor <= 20; floor++) {
+      expect(biomeForFloor(floor, gap, noPins, 1)).toBe(A.id)
+    }
+    for (let floor = 21; floor <= 30; floor++) {
+      expect(biomeForFloor(floor, gap, noPins, 1)).toBe(C.id)
+    }
+  })
+
+  it('a decade past the end of the list counts as one with no content', () => {
+    // Three biomes: floors 31-100 are decades 3-9, past the list's end, so they take the last
+    // authored biome before them, C.
+    const three = [A, EMPTY_BIOME, C]
+    for (const floor of [31, 40, 55, 99, 100]) {
+      expect(biomeForFloor(floor, three, noPins, 1)).toBe(C.id)
+    }
+  })
+
+  it('a one-biome list resolves floors 11, 25 and 100 to that biome', () => {
+    for (const floor of [1, 11, 25, 100]) {
+      expect(biomeForFloor(floor, [A], noPins, 1)).toBe(A.id)
+    }
+  })
+
+  it('an authored biome after the gap is reached only from its own decade', () => {
+    // [A, empty, empty, D]: floors 11-30 fall back to A, 31-40 are D, 41-100 fall back to D.
+    const list = [A, EMPTY_BIOME, EMPTY_BIOME, D]
+    expect(biomeForFloor(30, list, noPins, 1)).toBe(A.id)
+    expect(biomeForFloor(31, list, noPins, 1)).toBe(D.id)
+    expect(biomeForFloor(40, list, noPins, 1)).toBe(D.id)
+    expect(biomeForFloor(41, list, noPins, 1)).toBe(D.id)
+    expect(biomeForFloor(100, list, noPins, 1)).toBe(D.id)
+  })
+
+  it('throws the invariant error for an empty list, and for a list with nothing authored before the decade', () => {
+    expect(() => biomeForFloor(1, [], noPins, 1)).toThrow(/generation invariant violated/)
+    expect(() => biomeForFloor(1, [EMPTY_BIOME, EMPTY_BIOME], noPins, 1)).toThrow(
+      /generation invariant violated/,
+    )
+    // Biome 1 empty, biome 2 authored: floor 5 is decade 0, with nothing at or before it.
+    expect(() => biomeForFloor(5, [EMPTY_BIOME, A], noPins, 1)).toThrow(
+      /generation invariant violated/,
+    )
+  })
+})
+
+describe('biomeForFloor: past LAST_FIXED_FLOOR the draw is over the authored biomes only', () => {
+  const noPins = new Map<number, BiomeId>()
+  const SEEDS = [0, 1, 7, 42, 777, 123456, 4294967295]
+
+  it('LAST_FIXED_FLOOR is 100, and 100 is the last fixed floor', () => {
+    // Pinned: the constant is BIOME_COUNT x FLOORS_PER_BIOME (10 x 10).
+    expect(LAST_FIXED_FLOOR).toBe(100)
+    // Floor 100 is decade 9 for every seed; floor 101 is a draw (inline copy, below).
+    for (const seed of SEEDS) {
+      expect(biomeForFloor(100, FIXTURE_BIOME_SEQUENCE, noPins, seed)).toBe(
+        FIXTURE_BIOME_SEQUENCE[9]!.id,
+      )
+      expect(biomeForFloor(101, FIXTURE_BIOME_SEQUENCE, noPins, seed)).toBe(
+        expectedDraw(seed, 101, FIXTURE_BIOME_SEQUENCE),
+      )
+    }
+  })
+
+  it('a list with all ten authored draws as one draw over the whole list: floors 101-140 x 6 seeds', () => {
+    // Checkpoint-verified (not derived by hand): the expected value is an inline copy of the
+    // draw, `min(n - 1, floor(roll x n))` over the whole list. It fails when the draw runs over
+    // anything but the authored subset in list order, because for ten authored biomes that
+    // subset is the whole list.
+    const seeds = [1, 7, 42, 777, 123456, 4294967295]
+    const picked = new Set<BiomeId>()
+    for (const seed of seeds) {
+      for (let floor = 101; floor <= 140; floor++) {
+        const got = biomeForFloor(floor, FIXTURE_BIOME_SEQUENCE, noPins, seed)
+        expect(got).toBe(expectedDraw(seed, floor, FIXTURE_BIOME_SEQUENCE))
+        picked.add(got)
+      }
+    }
+    // The table is not degenerate: it reaches several biomes.
+    expect(picked.size).toBeGreaterThan(3)
+  })
+
+  it('a list with empty slots never draws an empty biome, and draws over the authored ones in list order', () => {
+    // [A, empty, C, empty, D]: the draw is `min(2, floor(roll x 3))` over [A, C, D].
+    const list = [A, EMPTY_BIOME, C, EMPTY_BIOME, D]
+    const authored = [A, C, D]
+    const picked = new Set<BiomeId>()
+    for (const seed of SEEDS) {
+      for (let floor = 101; floor <= 400; floor += 3) {
+        const got = biomeForFloor(floor, list, noPins, seed)
+        expect(got).not.toBe(EMPTY_BIOME.id)
+        expect(got).toBe(expectedDraw(seed, floor, authored))
+        picked.add(got)
+      }
+    }
+    // All three authored biomes are drawn somewhere in the table.
+    expect(picked).toEqual(new Set([A.id, C.id, D.id]))
+  })
+
+  it('a one-biome list draws that biome past floor 100', () => {
+    for (const seed of SEEDS) {
+      expect(biomeForFloor(101, [A], noPins, seed)).toBe(A.id)
+      expect(biomeForFloor(1000, [A, EMPTY_BIOME], noPins, seed)).toBe(A.id)
+    }
+  })
+
+  it('throws the invariant error when nothing is authored past floor 100', () => {
+    expect(() => biomeForFloor(101, [EMPTY_BIOME], noPins, 1)).toThrow(
+      /generation invariant violated/,
+    )
+    expect(() => biomeForFloor(101, [], noPins, 1)).toThrow(
+      /generation invariant violated/,
+    )
+  })
 })
 
 describe('biomeHasContent', () => {
@@ -312,40 +481,6 @@ describe('biomeHasContent', () => {
         speciesPool: [zeroWeightSpecies, FIXTURE_SPECIES_BRAWLERS],
       }),
     ).toBe(true)
-  })
-})
-
-describe('contentFrontier', () => {
-  it('is the last floor of the CONTIGUOUS prefix of has-content biomes, derived from the biome data', () => {
-    // A fixture list of exactly 2 authored (non-empty) biomes followed by empty placeholders --
-    // so frontier = 20.
-    const biomes: BiomeData[] = [
-      FIXTURE_BIOME,
-      FIXTURE_BIOME,
-      { id: createBiomeId('empty-3'), name: 'Empty 3', speciesPool: [] },
-      { id: createBiomeId('empty-4'), name: 'Empty 4', speciesPool: [] },
-    ]
-    expect(contentFrontier(biomes)).toBe(20)
-  })
-
-  it('stops at the FIRST has-content gap, never resuming at a later authored biome', () => {
-    // biome 1 authored, biome 2 empty, biome 3 authored again -- biomeForFloor would still
-    // resolve biome 2 (empty) for floors 11-20, so the frontier must stop at 10, not skip ahead
-    // to count biome 3's own floors 21-30 as reachable.
-    const biomes: BiomeData[] = [
-      FIXTURE_BIOME,
-      { id: createBiomeId('gap'), name: 'Gap', speciesPool: [] },
-      FIXTURE_BIOME,
-    ]
-    expect(contentFrontier(biomes)).toBe(10)
-  })
-
-  it('is 0 when the very first biome has no content', () => {
-    expect(contentFrontier(FIXTURE_BIOME_SEQUENCE)).toBe(0)
-  })
-
-  it('reflects a single authored biome as floor 10', () => {
-    expect(contentFrontier([FIXTURE_BIOME])).toBe(10)
   })
 })
 

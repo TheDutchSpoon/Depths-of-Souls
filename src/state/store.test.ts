@@ -26,6 +26,7 @@ import type { SeededRng } from '../engine/rng'
 import { TEST_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { FIXTURE_SCRIPTS_BY_ID } from '../engine/__fixtures__/scripts'
 import { enemyLevelRange } from '../engine/curves'
+import { BIOMES } from '../data/biomes'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { createCombat, resolveFight } from '../engine/combat'
 import {
@@ -584,23 +585,11 @@ const DESCEND_REASON_SCENARIOS: readonly DescendReasonScenario[] = [
     },
   },
   {
-    // deepestFloor is 0 -> max reachable is 1; FIXTURE_BIOME alone gives a frontier of 10, so
-    // floor 2 fails ONLY the reach check, not the frontier check.
+    // deepestFloor is 0 -> max reachable is 1, so floor 2 is out of reach.
     reason: 'floor-out-of-reach',
     floor: 2,
     setup: (store) => {
       store.getState().setSpec(FIXTURE_SPEC.id)
-    },
-  },
-  {
-    // FIXTURE_BIOME alone gives a content frontier of 10; deepestFloor 15 would otherwise make
-    // floor 11 reachable (reach itself passes), but 11 > the frontier (frontier wins even when
-    // reach alone would have been fine).
-    reason: 'beyond-content-frontier',
-    floor: 11,
-    setup: (store) => {
-      store.getState().setSpec(FIXTURE_SPEC.id)
-      store.setState({ deepestFloor: 15 })
     },
   },
 ]
@@ -631,25 +620,6 @@ describe('descend() / canDescend(): every refusal reason', () => {
     store.getState().setSpec(FIXTURE_SPEC.id)
     expect(expectFailure(store.getState().descend(0)).reason).toBe('floor-out-of-reach')
     expect(expectFailure(store.getState().descend(-1)).reason).toBe('floor-out-of-reach')
-  })
-
-  test('reason: beyond-content-frontier wins even when floor-out-of-reach ALSO fails', () => {
-    const store = createGameStore(
-      makeDeps({ createRng: stubRngFactory(ALL_WIN_SEQUENCE) }),
-    )
-    store.getState().setSpec(FIXTURE_SPEC.id)
-    // deepestFloor stays 0 (max reachable 1) AND floor 11 is past FIXTURE_BIOME's frontier of 10
-    // -- BOTH checks fail here, unlike the table's own 'beyond-content-frontier' scenario above
-    // (deepestFloor 15), which only exercises the frontier check failing ALONE. Swapping
-    // checkDescend's two checks would still pass that scenario; this one is what actually pins
-    // the precedence.
-    expect(store.getState().canDescend(11)).toEqual({
-      ok: false,
-      reason: 'beyond-content-frontier',
-    })
-    expect(expectFailure(store.getState().descend(11)).reason).toBe(
-      'beyond-content-frontier',
-    )
   })
 
   test('a valid floor: canDescend agrees, and calling it changes nothing', () => {
@@ -718,7 +688,7 @@ describe('pinBiome() / canPinBiome()', () => {
   test('refusing the pin closes the descend()-throws route (a player-reachable crash)', () => {
     // Without the refusal, pinBiome would accept this pin, canDescend(1) would agree it was fine,
     // and descend(1) would then throw the generator's own "empty or zero-weight pool" error -- a
-    // player-reachable crash through a second route beyond contentFrontier's own gate.
+    // player-reachable crash through a second route, one the reach check does not cover.
     const store = createGameStore(makePinDeps())
     store.getState().setSpec(FIXTURE_SPEC.id)
 
@@ -854,7 +824,7 @@ describe('setSpec()', () => {
 
 describe('recordBossKill() / perk points', () => {
   test('is idempotent and derives perk points as bossesCleared.size * 100', () => {
-    const store = createGameStore(makeDeps({}))
+    const store = createGameStore(makeDeps({ biomes: BIOMES }))
     expect(store.getState().bossesCleared.size).toBe(0)
     store.getState().recordBossKill('broodmother')
     store.getState().recordBossKill('broodmother') // no-op, already cleared
