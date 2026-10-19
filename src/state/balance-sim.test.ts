@@ -136,7 +136,7 @@ describe.skipIf(isSim)('balance simulator', () => {
 
     it('same seeds give a deep-equal report, built twice', () => {
       expect(buildReport(options)).toEqual(buildReport(options))
-    })
+    }, 60_000) // ~3s alone, over 5s under parallel load vs. Vitest's 5s default -- explicit headroom, not a tuned budget.
 
     it('has every spec, a row per floor up to the deepest floor any seed ran and the report items', () => {
       const report = buildReport(options)

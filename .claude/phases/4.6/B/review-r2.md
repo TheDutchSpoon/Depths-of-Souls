@@ -124,6 +124,14 @@ None.
    - Nothing reads them as live rules, and the full `citations` run skips `phases/`.
    - The phase brief is different. Later slices cite it as their plan, so it is fixed.
 
+## Decisions
+
+1. Duncan: add the timeout now, on this branch. `}, 60_000)` on the "built twice" test in
+   `src/state/balance-sim.test.ts`, with a headroom comment as in `corpus-digest.test.ts`. It is the
+   one change outside `#bs-listed-test-changes`: a timeout only, no assertion or expected value
+   changes, and the file passes 80 / 1 skipped as before.
+2. The old anchors in the finished step files stay, as recommended; Duncan raised no objection.
+
 ## What was verified, and how
 
 My own `npm ci` in sandbox worktrees of `9ace7ec`, `f947623` and `main`, with Vitest 5.0.4 (the
