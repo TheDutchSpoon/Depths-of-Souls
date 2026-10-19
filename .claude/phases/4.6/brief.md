@@ -506,9 +506,9 @@ Choices this brief made that the grill didn't pin. Each slice's plan confirms or
 
 - [x] **ASSUMPTION (A):** the party-size bound (0–5) is an engine constant in `engine/config.ts`,
       which `store.ts`'s `PARTY_SIZE` then reads.
-- [ ] **ASSUMPTION (B):** `canRecordBossKill` returns the same result shape as the other `can…`
+- [x] **ASSUMPTION (B):** `canRecordBossKill` returns the same result shape as the other `can…`
       queries.
-- [ ] **ASSUMPTION (B):** the intro Unicorn's gem stream is derived from the run seed with its own
+- [x] **ASSUMPTION (B):** the intro Unicorn's gem stream is derived from the run seed with its own
       fixed salt, like the summon roll's stream.
 - [ ] **ASSUMPTION (C):** "after the splash" for `on-attack` means after every splash hit of that
       instance; an AOE cast's `on-cast` fires once per instance, after its last member.

@@ -47,8 +47,8 @@ Read this when changing progression: specializations, perks and perk points, the
 
 ### Perk points
 
-- Perk points are **not dropped**: they come **only from first-time boss kills**, **100 per boss**,
-  one boss per biome. 10 bosses in v1 give 1000 points, exactly enough to **max one specialization
+- Perk points are **not dropped**: they come **only from first-time boss kills**, **100 per boss**
+  (config, `perkPointsPerBoss`), one boss per biome. 10 bosses in v1 give 1000 points, exactly enough to **max one specialization
   at floor 100**: character progression and cave depth finish together.
 - Bosses are the **sole** source, and only the **first clear** of each counts. The earned total is
   derived from the bosses cleared, never stored.
@@ -74,8 +74,11 @@ Read this when changing progression: specializations, perks and perk points, the
 - A specialization is a named collection of perks, as data (`src/data/specializations.ts`). A perk
   is an effect carrier (`spec/effects.md#carriers-and-effects`), combat-only; `Perk` stays a
   plain effect carrier, with no meta-economy framework.
-- A spec is valid iff its perks' `Σ(maxLevel × costPerLevel) === 1000`, checked at load.
-- Perk points are **derived**: `bossesCleared × 100`, first clears only. The spend is
+- A spec is valid iff its perks' `Σ(maxLevel × costPerLevel)` equals `specializationPointTotal`,
+  `perkPointsPerBoss × BIOME_COUNT` (one boss per biome; 1000 by default), checked at load. It is
+  derived from the config, never from the bosses the data has so far.
+- Perk points are **derived**: `perkPointsFor(bossesCleared, config)`, `bossesCleared ×
+  perkPointsPerBoss`, first clears only. The spend is
   `Map<perkId, level>`; refunding is free and unlimited (one perk, all of them, or a spec swap are
   the same clear), and the budget recomputes. The store actions and the earned, spent and free
   summary are `spec/store.md#store-actions`.

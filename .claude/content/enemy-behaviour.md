@@ -65,6 +65,10 @@ have already applied.
 | Stonehorn Warden (Shieldbarer starter) | warden |
 | Unicorn Lightbearer | striker (its revive fires on attack) |
 
+The scripted intro's enemy Unicorn rolls a full gem set of three biome-1 Vitality spells, like
+every enemy (Regrowth, Wild Vigor and Life Siphon, in a seeded order), so a Pacified intro Unicorn
+casts instead of waiting (`spec/run.md#scripted-intro`).
+
 ## Gem sets
 
 ### Three different spells per enemy
@@ -94,3 +98,6 @@ turn like any enemy's. The rules, and why, are in `spec/run.md#boss-floors`.
 | Broodmother (floor 10) | striker | Spider Weaver, Spider Ambusher | 3 from the Overgrowth, not Spiders |
 | Leech Sovereign (floor 20) | striker | none | 5 from Glimmerdark |
 | Rot Sovereign (floor 30) | warden | Sporecloud Seeder, Rotfeeder Scavenger | 3 from Rotcap Hollow |
+
+While three biomes are authored, floors 40, 50 … 100 are Rotcap Hollow boss floors, so they fight
+the Rot Sovereign again (`spec/run.md#floors-past-the-authored-biomes`).

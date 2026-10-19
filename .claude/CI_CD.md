@@ -98,7 +98,12 @@ check. The rules every change follows are in `CONVENTIONS.md`.
   plan-item ids), so `'…before Phase 8'` fails; the workflow words ("brief", "the plan", "grill")
   are not read there, because a player-facing string can hold them. Plan-item letters are `A`-`I`,
   so a derivation handle such as `S1_SCRIPT` or `T98` passes, and a test title may open with one
-  (`'E1 ticks first'`). A rename is proved with `comment-proof <base> --renames <map>`
+  (`'E1 ticks first'`).
+- In comments and test titles only, it also fails on the history of the code: "legacy … path",
+  "moved here from", "first real consumer", "existing implicit behavio(u)r", "keeps working
+  unchanged", "'s first file" and "the new `…`" (patterns 21–27). A string literal is not read for
+  them: a player-facing string can say "new" or "legacy".
+- A rename is proved with `comment-proof <base> --renames <map>`
   (`workflow/pr-review.md#4-verify-claimed-invariants-mechanically`).
 - `npm run docs:check -- comments --quotations` lists a quotation within four words of an anchor, on
   either side, that the target's section doesn't hold.

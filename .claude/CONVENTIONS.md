@@ -69,11 +69,16 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 ### Where each number lives
 
 - **Combat rule constants** stay in **`engine/config.ts`**: the affinity ±25%, the chip floor, the
-  Defend factors, `ROUND_CAP`, the cascade depth, `MAX_REVIVES_PER_CREATURE`.
+  Defend factors, `ROUND_CAP`, the cascade depth, `MAX_REVIVES_PER_CREATURE`. So does the stat
+  growth per level, `STAT_GROWTH_PER_LEVEL`, a progression number that `materializeCreature` reads
+  without a config (`spec/creatures.md#levels-and-xp`).
+- **The cave's shape** is engine constants in `engine/generation.ts`: `BIOME_COUNT`,
+  `FLOORS_PER_BIOME` and `LAST_FIXED_FLOOR` (`spec/run.md#generation-is-a-pure-seeded-module`).
 - **Progression and economy numbers** live in an injected **`BalanceConfig`**: the engine defines
   its shape, `data/balance.ts` its values. It holds the level range (the multiplier curve), the
   fight count, the enemy party size, the boss level offset, the rarity spawn weights, the soul gain,
-  the XP curve, XP per kill, the intro's XP grant, currency drops and the summon cost (free:
+  the XP curve, XP per kill, the intro's XP grant, currency drops, the perk points per boss
+  (`perkPointsPerBoss`) and the summon cost (free:
   nothing reads it until Phase 8's Soul Altar names the currency it is paid in). What each number
   does is in its spec rule (`spec/run.md`, `spec/creatures.md`).
 - **Curves are parameters, not functions** (`{ fightCountBase: 10, fightCountPerFloor: 1 }`, never
@@ -96,6 +101,9 @@ How CI, the deploy and the environments work is in `CI_CD.md`; a normal slice do
 - **A hard wall** (T4) is 5 failed pushes in a row at one floor; re-farm runs between them don't
   reset the count. With a re-farm after each failed push, that is about one session stuck on one
   floor. The simulator records the first wall and keeps going.
+- **A seed stops only at its cap** of floor runs: the cave has no end to stop at. The per-floor rows
+  run to the deepest floor any seed ran, with no row for a floor nobody ran, so the floor of a
+  seed's last failed pushes keeps its row.
 - **No band for round-cap draws**: the draw rate is reported, not targeted.
 - The report also has a **floor 1–5 matchup table** (per enemy creature: fights, wins, losses and
   round-cap draws, per spec; a fight counts for every enemy in its party, one that never got a turn

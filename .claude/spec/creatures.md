@@ -67,7 +67,8 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 - **Level-N stat = `round(base × (1 + 0.25 × (level − 1)))`**: +25% of base per level, level 1 =
   base (base 20 gains 5 a level, 65 at level 10). It is recomputed from base at every level, never
   accumulated, so there is no rounding drift, and the exact-quarter inputs keep it deterministic.
-  There is no growth-rate field.
+  The 0.25 is `STAT_GROWTH_PER_LEVEL` (`engine/config.ts`), one value for every creature: there is
+  no per-creature growth-rate field.
 - **Level is uncapped.** It climbs with depth (`spec/run.md#enemy-levels`), and the formula holds
   at any level.
 - Levels keep stats in a sane range for the subtractive damage formula; the power curve comes from
@@ -210,8 +211,9 @@ the Unicorn) is described in the content docs (`content/overgrowth.md`, `content
 - **Its own RNG:** the roll draws from `createRng(hashGemDraw(runSeed, instance ordinal))`, a hash
   with its own constants. It never reads or advances `runCounter`, so a gem roll can't shift a
   floor draw.
-- **The unlock biome** is the biome of `min(100, max(1, deepestFloor))`, ignoring atlas pins: the
-  pool follows depth, never a farming pin, and stops growing at floor 100.
+- **The unlock biome** is the biome of `min(LAST_FIXED_FLOOR, max(1, deepestFloor))` through
+  `biomeForFloor`, ignoring atlas pins: the pool follows depth, never a farming pin, and stops
+  growing at floor 100.
 - **No innate duplicates:** the pool excludes the spells of the creature's own `innate-spell`
   effects (the Seer never rolls Arcane Bolt). The exclusion lives in the store, which has the trait
   registry. No spawnable enemy carries an innate spell, and a data test pins that, so enemies need
