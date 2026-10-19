@@ -1,6 +1,6 @@
-// There is no content frontier: a floor past the last authored biome is generated from that
-// biome, a descent into it is accepted, and the boss on it is the real one. Real store, real
-// content (`spec/run.md#biomeforfloor`).
+// A floor whose biome has no content fights the last authored biome before it: a descent into a
+// floor past the last authored biome is accepted, and the boss on it is the real one. Real store,
+// real content (`spec/run.md#biomeforfloor`).
 
 import { describe, expect, test } from 'vitest'
 import type { Affinity, Spell } from '../engine/types'

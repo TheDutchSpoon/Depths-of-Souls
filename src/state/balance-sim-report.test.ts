@@ -246,7 +246,7 @@ describe('the first-try clear rate per floor', () => {
     expect(buildFirstTryRows([seedResult()])).toEqual([])
   })
 
-  it('has no content bound: a floor past 30 has a row, and a floor nobody ran has none', () => {
+  it('a floor past 30 has a row when a seed ran it, and a floor nobody ran has none', () => {
     const rows = buildFirstTryRows([
       seedResult({ runs: [run(1, 1, true), run(2, 31, true)] }),
     ])
@@ -513,7 +513,7 @@ describe('T2 and T3 floor reads', () => {
   })
 })
 
-// ---- The floor rows have no content bound ----
+// ---- The floor rows run to the deepest floor any seed ran ----
 
 describe('the floor rows run to the deepest floor any seed ran', () => {
   const CONFIG = DEFAULT_BALANCE_CONFIG

@@ -138,7 +138,7 @@ describe.skipIf(isSim)('balance simulator', () => {
       expect(buildReport(options)).toEqual(buildReport(options))
     })
 
-    it('has every spec, a row per content floor and the report items', () => {
+    it('has every spec, a row per floor up to the deepest floor any seed ran and the report items', () => {
       const report = buildReport(options)
       expect(report.specs.map((s) => s.specId)).toEqual(SPECIALIZATIONS.map((s) => s.id))
       for (const spec of report.specs) {
@@ -1407,6 +1407,44 @@ describe.skipIf(isSim)('balance simulator', () => {
         e.type === 'TurnStarted' ? [e.creatureId] : [],
       )
       expect(turnStarters).toContain(played.context.bossId)
+    })
+
+    it('a non-boss floor run makes one descent even when the party holds Pacify; a boss floor makes two', () => {
+      // The probe is a second descent whose result is thrown away, so it runs only where its
+      // result is used: on a boss floor. Counting `descend` calls through a wrapper on the store
+      // sees the extra descent a probe on a non-boss floor would add.
+      const descents = (store: ReturnType<typeof atBossFloor>, deepestFloor: number) => {
+        store.setState({ deepestFloor })
+        expect(pickProbeCreature(store.getState())).not.toBeNull()
+        const realDescend = store.getState().descend
+        const floors: number[] = []
+        store.setState({
+          descend: (floor) => {
+            floors.push(floor)
+            return realDescend(floor)
+          },
+        })
+        const played = playFloorRun(
+          store,
+          { ...INITIAL_PROGRESS, deepestFloor },
+          new Set<number>(),
+        )
+        return { floors, played }
+      }
+
+      const plainStore = atBossFloor()
+      expect(plainStore.getState().floorPreview(4)!.boss).toBe(false)
+      const plain = descents(plainStore, 3)
+      expect(plain.played.run.floor).toBe(4)
+      expect(plain.floors).toEqual([4])
+      expect(plain.played.bossVisit).toBeNull()
+
+      const bossStore = atBossFloor()
+      expect(bossStore.getState().floorPreview(10)!.boss).toBe(true)
+      const boss = descents(bossStore, 9)
+      expect(boss.played.run.floor).toBe(10)
+      expect(boss.floors).toEqual([10, 10])
+      expect(boss.played.bossVisit!.probe).not.toBeNull()
     })
 
     it('bossContext names the biome boss and its traits, reading the store pins', () => {

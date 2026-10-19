@@ -58,7 +58,7 @@ describe('refusal text', () => {
     expectDistinctPlainTexts(reasons.map((reason) => descendRefusalText(reason, 5)))
   })
 
-  test('the seed texts are the strings the screen has always shown', () => {
+  test('the seed texts name the bound MAX_RUN_SEED (4294967295)', () => {
     expect(seedRefusalText('seed-out-of-range')).toBe(
       'The seed must be between 0 and 4294967295.',
     )

@@ -2,7 +2,7 @@
 
 **Status: built.** Golden policy byte-identical: no expected value of any golden changed, and the
 corpus digest is untouched. Three golden fixtures and `__corpus__/node-shims.d.ts` changed by
-comment only. 2550 tests passed, 1 skipped (net +139 against `main`; 269 files, +8). The slice was
+comment only. 2551 tests passed, 1 skipped (net +140 against `main`; 269 files, +8). The slice was
 built in two steps: the build (committed as `f51a849`, the sweep's base) and the comment sweep on top of it.
 
 ## What was built
@@ -21,24 +21,27 @@ built in two steps: the build (committed as `f51a849`, the sweep's base) and the
   simulator's `nextRun`. `reach-readers.test.ts` reads the sources and fails if a fifth restatement
   appears. `deepestPlusOne` is gone.
 - **The intro Unicorn's gems come from its own stream.** The intro rolls the enemy Unicorn's set by
-  the enemy rule over biome 1 (`INTRO_BIOME_NUMBER = 1`), and the joining Unicorn's stored set from
-  `hashIntroUnicornDraw`, so the run counter advances by one whatever the roll. The state after the
+  the enemy rule over biome 1 (`INTRO_BIOME_NUMBER = 1`), from `hashIntroUnicornDraw(runSeed)`, a
+  stream of its own, so the run counter advances by one whatever the roll. The joining Unicorn's
+  stored set still comes from `hashGemDraw(runSeed, ordinal)`, through `rollPlayerGems`. The state after the
   intro, and the first descent, equal `main`'s in 60 of 60 cases (3 specs × 20 seeds); 9 of the 60
   intro logs differ, all Sorcerer, because only a Pacified Unicorn can now cast where `main`'s held
   no gem (`evidence/intro-equivalence.md`).
 - **A boss kill is checked.** `recordBossKill` refuses an id no biome in the store's list holds
   (and says so); `canRecordBossKill` answers the same question without acting. A repeat of a
   cleared boss returns `{ ok: true }` with the state object unchanged and no perk points.
-- **Numbers out of the logic.** `perkPointsPerBoss` (100) and `STAT_GROWTH_PER_LEVEL` (0.25) are
-  read from the balance config; `specializationPointTotal` follows the config (10 × 100 by
+- **Numbers out of the logic.** `perkPointsPerBoss` (100) is a `BalanceConfig` field and is read
+  from the balance config; `STAT_GROWTH_PER_LEVEL` (0.25) is a constant in `engine/config.ts`;
+  `specializationPointTotal` follows the config (10 × 100 by
   default); `perkPointsFor(bossesCleared, config)` takes it. The literals 100, 1000 and 0.25 are
   gone from the logic. The `Math.min(100, …)` that remains in `store.ts` caps soul percent.
   `curves.ts`' `floor <= 100` is the level multiplier's pivot and is untouched.
 - **Game-layer fixes.** Status durations print `1 turn` and `N turns`, not `(3r)`. A descent with no
   fights plays as done and every playback action but `set-speed` returns the state unchanged
   (`jump` included); a `jump` to a fight that does not exist still throws when there are fights.
-  The descent viewer renders a floor line and says no fights were played. The seed texts and the
-  debug-boss refusal say what happened. The Rot Sovereign attrition filter compares the creature
+  The descent viewer renders a floor line and says no fights were played. The seed texts say what happened,
+  and `recordBoss` returns the store's result (the Hub's Debug button discards it; it offers only
+  real bosses, so the refusal cannot happen there). The Rot Sovereign attrition filter compares the creature
   template id with `ROT_SOVEREIGN.id`. The simulator reads its sides from a roster
   (`state/__fixtures__/roster.ts`, `rosterOf`) instead of splitting ids, so `templateIdOf` and every
   hand-built id are gone. Floor rows run to the deepest floor any seed ran, with no row for a floor
@@ -60,15 +63,18 @@ built in two steps: the build (committed as `f51a849`, the sweep's base) and the
 
 ## Tests and goldens
 
-- New files: `store-frontier`, `store-reach`, `reach-readers`, `store-intro-unicorn`,
+- New files: `store-deep-floors`, `store-reach`, `reach-readers`, `store-intro-unicorn`,
   `store-boss-kill`, `config-reads` (all `src/state`), `app/demo-marker`, `ui/DescentViewer`.
   Additions in `generation`, `playback`, `refusals`, `eventText`, `debugBoss`, `balance-sim` and
-  `balance-sim-report` tests, and in `scripts/docs-check/comments.test.ts` (28 to 30).
+  `balance-sim-report` tests, and in `scripts/docs-check/comments.test.ts` (82 to 104).
 - 51 existing tests failed against the new code before any was touched, and each matched an entry
   in the plan's list or its hand-out (`evidence/test-inventory.md`). They were adjusted as set-up or
   listed expectations only; the frontier scenarios, the `deepestPlusOne` test and the
   `templateIdOf` test were removed.
-- 23 scratch mutations, one per mechanism and site, all killed (listed in `report-r1.md`).
+- 24 scratch mutations, one per mechanism and site, all killed (23 listed in `report-r1.md`, the
+  24th in `report-r2.md`). The 24th removes the `preview.boss &&` gate on the simulator's probe;
+  `balance-sim.test.ts` "a non-boss floor run makes one descent even when the party holds Pacify; a
+  boss floor makes two" counts the store's `descend` calls and fails with the gate gone.
 - Golden policy: no `__golden__` expected value changed; the corpus digest test passes unmodified;
   `corpus:update` never ran. The only golden-adjacent edits are fixture helpers
   (`__fixtures__/balance.ts` gains `perkPointsPerBoss: 100`; `__fixtures__/biomes.ts` gives each
@@ -86,5 +92,5 @@ Logic and types: `engine/{generation,config,leveling,balance-types}.ts`,
 and `data/specializations.ts`. Marker line: 35 files in `src/app`, `src/ui` and `src/main.tsx`.
 Fixtures: `engine/__fixtures__/{balance,biomes}.ts`. New: `state/__fixtures__/roster.ts`, the eight
 test files above, and the evidence files. The sweep touched 30 files by comment (the list is the
-`comment-proof` output in the report). No living or content doc was edited. Nothing was deleted or
-renamed.
+`comment-proof` output in the report). No living or content doc was edited. Nothing was deleted. Round 1 renamed
+`state/store-frontier.test.ts` to `state/store-deep-floors.test.ts`.

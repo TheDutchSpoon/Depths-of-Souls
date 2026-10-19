@@ -11,8 +11,9 @@
 //
 // ---- The player policy ----
 // One run = one spec x one seed: `startGame({ seed, specId })`, then a loop of
-// FLOOR RUNS (one `descend` each) until the seed reaches RUN_CAP floor runs (`cap`): the cave has
-// no content frontier (`spec/run.md#biomeforfloor`), so a seed only stops at the cap.
+// FLOOR RUNS (one `descend` each) until the seed reaches RUN_CAP floor runs (`cap`): a floor whose
+// biome has no content fights the last authored biome before it (`spec/run.md#biomeforfloor`), so
+// every floor can be entered and a seed only stops at the cap.
 //  - Which floor: after a clear, push to `farthestReachableFloor(deepestFloor)`, the store's one
 //    statement of the reach rule. After a FAILED PUSH the
 //    next run re-farms `deepestFloor`; while `deepestFloor` is 0 there is nothing to re-farm, so a

@@ -1085,7 +1085,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       if (!unicornRef)
         throw new Error('runScriptedIntro: Unicorn not found in standaloneCreatures')
       // The enemy rule, like every enemy (`rollLoadout`, no innate exclusion), from the intro's own
-      // stream: never the run counter, so every descent after the intro stays as it was.
+      // stream, never the run counter: no descent after the intro depends on the roll.
       const enemyGems = rollLoadout(
         unicornRef.speciesCreature,
         INTRO_BIOME_NUMBER,

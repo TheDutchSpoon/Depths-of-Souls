@@ -283,7 +283,7 @@ describe('biomeForFloor', () => {
   })
 })
 
-// ---- The cave has no content frontier: the fallback and the authored-only draw ----
+// ---- A floor whose biome has no content: the fallback and the authored-only draw ----
 
 const EMPTY_BIOME: BiomeData = {
   id: createBiomeId('empty'),
@@ -301,7 +301,8 @@ const D = biomeWithContent('authored-d')
 
 /** An inline copy of the draw past `LAST_FIXED_FLOOR`: the seeded hash of (runSeed, floor), one
  * roll, `min(n - 1, floor(roll * n))` over the biomes it may pick. The constants are generation's
- * own `hashFloorDraw`; the copy is what `main` computed for a list where every biome is authored. */
+ * own `hashFloorDraw`. Over a list where every biome is authored, it is one draw over the whole
+ * list. */
 function expectedDraw(
   runSeed: number,
   floor: number,
@@ -386,8 +387,8 @@ describe('biomeForFloor: past LAST_FIXED_FLOOR the draw is over the authored bio
     }
   })
 
-  it('a list with all ten authored draws exactly what main drew: floors 101-140 x 6 seeds', () => {
-    // Checkpoint-verified (not derived by hand): the expected value is an inline copy of main's
+  it('a list with all ten authored draws as one draw over the whole list: floors 101-140 x 6 seeds', () => {
+    // Checkpoint-verified (not derived by hand): the expected value is an inline copy of the
     // draw, `min(n - 1, floor(roll x n))` over the whole list. It fails when the draw runs over
     // anything but the authored subset in list order, because for ten authored biomes that
     // subset is the whole list.

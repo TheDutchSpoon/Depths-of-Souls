@@ -1,5 +1,5 @@
 // The farthest floor a player can enter is one past the deepest cleared (`farthestReachableFloor`),
-// with no content bound; the store refuses a biome list it could not generate floors from; and the
+// whatever the biome list holds; the store refuses a biome list it could not generate floors from; and the
 // player gem pool follows the deepest floor up to `LAST_FIXED_FLOOR` only.
 
 import { describe, expect, test } from 'vitest'

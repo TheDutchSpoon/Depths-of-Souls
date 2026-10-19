@@ -1,5 +1,5 @@
-// The numbers that used to sit in the logic are read from the config: the perk points a boss
-// pays, the stat growth per level, and the total a specialization's perks must sum to.
+// The perk points a boss pays, the stat growth per level and the total a specialization's perks
+// must sum to are read from the config.
 
 import { describe, expect, test } from 'vitest'
 import type { BalanceConfig } from '../engine/balance-types'
