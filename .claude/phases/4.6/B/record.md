@@ -3,7 +3,10 @@
 **Status: built.** Golden policy byte-identical: no expected value of any golden changed, and the
 corpus digest is untouched. Three golden fixtures and `__corpus__/node-shims.d.ts` changed by
 comment only. 2551 tests passed, 1 skipped (net +140 against `main`; 269 files, +8). The slice was
-built in two steps: the build (committed as `f51a849`, the sweep's base) and the comment sweep on top of it.
+built in two steps: the build (committed as `f51a849`, the sweep's base) and the comment sweep on top of it
+(`5aaba10`). The round-1 fix (`9ace7ec`) comes after the sweep. Its only code change is one new
+test. Everything else in it is comments, four test titles and one file rename, which
+`comment-proof a15eb5c` proves with a title mask and a rename map.
 
 ## What was built
 

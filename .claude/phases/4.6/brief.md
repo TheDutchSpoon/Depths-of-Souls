@@ -220,8 +220,8 @@ Each slice's mailbox holds its own `brief.md`. Why the cuts fall where they do:
 - The player gem-roll pool (`unlockBiomeIndex`, `store.ts:405-415`) reads the same resolution.
 - Goldens and the corpus are untouched (no corpus fight is past floor 30). Tests that pin the
   frontier change ([B's listed changes](#bs-listed-test-changes)).
-- The PR review rewrites `spec/run.md#content-frontier`, `#biomes`, `#biomeforfloor`,
-  `#content-frontier-and-pins` and `#pins`, `spec/store.md#how-store-actions-fail` and
+- The PR review rewrites `spec/run.md#floors-past-the-authored-biomes`, `#biomes`, `#biomeforfloor`,
+  `#authored-biomes-and-pins` and `#pins`, `spec/store.md#how-store-actions-fail` and
   `OPEN_QUESTIONS.md` where they mention the frontier.
 
 ### The intro's Unicorn rolls its spells
