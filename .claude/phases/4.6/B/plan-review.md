@@ -166,3 +166,101 @@ in no existing test: I checked every test store's biome list (`store.test.ts`'s 
   `perkPointsFor`'s config argument are listed (decide-points 1 and 2).
 - `phases/4.6/B/kickoff.md`: the floor-row ASSUMPTION is resolved (decide-point 3), and the "each
   V12 hit is a positive case" rule names its one exception (decide-point 4).
+
+## Round 2
+
+**Verdict: approved, with four small corrections** (`plan-handout-r2.md`). All five round-1 items
+landed, and A1, A4, A6, A8 and A17 now say what round 1 decided. I checked the new claims against
+`src/` rather than the plan's word, and the intro's request count, the guard's scope and the
+floor-row rule all hold. I also ran the guard as A19 specifies, in a scratch worktree on this
+branch (since removed). It works, with two conditions the plan doesn't state. Its own "exact" test
+list misses five call sites, and the roster helper as written can't keep one listed assertion. None
+of this needs Duncan's call, so the corrections are end states in the hand-out, not a third round.
+Nothing touches the brief's Assumptions checklist: no "bring it back" signal.
+
+### Fold-in check
+
+| Round-1 item | Landed? |
+| --- | --- |
+| 1. Intro tests | **Yes.** Two requests in order, one when owned, the exact biome-1 set over 20+ seeds, the slot order, `runCounter` 7. Verified: `createCombat` draws from its own `createRngState`, never `deps.createRng`, so the enemy roll and the grant's `rollPlayerGems` really are the only two requests. The joining ordinal is `nextInstanceOrdinal` before the intro (`addInstance` reads it inside the `set`). |
+| 2. Existing-test list | **Mostly.** Every site the hand-out named is there. But the plan now calls the list exact, and five more sites change. See plan fix 1. |
+| 3. Floor rows | **Yes.** Both builders, the unrun-floor skip, and the gap test. A new gap shows up in the printer (plan fix 4). |
+| 4. Reach readers and guard | **Yes.** Four readers with a `nextRun` row, comments stripped, the marker test on the raw text. A19 needs two conditions (plan fix 3). |
+| 5. Glimmerdark V12 hit | **Yes.** No pattern, fixed by hand, listed apart in the evidence file. |
+
+### Plan fixes
+
+1. **The existing-test list is short by five sites.** Each is a signature change the plan already
+   makes, so each surfaces as a `tsc -b` error. The plan's own rule is that the inventory must equal
+   its list, so each would be a needless stop-and-ask:
+   - `balance-sim.test.ts` ~285 and ~291: `stopReason(p, 30, 400)` in the wall test. The plan lists
+     only ~305–320.
+   - `balance-sim-report.test.ts` ~227–246: `buildFirstTryRows(…, 30)` in the two first-try tests.
+     Only "stops at the frontier" (~249) is listed.
+   - `refusals.test.ts` ~134 (`descendRefusalText(reason)` over the produced reasons) and
+     `presence.test.ts` ~60 (`descendRefusalText('empty-party')`). These are outside the listed
+     ~44–52, and both need the new reach argument.
+   - `balance-sim.test.ts` ~560–622: the ~625 test shares its ids `A`/`B`/`C` (`'a-player-0'` …)
+     with the `attributeStatModifiers` tests beside it. Making those ids opaque, as the plan
+     requires, changes those tests' set-up too.
+
+   All five changes are set-up only, with assertions unchanged, and they belong to classes the brief
+   already lists (the simulator's frontier stop, the out-of-reach text, the analysis set-up). Also,
+   `store.test.ts` ~721's comment names `contentFrontier`, which is deleted. It is reworded, comment
+   only.
+2. **The roster helper can't keep the matchup assertion (A18).** `rosterOf(playerIds, enemyIds)`
+   takes ids only. Through `makeCreature`, each creature's `origin.templateId` then defaults to its
+   id. `balance-sim-report.test.ts` ~129 asserts `enemyTemplateIds` equal
+   `['spider-weaver', 'treant-elder']` from three enemies, two of the same template. With opaque ids
+   and templates equal to the ids, that assertion would have to become `['e1', 'e2', 'e3']` and
+   would stop testing "distinct". The helper must let an entry name its template. The test's second
+   line (`analyzeFight(events, noCtx)` with no roster) passes an empty roster if the parameter
+   becomes required, and still expects `[]`.
+3. **A19's `ts.transpileModule` needs two conditions.** Both are verified on this tree:
+   - It **throws** on a declaration file ("Debug Failure. Output generation failed"), and the glob
+     `/src/**/*.{ts,tsx}` picks up `src/engine/__corpus__/node-shims.d.ts`. `comment-proof.ts`
+     already notes this. The guard skips `.d.ts` files.
+   - Without `fileName`, a `.tsx` file is parsed as `.ts`, and `RunScreen.tsx` comes out as garbled
+     non-JSX. The reader assertion on `farthestReachableFloor(game.deepestFloor)` would then run on
+     mangled text. Passing the path as `fileName` gives clean output.
+
+   With both conditions, the guard over the current tree flags exactly `floorPicker.ts`,
+   `balance-sim.ts` (code line 151; its comment lines 16 and 18 are stripped) and `store.ts`. That
+   is the expected "before" state: after B only the export remains. `import ts from 'typescript'`
+   and `import.meta.glob` with `?raw` both type-check under `tsconfig.app.json` and pass lint. The
+   file sits in `src/state`, so it runs in the Node project.
+4. **The watch-point line can't read a row that isn't there.** `formatSpec`'s "Floors
+   20–<deepest>" takes "the spec's last row". `balance-sim.test.ts` ~1005 formats a spec whose only
+   seed has no runs, so it has no rows. That would throw, or print "undefined". End state: the label
+   has no upper bound ("Floors 20 and deeper"). The line lists only floors with failed pushes
+   anyway. No test asserts the old label (grep).
+
+### Assumptions
+
+| # | Plan ASSUMPTION | Call |
+| --- | --- | --- |
+| A1 | Rows to the deepest floor any seed ran; an unrun floor has no row in either builder | **Confirm.** Matches round 1. |
+| A4 | Four readers; `deepestPlusOne` deleted | **Confirm.** The checklist repeats its last sentence and the repeat is mis-indented. That is cosmetic and needs no fix. |
+| A6 | Two `createRng` requests on a first intro, one when the Unicorn is owned | **Confirm.** Verified in `store.ts` and `combat.ts` (above). |
+| A8 | A row's shape is the first run on the floor, in seed order | **Confirm.** |
+| A17 | The guard reads code only; the marker test reads raw text | **Confirm.** |
+| A18 | `rosterOf` in a new `src/state/__fixtures__/roster.ts` | **Correct** (plan fix 2). The folder is right: the helper builds `FightRecord` parties, a `src/state` type, so it can't live in `engine/__fixtures__`. It is a new file under `src/`, so the comment check reads it. |
+| A19 | `ts.transpileModule` with `removeComments`, in `src/state/reach-readers.test.ts` | **Correct** (plan fix 3). The tool is right: unlike a regex stripper, it isn't fooled by `//` inside a string (checked). |
+
+**Golden policy:** unchanged from round 1, and it matches the kickoff.
+
+**Mechanism → test, at every site:** complete. The `nextRun` row's table of deepest floors (0, 1,
+12, 99, 150) moves with the export.
+
+### Decide-points
+
+None.
+
+### Decisions
+
+None. The corrections are plan fixes 1–4, handed out as written.
+
+### Docs edited
+
+None. The corrections fall within classes `phases/4.6/brief.md#bs-listed-test-changes` already
+lists, and change no decision.
