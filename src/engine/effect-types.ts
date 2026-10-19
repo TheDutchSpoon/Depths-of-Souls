@@ -105,7 +105,7 @@ export type CountOf =
  * rate by (deal-damage's spellPower, damage-modifier's magnitude×count or magnitude**count;
  * `spec/effects.md#count-scaling`). Absent means a count of one, so every call site is
  * byte-identical when magnitudeSource is absent. The count is a LIVE board count, recomputed on
- * every read. `flat` is the existing implicit behavior, made explicit. `stat-modifier`'s
+ * every read. `flat` is the authored value as it stands. `stat-modifier`'s
  * `factor` is NOT wired to this source on the standalone EffectDef (see StatModifierDef's own
  * comment); `apply-stat-modifier` carries it instead. */
 export type MagnitudeSource =

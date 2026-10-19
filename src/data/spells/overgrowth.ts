@@ -44,8 +44,7 @@ export const THORN_LASH: Spell = {
   ],
 }
 
-/** Weakening Bite: Violence's second spell is a debuff, not a second damage spell (no two
- * damage-only spells sharing an affinity in this biome) -- permanently lowers a
+/** Weakening Bite: a Violence debuff, not a damage spell -- permanently lowers a
  * single enemy's Defence for the rest of the fight, via an `apply-stat-modifier`
  * effect with the enemy targetSide. */
 export const WEAKENING_BITE: Spell = {

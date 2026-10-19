@@ -3,7 +3,7 @@
 //
 // CombatState.rng is plain data, a bookmark { position: number } -- not a
 // closure. `nextRandom(rng)` draws a value and ADVANCES `rng.position` IN PLACE (a deliberate,
-// narrow exception to never mutating -- `CONVENTIONS.md#combat-is-reproducible-from-its-inputs`
+// narrow exception to never mutating -- `CONVENTIONS.md#combatstate-is-plain-data-never-modified-after-being-returned`
 // calls this out explicitly: a roll advances the working copy's bookmark). This is safe exactly
 // because CALLERS are responsible for never
 // handing `nextRandom` an rng object that's still shared with an input snapshot someone else

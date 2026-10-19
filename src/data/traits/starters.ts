@@ -56,7 +56,7 @@ export const BRUTE_STARTER_TRAIT: DescribedTrait = {
 // High Defence; on-provoke, your creatures gain +35% Defence (team-wide,
 // `specializations/shieldbarer.md#starter-stonehorn-warden`). A
 // stat-modifier (not grant-action-state -- it's a stat buff, not an action-state flag), targeted at
-// the new `all-allies` ResponseTarget. Permanent-for-fight and re-fired on every Provoke, so
+// the `all-allies` ResponseTarget. Permanent-for-fight and re-fired on every Provoke, so
 // repeated provokes stack (a ramping team-Defence engine).
 
 export const SHIELDBARER_STARTER_TRAIT: DescribedTrait = {

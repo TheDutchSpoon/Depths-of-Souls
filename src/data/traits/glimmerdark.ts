@@ -131,8 +131,8 @@ export const BLINDCLAWS_SETTER_TRAIT: DescribedTrait = {
 
 /** Blindclaws' Striker (payoff): a damage bonus while acting before its target
  * (`content/glimmerdark.md#blindclaws-striker`), the spec'd numeric payoff -- a real `conditional-damage-bonus` on the
- * `acted-before-target` condition, made possible by conditions.ts completing that
- * condition's non-scripting path. Action-selection (attack-or-Defend) is the scripting layer's
+ * `acted-before-target` condition, which conditions.ts also resolves outside a script
+ * (against the current damage target). Action-selection (attack-or-Defend) is the scripting layer's
  * job, never a creature-identity trait -- Striker runs the plain `striker` role
  * (species/glimmerdark.ts), and this is its whole identity. Scoped to `actionKind: 'attack'`
  * (`content/glimmerdark.md#blindclaws-striker` is Attack-specific; the gems it casts when Pacified get no

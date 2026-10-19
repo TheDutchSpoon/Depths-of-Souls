@@ -42,7 +42,7 @@ export * from './rotcap-hollow'
 
 /**
  * The GLOBAL spell registry (`spec/run.md#spells-unlock-cumulatively`): `generateFloor` rolls a
- * cast-role loadout from THIS list filtered to `unlockedAtBiome <= currentBiomeIndex` then by
+ * every enemy's gem set from THIS list filtered to `unlockedAtBiome <= currentBiomeIndex` then by
  * affinity (`spellsUnlockedAt`). Order IS
  * determinism-relevant: `weightedPick` (generation.ts) walks the affinity-filtered slice of this
  * list in order, subtracting weights, so registry order maps each RNG roll to a spell -- the

@@ -1,5 +1,5 @@
 // The run-layer generation module (`spec/run.md#generation-is-a-pure-seeded-module`).
-// Pure, seeded, RNG-free where `spec/run.md#generation-is-a-pure-seeded-module` says it must be RNG-free -- an `src/engine` sibling
+// Pure, seeded, RNG-free where `spec/creatures.md#materializecreature` says it must be RNG-free -- an `src/engine` sibling
 // to the combat resolver, under the same purity discipline. Built and tested against small
 // FIXTURE biome/species/creature data (`__fixtures__/biomes.ts`); real content of this exact
 // shape lives in src/data/species/*.ts + src/data/biomes.ts.
@@ -77,7 +77,7 @@ export interface BiomeData {
 
 // ---- Equip gating (`spec/creatures.md#spell-affinity-gate`) ----
 // A universal data-driven predicate, not a per-creature allow-list. First consumer: this
-// module's cast-role loadout roll; player equipping (`spec/creatures.md#gems-as-items`) reuses the same gate.
+// module's enemy gem roll; player equipping (`spec/creatures.md#gems-as-items`) reuses the same gate.
 
 export function canEquip(spell: Spell, affinity: Affinity): boolean {
   return spell.affinity === affinity

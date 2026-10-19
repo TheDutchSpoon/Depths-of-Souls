@@ -48,10 +48,11 @@ export const SORCERER_STARTER: SpeciesCreature = {
   innateTraitIds: [SORCERER_STARTER_TRAIT.id],
   rarity: 'rare',
   // Arcane Bolt is granted by
-  // SORCERER_STARTER_TRAIT's own `innate-spell` effect, prepended by `createCombat`'s fight-setup
-  // ahead of this creature's regular (default, all-null) gem slots. The materialized result is
-  // `[Arcane Bolt, null, null, null]` -- immediately castable by the `caster` role, which
-  // casts a random castable gem every turn.
+  // SORCERER_STARTER_TRAIT's own `innate-spell` effect, which `createCombat`'s fight-setup prepends
+  // ahead of this creature's regular gem slots (`spec/creatures.md#innate-spells`). Those slots
+  // hold the set rolled when the starter was granted (`spec/creatures.md#player-gem-sets`), so it
+  // fights with Arcane Bolt at index 0 and its stored gems after it -- immediately castable by the
+  // `caster` role, which casts a random castable gem every turn.
 }
 
 export const SORCERER_STARTER_SPECIES_ID = 'sorcerer-starter-species'

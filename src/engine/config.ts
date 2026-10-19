@@ -29,8 +29,9 @@ export const DEFEND_TAKEN_FACTOR = 0.65
 // `BalanceConfig`, because `materializeCreature` takes no config.
 export const STAT_GROWTH_PER_LEVEL = 0.25
 
-// Fixture/data-default convenience only -- no engine logic reads this; Creature.equippedSpells
-// stays a variable-length array so trait/forge slot-count changes fit later without a retype.
+// The regular gem slots a creature has by default: `materializeCreature` and `rollLoadout`
+// (generation.ts) size a gem set by it, and fixtures default to it. Creature.equippedSpells stays
+// a variable-length array so trait/forge slot-count changes fit later without a retype.
 export const DEFAULT_GEM_SLOT_COUNT = 3
 
 // Loop safety: counts trigger-cascade CHAIN DEPTH, not breadth. An over-cap trigger

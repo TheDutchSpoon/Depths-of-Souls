@@ -921,8 +921,9 @@ export function executeResponse(
       // (a no-op multiplier on spellPower).
       const flatCount = count ?? 1
       // A spell's cast-instance fraction (`castPowerFraction`) takes the place of the
-      // implicit `1`, in the SAME multiplication order (`spellPower * fraction`) as the legacy
-      // cast path, so the result stays byte-identical with what `spell-effects.test.ts`'s oracle pins.
+      // implicit `1`, in the SAME multiplication order (`spellPower * fraction`) as the reference
+      // cast `spell-effects.test.ts` replays, so the result stays byte-identical with what its
+      // oracle pins.
       const formulaMultiplier = count ?? context.castPowerFraction ?? 1
       let working = state
       for (const targetId of resolveResponseTargets(response.target, context, state)) {
@@ -1083,7 +1084,7 @@ export function executeResponse(
         let amount: number
         if (response.offStat !== undefined) {
           // Remap-aware (a stat-remap redirects the slot), the lookup a heal SPELL uses;
-          // `spellPower × multiplier` keeps the legacy cast path's association, so the result
+          // `spellPower × multiplier` keeps the reference cast's association, so the result
           // stays byte-identical with what `spell-effects.test.ts`'s oracle pins.
           amount = getOffensiveStat(
             bearer,
@@ -1362,8 +1363,8 @@ function applyCostDamage(
 
 /** Regen tick / spell heal: a flat or stat-scaled heal, clamped to effective max Health -- no
  * auto-heal past it. Reached through `executeResponse`'s `heal` (a trigger's or a spell's own
- * effect list); exported so the equivalence oracle (spell-effects.test.ts) can replay the
- * legacy cast path on the same primitive. */
+ * effect list); exported so the equivalence oracle (spell-effects.test.ts) can replay its
+ * reference cast on the same primitive. */
 export function applyHeal(
   sourceId: CreatureId,
   targetId: CreatureId,

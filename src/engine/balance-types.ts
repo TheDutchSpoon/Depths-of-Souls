@@ -21,7 +21,7 @@ export interface BalanceConfig {
    * atFloor1Hundredths/100 at floor 1 to atFloor100Hundredths/100 at floor 100, then
    * + perFloorAfter100Hundredths/100 per floor after. Expressed in HUNDREDTHS (integers) so
    * enemyLevelRange can do the whole min-level computation in exact integer arithmetic with a
-   * SINGLE Math.round at the end (see curves.ts's scaledMinLevel) -- never rounding the
+   * SINGLE Math.floor at the end (see curves.ts's scaledMinLevel) -- never rounding the
    * multiplier itself first.
    */
   readonly levelMultiplier: {

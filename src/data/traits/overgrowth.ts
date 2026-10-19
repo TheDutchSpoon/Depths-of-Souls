@@ -121,7 +121,7 @@ export const SWARMHIVE_STRIKER_TRAIT: DescribedTrait = {
 /** Swarmhive's Queen (amplifier): the anchor -- a genuinely distinct mechanic from Striker
  * (design note: an amplifier should never just combine its species-mates' own effects). Every
  * time her own turn starts, she permanently buffs the WHOLE Swarmhive team's Attack by a flat
- * 10% -- the new `all-allies-of-species` ResponseTarget (effect-types.ts), a fresh
+ * 10% -- the `all-allies-of-species` ResponseTarget (effect-types.ts), a fresh
  * StatModifierEffect appended to every qualifying ally each firing, compounding round over
  * round for as long as she's alive and acting. */
 export const SWARMHIVE_QUEEN_TRAIT: DescribedTrait = {

@@ -1,4 +1,4 @@
-// Golden: a LETHAL cost, in the damage-path hook order (`spec/effects.md#hook-execution`):
+// Golden: a LETHAL cost, in the damage-path hook order (`spec/effects.md#damage-path-hook-order`):
 // DamageDealt -> (on-damage-taken, survivors only) -> on-damage-observed -> CreatureDied ->
 // on-death -> on-kill -> on-death-observed. The Wick's burn can kill it; the Flare's reaction then
 // sits BEFORE CreatureDied and the Last Gleam's `on-death-observed` AFTER it, and the lethal burn

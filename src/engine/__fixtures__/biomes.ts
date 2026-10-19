@@ -118,7 +118,7 @@ export const FIXTURE_WIT_BOLT_TIER2: Spell = {
   ],
 }
 
-/** The global spell registry a generateFloor call rolls a cast-role loadout from (every biome
+/** The global spell registry a generateFloor call rolls every enemy's gem set from (every biome
  * shares one cumulative list, filtered by `unlockedAtBiome <= biomeIndex` then by affinity). */
 export const FIXTURE_ALL_SPELLS: readonly Spell[] = [
   FIXTURE_WIT_BOLT,

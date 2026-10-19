@@ -224,12 +224,11 @@ export const NECROMOSS_THICKET: SpeciesCreature = {
   rarity: 'uncommon',
 }
 
-/** The biome's one cast-role creature (role `caster`) -- its trait fires on
- * on-turn-start regardless of the chosen action, so casting never blunts it; exercises
- * generateFloor's real spell-loadout roll against the cumulative-unlocked vitality-affinity pool.
- * Affinity is `vitality` (not `wit`): Hollowroot is the team healer (and the
- * biome's only caster), and Vitality is this game's healer affinity; as Vitality it rolls
- * Regrowth/Wild Vigor/Afterglow/Charnel Feast instead of Wit damage spells. */
+/** A `support` Necromoss -- its trait fires on on-turn-start regardless of the chosen action, so
+ * casting never blunts it; its gem set rolls from the cumulative-unlocked vitality-affinity pool.
+ * Affinity is `vitality` (not `wit`): Hollowroot is the team healer, and Vitality is this game's
+ * healer affinity; as Vitality it rolls Regrowth/Wild Vigor/Life Siphon/Afterglow/Charnel Feast
+ * instead of Wit damage spells. */
 export const NECROMOSS_HOLLOWROOT: SpeciesCreature = {
   id: 'necromoss-hollowroot',
   name: 'Necromoss Hollowroot',
@@ -363,8 +362,8 @@ export const ROT_SOVEREIGN: SpeciesCreature = {
 }
 
 /** The adds accompanying her fight -- real Rotcap Hollow roster members, drawn from the
- * biome's own spawn pool (`content/rotcap-hollow.md#rot-sovereign` names no specific pair for this
- * boss, unlike the Broodmother's spiderlings, `content/overgrowth.md#broodmother`). */
+ * biome's own spawn pool (`content/rotcap-hollow.md#rot-sovereign` names the pair: a Sporecloud
+ * Seeder and a Rotfeeder Scavenger). */
 export const ROT_SOVEREIGN_ADDS: readonly SpeciesCreature[] = [
   SPORECLOUD_SEEDER,
   ROTFEEDER_SCAVENGER,

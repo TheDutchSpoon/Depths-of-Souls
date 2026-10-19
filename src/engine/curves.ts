@@ -59,8 +59,7 @@ export function enemyPartySize(floor: number, config: BalanceConfig): number {
 }
 
 /** A boss floor's boss spawns a few levels above that floor's own enemyLevelRange(floor).max.
- * Default offset 5, so the narrower
- * range doesn't lower boss levels: 19 / 34 / 52 on floors 10 / 20 / 30. */
+ * Default offset 5: 19 / 34 / 52 on floors 10 / 20 / 30. */
 export function bossLevel(floor: number, config: BalanceConfig): number {
   return enemyLevelRange(floor, config).max + config.bossLevelOffset
 }

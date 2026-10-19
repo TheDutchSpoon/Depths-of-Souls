@@ -1,4 +1,4 @@
-// src/state's first file (`spec/run.md#generation-is-a-pure-seeded-module`: the store owns
+// The game-state store (`spec/run.md#generation-is-a-pure-seeded-module`: the store owns
 // navigation and ownership only and CALLS the generator). In-memory only -- no persistence
 // middleware, no idb/Dexie (`spec/saves.md#the-stores-plain-data-boundary`).
 //
@@ -74,7 +74,7 @@ export { PARTY_SIZE }
 
 export interface GameStoreDeps {
   readonly biomes: readonly BiomeData[]
-  /** The GLOBAL spell registry `generateFloor` rolls a cast-role loadout from (filtered by
+  /** The GLOBAL spell registry `generateFloor` rolls every enemy's gem set from (filtered by
    * `unlockedAtBiome` then affinity; `spec/run.md#spells-unlock-cumulatively`). */
   readonly allSpells: readonly Spell[]
   readonly scripts: ReadonlyMap<string, Script>
@@ -172,9 +172,9 @@ export interface FightRecord {
 
 export interface FloorOutcome {
   readonly floor: number
-  /** One result per fight actually resolved -- stops at the first non-win (`spec/combat.md#resolution--timing`: "the
-   * fight ends the instant a side has no living creature"; a floor's remaining fights are
-   * simply never attempted after a wipe). */
+  /** One result per fight actually resolved -- stops at the first non-win (`spec/run.md#a-descent-is-atomic`: a loss or
+   * draw ends the descent at that fight; a floor's remaining fights are simply never attempted
+   * after a wipe). */
   readonly fightResults: readonly FightResult[]
   /** True iff every fight on the floor was won. */
   readonly cleared: boolean
@@ -254,7 +254,7 @@ export type SetPartySlotResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly reason: SetPartySlotFailureReason }
 
-/** In this order, per `spec/progression.md#specializations`. */
+/** In this order, per `spec/store.md#how-store-actions-fail`. */
 export type SetPerkLevelFailureReason =
   'no-spec' | 'perk-not-in-spec' | 'invalid-level' | 'over-budget'
 

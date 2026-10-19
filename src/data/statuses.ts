@@ -58,8 +58,8 @@ export const BURN: StatusDef = {
     },
   ],
   polarity: 'debuff',
-  // No real producer applies Burn with a bare default (Withering Bolt and Sporch pass 3);
-  // placeholder matching its DoT sibling Poison's own default.
+  // The Sporch Igniter and the Cinderlord apply Burn with this bare default (Withering Bolt passes
+  // 3 itself), so it is live balance; it matches its DoT sibling Poison's own default.
   defaultDuration: 3,
 }
 
