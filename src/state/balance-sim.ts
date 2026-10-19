@@ -11,9 +11,10 @@
 //
 // ---- The player policy ----
 // One run = one spec x one seed: `startGame({ seed, specId })`, then a loop of
-// FLOOR RUNS (one `descend` each) until the seed clears the content frontier (`frontier`) or
-// reaches RUN_CAP floor runs (`cap`).
-//  - Which floor: after a clear, push to `deepestFloor + 1`. After a FAILED PUSH the
+// FLOOR RUNS (one `descend` each) until the seed reaches RUN_CAP floor runs (`cap`): the cave has
+// no content frontier (`spec/run.md#biomeforfloor`), so a seed only stops at the cap.
+//  - Which floor: after a clear, push to `farthestReachableFloor(deepestFloor)`, the store's one
+//    statement of the reach rule. After a FAILED PUSH the
 //    next run re-farms `deepestFloor`; while `deepestFloor` is 0 there is nothing to re-farm, so a
 //    failed floor-1 push is retried (floor 1 is `deepestFloor + 1` again: a push).
 //  - Hard wall: WALL_FAILED_PUSHES failed pushes at one floor, re-farm runs
@@ -50,15 +51,8 @@
 import type { BalanceConfig } from '../engine/balance-types'
 import { ROUND_CAP, MAX_REVIVES_PER_CREATURE } from '../engine/config'
 import type { StatusDef } from '../engine/effect-types'
-import {
-  biomeForFloor,
-  contentFrontier,
-  isBossFloor,
-  type BiomeData,
-  type SpeciesCreature,
-} from '../engine/generation'
-import type { BiomeId } from '../engine/ids'
-import { bossLevel, enemyLevelRange, fightCount } from '../engine/curves'
+import type { BiomeData, SpeciesCreature } from '../engine/generation'
+import { bossLevel, enemyLevelRange } from '../engine/curves'
 import type { Rule, Script } from '../engine/scripting-types'
 import type { CombatEvent } from '../engine/types'
 import { BIOMES } from '../data/biomes'
@@ -78,10 +72,11 @@ import {
 } from '../data/species/starters'
 import { STATUS_REGISTRY } from '../data/statuses'
 import { TRAIT_REGISTRY } from '../data/traits'
+import { ROT_SOVEREIGN } from '../data/species/rotcap-hollow'
 import type { InstanceId } from './ids'
-import { perkPointsFor, staticCreatureIdFor, type Instance } from './rewards'
-import { createGameStore, PARTY_SIZE } from './store'
-import type { FightRecord, GameActions, GameState } from './store'
+import { staticCreatureIdFor, type Instance } from './rewards'
+import { createGameStore, farthestReachableFloor, PARTY_SIZE } from './store'
+import type { FightRecord, FloorPreview, GameActions, GameState } from './store'
 
 // ---- Named constants ----
 
@@ -115,7 +110,7 @@ const MAX_PROBE_SLOT = 8
 // ---- Types: policy ----
 
 export type RunKind = 'push' | 'farm'
-export type StopReason = 'frontier' | 'cap'
+export type StopReason = 'cap'
 export type LockScope = 'all' | 'attack' | 'cast'
 
 export interface Progress {
@@ -148,16 +143,11 @@ export function nextRun(progress: Progress): { floor: number; kind: RunKind } {
   if (progress.lastRunFailedPush && progress.deepestFloor >= 1) {
     return { floor: progress.deepestFloor, kind: 'farm' }
   }
-  return { floor: progress.deepestFloor + 1, kind: 'push' }
+  return { floor: farthestReachableFloor(progress.deepestFloor), kind: 'push' }
 }
 
 /** Why a seed stops, or null to keep going. */
-export function stopReason(
-  progress: Progress,
-  frontier: number,
-  runCap: number,
-): StopReason | null {
-  if (progress.deepestFloor >= frontier) return 'frontier'
+export function stopReason(progress: Progress, runCap: number): StopReason | null {
   if (progress.runs >= runCap) return 'cap'
   return null
 }
@@ -498,9 +488,25 @@ export function bossLockStats(
   return { bossTurns, lockedTurns, lockedByScope: byScope, pacifyLands }
 }
 
-/** A combat creature id is `<template>-<side>-<slot>` (`materializeCreature`). */
-const PLAYER_ID = /-player-\d+$/
-const ENEMY_ID = /-enemy-\d+$/
+/** A fight's two parties as its record names them: which side a creature is on, and its template,
+ * are read from here (`Creature.side` membership and `origin.templateId`), never from the shape of
+ * a combat id. */
+export type Roster = Pick<FightRecord, 'playerParty' | 'enemyParty'>
+
+export const NO_ROSTER: Roster = { playerParty: [], enemyParty: [] }
+
+/** The combat ids on each side of one fight (`sidesOf`). */
+export interface FightSides {
+  readonly player: ReadonlySet<string>
+  readonly enemy: ReadonlySet<string>
+}
+
+export function sidesOf(roster: Roster): FightSides {
+  return {
+    player: new Set(roster.playerParty.map((creature) => creature.id)),
+    enemy: new Set(roster.enemyParty.map((creature) => creature.id)),
+  }
+}
 
 export interface FightMetrics {
   readonly result: 'win' | 'loss' | 'draw'
@@ -540,20 +546,16 @@ export interface FightContext {
 }
 
 /** The bucket a stack belongs to, or null for a target that is on neither side. */
-export function stackBucket(stack: StackCount): StackBucket | null {
-  if (PLAYER_ID.test(stack.targetId)) return `${stack.direction}-player`
-  if (ENEMY_ID.test(stack.targetId)) return `${stack.direction}-enemy`
+export function stackBucket(stack: StackCount, sides: FightSides): StackBucket | null {
+  if (sides.player.has(stack.targetId)) return `${stack.direction}-player`
+  if (sides.enemy.has(stack.targetId)) return `${stack.direction}-enemy`
   return null
-}
-
-/** A combat creature id without its `-<side>-<slot>` suffix: the template id. */
-export function templateIdOf(combatId: string): string {
-  return combatId.replace(/-(player|enemy)-\d+$/, '')
 }
 
 /** The largest stack per (bucket, attribution) among one fight's stacks (the first wins a tie). */
 export function traitStackMaxima(
   stacks: readonly StackCount[],
+  sides: FightSides,
 ): TraitStackMaxima<StackCount> {
   const next: Record<StackBucket, Record<string, StackCount>> = {
     'growth-player': {},
@@ -562,7 +564,7 @@ export function traitStackMaxima(
     'shred-enemy': {},
   }
   for (const stack of stacks) {
-    const bucket = stackBucket(stack)
+    const bucket = stackBucket(stack, sides)
     if (bucket === null) continue
     const current = next[bucket][stack.attribution]
     if (current === undefined || stack.count > current.count) {
@@ -628,13 +630,15 @@ export function foldFightStacks(
   return next
 }
 
-/** `enemyIds` is the fight's whole enemy party (its `FightRecord.enemyParty`): the events name an
- * enemy only once it acts or is hit, so they cannot supply the roster. */
+/** `roster` is the fight's two parties (its `FightRecord`): the events name a creature only once it
+ * acts or is hit, so they cannot supply the sides, and the sides come from membership, never from a
+ * creature id's spelling. */
 export function analyzeFight(
   events: readonly CombatEvent[],
   ctx: FightContext,
-  enemyIds: readonly string[] = [],
+  roster: Roster = NO_ROSTER,
 ): FightMetrics {
+  const sides = sidesOf(roster)
   let result: 'win' | 'loss' | 'draw' = 'draw'
   let maxRound = 0
   let deaths = 0
@@ -654,7 +658,7 @@ export function analyzeFight(
   const attribution = attributeStatModifiers(events)
   let largestStacks: Record<StackBucket, StackCount | null> = { ...NO_STACKS }
   for (const stack of attribution.stacks) {
-    const bucket = stackBucket(stack)
+    const bucket = stackBucket(stack, sides)
     if (bucket === null) continue
     const current = largestStacks[bucket]
     if (current === null || stack.count > current.count) {
@@ -692,8 +696,10 @@ export function analyzeFight(
     capDraw: result === 'draw' && maxRound >= ROUND_CAP,
     deaths,
     largestStacks,
-    traitStacks: traitStackMaxima(attribution.stacks),
-    enemyTemplateIds: [...new Set(enemyIds.map(templateIdOf))],
+    traitStacks: traitStackMaxima(attribution.stacks, sides),
+    enemyTemplateIds: [
+      ...new Set(roster.enemyParty.map((creature) => creature.origin.templateId)),
+    ],
     unattributed: attribution.unattributed,
     applications: attribution.applications,
     unicornRevives,
@@ -734,6 +740,11 @@ export interface RunRecord {
   readonly partyLevels: readonly number[]
   readonly fightsRun: number
   readonly fightsWon: number
+  /** What the floor held, as the store's own `floorPreview` named it before the descent: whether it
+   * was the boss fight and how many fights it had. Past `LAST_FIXED_FLOOR` the biome (so a boss
+   * floor) depends on the seed, so the report's per-floor rows read it from a run, never from the
+   * floor number alone. */
+  readonly shape: { readonly boss: boolean; readonly fights: number }
 }
 
 export interface UnicornTotals {
@@ -828,10 +839,7 @@ export function applyPerkPlan(store: Store): void {
   const spec = SPECIALIZATIONS_BY_ID.get(state.chosenSpec)
   if (!spec) throw new Error(`balance-sim: unknown spec ${state.chosenSpec}`)
   state.refundAllPerks()
-  for (const { perkId, level } of planPerkLevels(
-    spec,
-    perkPointsFor(state.bossesCleared),
-  )) {
+  for (const { perkId, level } of planPerkLevels(spec, state.perkPointSummary().earned)) {
     const result = store.getState().setPerkLevel(perkId, level)
     if (!result.ok) throw new Error(`balance-sim: setPerkLevel(${perkId}) refused`)
   }
@@ -847,18 +855,10 @@ function partyLevels(state: StoreState): number[] {
   return levels
 }
 
-/** The Unicorn's combat id (`<template>-player-<dense slot>`) for the current party, or null. */
-function unicornCombatId(state: StoreState): string | null {
-  let slot = 0
-  for (const id of state.activeParty) {
-    if (id === null) continue
-    const instance = state.collection.get(id)
-    if (!instance) continue
-    if (staticCreatureIdFor(instance) === UNICORN.id)
-      return `${UNICORN.id}-player-${slot}`
-    slot += 1
-  }
-  return null
+/** The Unicorn's combat id in `playerParty` (the creature materialized from the Unicorn's
+ * template), or null when it is not in the party. */
+export function unicornIdOf(playerParty: Roster['playerParty']): string | null {
+  return playerParty.find((c) => c.origin.templateId === UNICORN.id)?.id ?? null
 }
 
 /** `true` the first time a seed fights a boss floor; records the visit. */
@@ -899,24 +899,24 @@ export function runProbe(
   }
 }
 
-/** The analysis context for `floor`: the boss and its traits on a boss floor (the biome the store
- * fights, so it reads the store's own `atlasPins`), else boss-free. The Unicorn's combat id
- * rides along. */
+/** The analysis context for one fight of a floor the store previewed: on a boss floor the boss and
+ * its traits, read from the fight's own record (the boss is slot 0 of the enemy party,
+ * `spec/run.md#boss-floor-generation`) and the biome the preview named (so the store's pins and
+ * seed are already in it), else null. Whether the floor is a boss floor is the preview's, which is
+ * `floorShape`'s. The Unicorn's combat id rides along. */
 export function bossContext(
-  floor: number,
+  preview: Pick<FloorPreview, 'biomeId' | 'boss'>,
+  record: Roster,
   biomes: readonly BiomeData[],
-  atlasPins: ReadonlyMap<number, BiomeId>,
-  runSeed: number,
-  unicornId: string | null,
 ): FightContext | null {
-  if (!isBossFloor(floor)) return null
-  const biomeId = biomeForFloor(floor, biomes, atlasPins, runSeed)
-  const biome = biomes.find((b) => b.id === biomeId)
-  if (!biome?.boss) return null
+  if (!preview.boss) return null
+  const biome = biomes.find((b) => b.id === preview.biomeId)
+  const boss = record.enemyParty[0]
+  if (!biome?.boss || boss === undefined) return null
   return {
-    unicornId,
-    bossId: `${biome.boss.creature.id}-enemy-0`,
-    bossTemplateId: biome.boss.creature.id,
+    unicornId: unicornIdOf(record.playerParty),
+    bossId: boss.id,
+    bossTemplateId: boss.origin.templateId,
     bossTraitIds: biome.boss.creature.innateTraitIds,
     lockScopes: lockScopesByStatus(STATUS_REGISTRY),
   }
@@ -932,17 +932,23 @@ function noBossContext(unicornId: string | null): FightContext {
   }
 }
 
-/** Each fight's metrics, from its record's own events and enemy roster. */
+/** One fight's context: the boss's on a boss floor, else boss-free. */
+function fightContext(
+  preview: Pick<FloorPreview, 'biomeId' | 'boss'>,
+  record: Roster,
+): FightContext {
+  return (
+    bossContext(preview, record, BIOMES) ?? noBossContext(unicornIdOf(record.playerParty))
+  )
+}
+
+/** Each fight's metrics, from its record's own events and rosters. */
 function analyzeFights(
   records: readonly FightRecord[],
-  ctx: FightContext,
+  preview: Pick<FloorPreview, 'biomeId' | 'boss'>,
 ): FightMetrics[] {
   return records.map((record) =>
-    analyzeFight(
-      record.events,
-      ctx,
-      record.enemyParty.map((c) => c.id),
-    ),
+    analyzeFight(record.events, fightContext(preview, record), record),
   )
 }
 
@@ -966,32 +972,35 @@ export function playFloorRun(
   options: { readonly probeBosses?: boolean } = {},
 ): FloorRunResult {
   const { floor, kind } = nextRun(progress)
-  const before = store.getState()
-  const levels = partyLevels(before)
-  const unicornId = unicornCombatId(before)
-  const bossCtx = bossContext(floor, BIOMES, before.atlasPins, before.runSeed, unicornId)
+  const levels = partyLevels(store.getState())
+  // What the floor holds is the store's own answer (`floorShape` through the pins and the seed),
+  // asked before the descent; the boss rule is never restated here.
+  const preview = store.getState().floorPreview(floor)
+  if (preview === null) throw new Error(`balance-sim: floorPreview(${floor}) is null`)
 
   // The probe runs first and is rolled back, so the policy run fights the identical floor.
   let probeRun: ReturnType<typeof runProbe> = null
-  if (bossCtx !== null && options.probeBosses !== false) probeRun = runProbe(store, floor)
+  if (preview.boss && options.probeBosses !== false) probeRun = runProbe(store, floor)
 
   const result = store.getState().descend(floor)
   if (!result.ok)
     throw new Error(`balance-sim: descend(${floor}) refused: ${result.reason}`)
   const outcome = result.outcome
-  const context = bossCtx ?? noBossContext(unicornId)
-  const fights = analyzeFights(outcome.fightRecords, context)
+  const fights = analyzeFights(outcome.fightRecords, preview)
+  const firstRecord = outcome.fightRecords[0]
+  const context =
+    firstRecord === undefined ? noBossContext(null) : fightContext(preview, firstRecord)
 
   let bossVisit: BossVisit | null = null
-  if (bossCtx !== null && bossCtx.bossTemplateId !== null) {
+  if (context.bossId !== null && context.bossTemplateId !== null) {
     const probeMetrics =
       probeRun === null
         ? null
-        : (analyzeFights(probeRun.fightRecords, bossCtx)[0]?.boss ?? null)
+        : (analyzeFights(probeRun.fightRecords, preview)[0]?.boss ?? null)
     bossVisit = {
       floor,
       firstVisit: noteBossVisit(seenBossFloors, floor),
-      bossTemplateId: bossCtx.bossTemplateId,
+      bossTemplateId: context.bossTemplateId,
       policy: { cleared: outcome.cleared, metrics: fights[0]?.boss ?? null },
       probe:
         probeRun === null ? null : { cleared: probeRun.cleared, metrics: probeMetrics },
@@ -1008,6 +1017,7 @@ export function playFloorRun(
       partyLevels: levels,
       fightsRun: fights.length,
       fightsWon: fights.filter((f) => f.result === 'win').length,
+      shape: { boss: preview.boss, fights: preview.fights },
     },
     fights,
     context,
@@ -1025,7 +1035,6 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
     balanceConfig: config,
   })
   store.getState().startGame({ seed, specId })
-  const frontier = contentFrontier(BIOMES)
 
   const summoned = new Set<string>()
   for (const instance of store.getState().collection.values()) {
@@ -1066,7 +1075,7 @@ export function runSeed(specId: string, seed: number, options: SimOptions): Seed
   }
 
   for (;;) {
-    const stop = stopReason(progress, frontier, runCap)
+    const stop = stopReason(progress, runCap)
     if (stop !== null) {
       return {
         specId,
@@ -1332,7 +1341,6 @@ export interface SpecReport {
 export interface BalanceReport {
   readonly seeds: readonly number[]
   readonly runCap: number
-  readonly frontier: number
   readonly specs: readonly SpecReport[]
 }
 
@@ -1446,6 +1454,17 @@ export function buildMatchupRows(
   )
 }
 
+/** The deepest floor any seed of the spec ran: the report's per-floor rows run to it. It is one
+ * past the deepest cleared for a seed that ended on a failed push, so the floor holding a seed's
+ * last failed pushes keeps its row. */
+function deepestFloorRun(results: readonly Pick<SeedResult, 'runs'>[]): number {
+  let deepest = 0
+  for (const result of results) {
+    for (const run of result.runs) deepest = Math.max(deepest, run.floor)
+  }
+  return deepest
+}
+
 /** Per floor, over the seeds that ever ran it, how many cleared it on their FIRST
  * run there (a push or a farm, whichever came first). A floor no seed ran has no row. */
 export interface FirstTryRow {
@@ -1456,10 +1475,9 @@ export interface FirstTryRow {
 
 export function buildFirstTryRows(
   results: readonly Pick<SeedResult, 'runs'>[],
-  frontier: number,
 ): FirstTryRow[] {
   const rows: FirstTryRow[] = []
-  for (let floor = 1; floor <= frontier; floor++) {
+  for (let floor = 1; floor <= deepestFloorRun(results); floor++) {
     let seeds = 0
     let firstTryClears = 0
     for (const result of results) {
@@ -1516,14 +1534,18 @@ export function buildBossRows(
   return rows
 }
 
+/** One row per floor from 1 to the deepest floor any seed ran; a floor no seed ran has no row. A
+ * row's `fightsPerFloor` and `bossLevel` follow the first run on the floor in seed order (its
+ * `shape`): past `LAST_FIXED_FLOOR` the biome is per seed, so seeds can differ there. */
 function buildFloorRows(
   results: readonly SeedResult[],
-  frontier: number,
   config: BalanceConfig,
 ): FloorRow[] {
   const rows: FloorRow[] = []
-  for (let floor = 1; floor <= frontier; floor++) {
+  for (let floor = 1; floor <= deepestFloorRun(results); floor++) {
     const runs = results.flatMap((r) => r.runs.filter((run) => run.floor === floor))
+    const first = runs[0]
+    if (first === undefined) continue
     const range = enemyLevelRange(floor, config)
     const meanLevels = runs
       .filter((run) => run.partyLevels.length > 0)
@@ -1541,14 +1563,14 @@ function buildFloorRows(
       failedPushes: results.reduce((s, r) => s + (r.failedPushes[floor] ?? 0), 0),
       fightsRun: runs.reduce((s, run) => s + run.fightsRun, 0),
       fightsWon: runs.reduce((s, run) => s + run.fightsWon, 0),
-      fightsPerFloor: isBossFloor(floor) ? 1 : fightCount(floor, config),
+      fightsPerFloor: first.shape.fights,
       meanPartyLevel:
         meanLevels.length === 0
           ? null
           : meanLevels.reduce((s, l) => s + l, 0) / meanLevels.length,
       enemyMin: range.min,
       enemyMax: range.max,
-      bossLevel: isBossFloor(floor) ? bossLevel(floor, config) : null,
+      bossLevel: first.shape.boss ? bossLevel(floor, config) : null,
     })
   }
   return rows
@@ -1558,7 +1580,6 @@ function buildFloorRows(
 export function buildSpecReport(
   specId: string,
   results: readonly SeedResult[],
-  frontier: number,
   config: BalanceConfig,
 ): SpecReport {
   const firstTryClears = results.filter((r) => r.firstTryFloor1Clear).length
@@ -1629,7 +1650,7 @@ export function buildSpecReport(
 
   const attritionVisits = results
     .flatMap((r) => r.bossVisits)
-    .filter((v) => v.bossTemplateId === 'rot-sovereign')
+    .filter((v) => v.bossTemplateId === ROT_SOVEREIGN.id)
   const attritionMetrics = attritionVisits.flatMap((v) =>
     v.policy.metrics ? [v.policy.metrics] : [],
   )
@@ -1651,7 +1672,6 @@ export function buildSpecReport(
     },
     t4: {
       stopReasons: {
-        frontier: results.filter((r) => r.stop === 'frontier').length,
         cap: results.filter((r) => r.stop === 'cap').length,
       },
       deepestFloors: results.map((r) => r.deepestFloor),
@@ -1667,7 +1687,7 @@ export function buildSpecReport(
         neverClearing: results.length - runsToFloor10.length,
       },
     },
-    floors: buildFloorRows(results, frontier, config),
+    floors: buildFloorRows(results, config),
     fights: results.reduce((s, r) => s + r.fights, 0),
     draws: results.reduce((s, r) => s + r.draws, 0),
     capDraws: results.reduce((s, r) => s + r.capDraws, 0),
@@ -1676,7 +1696,7 @@ export function buildSpecReport(
     unattributed: results.reduce((s, r) => s + r.unattributed, 0),
     applications: results.reduce((s, r) => s + r.applications, 0),
     matchups: buildMatchupRows(results),
-    firstTry: buildFirstTryRows(results, frontier),
+    firstTry: buildFirstTryRows(results),
     unicorn: {
       fightsWithUnicorn: sumUnicorn('fightsWithUnicorn'),
       winsWithUnicorn: sumUnicorn('winsWithUnicorn'),
@@ -1710,16 +1730,15 @@ export function buildSpecReport(
  * report. */
 export function buildReport(options: SimOptions): BalanceReport {
   const config = options.config ?? DEFAULT_BALANCE_CONFIG
-  const frontier = contentFrontier(BIOMES)
   const specIds = options.specIds ?? SPECIALIZATIONS.map((s) => s.id)
   const scripts = options.scripts ?? buildSimScripts()
   const specs = specIds.map((specId) => {
     const results = options.seeds.map((seed) =>
       runSeed(specId, seed, { ...options, scripts }),
     )
-    return buildSpecReport(specId, results, frontier, config)
+    return buildSpecReport(specId, results, config)
   })
-  return { seeds: options.seeds, runCap: options.runCap ?? RUN_CAP, frontier, specs }
+  return { seeds: options.seeds, runCap: options.runCap ?? RUN_CAP, specs }
 }
 
 // ---- Formatting ----
@@ -1756,7 +1775,7 @@ function verdict(pass: boolean): string {
   return pass ? 'PASS' : 'FAIL'
 }
 
-function formatSpec(spec: SpecReport, frontier: number): string[] {
+function formatSpec(spec: SpecReport): string[] {
   const out: string[] = []
   const t = spec.thresholds
   out.push('', `=== ${spec.specId} (${spec.seeds} seeds) ===`)
@@ -1773,7 +1792,7 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     .map(([floor, count]) => `f${floor}:${count}`)
     .join(' ')
   out.push(
-    `T4 stop: frontier ${spec.t4.stopReasons.frontier}, cap ${spec.t4.stopReasons.cap}; walled seeds ${spec.t4.seedsWalled} (before floor 10: ${spec.t4.seedsWalledBeforeFloor10}); first-wall floors ${walls || 'none'}; deepest floor median ${fmt(median(spec.t4.deepestFloors))}`,
+    `T4 stop: cap ${spec.t4.stopReasons.cap}; walled seeds ${spec.t4.seedsWalled} (before floor 10: ${spec.t4.seedsWalledBeforeFloor10}); first-wall floors ${walls || 'none'}; deepest floor median ${fmt(median(spec.t4.deepestFloors))}`,
   )
   out.push(
     `T4 walls' size: most failed pushes on one floor below ${FIRST_BOSS_FLOOR}, per seed: ${fmtSpread(spec.t4.worstFailedPushesBelow10)}; floor runs to the first floor-${FIRST_BOSS_FLOOR} clear: ${fmtSpread(spec.t4.runsToFirstFloor10Clear.spread)} over the seeds that clear it, ${spec.t4.runsToFirstFloor10Clear.neverClearing} never do`,
@@ -1805,7 +1824,7 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
     ),
   )
   out.push(
-    `Floors 20-${frontier} (watch point), failed pushes by floor: ${
+    `Floors 20 and deeper (watch point), failed pushes by floor: ${
       Object.entries(spec.t4.failedPushesByFloor)
         .filter(([floor]) => Number(floor) >= 20)
         .map(([floor, count]) => `f${floor}:${count}`)
@@ -1861,9 +1880,9 @@ function formatSpec(spec: SpecReport, frontier: number): string[] {
 
 export function formatReport(report: BalanceReport): string {
   const lines = [
-    `Balance report: ${report.seeds.length} seeds (${report.seeds[0]}..${report.seeds[report.seeds.length - 1]}), run cap ${report.runCap}, content frontier floor ${report.frontier}`,
+    `Balance report: ${report.seeds.length} seeds (${report.seeds[0]}..${report.seeds[report.seeds.length - 1]}), run cap ${report.runCap}`,
   ]
-  for (const spec of report.specs) lines.push(...formatSpec(spec, report.frontier))
+  for (const spec of report.specs) lines.push(...formatSpec(spec))
   lines.push('', 'CI thresholds summary (reported, not asserted):')
   for (const spec of report.specs) {
     const t = spec.thresholds

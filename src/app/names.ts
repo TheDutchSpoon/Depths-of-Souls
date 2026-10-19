@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import type { SpeciesCreature } from '../engine/generation'
 import { ALL_CREATURE_TEMPLATES, BOSS_CREATURES_BY_ID } from '../data/creatures'
 

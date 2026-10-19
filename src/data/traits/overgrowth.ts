@@ -55,7 +55,7 @@ export const SPIDER_BROODWARDEN_TRAIT: DescribedTrait = {
   id: 'spider-broodwarden-entangling-brood',
   name: 'Entangling Brood',
   description:
-    'When it attacks, it also lands a separate bonus hit of 25% of its Attack for every enemy currently Webbed (50% with two, and so on), as indirect damage. It never applies Web itself; it only benefits from what its species-mates have done.',
+    'When it attacks, it also deals its target damage equal to 25% of its Attack for every enemy currently Webbed (50% with two, and so on). It never applies Web itself; it only benefits from what its species-mates have done.',
   effects: [
     {
       category: 'triggered',
@@ -79,7 +79,7 @@ export const SWARMHIVE_DRONE_TRAIT: DescribedTrait = {
   id: 'swarmhive-drone-final-sting',
   name: 'Final Sting',
   description:
-    'When it dies, it hits a random living enemy for 30% of its Attack, as indirect damage.',
+    'When it dies, it deals damage equal to 30% of its Attack to a random living enemy.',
   effects: [
     {
       category: 'triggered',
@@ -128,7 +128,7 @@ export const SWARMHIVE_QUEEN_TRAIT: DescribedTrait = {
   id: 'swarmhive-queen-hive-anchor',
   name: 'Hive Anchor',
   description:
-    'At the start of each of its turns, it permanently raises the Attack of every living Swarmhive ally, itself included, by 10%, again every round it acts, so the bonus compounds over the fight.',
+    'At the start of each of its turns, it permanently raises the Attack of every living Swarmhive ally, itself included, by 10%, so the bonus compounds over the fight.',
   effects: [
     {
       category: 'triggered',
@@ -259,7 +259,7 @@ export const POLLINATOR_POLLENLORD_TRAIT: DescribedTrait = {
   id: 'pollinator-pollenlord-bloom-surge',
   name: 'Bloom Surge',
   description:
-    "At the start of each of its turns, permanently raises its whole team's Speed by 10%, again every round it acts.",
+    "At the start of each of its turns, permanently raises its whole team's Speed by 10%.",
   effects: [
     {
       category: 'triggered',
@@ -296,7 +296,7 @@ export const SNAPJAW_JAWS_TRAIT: DescribedTrait = {
   id: 'snapjaw-jaws-snapback',
   name: 'Snapback',
   description:
-    "Whenever an attack or spell hits it, it hits back for 60% of its Attack, as indirect damage. It doesn't answer a tick, a cost or another creature's trait, status or perk damage.",
+    'Whenever an attack or spell hits it, it deals damage equal to 60% of its Attack to the creature that hit it.',
   effects: [
     {
       category: 'triggered',
@@ -380,7 +380,7 @@ export const LULLPOLLEN_DOZER_TRAIT: DescribedTrait = {
   id: 'lullpollen-dozer-drowsy-bloom',
   name: 'Drowsy Bloom',
   description:
-    'When it attacks, it also lands a separate bonus hit of 25% of its Attack for every enemy currently Sleeping (50% with two, and so on), as indirect damage. It never puts anything to Sleep itself; it only benefits from what its species-mates have done.',
+    'When it attacks, it also deals its target damage equal to 25% of its Attack for every enemy currently Sleeping (50% with two, and so on). It never puts anything to Sleep itself; it only benefits from what its species-mates have done.',
   effects: [
     {
       category: 'triggered',
@@ -407,7 +407,7 @@ export const BROODMOTHER_TRAIT: DescribedTrait = {
   id: 'broodmother-swarm-call',
   name: 'Swarm Call',
   description:
-    'Whenever she attacks, she also deals bonus damage of 25% of her Attack for every living spiderling fighting beside her, herself included, as indirect damage. It is read fresh on every attack, so killing her adds visibly shrinks it. At the end of every round, she has a 40% chance to Web the entire enemy party at once.',
+    'Whenever she attacks, she also deals her target damage equal to 25% of her Attack for every living spiderling fighting beside her, herself included. It is read fresh on every attack, so killing her adds visibly shrinks it. At the end of every round, she has a 40% chance to Web the entire enemy party at once.',
   effects: [
     {
       category: 'triggered',

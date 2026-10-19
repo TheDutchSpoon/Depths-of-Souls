@@ -33,7 +33,7 @@
 
 import { describe, expect, test } from 'vitest'
 import type { CombatEvent } from '../engine/types'
-import { contentFrontier } from '../engine/generation'
+import { biomeForFloor, biomeHasContent } from '../engine/generation'
 import { TEST_BALANCE_CONFIG as CFG } from '../engine/__fixtures__/balance'
 import { OVERGROWTH_BIOME_ID } from '../data/species/overgrowth'
 import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
@@ -353,8 +353,11 @@ describe('integration: real Brute party through real floor 1 (Overgrowth)', () =
 })
 
 describe('real defaults: real store, real content, the default BalanceConfig', () => {
-  test('the content frontier reflects the 3 authored biomes (Overgrowth/Glimmerdark/Rotcap Hollow)', () => {
-    expect(contentFrontier(BIOMES)).toBe(30)
+  test('the 3 authored biomes (Overgrowth/Glimmerdark/Rotcap Hollow) are the first three of the list, and floor 35 draws the last of them', () => {
+    expect(BIOMES.filter(biomeHasContent).map((biome) => biome.id)).toEqual(
+      BIOMES.slice(0, 3).map((biome) => biome.id),
+    )
+    expect(biomeForFloor(35, BIOMES, new Map(), 1)).toBe(BIOMES[2]!.id)
   })
 
   test('floor 1 runs the new default fight count (10) and grants soul% matching the new rarity table', () => {

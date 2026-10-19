@@ -155,3 +155,44 @@ describe('timerKey', () => {
     expect(timerKey({ ...playing(0, 0) })).toBe(timerKey(playing(0, 0)))
   })
 })
+
+describe('a descent with no fights', () => {
+  const none: readonly number[] = []
+  const actions: PlaybackAction[] = [
+    { type: 'timer-elapsed' },
+    { type: 'skip-fight' },
+    { type: 'skip-floor' },
+    { type: 'jump', fight: 0 },
+  ]
+
+  test('starts done, with nothing pending', () => {
+    const state = initialPlayback(0)
+    expect(state).toEqual({ phase: 'done', fight: 0, revealed: 0, speed: 1 })
+    expect(pendingDelayMs(state)).toBeNull()
+  })
+
+  test('a descent with a fight still starts playing', () => {
+    expect(initialPlayback(1).phase).toBe('playing')
+    expect(initialPlayback(3).phase).toBe('playing')
+  })
+
+  test.each(actions)(
+    '$type returns the identical state, with no NaN or undefined position',
+    (action) => {
+      const state = initialPlayback(0)
+      const next = playbackReducer(state, action, none)
+      expect(next).toBe(state)
+      expect(Number.isInteger(next.fight)).toBe(true)
+      expect(Number.isInteger(next.revealed)).toBe(true)
+    },
+  )
+
+  test('a speed change still changes the speed', () => {
+    const next = playbackReducer(
+      initialPlayback(0),
+      { type: 'set-speed', speed: 3 },
+      none,
+    )
+    expect(next).toEqual({ phase: 'done', fight: 0, revealed: 0, speed: 3 })
+  })
+})

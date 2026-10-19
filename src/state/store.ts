@@ -21,10 +21,9 @@ import type { EffectDef, Trait, StatusDef } from '../engine/effect-types'
 import {
   biomeForFloor,
   biomeHasContent,
-  contentFrontier,
-  FLOORS_PER_BIOME,
   floorShape,
   generateFloor,
+  LAST_FIXED_FLOOR,
   materializeCreature,
   rollLoadout,
 } from '../engine/generation'
@@ -215,10 +214,8 @@ export interface PerkPointSummary {
   readonly free: number
 }
 
-/** Reasons `descend` can refuse -- see `spec/store.md#how-store-actions-fail`.
- * `beyond-content-frontier` wins over `floor-out-of-reach` when both apply. */
-export type DescendFailureReason =
-  'no-spec' | 'empty-party' | 'floor-out-of-reach' | 'beyond-content-frontier'
+/** Reasons `descend` can refuse -- see `spec/store.md#how-store-actions-fail`. */
+export type DescendFailureReason = 'no-spec' | 'empty-party' | 'floor-out-of-reach'
 
 export type DescendResult =
   | { readonly ok: true; readonly outcome: FloorOutcome }
@@ -226,6 +223,13 @@ export type DescendResult =
 
 export type CanDescendResult =
   { readonly ok: true } | { readonly ok: false; readonly reason: DescendFailureReason }
+
+/** `unknown-boss`: the id is not the boss of any biome in the store's biome data. */
+export type RecordBossKillFailureReason = 'unknown-boss'
+
+export type RecordBossKillResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: RecordBossKillFailureReason }
 
 export type PinBiomeFailureReason =
   'unknown-biome' | 'floor-out-of-range' | 'biome-has-no-content'
@@ -290,10 +294,14 @@ export interface GameActions {
    * Swapping specs never removes a previously-owned starter. Throws on an unknown
    * spec id (the UI only offers real specs, so this is an impossible state, not a player-reachable failure). */
   setSpec(specId: string): void
-  /** Idempotent: a boss already in bossesCleared is a no-op (first-clear-only per
-   * `spec/progression.md#perk-points`). Needed for bossesCleared to ever become
-   * non-empty; perk points are `bossesCleared.size * 100`, derived, never stored separately. */
-  recordBossKill(bossId: string): void
+  /** Idempotent: a known boss already in bossesCleared is `{ ok: true }` and changes nothing
+   * (first-clear-only per `spec/progression.md#perk-points`). Needed for bossesCleared to ever
+   * become non-empty; perk points are `bossesCleared.size * perkPointsPerBoss`, derived, never
+   * stored separately. Player-reachable failure (`spec/store.md#how-store-actions-fail`): an id
+   * that is not a boss in the biome data is refused with `unknown-boss` and nothing changes. */
+  recordBossKill(bossId: string): RecordBossKillResult
+  /** Pure query sharing `recordBossKill`'s own check. */
+  canRecordBossKill(bossId: string): RecordBossKillResult
   /** Pins a biome for a floor (the Biome Atlas facility, `spec/run.md#facilities`). No
    * facility-unlock gating here (the facilities wait, `spec/run.md#facilities`). Player-reachable
    * failure (`spec/store.md#how-store-actions-fail`): returns `{ ok: false, reason }` instead of throwing. Reasons:
@@ -303,9 +311,10 @@ export interface GameActions {
   /** Pure query sharing `pinBiome`'s own check -- lets the UI grey out an invalid pin without
    * performing it. */
   canPinBiome(floor: number, biomeId: BiomeId): PinBiomeResult
-  /** The integration action. Bounded to `1..min(deepestFloor+1, contentFrontier)` (can re-farm
-   * any already-cleared floor, or push exactly one floor past the current frontier, but never
-   * skip ahead or go past the last authored biome). Generates the floor via the engine's pure
+  /** The integration action. Bounded to `1..deepestFloor+1` (can re-farm any already-cleared
+   * floor, or push exactly one floor past the deepest cleared, but never skip ahead); a floor
+   * whose biome has no content generates from the last authored biome before it
+   * (`spec/run.md#biomeforfloor`). Generates the floor via the engine's pure
    * generation module, runs each fight through the real resolver in sequence, banks soul%/XP/
    * currency rewards as each fight resolves (never held pending the floor's overall outcome),
    * applies each fight's XP to the active party right after it, win or not, so the next fight
@@ -316,8 +325,8 @@ export interface GameActions {
   /** Pure query sharing `descend`'s own check -- lets the UI grey out an unreachable floor
    * without resolving anything. */
   canDescend(floor: number): CanDescendResult
-  /** What `floor` holds (`null` unless it is a whole number >= 1; never throws). Beyond the
-   * content frontier it still previews: only `descend` refuses there. */
+  /** What `floor` holds (`null` unless it is a whole number >= 1; never throws, whatever biome
+   * list the store was given). */
   floorPreview(floor: number): FloorPreview | null
   /** Perk points earned (`perkPointsFor` the bosses cleared), spent on the chosen spec's perks
    * (0 with none) and free. */
@@ -327,7 +336,9 @@ export interface GameActions {
    * regardless of win/loss/draw, the Unicorn joins the collection (and the first open party
    * slot) if not already owned, and every creature in the active party then gets the intro's flat
    * XP grant (`BalanceConfig.introXpGrant`), whatever the result; the intro's kills bank nothing.
-   * The engine has zero awareness this fight is special. */
+   * The enemy Unicorn rolls a full gem set from biome 1's spells, from a stream of the run seed
+   * alone (scaffolding until crafted spells, `spec/creatures.md#gems-as-items`). The engine has
+   * zero awareness this fight is special. */
   runScriptedIntro(): {
     readonly events: readonly CombatEvent[]
     readonly result: FightResult
@@ -404,13 +415,13 @@ function applyXpToParty(
 }
 
 /** The unlock biome's 1-based number for a player gem roll -- the
- * biome of `min(100, max(1, deepestFloor))` through `biomeForFloor` with EMPTY pins, so a farming
- * pin never changes a roll and the pool stops growing at floor 100 (the fixed sequence ends there;
- * past it `biomeForFloor` draws by seed hash and could shrink the pool). The cap is also bounded by
- * the biome list actually supplied (a test fixture with one biome has one decade). */
+ * biome of `min(LAST_FIXED_FLOOR, max(1, deepestFloor))` through `biomeForFloor` with EMPTY pins,
+ * so a farming pin never changes a roll and the pool stops growing at the last fixed floor (past
+ * it `biomeForFloor` draws by seed hash and could shrink the pool). A biome list shorter than the
+ * fixed sequence needs no bound of its own: `biomeForFloor` falls back to the last authored biome
+ * before a decade the list doesn't reach. */
 function unlockBiomeIndex(state: GameState, deps: GameStoreDeps): number {
-  const cap = Math.min(100, deps.biomes.length * FLOORS_PER_BIOME)
-  const floor = Math.min(cap, Math.max(1, state.deepestFloor))
+  const floor = Math.min(LAST_FIXED_FLOOR, Math.max(1, state.deepestFloor))
   const biomeId = biomeForFloor(floor, deps.biomes, new Map(), state.runSeed)
   return deps.biomes.findIndex((b) => b.id === biomeId) + 1
 }
@@ -542,6 +553,22 @@ function hashGemDraw(runSeed: number, ordinal: number): number {
   )
 }
 
+/** The scripted intro's enemy Unicorn roll -- its OWN hash of the run seed alone, with constants
+ * distinct from `hashRunDraw`, `hashGemDraw` and generation's `hashFloorDraw`. The salt stands
+ * where `hashGemDraw` mixes an instance ordinal in: the roll must not depend on any ordinal or on
+ * `runCounter`, so the intro fight's set is a function of the run seed and nothing else. */
+const INTRO_UNICORN_SALT = 1
+function hashIntroUnicornDraw(runSeed: number): number {
+  return (
+    (Math.imul(runSeed | 0, 0x7feb352d) ^ Math.imul(INTRO_UNICORN_SALT, 0x846ca68b)) >>> 0
+  )
+}
+
+/** The scripted intro is a fixed level-1 fight before any descent, so its enemy Unicorn rolls its
+ * gems from the spells biome 1 unlocks (the 1-based number, `spec/run.md#spells-unlock-cumulatively`),
+ * never from `deps.biomes[1]`. */
+const INTRO_BIOME_NUMBER = 1
+
 /** Resolves a floor to its biome through the state's pins and run seed, and the biome's 1-based
  * number in `deps.biomes` (`spec/run.md#biomeforfloor`). The one resolution behind `descend` and
  * `floorPreview`; the floor must be a whole number >= 1. */
@@ -563,27 +590,28 @@ function resolveFloorBiome(
   return { biome, biomeIndex: deps.biomes.indexOf(biome) + 1 }
 }
 
+/** The farthest floor a player can enter: one past the deepest floor cleared (`descend` re-farms
+ * any floor up to the deepest cleared, or pushes exactly one past it). The one home of the rule:
+ * `checkDescend`, the demo's "Deepest + 1" button, the out-of-reach text and the balance
+ * simulator's push all read it. */
+export function farthestReachableFloor(deepestFloor: number): number {
+  return deepestFloor + 1
+}
+
 /** The shared check behind both `descend` and `canDescend` -- a
  * player-reachable failure returns `{ ok: false, reason }`, never throws. Order: prerequisites
  * that don't depend on which floor was asked for (no-spec, empty-party) first, then
- * `beyond-content-frontier` before `floor-out-of-reach` so the frontier wins when both would
- * otherwise apply. */
-function checkDescend(
-  state: GameState,
-  deps: GameStoreDeps,
-  floor: number,
-): CanDescendResult {
+ * `floor-out-of-reach` (not a whole number, below 1, or past one beyond the deepest cleared). */
+function checkDescend(state: GameState, floor: number): CanDescendResult {
   if (!state.chosenSpec) return { ok: false, reason: 'no-spec' }
   if (state.activeParty.every((id) => id === null)) {
     return { ok: false, reason: 'empty-party' }
   }
-  if (!Number.isInteger(floor) || floor < 1) {
-    return { ok: false, reason: 'floor-out-of-reach' }
-  }
-  if (floor > contentFrontier(deps.biomes)) {
-    return { ok: false, reason: 'beyond-content-frontier' }
-  }
-  if (floor > state.deepestFloor + 1) {
+  if (
+    !Number.isInteger(floor) ||
+    floor < 1 ||
+    floor > farthestReachableFloor(state.deepestFloor)
+  ) {
     return { ok: false, reason: 'floor-out-of-reach' }
   }
   return { ok: true }
@@ -595,9 +623,9 @@ function checkDescend(
  *
  * A pin into a biome with no content (`biomeHasContent`, generation.ts) is
  * refused with `biome-has-no-content` -- without this, `pinBiome` could route `descend` straight
- * into `generateFloor`'s own `weightedPick` throw (a player-reachable crash through a second
- * route beyond `contentFrontier`'s own gate, since a pin can target a biome the fixed 1-100
- * sequence would never have picked for that floor). Checked last (after floor-out-of-range and
+ * into `generateFloor`'s own `weightedPick` throw (a player-reachable crash, since a pin is
+ * returned by `biomeForFloor` as it is and can target a biome with nothing to spawn, which the
+ * fallback would never have picked). Checked last (after floor-out-of-range and
  * unknown-biome) since it needs a resolved biome to test. */
 function checkPinBiome(
   deps: GameStoreDeps,
@@ -615,6 +643,15 @@ function checkPinBiome(
     return { ok: false, reason: 'biome-has-no-content' }
   }
   return { ok: true }
+}
+
+/** The shared check behind both `recordBossKill` and `canRecordBossKill`. A boss is known iff some
+ * biome in the store's own biome data carries it (`BiomeData.boss.bossId`): the injected data, not
+ * the global creature registry, so a store built on other biomes answers for its own bosses. */
+function checkRecordBossKill(deps: GameStoreDeps, bossId: string): RecordBossKillResult {
+  return deps.biomes.some((biome) => biome.boss?.bossId === bossId)
+    ? { ok: true }
+    : { ok: false, reason: 'unknown-boss' }
 }
 
 /** Shared by `summon` and `canSummon`. */
@@ -661,7 +698,7 @@ export function perkPointsSpent(
 
 /** Shared by `setPerkLevel` and `canSetPerkLevel`. The budget is
  * `Σ level × costPerLevel` over the current spec's perks with this change applied, against
- * `bossesCleared × 100`; lowering a level can't go over (spend only ever falls). */
+ * `bossesCleared × perkPointsPerBoss`; lowering a level can't go over (spend only ever falls). */
 function checkSetPerkLevel(
   state: GameState,
   deps: GameStoreDeps,
@@ -677,7 +714,7 @@ function checkSetPerkLevel(
     return { ok: false, reason: 'invalid-level' }
   }
   const spent = perkPointsSpent(spec, new Map(state.perkSpend).set(perkId, level))
-  if (spent > perkPointsFor(state.bossesCleared))
+  if (spent > perkPointsFor(state.bossesCleared, deps.balanceConfig))
     return { ok: false, reason: 'over-budget' }
   return { ok: true }
 }
@@ -710,6 +747,17 @@ function freshState(seed: number): GameState {
 
 export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
   const deps: GameStoreDeps = { ...DEFAULT_DEPS, ...overrides }
+  // Every floor falls back to an authored biome, and the first one is the last stop of every
+  // fallback (`biomeForFloor`): a store with none would have floors it can't generate.
+  const firstBiome = deps.biomes[0]
+  if (firstBiome === undefined) {
+    throw new Error('createGameStore: the biome list is empty')
+  }
+  if (!biomeHasContent(firstBiome)) {
+    throw new Error(
+      `createGameStore: the first biome (${String(firstBiome.id)}) has no content, so a floor could have no authored biome to fall back to`,
+    )
+  }
 
   return create<GameState & GameActions>((set, get) => ({
     ...freshState(deps.runSeed),
@@ -791,8 +839,18 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       }))
     },
 
+    canRecordBossKill(bossId) {
+      return checkRecordBossKill(deps, bossId)
+    },
+
     recordBossKill(bossId) {
+      const check = checkRecordBossKill(deps, bossId)
+      if (!check.ok) return check
+      // An already-cleared boss changes nothing, and no `set` runs: zustand would make a new state
+      // object even for the same Set, which a subscriber would see as a change.
+      if (get().bossesCleared.has(bossId)) return { ok: true }
       set((s) => ({ bossesCleared: withBossCleared(s.bossesCleared, bossId) }))
+      return { ok: true }
     },
 
     canPinBiome(floor, biomeId) {
@@ -811,7 +869,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
     },
 
     canDescend(floor) {
-      return checkDescend(get(), deps, floor)
+      return checkDescend(get(), floor)
     },
 
     floorPreview(floor) {
@@ -823,7 +881,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
 
     perkPointSummary() {
       const state = get()
-      const earned = perkPointsFor(state.bossesCleared)
+      const earned = perkPointsFor(state.bossesCleared, deps.balanceConfig)
       const spec =
         state.chosenSpec === null ? undefined : deps.specializations.get(state.chosenSpec)
       const spent = spec ? perkPointsSpent(spec, state.perkSpend) : 0
@@ -832,7 +890,7 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
 
     descend(floor) {
       const state = get()
-      const check = checkDescend(state, deps, floor)
+      const check = checkDescend(state, floor)
       if (!check.ok) return check
 
       // Guaranteed non-null by checkDescend's own 'no-spec' branch above.
@@ -997,7 +1055,8 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
           bossDefeated,
           bossFirstCleared,
           perkPointsGained:
-            perkPointsFor(bossesAfter) - perkPointsFor(state.bossesCleared),
+            perkPointsFor(bossesAfter, deps.balanceConfig) -
+            perkPointsFor(state.bossesCleared, deps.balanceConfig),
           deepestFloorAdvanced: cleared && floor > state.deepestFloor,
           soulGained: soulGainedThisCall,
           xpBanked,
@@ -1025,11 +1084,20 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
       )
       if (!unicornRef)
         throw new Error('runScriptedIntro: Unicorn not found in standaloneCreatures')
+      // The enemy rule, like every enemy (`rollLoadout`, no innate exclusion), from the intro's own
+      // stream: never the run counter, so every descent after the intro stays as it was.
+      const enemyGems = rollLoadout(
+        unicornRef.speciesCreature,
+        INTRO_BIOME_NUMBER,
+        deps.allSpells,
+        deps.createRng(hashIntroUnicornDraw(state.runSeed)),
+      )
       const enemyCreature = materializeCreature(unicornRef.speciesCreature, {
         level: 1,
         side: 'enemy',
         slot: 0,
         speciesId: unicornRef.speciesId,
+        gems: enemyGems,
       })
       const combatSeed = hashRunDraw(state.runSeed, state.runCounter)
       const combat = createCombat({
@@ -1065,8 +1133,8 @@ export function createGameStore(overrides: Partial<GameStoreDeps> = {}) {
 
 /** The default, zero-config store instance -- real src/data content wired in. Biomes 1-3
  * (The Overgrowth/Glimmerdark/Rotcap Hollow) are real, playable content; biomes 4-10 are the
- * placeholder shape (empty spawn pools) until content authors them -- `descend()` against
- * floor 31+ returns `{ ok: false, reason: 'beyond-content-frontier' }` (see data/biomes.ts's own
- * header comment) until then. See integration.test.ts for an end-to-end exercise of this exact
- * instance against real floor 1. */
+ * placeholder shape (empty spawn pools) until content authors them -- floors 31 and deeper
+ * generate from the last authored biome (`biomeForFloor`; see data/biomes.ts's own header comment)
+ * until then. See integration.test.ts for an end-to-end exercise of this exact instance against
+ * real floor 1. */
 export const useGameStore = createGameStore()

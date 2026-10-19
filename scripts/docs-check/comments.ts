@@ -77,6 +77,21 @@ export const PATTERNS: Pattern[] = [
   { id: 15, what: 'the plan', res: [/\b[Tt]he plan(?:'s)?\b/g] },
   { id: 16, what: 'plan review', res: [/\b[Pp]lan review\b/g] },
   { id: 17, what: 'sign-off', res: [/\b[Ss]ign-off\b/g] },
+  // Patterns 21 and up record the history of the code rather than of the process: what a thing
+  // replaced, where it moved from, who used it first. They read comments and titles only, never a
+  // string literal (`names.ts` reads patterns 1-9 there): "new" and "legacy" are English a
+  // player-facing string can hold. Ids 18-20 belong to the name guard.
+  { id: 21, what: 'legacy path', res: [/\blegacy\s+(?:\w+\s+)?path\b/g] },
+  { id: 22, what: 'moved from', res: [/\bmoved here from\b/g] },
+  { id: 23, what: 'first consumer', res: [/\bfirst real consumer\b/g] },
+  {
+    id: 24,
+    what: 'existing behaviour',
+    res: [/\bexisting implicit behavio(?:u)?r\b/g],
+  },
+  { id: 25, what: 'importers keep working', res: [/\bkeeps?\s+working\s+unchanged\b/g] },
+  { id: 26, what: 'file position', res: [/'s first file\b/g] },
+  { id: 27, what: 'the new code span', res: [/\b[Tt]he new `/g] },
 ]
 
 /** `ASSUMPTION:` is allowed when its comment cites the open question it points at. */

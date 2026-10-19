@@ -22,7 +22,7 @@ export const SORCERER_STARTER_TRAIT: DescribedTrait = {
   id: 'sorcerer-starter-arcane-surge',
   name: 'Arcane Surge',
   description:
-    'An innate spell, Arcane Bolt, dealing 100% of its Intelligence (not a gem: un-upgradeable, no affinity gate, an extra slot before the gem slots, kept through fusion), plus a 50% chance at the end of its turn to cast a random equipped spell.',
+    'An innate spell, Arcane Bolt, dealing 100% of its Intelligence (not a gem: un-upgradeable, no affinity gate, an extra slot before the gem slots, kept through fusion), plus, at the end of each of its turns, a 50% chance to cast a random one of its spells, Arcane Bolt included.',
   effects: [
     {
       category: 'triggered',
@@ -87,7 +87,7 @@ export const UNICORN_TRAIT: DescribedTrait = {
   id: 'unicorn-guardians-light',
   name: "Guardian's Light",
   description:
-    "Whenever it attacks, it revives a random dead ally at 20% of that ally's baseline maximum HP. It fires once per attack hit, so a creature that attacks more than once (Flurry) revives more than once; a revive deals no damage, so it can't cascade.",
+    "Whenever it attacks, it revives a random dead ally at 20% of that ally's baseline maximum HP. With Flurry it attacks twice, so it revives twice.",
   effects: [
     {
       category: 'triggered',

@@ -133,14 +133,15 @@ export const FIXTURE_BIOME: BiomeData = {
   speciesPool: [FIXTURE_SPECIES_BRAWLERS, FIXTURE_SPECIES_CASTERS],
 }
 
-/** Ten distinct, otherwise-empty biomes -- used only by biomeForFloor's fixed-sequence tests
- * (never generateFloor, which needs FIXTURE_BIOME's populated pools). */
+/** Ten distinct biomes that each hold content (the brawlers), so `biomeForFloor` resolves a floor
+ * to its own decade's biome and never falls back -- used by its fixed-sequence tests (never
+ * generateFloor, which needs FIXTURE_BIOME's populated pools). */
 export const FIXTURE_BIOME_SEQUENCE: readonly BiomeData[] = Array.from(
   { length: BIOME_COUNT },
   (_, index) => ({
     id: createBiomeId(`fixture-sequence-biome-${index + 1}`),
     name: `Fixture Sequence Biome ${index + 1}`,
-    speciesPool: [],
+    speciesPool: [FIXTURE_SPECIES_BRAWLERS],
   }),
 )
 

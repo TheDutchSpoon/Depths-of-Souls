@@ -64,7 +64,7 @@ const lines: Record<CombatEvent['type'], [CombatEvent, string]> = {
   ],
   StatusApplied: [
     { type: 'StatusApplied', targetId: id('a'), statusId: 'poison', duration: 3 },
-    '  <a> gains poison (3r)',
+    '  <a> gains poison (3 turns)',
   ],
   StatusExpired: [
     { type: 'StatusExpired', creatureId: id('a'), statusId: 'poison' },
@@ -123,6 +123,17 @@ describe('describeEvent', () => {
       expect(describeEvent(event, view)).toBe(line)
     },
   )
+
+  test('a one-turn status says "1 turn", a longer one "N turns"', () => {
+    const applied = (duration: number): CombatEvent => ({
+      type: 'StatusApplied',
+      targetId: id('a'),
+      statusId: 'stun',
+      duration,
+    })
+    expect(describeEvent(applied(1), view)).toBe('  <a> gains stun (1 turn)')
+    expect(describeEvent(applied(2), view)).toBe('  <a> gains stun (2 turns)')
+  })
 
   test('an area cast prints the spell and every target label', () => {
     const event: CombatEvent = {

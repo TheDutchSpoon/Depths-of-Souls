@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { createCombat } from '../engine/combat'
 import type { CreateCombatRegistries } from '../engine/combat'
 import type { CreatureId } from '../engine/ids'

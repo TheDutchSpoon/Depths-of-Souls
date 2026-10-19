@@ -41,15 +41,17 @@ describe('the descent loop as the screen drives it', () => {
       expect(level).toBeGreaterThan(first.playerParty[index]!.level)
     })
 
-    // Floor 31 is past the content frontier, with the text the screen shows.
+    // Floor 31 is out of reach (the deepest floor cleared is 1, so the farthest is 2), with the
+    // text the screen shows.
+    expect(store.getState().deepestFloor).toBe(1)
     const beyond = store.getState().canDescend(31)
-    expect(beyond).toEqual({ ok: false, reason: 'beyond-content-frontier' })
+    expect(beyond).toEqual({ ok: false, reason: 'floor-out-of-reach' })
     expect(store.getState().descend(31)).toEqual({
       ok: false,
-      reason: 'beyond-content-frontier',
+      reason: 'floor-out-of-reach',
     })
-    expect(descendRefusalText('beyond-content-frontier')).toBe(
-      'No floors that deep exist yet.',
+    expect(descendRefusalText('floor-out-of-reach', 2)).toBe(
+      'That floor is out of reach: enter a whole number from 1 to 2, one past the deepest floor cleared.',
     )
 
     // An emptied party is refused.
@@ -57,7 +59,7 @@ describe('the descent loop as the screen drives it', () => {
       expect(store.getState().setPartySlot(slot, null)).toEqual({ ok: true })
     }
     expect(store.getState().descend(1)).toEqual({ ok: false, reason: 'empty-party' })
-    expect(descendRefusalText('empty-party')).toBe(
+    expect(descendRefusalText('empty-party', 2)).toBe(
       'The party is empty: put a creature in it first.',
     )
   })

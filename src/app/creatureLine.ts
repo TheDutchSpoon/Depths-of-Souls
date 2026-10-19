@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import type { BalanceConfig } from '../engine/balance-types'
 import type { Trait } from '../engine/effect-types'
 import type { SpeciesCreature } from '../engine/generation'

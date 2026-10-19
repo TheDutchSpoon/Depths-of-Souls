@@ -3,14 +3,15 @@
 
 import type { CreatureStats } from './types'
 import type { BalanceConfig } from './balance-types'
+import { STAT_GROWTH_PER_LEVEL } from './config'
 
 /**
- * Level-N stat = round(base * (1 + 0.25 * (level - 1))), recomputed from base every call --
+ * Level-N stat = round(base * (1 + STAT_GROWTH_PER_LEVEL * (level - 1))), recomputed from base every call --
  * never accumulated, so there is no rounding drift across repeated level-ups. Level 1 returns
  * base unchanged (factor === 1).
  */
 export function scaleStatsToLevel(base: CreatureStats, level: number): CreatureStats {
-  const factor = 1 + 0.25 * (level - 1)
+  const factor = 1 + STAT_GROWTH_PER_LEVEL * (level - 1)
   return {
     health: Math.round(base.health * factor),
     attack: Math.round(base.attack * factor),

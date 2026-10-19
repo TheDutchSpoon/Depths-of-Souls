@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import type { GameActions } from '../state/store'
 import { SPEC_CHOICES } from './startRun'
 

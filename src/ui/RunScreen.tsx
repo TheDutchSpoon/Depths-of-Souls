@@ -1,12 +1,8 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { useState } from 'react'
-import {
-  deepestPlusOne,
-  floorInfoText,
-  parseFloorField,
-  prefillFloor,
-} from '../app/floorPicker'
+import { floorInfoText, parseFloorField, prefillFloor } from '../app/floorPicker'
 import { descendRefusalText } from '../app/refusals'
-import { useGameStore } from '../state/store'
+import { farthestReachableFloor, useGameStore } from '../state/store'
 import { DescentViewer } from './DescentViewer'
 import type { Descent } from './DescentViewer'
 
@@ -53,14 +49,18 @@ export function RunScreen() {
       </label>{' '}
       <button
         type="button"
-        onClick={() => setFloorText(String(deepestPlusOne(game.deepestFloor)))}
+        onClick={() => setFloorText(String(farthestReachableFloor(game.deepestFloor)))}
       >
         Deepest + 1
       </button>{' '}
       <button type="button" disabled={!check.ok} onClick={descend}>
         Descend
       </button>
-      {!check.ok && <p role="status">{descendRefusalText(check.reason)}</p>}
+      {!check.ok && (
+        <p role="status">
+          {descendRefusalText(check.reason, farthestReachableFloor(game.deepestFloor))}
+        </p>
+      )}
       {preview !== null && <p>{floorInfoText(preview)}</p>}
       {descent !== null && <DescentViewer key={descent.id} descent={descent} />}
     </section>

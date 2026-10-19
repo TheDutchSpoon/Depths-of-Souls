@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import type { CombatEvent } from '../engine/types'
 import type { FightView } from './fightView'
 
@@ -85,7 +86,7 @@ export function describeEvent(
     case 'ActionGranted':
       return `  ${label(event.sourceId)} grants ${label(event.actorId)} an action (${event.effectId})`
     case 'StatusApplied':
-      return `  ${label(event.targetId)} gains ${event.statusId} (${event.duration}r)`
+      return `  ${label(event.targetId)} gains ${event.statusId} (${event.duration} ${event.duration === 1 ? 'turn' : 'turns'})`
     case 'StatusExpired':
       return `  ${label(event.creatureId)}'s ${event.statusId} expired`
     case 'StatModifierApplied':

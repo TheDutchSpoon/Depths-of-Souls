@@ -69,4 +69,8 @@ export interface BalanceConfig {
    * itself. Default 0 (free), per `spec/creatures.md#souls`. Nothing reads it yet
    * (`spec/creatures.md#summoning-at-the-soul-altar`). */
   readonly summonCost: number
+
+  /** Perk points one first-cleared boss earns (`spec/progression.md#perk-points`). A specialization
+   * totals this times one boss per biome (`BIOME_COUNT`): `specializationPointTotal`. Default 100. */
+  readonly perkPointsPerBoss: number
 }

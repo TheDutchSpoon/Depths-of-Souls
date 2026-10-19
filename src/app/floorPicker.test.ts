@@ -1,12 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { BIOMES } from '../data/biomes'
 import { createGameStore } from '../state/store'
-import {
-  deepestPlusOne,
-  floorInfoText,
-  parseFloorField,
-  prefillFloor,
-} from './floorPicker'
+import { floorInfoText, parseFloorField, prefillFloor } from './floorPicker'
 import { startRun } from './startRun'
 
 describe('parseFloorField', () => {
@@ -33,15 +28,10 @@ describe('parseFloorField', () => {
   })
 })
 
-describe('prefillFloor and deepestPlusOne', () => {
+describe('prefillFloor', () => {
   test('the field starts at 1 until a floor has been fought, then at the last floor fought', () => {
     expect(prefillFloor(0)).toBe(1)
     expect(prefillFloor(7)).toBe(7)
-  })
-
-  test('Deepest + 1 is one past the deepest floor', () => {
-    expect(deepestPlusOne(0)).toBe(1)
-    expect(deepestPlusOne(12)).toBe(13)
   })
 })
 
@@ -59,8 +49,8 @@ describe('any text in the field reaches a refusal, never a throw', () => {
     ['1e3', 'floor-out-of-reach'],
     // 400 digits parse to Infinity, which is not an integer.
     ['9'.repeat(400), 'floor-out-of-reach'],
-    // 1e20 is a whole number past the content frontier.
-    ['99999999999999999999', 'beyond-content-frontier'],
+    // 1e20 is a whole number far past the farthest reachable floor.
+    ['99999999999999999999', 'floor-out-of-reach'],
   ]
 
   test.each(cases)('%j is refused as %s', (text, reason) => {

@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { useLayoutEffect, useRef } from 'react'
 import { FOLLOW_TOLERANCE_PX, isAtBottom, shouldResetFollow } from '../app/followLog'
 import { useFillViewport } from './useFillViewport'

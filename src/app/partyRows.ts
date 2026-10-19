@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import type { InstanceId } from '../state/ids'
 import type { GameActions, GameState, SetPartySlotResult } from '../state/store'
 import { creatureLine } from './creatureLine'

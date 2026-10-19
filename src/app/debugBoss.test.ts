@@ -24,6 +24,16 @@ describe('recordBoss', () => {
     expect(store.getState().perkPointSummary().earned).toBe(100)
   })
 
+  test('an id no biome holds is refused by the store, and says so', () => {
+    const store = createGameStore()
+    expect(recordBoss(store.getState(), 'not-a-boss')).toEqual({
+      ok: false,
+      reason: 'unknown-boss',
+    })
+    expect(store.getState().bossesCleared.size).toBe(0)
+    expect(recordBoss(store.getState(), bossChoices()[0]!.id)).toEqual({ ok: true })
+  })
+
   test('each listed boss earns its own 100 points', () => {
     const store = createGameStore()
     for (const choice of bossChoices()) recordBoss(store.getState(), choice.id)

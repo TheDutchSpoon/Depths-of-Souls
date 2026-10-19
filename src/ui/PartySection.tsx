@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { useState } from 'react'
 import { creatureLineText, HUB_CONTEXT } from '../app/creatureLine'
 import { partyRows, pickParty } from '../app/partyRows'

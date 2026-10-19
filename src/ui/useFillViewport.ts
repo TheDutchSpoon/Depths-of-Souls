@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { useEffect, useLayoutEffect } from 'react'
 import type { RefObject } from 'react'
 

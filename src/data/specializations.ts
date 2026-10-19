@@ -7,13 +7,13 @@
 // Leveled perks' effects are a FUNCTION of the purchased level (not a fixed
 // definition) -- `effects: EffectDef[] | ((level: number) => EffectDef[])`. A load-time
 // validator (`validateSpecialization`, called at the bottom of this module for all three specs)
-// asserts each spec's perks sum to exactly 1000 -- throws at import time, not a
+// asserts each spec's perks sum to exactly `specializationPointTotal` -- throws at import time, not a
 // runtime-reachable error, so a data-authoring mistake fails fast in tests.
 //
 // Inert perks (`spec/progression.md#inert-perks`: the gem-equip-economy Mastery family +
 // Arcane Shields/Arcane Versatility/True Wit for Sorcerer, Shield Specialist for Shieldbarer,
 // Proficient's half of Brute's Proficient Warrior) are authored as REAL PerkDefs (full
-// cost/maxLevel, counted toward the 1000-point sum) whose `effects` are simply `[]` -- there is
+// cost/maxLevel, counted toward the point total) whose `effects` are simply `[]` -- there is
 // no engine primitive for equipping gems off-affinity or for an equipment Stat Slot benefit at all (the
 // whole gem/equipment forge economy is unbuilt: `spec/creatures.md#gems-as-items`,
 // `spec/creatures.md#equipment`), so `[]` is the honest, correct dormant reading, not a stub.
@@ -32,6 +32,9 @@
 
 import type { EffectDef } from '../engine/effect-types'
 import { validateEffectList } from '../engine/effect-types'
+import type { BalanceConfig } from '../engine/balance-types'
+import { BIOME_COUNT } from '../engine/generation'
+import { DEFAULT_BALANCE_CONFIG } from './balance'
 import { BRUTE_STARTER, SHIELDBARER_STARTER, SORCERER_STARTER } from './species/starters'
 
 export interface PerkDef {
@@ -61,15 +64,27 @@ export interface DescribedSpecialization extends Omit<Specialization, 'perks'> {
   readonly perks: readonly DescribedPerkDef[]
 }
 
-/** `spec/progression.md#specializations-are-data` stated invariant: a spec is valid iff `Σ(maxLevel × costPerLevel) === 1000`,
- * and every perk's effects, at every level it can be bought at, pass `validateEffectList`.
+/** The points a specialization's perks must sum to: every point the game can pay out, one boss per
+ * biome (`BIOME_COUNT`) at `perkPointsPerBoss` each (`spec/progression.md#specializations-are-data`).
+ * Derived from the config and the biome count, never from the bosses the data ships today. */
+export function specializationPointTotal(config: BalanceConfig): number {
+  return config.perkPointsPerBoss * BIOME_COUNT
+}
+
+/** `spec/progression.md#specializations-are-data` stated invariant: a spec is valid iff
+ * `Σ(maxLevel × costPerLevel) === specializationPointTotal(config)`, and every perk's effects, at
+ * every level it can be bought at, pass `validateEffectList`.
  * Throws at import time (called at the bottom of this module for all three specs) -- a
  * data-authoring mistake fails fast in tests, never reachable at runtime. */
-export function validateSpecialization(spec: Specialization): void {
+export function validateSpecialization(
+  spec: Specialization,
+  config: BalanceConfig = DEFAULT_BALANCE_CONFIG,
+): void {
   const total = spec.perks.reduce((sum, p) => sum + p.maxLevel * p.costPerLevel, 0)
-  if (total !== 1000) {
+  const expected = specializationPointTotal(config)
+  if (total !== expected) {
     throw new Error(
-      `specialization invariant violated: ${spec.id}'s perks sum to ${total} points, expected exactly 1000`,
+      `specialization invariant violated: ${spec.id}'s perks sum to ${total} points, expected exactly ${expected}`,
     )
   }
   // A perk carries stat-modifiers, triggers and passives like a trait, so it goes through the same
@@ -443,7 +458,7 @@ export const SHIELDBARER: DescribedSpecialization = {
       // "Attacks and spells ignore 1% of the enemy's Defence per level." armor-penetration
       id: 'armor-piercer',
       name: 'Armor piercer',
-      description: "Attacks and spells ignore 1% of the enemy's Defence per level.",
+      description: "Your creatures' damage ignores 1% of the target's Defence per level.",
       maxLevel: 25,
       costPerLevel: 4,
       effects: (level) => [{ category: 'armor-penetration', percent: 0.01 * level }],
@@ -465,7 +480,7 @@ export const SHIELDBARER: DescribedSpecialization = {
       id: 'thorns',
       name: 'Thorns',
       description:
-        "After taking damage from an attack or spell, deals damage to that enemy equal to 15% of the creature's Defence, as indirect damage (a fifth of the enemy's Defence applies).",
+        'Whenever an attack or spell hits the creature, it deals damage equal to 15% of its Defence to the creature that hit it.',
       maxLevel: 1,
       costPerLevel: 100,
       effects: [

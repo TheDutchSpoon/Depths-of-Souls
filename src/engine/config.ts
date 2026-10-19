@@ -24,6 +24,11 @@ export const INDIRECT_DEFENCE_RATE = 0.2
 export const DEFEND_DEFENCE_MULTIPLIER = 1.5
 export const DEFEND_TAKEN_FACTOR = 0.65
 
+// The stat growth per level above 1: `scaleStatsToLevel` multiplies base stats by
+// `1 + STAT_GROWTH_PER_LEVEL * (level - 1)` (`spec/creatures.md#levels-and-xp`). Here, not in
+// `BalanceConfig`, because `materializeCreature` takes no config.
+export const STAT_GROWTH_PER_LEVEL = 0.25
+
 // Fixture/data-default convenience only -- no engine logic reads this; Creature.equippedSpells
 // stays a variable-length array so trait/forge slot-count changes fit later without a retype.
 export const DEFAULT_GEM_SLOT_COUNT = 3

@@ -3,17 +3,20 @@ import { DEFAULT_BALANCE_CONFIG } from '../data/balance'
 import { BIOMES } from '../data/biomes'
 import { ALL_SPELLS } from '../data/spells'
 import { fightCount } from './curves'
-import { contentFrontier, floorShape, generateFloor } from './generation'
+import { biomeHasContent, floorShape, generateFloor } from './generation'
 import type { BiomeData } from './generation'
 import { createSeededRng } from './rng'
 
 const CONFIG = DEFAULT_BALANCE_CONFIG
 
 describe('floorShape', () => {
-  it('agrees with generateFloor on the boss flag and the fight count, floor 1 to the frontier', () => {
-    const frontier = contentFrontier(BIOMES)
-    expect(frontier).toBe(30)
-    for (let floor = 1; floor <= frontier; floor++) {
+  it('agrees with generateFloor on the boss flag and the fight count, floor 1 to the last authored floor', () => {
+    // Three biomes are authored, in order, so their floors are 1 to 30.
+    const authored = BIOMES.filter(biomeHasContent)
+    expect(authored.map((biome) => biome.id)).toEqual(BIOMES.slice(0, 3).map((b) => b.id))
+    const lastAuthoredFloor = 10 * authored.length
+    expect(lastAuthoredFloor).toBe(30)
+    for (let floor = 1; floor <= lastAuthoredFloor; floor++) {
       const biomeIndex = Math.floor((floor - 1) / 10)
       const biome = BIOMES[biomeIndex]!
       const fights = generateFloor(

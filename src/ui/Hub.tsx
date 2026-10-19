@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { useState } from 'react'
 import { bossChoices, recordBoss } from '../app/debugBoss'
 import { useGameStore } from '../state/store'

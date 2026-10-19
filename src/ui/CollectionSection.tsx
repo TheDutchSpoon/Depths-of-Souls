@@ -1,3 +1,4 @@
+// Throwaway demo: replaced by the real combat UI (`CONVENTIONS.md#every-feature-phase-ships-a-demo`).
 import { creatureLineText, HUB_CONTEXT } from '../app/creatureLine'
 import { benchRows } from '../app/partyRows'
 import { useGameStore } from '../state/store'
